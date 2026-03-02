@@ -1,0 +1,74 @@
+# Life OS - Personal Intelligence Operating System
+
+**Tier 3: The Agency Standard (Offline-First)**
+
+## Architecture Overview
+
+Life OS is a local-first desktop application built as a polyglot monorepo. It operates fully without internet connectivity for all core functions, using the network only when explicitly invoking external APIs (Notion, Google Gemini).
+
+## Stack
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| Desktop Shell | Tauri v2 (Rust) | Native OS access, filesystem, secure store, sidecar management |
+| Frontend | React + Vite + TypeScript | UI layer. Shadcn-admin aesthetic. |
+| Styling | Tailwind CSS + shadcn/ui | Component library and design system |
+| Backend Sidecar | Python FastAPI (compiled binary via PyInstaller) | AI logic, Gemini API calls, Notion API calls |
+| Local State | Tauri-plugin-store | API Keys, Vault Path, User Profiles |
+| Knowledge Base | Local Obsidian `.md` files | Unstructured data for RAG |
+| Cloud Database | Notion API | Structured data: Tasks, Projects, Goals |
+| Monorepo Orchestration | Turborepo v2 | Build pipelines, caching, dependency graph |
+| Node Package Manager | pnpm (Strict Mode) | Forbidden: npm, yarn |
+| Python Package Manager | uv (Astral) | Forbidden: pip |
+
+## Data Flow
+
+```
+[User] <-> [React/Vite (apps/desktop)] <-> [Tauri IPC Bridge] <-> [Python FastAPI Sidecar (apps/api)]
+                                                                            |
+                                                         +------------------+------------------+
+                                                         |                  |                  |
+                                                  [Notion API]     [Google Gemini API]  [Local Obsidian FS]
+```
+
+## Reads & Writes
+
+- **Frontend (React):** Reads local Tauri store (config). Invokes Python sidecar commands via HTTP (localhost). Renders data from Python responses.
+- **Python API (FastAPI Sidecar):** Reads/Writes Notion API. Reads local Obsidian `.md` files. Reads/Writes Google Gemini API. Reads API keys from frontend request context.
+- **Tauri Desktop (Rust):** Manages filesystem permissions. Launches Python sidecar process. Bridges IPC between React and system.
+
+## Monorepo Structure
+
+```
+/
+├── .tracking/          # Agent state files (project_state.md, changelog.md, error_registry.md, adrs/)
+├── apps/
+│   ├── desktop/        # Tauri v2 + React/Vite frontend application
+│   ├── api/            # Python FastAPI sidecar (uv-managed)
+│   └── web/            # Reserved (not used in Tier 3)
+├── packages/
+│   ├── ui/             # Shared React component library
+│   ├── schemas/        # Auto-generated Zod schemas from Pydantic/OpenAPI
+│   ├── config-eslint/  # Shared ESLint configuration
+│   └── config-typescript/ # Shared tsconfig base
+├── ops/
+│   ├── docker/         # Docker configurations (dev services)
+│   └── supabase/       # Reserved (not active in this project)
+├── turbo.json          # Turborepo pipeline configuration
+├── pnpm-workspace.yaml # pnpm workspace definition
+├── package.json        # Root package.json
+└── .env.example        # Environment variable template
+```
+
+## Security Mandate
+
+- No API keys are hardcoded. Ever.
+- Application boots to Onboarding/Settings screen if configuration is absent.
+- All secrets are stored in Tauri's secure local store, fetched by the frontend and passed per-request to the Python sidecar.
+
+## Execution Sequence
+
+1. **Phase 3.1:** Tauri shell + Vite/React + Tailwind + shadcn/ui. Python FastAPI sidecar launch via Tauri. Verify `/api/health`.
+2. **Phase 3.2:** Settings UI + secure local storage + `/api/config/verify` endpoint.
+3. **Phase 3.3:** Notion API client + Obsidian filesystem reader in Python.
+4. **Phase 3.4:** Google Gemini SDK integration. Dashboard + Strategist UI. Full data pipeline.

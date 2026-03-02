@@ -1,0 +1,46 @@
+# Node
+node_modules/
+dist/
+.next/
+.turbo/
+
+# pnpm
+.pnpm-store/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.spec
+
+# Rust / Tauri
+apps/desktop/src-tauri/target/
+*.rs.bk
+
+# Environment
+.env
+.env.local
+.env.production
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Tauri
+apps/desktop/src-tauri/target/
