@@ -2,12 +2,8 @@ import { useState } from 'react';
 import { useConfig } from '@/lib/ConfigContext';
 import { useNavigate } from 'react-router-dom';
 import { open } from '@tauri-apps/plugin-dialog';
-import { FolderOpen, BrainCircuit, RefreshCw } from 'lucide-react';
+import { FolderOpen, BrainCircuit, Loader2, ShieldCheck, Zap } from 'lucide-react';
 
-/**
- * Onboarding View
- * Mandatory full-screen gate for first-run configuration.
- */
 export default function Onboarding() {
     const { config, saveConfig } = useConfig();
     const [formData, setFormData] = useState({
@@ -47,110 +43,129 @@ export default function Onboarding() {
     };
 
     return (
-        <div className="min-h-screen w-full bg-[#030303] text-white flex items-center justify-center p-6 font-sans relative overflow-hidden">
-            {/* Ambient Background Elements */}
-            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-purple-500/10 rounded-full blur-[100px]" />
+        <div className="min-h-screen w-full bg-background text-foreground flex items-center justify-center p-6 font-sans">
+            <div className="w-full max-w-lg space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
 
-            <div className="w-full max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-700">
-                <div className="flex flex-col items-center gap-2 mb-12 text-center">
-                    <div className="p-4 rounded-[2rem] bg-white/5 border border-white/10 mb-4 backdrop-blur-xl shadow-2xl">
-                        <BrainCircuit className="w-12 h-12 text-white" />
+                {/* Minimal Header */}
+                <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="p-3 rounded-2xl bg-primary/5 border border-primary/10 mb-2">
+                        <BrainCircuit className="w-8 h-8 text-primary" />
                     </div>
-                    <h1 className="text-4xl font-bold tracking-tighter bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">
-                        Initialize Life OS
-                    </h1>
-                    <p className="text-zinc-500 font-medium max-w-[280px]">
-                        Sync your digital intelligence securely in a few steps.
-                    </p>
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-black tracking-tight">Setup Life OS</h1>
+                        <p className="text-sm text-muted-foreground font-medium max-w-xs mx-auto">
+                            Configure your environment variables to enable strategic synchronization.
+                        </p>
+                    </div>
                 </div>
 
-                <form onSubmit={handleSave} className="space-y-6">
-                    {/* Notion */}
-                    <div className="space-y-2 group">
-                        <label className="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 flex items-center gap-2 px-1">
-                            <span className="w-1 h-1 rounded-full bg-zinc-500 group-focus-within:bg-white transition-colors" />
-                            Notion API Key
-                        </label>
-                        <div className="relative">
+                {/* Form Container */}
+                <form onSubmit={handleSave} className="space-y-8 bg-card border border-border p-10 rounded-[2.5rem] shadow-sm">
+
+                    <div className="grid grid-cols-1 gap-8">
+                        {/* Notion */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground flex items-center gap-2">
+                                    <span className="w-1 h-1 rounded-full bg-primary" />
+                                    Notion API Integration
+                                </label>
+                                <span className="text-[10px] text-muted-foreground/50 font-medium">Required</span>
+                            </div>
                             <input
                                 type="password"
                                 placeholder="secret_..."
                                 value={formData.notionApiKey}
                                 onChange={e => setFormData(prev => ({ ...prev, notionApiKey: e.target.value }))}
                                 required
-                                className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-4 text-sm font-mono text-white outline-none focus:ring-2 focus:ring-white/20 focus:border-white/20 transition-all placeholder:text-zinc-500"
+                                className="w-full bg-muted/30 border border-border rounded-xl px-5 py-4 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary/20 focus:bg-background transition-all placeholder:text-muted-foreground/30"
                             />
                         </div>
-                    </div>
 
-                    {/* Gemini */}
-                    <div className="space-y-2 group">
-                        <label className="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 flex items-center gap-2 px-1">
-                            <span className="w-1 h-1 rounded-full bg-zinc-500 group-focus-within:bg-white transition-colors" />
-                            Google Gemini Key
-                        </label>
-                        <div className="relative">
+                        {/* Gemini */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground flex items-center gap-2">
+                                    <span className="w-1 h-1 rounded-full bg-primary" />
+                                    Google Gemini Key
+                                </label>
+                                <span className="text-[10px] text-muted-foreground/50 font-medium">Core LLM</span>
+                            </div>
                             <input
                                 type="password"
                                 placeholder="AIza..."
                                 value={formData.geminiApiKey}
                                 onChange={e => setFormData(prev => ({ ...prev, geminiApiKey: e.target.value }))}
                                 required
-                                className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-4 text-sm font-mono outline-none focus:ring-2 focus:ring-white/20 focus:border-white/20 transition-all placeholder:text-zinc-700"
+                                className="w-full bg-muted/30 border border-border rounded-xl px-5 py-4 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary/20 focus:bg-background transition-all placeholder:text-muted-foreground/30"
                             />
+                        </div>
+
+                        {/* Obsidian */}
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground flex items-center gap-2">
+                                <span className="w-1 h-1 rounded-full bg-primary" />
+                                Obsidian Local Vault
+                            </label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="/Users/name/Vault"
+                                    value={formData.obsidianVaultPath}
+                                    onChange={e => setFormData(prev => ({ ...prev, obsidianVaultPath: e.target.value }))}
+                                    required
+                                    className="flex-1 bg-muted/30 border border-border rounded-xl px-5 py-4 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary/20 focus:bg-background transition-all placeholder:text-muted-foreground/30"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handlePickDirectory}
+                                    className="px-5 rounded-xl bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-all active:scale-95"
+                                >
+                                    <FolderOpen size={18} />
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Obsidian */}
-                    <div className="space-y-2 group">
-                        <label className="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 flex items-center gap-2 px-1">
-                            <span className="w-1 h-1 rounded-full bg-zinc-500 group-focus-within:bg-white transition-colors" />
-                            Obsidian Vault Path
-                        </label>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                placeholder="/Users/name/Documents/Vault"
-                                value={formData.obsidianVaultPath}
-                                onChange={e => setFormData(prev => ({ ...prev, obsidianVaultPath: e.target.value }))}
-                                required
-                                className="flex-1 bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-4 text-sm font-mono text-white outline-none focus:ring-2 focus:ring-white/20 focus:border-white/20 transition-all placeholder:text-zinc-500"
-                            />
-                            <button
-                                type="button"
-                                onClick={handlePickDirectory}
-                                className="px-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95 text-zinc-400 hover:text-white"
-                                title="Open Finder"
-                            >
-                                <FolderOpen className="w-5 h-5" />
-                            </button>
-                        </div>
+                    <div className="pt-4">
+                        <button
+                            type="submit"
+                            disabled={isSaving}
+                            className="w-full py-4 bg-foreground text-background rounded-2xl font-bold text-xs uppercase tracking-[0.2em] shadow-lg hover:opacity-90 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 transition-all"
+                        >
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                    Synchronizing...
+                                </>
+                            ) : (
+                                <>
+                                    Initialize Workspace
+                                    <Zap size={14} className="text-primary fill-current" />
+                                </>
+                            )}
+                        </button>
                     </div>
-
-                    <button
-                        type="submit"
-                        disabled={isSaving}
-                        className="w-full py-4 bg-white text-black rounded-2xl font-bold text-sm tracking-tight transition-all hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 mt-4"
-                    >
-                        {isSaving ? (
-                            <>
-                                <RefreshCw className="w-4 h-4 animate-spin" />
-                                INITIALIZING SYSTEMS...
-                            </>
-                        ) : (
-                            'BOOT SYSTEM'
-                        )}
-                    </button>
                 </form>
 
-                <div className="mt-12 text-center">
-                    <p className="text-[10px] text-zinc-600 font-bold tracking-widest uppercase">
-                        All data stays local &bull; Life OS v0.1.0 Alpha
+                {/* Footer Policy */}
+                <div className="flex flex-col items-center gap-6 opacity-60">
+                    <div className="flex items-center gap-8">
+                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
+                            <ShieldCheck size={12} className="text-emerald-500" />
+                            Local Privacy
+                        </div>
+                        <div className="w-px h-3 bg-border" />
+                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
+                            <Zap size={12} className="text-primary" />
+                            Direct Sync
+                        </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-[0.3em]">
+                        Life OS &bull; Deployment Alpha
                     </p>
                 </div>
             </div>
         </div>
     );
 }
-

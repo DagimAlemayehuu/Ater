@@ -1,126 +1,325 @@
-import { useEffect, useState } from 'react'
-import { LayoutDashboard, FileText, Database, Package, Sparkles, Activity } from 'lucide-react'
+import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+    ArrowRight, RefreshCw, Calendar, CheckCircle2,
+    Circle, GraduationCap, Target, BookOpen, Zap,
+    MessageSquare, Brain, ArrowUpRight
+} from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
+import { cn } from '@/lib/utils'
 
-/**
- * Modern Dashboard Card
- */
-const Card = ({ title, value, icon, sub, trend }: any) => (
-    <div className="flex flex-col gap-4 p-6 rounded-3xl border bg-card shadow-sm hover:shadow-md transition-all animate-in zoom-in-95 duration-500">
-        <div className="flex items-center justify-between">
-            <div className="p-3 rounded-2xl bg-muted/50 text-primary">
-                {icon}
-            </div>
-            {trend && (
-                <div className="px-2 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest text-green-500 bg-green-500/10">
-                    {trend}
-                </div>
-            )}
-        </div>
-        <div>
-            <h3 className="text-muted-foreground text-sm font-medium tracking-tight uppercase leading-relaxed mb-1">{title}</h3>
-            <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold tracking-tighter tabular-nums">{value}</span>
-                <span className="text-xs text-muted-foreground/60 font-medium ">{sub}</span>
-            </div>
-        </div>
-    </div>
-)
+const GOALS_DB_ID = '2a9219ed-7519-815f-ac0f-ebfcd1dcd003'
+
+interface Goal {
+    id: string
+    title: string
+    type: string
+    priority: string
+    completed: boolean
+    dueDate: string
+    remaining: string
+}
+
+function parseGoal(page: any): Goal {
+    const props = page.properties
+    return {
+        id: page.id,
+        title: props.Name?.title?.[0]?.plain_text || 'Untitled',
+        type: props['Type of Goal']?.select?.name || '',
+        priority: props.Priority?.select?.name || 'None',
+        completed: props.Completed?.checkbox || false,
+        dueDate: props['Due Date']?.date?.start || '',
+        remaining: props.Remaining?.formula?.string || '',
+    }
+}
 
 export default function Dashboard() {
-    const [notionCount, setNotionCount] = useState<number | null>(null)
-    const [obsidianCount, setObsidianCount] = useState<number | null>(null)
+    const navigate = useNavigate()
     const [loading, setLoading] = useState(true)
+    const [syncing, setSyncing] = useState(false)
+    const [goals, setGoals] = useState<Goal[]>([])
+    const [academics, setAcademics] = useState<{ courses: any[], exams: any[], assignments: any[], units: any[] }>({ courses: [], exams: [], assignments: [], units: [] })
+    const [notionCount, setNotionCount] = useState(0)
+    const [obsidianCount, setObsidianCount] = useState(0)
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [notion, obsidian] = await Promise.all([
-                    sidecarApi.listNotionPages().catch(() => ({ pages: [] })),
-                    sidecarApi.listObsidianFiles().catch(() => ({ files: [] }))
-                ])
-                setNotionCount(notion.pages.length)
-                setObsidianCount(obsidian.files.length)
-            } catch (err) {
-                console.error('Failed to sync counts:', err)
-            } finally {
-                setLoading(false)
-            }
+    const fetchData = useCallback(async () => {
+        try {
+            const [goalsRes, academicRes, notionRes, obsidianRes] = await Promise.all([
+                sidecarApi.queryNotionDatabase(GOALS_DB_ID).catch(() => ({ results: [] })),
+                sidecarApi.academicsDashboard().catch(() => ({ courses: [], exams: [], assignments: [], units: [] })),
+                sidecarApi.listNotionPages().catch(() => ({ pages: [] })),
+                sidecarApi.listObsidianFiles().catch(() => ({ files: [] })),
+            ])
+
+            const parsed = goalsRes.results.map(parseGoal)
+            parsed.sort((a, b) => {
+                if (a.completed && !b.completed) return 1
+                if (!a.completed && b.completed) return -1
+                const pw: Record<string, number> = { High: 3, Medium: 2, Low: 1, None: 0 }
+                return (pw[b.priority] || 0) - (pw[a.priority] || 0)
+            })
+            setGoals(parsed)
+            setAcademics({
+                courses: academicRes.courses || [],
+                exams: academicRes.exams || [],
+                assignments: academicRes.assignments || [],
+                units: academicRes.units || [],
+            })
+            setNotionCount(notionRes.pages?.length || 0)
+            setObsidianCount(obsidianRes.files?.length || 0)
+        } catch (err) {
+            console.error('Dashboard fetch failed:', err)
+        } finally {
+            setLoading(false)
         }
-        fetchData()
     }, [])
 
+    useEffect(() => { fetchData() }, [fetchData])
+
+    const handleRefresh = async () => {
+        setSyncing(true)
+        setLoading(true)
+        await fetchData()
+        setSyncing(false)
+    }
+
+    const activeGoals = goals.filter(g => !g.completed)
+    const completedGoals = goals.filter(g => g.completed)
+
+    const today = new Date()
+    const todayStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+
+    // Merge exams + assignments into deadlines
+    const deadlines: { id: string; name: string; date: string; type: 'exam' | 'assignment' }[] = []
+    academics.exams.forEach((e: any) => {
+        deadlines.push({ id: e.id, name: e.properties?.['Name']?.title?.[0]?.plain_text || 'Exam', date: e.properties?.['Exam Date']?.date?.start || '', type: 'exam' })
+    })
+    academics.assignments.forEach((a: any) => {
+        deadlines.push({ id: a.id, name: a.properties?.['Name']?.title?.[0]?.plain_text || 'Assignment', date: a.properties?.['Deadline']?.date?.start || '', type: 'assignment' })
+    })
+    deadlines.sort((a, b) => {
+        if (!a.date) return 1
+        if (!b.date) return -1
+        return new Date(a.date).getTime() - new Date(b.date).getTime()
+    })
+
+    const formatDate = (dateStr: string) => {
+        if (!dateStr) return 'No date'
+        const d = new Date(dateStr)
+        const diff = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+        const formatted = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        if (diff < 0) return `${formatted} · overdue`
+        if (diff === 0) return `${formatted} · today`
+        if (diff === 1) return `${formatted} · tomorrow`
+        if (diff <= 7) return `${formatted} · ${diff}d left`
+        return formatted
+    }
+
+    const isUrgent = (dateStr: string) => {
+        if (!dateStr) return false
+        return Math.ceil((new Date(dateStr).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) <= 3
+    }
+
     return (
-        <div className="flex flex-col gap-8 transition-all duration-300">
-            {/* Welcome Section */}
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                    <h2 className="text-4xl font-bold tracking-tighter bg-gradient-to-r from-white to-zinc-500 bg-clip-text text-transparent">
-                        System Overview
-                    </h2>
-                    <p className="text-muted-foreground/80 font-medium">
-                        Synchronized with <span className="text-foreground">Obsidian</span> and <span className="text-foreground">Notion</span>.
-                    </p>
+        <div className="flex-1 space-y-6 animate-in fade-in duration-300">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+                    <p className="text-sm text-muted-foreground mt-0.5">{todayStr}</p>
                 </div>
-                <div className="flex items-center gap-2 p-1 pl-3 rounded-full border bg-muted/30">
-                    <Activity className="w-4 h-4 text-green-500 animate-pulse" />
-                    <span className="text-[11px] font-bold tracking-widest text-muted-foreground uppercase mr-2">Core Heartbeat</span>
-                    <button className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:scale-105 active:scale-95 transition-all">
-                        FULL SYNC
+                <button
+                    onClick={handleRefresh}
+                    disabled={syncing}
+                    className="inline-flex items-center justify-center rounded-md border text-sm font-medium transition-colors disabled:opacity-50 hover:bg-muted h-9 px-3"
+                >
+                    <RefreshCw className={cn("mr-2 h-3.5 w-3.5", syncing && "animate-spin")} />
+                    Refresh
+                </button>
+            </div>
+
+            {/* Stats Row */}
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                <StatCard label="Active Goals" value={loading ? '—' : String(activeGoals.length)} sub={`${completedGoals.length} completed`} icon={<Target className="h-3.5 w-3.5" />} onClick={() => navigate('/goals')} />
+                <StatCard label="Deadlines" value={loading ? '—' : String(deadlines.length)} sub={deadlines.filter(d => isUrgent(d.date)).length > 0 ? `${deadlines.filter(d => isUrgent(d.date)).length} this week` : 'none this week'} icon={<Calendar className="h-3.5 w-3.5" />} onClick={() => navigate('/academics')} />
+                <StatCard label="Courses" value={loading ? '—' : String(academics.courses.length)} sub={`${academics.units.length} units`} icon={<BookOpen className="h-3.5 w-3.5" />} onClick={() => navigate('/academics')} />
+                <StatCard label="Notion Pages" value={loading ? '—' : String(notionCount)} sub={`${obsidianCount} vault files`} icon={<Zap className="h-3.5 w-3.5" />} />
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                <QuickAction label="Chat" sub="Ask anything" icon={<MessageSquare className="h-4 w-4" />} onClick={() => navigate('/chat')} />
+                <QuickAction label="Parser" sub="Process documents" icon={<Brain className="h-4 w-4" />} onClick={() => navigate('/oka')} />
+                <QuickAction label="Goals" sub="Track progress" icon={<Target className="h-4 w-4" />} onClick={() => navigate('/goals')} />
+                <QuickAction label="Academics" sub="Courses & exams" icon={<GraduationCap className="h-4 w-4" />} onClick={() => navigate('/academics')} />
+            </div>
+
+            {/* Main Grid */}
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-5">
+                {/* Deadlines */}
+                <Section title="Upcoming Deadlines" sub="Exams and assignments" action="View all" onAction={() => navigate('/academics')} className="lg:col-span-2">
+                    {loading ? <Loading /> : deadlines.length === 0 ? (
+                        <Empty text="No upcoming deadlines." />
+                    ) : (
+                        <div className="space-y-1">
+                            {deadlines.slice(0, 7).map(d => (
+                                <div key={d.id} className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/50 transition-colors">
+                                    <div className={cn("w-1 h-6 rounded-full shrink-0 bg-muted-foreground/30", isUrgent(d.date) && "bg-foreground")} />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">{d.name}</p>
+                                        <p className={cn("text-xs mt-0.5", isUrgent(d.date) ? "text-foreground font-medium" : "text-muted-foreground")}>{formatDate(d.date)}</p>
+                                    </div>
+                                    <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                                        {d.type}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </Section>
+
+                {/* Active Goals */}
+                <Section title="Active Goals" sub={`${activeGoals.length} open`} action="View all" onAction={() => navigate('/goals')} className="lg:col-span-3">
+                    {loading ? <Loading /> : activeGoals.length === 0 ? (
+                        <Empty text="No active goals." />
+                    ) : (
+                        <div className="space-y-0.5">
+                            {activeGoals.slice(0, 8).map(goal => (
+                                <div key={goal.id} className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate('/goals')}>
+                                    <Circle className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">{goal.title}</p>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            {goal.type && <span className="text-xs text-muted-foreground">{goal.type}</span>}
+                                            {goal.dueDate && (
+                                                <>
+                                                    <span className="text-muted-foreground/30">·</span>
+                                                    <span className="text-xs text-muted-foreground">{formatDate(goal.dueDate)}</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                                        {goal.priority}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </Section>
+            </div>
+
+            {/* Bottom Row */}
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 pb-6">
+                {/* Courses */}
+                <Section title="Courses" sub="Current semester" action="View all" onAction={() => navigate('/academics')}>
+                    {loading ? <Loading /> : academics.courses.length === 0 ? (
+                        <Empty text="No courses found." />
+                    ) : (
+                        <div className="space-y-0.5">
+                            {academics.courses.slice(0, 6).map((c: any) => {
+                                const name = c.properties?.['Course Name']?.title?.[0]?.plain_text || 'Untitled'
+                                const goal = c.properties?.['Goal']?.select?.name || ''
+                                const grade = c.properties?.['Grade']?.select?.name || ''
+                                return (
+                                    <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate('/academics')}>
+                                        <GraduationCap className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                        <span className="text-sm font-medium flex-1 truncate">{name}</span>
+                                        {grade && <span className="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{grade}</span>}
+                                        {goal && !grade && <span className="text-xs text-muted-foreground">→ {goal}</span>}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </Section>
+
+                {/* Completed Goals */}
+                <Section title="Completed" sub="Recently finished">
+                    {loading ? <Loading /> : completedGoals.length === 0 ? (
+                        <Empty text="No completed goals yet." />
+                    ) : (
+                        <div className="space-y-0.5">
+                            {completedGoals.slice(0, 6).map(goal => (
+                                <div key={goal.id} className="flex items-center gap-3 px-3 py-2.5 rounded-md">
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                                    <span className="text-sm text-muted-foreground line-through truncate flex-1">{goal.title}</span>
+                                    {goal.type && <span className="text-xs text-muted-foreground/40">{goal.type}</span>}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </Section>
+            </div>
+        </div>
+    )
+}
+
+/* ─── Components ─── */
+
+function StatCard({ label, value, sub, icon, onClick }: {
+    label: string; value: string; sub: string; icon: React.ReactNode; onClick?: () => void
+}) {
+    return (
+        <div onClick={onClick} className="rounded-lg border bg-card p-4 cursor-pointer hover:bg-muted/40 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-muted-foreground">{label}</span>
+                <span className="text-muted-foreground/60">{icon}</span>
+            </div>
+            <div className="text-2xl font-bold tracking-tight">{value}</div>
+            <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
+        </div>
+    )
+}
+
+function QuickAction({ label, sub, icon, onClick }: {
+    label: string; sub: string; icon: React.ReactNode; onClick: () => void
+}) {
+    return (
+        <button onClick={onClick} className="flex items-center gap-3 rounded-lg border bg-card p-3.5 hover:bg-muted/40 transition-colors text-left group w-full">
+            <div className="text-muted-foreground group-hover:text-foreground transition-colors">{icon}</div>
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{label}</p>
+                <p className="text-xs text-muted-foreground">{sub}</p>
+            </div>
+            <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />
+        </button>
+    )
+}
+
+function Section({ title, sub, action, onAction, className, children }: {
+    title: string; sub?: string; action?: string; onAction?: () => void; className?: string; children: React.ReactNode
+}) {
+    return (
+        <div className={cn("rounded-lg border bg-card", className)}>
+            <div className="flex items-center justify-between px-4 pt-4 pb-2">
+                <div>
+                    <h3 className="text-sm font-semibold">{title}</h3>
+                    {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+                </div>
+                {action && onAction && (
+                    <button onClick={onAction} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                        {action} <ArrowRight className="h-3 w-3" />
                     </button>
-                </div>
+                )}
             </div>
+            <div className="px-1 pb-2">{children}</div>
+        </div>
+    )
+}
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card
-                    title="Notion Artifacts"
-                    value={loading ? '...' : notionCount ?? '0'}
-                    sub="Synchronized Pages"
-                    icon={<Database className="w-6 h-6" />}
-                    trend="+12%"
-                />
-                <Card
-                    title="Obsidian Vault"
-                    value={loading ? '...' : obsidianCount ?? '0'}
-                    sub="Local Markdown Files"
-                    icon={<FileText className="w-6 h-6" />}
-                    trend="LIVE"
-                />
-                <Card
-                    title="Neural Tokens"
-                    value="14.2k"
-                    sub="Gemini Usage (Estimated)"
-                    icon={<Sparkles className="w-6 h-6" />}
-                />
-                <Card
-                    title="Storage Cache"
-                    value="48MB"
-                    sub="Local Index Space"
-                    icon={<Package className="w-6 h-6" />}
-                />
-            </div>
+function Loading() {
+    return (
+        <div className="flex items-center justify-center py-8">
+            <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground/40" />
+        </div>
+    )
+}
 
-            {/* Featured Insight Section - Placeholder for Phase 3.4 */}
-            <div className="group relative p-8 rounded-[2rem] border overflow-hidden bg-card transition-all hover:border-primary/50 shadow-sm">
-                <div className="absolute top-0 right-0 p-8 opacity-5 text-primary group-hover:scale-110 transition-transform">
-                    <LayoutDashboard className="w-32 h-32" />
-                </div>
-                <div className="flex flex-col gap-4 max-w-2xl relative z-10">
-                    <h3 className="text-2xl font-bold tracking-tight">Agentic Readiness</h3>
-                    <p className="text-muted-foreground leading-relaxed">
-                        Your Notion databases and Obsidian files are indexed. The life-strategist is ready to brainstorm on your existing knowledge base.
-                    </p>
-                    <div className="flex gap-2">
-                        <button className="px-5 py-2.5 rounded-2xl bg-primary text-primary-foreground font-bold text-sm tracking-tight transition-all hover:shadow-lg active:scale-95">
-                            Launch Strategist
-                        </button>
-                        <button className="px-5 py-2.5 rounded-2xl bg-muted text-foreground border font-bold text-sm tracking-tight transition-all hover:bg-muted/80">
-                            Manage Intelligence
-                        </button>
-                    </div>
-                </div>
-            </div>
+function Empty({ text }: { text: string }) {
+    return (
+        <div className="py-8 text-center">
+            <p className="text-sm text-muted-foreground">{text}</p>
         </div>
     )
 }

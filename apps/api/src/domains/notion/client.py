@@ -45,18 +45,37 @@ class NotionClient:
             data = response.json()
             return data.get("results", [])
 
-    async def query_database(self, database_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+    async def query_database(self, database_id: str, limit: int = 100) -> List[Dict[str, Any]]:
         """
-        Queries a specific Notion database for all its entries.
+        Queries a specific Notion database for its entries.
+        If limit is 0, it fetches all entries using pagination.
         """
+        results = []
+        has_more = True
+        next_cursor = None
+        
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.BASE_URL}/databases/{database_id}/query",
-                headers=self.headers,
-                json={"page_size": limit}
-            )
-            response.raise_for_status()
-            return response.json().get("results", [])
+            while has_more:
+                payload = {"page_size": 100 if limit == 0 else limit}
+                if next_cursor:
+                    payload["start_cursor"] = next_cursor
+                    
+                response = await client.post(
+                    f"{self.BASE_URL}/databases/{database_id}/query",
+                    headers=self.headers,
+                    json=payload
+                )
+                response.raise_for_status()
+                data = response.json()
+                results.extend(data.get("results", []))
+                
+                has_more = data.get("has_more", False)
+                next_cursor = data.get("next_cursor")
+                
+                if limit != 0 and len(results) >= limit:
+                    break
+                    
+            return results[:limit] if limit != 0 else results
 
     async def get_page_content(self, page_id: str) -> List[Dict[str, Any]]:
         """

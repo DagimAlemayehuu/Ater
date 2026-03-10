@@ -9,6 +9,7 @@ via HTTP headers (X-Notion-Key, X-Gemini-Key, X-Vault-Path).
 import signal
 import sys
 import os
+import asyncio
 import traceback
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
@@ -22,12 +23,36 @@ from src.domains.notion.client import NotionClient
 from src.domains.obsidian.client import ObsidianClient
 from src.domains.ai.strategist import Strategist
 
+# OKA Integration
+from src.domains.oka.router import router as oka_router
+from src.domains.academics.router import router as academics_router
+from src.domains.oka.database import engine as oka_engine, Base as OkaBase, AsyncSessionLocal as OkaSessionLocal
+from src.domains.oka.gemini_service import background_queue_worker
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
     print("[Life OS Sidecar] Starting up...")
+
+    # Initialize OKA database tables
+    async with oka_engine.begin() as conn:
+        await conn.run_sync(OkaBase.metadata.create_all)
+    print("[Life OS Sidecar] OKA database initialized.")
+
+    # Start OKA background worker
+    def get_session_factory():
+        async def factory():
+            async with OkaSessionLocal() as session:
+                yield session
+        return factory
+
+    worker_task = asyncio.create_task(background_queue_worker(get_session_factory()))
+    print("[Life OS Sidecar] OKA background worker started.")
+
     yield
+
+    worker_task.cancel()
     print("[Life OS Sidecar] Shutting down...")
 
 
@@ -50,6 +75,10 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Mount routers
+app.include_router(oka_router, prefix="/api")
+app.include_router(academics_router, prefix="/api")
 
 
 @app.get("/api/health")
@@ -126,9 +155,69 @@ async def list_obsidian_files(secrets: AppSecrets = Depends(get_app_secrets)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/obsidian/files/{path:path}")
+async def read_obsidian_file(path: str, secrets: AppSecrets = Depends(get_app_secrets)):
+    """Reads a file from the Obsidian vault."""
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+    try:
+        client = ObsidianClient(secrets.vault_path)
+        content = client.read_note(path)
+        if content is None:
+            raise HTTPException(status_code=404, detail="File not found")
+        return {"content": content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/obsidian/files/{path:path}")
+async def write_obsidian_file(
+    path: str, 
+    payload: Dict[str, str] = Body(...), 
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Writes content to a file in the Obsidian vault."""
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+    content = payload.get("content")
+    if content is None:
+        raise HTTPException(status_code=400, detail="Content missing")
+    try:
+        full_path = Path(secrets.vault_path) / path
+        os.makedirs(full_path.parent, exist_ok=True)
+        with open(full_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/personae/save")
+async def save_persona_prompt(payload: Dict[str, str] = Body(...)):
+    """Saves a customized persona prompt to the system prompts/custom prompts directory."""
+    name = payload.get("name")
+    content = payload.get("content")
+    if not name or not content:
+        raise HTTPException(status_code=400, detail="Missing name or content")
+    try:
+        # Resolve the root project path (LifeOs directory)
+        # apps/api/src/api/main.py -> LifeOs
+        root_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
+        custom_prompts_dir = root_dir / "resources" / "prompts" / "custom prompts"
+        custom_prompts_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Make a safe filename
+        safe_name = "".join([c for c in name if c.isalnum() or c in (' ', '-', '_')]).strip()
+        file_path = custom_prompts_dir / f"{safe_name}.md"
+        
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+            
+        return {"success": True, "path": str(file_path)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/ai/brainstorm")
 async def brainstorm_with_ai(
-    query_data: Dict[str, str],
+    query_data: Dict[str, Any],
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """
@@ -142,12 +231,13 @@ async def brainstorm_with_ai(
         raise HTTPException(status_code=400, detail="Query missing in request body")
     
     try:
-        agent = Strategist(secrets.gemini_key, notion_key=secrets.notion_key)
+        agent = Strategist(secrets.gemini_key, notion_key=secrets.notion_key, vault_path=secrets.vault_path)
         response = await agent.brainstorm(
             query, 
             context=query_data.get("context"),
             system_prompt=query_data.get("system_prompt"),
-            model=secrets.gemini_model or 'gemini-2.5-flash'
+            model=secrets.gemini_model or 'gemini-2.5-flash',
+            history=query_data.get("history")
         )
         return {"response": response}
     except Exception as e:
@@ -259,25 +349,51 @@ async def update_notion_page_content(
         for block in current_blocks:
             await client.delete_block(block["id"])
             
-        # 2. Convert markdown into Notion paragraphs/bullets (very simple conversion)
-        # Actually for now we'll just treat the whole thing as paragraphs per newline
+        # 2. Convert markdown into Notion blocks
         lines = markdown.split("\n")
         new_blocks = []
         for line in lines:
-            if not line.strip(): 
+            line = line.strip()
+            if not line:
+                # Add empty paragraph for spacing
+                new_blocks.append({
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {"rich_text": []}
+                })
                 continue
+            
+            # Simple Heading detection
+            if line.startswith("# "):
+                block_type = "heading_1"
+                text = line[2:]
+            elif line.startswith("## "):
+                block_type = "heading_2"
+                text = line[3:]
+            elif line.startswith("### "):
+                block_type = "heading_3"
+                text = line[4:]
+            # Simple Bullet List detection
+            elif line.startswith("- ") or line.startswith("* "):
+                block_type = "bulleted_list_item"
+                text = line[2:]
+            # Default to paragraph
+            else:
+                block_type = "paragraph"
+                text = line
+
             new_blocks.append({
                 "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": [{"type": "text", "text": {"content": line}}]
+                "type": block_type,
+                block_type: {
+                    "rich_text": [{"type": "text", "text": {"content": text}}]
                 }
             })
             
         if new_blocks:
-            # Note: Notion append_block_children has a limit on amount of blocks per call.
-            # We assume small to medium content here for simplicity.
-            await client.append_block_children(page_id, new_blocks)
+            # Batch blocks into groups of 100 to avoid Notion API limits
+            for i in range(0, len(new_blocks), 100):
+                await client.append_block_children(page_id, new_blocks[i:i+100])
             
         return {"success": True}
     except Exception as e:

@@ -41,19 +41,19 @@ Life OS is a local-first desktop application built as a polyglot monorepo. It op
 
 ```
 /
-├── .tracking/          # Agent state files (project_state.md, changelog.md, error_registry.md, adrs/)
 ├── apps/
 │   ├── desktop/        # Tauri v2 + React/Vite frontend application
-│   ├── api/            # Python FastAPI sidecar (uv-managed)
-│   └── web/            # Reserved (not used in Tier 3)
+│   └── api/            # Python FastAPI sidecar (uv-managed)
+├── docs/
+│   ├── architecture/   # System design, ADRs, and structural diagrams
+│   ├── prompts/        # Knowledge Architect (OKA) prompt masterplans
+│   └── setup/          # Initialization protocols and project tracking
 ├── packages/
-│   ├── ui/             # Shared React component library
-│   ├── schemas/        # Auto-generated Zod schemas from Pydantic/OpenAPI
 │   ├── config-eslint/  # Shared ESLint configuration
 │   └── config-typescript/ # Shared tsconfig base
-├── ops/
-│   ├── docker/         # Docker configurations (dev services)
-│   └── supabase/       # Reserved (not active in this project)
+├── resources/
+│   ├── reference/      # Markdown archival reference files
+│   └── templates/      # Academic/Personal profile templates
 ├── turbo.json          # Turborepo pipeline configuration
 ├── pnpm-workspace.yaml # pnpm workspace definition
 ├── package.json        # Root package.json

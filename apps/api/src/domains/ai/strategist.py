@@ -5,6 +5,7 @@ import json
 import datetime
 
 from src.domains.notion.client import NotionClient
+from src.domains.obsidian.client import ObsidianClient
 
 GOALS_DB_ID = "2a9219ed-7519-815f-ac0f-ebfcd1dcd003"
 
@@ -15,9 +16,10 @@ class Strategist:
     Equipped with Notion Goal Management tools.
     """
 
-    def __init__(self, api_key: str, notion_key: Optional[str] = None):
+    def __init__(self, api_key: str, notion_key: Optional[str] = None, vault_path: Optional[str] = None):
         self.client = genai.Client(api_key=api_key)
         self.notion_key = notion_key
+        self.vault_path = vault_path
 
     async def _list_notion_goals(self):
         """Retrieves all current goals from the Notion database."""
@@ -114,8 +116,33 @@ class Strategist:
         except Exception as e:
             return f"Error deleting goal: {str(e)}"
 
+    async def _list_obsidian_notes(self):
+        """Lists all markdown files in the local Obsidian vault."""
+        print("[Strategist] Tool Call: list_obsidian_notes")
+        if not self.vault_path: return "Error: Obsidian vault path not configured."
+        client = ObsidianClient(self.vault_path)
+        try:
+            files = client.list_files()
+            # Just return names and relative paths to save tokens
+            summary = [{"name": f["name"], "path": f["path"]} for f in files]
+            return json.dumps(summary)
+        except Exception as e:
+            return f"Error listing obsidian notes: {str(e)}"
 
-    async def brainstorm(self, query: str, context: Optional[str] = None, system_prompt: Optional[str] = None, model: str = 'gemini-2.5-flash') -> str:
+    async def _read_obsidian_note(self, relative_path: str):
+        """Reads the content of a specific Obsidian note."""
+        print(f"[Strategist] Tool Call: read_obsidian_note ({relative_path})")
+        if not self.vault_path: return "Error: Obsidian vault path not configured."
+        client = ObsidianClient(self.vault_path)
+        try:
+            content = client.read_note(relative_path)
+            if content is None: return "File not found."
+            return content
+        except Exception as e:
+            return f"Error reading obsidian note: {str(e)}"
+
+
+    async def brainstorm(self, query: str, context: Optional[str] = None, system_prompt: Optional[str] = None, model: str = 'gemini-2.5-flash', history: Optional[List[Dict[str, str]]] = None) -> str:
         """
         Brainstorms and potentially executes actions in Notion based on the query.
         """
@@ -123,8 +150,10 @@ class Strategist:
 
         # Use provided system prompt or fallback to default
         if system_prompt and system_prompt.strip():
+            print(f"[Life OS Sidecar] Using provided system_prompt (len: {len(system_prompt)})")
             system_instruction = f"{system_prompt.strip()}\n\n[System Info: Current Time is {now}. Notion Database ID: {GOALS_DB_ID}]"
         else:
+            print("[Life OS Sidecar] Using fallback STRATEGIST system prompt")
             system_instruction = f"""
             You are THE STRATEGIST, an AI-driven Chief of Staff and Strategic Orchestrator. 
             Current System Time: {now}.
@@ -161,14 +190,17 @@ class Strategist:
 
         # Define tools using simpler declarations for GenAI
         notion_tools = [self._list_notion_goals, self._create_notion_goal, self._update_notion_goal, self._delete_notion_goal]
+        obsidian_tools = [self._list_obsidian_notes, self._read_obsidian_note]
+        all_tools = notion_tools + obsidian_tools
 
         try:
             # Using Chat with automatic tool resolution
             chat = self.client.aio.chats.create(
                 model=model,
+                history=history,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
-                    tools=notion_tools,
+                    tools=all_tools,
                     automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
                     thinking_config=types.ThinkingConfig(thinking_budget=-1) if "2.5" in model else (
                         types.ThinkingConfig(thinking_level="HIGH") if "3.1" in model else None

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { useEffect, useState } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { ConfigProvider, useConfig } from '@/lib/ConfigContext'
+import { ThemeProvider } from '@/context/theme-provider'
 import Onboarding from '@/routes/onboarding'
 import Shell from '@/components/layout/Shell'
 import Dashboard from '@/routes/dashboard'
@@ -9,10 +10,13 @@ import Strategist from '@/routes/strategist'
 import Notion from '@/routes/notion'
 import Settings from '@/routes/settings'
 import Goals from '@/routes/goals'
-import Profiles from '@/routes/profiles'
+import Obsidian from '@/routes/obsidian'
+import { OkaProvider } from '@/lib/OkaContext'
+import Chat from '@/routes/chat'
+import Oka from '@/routes/oka'
+import Academics from '@/routes/academics'
 
 // Placeholder components
-// Placeholder component for unimplemented pages
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div style={{ padding: '2rem', color: '#71717a' }}>
     <h1 style={{ fontSize: '1.875rem', fontWeight: 700, color: 'white' }}>{title}</h1>
@@ -89,34 +93,38 @@ function ConfigGate({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <ConfigProvider>
-      <SidecarGate>
-        <BrowserRouter>
-          <ConfigGate>
-            <Routes>
-              {/* Onboarding stays outside the shell */}
-              <Route path="/onboarding" element={<Onboarding />} />
-
-              {/* All other routes are wrapped in the layout shell */}
-              <Route path="*" element={
-                <Shell>
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/goals" element={<Goals />} />
-                    <Route path="/strategist" element={<Strategist />} />
-                    <Route path="/notion" element={<Notion />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/debugger" element={<PlaceholderPage title="The Debugger" />} />
-                    <Route path="/profiles" element={<Profiles />} />
-                  </Routes>
-                </Shell>
-              } />
-            </Routes>
-          </ConfigGate>
-        </BrowserRouter>
-      </SidecarGate>
-    </ConfigProvider>
+    <ThemeProvider>
+      <OkaProvider>
+        <ConfigProvider>
+          <SidecarGate>
+            <BrowserRouter>
+              <ConfigGate>
+                <Routes>
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route path="*" element={
+                    <Shell>
+                      <Routes>
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/goals" element={<Goals />} />
+                        <Route path="/obsidian" element={<Obsidian />} />
+                        <Route path="/chat" element={<Chat />} />
+                        <Route path="/strategist" element={<Strategist />} />
+                        <Route path="/notion" element={<Notion />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/oka" element={<Oka />} />
+                        <Route path="/academics" element={<Academics />} />
+                        <Route path="/debugger" element={<PlaceholderPage title="The Debugger" />} />
+                      </Routes>
+                    </Shell>
+                  } />
+                </Routes>
+              </ConfigGate>
+            </BrowserRouter>
+          </SidecarGate>
+        </ConfigProvider>
+      </OkaProvider>
+    </ThemeProvider>
   )
 }
 
