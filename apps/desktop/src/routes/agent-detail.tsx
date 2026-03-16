@@ -9,7 +9,7 @@ export default function AgentDetail() {
     const { id } = useParams()
     const navigate = useNavigate()
     
-    const agent = agentsData.find((a: any) => a.id === id)
+    const agent = agentsData.find((a: Record<string, unknown>) => a.id === id)
     
     if (!agent) {
         return (
