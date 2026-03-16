@@ -35,7 +35,7 @@ export default function Onboarding() {
         try {
             await saveConfig(formData);
             navigate('/dashboard');
-        } catch (err) {
+        } catch {
             alert('Failed to save configuration');
         } finally {
             setIsSaving(false);

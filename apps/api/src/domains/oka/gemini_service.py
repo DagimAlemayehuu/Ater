@@ -45,19 +45,46 @@ async def upload_document(file_path: str, api_key: str) -> str:
 
 
 def get_academic_profile() -> str:
-    """Reads the user's Academic Profile from the auto-synced markdown file."""
+    """Reads the user's Academic Profile from available sources."""
     try:
         from pathlib import Path
-        # Resolve path to LifeOs/md templates/academic_profile.md
         root_dir = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
-        profile_path = root_dir / "resources" / "templates" / "academic_profile.md"
         
-        if profile_path.exists():
-            with open(profile_path, "r", encoding="utf-8") as f:
-                return f.read()
+        # Priority order for profile locations
+        locations = [
+            root_dir / "resources" / "templates" / "academic_profile.md",
+            root_dir / "resources" / "reference" / "academic_profile.md",
+        ]
+        
+        for profile_path in locations:
+            if profile_path.exists():
+                with open(profile_path, "r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                    if content:
+                        return content
     except Exception as e:
         logger.warning(f"Could not load academic profile: {e}")
     return ""
+
+def inject_academic_context(system_prompt: str, profile: str) -> str:
+    """Injects the academic profile into the system prompt with clear demarcation."""
+    if not profile:
+        return system_prompt.replace("[INSERT_ACADEMIC_CONTEXT_HERE]", "No academic profile available.")
+    
+    formatted_profile = (
+        "\n\n--- BEGIN USER ACADEMIC PROFILE ---\n"
+        "The following information represents the user's current academic status, including active courses, "
+        "upcoming deadlines, and identified knowledge deficits. Use this to prioritize and tailor "
+        "the depth and focus of the generated notes.\n\n"
+        f"{profile}\n"
+        "--- END USER ACADEMIC PROFILE ---\n\n"
+    )
+    
+    if "[INSERT_ACADEMIC_CONTEXT_HERE]" in system_prompt:
+        return system_prompt.replace("[INSERT_ACADEMIC_CONTEXT_HERE]", formatted_profile)
+    
+    # Fallback: append if placeholder not found
+    return f"{system_prompt}\n\n{formatted_profile}"
 
 
 def audit_generated_text(text: str) -> str | None:
@@ -212,11 +239,9 @@ async def process_job(db, job_id: int):
             # Retrieve the uploaded file by its stable name (e.g. "files/abc123")
             gemini_file = await aclient.files.get(name=job.file_uri)
 
-            sys_prompt_b = settings.system_instruction_part_b
+            # Prepare system prompt with academic context
             academic_profile = get_academic_profile()
-            if academic_profile and "[INSERT_ACADEMIC_CONTEXT_HERE]" in sys_prompt_b:
-                sys_prompt_b = sys_prompt_b.replace("[INSERT_ACADEMIC_CONTEXT_HERE]", academic_profile)
-
+            sys_prompt_b = inject_academic_context(settings.system_instruction_part_b, academic_profile)
             sys_prompt = f"{settings.system_instruction_part_a}\n\n{sys_prompt_b}"
 
             notes_context = ""

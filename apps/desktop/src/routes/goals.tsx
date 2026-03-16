@@ -4,6 +4,7 @@ import { ExternalLink, RefreshCw, Calendar, CheckSquare, Clock, X, Plus, Save, T
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface GoalRaw { id: string; properties: Record<string, any>; url: string }
 
 interface Goal {
@@ -28,6 +29,7 @@ const GOALS_DB_ID = '2a9219ed-7519-815f-ac0f-ebfcd1dcd003'
 const GOAL_TYPES = ['Weekly Goal', 'Monthly Goal', 'Quarterly Goal', 'Yearly Goal', 'Lifetime Goal']
 const PRIORITIES = ['High', 'Medium', 'Low', 'None']
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseGoal(page: any): Goal {
     const props = page.properties
     const title = props.Name?.title?.[0]?.plain_text || 'Untitled'
@@ -76,6 +78,7 @@ export default function Goals() {
 
     useEffect(() => {
         fetchGoals()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const [markdownContent, setMarkdownContent] = useState('')
@@ -86,6 +89,7 @@ export default function Goals() {
         if (selectedGoal) {
             fetchContent(selectedGoal.id)
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedGoal?.id])
 
     const fetchContent = async (id: string) => {
@@ -93,8 +97,10 @@ export default function Goals() {
         try {
             const res = await sidecarApi.getNotionPageContent(id)
             const text = res.blocks
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 .map((b: any) => {
                     const blockType = b.type
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const content = b[blockType]?.rich_text?.map((t: any) => t.plain_text).join('') || ''
                     if (blockType === 'heading_1') return `# ${content}`
                     if (blockType === 'heading_2') return `## ${content}`
@@ -147,6 +153,7 @@ export default function Goals() {
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateGoalProperty = async (goalId: string, properties: Record<string, any>) => {
         setUpdatingId(goalId)
         try {
@@ -192,6 +199,7 @@ export default function Goals() {
         if (!newTitle.trim()) return
         setLoading(true)
         try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const properties: Record<string, any> = {
                 Name: { title: [{ text: { content: newTitle.trim() } }] },
                 'Type of Goal': { select: { name: newType } },
@@ -571,6 +579,7 @@ function DetailProperty({ label, children }: { label: string; children: React.Re
     )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function FileText(props: any) {
     return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>
 }

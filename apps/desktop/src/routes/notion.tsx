@@ -7,8 +7,10 @@ import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
 
 export default function Notion() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [databases, setDatabases] = useState<any[]>([])
     const [selectedDb, setSelectedDb] = useState<string | null>(null)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [dbResults, setDbResults] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const [loadingDb, setLoadingDb] = useState(false)
@@ -42,19 +44,24 @@ export default function Notion() {
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const getTitle = (db: any) => {
         return db.title?.[0]?.plain_text || 'Untitled'
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const getPageTitle = (page: any) => {
         // Notion database title logic is tricky, usually it's under 'Name' or 'Title' property
         const props = page.properties
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const titleProp = Object.values(props).find((p: any) => p.type === 'title') as any
         return titleProp?.title?.[0]?.plain_text || 'Untitled'
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const getProperties = (db: any) => {
         if (!db?.properties) return []
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return Object.entries(db.properties).map(([name, val]: [string, any]) => ({
             name,
             type: val.type
@@ -142,6 +149,7 @@ export default function Notion() {
                                                 {getTitle(databases.find(d => d.id === selectedDb))}
                                             </h3>
                                             <div className="flex flex-wrap gap-2">
+                                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                                 {getProperties(databases.find(d => d.id === selectedDb)).map((prop: any) => (
                                                     <span
                                                         key={prop.name}

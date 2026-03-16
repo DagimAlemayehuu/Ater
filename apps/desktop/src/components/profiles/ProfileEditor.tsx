@@ -79,14 +79,12 @@ function OnboardingWizard({
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const total = questions.length;
 
-    // When current question changes, load its value
+    // When current question changes, focus input
     useEffect(() => {
-        if (questions[current]) {
-            setLocalAnswer(questions[current].value || '');
-        }
         // Auto-focus
-        setTimeout(() => inputRef.current?.focus(), 100);
-    }, [current, questions]);
+        const timer = setTimeout(() => inputRef.current?.focus(), 100);
+        return () => clearTimeout(timer);
+    }, [current]);
 
     const saveAndGo = (direction: 'next' | 'prev') => {
         const q = questions[current];
@@ -96,12 +94,16 @@ function OnboardingWizard({
 
         if (direction === 'next') {
             if (current < total - 1) {
+                const nextQ = questions[current + 1];
+                setLocalAnswer(nextQ.value || '');
                 setCurrent(c => c + 1);
             } else {
                 onComplete();
             }
         } else {
             if (current > 0) {
+                const prevQ = questions[current - 1];
+                setLocalAnswer(prevQ.value || '');
                 setCurrent(c => c - 1);
             }
         }
@@ -467,7 +469,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ id, title, value, onChang
                 parsed.sections = parsed.sections.map((section: ProfileSection) => {
                     if (!section) return section;
                     const normalizedTitle = normalize(section.title);
-                    const schemaSection = schema.find((s: any) => {
+                    const schemaSection = schema.find((s: ProfileSection) => {
                         const sn = normalize(s.title);
                         return sn === normalizedTitle || normalizedTitle.includes(sn) || sn.includes(normalizedTitle);
                     });
@@ -475,7 +477,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ id, title, value, onChang
                         section.fields = section.fields.map((field: ProfileField) => {
                             if (!field) return field;
                             const normalizedLabel = normalize(field.label);
-                            const schemaField = schemaSection.fields.find((f: any) => {
+                            const schemaField = schemaSection.fields.find((f: ProfileField) => {
                                 const fn = normalize(f.label);
                                 return fn === normalizedLabel || normalizedLabel.includes(fn) || fn.includes(normalizedLabel);
                             });
@@ -500,8 +502,10 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ id, title, value, onChang
         }
     }, [title, schema]);
 
+    // Update local data when markdown value changes from parent
     useEffect(() => {
         if (value === lastSyncedMarkdown.current) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLocalData(buildProfileData(value));
     }, [value, buildProfileData]);
 

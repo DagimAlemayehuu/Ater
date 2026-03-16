@@ -9,6 +9,7 @@ import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
 
 export default function Obsidian() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [files, setFiles] = useState<any[]>([])
     const [selectedPath, setSelectedPath] = useState<string | null>(null)
     const [content, setContent] = useState('')

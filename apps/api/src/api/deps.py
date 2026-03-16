@@ -1,6 +1,7 @@
 from fastapi import Header, HTTPException
 from typing import Optional
 from pydantic import BaseModel
+from src.domains.vault.watcher import WatcherManager
 
 class AppSecrets(BaseModel):
     notion_key: Optional[str] = None
@@ -18,6 +19,11 @@ async def get_app_secrets(
     Dependency to extract core secrets from request headers.
     Ensures they are cleaned and ready for use.
     """
+    
+    # Start filesystem watcher if vault path is provided
+    if x_vault_path and x_gemini_key:
+        WatcherManager.start_watching(x_vault_path, x_gemini_key)
+
     return AppSecrets(
         notion_key=x_notion_key,
         gemini_key=x_gemini_key,

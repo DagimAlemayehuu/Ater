@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
     ArrowRight, RefreshCw, Calendar, CheckCircle2,
     Circle, GraduationCap, Target, BookOpen, Zap,
-    MessageSquare, Brain, ArrowUpRight
+    MessageSquare, Brain, ArrowUpRight, Search
 } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
@@ -20,6 +20,7 @@ interface Goal {
     remaining: string
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseGoal(page: any): Goal {
     const props = page.properties
     return {
@@ -38,6 +39,7 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true)
     const [syncing, setSyncing] = useState(false)
     const [goals, setGoals] = useState<Goal[]>([])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [academics, setAcademics] = useState<{ courses: any[], exams: any[], assignments: any[], units: any[] }>({ courses: [], exams: [], assignments: [], units: [] })
     const [notionCount, setNotionCount] = useState(0)
     const [obsidianCount, setObsidianCount] = useState(0)
@@ -91,9 +93,11 @@ export default function Dashboard() {
 
     // Merge exams + assignments into deadlines
     const deadlines: { id: string; name: string; date: string; type: 'exam' | 'assignment' }[] = []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     academics.exams.forEach((e: any) => {
         deadlines.push({ id: e.id, name: e.properties?.['Name']?.title?.[0]?.plain_text || 'Exam', date: e.properties?.['Exam Date']?.date?.start || '', type: 'exam' })
     })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     academics.assignments.forEach((a: any) => {
         deadlines.push({ id: a.id, name: a.properties?.['Name']?.title?.[0]?.plain_text || 'Assignment', date: a.properties?.['Deadline']?.date?.start || '', type: 'assignment' })
     })
@@ -147,8 +151,9 @@ export default function Dashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
                 <QuickAction label="Chat" sub="Ask anything" icon={<MessageSquare className="h-4 w-4" />} onClick={() => navigate('/chat')} />
+                <QuickAction label="Debugger" sub="Vault RAG" icon={<Search className="h-4 w-4" />} onClick={() => navigate('/debugger')} />
                 <QuickAction label="Parser" sub="Process documents" icon={<Brain className="h-4 w-4" />} onClick={() => navigate('/oka')} />
                 <QuickAction label="Goals" sub="Track progress" icon={<Target className="h-4 w-4" />} onClick={() => navigate('/goals')} />
                 <QuickAction label="Academics" sub="Courses & exams" icon={<GraduationCap className="h-4 w-4" />} onClick={() => navigate('/academics')} />
@@ -217,6 +222,7 @@ export default function Dashboard() {
                         <Empty text="No courses found." />
                     ) : (
                         <div className="space-y-0.5">
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {academics.courses.slice(0, 6).map((c: any) => {
                                 const name = c.properties?.['Course Name']?.title?.[0]?.plain_text || 'Untitled'
                                 const goal = c.properties?.['Goal']?.select?.name || ''

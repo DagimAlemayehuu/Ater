@@ -13,12 +13,13 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    host: '127.0.0.1',
     // Prevent Vite from opening a browser window - Tauri manages the webview
     open: false,
   },
   build: {
     // Tauri uses Chromium on macOS/Linux, Safari on iOS
-    target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
+    target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari15',
     minify: !process.env.TAURI_ENV_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
     outDir: 'dist',

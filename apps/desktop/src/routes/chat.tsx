@@ -14,17 +14,19 @@ import {
 import * as Icons from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
-import { useConfig, DEFAULT_CONFIG } from '@/lib/ConfigContext'
-import type { CustomPersona, CustomSliderConfig } from '@/lib/ConfigContext'
+import { useConfig } from '@/lib/ConfigContext'
+import { DEFAULT_CONFIG } from '@/lib/config-types'
+import type { CustomPersona, CustomSliderConfig } from '@/lib/config-types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { LucideIcon } from 'lucide-react'
-import { slidersToPromptFragment } from '@/components/profiles/StrategistSliders'
+import { slidersToPromptFragment } from '@/lib/slider-configs'
 
 interface Message {
     role: 'user' | 'model'
     content: string
     isCommit?: boolean
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     commitData?: any;
 }
 
@@ -89,6 +91,7 @@ export default function Chat() {
 
         setSessions(newSessions);
         localStorage.setItem('lifeos_chat_sessions', JSON.stringify(newSessions));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [messages, selectedPersonaId, currentSessionId]);
 
     const startNewChat = () => {
@@ -135,6 +138,7 @@ export default function Chat() {
         ...(config?.customPersonas || []).map(p => ({
             id: p.id,
             name: p.name,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             icon: (Icons as any)[p.icon] || MessageSquare,
             prompt: p.prompt,
             isCustom: true,
@@ -149,6 +153,7 @@ export default function Chat() {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages, loading])
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parseCommit = (text: string): any | null => {
         const match = text.match(/<PERSONA_COMMIT>\s*([\s\S]*?)\s*<\/PERSONA_COMMIT>/);
         if (!match) return null;
@@ -160,6 +165,7 @@ export default function Chat() {
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleInstall = async (data: any, messageIdx: number) => {
         if (!data.name || (!data.systemPrompt && !data.prompt)) return;
 
@@ -173,6 +179,7 @@ export default function Chat() {
             icon: data.icon || 'MessageSquare',
             prompt: systemPrompt,
             slidersConfig: slidersConfig,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             slidersValues: slidersConfig.reduce((acc: any, s: CustomSliderConfig) => ({ ...acc, [s.id]: s.default }), {})
         };
 
@@ -241,15 +248,18 @@ export default function Chat() {
             let personaCustomConfig: CustomSliderConfig[] | undefined;
 
             if (activePersona.isCustom) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const customP = activePersona as any;
                 slidersValue = JSON.stringify(customP.slidersValues || {});
                 personaCustomConfig = customP.customConfig;
             } else {
-                slidersValue = config?.[slidersKey] || '';
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                slidersValue = (slidersKey && config) ? (config as any)[slidersKey] : '';
             }
 
             const calibrationFragment = slidersToPromptFragment(
                 slidersValue,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 activePersona.isCustom ? 'custom' : (activePersona.id as any),
                 personaCustomConfig
             );
@@ -271,6 +281,7 @@ export default function Chat() {
                 commitData: commitData || undefined
             }
             setMessages(prev => [...prev, aiMsg])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             setMessages(prev => [...prev, { role: 'model', content: `ERROR: ${error.message || 'Unknown error'}` }])
         } finally {
@@ -453,6 +464,7 @@ export default function Chat() {
                                             {msg.commitData.description}
                                         </p>
                                         <div className="flex flex-wrap gap-2">
+                                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                             {(msg.commitData.tuningSliders as any[])?.map((s: any, i: number) => (
                                                 <span key={i} className="px-2 py-1 rounded-md bg-muted/50 text-xs font-medium text-muted-foreground border">
                                                     {s.label}

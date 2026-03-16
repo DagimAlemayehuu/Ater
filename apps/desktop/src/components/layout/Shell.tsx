@@ -10,7 +10,11 @@ import {
     Menu,
     Command,
     Moon,
-    Sun
+    Sun,
+    Play,
+    Bot,
+    FileText,
+    Bug
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/theme-provider'
@@ -23,21 +27,30 @@ const navGroups = [
         title: 'Overview',
         items: [
             { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-            { label: 'Goals', path: '/goals', icon: Zap },
+            { label: 'Chat', path: '/chat', icon: MessageSquare },
         ],
     },
     {
         title: 'Intelligence',
         items: [
-            { label: 'Chat', path: '/chat', icon: MessageSquare },
-            { label: 'OKA', path: '/oka', icon: Brain },
+            { label: 'Agents', path: '/agents', icon: Bot },
+            { label: 'Strategist', path: '/strategist', icon: Brain },
+            { label: 'OKA', path: '/oka', icon: Play },
             { label: 'Academics', path: '/academics', icon: GraduationCap },
+        ],
+    },
+    {
+        title: 'Archive',
+        items: [
+            { label: 'Knowledge', path: '/obsidian', icon: FileText },
+            { label: 'Automations', path: '/automations', icon: Zap },
         ],
     },
     {
         title: 'System',
         items: [
             { label: 'Settings', path: '/settings', icon: Settings },
+            { label: 'Debugger', path: '/debugger', icon: Bug },
         ],
     },
 ]

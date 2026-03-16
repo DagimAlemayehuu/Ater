@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { useConfig } from '@/lib/ConfigContext';
 import { sidecarApi } from '@/lib/sidecarApi';
 import { MASTER_PLAN_SCHEMA } from './schemas';
+import { type ProfileSection } from './ProfileDataMapper';
 
 interface MasterPlanGeneratorProps {
     onComplete: (markdown: string) => void;
@@ -77,7 +78,7 @@ const MasterPlanGenerator: React.FC<MasterPlanGeneratorProps> = ({ onComplete, o
                 `- ${q.label}: ${answers[q.id] || 'Not specified'}`
             ).join('\n');
 
-            const schemaSections = MASTER_PLAN_SCHEMA.map(s =>
+            const schemaSections = (MASTER_PLAN_SCHEMA as ProfileSection[]).map(s =>
                 `### ${s.title}\n${s.fields.map(f => `- ${f.label}: [to be filled]`).join('\n')}`
             ).join('\n\n');
 
@@ -103,8 +104,9 @@ RULES:
 
             const result = await sidecarApi.brainstorm(prompt);
             onComplete(result.response);
-        } catch (err: any) {
-            setGenerationError(err.message || 'Failed to generate master plan');
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to generate master plan';
+            setGenerationError(message);
         } finally {
             setIsGenerating(false);
         }

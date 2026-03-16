@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
     Database, Key, HardDrive, Trash2, Edit2, FolderOpen, ShieldCheck, Sun, Moon,
     User, BookOpen, DollarSign, Activity, Brain, Bot, Sliders, ChevronLeft, ArrowRight, Wand2, Info, Settings as SettingsIcon, Target, MessageSquare
@@ -8,7 +8,7 @@ import { useConfig } from '@/lib/ConfigContext'
 import { useTheme } from '@/context/theme-provider'
 import { open } from '@tauri-apps/plugin-dialog'
 import { cn } from '@/lib/utils'
-import { sidecarApi } from '@/lib/sidecarApi'
+import { sidecarApi, type OkaSettings } from '@/lib/sidecarApi'
 import { OKA_PART_A, OKA_PART_B } from '@/lib/oka_defaults'
 import ProfileEditor from '@/components/profiles/ProfileEditor'
 import MasterPlanGenerator from '@/components/profiles/MasterPlanGenerator'
@@ -22,6 +22,7 @@ import {
     STRATEGIST_PROMPT_SCHEMA,
     CREATOR_PROMPT_SCHEMA,
 } from '@/components/profiles/schemas'
+import { type AppConfig } from '@/lib/config-types'
 
 /* ─────────────────────── Types ─────────────────────── */
 
@@ -34,7 +35,8 @@ interface ProfileCardDef {
     icon: React.ReactNode
     description: string
     category: 'profiles' | 'master_plan' | 'ai_tuning' | 'system_prompts' | 'custom_prompts'
-    configKey?: string
+    configKey?: keyof AppConfig
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     schema?: any
 }
 
@@ -79,9 +81,16 @@ const CREATOR_CARD: ProfileCardDef = {
     category: 'system_prompts', configKey: 'creatorPrompt', schema: CREATOR_PROMPT_SCHEMA,
 }
 
+const OKA_CARD: ProfileCardDef = {
+    id: 'oka_prompt', title: 'The OKA Engine', icon: <Brain size={16} />,
+    description: 'Directives for Obsidian Knowledge Architecture.',
+    category: 'system_prompts', configKey: 'okaPrompt', schema: STRATEGIST_PROMPT_SCHEMA, // Reuse strategist schema for now as it's a generic text editor
+}
+
 const SYSTEM_PROMPT_CARDS: ProfileCardDef[] = [
     STRATEGIST_CARD,
-    CREATOR_CARD
+    CREATOR_CARD,
+    OKA_CARD
 ]
 
 /* ─────────────────── Components ─────────────────── */
@@ -95,7 +104,7 @@ function CardHeader({ title, description, icon }: { title: string, description?:
         <div className="flex flex-row items-center justify-between p-6 pb-4 space-y-0 text-sm font-medium">
             <div className="space-y-1">
                 <h3 className="tracking-tight text-lg font-semibold">{title}</h3>
-                {description && <p className="text-sm text-muted-foreground font-normal">{description}</p>}
+                {description && <div className="text-sm text-muted-foreground font-normal">{description}</div>}
             </div>
             {icon && icon}
         </div>
@@ -106,7 +115,18 @@ function CardContent({ className, children }: { className?: string, children: Re
     return <div className={cn("p-6 pt-0", className)}>{children}</div>
 }
 
-const SettingsCard = ({ title, icon, value, children, onEdit, isEditing, onSave, onCancel }: any) => (
+interface SettingsCardProps {
+    title: string
+    icon: React.ReactNode
+    value: string
+    children: React.ReactNode
+    onEdit: () => void
+    isEditing: boolean
+    onSave: () => void
+    onCancel: () => void
+}
+
+const SettingsCard = ({ title, icon, value, children, onEdit, isEditing, onSave, onCancel }: SettingsCardProps) => (
     <Card className="flex flex-col justify-between h-full">
         <CardHeader title={title} description={value} icon={<div className="text-muted-foreground p-2 rounded-md bg-muted/50">{icon}</div>} />
         <CardContent className="flex-1 flex flex-col justify-between">
@@ -170,16 +190,16 @@ function StrategistPromptTextarea({ value, onSave, placeholder }: { value: strin
 export default function Settings() {
     const { config, saveConfig, updateCustomPersona, deleteCustomPersona } = useConfig()
     const { theme, setTheme } = useTheme()
-    const [editingKey, setEditingKey] = useState<string | null>(null)
+    const [editingKey, setEditingKey] = useState<keyof AppConfig | null>(null)
     const [editValue, setEditValue] = useState('')
     const [activeSection, setActiveSection] = useState<SettingsSection>('general')
     const [activeProfileId, setActiveProfileId] = useState<ProfileId | null>(null)
     const [showMasterPlanGen, setShowMasterPlanGen] = useState(false)
 
     // OKA Settings
-    const [okaSettings, setOkaSettings] = useState<any>(null);
+    const [okaSettings, setOkaSettings] = useState<OkaSettings | null>(null);
 
-    const fetchOkaSettings = async () => {
+    const fetchOkaSettings = useCallback(async () => {
         try {
             const data = await sidecarApi.okaGetSettings();
             setOkaSettings(data);
@@ -188,9 +208,9 @@ export default function Settings() {
             console.error('[Settings] Failed to fetch OKA settings:', err);
             return null;
         }
-    };
+    }, []);
 
-    const handleResetOkaProtocol = async () => {
+    const handleResetOkaProtocol = useCallback(async () => {
         try {
             await sidecarApi.okaUpdateSettings({
                 system_instruction_part_a: OKA_PART_A,
@@ -200,39 +220,44 @@ export default function Settings() {
         } catch (err) {
             console.error('[Settings] Failed to reset OKA protocol:', err);
         }
-    };
+    }, [fetchOkaSettings]);
+
+    // Track initialization to avoid infinite loops
+    const hasInitializedOka = useRef(false);
 
     useEffect(() => {
-        if (activeSection === 'oka') {
+        if (activeSection === 'oka' && !hasInitializedOka.current) {
+            hasInitializedOka.current = true;
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             fetchOkaSettings().then(async (data) => {
                 if (data && !data.system_instruction_part_a) {
                     await handleResetOkaProtocol();
                 }
 
-                const updates: any = {};
-                if (data) {
-                    if (config?.geminiApiKey && data.google_api_key !== config.geminiApiKey) {
-                        updates.google_api_key = config.geminiApiKey;
+                const updates: Partial<OkaSettings> = {};
+                if (data && config!) {
+                    if (config!.geminiApiKey && data.google_api_key !== config!.geminiApiKey) {
+                        updates.google_api_key = config!.geminiApiKey;
                     }
-                    if (config?.geminiModel && data.selected_model !== config.geminiModel) {
-                        updates.selected_model = config.geminiModel;
+                    if (config!.geminiModel && data.selected_model !== config!.geminiModel) {
+                        updates.selected_model = config!.geminiModel;
                     }
-                    if (config?.obsidianVaultPath && data.vault_path !== config.obsidianVaultPath) {
-                        updates.vault_path = config.obsidianVaultPath;
+                    if (config!.obsidianVaultPath && data.vault_path !== config!.obsidianVaultPath) {
+                        updates.vault_path = config!.obsidianVaultPath;
                     }
 
                     if (Object.keys(updates).length > 0) {
                         await sidecarApi.okaUpdateSettings(updates);
-                        setOkaSettings((prev: any) => ({ ...prev, ...updates }));
+                        setOkaSettings((prev) => prev ? { ...prev, ...updates } : null);
                     }
                 }
             });
         }
-    }, [activeSection, config?.geminiApiKey, config?.geminiModel, config?.obsidianVaultPath]);
+    }, [activeSection, config, handleResetOkaProtocol, fetchOkaSettings]);
 
     if (!config) return null
 
-    const startEditing = (key: string, current: string) => {
+    const startEditing = (key: keyof AppConfig, current: string) => {
         setEditingKey(key)
         setEditValue(current)
     }
@@ -250,7 +275,7 @@ export default function Settings() {
 
             setEditingKey(null)
             fetchOkaSettings();
-        } catch (err) {
+        } catch {
             alert('Failed to save setting')
         }
     }
@@ -297,12 +322,14 @@ export default function Settings() {
     function renderProfileDetail() {
         if (!activeProfileId) return null
         let card = [...PROFILE_CARDS, MASTER_PLAN_CARD, STRATEGIST_CARD, CREATOR_CARD].find(c => c.id === activeProfileId)
-        const customPersona = config?.customPersonas?.find(p => p.id === activeProfileId)
+        // eslint-disable-next-line @typescript-eslint/no-extra-non-null-assertion
+        const customPersona = config!?.customPersonas?.find(p => p.id === activeProfileId)
 
         if (!card && customPersona) {
             card = {
                 id: customPersona.id,
                 title: customPersona.name,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 icon: React.createElement((Icons as any)[customPersona.icon] || MessageSquare, { size: 16 }),
                 description: customPersona.description,
                 category: 'custom_prompts',
@@ -332,15 +359,17 @@ export default function Settings() {
             )
         }
 
-        const isCorePrompt = activeProfileId === 'strategist_prompt' || activeProfileId === 'creator_prompt';
+        const isCorePrompt = activeProfileId === 'strategist_prompt' || activeProfileId === 'creator_prompt' || activeProfileId === 'oka_prompt';
         const isCustomPrompt = !!customPersona;
 
         if (isCorePrompt || isCustomPrompt) {
             const slidersKey = activeProfileId === 'strategist_prompt' ? 'strategistSliders' : 'creatorSliders';
-            const promptKey = activeProfileId === 'strategist_prompt' ? 'strategistPrompt' : 'creatorPrompt';
+            const promptKey = activeProfileId === 'strategist_prompt' ? 'strategistPrompt' : (activeProfileId === 'oka_prompt' ? 'okaPrompt' : 'creatorPrompt');
 
-            const currentPrompt = isCustomPrompt ? customPersona?.prompt : config?.[promptKey as any];
-            const currentSliders = isCustomPrompt ? JSON.stringify(customPersona?.slidersValues) : config?.[slidersKey as any];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const currentPrompt = isCustomPrompt ? customPersona?.prompt : (config! as any)[promptKey];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const currentSliders = isCustomPrompt ? JSON.stringify(customPersona?.slidersValues) : (config! as any)[slidersKey];
 
             return (
                 <div className="w-full animate-in fade-in duration-300 space-y-6">
@@ -374,23 +403,25 @@ export default function Settings() {
                         <p className="text-muted-foreground">{card.description}</p>
                     </div>
 
-                    <Card>
-                        <CardHeader title="Behavioral Calibration" description="Adjust dynamic traits governing reasoning style." icon={<Sliders size={18} className="text-muted-foreground" />} />
-                        <CardContent>
-                            <StrategistSliders
-                                value={currentSliders || ''}
-                                onChange={(v) => {
-                                    if (isCustomPrompt) {
-                                        updateCustomPersona(customPersona.id, { slidersValues: JSON.parse(v) });
-                                    } else {
-                                        saveConfig({ [slidersKey]: v });
-                                    }
-                                }}
-                                type={isCustomPrompt ? 'custom' : (activeProfileId === 'creator_prompt' ? 'creator' : 'strategist')}
-                                customConfig={customPersona?.slidersConfig}
-                            />
-                        </CardContent>
-                    </Card>
+                    {activeProfileId !== 'oka_prompt' && (
+                        <Card>
+                            <CardHeader title="Behavioral Calibration" description="Adjust dynamic traits governing reasoning style." icon={<Sliders size={18} className="text-muted-foreground" />} />
+                            <CardContent>
+                                <StrategistSliders
+                                    value={currentSliders || ''}
+                                    onChange={(v) => {
+                                        if (isCustomPrompt) {
+                                            updateCustomPersona(customPersona.id, { slidersValues: JSON.parse(v) });
+                                        } else {
+                                            saveConfig({ [slidersKey]: v });
+                                        }
+                                    }}
+                                    type={isCustomPrompt ? 'custom' : (activeProfileId === 'creator_prompt' ? 'creator' : 'strategist')}
+                                    customConfig={customPersona?.slidersConfig}
+                                />
+                            </CardContent>
+                        </Card>
+                    )}
 
                     <Card>
                         <CardHeader title="Operational Directives" description="Core system instructions." icon={<Bot size={18} className="text-muted-foreground" />} />
@@ -401,6 +432,7 @@ export default function Settings() {
                                     if (isCustomPrompt) {
                                         updateCustomPersona(customPersona.id, { prompt: v });
                                     } else {
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                         saveConfig({ [promptKey as any]: v });
                                     }
                                 }}
@@ -416,7 +448,8 @@ export default function Settings() {
                                 <ProfileEditor
                                     id={activeProfileId}
                                     title={card.title}
-                                    value={config?.[card.configKey!] || ''}
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    value={(config! as any)[card.configKey!] || ''}
                                     onChange={(v) => saveConfig({ [card.configKey!]: v })}
                                     schema={card.schema}
                                 />
@@ -427,7 +460,8 @@ export default function Settings() {
             )
         }
 
-        const profileValue = (config as any)?.[card.configKey!] || ''
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const profileValue = (config! as any)[card.configKey!] || ''
 
         return (
             <div className="w-full animate-in fade-in duration-300 space-y-6 flex flex-col h-full pb-8">
@@ -476,9 +510,10 @@ export default function Settings() {
 
     /* ────── System Prompts Section ────── */
     function renderSystemPrompts() {
-        const customPersonaCards: ProfileCardDef[] = (config?.customPersonas || []).map(p => ({
+        const customPersonaCards: ProfileCardDef[] = (config!.customPersonas || []).map(p => ({
             id: p.id,
             title: p.name,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             icon: React.createElement((Icons as any)[p.icon] || MessageSquare, { size: 16 }),
             description: p.description,
             category: 'custom_prompts',
@@ -540,7 +575,7 @@ export default function Settings() {
                         icon={<Database size={18} />}
                         value="Workspace synchronization API key"
                         isEditing={editingKey === 'notionApiKey'}
-                        onEdit={() => startEditing('notionApiKey', config?.notionApiKey || '')}
+                        onEdit={() => startEditing('notionApiKey', config!.notionApiKey || '')}
                         onSave={handleSave}
                         onCancel={() => setEditingKey(null)}
                     >
@@ -554,7 +589,7 @@ export default function Settings() {
                             />
                         ) : (
                             <div className="px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm border border-transparent">
-                                <span>{config?.notionApiKey ? '••••••••' + config.notionApiKey.slice(-4) : 'Not configured'}</span>
+                                <span>{config!.notionApiKey ? '••••••••' + config!.notionApiKey.slice(-4) : 'Not configured'}</span>
                                 <ShieldCheck size={14} className="opacity-50" />
                             </div>
                         )}
@@ -566,7 +601,7 @@ export default function Settings() {
                         icon={<Brain size={18} />}
                         value="LLM API key and model selection"
                         isEditing={editingKey === 'geminiApiKey'}
-                        onEdit={() => startEditing('geminiApiKey', config?.geminiApiKey || '')}
+                        onEdit={() => startEditing('geminiApiKey', config!.geminiApiKey || '')}
                         onSave={handleSave}
                         onCancel={() => setEditingKey(null)}
                     >
@@ -581,7 +616,7 @@ export default function Settings() {
                                 />
                             ) : (
                                 <div className="px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm">
-                                    <span>{config?.geminiApiKey ? '••••••••' + config.geminiApiKey.slice(-4) : 'Not configured'}</span>
+                                    <span>{config!.geminiApiKey ? '••••••••' + config!.geminiApiKey.slice(-4) : 'Not configured'}</span>
                                     <Key size={14} className="opacity-50" />
                                 </div>
                             )}
@@ -589,7 +624,7 @@ export default function Settings() {
                             <div className="space-y-1">
                                 <label className="text-xs font-medium text-muted-foreground">Model</label>
                                 <select
-                                    value={config?.geminiModel || 'gemini-2.5-flash'}
+                                    value={config!.geminiModel || 'gemini-2.5-flash'}
                                     onChange={(e) => {
                                         const val = e.target.value;
                                         saveConfig({ geminiModel: val });
@@ -610,13 +645,13 @@ export default function Settings() {
                         icon={<HardDrive size={18} />}
                         value="Local directory for markdown notes"
                         isEditing={editingKey === 'obsidianVaultPath'}
-                        onEdit={() => startEditing('obsidianVaultPath', config?.obsidianVaultPath || '')}
+                        onEdit={() => startEditing('obsidianVaultPath', config!.obsidianVaultPath || '')}
                         onSave={handleSave}
                         onCancel={() => setEditingKey(null)}
                     >
                         <div className="flex gap-2">
                             <div className="flex-1 px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm overflow-hidden content-center">
-                                <span className="truncate pr-2">{editingKey === 'obsidianVaultPath' ? editValue : (config?.obsidianVaultPath || 'Not selected')}</span>
+                                <span className="truncate pr-2">{editingKey === 'obsidianVaultPath' ? editValue : (config!.obsidianVaultPath || 'Not selected')}</span>
                             </div>
                             {editingKey === 'obsidianVaultPath' && (
                                 <button
@@ -644,9 +679,9 @@ export default function Settings() {
                                 <Trash2 size={16} className="mr-2" />
                                 Reset Config
                             </button>
-                            <p className="text-sm text-muted-foreground mt-4 leading-relaxed">
+                            <div className="text-sm text-muted-foreground mt-4 leading-relaxed">
                                 Keys are securely stored via your OS keychain system. Clearing this will remove integrations.
-                            </p>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
@@ -674,11 +709,13 @@ export default function Settings() {
                 <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {cards.map((card) => {
-                        const profileValue = (config as any)?.[card.configKey!]?.trim() || '';
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const profileValue = (config! as any)[card.configKey!]?.trim() || '';
                         let completionPct = 0;
                         let status: 'Setup' | 'Partial' | 'Complete' = 'Setup';
 
                         if (profileValue.length > 0 && card.schema) {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             const totalFields = card.schema.reduce((acc: number, s: any) => acc + s.fields.length, 0);
                             const filledFieldMatches = profileValue.match(/^[-*]\s+.+?:\s*(.+)$/gm);
                             const filledFieldsCount = filledFieldMatches
@@ -754,7 +791,7 @@ export default function Settings() {
                                 onChange={(e) => {
                                     const val = e.target.value;
                                     sidecarApi.okaUpdateSettings({ system_instruction_part_a: val });
-                                    setOkaSettings((prev: any) => prev ? { ...prev, system_instruction_part_a: val } : null);
+                                    setOkaSettings((prev) => prev ? { ...prev, system_instruction_part_a: val } : null);
                                 }}
                                 className="w-full h-64 bg-background text-sm font-mono p-4 rounded-md border border-input focus:outline-none focus:ring-1 focus:ring-ring resize-none custom-scrollbar"
                                 placeholder="Part A rules..."
@@ -770,7 +807,7 @@ export default function Settings() {
                                 onChange={(e) => {
                                     const val = e.target.value;
                                     sidecarApi.okaUpdateSettings({ system_instruction_part_b: val });
-                                    setOkaSettings((prev: any) => prev ? { ...prev, system_instruction_part_b: val } : null);
+                                    setOkaSettings((prev) => prev ? { ...prev, system_instruction_part_b: val } : null);
                                 }}
                                 className="w-full h-64 bg-background text-sm font-mono p-4 rounded-md border border-input focus:outline-none focus:ring-1 focus:ring-ring resize-none custom-scrollbar"
                                 placeholder="Part B rules..."

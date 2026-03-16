@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { sidecarApi } from './sidecarApi'
 
@@ -40,7 +42,9 @@ interface OkaContextType {
     plan: BatchPlan | null
     setPlan: (plan: BatchPlan | null) => void
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     metadata: any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setMetadata: (meta: any) => void
 
     currentBatchId: number
@@ -67,42 +71,38 @@ interface OkaContextType {
 const OkaContext = createContext<OkaContextType | undefined>(undefined)
 
 export function OkaProvider({ children }: { children: ReactNode }) {
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'staging' | 'chat'>(() => {
-        try { const v = localStorage.getItem('oka_activeTab'); return (v ? JSON.parse(v) : 'dashboard') } catch { return 'dashboard' }
-    })
-    const [targetUnit, setTargetUnit] = useState<{ id: string; name: string } | null>(() => {
-        try { const v = localStorage.getItem('oka_targetUnit'); return v ? JSON.parse(v) : null } catch { return null }
-    })
-    const [fileUri, setFileUri] = useState<string | null>(() => {
-        try { const v = localStorage.getItem('oka_fileUri'); return v ? JSON.parse(v) : null } catch { return null }
-    })
-    const [plan, setPlan] = useState<BatchPlan | null>(() => {
-        try { const v = localStorage.getItem('oka_plan'); return v ? JSON.parse(v) : null } catch { return null }
-    })
-    const [metadata, setMetadata] = useState<any>(() => {
-        try { const v = localStorage.getItem('oka_metadata'); return v ? JSON.parse(v) : null } catch { return null }
-    })
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'staging' | 'chat'>('dashboard')
+    const [targetUnit, setTargetUnit] = useState<{ id: string; name: string } | null>(null)
+    const [fileUri, setFileUri] = useState<string | null>(null)
+    const [plan, setPlan] = useState<BatchPlan | null>(null)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [metadata, setMetadata] = useState<any>(null)
+    const [currentBatchId, setCurrentBatchId] = useState(1)
+    const [generatedNotes, setGeneratedNotes] = useState<GeneratedNote[]>([])
+    const [jobId, setJobId] = useState<number | null>(null)
+    const [status, setStatus] = useState<'idle' | 'processing' | 'completed' | 'failed'>('idle')
+    const [generationError, setGenerationError] = useState<string | null>(null)
+    const [messages, setMessages] = useState<ChatMessage[]>([])
 
-    const [currentBatchId, setCurrentBatchId] = useState(() => {
-        try { const v = localStorage.getItem('oka_currentBatchId'); return v ? JSON.parse(v) : 1 } catch { return 1 }
-    })
-    const [generatedNotes, setGeneratedNotes] = useState<GeneratedNote[]>(() => {
-        try { const v = localStorage.getItem('oka_generatedNotes'); return v ? JSON.parse(v) : [] } catch { return [] }
-    })
-
-    const [jobId, setJobId] = useState<number | null>(() => {
-        try { const v = localStorage.getItem('oka_jobId'); return v ? JSON.parse(v) : null } catch { return null }
-    })
-    const [status, setStatus] = useState<'idle' | 'processing' | 'completed' | 'failed'>(() => {
-        try { const v = localStorage.getItem('oka_status'); return v ? JSON.parse(v) : 'idle' } catch { return 'idle' }
-    })
-    const [generationError, setGenerationError] = useState<string | null>(() => {
-        try { const v = localStorage.getItem('oka_generationError'); return v ? JSON.parse(v) : null } catch { return null }
-    })
-
-    const [messages, setMessages] = useState<ChatMessage[]>(() => {
-        try { const v = localStorage.getItem('oka_messages'); return v ? JSON.parse(v) : [] } catch { return [] }
-    })
+    // Initial load from localStorage
+    useEffect(() => {
+        /* eslint-disable react-hooks/set-state-in-effect */
+        try {
+            const vTab = localStorage.getItem('oka_activeTab'); if (vTab) setActiveTab(JSON.parse(vTab))
+            const vUnit = localStorage.getItem('oka_targetUnit'); if (vUnit) setTargetUnit(JSON.parse(vUnit))
+            const vUri = localStorage.getItem('oka_fileUri'); if (vUri) setFileUri(JSON.parse(vUri))
+            const vPlan = localStorage.getItem('oka_plan'); if (vPlan) setPlan(JSON.parse(vPlan))
+            const vMeta = localStorage.getItem('oka_metadata'); if (vMeta) setMetadata(JSON.parse(vMeta))
+            const vBatch = localStorage.getItem('oka_currentBatchId'); if (vBatch) setCurrentBatchId(JSON.parse(vBatch))
+            const vNotes = localStorage.getItem('oka_generatedNotes'); if (vNotes) setGeneratedNotes(JSON.parse(vNotes))
+            const vJob = localStorage.getItem('oka_jobId'); if (vJob) setJobId(JSON.parse(vJob))
+            const vStatus = localStorage.getItem('oka_status'); if (vStatus) setStatus(JSON.parse(vStatus))
+            const vErr = localStorage.getItem('oka_generationError'); if (vErr) setGenerationError(JSON.parse(vErr))
+            const vMsg = localStorage.getItem('oka_messages'); if (vMsg) setMessages(JSON.parse(vMsg))
+        } catch (e) {
+            console.warn('[OKA] Failed to load from localStorage:', e)
+        }
+    }, [])
 
     // Store state in localStorage
     useEffect(() => { localStorage.setItem('oka_activeTab', JSON.stringify(activeTab)) }, [activeTab])
@@ -117,12 +117,17 @@ export function OkaProvider({ children }: { children: ReactNode }) {
     useEffect(() => { localStorage.setItem('oka_generationError', JSON.stringify(generationError)) }, [generationError])
     useEffect(() => { localStorage.setItem('oka_messages', JSON.stringify(messages)) }, [messages])
 
-    // Auto-sync configuration on mount
+    // Background sync
     useEffect(() => {
-        sidecarApi.okaGetSettings().catch(err => {
-            console.error('[OKA] Background configuration sync failed:', err);
-        });
-    }, []);
+        const sync = async () => {
+            try {
+                await sidecarApi.okaGetSettings()
+            } catch {
+                console.warn('[OKA] Initial settings sync failed.')
+            }
+        }
+        sync()
+    }, [])
 
     // Global background polling
     useEffect(() => {
@@ -135,6 +140,7 @@ export function OkaProvider({ children }: { children: ReactNode }) {
                     if (jobStatus === 'completed') {
                         clearInterval(interval)
                         const { notes } = await sidecarApi.okaGenerateResults(jobId)
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         setGeneratedNotes(notes.map((n: any) => ({ ...n, selected: true })))
                         setGenerationError(null)
                         setStatus('completed')
@@ -171,6 +177,7 @@ export function OkaProvider({ children }: { children: ReactNode }) {
                 metadata: metadata,
             })
             setJobId(result.job_id)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             setGenerationError(err?.message || 'Failed to enqueue generation job.')
             setStatus('failed')

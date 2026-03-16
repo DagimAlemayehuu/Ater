@@ -13,15 +13,20 @@ import asyncio
 import traceback
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
+from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, Depends, Header, HTTPException, Body
+from fastapi import FastAPI, Depends, Header, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from loguru import logger
 
 from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.notion.client import NotionClient
 from src.domains.obsidian.client import ObsidianClient
 from src.domains.ai.strategist import Strategist
+from src.domains.vault.router import router as vault_router
+from src.domains.vault.client import VaultManager
 
 # OKA Integration
 from src.domains.oka.router import router as oka_router
@@ -64,6 +69,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Catch-all for any unhandled exceptions.
+    Logs the full traceback and returns a clean 500 JSON response.
+    """
+    error_detail = str(exc)
+    logger.error(f"UNHANDLED EXCEPTION: {error_detail}\n{traceback.format_exc()}")
+    
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "error": error_detail}
+    )
+
 # CORS: Only allow the Tauri webview origin (tauri://localhost) and local dev (localhost:1420)
 app.add_middleware(
     CORSMiddleware,
@@ -80,6 +99,7 @@ app.add_middleware(
 # Mount routers
 app.include_router(oka_router, prefix="/api")
 app.include_router(academics_router, prefix="/api")
+app.include_router(vault_router, prefix="/api")
 
 
 @app.get("/api/health")
@@ -102,7 +122,8 @@ async def list_notion_pages(secrets: AppSecrets = Depends(get_app_secrets)):
         pages = await client.list_pages()
         return {"pages": pages}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Notion list pages failed: {e}")
+        raise HTTPException(status_code=502, detail=f"Notion API Error: {str(e)}")
 
 @app.get("/api/notion/databases")
 async def list_notion_databases(secrets: AppSecrets = Depends(get_app_secrets)):
@@ -117,7 +138,8 @@ async def list_notion_databases(secrets: AppSecrets = Depends(get_app_secrets)):
         databases = await client.list_databases()
         return {"databases": databases}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Notion list databases failed: {e}")
+        raise HTTPException(status_code=502, detail=f"Notion API Error: {str(e)}")
 
 @app.get("/api/notion/databases/{database_id}/query")
 async def query_notion_database(
@@ -136,7 +158,8 @@ async def query_notion_database(
         results = await client.query_database(database_id, limit=limit)
         return {"results": results}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Notion query failed ({database_id}): {e}")
+        raise HTTPException(status_code=502, detail=f"Notion API Error: {str(e)}")
 
 @app.get("/api/obsidian/files")
 async def list_obsidian_files(secrets: AppSecrets = Depends(get_app_secrets)):
@@ -153,8 +176,11 @@ async def list_obsidian_files(secrets: AppSecrets = Depends(get_app_secrets)):
         
         files = client.list_files()
         return {"files": files}
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Obsidian list files failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Vault Error: {str(e)}")
 
 @app.get("/api/obsidian/files/{path:path}")
 async def read_obsidian_file(path: str, secrets: AppSecrets = Depends(get_app_secrets)):
@@ -167,8 +193,11 @@ async def read_obsidian_file(path: str, secrets: AppSecrets = Depends(get_app_se
         if content is None:
             raise HTTPException(status_code=404, detail="File not found")
         return {"content": content}
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Obsidian read failed ({path}): {e}")
+        raise HTTPException(status_code=500, detail=f"Vault Read Error: {str(e)}")
 
 @app.put("/api/obsidian/files/{path:path}")
 async def write_obsidian_file(
@@ -242,6 +271,65 @@ async def brainstorm_with_ai(
         )
         return {"response": response}
     except Exception as e:
+        logger.error(f"Gemini brainstorm failed: {e}")
+        raise HTTPException(status_code=503, detail=f"AI Agent Error: {str(e)}")
+
+@app.post("/api/debugger/query")
+async def debugger_query(
+    query_data: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """
+    RAG-based debugger. Searches the vault and answers based ONLY on retrieved context.
+    """
+    if not secrets.gemini_key or not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Gemini-Key and X-Vault-Path headers missing")
+    
+    query = query_data.get("query")
+    if not query:
+        raise HTTPException(status_code=400, detail="Query missing")
+    
+    try:
+        # 1. Search Vault
+        vault_manager = VaultManager(secrets.vault_path, secrets.gemini_key)
+        search_results = await vault_manager.search(query, limit=10)
+        
+        context_parts = []
+        unique_sources = set()
+        for r in search_results:
+            context_parts.append(f"FILE: {r['path']}\nCONTENT: {r['content']}")
+            unique_sources.add(r["path"])
+        
+        vault_context = "\n---\n".join(context_parts)
+        
+        # 2. Prompt Gemini
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=secrets.gemini_key)
+        
+        system_instruction = f"""
+        You are THE DEBUGGER, a RAG-based problem solver for Life OS.
+        Your goal is to answer user questions based ONLY on the provided vault context.
+        
+        If the answer is not in the context, state that clearly.
+        Be concise, technical, and objective. No conversational filler.
+        
+        ### VAULT CONTEXT
+        {vault_context}
+        """
+        
+        response = await client.aio.models.generate_content(
+            model=secrets.gemini_model or 'gemini-2.5-flash',
+            contents=query,
+            config=types.GenerateContentConfig(system_instruction=system_instruction)
+        )
+        
+        return {
+            "response": response.text,
+            "sources": list(unique_sources)
+        }
+    except Exception as e:
+        print(f"[Life OS Sidecar] Debugger Fail: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 @app.patch("/api/notion/pages/{page_id}")
 async def update_notion_page(
@@ -400,6 +488,7 @@ async def update_notion_page_content(
     except Exception as e:
         print(f"[Life OS Sidecar] Notion update blocks failed: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 def handle_shutdown(signum, frame):
     """Clean shutdown handler for when Tauri terminates the process."""

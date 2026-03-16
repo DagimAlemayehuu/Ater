@@ -9,6 +9,7 @@ import {
   FileText,
   Database,
   Crosshair,
+  Bug,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -68,6 +69,11 @@ export const sidebarData: SidebarData = {
           title: 'Zettelkasten',
           url: '/obsidian',
           icon: FileText,
+        },
+        {
+          title: 'The Debugger',
+          url: '/debugger',
+          icon: Bug,
         },
       ],
     },

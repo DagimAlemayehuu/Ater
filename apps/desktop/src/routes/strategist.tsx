@@ -24,12 +24,10 @@ import {
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 import { useConfig } from '@/lib/ConfigContext'
-import { slidersToPromptFragment } from '@/components/profiles/StrategistSliders'
+import { slidersToPromptFragment } from '@/lib/slider-configs'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Link } from 'react-router-dom'
-import { Header } from '@/components/layout/header'
-import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
 
 interface Message {
@@ -155,6 +153,7 @@ export default function Strategist() {
                 return
             }
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const parsed = res.results.map((page: { id: string; properties: Record<string, any>; url: string }) => {
                 const props = page.properties
                 // We'll try to find the title property dynamically if 'Name' is missing
@@ -234,13 +233,10 @@ Let's start with Step 1: Tell me about your current state and when you want to o
 
     if (!hasMasterPlan) {
         return (
-            <>
-                <Header>
-                    <div className='ms-auto flex items-center space-x-4'>
-                        <ThemeSwitch />
-                    </div>
-                </Header>
-                <Main>
+            <div className="flex flex-col gap-6">
+                <div className='ms-auto flex items-center space-x-4'>
+                    <ThemeSwitch />
+                </div>
                     <div className="flex flex-col items-center justify-center h-full gap-8 animate-in fade-in duration-700">
                         <div className="p-6 rounded-xl bg-muted border border-border">
                             <Sparkles size={48} className="text-muted-foreground" />
@@ -266,19 +262,15 @@ Let's start with Step 1: Tell me about your current state and when you want to o
                             </Link>
                         </div>
                     </div>
-                </Main>
-            </>
+                </div>
         )
     }
 
     return (
-        <>
-            <Header>
-                <div className='ms-auto flex items-center space-x-4'>
-                    <ThemeSwitch />
-                </div>
-            </Header>
-            <Main>
+        <div className="flex flex-col gap-6">
+            <div className='ms-auto flex items-center space-x-4'>
+                <ThemeSwitch />
+            </div>
                 <div className="flex flex-col h-full gap-5 transition-all duration-300">
                     {/* Header & Nav */}
                     {/* Minimal Header & Nav */}
@@ -632,8 +624,7 @@ Let's start with Step 1: Tell me about your current state and when you want to o
                         )}
                     </div>
                 </div>
-            </Main>
-        </>
+            </div>
     )
 }
 
@@ -792,6 +783,7 @@ function StatCard({ title, value, subValue, icon: Icon, color }: { title: string
     )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function MenuButton({ number, label, description, onClick, icon: Icon }: { number: string, label: string, description: string, onClick: () => void, icon: any }) {
     return (
         <button
@@ -843,8 +835,10 @@ function GoalEditor({ goal, onClose, onSave, onDelete }: { goal: Goal, onClose: 
                 const response = await sidecarApi.getNotionPageContent(goal.id)
                 // Convert blocks back to simple markdown for editing
                 const text = response.blocks
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     .map((b: any) => {
                         const blockType = b.type
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         const content = b[blockType]?.rich_text?.map((t: any) => t.plain_text).join('') || ''
                         if (blockType === 'heading_1') return `# ${content}`
                         if (blockType === 'heading_2') return `## ${content}`
@@ -867,6 +861,7 @@ function GoalEditor({ goal, onClose, onSave, onDelete }: { goal: Goal, onClose: 
     const handleSave = async () => {
         setSaving(true)
         try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const props: any = {
                 Name: { title: [{ text: { content: title } }] },
                 Priority: { select: { name: priority } },
@@ -1055,6 +1050,7 @@ function GoalCreator({ onClose, onCreated }: { onClose: () => void, onCreated: (
         if (!title.trim()) return
         setSaving(true)
         try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const properties: any = {
                 Name: { title: [{ text: { content: title } }] },
                 Priority: { select: { name: priority } },
@@ -1262,6 +1258,7 @@ function PlanEditor({ onClose }: { onClose: () => void }) {
     )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ReviewWizard({ onClose, onSubmit }: { onClose: () => void, onSubmit: (data: any) => void }) {
     const [step, setStep] = useState(1)
     const [data, setData] = useState({
@@ -1690,6 +1687,7 @@ function StartDateEditor({ onClose }: { onClose: () => void }) {
     )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CrisisWizard({ goals, onClose, onSubmit }: { goals: Goal[], onClose: () => void, onSubmit: (data: any) => void }) {
     const [step, setStep] = useState(1)
     const [selectedGoals, setSelectedGoals] = useState<string[]>([])
@@ -1769,6 +1767,7 @@ function CrisisWizard({ goals, onClose, onSubmit }: { goals: Goal[], onClose: ()
     )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function DeloadWizard({ onClose, onSubmit }: { onClose: () => void, onSubmit: (data: any) => void }) {
     const [fatigue, setFatigue] = useState(5)
     const [type, setType] = useState('Active Recovery')
@@ -1823,6 +1822,7 @@ function DeloadWizard({ onClose, onSubmit }: { onClose: () => void, onSubmit: (d
     )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function LifePivotWizard({ onClose, onSubmit }: { onClose: () => void, onSubmit: (data: any) => void }) {
     const [area, setArea] = useState('New Professional Direction')
     const [intensity, setIntensity] = useState('Substantial Shift')

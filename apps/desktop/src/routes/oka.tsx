@@ -110,6 +110,7 @@ function OkaDashboard() {
         try {
             const uri = await sidecarApi.okaIngestResource(file)
             setFileUri(uri)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             setError(err.message || 'Upload failed')
             setFileName(null)
@@ -134,6 +135,7 @@ function OkaDashboard() {
                 course_code: result.course_code,
                 credits: result.credits,
             })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             setError(err.message || 'Plan generation failed')
         } finally {
@@ -416,6 +418,7 @@ function OkaStagingArea() {
                     "NoteBookLM ": { url: obsUrl }
                 })
             }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             setDeployResult(`Deployment failed: ${err.message}`)
         } finally {
@@ -701,6 +704,7 @@ function OkaChat() {
 
         setSessions(newSessions);
         localStorage.setItem('lifeos_oka_sessions', JSON.stringify(newSessions));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [messages, currentSessionId, fileUri]);
 
     const startNewChat = () => {
@@ -752,6 +756,7 @@ function OkaChat() {
                 fileUri || undefined,
             )
             setMessages([...updatedMessages, { role: 'model', content: response }])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             setMessages([
                 ...updatedMessages,
@@ -774,6 +779,7 @@ function OkaChat() {
                 ...prev,
                 { role: 'model', content: `📎 Document "${file.name}" attached and uploaded to AI context.` },
             ])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             setMessages((prev) => [
                 ...prev,

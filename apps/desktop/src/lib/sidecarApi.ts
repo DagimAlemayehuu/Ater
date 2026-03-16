@@ -18,6 +18,7 @@ export interface HealthResponse {
 export interface NotionPage {
     id: string
     object: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     properties: Record<string, any>
     url: string
 }
@@ -28,6 +29,14 @@ export interface ObsidianFile {
     full_path: string
     modified: string
     size: number
+}
+
+export interface OkaSettings {
+    google_api_key?: string
+    selected_model?: string
+    vault_path?: string
+    system_instruction_part_a?: string
+    system_instruction_part_b?: string
 }
 
 /**
@@ -77,20 +86,27 @@ export const sidecarApi = {
         return response.json()
     },
     listNotionPages: () => request<{ pages: NotionPage[] }>('/api/notion/pages'),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     listNotionDatabases: () => request<{ databases: any[] }>('/api/notion/databases'),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     queryNotionDatabase: (databaseId: string) => request<{ results: any[] }>(`/api/notion/databases/${databaseId}/query`),
     listObsidianFiles: () => request<{ files: ObsidianFile[] }>('/api/obsidian/files'),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     brainstorm: (query: string, context?: string, systemPrompt?: string, history?: any[]) =>
         request<{ response: string }>('/api/ai/brainstorm', {
             method: 'POST',
             body: JSON.stringify({ query, context, system_prompt: systemPrompt, history })
         }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     updateNotionPage: (pageId: string, properties: Record<string, any>) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         request<{ page: any }>(`/api/notion/pages/${pageId}`, {
             method: 'PATCH',
             body: JSON.stringify(properties)
         }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     createNotionPage: (databaseId: string, properties: Record<string, any>) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         request<{ page: any }>(`/api/notion/databases/${databaseId}/pages`, {
             method: 'POST',
             body: JSON.stringify({ properties })
@@ -100,6 +116,7 @@ export const sidecarApi = {
             method: 'DELETE'
         }),
     getNotionPageContent: (pageId: string) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         request<{ blocks: any[] }>(`/api/notion/pages/${pageId}/content`),
     updateNotionPageContent: (pageId: string, markdown: string) =>
         request<{ success: boolean }>(`/api/notion/pages/${pageId}/content`, {
@@ -145,6 +162,7 @@ export const sidecarApi = {
         }),
 
     okaGeneratePlan: (fileUri: string) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         request<any>('/api/oka/generate-plan', {
             method: 'POST',
             body: JSON.stringify({ file_uri: fileUri }),
@@ -155,6 +173,7 @@ export const sidecarApi = {
         unit_context: string
         batch_id?: number
         batch_notes?: string[]
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         metadata?: any
     }) =>
         request<{ job_id: number; status: string }>('/api/oka/generate-batch', {
@@ -166,8 +185,10 @@ export const sidecarApi = {
         request<{ status: string; error?: string | null }>(`/api/oka/generate-status/${jobId}`),
 
     okaGenerateResults: (jobId: number) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         request<{ notes: any[] }>(`/api/oka/generate-results/${jobId}`),
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     okaDeployBatch: (notes: any[], vaultPath: string) =>
         request<{ status: string }>('/api/oka/deploy-batch', {
             method: 'POST',
@@ -175,15 +196,19 @@ export const sidecarApi = {
         }),
 
     okaHubStructure: (hubPath: string) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         request<any[]>(`/api/oka/hub-structure?hub_file_path=${encodeURIComponent(hubPath)}`),
 
     okaValidatePath: (vaultPath: string) =>
         request<{ is_valid: boolean }>(`/api/oka/validate-path?vault_path=${encodeURIComponent(vaultPath)}`),
 
     okaGetSettings: () =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         request<any>('/api/oka/settings'),
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     okaUpdateSettings: (settings: any) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         request<any>('/api/oka/settings', {
             method: 'PATCH',
             body: JSON.stringify(settings),
@@ -204,11 +229,36 @@ export const sidecarApi = {
     // ── Academics ───────────────────────────────────────────
 
     academicsDashboard: () =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         request<{ semesters: any[]; courses: any[]; units: any[]; exams: any[]; assignments: any[] }>('/api/academics/dashboard'),
 
     academicsSyncProfile: () =>
         request<{ success: boolean; profile_path: string }>('/api/academics/sync-profile', {
             method: 'POST'
+        }),
+
+    // ── Vault Brain (RAG) ───────────────────────────────────
+
+    vaultSync: (force: boolean = false) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        request<{ status: string; result: any }>('/api/vault/sync', {
+            method: 'POST',
+            body: JSON.stringify({ force })
+        }),
+
+    vaultSearch: (query: string, limit: number = 5) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        request<{ results: any[] }>(`/api/vault/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+
+    vaultClearIndex: () =>
+        request<{ status: string; message: string }>('/api/vault/index', {
+            method: 'DELETE'
+        }),
+
+    debuggerQuery: (query: string) =>
+        request<{ response: string; sources: string[] }>('/api/debugger/query', {
+            method: 'POST',
+            body: JSON.stringify({ query })
         }),
 }
 

@@ -6,6 +6,7 @@ import datetime
 
 from src.domains.notion.client import NotionClient
 from src.domains.obsidian.client import ObsidianClient
+from src.domains.vault.client import VaultManager
 
 GOALS_DB_ID = "2a9219ed-7519-815f-ac0f-ebfcd1dcd003"
 
@@ -13,13 +14,36 @@ class Strategist:
     """
     Life OS Strategist - Powered by Google Gemini (New SDK).
     Responsible for high-level reasoning, knowledge synthesis, and brainstorming.
-    Equipped with Notion Goal Management tools.
+    Equipped with Notion Goal Management and Obsidian Vector Search tools.
     """
 
     def __init__(self, api_key: str, notion_key: Optional[str] = None, vault_path: Optional[str] = None):
         self.client = genai.Client(api_key=api_key)
+        self.api_key = api_key
         self.notion_key = notion_key
         self.vault_path = vault_path
+
+    async def _search_vault(self, query: str):
+        """
+        Performs a semantic vector search across the Obsidian vault.
+        Use this to find relevant information, past thoughts, or specific facts.
+        """
+        print(f"[Strategist] Tool Call: search_vault ({query})")
+        if not self.vault_path: return "Error: Obsidian vault path not configured."
+        
+        try:
+            vault_manager = VaultManager(self.vault_path, self.api_key)
+            results = await vault_manager.search(query, limit=5)
+            
+            if not results: return "No relevant information found in the vault."
+            
+            summary = []
+            for r in results:
+                summary.append(f"Source: {r['path']}\nContent: {r['content']}")
+            
+            return "\n---\n".join(summary)
+        except Exception as e:
+            return f"Error searching vault: {str(e)}"
 
     async def _list_notion_goals(self):
         """Retrieves all current goals from the Notion database."""
@@ -155,42 +179,42 @@ class Strategist:
         else:
             print("[Life OS Sidecar] Using fallback STRATEGIST system prompt")
             system_instruction = f"""
-            You are THE STRATEGIST, an AI-driven Chief of Staff and Strategic Orchestrator. 
+            You are THE STRATEGIST, an AI-driven Chief of Staff and Strategic Orchestrator for Life OS.
             Current System Time: {now}.
             
-            ### PHILOSOPHY & TONE
-            - You are rigid, objective, and data-driven. 
-            - DO NOT act as a cheerleader. No emojis. No fluff. No motivational quotes.
-            - Your primary directive is to calculate and enforce the shortest, most resilient path to goals using a 70% execution consistency threshold.
-            - Failures are strictly "data points" for system correction.
+            ### CORE PHILOSOPHY: THE SHORTEST PATH
+            - You calculate and enforce the shortest, most resilient path to goals using a 70% execution consistency threshold for >90% success.
+            - You are rigid, objective, and data-driven. No emojis. No fluff. No motivational quotes.
+            - Failures are "data points" for system correction, not emotional events.
             - You follow Ray Dalio’s 5-Step Process (Set Goals, Identify Problems, Identify Root Causes, Design Game Plan, Execute).
 
             ### OPERATIONAL FRAMEWORKS
-            - 3-1 Cadence: 3 weeks of progressive overload/intensity, followed by 1 "Deload Week".
-            - 5-2 Cadence: 5 days of high-leverage structured work, 2 "Flex/Buffer Days".
-            - MV/MEV/MRV Framework: 
-                1. Keystone (Primary Focus - Deep Work).
+            - **MV/MEV/MRV**: 
+                1. Keystone (Primary Focus - 100% MEV).
                 2. Supporting Growth (Calibrated MEV).
-                3. Maintenance (Minimum Volume).
-                4. Sacrifice (Zero Effort).
+                3. Maintenance (Minimum Volume - MV).
+                4. Sacrifice (Zero Effort - MRV exceeded).
+            - **15-Minute Ignition**: For every major goal, a specific 15-minute, bare-minimum action must exist to maintain momentum on "low discipline" days.
+            - **3-1 Cadence**: 3 weeks of progressive intensity followed by 1 "Deload Week" (50% reduction in intensity).
 
-            ### STRATEGIC CONTEXT (THE MASTER PLAN)
-            Always refer to the provided "USER PROFILES" and specifically the "MASTER PLAN" box. 
-            If no Master Plan exists in the context, your FIRST and ONLY priority is to guide the user through creating one using the structure provided in your core knowledge (Start Date, Achievability, Hindrances, Prioritization Matrix, Quarterly Breakdown, Habits).
-            
-            Once a Master Plan exists, all Notion actions (creating, updating, deleting goals) MUST align with it. 
-            If a user tries to add a goal that contradicts the Master Plan or exceeds their MRV (e.g., too many gym days for a 'low discipline' trait), you MUST challenge them and suggest a recalibration.
+            ### VAULT GROUNDING (The "Brain")
+            - You have access to the user's entire Obsidian vault via `search_vault`.
+            - **MANDATORY**: Before providing strategic advice or creating new goals, use `search_vault` to find the user's "MASTER PLAN" or "USER PROFILE" to ensure alignment.
+            - If no Master Plan is found, your ONLY priority is to guide the user through creating one (Vision, Trinity Pillars, Rhythm, System Rules).
 
-            ### NOTION CAPABILITIES (Database ID: {GOALS_DB_ID})
-            - list_notion_goals: Use this to audit current execution against the Master Plan.
-            - create_notion_goal: Every goal must have an Outcome (Result), Trait (Identity), and Process (Action).
-            - update_notion_goal: Use for status changes or tactical re-routing.
-            - delete_notion_goal: Archive goals that no longer serve the Master Plan.
+            ### THE BUILDER'S IMPERATIVE
+            - Every response MUST conclude with a practical "shippable" next step (a "Binary Input") that the user can execute in < 30 minutes.
+            - This is the "15-Minute Ignition" for the current conversation.
+
+            ### NOTION & OBSIDIAN TOOLS
+            - list_notion_goals / create_notion_goal / update_notion_goal: Use for tactical execution.
+            - search_vault: Use for semantic context and Master Plan alignment.
+            - read_obsidian_note / list_obsidian_notes: Use for specific file retrieval.
             """
 
         # Define tools using simpler declarations for GenAI
         notion_tools = [self._list_notion_goals, self._create_notion_goal, self._update_notion_goal, self._delete_notion_goal]
-        obsidian_tools = [self._list_obsidian_notes, self._read_obsidian_note]
+        obsidian_tools = [self._list_obsidian_notes, self._read_obsidian_note, self._search_vault]
         all_tools = notion_tools + obsidian_tools
 
         try:
