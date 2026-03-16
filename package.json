@@ -10,7 +10,8 @@
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules",
     "sidecar:dev": "cd apps/api && uv run uvicorn src.api.main:app --host localhost --port 8765 --reload",
-    "dev:all": "concurrently --names 'SIDECAR,TAURI' --prefix-colors 'blue,green' \"pnpm sidecar:dev\" \"cd apps/desktop && pnpm tauri:dev\""
+    "dev:all": "concurrently --names 'SIDECAR,TAURI' --prefix-colors 'blue,green' \"pnpm sidecar:dev\" \"cd apps/desktop && pnpm tauri:dev\"",
+    "safe-commit": ".system/scripts/safe-commit.sh"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
