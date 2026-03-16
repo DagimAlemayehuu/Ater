@@ -383,7 +383,7 @@ function OkaDashboard() {
 function OkaStagingArea() {
     const {
         fileUri, plan, generatedNotes, setGeneratedNotes,
-        currentBatchId, setCurrentBatchId, status, setStatus, startBatch, targetUnit
+        currentBatchId, setCurrentBatchId, status, setStatus, startBatch, targetUnit, generationError
     } = useOka()
     const { config } = useConfig()
     const vaultPath = config?.obsidianVaultPath || ''
@@ -495,7 +495,9 @@ function OkaStagingArea() {
                         <XCircle size={18} />
                         <div>
                             <h4 className="font-semibold">Synthesis Interrupted</h4>
-                            <p className="text-destructive/80 mt-0.5">An operational failure occurred during generation.</p>
+                            <p className="text-destructive/80 mt-0.5">
+                                {generationError || 'An operational failure occurred during generation.'}
+                            </p>
                         </div>
                     </div>
                     <button

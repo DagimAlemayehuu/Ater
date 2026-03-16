@@ -1,74 +1,73 @@
-# Life OS - Personal Intelligence Operating System
+# Life OS — Personal Intelligence Operating System
 
 **Tier 3: The Agency Standard (Offline-First)**
 
-## Architecture Overview
+## What Is Life OS?
 
-Life OS is a local-first desktop application built as a polyglot monorepo. It operates fully without internet connectivity for all core functions, using the network only when explicitly invoking external APIs (Notion, Google Gemini).
+Life OS is a local-first desktop application — a personal AI operating system that combines:
 
-## Stack
-
-| Layer | Technology | Purpose |
+| Pillar | Technology | Role |
 |---|---|---|
-| Desktop Shell | Tauri v2 (Rust) | Native OS access, filesystem, secure store, sidecar management |
-| Frontend | React + Vite + TypeScript | UI layer. Shadcn-admin aesthetic. |
-| Styling | Tailwind CSS + shadcn/ui | Component library and design system |
-| Backend Sidecar | Python FastAPI (compiled binary via PyInstaller) | AI logic, Gemini API calls, Notion API calls |
-| Local State | Tauri-plugin-store | API Keys, Vault Path, User Profiles |
-| Knowledge Base | Local Obsidian `.md` files | Unstructured data for RAG |
-| Cloud Database | Notion API | Structured data: Tasks, Projects, Goals |
-| Monorepo Orchestration | Turborepo v2 | Build pipelines, caching, dependency graph |
-| Node Package Manager | pnpm (Strict Mode) | Forbidden: npm, yarn |
-| Python Package Manager | uv (Astral) | Forbidden: pip |
+| **The Synapse** | Notion API | Structured data: Goals, Academics, Projects, Tasks |
+| **The Vault** | Obsidian (`.md`) | Local knowledge: Course notes, journals, docs |
+| **The Architect** | OKA (Gemini) | AI synthesis: Converts source docs into structured notes |
+| **The Strategist** | AI Engine | Context-aware guidance based on synced profiles |
 
-## Data Flow
+## Architecture
 
 ```
-[User] <-> [React/Vite (apps/desktop)] <-> [Tauri IPC Bridge] <-> [Python FastAPI Sidecar (apps/api)]
-                                                                            |
-                                                         +------------------+------------------+
-                                                         |                  |                  |
-                                                  [Notion API]     [Google Gemini API]  [Local Obsidian FS]
+[User] <-> [React/Vite (apps/desktop)] <-> [Tauri v2 IPC] <-> [Python FastAPI Sidecar (apps/api)]
+                                                                        |
+                                                   +-------------------+-------------------+
+                                                   |                   |                   |
+                                            [Notion API]      [Google Gemini API]  [Local Obsidian FS]
 ```
 
-## Reads & Writes
+| Layer | Technology |
+|---|---|
+| Desktop Shell | Tauri v2 (Rust) — native OS, secure store, sidecar management |
+| Frontend | React 19 + Vite 7 + TypeScript 5.9, Tailwind CSS + shadcn/ui |
+| Backend Sidecar | Python 3.11+ FastAPI on `localhost:8765` |
+| Package Managers | pnpm (Node), uv (Python) — **npm/yarn/pip forbidden** |
+| Monorepo | Turborepo v2 |
 
-- **Frontend (React):** Reads local Tauri store (config). Invokes Python sidecar commands via HTTP (localhost). Renders data from Python responses.
-- **Python API (FastAPI Sidecar):** Reads/Writes Notion API. Reads local Obsidian `.md` files. Reads/Writes Google Gemini API. Reads API keys from frontend request context.
-- **Tauri Desktop (Rust):** Manages filesystem permissions. Launches Python sidecar process. Bridges IPC between React and system.
+## Quick Start
 
-## Monorepo Structure
+```bash
+pnpm install                  # Install Node dependencies
+cd apps/api && uv venv && uv pip install -e . && cd ../..  # Setup Python
+pnpm dev:all                  # Start everything (sidecar + Tauri)
+```
+
+## Project Structure
 
 ```
-/
+LifeOs/
 ├── apps/
-│   ├── desktop/        # Tauri v2 + React/Vite frontend application
-│   └── api/            # Python FastAPI sidecar (uv-managed)
-├── docs/
-│   ├── architecture/   # System design, ADRs, and structural diagrams
-│   ├── prompts/        # Knowledge Architect (OKA) prompt masterplans
-│   └── setup/          # Initialization protocols and project tracking
-├── packages/
-│   ├── config-eslint/  # Shared ESLint configuration
-│   └── config-typescript/ # Shared tsconfig base
-├── resources/
-│   ├── reference/      # Markdown archival reference files
-│   └── templates/      # Academic/Personal profile templates
-├── turbo.json          # Turborepo pipeline configuration
-├── pnpm-workspace.yaml # pnpm workspace definition
-├── package.json        # Root package.json
-└── .env.example        # Environment variable template
+│   ├── desktop/          # Tauri v2 + React/Vite frontend
+│   └── api/              # Python FastAPI sidecar
+├── docs/                 # 📚 Complete documentation hub (start here)
+│   ├── README.md             # Master index — read this first
+│   ├── architecture/         # System design, frontend, backend, data model
+│   ├── tracking/             # Project state, changelog, backlog, issues
+│   ├── guides/               # Development setup, conventions, how-to guides
+│   ├── api/                  # API endpoint reference
+│   ├── personas/             # AI persona definitions (Strategist, Creator)
+│   ├── prompts/              # OKA system instruction (~164KB)
+│   └── setup/                # Original initialization protocols
+├── packages/             # Shared configs (ESLint, TypeScript)
+├── resources/            # Templates, reference files, prompts
+└── .agents/workflows/    # Agent workflows (update-docs, etc.)
 ```
 
-## Security Mandate
+## Security
 
-- No API keys are hardcoded. Ever.
-- Application boots to Onboarding/Settings screen if configuration is absent.
-- All secrets are stored in Tauri's secure local store, fetched by the frontend and passed per-request to the Python sidecar.
+- **No hardcoded API keys.** Ever.
+- Keys stored in Tauri's encrypted local store → injected as HTTP headers per-request.
+- App boots to `/onboarding` if configuration is missing.
 
-## Execution Sequence
+## Documentation
 
-1. **Phase 3.1:** Tauri shell + Vite/React + Tailwind + shadcn/ui. Python FastAPI sidecar launch via Tauri. Verify `/api/health`.
-2. **Phase 3.2:** Settings UI + secure local storage + `/api/config/verify` endpoint.
-3. **Phase 3.3:** Notion API client + Obsidian filesystem reader in Python.
-4. **Phase 3.4:** Google Gemini SDK integration. Dashboard + Strategist UI. Full data pipeline.
+**→ Start with [`docs/README.md`](docs/README.md)** — the master index for all project documentation, including architecture, tracking, guides, and API reference.
+
+For AI agents: the docs folder is self-contained. Read `docs/README.md` first, then `docs/tracking/project-state.md` to understand current status.

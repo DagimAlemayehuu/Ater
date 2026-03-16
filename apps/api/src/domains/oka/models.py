@@ -30,6 +30,7 @@ class JobQueue(Base):
     # Available statuses: pending, processing, completed, failed
     status = Column(String, default="pending", nullable=False)
     result_json = Column(Text, nullable=True)
+    error_message = Column(Text, nullable=True)
     batch_notes = Column(Text, nullable=True)
     metadata_json = Column(Text, nullable=True)
     prompt = Column(Text, nullable=True)

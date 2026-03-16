@@ -80,36 +80,75 @@ def deploy_notes_to_vault(notes: list, vault_path: str):
     """
     Deploys parsed notes to the Obsidian vault.
     Creates directory structure based on YAML frontmatter metadata.
+    If a note is missing YAML, injects it from the note's own metadata.
     """
     logger.info(f"Starting deployment of {len(notes)} notes to {vault_path}")
 
+    deployed: list[str] = []
+    skipped: list[dict] = []
+
     for note in notes:
         content = note.get('content', '')
-        
-        # 1. Validate YAML and extract metadata
-        validation = VaultUtils.validate_yaml_integrity(content)
-        if not validation["valid"]:
-            logger.error(f"Note fails YAML validation: {validation['error']}. Skipping.")
-            continue
-        
-        metadata = validation["metadata"]
-        
-        # 2. Generate canonical path
-        target_file = VaultUtils.get_note_path_hierarchical(vault_path, metadata)
-        target_dir = os.path.dirname(target_file)
-        
-        os.makedirs(target_dir, exist_ok=True)
+        note_title = note.get('title', 'Untitled')
+        note_type = note.get('type', 'Concept')
 
-        logger.info(f"Deploying note to: {target_file}")
+        try:
+            # 1. Validate YAML and extract metadata
+            validation = VaultUtils.validate_yaml_integrity(content)
+            if not validation["valid"]:
+                logger.warning(f"Note '{note_title}' fails YAML validation: {validation.get('error')}. Injecting fallback YAML.")
+                # Inject YAML frontmatter from note-level metadata
+                canonical_title = VaultUtils.get_canonical_title(note_title)
+                fallback_yaml = (
+                    "---\n"
+                    f'title: "{canonical_title}"\n'
+                    f'type: "{note_type}"\n'
+                    f'year: "Unsorted_Year"\n'
+                    f'semester: "Unsorted_Semester"\n'
+                    f'course: "General_Course"\n'
+                    f'unit: "Uncategorized_Unit"\n'
+                    "---\n\n"
+                )
+                # If content already has a broken YAML block, strip it
+                import re as _re
+                content = _re.sub(r'^---\s*[\s\S]*?\s*---\s*', '', content, count=1).lstrip()
+                content = fallback_yaml + content
+                # Re-validate
+                validation = VaultUtils.validate_yaml_integrity(content)
+                if not validation["valid"]:
+                    logger.error(f"Note '{note_title}' still fails after YAML injection. Skipping.")
+                    skipped.append({
+                        "title": note_title,
+                        "error": validation.get("error", "Invalid YAML after injection"),
+                    })
+                    continue
 
-        # 3. Handle updates vs new notes
-        if os.path.exists(target_file):
-            with open(target_file, 'a', encoding='utf-8') as f:
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                # Append with refinement log style
-                # Protocol A.1.3.6 mentions refinement log
-                f.write(f"\n\n---\n*AI Refinement Log appended on {timestamp}*\n\n{content}")
-        else:
-            with open(target_file, 'w', encoding='utf-8') as f:
-                f.write(content)
+            metadata = validation["metadata"]
+            
+            # 2. Generate canonical path
+            target_file = VaultUtils.get_note_path_hierarchical(vault_path, metadata)
+            target_dir = os.path.dirname(target_file)
+            
+            os.makedirs(target_dir, exist_ok=True)
+
+            logger.info(f"Deploying note to: {target_file}")
+
+            # 3. Handle updates vs new notes
+            if os.path.exists(target_file):
+                with open(target_file, 'a', encoding='utf-8') as f:
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    f.write(f"\n\n---\n*AI Refinement Log appended on {timestamp}*\n\n{content}")
+            else:
+                with open(target_file, 'w', encoding='utf-8') as f:
+                    f.write(content)
+            deployed.append(target_file)
+
+        except Exception as e:
+            logger.error(f"Failed to deploy note '{note_title}': {e}")
+            skipped.append({
+                "title": note_title,
+                "error": str(e),
+            })
+
+    return {"deployed": deployed, "skipped": skipped}
 

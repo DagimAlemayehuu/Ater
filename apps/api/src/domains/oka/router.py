@@ -52,9 +52,11 @@ class GenerateResponse(BaseModel):
     status: str
 
 class NoteItem(BaseModel):
+    model_config = {"extra": "ignore"}
     title: str
     content: str
     type: str
+    selected: bool | None = None
 
 class DeployRequest(BaseModel):
     notes: list[NoteItem]
@@ -224,7 +226,7 @@ async def get_generate_status(job_id: int, db: AsyncSession = Depends(get_db)):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    return {"status": job.status}
+    return {"status": job.status, "error": job.error_message}
 
 
 @router.get("/generate-results/{job_id}")
@@ -255,8 +257,8 @@ async def hub_structure(hub_file_path: str):
 @router.post("/deploy-batch")
 async def deploy_batch(req: DeployRequest):
     try:
-        deploy_notes_to_vault([n.model_dump() for n in req.notes], req.vault_path)
-        return {"status": "success"}
+        result = deploy_notes_to_vault([n.model_dump() for n in req.notes], req.vault_path)
+        return {"status": "success", **result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

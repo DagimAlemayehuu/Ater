@@ -26,7 +26,7 @@ from src.domains.ai.strategist import Strategist
 # OKA Integration
 from src.domains.oka.router import router as oka_router
 from src.domains.academics.router import router as academics_router
-from src.domains.oka.database import engine as oka_engine, Base as OkaBase, AsyncSessionLocal as OkaSessionLocal
+from src.domains.oka.database import engine as oka_engine, Base as OkaBase, AsyncSessionLocal as OkaSessionLocal, ensure_schema as oka_ensure_schema
 from src.domains.oka.gemini_service import background_queue_worker
 
 
@@ -38,6 +38,7 @@ async def lifespan(app: FastAPI):
     # Initialize OKA database tables
     async with oka_engine.begin() as conn:
         await conn.run_sync(OkaBase.metadata.create_all)
+    await oka_ensure_schema()
     print("[Life OS Sidecar] OKA database initialized.")
 
     # Start OKA background worker

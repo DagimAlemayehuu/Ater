@@ -55,6 +55,9 @@ interface OkaContextType {
     status: 'idle' | 'processing' | 'completed' | 'failed'
     setStatus: (status: 'idle' | 'processing' | 'completed' | 'failed') => void
 
+    generationError: string | null
+    setGenerationError: (err: string | null) => void
+
     messages: ChatMessage[]
     setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>
 
@@ -93,6 +96,9 @@ export function OkaProvider({ children }: { children: ReactNode }) {
     const [status, setStatus] = useState<'idle' | 'processing' | 'completed' | 'failed'>(() => {
         try { const v = localStorage.getItem('oka_status'); return v ? JSON.parse(v) : 'idle' } catch { return 'idle' }
     })
+    const [generationError, setGenerationError] = useState<string | null>(() => {
+        try { const v = localStorage.getItem('oka_generationError'); return v ? JSON.parse(v) : null } catch { return null }
+    })
 
     const [messages, setMessages] = useState<ChatMessage[]>(() => {
         try { const v = localStorage.getItem('oka_messages'); return v ? JSON.parse(v) : [] } catch { return [] }
@@ -108,6 +114,7 @@ export function OkaProvider({ children }: { children: ReactNode }) {
     useEffect(() => { localStorage.setItem('oka_generatedNotes', JSON.stringify(generatedNotes)) }, [generatedNotes])
     useEffect(() => { localStorage.setItem('oka_jobId', JSON.stringify(jobId)) }, [jobId])
     useEffect(() => { localStorage.setItem('oka_status', JSON.stringify(status)) }, [status])
+    useEffect(() => { localStorage.setItem('oka_generationError', JSON.stringify(generationError)) }, [generationError])
     useEffect(() => { localStorage.setItem('oka_messages', JSON.stringify(messages)) }, [messages])
 
     // Auto-sync configuration on mount
@@ -124,14 +131,16 @@ export function OkaProvider({ children }: { children: ReactNode }) {
         if (status === 'processing' && jobId !== null) {
             interval = setInterval(async () => {
                 try {
-                    const { status: jobStatus } = await sidecarApi.okaGenerateStatus(jobId)
+                    const { status: jobStatus, error } = await sidecarApi.okaGenerateStatus(jobId)
                     if (jobStatus === 'completed') {
                         clearInterval(interval)
                         const { notes } = await sidecarApi.okaGenerateResults(jobId)
                         setGeneratedNotes(notes.map((n: any) => ({ ...n, selected: true })))
+                        setGenerationError(null)
                         setStatus('completed')
                     } else if (jobStatus === 'failed') {
                         clearInterval(interval)
+                        setGenerationError(error || 'Generation failed in sidecar.')
                         setStatus('failed')
                     }
                 } catch {
@@ -149,6 +158,7 @@ export function OkaProvider({ children }: { children: ReactNode }) {
         if (!fileUri || !plan) return
 
         setStatus('processing')
+        setGenerationError(null)
         setGeneratedNotes([])
         setCurrentBatchId(batchId)
 
@@ -162,6 +172,7 @@ export function OkaProvider({ children }: { children: ReactNode }) {
             })
             setJobId(result.job_id)
         } catch (err: any) {
+            setGenerationError(err?.message || 'Failed to enqueue generation job.')
             setStatus('failed')
         }
     }
@@ -177,6 +188,7 @@ export function OkaProvider({ children }: { children: ReactNode }) {
             generatedNotes, setGeneratedNotes,
             jobId, setJobId,
             status, setStatus,
+            generationError, setGenerationError,
             messages, setMessages,
             startBatch
         }}>

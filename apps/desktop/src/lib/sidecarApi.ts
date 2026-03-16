@@ -163,7 +163,7 @@ export const sidecarApi = {
         }),
 
     okaGenerateStatus: (jobId: number) =>
-        request<{ status: string }>(`/api/oka/generate-status/${jobId}`),
+        request<{ status: string; error?: string | null }>(`/api/oka/generate-status/${jobId}`),
 
     okaGenerateResults: (jobId: number) =>
         request<{ notes: any[] }>(`/api/oka/generate-results/${jobId}`),

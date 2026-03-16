@@ -7,11 +7,13 @@ import os
 import asyncio
 import re
 import json
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from sqlalchemy.future import select
 from loguru import logger
 
 from src.domains.oka.models import JobQueue, OkaSettings
+from src.domains.oka.vault_utils import VaultUtils
 
 # Logging setup
 DATA_DIR = os.path.join(os.path.expanduser("~"), ".life-os", "oka")
@@ -21,10 +23,25 @@ logger.add(LOG_FILE, rotation="1 MB")
 
 
 async def upload_document(file_path: str, api_key: str) -> str:
-    """Uploads a document to Google AI Studio and returns the file URI."""
-    genai.configure(api_key=api_key)
-    uploaded_file = genai.upload_file(path=file_path)
-    return uploaded_file.name
+    """
+    Uploads a document and returns a stable file name (e.g. "files/abc123").
+    This name is used later with `client.files.get(name=...)`.
+    """
+    client = genai.Client(api_key=api_key)
+    # Prefer async client when available, fall back to sync in a thread.
+    try:
+        uploaded = await client.aio.files.upload(file=file_path)
+    except Exception:
+        uploaded = await asyncio.to_thread(client.files.upload, file=file_path)
+    finally:
+        try:
+            await client.aio.aclose()
+        except Exception:
+            try:
+                client.close()
+            except Exception:
+                pass
+    return uploaded.name
 
 
 def get_academic_profile() -> str:
@@ -44,35 +61,12 @@ def get_academic_profile() -> str:
 
 
 def audit_generated_text(text: str) -> str | None:
-    """Audits the raw Gemini output against critical OKA rules."""
-    
-    # 1. Prohibition of triple backticks
-    if "```" in text:
-        return "CRITICAL FAILURE: You used standard markdown code blocks (```). You MUST use --- START_CODE:{language} ---."
-    
-    # 2. Silent Planning Protocol (A.3.2)
-    if "--- START_INTERNAL_AUDIT ---" not in text:
-        return "CRITICAL FAILURE: You failed to begin your response with the required --- START_INTERNAL_AUDIT --- marker for the Silent Planning Protocol."
-
-    # 3. Mandatory Output Blocks (A.2.3.2)
-    # Every code/mermaid block needs a --- START_CODE:text --- block
-    code_matches = re.findall(r'--- START_CODE:(\w+) ---', text)
-    if code_matches:
-        # Filter out 'text' since it's the output block itself
-        actual_code_blocks = [m for m in code_matches if m != 'text']
-        text_output_blocks = [m for m in code_matches if m == 'text']
-        
-        if len(actual_code_blocks) > len(text_output_blocks):
-            return "CRITICAL FAILURE: You provided code/diagram blocks but failed to include a corresponding --- START_CODE:text --- simulated output block for each."
-
-    # 4. Blank Line Precision (A.2.1)
-    # --- START_NOTE --- must be followed by exactly one blank line (\n\n)
-    if re.search(r'--- START_NOTE ---\n[^\n]', text):
-        return "CRITICAL FAILURE: --- START_NOTE --- must be followed by exactly one blank line."
-    
-    # --- END_NOTE --- must be preceded by exactly one blank line
-    if re.search(r'[^\n]\n--- END_NOTE ---', text):
-        return "CRITICAL FAILURE: --- END_NOTE --- must be preceded by exactly one blank line."
+    """Audits the raw Gemini output — only checks for actual note blocks."""
+    # The only hard requirement: at least one parseable note block.
+    pattern = re.compile(r'--- START_NOTE ---(.*?)--- END_NOTE ---', re.DOTALL)
+    matches = pattern.findall(text)
+    if not matches:
+        return "CRITICAL FAILURE: No notes found. You must output at least one --- START_NOTE --- ... --- END_NOTE --- block."
 
     return None
 
@@ -85,14 +79,23 @@ def parse_gemini_response(text: str) -> list[dict]:
 
     for match in matches:
         content = match.strip()
-        title_match = re.search(r'^#\s+(.*?)$', content, re.MULTILINE)
-        title = title_match.group(1).strip() if title_match else "Untitled Note"
-
+        # Prefer YAML values for title/type (used by deployer)
+        title = "Untitled"
         note_type = "Concept"
-        if "type: " in content.lower():
-            type_match = re.search(r'type:\s*(.*?)$', content, re.IGNORECASE | re.MULTILINE)
-            if type_match:
-                note_type = type_match.group(1).strip()
+        yaml_match = re.search(r'^---\s*(.*?)\s*---', content, re.DOTALL)
+        if yaml_match:
+            yaml_text = yaml_match.group(1)
+            t_match = re.search(r'^title:\s*"?(.+?)"?\s*$', yaml_text, re.MULTILINE | re.IGNORECASE)
+            if t_match:
+                title = t_match.group(1).strip()
+            ty_match = re.search(r'^type:\s*"?(.+?)"?\s*$', yaml_text, re.MULTILINE | re.IGNORECASE)
+            if ty_match:
+                note_type = ty_match.group(1).strip()
+        else:
+            # Fallback to first H1 if YAML missing (should be blocked by audit)
+            title_match = re.search(r'^#\s+(.*?)$', content, re.MULTILINE)
+            if title_match:
+                title = title_match.group(1).strip()
 
         notes.append({
             "title": title,
@@ -101,6 +104,86 @@ def parse_gemini_response(text: str) -> list[dict]:
         })
 
     return notes
+
+
+def _has_yaml_frontmatter(note_content: str) -> bool:
+    return bool(re.search(r'^---\s*[\s\S]*?\s*---', note_content))
+
+
+def _inject_yaml_frontmatter(note_content: str, *, title: str, note_type: str, meta: dict) -> str:
+    """
+    Guarantee deployable notes even if the model omits YAML.
+    Uses VaultUtils canonicalization rules and the job metadata override.
+    """
+    canonical_title = VaultUtils.get_canonical_title(title or "Untitled")
+    canonical_unit = VaultUtils.get_canonical_title(meta.get("unit_name") or meta.get("unit") or "Uncategorized_Unit")
+    canonical_course = VaultUtils.get_canonical_title(meta.get("course_name") or meta.get("course") or "General_Computer_Science")
+    canonical_year = VaultUtils.get_canonical_title(meta.get("year") or "Unsorted_Year")
+    canonical_semester = VaultUtils.get_canonical_title(meta.get("semester") or "Unsorted_Semester")
+    canonical_type = (note_type or "Concept").strip()
+
+    yaml = (
+        "---\n"
+        f"title: \"{canonical_title}\"\n"
+        f"type: \"{canonical_type}\"\n"
+        f"year: \"{canonical_year}\"\n"
+        f"semester: \"{canonical_semester}\"\n"
+        f"course: \"{canonical_course}\"\n"
+        f"unit: \"{canonical_unit}\"\n"
+        "---\n"
+    )
+
+    body = note_content.lstrip()
+    return yaml + "\n" + body
+
+
+def _extract_text_from_response(response) -> str | None:
+    """
+    google-generativeai's `response.text` accessor throws when there are no valid text Parts.
+    In the wild, Gemini sometimes returns a candidate with a STOP finish_reason but no text parts.
+    """
+    if response is None:
+        return None
+
+    # Best-effort: use quick accessor if it works.
+    try:
+        txt = response.text
+        if txt and isinstance(txt, str):
+            return txt
+    except Exception:
+        pass
+
+    try:
+        if not getattr(response, "candidates", None):
+            return None
+        candidate = response.candidates[0]
+        content = getattr(candidate, "content", None)
+        parts = getattr(content, "parts", None) or []
+        texts: list[str] = []
+        for p in parts:
+            t = getattr(p, "text", None)
+            if t:
+                texts.append(t)
+        joined = "\n".join(texts).strip()
+        return joined or None
+    except Exception:
+        return None
+
+
+def _summarize_response_for_logs(response) -> str:
+    try:
+        cand = response.candidates[0] if getattr(response, "candidates", None) else None
+        fr = getattr(cand, "finish_reason", None)
+        parts = getattr(getattr(cand, "content", None), "parts", None) or []
+        part_kinds = []
+        for p in parts:
+            if getattr(p, "text", None):
+                part_kinds.append("text")
+            else:
+                part_kinds.append(type(p).__name__)
+        return f"finish_reason={fr} parts={part_kinds}"
+    except Exception:
+        return "unavailable"
 
 
 async def process_job(db, job_id: int):
@@ -112,15 +195,22 @@ async def process_job(db, job_id: int):
     settings = settings_result.scalar_one_or_none()
 
     if not job or not settings or not settings.google_api_key:
+        if job:
+            job.status = "failed"
+            job.error_message = "OKA Settings missing or Google API key not configured."
+            await db.commit()
         return
 
     max_retries = 3
     for attempt in range(max_retries):
+        aclient = None
         try:
-            genai.configure(api_key=settings.google_api_key)
-            model = genai.GenerativeModel(model_name=settings.selected_model)
+            model_name = (settings.selected_model or "gemini-2.5-flash").strip()
+            client = genai.Client(api_key=settings.google_api_key)
+            aclient = client.aio
 
-            gemini_file = genai.get_file(job.file_uri)
+            # Retrieve the uploaded file by its stable name (e.g. "files/abc123")
+            gemini_file = await aclient.files.get(name=job.file_uri)
 
             sys_prompt_b = settings.system_instruction_part_b
             academic_profile = get_academic_profile()
@@ -134,20 +224,33 @@ async def process_job(db, job_id: int):
                 notes_context = f"\nFor this BATCH, you MUST ONLY generate the following notes: {job.batch_notes}\n"
 
             metadata_context = ""
+            meta_dict: dict = {}
             if job.metadata_json:
                 try:
                     meta = json.loads(job.metadata_json)
+                    meta_dict = meta if isinstance(meta, dict) else {}
                     metadata_context = "\n--- ACTION: METADATA_SYNCHRONIZATION (OVERRIDE) ---\n"
                     metadata_context += "Use the following specific metadata for the YAML Frontmatter and paths for ALL notes in this batch:\n"
                     metadata_context += f"Academic Year: {meta.get('year')}\n"
                     metadata_context += f"Semester: {meta.get('semester')}\n"
-                    metadata_context += f"Course Name: {meta.get('course_name')}\n"
-                    metadata_context += f"Course Code: {meta.get('course_code')}\n"
-                    metadata_context += f"Unit Name: {meta.get('unit_name')}\n"
-                    metadata_context += f"Credits: {meta.get('credits')}\n"
+                    metadata_context += f"Course (YAML field: course): {meta.get('course_name')}\n"
+                    metadata_context += f"Course Code (optional): {meta.get('course_code')}\n"
+                    metadata_context += f"Unit (YAML field: unit): {meta.get('unit_name')}\n"
+                    metadata_context += f"Credits (optional): {meta.get('credits')}\n"
                     metadata_context += "---------------------------------------------------------\n"
                 except Exception:
                     pass
+
+            yaml_skeleton = (
+                "---\n"
+                "title: \"<CANONICAL_TITLE_CASE_WITH_UNDERSCORES>\"\n"
+                "type: \"<Hub|Questions|Foundational|Core|Supporting|Unit>\"\n"
+                "year: \"<YEAR>\"\n"
+                "semester: \"<SEMESTER>\"\n"
+                "course: \"<COURSE>\"\n"
+                "unit: \"<UNIT>\"\n"
+                "---\n"
+            )
 
             if job.batch_id == 1:
                 batch_instruction = (
@@ -156,8 +259,11 @@ async def process_job(db, job_id: int):
                     "Your task is to generate the HUB file (index of the unit) and the fundamental notes as specified.\n"
                     "CRITICAL: You MUST wrap EVERY generated note with the following delimiters:\n"
                     "--- START_NOTE ---\n\n"
-                    "Note Content Here\n\n"
+                    f"{yaml_skeleton}\n"
+                    "# <H1 Title>\n"
+                    "<Markdown body>\n\n"
                     "--- END_NOTE ---\n"
+                    "CRITICAL: The YAML frontmatter above is MANDATORY and must include: title, type, year, semester, course, unit.\n"
                 )
             else:
                 batch_instruction = (
@@ -166,42 +272,46 @@ async def process_job(db, job_id: int):
                     "Continue generating the topical notes exactly as named in the architectural plan.\n"
                     "CRITICAL: You MUST wrap EVERY generated note with the following delimiters:\n"
                     "--- START_NOTE ---\n\n"
-                    "Note Content Here\n\n"
+                    f"{yaml_skeleton}\n"
+                    "# <H1 Title>\n"
+                    "<Markdown body>\n\n"
                     "--- END_NOTE ---\n"
+                    "CRITICAL: The YAML frontmatter above is MANDATORY and must include: title, type, year, semester, course, unit.\n"
                 )
 
             full_prompt = (
-                sys_prompt + metadata_context + batch_instruction
+                "start\n" + sys_prompt + metadata_context + batch_instruction
                 + "\n\nBegin generating Batch " + str(job.batch_id)
-                + " notes now. CRITICAL: You MUST begin your response strictly with --- START_INTERNAL_AUDIT --- to conduct your Silent Planning Protocol before writing the first --- START_NOTE ---. Do not provide conversational filler. Ensure EXACT blank line precision as per A.2.1."
+                + " notes now. Do not provide conversational filler. Output ONLY the note blocks."
             )
 
             # Wait until the file is active (with timeout)
             max_wait_seconds = 600 # 10 minutes max for very large files
             waited = 0
-            while gemini_file.state.name == "PROCESSING" and waited < max_wait_seconds:
+            while getattr(getattr(gemini_file, "state", None), "name", None) == "PROCESSING" and waited < max_wait_seconds:
                 await asyncio.sleep(5) # Increased from 2s to reduce rate-limit pressure
                 waited += 5
-                gemini_file = genai.get_file(job.file_uri)
+                gemini_file = await aclient.files.get(name=job.file_uri)
 
-            if gemini_file.state.name == "PROCESSING":
+            if getattr(getattr(gemini_file, "state", None), "name", None) == "PROCESSING":
                 logger.error(f"Job {job.id} timed out waiting for file processing")
                 job.status = "failed"
+                job.error_message = "Timeout waiting for Gemini file processing."
                 await db.commit()
+                await aclient.aclose()
                 return
 
-            if gemini_file.state.name == "FAILED":
+            if getattr(getattr(gemini_file, "state", None), "name", None) == "FAILED":
                 job.status = "failed"
+                job.error_message = "Gemini file processing failed."
                 await db.commit()
+                await aclient.aclose()
                 return
-
-            from google.generativeai.types import HarmCategory, HarmBlockThreshold
-            safety_settings = {
-                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-            }
+            gen_config = types.GenerateContentConfig(
+                system_instruction=sys_prompt,
+                max_output_tokens=65536,
+                temperature=0.2,
+            )
 
             max_audit_retries = 3
             current_prompt = full_prompt
@@ -209,29 +319,80 @@ async def process_job(db, job_id: int):
             error_message = None
 
             for audit_attempt in range(max_audit_retries):
-                response = model.generate_content([current_prompt, gemini_file], safety_settings=safety_settings)
+                response = await aclient.models.generate_content(
+                    model=model_name,
+                    contents=[current_prompt, gemini_file],
+                    config=gen_config,
+                )
                 
                 if not response.candidates:
                     raise Exception("Gemini returned no candidates. Safety filter might be active.")
-                
-                error_message = audit_generated_text(response.text)
+
+                response_text = _extract_text_from_response(response)
+                if not response_text:
+                    # Transient API edge-case; retry with small backoff.
+                    logger.warning(
+                        "Gemini returned a candidate with no text parts. "
+                        f"({_summarize_response_for_logs(response)})"
+                    )
+                    await asyncio.sleep(2)
+                    continue
+
+                error_message = audit_generated_text(response_text)
                 if error_message:
                     logger.warning(f"Audit failed (Attempt {audit_attempt + 1}): {error_message}")
-                    current_prompt = f"YOUR PREVIOUS ATTEMPT FAILED. REASON: {error_message}\nFix this immediately and regenerate the ENTIRE batch."
+                    with open("/tmp/gemini_failed_output.txt", "w") as f: f.write(response_text)
+                    # Keep the full system + batch prompt, but prepend a strict correction.
+                    current_prompt = (
+                        full_prompt
+                        + "\n\nYOUR PREVIOUS ATTEMPT FAILED.\nREASON: "
+                        + error_message
+                        + "\nFix this immediately and regenerate the ENTIRE batch. "
+                        + "Return ONLY the internal audit + note blocks."
+                    )
                 else:
                     break
             
             if error_message:
                 logger.error(f"Job {job.id} failed audit after {max_audit_retries} attempts.")
                 job.status = "failed"
+                job.error_message = error_message
                 await db.commit()
                 return
 
-            parsed_notes = parse_gemini_response(response.text)
+            final_text = _extract_text_from_response(response)
+            if not final_text:
+                raise Exception(
+                    "Gemini returned no text parts after audit passed. "
+                    f"({_summarize_response_for_logs(response)})"
+                )
+
+            parsed_notes = parse_gemini_response(final_text)
+            if not parsed_notes:
+                job.status = "failed"
+                job.error_message = (
+                    "Generation returned text but no notes were parsed. "
+                    "Ensure the model outputs '--- START_NOTE ---' and '--- END_NOTE ---' blocks."
+                )
+                await db.commit()
+                return
+
+            # Post-process: ensure every note is deployable (YAML required by VaultUtils)
+            for n in parsed_notes:
+                c = n.get("content", "")
+                if not _has_yaml_frontmatter(c):
+                    n["content"] = _inject_yaml_frontmatter(
+                        c,
+                        title=n.get("title", ""),
+                        note_type=n.get("type", ""),
+                        meta=meta_dict,
+                    )
 
             job.status = "completed"
             job.result_json = json.dumps(parsed_notes)
+            job.error_message = None
             await db.commit()
+            await aclient.aclose()
             return parsed_notes
 
         except Exception as e:
@@ -245,8 +406,61 @@ async def process_job(db, job_id: int):
                     continue
 
             job.status = "failed"
+            job.error_message = err_msg
             await db.commit()
+            if aclient:
+                try:
+                    await aclient.aclose()
+                except Exception:
+                    pass
             return
+
+
+def _repair_json(text: str) -> str:
+    """Attempt to repair common JSON issues from Gemini output."""
+    text = text.strip()
+    # Remove markdown code fences if present
+    text = re.sub(r'^```json\s*', '', text)
+    text = re.sub(r'^```\s*', '', text)
+    text = re.sub(r'\s*```$', '', text)
+
+    # Remove trailing commas before closing brackets/braces
+    text = re.sub(r',\s*([}\]])', r'\1', text)
+
+    # If JSON is truncated (doesn't end with }), try to close it
+    if text and not text.rstrip().endswith('}'):
+        logger.warning("JSON appears truncated, attempting repair...")
+        # Count open/close braces and brackets
+        open_braces = text.count('{') - text.count('}')
+        open_brackets = text.count('[') - text.count(']')
+
+        # Find the last complete object and truncate there
+        # Strategy: try to find the last complete batch entry
+        # Remove any trailing incomplete object/string
+        # First, try removing trailing partial content after last complete note/batch
+        last_good = text
+        
+        # Try trimming from the end to find a parseable JSON
+        for trim_marker in ['}, {', '},\n    {', '}\n  ]', '},\n  ]']:
+            idx = text.rfind(trim_marker)
+            if idx > 0:
+                candidate = text[:idx + 1]
+                # Close remaining brackets/braces
+                ob = candidate.count('{') - candidate.count('}')
+                obrk = candidate.count('[') - candidate.count(']')
+                candidate += ']' * obrk + '}' * ob
+                try:
+                    json.loads(candidate)
+                    logger.info("JSON repair succeeded via trim strategy")
+                    return candidate
+                except json.JSONDecodeError:
+                    continue
+
+        # Brute force: just close everything
+        last_good += ']' * open_brackets + '}' * open_braces
+        return last_good
+
+    return text
 
 
 async def generate_plan(
@@ -254,91 +468,129 @@ async def generate_plan(
     sys_prompt_a: str, sys_prompt_b: str,
 ) -> dict:
     """Generates an architectural plan for the knowledge assets from a source document."""
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(model_name=model_name)
+    model_name = (model_name or "gemini-2.5-flash").strip()
+    client = genai.Client(api_key=api_key)
+    aclient = client.aio
 
-    gemini_file = genai.get_file(file_uri)
+    gemini_file = await aclient.files.get(name=file_uri)
     max_wait_seconds = 300
     waited = 0
-    while gemini_file.state.name == "PROCESSING" and waited < max_wait_seconds:
-        await asyncio.sleep(5) # Increased from 2s
+    while getattr(getattr(gemini_file, "state", None), "name", None) == "PROCESSING" and waited < max_wait_seconds:
+        await asyncio.sleep(5)
         waited += 5
-        gemini_file = genai.get_file(file_uri)
+        gemini_file = await aclient.files.get(name=file_uri)
 
-    if gemini_file.state.name == "PROCESSING":
+    if getattr(getattr(gemini_file, "state", None), "name", None) == "PROCESSING":
+        await aclient.aclose()
         raise Exception("Timeout waiting for Gemini to process the document")
 
-    if gemini_file.state.name == "FAILED":
+    if getattr(getattr(gemini_file, "state", None), "name", None) == "FAILED":
+        await aclient.aclose()
         raise Exception("Gemini file processing failed")
 
     plan_prompt = (
-        f"{sys_prompt_a}\n\n{sys_prompt_b}\n\n"
-        "--- ACTION: ARCHITECTURAL PLANNING PHASE (A.6.2.0) ---\n"
-        "Analyze the source material and define the architectural blueprint for the Knowledge Assets.\n"
-        "Return ONLY a JSON object with this structure:\n"
-        "{\n"
+        "Analyze the attached source material and create an architectural plan for knowledge notes.\n"
+        "Return ONLY a valid JSON object with this exact structure:\n"
+        '{\n'
         '  "unit_name": "Canonical_Name_of_the_Unit",\n'
         '  "year": "Year_XX",\n'
         '  "semester": "Semester_X",\n'
         '  "course_name": "Course_Name",\n'
         '  "course_code": "CSXXXX",\n'
-        '  "credits": integer,\n'
-        '  "total_notes": integer_count,\n'
+        '  "credits": 4,\n'
+        '  "total_notes": 15,\n'
         '  "batches": [\n'
-        "    {\n"
+        '    {\n'
         '      "batch_id": 1,\n'
         '      "notes": [\n'
-        '        { "title": "Canonical_Unit_Name_Hub", "type": "Hub", "reasoning": "Central navigation hub" },\n'
-        '        { "title": "Possible_Questions", "type": "Questions", "reasoning": "Assessment foundation" }\n'
-        "      ]\n"
-        "    },\n"
-        '    { "batch_id": 2, "notes": [...] }\n'
-        "  ]\n"
-        "}\n"
-        "CRITICAL REQUIREMENT 1: Batch 1 MUST ONLY contain exactly two files: the Hub and the Possible Questions note.\n"
-        "CRITICAL REQUIREMENT 2: Every subsequent batch (Batch 2, Batch 3, etc.) SHOULD contain between 6 and 8 notes. Max 8.\n"
-        "Do not include any text, markdown backticks, or filler. Only the raw JSON string."
+        '        {"title": "Unit_Name_Hub", "type": "Hub", "reasoning": "Central navigation hub"},\n'
+        '        {"title": "Possible_Questions", "type": "Questions", "reasoning": "Assessment foundation"}\n'
+        '      ]\n'
+        '    },\n'
+        '    {"batch_id": 2, "notes": [{"title": "Topic_Name", "type": "Core", "reasoning": "Reason"}]}\n'
+        '  ]\n'
+        '}\n\n'
+        "Rules:\n"
+        "1. Batch 1 MUST contain exactly 2 notes: the Hub and Possible Questions.\n"
+        "2. Subsequent batches should contain 4-6 notes each (max 8).\n"
+        "3. All titles must use Canonical_Title_Case_With_Underscores (no spaces, hyphens, or special chars).\n"
+        "4. Note types: Hub, Questions, Foundational, Core, Supporting.\n"
+        "5. Output ONLY the JSON. No text, no markdown, no code fences."
     )
 
     logger.info(f"Generating plan for file: {file_uri}")
-    response = None
-    try:
-        from google.generativeai.types import HarmCategory, HarmBlockThreshold
-        safety_settings = {
-            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-        }
-
-        response = model.generate_content(
-            [plan_prompt, gemini_file],
-            safety_settings=safety_settings,
-        )
-
-        if not response.candidates:
-            raise Exception("Gemini returned no candidates. Blocking or safety filter might be active.")
-
-        text = response.text
-        logger.debug(f"Gemini Raw Response: {text}")
-
-        json_match = re.search(r'(\{.*\})', text, re.DOTALL)
-        json_text = json_match.group(1) if json_match else text
-        json_text = json_text.strip()
-        return json.loads(json_text)
-
-    except Exception as e:
-        err_str = str(e)
-        logger.error(f"Generate Plan Error: {err_str}")
-        if response and hasattr(response, 'prompt_feedback'):
-            logger.warning(f"Prompt Feedback: {response.prompt_feedback}")
-
-        if "429" in err_str or "Quota" in err_str or "ResourceExhausted" in err_str:
-            raise Exception(
-                "Google API Limits Exceeded (429). You have hit the strict rate limit for the "
-                "selected model. Please wait a minute or switch to a 'Flash' model."
+    
+    max_retries = 3
+    last_error = None
+    
+    for attempt in range(max_retries):
+        response = None
+        try:
+            response = await aclient.models.generate_content(
+                model=model_name,
+                contents=[plan_prompt, gemini_file],
+                config=types.GenerateContentConfig(
+                    max_output_tokens=65536,
+                    temperature=0.1,
+                    response_mime_type="application/json",
+                ),
             )
-        raise e
+
+            if not response.candidates:
+                raise Exception("Gemini returned no candidates. Blocking or safety filter might be active.")
+
+            text = _extract_text_from_response(response) or ""
+            logger.debug(f"Gemini Raw Response (attempt {attempt + 1}): {text[:500]}...")
+
+            # Extract JSON object from response
+            json_match = re.search(r'(\{.*\})', text, re.DOTALL)
+            json_text = json_match.group(1) if json_match else text
+            json_text = json_text.strip()
+
+            # First try direct parse
+            try:
+                result = json.loads(json_text)
+                await aclient.aclose()
+                return result
+            except json.JSONDecodeError as je:
+                logger.warning(f"Direct JSON parse failed (attempt {attempt + 1}): {je}")
+                # Try repair
+                repaired = _repair_json(json_text)
+                try:
+                    result = json.loads(repaired)
+                    logger.info(f"JSON repair succeeded on attempt {attempt + 1}")
+                    await aclient.aclose()
+                    return result
+                except json.JSONDecodeError as je2:
+                    last_error = f"JSON parse failed after repair: {je2}"
+                    logger.warning(f"JSON repair also failed (attempt {attempt + 1}): {je2}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(2)
+                        continue
+
+        except Exception as e:
+            err_str = str(e)
+            last_error = err_str
+            logger.error(f"Generate Plan Error (attempt {attempt + 1}): {err_str}")
+            if response and hasattr(response, 'prompt_feedback'):
+                logger.warning(f"Prompt Feedback: {response.prompt_feedback}")
+
+            if "429" in err_str or "Quota" in err_str or "ResourceExhausted" in err_str:
+                if attempt < max_retries - 1:
+                    logger.info("Rate limited during plan generation, waiting 30s...")
+                    await asyncio.sleep(30)
+                    continue
+                await aclient.aclose()
+                raise Exception(
+                    "Google API Limits Exceeded (429). Please wait a minute or switch to a different model."
+                )
+            if attempt >= max_retries - 1:
+                await aclient.aclose()
+                raise e
+            await asyncio.sleep(2)
+    
+    await aclient.aclose()
+    raise Exception(f"Plan generation failed after {max_retries} attempts: {last_error}")
 
 
 async def chat_with_gemini(
@@ -347,59 +599,42 @@ async def chat_with_gemini(
     sys_prompt_a: str, sys_prompt_b: str,
 ) -> str:
     """Runs a multi-turn chat with Gemini, optionally with a file context."""
-    genai.configure(api_key=api_key)
-
+    model_name = (model_name or "gemini-2.5-flash").strip()
     instruction = (
         f"{sys_prompt_a}\n\n{sys_prompt_b}\n\n"
         "You are in a collaborative chat mode. Help the user with their knowledge architecture tasks."
     )
 
-    model = genai.GenerativeModel(
-        model_name=model_name,
-        system_instruction=instruction,
-    )
+    client = genai.Client(api_key=api_key)
+    aclient = client.aio
 
-    from google.generativeai.types import HarmCategory, HarmBlockThreshold
-    safety_settings = {
-        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-    }
+    # Flatten messages into a readable transcript (simple + robust).
+    transcript_lines: list[str] = []
+    for m in messages:
+        role = m.get("role", "user")
+        content = m.get("content", "")
+        transcript_lines.append(f"{role.upper()}: {content}")
+    transcript = "\n".join(transcript_lines).strip()
 
-    gemini_file = None
+    parts: list[object] = [transcript]
     if file_uri:
         try:
-            gemini_file = genai.get_file(file_uri)
+            f = await aclient.files.get(name=file_uri)
+            parts.append(f)
         except Exception as e:
-            logger.error(f"Failed to get gemini file: {e}")
+            logger.error(f"Failed to get gemini file for chat: {e}")
 
-    history = []
-    for i, msg in enumerate(messages[:-1]):
-        parts = [msg["content"]]
-        if i == 0 and msg["role"] == "user" and gemini_file:
-            parts.append(gemini_file)
-        history.append({"role": msg["role"], "parts": parts})
-
-    chat = model.start_chat(history=history)
-    last_msg = messages[-1]["content"]
-
-    final_parts = [last_msg]
-    if not history and gemini_file:
-        final_parts.append(gemini_file)
-
-    response = await chat.send_message_async(final_parts, safety_settings=safety_settings)
+    response = await aclient.models.generate_content(
+        model=model_name,
+        contents=parts,
+        config=types.GenerateContentConfig(system_instruction=instruction),
+    )
+    await aclient.aclose()
 
     if not response.candidates:
-        if hasattr(response, 'prompt_feedback') and response.prompt_feedback.block_reason:
-            return f"Response blocked by safety filters (Reason: {response.prompt_feedback.block_reason}). Please try a different query."
         return "No response generated by the model. It might have reached a quota limit or been blocked."
 
-    candidate = response.candidates[0]
-    if candidate.finish_reason != 1:
-        return f"Generation incomplete. (Finish Reason: {candidate.finish_reason}). This often happens with long outputs or quota limits."
-
-    return response.text
+    return _extract_text_from_response(response) or ""
 
 
 async def background_queue_worker(get_db_session):
@@ -416,9 +651,11 @@ async def background_queue_worker(get_db_session):
 
                 if job:
                     job.status = "processing"
+                    job.error_message = None
                     await db.commit()
                     await process_job(db, job.id)
-                    await asyncio.sleep(30)
+                    # Small delay to prevent tight loop; keep UX responsive.
+                    await asyncio.sleep(1)
                 else:
                     await asyncio.sleep(5)
         except Exception as e:
