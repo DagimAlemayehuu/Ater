@@ -1,0 +1,41 @@
+name: SYSTEM_PULSE
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+          
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        
+      - name: Install dependencies
+        run: pnpm install
+        
+      - name: Build and Typecheck
+        run: pnpm turbo build typecheck
+        
+      - name: Run Backend Tests
+        run: |
+          if [ -d "apps/api" ]; then
+            cd apps/api && uv sync && uv run pytest
+          fi
