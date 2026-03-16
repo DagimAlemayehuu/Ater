@@ -7,7 +7,7 @@ export default function AutomationDetail() {
     const { id } = useParams()
     const navigate = useNavigate()
     
-    const auto = automationsData.find((a: any) => a.id === id)
+    const auto = automationsData.find((a: Record<string, unknown>) => a.id === id)
     
     if (!auto) {
         return (

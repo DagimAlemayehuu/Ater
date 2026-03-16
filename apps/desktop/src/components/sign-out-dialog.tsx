@@ -3,7 +3,9 @@ export interface SignOutDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-export function SignOutDialog(_props: SignOutDialogProps) {
-  // Desktop app has no sign in right now
+export function SignOutDialog({ open }: SignOutDialogProps) {
+  if (open) {
+      return null
+  }
   return null
 }
