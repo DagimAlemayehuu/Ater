@@ -1,6 +1,6 @@
 # Life OS — Personal Intelligence Operating System
 
-**Tier 3: The Agency Standard (Offline-First)**
+**Tier 1: Autonomous Factory Standard (Offline-First)**
 
 ## What Is Life OS?
 
@@ -16,12 +16,14 @@ Life OS is a local-first desktop application — a personal AI operating system 
 ## Architecture
 
 ```
-[User] <-> [React/Vite (apps/desktop)] <-> [Tauri v2 IPC] <-> [Python FastAPI Sidecar (apps/api)]
-                                                                        |
-                                                   +-------------------+-------------------+
-                                                   |                   |                   |
-                                            [Notion API]      [Google Gemini API]  [Local Obsidian FS]
+[User] <-> [React/Vite (apps/desktop)] <-> [Tauri v2 IPC Bridge] <-> [Python FastAPI Sidecar (apps/api)]
+                                                                           |
+                                                      +--------------------+-------------------+
+                                                      |                    |                   |
+                                               [Notion API]       [Google Gemini API]  [Local Obsidian FS]
 ```
+
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -30,12 +32,13 @@ Life OS is a local-first desktop application — a personal AI operating system 
 | Backend Sidecar | Python 3.11+ FastAPI on `localhost:8765` |
 | Package Managers | pnpm (Node), uv (Python) — **npm/yarn/pip forbidden** |
 | Monorepo | Turborepo v2 |
+| Command Center | **.system/** — Runbook-driven development protocols |
 
 ## Quick Start
 
 ```bash
 pnpm install                  # Install Node dependencies
-cd apps/api && uv venv && uv pip install -e . && cd ../..  # Setup Python
+cd apps/api && uv sync        # Setup Python environment
 pnpm dev:all                  # Start everything (sidecar + Tauri)
 ```
 
@@ -43,21 +46,25 @@ pnpm dev:all                  # Start everything (sidecar + Tauri)
 
 ```
 LifeOs/
+├── .system/              # 🧠 Command Center (Intelligence, Workflows, State)
+│   ├── agents/               # AI Persona definitions
+│   ├── architecture/         # System design and API contracts
+│   ├── core/                 # Constitution and behavior laws
+│   ├── design/               # UI/UX rules and app structure
+│   ├── prompts/              # System prompts (OKA, etc.)
+│   ├── scripts/              # Operational scripts (safe-commit, etc.)
+│   ├── state/                # Project state and task tracking
+│   └── workflows/            # Executable runbooks
 ├── apps/
-│   ├── desktop/          # Tauri v2 + React/Vite frontend
-│   └── api/              # Python FastAPI sidecar
-├── docs/                 # 📚 Complete documentation hub (start here)
-│   ├── README.md             # Master index — read this first
-│   ├── architecture/         # System design, frontend, backend, data model
-│   ├── tracking/             # Project state, changelog, backlog, issues
-│   ├── guides/               # Development setup, conventions, how-to guides
-│   ├── api/                  # API endpoint reference
-│   ├── personas/             # AI persona definitions (Strategist, Creator)
-│   ├── prompts/              # OKA system instruction (~164KB)
-│   └── setup/                # Original initialization protocols
-├── packages/             # Shared configs (ESLint, TypeScript)
+│   ├── desktop/              # Tauri v2 + React/Vite frontend
+│   └── api/                  # Python FastAPI sidecar
+├── packages/
+│   ├── schemas/              # Shared API contracts (Supreme Law)
+│   ├── config-eslint/        # Shared linting
+│   └── config-typescript/    # Shared types
 ├── resources/            # Templates, reference files, prompts
-└── .agents/workflows/    # Agent workflows (update-docs, etc.)
+├── AGENTS.md             # Supreme Law: Agent protocols
+└── GEMINI.md             # Gemini Parsing Protocol
 ```
 
 ## Security
@@ -68,6 +75,5 @@ LifeOs/
 
 ## Documentation
 
-**→ Start with [`docs/README.md`](docs/README.md)** — the master index for all project documentation, including architecture, tracking, guides, and API reference.
-
-For AI agents: the docs folder is self-contained. Read `docs/README.md` first, then `docs/tracking/project-state.md` to understand current status.
+**→ Start with [`AGENTS.md`](AGENTS.md)** — the master protocol for interacting with this repository.
+**→ Read [`.system/workflows/INITIALIZATION.md`](.system/workflows/INITIALIZATION.md)** — to start your development session.
