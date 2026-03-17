@@ -1,4 +1,4 @@
-import { Zap, Archive, GraduationCap, Sun, Layers, Camera, Link as LinkIcon, Flame, Tags, Moon, Play, Pause, Plus, Settings2, History } from 'lucide-react'
+import { Zap, Archive, GraduationCap, Layers, Camera, Link as LinkIcon, Flame, Tags, Moon, Play, Pause, Plus, Settings2, History, Newspaper } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 
@@ -6,13 +6,13 @@ import { useNavigate } from 'react-router-dom'
 export const automationsData = [
     { id: 'obsidian-sync', name: 'Obsidian Sync Watcher', status: 'active', lastRun: '2 mins ago', type: 'System', icon: Zap },
     { id: 'notion-cleanup', name: 'Notion Weekly Cleanup', status: 'active', lastRun: '1 hour ago', type: 'Notion', icon: Archive },
-    { id: 'academic-fetcher', name: 'Academic Fetcher', status: 'idling', lastRun: 'Never', type: 'Academic', icon: GraduationCap },
-    { id: 'daily-briefing', name: 'Daily Briefing Generator', status: 'active', lastRun: '6:00 AM', type: 'Report', icon: Sun },
+    { id: 'academic-fetcher', name: 'Academic Fetcher', status: 'active', lastRun: 'Never', type: 'Academic', icon: GraduationCap },
+    { id: 'daily-briefing', name: 'Daily Intelligence Briefing', status: 'active', lastRun: '1h ago', type: 'Digest', icon: Newspaper },
     { id: 'flashcard-extractor', name: 'Flashcard Extractor', status: 'idling', lastRun: 'Yesterday', type: 'Learning', icon: Layers },
     { id: 'master-plan-snapshot', name: 'Master Plan Snapshot', status: 'active', lastRun: 'Sunday', type: 'Backup', icon: Camera },
     { id: 'orphan-linker', name: 'Orphan Note Linker', status: 'idling', lastRun: '3 days ago', type: 'Obsidian', icon: LinkIcon },
     { id: 'habit-streak', name: 'Habit Streak Calculator', status: 'active', lastRun: '10 mins ago', type: 'Notion', icon: Flame },
-    { id: 'expense-categorizer', name: 'Expense Categorizer', status: 'idling', lastRun: 'Never', type: 'Finance', icon: Tags },
+    { id: 'expense-categorizer', name: 'Expense Categorizer', status: 'active', lastRun: 'Never', type: 'Finance', icon: Tags },
     { id: 'eod-shutdown', name: 'End of Day Shutdown', status: 'active', lastRun: '10:00 PM', type: 'System', icon: Moon },
 ]
 

@@ -43,3 +43,16 @@ This file tracks the step-by-step technical implementation path generated during
     - [x] Create PyInstaller sidecar build script and binary triple mapping.
     - [x] Implement production sidecar spawning in Tauri `lib.rs`.
 - [x] Fix app startup hang by adding `/api/health` and improving `SidecarGate` polling.
+
+## Sprint: Phase 7.0 - Ecosystem Logic (In Progress)
+- [ ] **Implement Coach Agent Logic**
+    - [ ] Create `apps/api/src/domains/ai/coach.py`.
+    - [ ] Define Coach tools (habit check, goal calibration).
+    - [ ] Connect frontend `agent-detail.tsx` to coach endpoint.
+- [ ] **Implement Daily Briefing Automation**
+    - [ ] Create aggregation logic for Notion Tasks + Obsidian Daily Notes.
+    - [ ] Build Gemini summarization prompt for the briefing.
+    - [ ] Expose trigger endpoint for manual/scheduled runs.
+- [ ] **Implement Financer Agent**
+    - [ ] Connect to Notion "Expenses" database.
+    - [ ] Implement AI categorization engine.

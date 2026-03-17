@@ -9,18 +9,26 @@ Items are ordered by priority within each category.
 
 ## 🔴 High Priority
 
-### 1. The Debugger — RAG-Based Problem Solver
-- **Route:** `/debugger` (currently placeholder)
-- **Scope:** Implement local vector-based search to query the entire Obsidian vault
-- **Backend:** Add vector embedding + similarity search to the sidecar (consider FAISS or ChromaDB)
-- **Frontend:** Chat interface where AI answers are grounded in vault content
-- **Depends on:** Vault Search (below)
+### 1. Agent Logic Implementation — Phase 6.1
+- **Scope:** Build out the specialized Python modules for the idling agents.
+- **Targets:** 
+    - [x] **Coach:** Habit tracking, motivation, and goal calibration.
+    - [x] **Financer:** Expense analysis and budgeting (Notion-backed).
+    - [x] **Scout:** Web-search enabled research and link discovery.
+    - [x] **Scribe:** Voice/log transcription and formatting.
+    - [x] **Architect:** Technical documentation and system meta-analysis.
+    - [x] **Auditor:** Productivity audit and goal compliance.
+- **Backend:** Create `src/domains/[agent]` modules with specific toolsets.
 
-### 2. Vault Search — Local Vector Search
-- **Scope:** Build a vector index of all `.md` files in the Obsidian vault
-- **Backend:** Embedding generation (Gemini or local model), vector store, similarity search endpoint
-- **Endpoint:** `GET /api/vault/search?q=...`
-- **Used by:** Debugger, Strategist (context injection), Dashboard (search)
+### 2. Automation Worker Implementation — Phase 6.1
+- **Scope:** Build the background job orchestration for the idle system tasks.
+- **Targets:**
+    - [x] **Daily Briefing:** Aggregate Notion/Obsidian data into a morning summary.
+    - [x] **Notion Cleanup:** Archive old tasks and consolidate tags.
+    - [x] **Habit Streak:** Daily validation of habit completion.
+    - [x] **Expense Categorizer:** Auto-tagging transactions via AI.
+    - [x] **Academic Fetcher:** Sync external course data/grades.
+- **Backend:** Implement the `src/domains/automations/workers` system.
 
 ### 3. Error Handling Audit
 - **Scope:** Review all API endpoints and frontend fetch calls for proper error handling

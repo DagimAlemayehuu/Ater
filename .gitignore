@@ -44,3 +44,9 @@ logs/
 
 # Tauri
 apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/binaries/
+
+# Temp
+lint_output.txt
+lint_output_final.txt
+apps/desktop/lint-report.txt

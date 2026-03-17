@@ -1,11 +1,18 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { automationsData } from './automations'
-import { ArrowLeft, Play, Pause, Settings2, History, AlertCircle, Terminal, Clock, Activity } from 'lucide-react'
+import { ArrowLeft, Play, Settings2, History, AlertCircle, Terminal, Clock, Activity, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useState } from 'react'
+import { sidecarApi } from '@/lib/sidecarApi'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export default function AutomationDetail() {
     const { id } = useParams()
     const navigate = useNavigate()
+    const [running, setRunning] = useState(false)
+    const [briefing, setBriefing] = useState<string | null>(null)
+    const [logs, setLogs] = useState<string[]>(['# Establishing connection to orchestration layer...', `# Fetching telemetry data for ${id}...`])
     
     const auto = automationsData.find((a: Record<string, unknown>) => a.id === id)
     
@@ -21,6 +28,41 @@ export default function AutomationDetail() {
 
     const Icon = auto.icon
     const isActive = auto.status === 'active'
+
+    const handleRun = async () => {
+        if (running) return
+        setRunning(true)
+        setLogs(prev => [...prev, `[USER] Manual trigger initiated.`, `[SYSTEM] Spawning worker process...`])
+        
+        try {
+            if (id === 'daily-briefing') {
+                const res = await sidecarApi.runDailyBriefing()
+                setBriefing(res.briefing)
+                setLogs(prev => [...prev, `[SYSTEM] Briefing generated successfully.`, `[WORKER] Process exited with code 0.`])
+            } else if (id === 'notion-cleanup') {
+                const res = await sidecarApi.runCleanup()
+                setLogs(prev => [...prev, `[SYSTEM] Notion Cleanup complete.`, `[WORKER] Archived ${res.archived_count} items.`, `[WORKER] Process exited with code 0.`])
+            } else if (id === 'expense-categorizer') {
+                const res = await sidecarApi.runCategorizer()
+                setLogs(prev => [...prev, `[SYSTEM] Expense Categorization complete.`, `[WORKER] Categorized ${res.categorized_count} expenses.`, `[WORKER] Process exited with code 0.`])
+            } else if (id === 'habit-streak') {
+                const res = await sidecarApi.runHabits()
+                setLogs(prev => [...prev, `[SYSTEM] Habit Streak calculation complete.`, `[WORKER] Validated ${res.habits_validated} habits.`, `[WORKER] Process exited with code 0.`])
+            } else if (id === 'academic-fetcher') {
+                await sidecarApi.runAcademics()
+                setLogs(prev => [...prev, `[SYSTEM] Academic data fetch complete.`, `[WORKER] Process exited with code 0.`])
+            } else {
+                // Mock for others
+                await new Promise(r => setTimeout(r, 1500))
+                setLogs(prev => [...prev, `[SYSTEM] Automation logic for ${id} is still in development.`, `[WORKER] Process exited with code 0.`])
+            }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+            setLogs(prev => [...prev, `[ERROR] ${error.message}`])
+        } finally {
+            setRunning(false)
+        }
+    }
 
     return (
         <div className="flex flex-col h-full animate-in fade-in duration-500 p-4 lg:p-8">
@@ -38,9 +80,13 @@ export default function AutomationDetail() {
                     </div>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
-                    <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-foreground text-background text-xs font-bold hover:opacity-90 transition-all">
-                        {isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                        {isActive ? 'Pause Automation' : 'Start Automation'}
+                    <button 
+                        onClick={handleRun}
+                        disabled={running}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-foreground text-background text-xs font-bold hover:opacity-90 transition-all disabled:opacity-50"
+                    >
+                        {running ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                        {id === 'daily-briefing' ? 'Generate Briefing' : 'Run Once'}
                     </button>
                     <button className="p-2 rounded-lg bg-muted border border-border text-muted-foreground hover:text-foreground transition-all">
                         <Settings2 className="w-5 h-5" />
@@ -90,21 +136,35 @@ export default function AutomationDetail() {
                     <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Execution Logs</span>
                 </div>
                 <div className="flex-1 p-4 font-mono text-xs overflow-y-auto custom-scrollbar bg-black/5 dark:bg-black/20">
-                    <div className="text-muted-foreground opacity-50 mb-2"># Establishing connection to orchestration layer...</div>
-                    <div className="text-muted-foreground opacity-50 mb-2"># Fetching telemetry data for {auto.id}...</div>
-                    {isActive ? (
+                    {logs.map((log, i) => (
+                        <div key={i} className={cn("mb-1", 
+                            log.startsWith('#') ? "text-muted-foreground opacity-50" : 
+                            log.startsWith('[SYSTEM]') ? "text-emerald-500/80" : 
+                            log.startsWith('[ERROR]') ? "text-destructive" : 
+                            "text-foreground/80")}>
+                            {log}
+                        </div>
+                    ))}
+
+                    {briefing && (
+                        <div className="mt-6 p-6 font-sans text-sm bg-background border border-border rounded-xl animate-in zoom-in duration-300">
+                            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-primary" />
+                                Today's Intelligence Briefing
+                            </h3>
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {briefing}
+                                </ReactMarkdown>
+                            </div>
+                        </div>
+                    )}
+
+                    {isActive && logs.length === 2 && (
                         <>
                             <div className="text-emerald-500/80 mb-1">[SYSTEM] Watcher process hooked successfully.</div>
                             <div className="text-emerald-500/80 mb-1">[SYSTEM] Listening for events in background...</div>
-                            {auto.id === 'obsidian-sync' && (
-                                <div className="text-foreground/80 mt-4 flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    Polling local vault directory...
-                                </div>
-                            )}
                         </>
-                    ) : (
-                        <div className="text-amber-500/80 mt-4">[SYSTEM] Automation is currently idling. No recent activity detected.</div>
                     )}
                 </div>
             </div>

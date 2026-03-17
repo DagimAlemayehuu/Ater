@@ -39,7 +39,7 @@ export const agentsData = [
         id: 'auditor', 
         name: 'The Auditor', 
         role: 'Performance Reviewer', 
-        status: 'standby', 
+        status: 'online', 
         description: 'Analyzes weekly goal completion rates to generate a Performance Audit report.',
         icon: FileCheck2
     },
@@ -47,7 +47,7 @@ export const agentsData = [
         id: 'financer', 
         name: 'The Financer', 
         role: 'Wealth Manager', 
-        status: 'standby', 
+        status: 'online', 
         description: 'Reads your financial profile and expense trackers to monitor budgets.',
         icon: Wallet
     },
@@ -55,7 +55,7 @@ export const agentsData = [
         id: 'coach', 
         name: 'The Coach', 
         role: 'Health & Fitness', 
-        status: 'standby', 
+        status: 'online', 
         description: 'Tracks workout logs, calculates progressive overload, and plans deload weeks.',
         icon: Dumbbell
     },
@@ -63,7 +63,7 @@ export const agentsData = [
         id: 'scribe', 
         name: 'The Scribe', 
         role: 'Journaling & Formatting', 
-        status: 'standby', 
+        status: 'online', 
         description: 'Formats rough brain-dumps into perfectly tagged, cross-linked Obsidian notes.',
         icon: PenTool
     },
@@ -71,7 +71,7 @@ export const agentsData = [
         id: 'scout', 
         name: 'The Scout', 
         role: 'Web Researcher', 
-        status: 'standby', 
+        status: 'online', 
         description: 'Fetches web documentation and research papers, injecting summaries into your vault.',
         icon: Globe
     },
@@ -79,7 +79,7 @@ export const agentsData = [
         id: 'architect', 
         name: 'The Architect', 
         role: 'System Builder', 
-        status: 'standby', 
+        status: 'online', 
         description: 'Designs and deploys new Notion database schemas or complex Obsidian templates.',
         icon: LayoutTemplate
     }

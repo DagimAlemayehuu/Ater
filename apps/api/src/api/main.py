@@ -24,9 +24,24 @@ from loguru import logger
 from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.notion.client import NotionClient
 from src.domains.obsidian.client import ObsidianClient
-from src.domains.ai.strategist import Strategist
 from src.domains.vault.router import router as vault_router
 from src.domains.vault.client import VaultManager
+
+# AI Agents
+from src.domains.ai.strategist import Strategist
+from src.domains.ai.coach import Coach
+from src.domains.ai.financer import Financer
+from src.domains.ai.scout import Scout
+from src.domains.ai.scribe import Scribe
+from src.domains.ai.architect import Architect
+from src.domains.ai.auditor import Auditor
+
+# Automations
+from src.domains.automations.briefing import DailyBriefing
+from src.domains.automations.categorizer import ExpenseCategorizer
+from src.domains.automations.cleanup import NotionCleanup
+from src.domains.automations.habits import HabitStreak
+from src.domains.automations.academics import AcademicFetcher
 
 # OKA Integration
 from src.domains.oka.router import router as oka_router
@@ -273,6 +288,189 @@ async def brainstorm_with_ai(
     except Exception as e:
         logger.error(f"Gemini brainstorm failed: {e}")
         raise HTTPException(status_code=503, detail=f"AI Agent Error: {str(e)}")
+
+@app.post("/api/ai/coach")
+async def chat_with_coach(
+    query_data: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """
+    Habit and motivation coaching using the Coach agent.
+    """
+    if not secrets.gemini_key:
+        raise HTTPException(status_code=401, detail="X-Gemini-Key header missing")
+    
+    query = query_data.get("query")
+    if not query:
+        raise HTTPException(status_code=400, detail="Query missing")
+    
+    try:
+        agent = Coach(secrets.gemini_key, notion_key=secrets.notion_key, vault_path=secrets.vault_path)
+        response = await agent.chat(
+            query, 
+            context=query_data.get("context"),
+            model=secrets.gemini_model or 'gemini-2.5-flash',
+            history=query_data.get("history")
+        )
+        return {"response": response}
+    except Exception as e:
+        logger.error(f"Coach failed: {e}")
+        raise HTTPException(status_code=503, detail=f"Coach Error: {str(e)}")
+
+@app.post("/api/ai/financer")
+async def chat_with_financer(
+    query_data: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Expense analysis and budgeting agent."""
+    if not secrets.gemini_key or not secrets.notion_key:
+        raise HTTPException(status_code=401, detail="X-Gemini-Key or X-Notion-Key missing")
+    try:
+        agent = Financer(secrets.gemini_key, secrets.notion_key, secrets.gemini_model or 'gemini-2.5-flash')
+        response = await agent.chat(query_data.get("query"), history=query_data.get("history"), context=query_data.get("context"))
+        return {"response": response}
+    except Exception as e:
+        logger.error(f"Financer failed: {e}")
+        raise HTTPException(status_code=503, detail=str(e))
+
+@app.post("/api/ai/scout")
+async def chat_with_scout(
+    query_data: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Web-search enabled research agent."""
+    if not secrets.gemini_key:
+        raise HTTPException(status_code=401, detail="X-Gemini-Key missing")
+    try:
+        agent = Scout(secrets.gemini_key, secrets.gemini_model or 'gemini-2.5-flash')
+        response = await agent.chat(query_data.get("query"), history=query_data.get("history"), context=query_data.get("context"))
+        return {"response": response}
+    except Exception as e:
+        logger.error(f"Scout failed: {e}")
+        raise HTTPException(status_code=503, detail=str(e))
+
+@app.post("/api/ai/scribe")
+async def chat_with_scribe(
+    query_data: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Transcription and note consolidation agent."""
+    if not secrets.gemini_key or not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Gemini-Key or X-Vault-Path missing")
+    try:
+        agent = Scribe(secrets.gemini_key, secrets.vault_path, secrets.gemini_model or 'gemini-2.5-flash')
+        response = await agent.chat(query_data.get("query"), history=query_data.get("history"), context=query_data.get("context"))
+        return {"response": response}
+    except Exception as e:
+        logger.error(f"Scribe failed: {e}")
+        raise HTTPException(status_code=503, detail=str(e))
+
+@app.post("/api/ai/architect")
+async def chat_with_architect(
+    query_data: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Technical documentation and system meta-analysis agent."""
+    if not secrets.gemini_key:
+        raise HTTPException(status_code=401, detail="X-Gemini-Key missing")
+    try:
+        agent = Architect(secrets.gemini_key, secrets.gemini_model or 'gemini-2.5-flash')
+        response = await agent.chat(query_data.get("query"), history=query_data.get("history"), context=query_data.get("context"))
+        return {"response": response}
+    except Exception as e:
+        logger.error(f"Architect failed: {e}")
+        raise HTTPException(status_code=503, detail=str(e))
+
+@app.post("/api/ai/auditor")
+async def chat_with_auditor(
+    query_data: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Productivity audit and goal compliance agent."""
+    if not secrets.gemini_key or not secrets.notion_key:
+        raise HTTPException(status_code=401, detail="X-Gemini-Key or X-Notion-Key missing")
+    try:
+        agent = Auditor(secrets.gemini_key, secrets.notion_key, secrets.gemini_model or 'gemini-2.5-flash')
+        response = await agent.chat(query_data.get("query"), history=query_data.get("history"), context=query_data.get("context"))
+        return {"response": response}
+    except Exception as e:
+        logger.error(f"Auditor failed: {e}")
+        raise HTTPException(status_code=503, detail=str(e))
+
+@app.post("/api/automations/briefing")
+async def run_daily_briefing(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Triggers the daily briefing generation."""
+    if not secrets.gemini_key or not secrets.notion_key or not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="Required headers missing")
+    try:
+        automation = DailyBriefing(secrets.gemini_key, secrets.notion_key, secrets.vault_path)
+        result = await automation.generate()
+        return {"briefing": result}
+    except Exception as e:
+        logger.error(f"Briefing failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/automations/categorizer")
+async def run_expense_categorizer(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Auto-categorizes expenses in Notion."""
+    if not secrets.gemini_key or not secrets.notion_key:
+        raise HTTPException(status_code=401, detail="X-Gemini-Key or X-Notion-Key missing")
+    try:
+        automation = ExpenseCategorizer(secrets.gemini_key, secrets.notion_key, secrets.gemini_model or 'gemini-2.5-flash')
+        result = await automation.run()
+        return result
+    except Exception as e:
+        logger.error(f"Categorizer failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/automations/cleanup")
+async def run_notion_cleanup(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Archives old tasks in Notion."""
+    if not secrets.notion_key:
+        raise HTTPException(status_code=401, detail="X-Notion-Key missing")
+    try:
+        automation = NotionCleanup(secrets.notion_key)
+        result = await automation.run()
+        return result
+    except Exception as e:
+        logger.error(f"Cleanup failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/automations/habits")
+async def run_habit_streak_validation(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Validates habit streaks in Notion."""
+    if not secrets.notion_key:
+        raise HTTPException(status_code=401, detail="X-Notion-Key missing")
+    try:
+        automation = HabitStreak(secrets.notion_key)
+        result = await automation.run()
+        return result
+    except Exception as e:
+        logger.error(f"Habit validation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/automations/academics")
+async def run_academic_fetcher(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Syncs academic data into Notion."""
+    if not secrets.notion_key:
+        raise HTTPException(status_code=401, detail="X-Notion-Key missing")
+    try:
+        automation = AcademicFetcher(secrets.notion_key)
+        result = await automation.run()
+        return result
+    except Exception as e:
+        logger.error(f"Academic fetch failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/debugger/query")
 async def debugger_query(

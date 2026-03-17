@@ -260,6 +260,73 @@ export const sidecarApi = {
             method: 'POST',
             body: JSON.stringify({ query })
         }),
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    chatWithCoach: (query: string, history?: any[], context?: string) =>
+        request<{ response: string }>('/api/ai/coach', {
+            method: 'POST',
+            body: JSON.stringify({ query, history, context })
+        }),
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    chatWithFinancer: (query: string, history?: any[], context?: string) =>
+        request<{ response: string }>('/api/ai/financer', {
+            method: 'POST',
+            body: JSON.stringify({ query, history, context })
+        }),
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    chatWithScout: (query: string, history?: any[], context?: string) =>
+        request<{ response: string }>('/api/ai/scout', {
+            method: 'POST',
+            body: JSON.stringify({ query, history, context })
+        }),
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    chatWithScribe: (query: string, history?: any[], context?: string) =>
+        request<{ response: string }>('/api/ai/scribe', {
+            method: 'POST',
+            body: JSON.stringify({ query, history, context })
+        }),
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    chatWithArchitect: (query: string, history?: any[], context?: string) =>
+        request<{ response: string }>('/api/ai/architect', {
+            method: 'POST',
+            body: JSON.stringify({ query, history, context })
+        }),
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    chatWithAuditor: (query: string, history?: any[], context?: string) =>
+        request<{ response: string }>('/api/ai/auditor', {
+            method: 'POST',
+            body: JSON.stringify({ query, history, context })
+        }),
+
+    runDailyBriefing: () =>
+        request<{ briefing: string }>('/api/automations/briefing', {
+            method: 'POST'
+        }),
+
+    runCategorizer: () =>
+        request<{ categorized_count: number }>('/api/automations/categorizer', {
+            method: 'POST'
+        }),
+
+    runCleanup: () =>
+        request<{ archived_count: number }>('/api/automations/cleanup', {
+            method: 'POST'
+        }),
+
+    runHabits: () =>
+        request<{ habits_validated: number }>('/api/automations/habits', {
+            method: 'POST'
+        }),
+
+    runAcademics: () =>
+        request<{ success: boolean }>('/api/automations/academics', {
+            method: 'POST'
+        }),
 }
 
 

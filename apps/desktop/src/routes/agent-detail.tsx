@@ -4,12 +4,16 @@ import { ArrowLeft, TerminalSquare, AlertCircle } from 'lucide-react'
 import Debugger from './debugger'
 import Strategist from './strategist'
 import Oka from './oka'
+import Coach from './coach'
+import AgentConsole from '@/components/AgentConsole'
 
 export default function AgentDetail() {
     const { id } = useParams()
     const navigate = useNavigate()
     
-    const agent = agentsData.find((a: Record<string, unknown>) => a.id === id)
+    // Explicitly casting because of the dynamic structure of agentsData
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const agent = agentsData.find((a: any) => a.id === id)
     
     if (!agent) {
         return (
@@ -32,6 +36,33 @@ export default function AgentDetail() {
     
     if (agent.id === 'oka') {
         return <Oka />
+    }
+
+    if (agent.id === 'coach') {
+        return <Coach />
+    }
+
+    // Use the generic AgentConsole for newly implemented agents
+    const consoleAgents = ['financer', 'scout', 'scribe', 'architect', 'auditor']
+    if (consoleAgents.includes(agent.id)) {
+        return (
+            <AgentConsole 
+                agentId={agent.id}
+                name={agent.name}
+                role={agent.role}
+                description={agent.description}
+                icon={agent.icon}
+                status={agent.status}
+                suggestions={
+                    agent.id === 'financer' ? ["Check my budget", "Review recent expenses", "Total wealth summary"] :
+                    agent.id === 'scout' ? ["Research latest AI news", "Find papers on RAG", "Search for Life OS documentation"] :
+                    agent.id === 'scribe' ? ["Format my recent thought", "Link these two notes", "Create a tag summary"] :
+                    agent.id === 'architect' ? ["Show me my vault map", "Create new project template", "Design a fitness database"] :
+                    agent.id === 'auditor' ? ["Run weekly performance audit", "Check goal completion rates", "Generate audit report"] :
+                    undefined
+                }
+            />
+        )
     }
 
     const Icon = agent.icon
