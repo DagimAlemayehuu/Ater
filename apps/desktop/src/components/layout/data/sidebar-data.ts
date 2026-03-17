@@ -34,38 +34,18 @@ export const sidebarData: SidebarData = {
           url: '/dashboard',
           icon: LayoutDashboard,
         },
-        {
-          title: 'Strategist',
-          url: '/strategist',
-          icon: Crosshair,
-        },
-        {
-          title: 'Goals',
-          url: '/goals',
-          icon: Zap,
-        },
       ],
     },
     {
-      title: 'Intelligence',
+      title: 'Spaces',
       items: [
         {
-          title: 'Chat',
-          url: '/chat',
-          icon: MessageSquare,
+          title: 'Notion',
+          url: '/notion',
+          icon: Database,
         },
         {
-          title: 'Architect',
-          url: '/oka',
-          icon: Brain,
-        },
-        {
-          title: 'Academics',
-          url: '/academics',
-          icon: GraduationCap,
-        },
-        {
-          title: 'Zettelkasten',
+          title: 'Obsidian',
           url: '/obsidian',
           icon: FileText,
         },
@@ -74,11 +54,6 @@ export const sidebarData: SidebarData = {
     {
       title: 'System',
       items: [
-        {
-          title: 'Notion',
-          url: '/notion',
-          icon: Database,
-        },
         {
           title: 'Settings',
           url: '/settings',

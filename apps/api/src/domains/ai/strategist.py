@@ -142,7 +142,7 @@ class Strategist:
             return f"Error reading obsidian note: {str(e)}"
 
 
-    async def brainstorm(self, query: str, context: Optional[str] = None, system_prompt: Optional[str] = None, model: str = 'gemini-2.5-flash', history: Optional[List[Dict[str, str]]] = None) -> str:
+    async def brainstorm(self, query: str, context: Optional[str] = None, system_prompt: Optional[str] = None, model: str = 'gemini-2.5-flash', history: Optional[List[Dict[str, str]]] = None, file_uri: Optional[str] = None) -> str:
         """
         Brainstorms and potentially executes actions in Notion based on the query.
         """
@@ -153,7 +153,7 @@ class Strategist:
             print(f"[Life OS Sidecar] Using provided system_prompt (len: {len(system_prompt)})")
             system_instruction = f"{system_prompt.strip()}\n\n[System Info: Current Time is {now}. Notion Database ID: {GOALS_DB_ID}]"
         else:
-            print("[Life OS Sidecar] Using fallback STRATEGIST system prompt")
+            # ... (keep existing fallback prompt logic)
             system_instruction = f"""
             You are THE STRATEGIST, an AI-driven Chief of Staff and Strategic Orchestrator. 
             Current System Time: {now}.
@@ -193,11 +193,18 @@ class Strategist:
         obsidian_tools = [self._list_obsidian_notes, self._read_obsidian_note]
         all_tools = notion_tools + obsidian_tools
 
+        # Prepare history for the SDK (map 'assistant' to 'model')
+        formatted_history = []
+        if history:
+            for msg in history:
+                role = "user" if msg["role"] == "user" else "model"
+                formatted_history.append({"role": role, "parts": [{"text": msg["content"]}]})
+
         try:
             # Using Chat with automatic tool resolution
             chat = self.client.aio.chats.create(
                 model=model,
-                history=history,
+                history=formatted_history,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
                     tools=all_tools,
@@ -208,21 +215,39 @@ class Strategist:
                 )
             )
 
-            full_query = f"""
+            parts = []
+            if file_uri:
+                # Determine mime type from URI/filename if possible, default to pdf for safety
+                mime_type = "application/pdf"
+                if any(ext in file_uri.lower() for ext in [".txt", ".md", ".py", ".js", ".ts", ".json"]):
+                    mime_type = "text/plain"
+                
+                parts.append(types.Part.from_uri(file_uri=file_uri, mime_type=mime_type))
+            
+            parts.append(types.Part.from_text(text=f"""
             User Query: {query}
             
             Optional Context from Knowledge Base:
             {context if context else 'No specific context provided.'}
-            """
+            """))
 
-            response = await chat.send_message(full_query)
+            response = await chat.send_message(parts)
             return response.text
         except Exception as e:
             print(f"[Life OS Sidecar] Strategist Agent Fail: {e}")
-            # Final fallback
+            
+            # Simple fallback content if chat fails
+            contents = []
+            if file_uri:
+                mime_type = "application/pdf"
+                if any(ext in file_uri.lower() for ext in [".txt", ".md", ".py", ".js", ".ts", ".json"]):
+                    mime_type = "text/plain"
+                contents.append(types.Part.from_uri(file_uri=file_uri, mime_type=mime_type))
+            contents.append(query)
+
             response = await self.client.aio.models.generate_content(
                 model=model,
-                contents=query,
+                contents=contents,
                 config=types.GenerateContentConfig(system_instruction=system_instruction)
             )
             return response.text

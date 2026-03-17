@@ -6,6 +6,14 @@
 
 Life OS is a local-first desktop application built as a polyglot monorepo. It operates fully without internet connectivity for all core functions, using the network only when explicitly invoking external APIs (Notion, Google Gemini).
 
+## New Features (Refactored)
+
+- **Notion Hub**: Consolidated workspace for managing **Academics** and **Goals**.
+- **Obsidian Intelligence**: A high-fidelity reasoning engine and vault explorer.
+    - **System Instructions**: Custom-tuned AI behavior permanently docked for precise reasoning.
+    - **Vault Explorer**: Hierarchical folder navigation with a professional single-pane Markdown reader.
+    - **AI File Uploads**: Real-time document analysis (PDF, Code, Text) powered by Gemini Files API.
+
 ## Stack
 
 | Layer | Technology | Purpose |
@@ -34,7 +42,7 @@ Life OS is a local-first desktop application built as a polyglot monorepo. It op
 ## Reads & Writes
 
 - **Frontend (React):** Reads local Tauri store (config). Invokes Python sidecar commands via HTTP (localhost). Renders data from Python responses.
-- **Python API (FastAPI Sidecar):** Reads/Writes Notion API. Reads local Obsidian `.md` files. Reads/Writes Google Gemini API. Reads API keys from frontend request context.
+- **Python API (FastAPI Sidecar):** Reads/Writes Notion API. Reads local Obsidian `.md` files. Reads/Writes Google Gemini API. Handles secure file uploads.
 - **Tauri Desktop (Rust):** Manages filesystem permissions. Launches Python sidecar process. Bridges IPC between React and system.
 
 ## Monorepo Structure
@@ -46,7 +54,7 @@ Life OS is a local-first desktop application built as a polyglot monorepo. It op
 │   └── api/            # Python FastAPI sidecar (uv-managed)
 ├── docs/
 │   ├── architecture/   # System design, ADRs, and structural diagrams
-│   ├── prompts/        # Knowledge Architect (OKA) prompt masterplans
+│   ├── prompts/        # System and AI persona prompt masterplans
 │   └── setup/          # Initialization protocols and project tracking
 ├── packages/
 │   ├── config-eslint/  # Shared ESLint configuration
@@ -65,10 +73,3 @@ Life OS is a local-first desktop application built as a polyglot monorepo. It op
 - No API keys are hardcoded. Ever.
 - Application boots to Onboarding/Settings screen if configuration is absent.
 - All secrets are stored in Tauri's secure local store, fetched by the frontend and passed per-request to the Python sidecar.
-
-## Execution Sequence
-
-1. **Phase 3.1:** Tauri shell + Vite/React + Tailwind + shadcn/ui. Python FastAPI sidecar launch via Tauri. Verify `/api/health`.
-2. **Phase 3.2:** Settings UI + secure local storage + `/api/config/verify` endpoint.
-3. **Phase 3.3:** Notion API client + Obsidian filesystem reader in Python.
-4. **Phase 3.4:** Google Gemini SDK integration. Dashboard + Strategist UI. Full data pipeline.

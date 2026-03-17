@@ -9,23 +9,17 @@ import { useTheme } from '@/context/theme-provider'
 import { open } from '@tauri-apps/plugin-dialog'
 import { cn } from '@/lib/utils'
 import { sidecarApi } from '@/lib/sidecarApi'
-import { OKA_PART_A, OKA_PART_B } from '@/lib/oka_defaults'
 import ProfileEditor from '@/components/profiles/ProfileEditor'
-import MasterPlanGenerator from '@/components/profiles/MasterPlanGenerator'
-import StrategistSliders from '@/components/profiles/StrategistSliders'
 import {
     PERSONAL_PROFILE_SCHEMA,
     ACADEMIC_PROFILE_SCHEMA,
     FINANCIAL_PROFILE_SCHEMA,
     FITNESS_PROFILE_SCHEMA,
-    MASTER_PLAN_SCHEMA,
-    STRATEGIST_PROMPT_SCHEMA,
-    CREATOR_PROMPT_SCHEMA,
 } from '@/components/profiles/schemas'
 
 /* ─────────────────────── Types ─────────────────────── */
 
-type SettingsSection = 'general' | 'profiles' | 'master_plan' | 'system_prompts' | 'oka'
+type SettingsSection = 'general' | 'profiles'
 type ProfileId = string
 
 interface ProfileCardDef {
@@ -59,29 +53,6 @@ const PROFILE_CARDS: ProfileCardDef[] = [
         description: 'Body data, training plan, nutrition, and recovery.',
         category: 'profiles', configKey: 'profileFitness', schema: FITNESS_PROFILE_SCHEMA,
     },
-]
-
-const MASTER_PLAN_CARD: ProfileCardDef = {
-    id: 'master_plan', title: 'Master Plan', icon: <Brain size={16} />,
-    description: 'AI-generated roadmap for your life.',
-    category: 'master_plan', configKey: 'profileMasterPlan', schema: MASTER_PLAN_SCHEMA,
-}
-
-const STRATEGIST_CARD: ProfileCardDef = {
-    id: 'strategist_prompt', title: 'The Strategist', icon: <Bot size={16} />,
-    description: 'Core directives for AI reasoning.',
-    category: 'system_prompts', configKey: 'strategistPrompt', schema: STRATEGIST_PROMPT_SCHEMA,
-}
-
-const CREATOR_CARD: ProfileCardDef = {
-    id: 'creator_prompt', title: 'The Creator', icon: <Wand2 size={16} />,
-    description: 'Directives for creative tasks.',
-    category: 'system_prompts', configKey: 'creatorPrompt', schema: CREATOR_PROMPT_SCHEMA,
-}
-
-const SYSTEM_PROMPT_CARDS: ProfileCardDef[] = [
-    STRATEGIST_CARD,
-    CREATOR_CARD
 ]
 
 /* ─────────────────── Components ─────────────────── */
@@ -176,60 +147,6 @@ export default function Settings() {
     const [activeProfileId, setActiveProfileId] = useState<ProfileId | null>(null)
     const [showMasterPlanGen, setShowMasterPlanGen] = useState(false)
 
-    // OKA Settings
-    const [okaSettings, setOkaSettings] = useState<any>(null);
-
-    const fetchOkaSettings = async () => {
-        try {
-            const data = await sidecarApi.okaGetSettings();
-            setOkaSettings(data);
-            return data;
-        } catch (err) {
-            console.error('[Settings] Failed to fetch OKA settings:', err);
-            return null;
-        }
-    };
-
-    const handleResetOkaProtocol = async () => {
-        try {
-            await sidecarApi.okaUpdateSettings({
-                system_instruction_part_a: OKA_PART_A,
-                system_instruction_part_b: OKA_PART_B
-            });
-            await fetchOkaSettings();
-        } catch (err) {
-            console.error('[Settings] Failed to reset OKA protocol:', err);
-        }
-    };
-
-    useEffect(() => {
-        if (activeSection === 'oka') {
-            fetchOkaSettings().then(async (data) => {
-                if (data && !data.system_instruction_part_a) {
-                    await handleResetOkaProtocol();
-                }
-
-                const updates: any = {};
-                if (data) {
-                    if (config?.geminiApiKey && data.google_api_key !== config.geminiApiKey) {
-                        updates.google_api_key = config.geminiApiKey;
-                    }
-                    if (config?.geminiModel && data.selected_model !== config.geminiModel) {
-                        updates.selected_model = config.geminiModel;
-                    }
-                    if (config?.obsidianVaultPath && data.vault_path !== config.obsidianVaultPath) {
-                        updates.vault_path = config.obsidianVaultPath;
-                    }
-
-                    if (Object.keys(updates).length > 0) {
-                        await sidecarApi.okaUpdateSettings(updates);
-                        setOkaSettings((prev: any) => ({ ...prev, ...updates }));
-                    }
-                }
-            });
-        }
-    }, [activeSection, config?.geminiApiKey, config?.geminiModel, config?.obsidianVaultPath]);
-
     if (!config) return null
 
     const startEditing = (key: string, current: string) => {
@@ -241,15 +158,7 @@ export default function Settings() {
         if (!editingKey) return
         try {
             await saveConfig({ [editingKey]: editValue })
-
-            if (editingKey === 'geminiApiKey') {
-                await sidecarApi.okaUpdateSettings({ google_api_key: editValue });
-            } else if (editingKey === 'obsidianVaultPath') {
-                await sidecarApi.okaUpdateSettings({ vault_path: editValue });
-            }
-
             setEditingKey(null)
-            fetchOkaSettings();
         } catch (err) {
             alert('Failed to save setting')
         }
@@ -288,173 +197,32 @@ export default function Settings() {
     const sidebarItems: { section: SettingsSection; label: string; icon: React.ReactNode }[] = [
         { section: 'general', label: 'General', icon: <SettingsIcon size={16} /> },
         { section: 'profiles', label: 'Profiles', icon: <User size={16} /> },
-        { section: 'master_plan', label: 'Master Plan', icon: <Target size={16} /> },
-        { section: 'system_prompts', label: 'System Prompts', icon: <Bot size={16} /> },
-        { section: 'oka', label: 'OKA Engine', icon: <Wand2 size={16} /> },
     ]
 
     /* ────── Profile Detail View ────── */
     function renderProfileDetail() {
         if (!activeProfileId) return null
-        let card = [...PROFILE_CARDS, MASTER_PLAN_CARD, STRATEGIST_CARD, CREATOR_CARD].find(c => c.id === activeProfileId)
-        const customPersona = config?.customPersonas?.find(p => p.id === activeProfileId)
-
-        if (!card && customPersona) {
-            card = {
-                id: customPersona.id,
-                title: customPersona.name,
-                icon: React.createElement((Icons as any)[customPersona.icon] || MessageSquare, { size: 16 }),
-                description: customPersona.description,
-                category: 'custom_prompts',
-            }
-        }
+        const card = PROFILE_CARDS.find(c => c.id === activeProfileId)
 
         if (!card) return null
-
-        if (activeProfileId === 'master_plan' && showMasterPlanGen) {
-            return (
-                <div className="animate-in fade-in duration-300">
-                    <button
-                        onClick={() => setShowMasterPlanGen(false)}
-                        className="flex items-center gap-2 mb-6 text-sm font-medium hover:underline text-muted-foreground hover:text-foreground"
-                    >
-                        <ChevronLeft size={16} />
-                        Back to Master Plan
-                    </button>
-                    <MasterPlanGenerator
-                        onComplete={(markdown) => {
-                            saveConfig({ profileMasterPlan: markdown })
-                            setShowMasterPlanGen(false)
-                        }}
-                        onCancel={() => setShowMasterPlanGen(false)}
-                    />
-                </div>
-            )
-        }
-
-        const isCorePrompt = activeProfileId === 'strategist_prompt' || activeProfileId === 'creator_prompt';
-        const isCustomPrompt = !!customPersona;
-
-        if (isCorePrompt || isCustomPrompt) {
-            const slidersKey = activeProfileId === 'strategist_prompt' ? 'strategistSliders' : 'creatorSliders';
-            const promptKey = activeProfileId === 'strategist_prompt' ? 'strategistPrompt' : 'creatorPrompt';
-
-            const currentPrompt = isCustomPrompt ? customPersona?.prompt : config?.[promptKey as any];
-            const currentSliders = isCustomPrompt ? JSON.stringify(customPersona?.slidersValues) : config?.[slidersKey as any];
-
-            return (
-                <div className="w-full animate-in fade-in duration-300 space-y-6">
-                    <div className="flex items-center justify-between">
-                        <button
-                            onClick={() => setActiveProfileId(null)}
-                            className="flex items-center gap-2 text-sm font-medium hover:underline text-muted-foreground hover:text-foreground"
-                        >
-                            <ChevronLeft size={16} />
-                            All System Prompts
-                        </button>
-
-                        {isCustomPrompt && (
-                            <button
-                                onClick={() => {
-                                    if (confirm(`Delete ${customPersona.name}?`)) {
-                                        deleteCustomPersona(customPersona.id);
-                                        setActiveProfileId(null);
-                                    }
-                                }}
-                                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-destructive/10 text-destructive h-9 px-4 py-2"
-                            >
-                                <Trash2 size={14} className="mr-2" />
-                                Delete Persona
-                            </button>
-                        )}
-                    </div>
-
-                    <div>
-                        <h2 className="text-2xl font-bold tracking-tight">{card.title} Configuration</h2>
-                        <p className="text-muted-foreground">{card.description}</p>
-                    </div>
-
-                    <Card>
-                        <CardHeader title="Behavioral Calibration" description="Adjust dynamic traits governing reasoning style." icon={<Sliders size={18} className="text-muted-foreground" />} />
-                        <CardContent>
-                            <StrategistSliders
-                                value={currentSliders || ''}
-                                onChange={(v) => {
-                                    if (isCustomPrompt) {
-                                        updateCustomPersona(customPersona.id, { slidersValues: JSON.parse(v) });
-                                    } else {
-                                        saveConfig({ [slidersKey]: v });
-                                    }
-                                }}
-                                type={isCustomPrompt ? 'custom' : (activeProfileId === 'creator_prompt' ? 'creator' : 'strategist')}
-                                customConfig={customPersona?.slidersConfig}
-                            />
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader title="Operational Directives" description="Core system instructions." icon={<Bot size={18} className="text-muted-foreground" />} />
-                        <CardContent>
-                            <StrategistPromptTextarea
-                                value={currentPrompt || ''}
-                                onSave={(v) => {
-                                    if (isCustomPrompt) {
-                                        updateCustomPersona(customPersona.id, { prompt: v });
-                                    } else {
-                                        saveConfig({ [promptKey as any]: v });
-                                    }
-                                }}
-                                placeholder={`Enter operational directives for ${card.title}...`}
-                            />
-                        </CardContent>
-                    </Card>
-
-                    {isCorePrompt && card.schema && (
-                        <Card>
-                            <CardHeader title="Structured Parameters" description="Modular logical boundaries." icon={<Edit2 size={18} className="text-muted-foreground" />} />
-                            <CardContent>
-                                <ProfileEditor
-                                    id={activeProfileId}
-                                    title={card.title}
-                                    value={config?.[card.configKey!] || ''}
-                                    onChange={(v) => saveConfig({ [card.configKey!]: v })}
-                                    schema={card.schema}
-                                />
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
-            )
-        }
 
         const profileValue = (config as any)?.[card.configKey!] || ''
 
         return (
             <div className="w-full animate-in fade-in duration-300 space-y-6 flex flex-col h-full pb-8">
-                {activeSection === 'profiles' && (
-                    <button
-                        onClick={() => setActiveProfileId(null)}
-                        className="flex items-center gap-2 mb-2 text-sm font-medium hover:underline text-muted-foreground hover:text-foreground w-max"
-                    >
-                        <ChevronLeft size={16} />
-                        All Profiles
-                    </button>
-                )}
+                <button
+                    onClick={() => setActiveProfileId(null)}
+                    className="flex items-center gap-2 mb-2 text-sm font-medium hover:underline text-muted-foreground hover:text-foreground w-max"
+                >
+                    <ChevronLeft size={16} />
+                    All Profiles
+                </button>
 
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">{card.title} Profile</h2>
                         <p className="text-muted-foreground mt-1">{card.description}</p>
                     </div>
-                    {activeProfileId === 'master_plan' && (
-                        <button
-                            onClick={() => setShowMasterPlanGen(true)}
-                            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 shadow-sm"
-                        >
-                            <Wand2 size={16} className="mr-2" />
-                            Generate with AI
-                        </button>
-                    )}
                 </div>
 
                 <Card className="flex-1 flex flex-col overflow-hidden">
@@ -470,29 +238,6 @@ export default function Settings() {
                         </div>
                     </CardContent>
                 </Card>
-            </div>
-        )
-    }
-
-    /* ────── System Prompts Section ────── */
-    function renderSystemPrompts() {
-        const customPersonaCards: ProfileCardDef[] = (config?.customPersonas || []).map(p => ({
-            id: p.id,
-            title: p.name,
-            icon: React.createElement((Icons as any)[p.icon] || MessageSquare, { size: 16 }),
-            description: p.description,
-            category: 'custom_prompts',
-        }))
-
-        return (
-            <div className="w-full space-y-6 animate-in fade-in duration-300">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight text-foreground">System Prompts</h2>
-                    <p className="text-muted-foreground">Configure AI personas and behaviors.</p>
-                </div>
-
-                {renderProfileCategory('Core Kernels', SYSTEM_PROMPT_CARDS)}
-                {customPersonaCards.length > 0 && renderProfileCategory('Custom Personas', customPersonaCards)}
             </div>
         )
     }
@@ -593,7 +338,6 @@ export default function Settings() {
                                     onChange={(e) => {
                                         const val = e.target.value;
                                         saveConfig({ geminiModel: val });
-                                        sidecarApi.okaUpdateSettings({ selected_model: val });
                                     }}
                                     className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                                 >
@@ -729,59 +473,6 @@ export default function Settings() {
         )
     }
 
-    function renderOkaSettings() {
-        return (
-            <div className="w-full space-y-6 animate-in fade-in duration-300">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h2 className="text-2xl font-bold tracking-tight">OKA Protocol</h2>
-                        <p className="text-muted-foreground">Manage parsing instructions for the smart note taker.</p>
-                    </div>
-                    <button
-                        onClick={handleResetOkaProtocol}
-                        className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 border shadow-sm"
-                    >
-                        <Wand2 size={16} className="mr-2" /> Restore Initial Protocol
-                    </button>
-                </div>
-
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader title="Operational Protocol (Part A)" description="Defines the core structure and rule engine for atomization." icon={<ShieldCheck size={18} className="text-muted-foreground" />} />
-                        <CardContent>
-                            <textarea
-                                value={okaSettings?.system_instruction_part_a || ''}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    sidecarApi.okaUpdateSettings({ system_instruction_part_a: val });
-                                    setOkaSettings((prev: any) => prev ? { ...prev, system_instruction_part_a: val } : null);
-                                }}
-                                className="w-full h-64 bg-background text-sm font-mono p-4 rounded-md border border-input focus:outline-none focus:ring-1 focus:ring-ring resize-none custom-scrollbar"
-                                placeholder="Part A rules..."
-                            />
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader title="Content Directives (Part B)" description="Defines layout, markdown rendering, and formatting preferences." icon={<Edit2 size={18} className="text-muted-foreground" />} />
-                        <CardContent>
-                            <textarea
-                                value={okaSettings?.system_instruction_part_b || ''}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    sidecarApi.okaUpdateSettings({ system_instruction_part_b: val });
-                                    setOkaSettings((prev: any) => prev ? { ...prev, system_instruction_part_b: val } : null);
-                                }}
-                                className="w-full h-64 bg-background text-sm font-mono p-4 rounded-md border border-input focus:outline-none focus:ring-1 focus:ring-ring resize-none custom-scrollbar"
-                                placeholder="Part B rules..."
-                            />
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        )
-    }
-
     return (
         <div className="space-y-6 md:block w-full mx-auto animate-in fade-in duration-300">
             <div className="space-y-0.5">
@@ -823,9 +514,7 @@ export default function Settings() {
                     {activeProfileId ? renderProfileDetail() : (
                         activeSection === 'general' ? renderGeneral() :
                             activeSection === 'profiles' ? renderProfiles() :
-                                activeSection === 'system_prompts' ? renderSystemPrompts() :
-                                    activeSection === 'oka' ? renderOkaSettings() :
-                                        renderGeneral()
+                                renderGeneral()
                     )}
                 </div>
             </div>

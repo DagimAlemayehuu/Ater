@@ -44,7 +44,7 @@ class AcademicsService:
     async def sync_profile_markdown(self) -> str:
         """
         Creates/Overwrites the academic_profile.md file in Life OS md templates
-        This acts as the single source of truth context for OKA and Strategist.
+        This acts as the single source of truth context for Strategist.
         """
         dashboard_data = await self.get_dashboard_data()
         
@@ -96,7 +96,7 @@ class AcademicsService:
         for e in upcoming_exams:
             md_content += f"- 🔴 **{e['name']}** - Date: {e['date']}\\n"
             
-        md_content += "\\n## Knowledge Deficits (Requires Study or OKA Generation)\\n"
+        md_content += "\\n## Knowledge Deficits (Requires Study)\\n"
         if not knowledge_deficits:
             md_content += "- All caught up and confident! 🚀\\n"
         else:

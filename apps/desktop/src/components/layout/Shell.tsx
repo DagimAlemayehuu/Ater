@@ -10,10 +10,14 @@ import {
     Menu,
     Command,
     Moon,
-    Sun
+    Sun,
+    Database,
+    FileText
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/theme-provider'
+
+import { SidebarProvider } from '@/components/ui/sidebar'
 
 /**
  * Sidebar definition — grouped navigation
@@ -23,15 +27,13 @@ const navGroups = [
         title: 'Overview',
         items: [
             { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-            { label: 'Goals', path: '/goals', icon: Zap },
         ],
     },
     {
-        title: 'Intelligence',
+        title: 'Workspaces',
         items: [
-            { label: 'Chat', path: '/chat', icon: MessageSquare },
-            { label: 'OKA', path: '/oka', icon: Brain },
-            { label: 'Academics', path: '/academics', icon: GraduationCap },
+            { label: 'Notion', path: '/notion', icon: Database },
+            { label: 'Obsidian', path: '/obsidian', icon: FileText },
         ],
     },
     {
@@ -54,7 +56,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     const currentItem = allNavItems.find(n => n.path === location.pathname)
 
     return (
-        <div className="flex h-screen overflow-hidden bg-background text-foreground antialiased selection:bg-foreground selection:text-background">
+        <SidebarProvider defaultOpen={!collapsed}>
+            <div className="flex h-screen overflow-hidden bg-background text-foreground antialiased selection:bg-foreground selection:text-background w-full">
 
             {/* Mobile Sidebar Overlay */}
             {mobileOpen && (
@@ -173,5 +176,6 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                 </div>
             </main>
         </div>
+        </SidebarProvider>
     )
 }

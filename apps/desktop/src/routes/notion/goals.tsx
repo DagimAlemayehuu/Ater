@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { ExternalLink, RefreshCw, Calendar, CheckSquare, Clock, X, Plus, Save, Trash2, Search, CheckCircle2, ChevronRight } from 'lucide-react'
-import { sidecarApi } from '@/lib/sidecarApi'
-import { cn } from '@/lib/utils'
+import { sidecarApi } from '../../lib/sidecarApi'
+import { cn } from '../../lib/utils'
 
 interface GoalRaw { id: string; properties: Record<string, any>; url: string }
 

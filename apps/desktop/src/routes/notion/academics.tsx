@@ -4,9 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import {
     AlertCircle, RefreshCw, Zap, ChevronRight, Plus, X, ExternalLink, Save, Trash2, Hash, Search
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { sidecarApi } from '@/lib/sidecarApi'
-import { useOka } from '@/lib/OkaContext'
+import { cn } from '../../lib/utils'
+import { sidecarApi } from '../../lib/sidecarApi'
 
 const DB_COURSES = "2a9219ed-7519-817e-aedb-da156d06134c"
 const DB_STUDY_PLANNER = "2a9219ed-7519-81e2-81f8-de21e47c26fc"
@@ -61,7 +60,6 @@ function TableView({ items, columns, onRowClick, emptyMessage, selectedItemId }:
 
 export default function Academics() {
     const navigate = useNavigate()
-    const { setTargetUnit } = useOka()
     const [loading, setLoading] = useState(true)
     const [syncing, setSyncing] = useState(false)
     const [data, setData] = useState<{
@@ -438,20 +436,7 @@ export default function Academics() {
                                                         },
                                                         {
                                                             key: 'actions', label: '', render: (u) => {
-                                                                const hasNote = !!u.properties['NoteBookLM ']?.url
-                                                                const title = u.properties['Name of Unit']?.title?.[0]?.plain_text || 'Untitled'
-                                                                return (
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setTargetUnit({ id: u.id, name: title });
-                                                                            navigate('/oka');
-                                                                        }}
-                                                                        className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1 px-3 py-1 bg-secondary text-secondary-foreground hover:bg-muted ml-auto rounded-md text-xs font-medium"
-                                                                    >
-                                                                        {hasNote ? 'Regenerate OKA' : 'OKA'} <ChevronRight size={14} />
-                                                                    </button>
-                                                                )
+                                                                return null
                                                             }
                                                         }
                                                     ]}

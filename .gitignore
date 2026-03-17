@@ -44,3 +44,10 @@ logs/
 
 # Tauri
 apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/binaries/
+
+# Build
+dist/
+build/
+apps/api/dist/
+apps/api/build/

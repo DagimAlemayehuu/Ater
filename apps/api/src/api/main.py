@@ -11,11 +11,13 @@ import sys
 import os
 import asyncio
 import traceback
+import shutil
+import time
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
 
 import uvicorn
-from fastapi import FastAPI, Depends, Header, HTTPException, Body
+from fastapi import FastAPI, Depends, Header, HTTPException, Body, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.deps import AppSecrets, get_app_secrets
@@ -23,36 +25,14 @@ from src.domains.notion.client import NotionClient
 from src.domains.obsidian.client import ObsidianClient
 from src.domains.ai.strategist import Strategist
 
-# OKA Integration
-from src.domains.oka.router import router as oka_router
 from src.domains.academics.router import router as academics_router
-from src.domains.oka.database import engine as oka_engine, Base as OkaBase, AsyncSessionLocal as OkaSessionLocal
-from src.domains.oka.gemini_service import background_queue_worker
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
     print("[Life OS Sidecar] Starting up...")
-
-    # Initialize OKA database tables
-    async with oka_engine.begin() as conn:
-        await conn.run_sync(OkaBase.metadata.create_all)
-    print("[Life OS Sidecar] OKA database initialized.")
-
-    # Start OKA background worker
-    def get_session_factory():
-        async def factory():
-            async with OkaSessionLocal() as session:
-                yield session
-        return factory
-
-    worker_task = asyncio.create_task(background_queue_worker(get_session_factory()))
-    print("[Life OS Sidecar] OKA background worker started.")
-
     yield
-
-    worker_task.cancel()
     print("[Life OS Sidecar] Shutting down...")
 
 
@@ -77,7 +57,6 @@ app.add_middleware(
 )
 
 # Mount routers
-app.include_router(oka_router, prefix="/api")
 app.include_router(academics_router, prefix="/api")
 
 
@@ -215,6 +194,40 @@ async def save_persona_prompt(payload: Dict[str, str] = Body(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/ai/upload")
+async def ai_upload(file: UploadFile = File(...), secrets: AppSecrets = Depends(get_app_secrets)):
+    """Uploads a file to Gemini Files API for reasoning context."""
+    if not secrets.gemini_key:
+        raise HTTPException(status_code=400, detail="Gemini API Key missing")
+    
+    # Save temporary file
+    temp_path = f"temp_{file.filename}"
+    with open(temp_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    try:
+        from google import genai
+        client = genai.Client(api_key=secrets.gemini_key)
+        uploaded_file = client.files.upload(file=temp_path)
+        
+        # Wait for file to process
+        import time
+        max_retries = 60
+        for _ in range(max_retries):
+            file_info = client.files.get(name=uploaded_file.name)
+            if file_info.state.name == "ACTIVE":
+                break
+            if file_info.state.name == "FAILED":
+                raise HTTPException(status_code=500, detail="File processing failed in Gemini")
+            time.sleep(2)
+        else:
+            raise HTTPException(status_code=500, detail="File processing timed out")
+
+        return {"file_uri": uploaded_file.uri, "name": file.filename}
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
 @app.post("/api/ai/brainstorm")
 async def brainstorm_with_ai(
     query_data: Dict[str, Any],
@@ -233,15 +246,18 @@ async def brainstorm_with_ai(
     try:
         agent = Strategist(secrets.gemini_key, notion_key=secrets.notion_key, vault_path=secrets.vault_path)
         response = await agent.brainstorm(
-            query, 
+            query,
             context=query_data.get("context"),
             system_prompt=query_data.get("system_prompt"),
             model=secrets.gemini_model or 'gemini-2.5-flash',
-            history=query_data.get("history")
+            history=query_data.get("history", []),
+            file_uri=query_data.get("file_uri")
         )
         return {"response": response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.patch("/api/notion/pages/{page_id}")
 async def update_notion_page(
     page_id: str,

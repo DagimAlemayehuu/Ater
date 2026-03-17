@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
     ArrowRight, RefreshCw, Calendar, CheckCircle2,
     Circle, GraduationCap, Target, BookOpen, Zap,
-    MessageSquare, Brain, ArrowUpRight
+    MessageSquare, ArrowUpRight
 } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
@@ -139,25 +139,23 @@ export default function Dashboard() {
             </div>
 
             {/* Stats Row */}
-            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-                <StatCard label="Active Goals" value={loading ? '—' : String(activeGoals.length)} sub={`${completedGoals.length} completed`} icon={<Target className="h-3.5 w-3.5" />} onClick={() => navigate('/goals')} />
-                <StatCard label="Deadlines" value={loading ? '—' : String(deadlines.length)} sub={deadlines.filter(d => isUrgent(d.date)).length > 0 ? `${deadlines.filter(d => isUrgent(d.date)).length} this week` : 'none this week'} icon={<Calendar className="h-3.5 w-3.5" />} onClick={() => navigate('/academics')} />
-                <StatCard label="Courses" value={loading ? '—' : String(academics.courses.length)} sub={`${academics.units.length} units`} icon={<BookOpen className="h-3.5 w-3.5" />} onClick={() => navigate('/academics')} />
-                <StatCard label="Notion Pages" value={loading ? '—' : String(notionCount)} sub={`${obsidianCount} vault files`} icon={<Zap className="h-3.5 w-3.5" />} />
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+                <StatCard label="Active Goals" value={loading ? '—' : String(activeGoals.length)} sub={`${completedGoals.length} completed`} icon={<Target className="h-3.5 w-3.5" />} onClick={() => navigate('/notion')} />
+                <StatCard label="Deadlines" value={loading ? '—' : String(deadlines.length)} sub={deadlines.filter(d => isUrgent(d.date)).length > 0 ? `${deadlines.filter(d => isUrgent(d.date)).length} this week` : 'none this week'} icon={<Calendar className="h-3.5 w-3.5" />} onClick={() => navigate('/notion')} />
+                <StatCard label="Courses" value={loading ? '—' : String(academics.courses.length)} sub={`${academics.units.length} units`} icon={<BookOpen className="h-3.5 w-3.5" />} onClick={() => navigate('/notion')} />
             </div>
 
             {/* Quick Actions */}
-            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-                <QuickAction label="Chat" sub="Ask anything" icon={<MessageSquare className="h-4 w-4" />} onClick={() => navigate('/chat')} />
-                <QuickAction label="Parser" sub="Process documents" icon={<Brain className="h-4 w-4" />} onClick={() => navigate('/oka')} />
-                <QuickAction label="Goals" sub="Track progress" icon={<Target className="h-4 w-4" />} onClick={() => navigate('/goals')} />
-                <QuickAction label="Academics" sub="Courses & exams" icon={<GraduationCap className="h-4 w-4" />} onClick={() => navigate('/academics')} />
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+                <QuickAction label="Notion" sub="Manage goals & work" icon={<MessageSquare className="h-4 w-4" />} onClick={() => navigate('/notion')} />
+                <QuickAction label="Obsidian" sub="Knowledge chat" icon={<Target className="h-4 w-4" />} onClick={() => navigate('/obsidian')} />
+                <QuickAction label="Settings" sub="System config" icon={<GraduationCap className="h-4 w-4" />} onClick={() => navigate('/settings')} />
             </div>
 
             {/* Main Grid */}
             <div className="grid gap-4 grid-cols-1 lg:grid-cols-5">
                 {/* Deadlines */}
-                <Section title="Upcoming Deadlines" sub="Exams and assignments" action="View all" onAction={() => navigate('/academics')} className="lg:col-span-2">
+                <Section title="Upcoming Deadlines" sub="Exams and assignments" action="View all" onAction={() => navigate('/notion')} className="lg:col-span-2">
                     {loading ? <Loading /> : deadlines.length === 0 ? (
                         <Empty text="No upcoming deadlines." />
                     ) : (
@@ -179,13 +177,13 @@ export default function Dashboard() {
                 </Section>
 
                 {/* Active Goals */}
-                <Section title="Active Goals" sub={`${activeGoals.length} open`} action="View all" onAction={() => navigate('/goals')} className="lg:col-span-3">
+                <Section title="Active Goals" sub={`${activeGoals.length} open`} action="View all" onAction={() => navigate('/notion')} className="lg:col-span-3">
                     {loading ? <Loading /> : activeGoals.length === 0 ? (
                         <Empty text="No active goals." />
                     ) : (
                         <div className="space-y-0.5">
                             {activeGoals.slice(0, 8).map(goal => (
-                                <div key={goal.id} className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate('/goals')}>
+                                <div key={goal.id} className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate('/notion')}>
                                     <Circle className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium truncate">{goal.title}</p>
@@ -212,7 +210,7 @@ export default function Dashboard() {
             {/* Bottom Row */}
             <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 pb-6">
                 {/* Courses */}
-                <Section title="Courses" sub="Current semester" action="View all" onAction={() => navigate('/academics')}>
+                <Section title="Courses" sub="Current semester" action="View all" onAction={() => navigate('/notion')}>
                     {loading ? <Loading /> : academics.courses.length === 0 ? (
                         <Empty text="No courses found." />
                     ) : (
@@ -222,7 +220,7 @@ export default function Dashboard() {
                                 const goal = c.properties?.['Goal']?.select?.name || ''
                                 const grade = c.properties?.['Grade']?.select?.name || ''
                                 return (
-                                    <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate('/academics')}>
+                                    <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate('/notion')}>
                                         <GraduationCap className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                                         <span className="text-sm font-medium flex-1 truncate">{name}</span>
                                         {grade && <span className="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{grade}</span>}

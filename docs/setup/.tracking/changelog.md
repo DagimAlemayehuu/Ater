@@ -1,48 +1,55 @@
 # Changelog
 
-## Phase 1 - Scaffolding
+## Phase 4.5 - Workspace Consolidation & Intelligence Refactor (Current)
 
-- Initialized git repository.
-- Created full monorepo directory structure (apps/*, packages/*, ops/*, .tracking/*).
-- Generated .tracking/project_state.md, .tracking/changelog.md, .tracking/error_registry.md.
-- Created .gitignore and .env.example.
-- Initialized Python uv project in apps/api (uv init + uv venv).
-- Generated global README.md with full architecture documentation.
-- Generated pnpm-workspace.yaml.
-- Generated root package.json with turbo scripts and pnpm engine constraint.
-- Generated turbo.json with v2 pipeline for build, dev, lint, typecheck, clean.
-- Detected Tier: TIER 3 (The Agency Standard / Offline-First).
+- **Completely removed OKA (Obsidian Knowledge Architect)** synthesis engine and background workers.
+- **Refactored Obsidian Hub**:
+    - Created a side-by-side **Intelligence View** with System Instructions on the left and Gemini Chat on the right.
+    - Implemented a **Vault Explorer** with hierarchical folder tree navigation.
+    - Built a high-fidelity, single-pane **Markdown Reader** with professional typography.
+    - Enabled **Real-time File Uploads** (PDF, Code, Text) using Gemini Files API.
+- **Refactored Notion Hub**:
+    - Consolidated **Academics** and **Goals** into a single tabbed view.
+    - Optimized dashboard links to point to the new unified hub.
+- **Backend Refactor**:
+    - Updated `Strategist.brainstorm` to support `file_uri` and dynamic MIME-type detection.
+    - Added `/api/ai/upload` endpoint with file processing wait cycles.
+    - Fixed SDK compatibility by mapping frontend roles to Gemini model roles.
+- **Navigation Update**: Streamlined sidebar to: Dashboard, Notion, Obsidian, Settings.
 
-## Phase 3.1 - Core Infrastructure & Sidecar Wiring
+## Phase 4.0 - OKA & Synthesis (Deprecated)
 
-- Initialized @life-os/desktop (Vite + React + TypeScript).
-- Initialized Tauri v2 shell in apps/desktop.
-- Configured tauri.conf.json with sidecar permissions and CSP.
-- Implemented Python FastAPI sidecar with /api/health endpoint.
-- Verified sidecar connectivity via React and CLI smoke tests.
-- Configured monorepo scripts for concurrent sidecar/tauri dev execution.
+- Implemented the Obsidian Knowledge Architect (OKA) for large-scale synthesis.
+- Built background job queue with SQLite persistence.
+- (These features were removed in v4.5 in favor of real-time, instruction-driven reasoning).
 
-## Phase 3.2 - Storage, State, and Onboarding
+## Phase 3.4 - Gemini Intelligence & Dashboard
 
-- Installed and registered tauri-plugin-store in Rust (lib.rs) and React.
-- Implemented ConfigContext.tsx (Zustand-like persistent store via Tauri).
-- Created onboarding gate UI (/onboarding) for system initialization.
-- Finalized App.tsx boot sequence (HealthGate -> ConfigGate -> Routes).
-- Verified typecheck: PASS.
+- Implemented AI Strategist domain in Python using Gemini Flash SDK.
+- Exposed /api/ai/brainstorm endpoint for high-speed reasoning.
+- Created "Dashboard" live-stats overview UI.
+- Finalized Settings UI for local storage management.
 
 ## Phase 3.3 - The Shadcn UI Shell & Connectors
 
 - Installed Tailwind CSS and configured Shadcn design tokens (HSL variables).
 - Implemented professional collapsible Sidebar/Shell in React.
 - Built Notion/Obsidian connectors in Python sidecar with Header-based authentication.
-- Expanded sidecarApi.ts with typed data fetching.
 
-## Phase 3.4 - Gemini Intelligence & Dashboard
+## Phase 3.2 - Storage, State, and Onboarding
 
-- Implemented AI Strategist domain in Python using Gemini Flash SDK.
-- Exposed /api/ai/brainstorm endpoint for high-speed reasoning.
-- Created "The Strategist" brainstorming terminal UI in React.
-- Created "Dashboard" live-stats overview UI.
-- Finalized Settings UI for local storage management.
+- Installed and registered tauri-plugin-store in Rust (lib.rs) and React.
+- Implemented ConfigContext.tsx (Zustand-like persistent store via Tauri).
+- Created onboarding gate UI (/onboarding) for system initialization.
 
-**SYSTEM INITIALIZED: Ready for Local Production.**
+## Phase 3.1 - Core Infrastructure & Sidecar Wiring
+
+- Initialized @life-os/desktop (Vite + React + TypeScript).
+- Initialized Tauri v2 shell in apps/desktop.
+- Implemented Python FastAPI sidecar with /api/health endpoint.
+
+## Phase 1 - Scaffolding
+
+- Initialized git repository.
+- Created full monorepo directory structure.
+- Generated architecture documentation.

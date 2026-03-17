@@ -1,0 +1,174 @@
+
+> @life-os/desktop@0.1.0 lint /Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop
+> eslint .
+
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/components/sign-out-dialog.tsx
+  1:11  error  'SignOutDialogProps' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/lib/OkaContext.tsx
+   45:15  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+   46:25  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+   76:46  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+   87:75  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/lib/OkaContext.tsx:87:75
+  85 |     useEffect(() => {
+  86 |         try {
+> 87 |             const vTab = localStorage.getItem('oka_activeTab'); if (vTab) setActiveTab(JSON.parse(vTab))
+     |                                                                           ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  88 |             const vUnit = localStorage.getItem('oka_targetUnit'); if (vUnit) setTargetUnit(JSON.parse(vUnit))
+  89 |             const vUri = localStorage.getItem('oka_fileUri'); if (vUri) setFileUri(JSON.parse(vUri))
+  90 |             const vPlan = localStorage.getItem('oka_plan'); if (vPlan) setPlan(JSON.parse(vPlan))  react-hooks/set-state-in-effect
+  121:22  error  'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  139:57  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+  175:23  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/lib/sidecarApi.ts
+   21:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   88:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   89:69  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   91:84  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   96:67  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   97:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  101:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  102:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  111:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  166:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  177:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  179:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  186:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  192:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  194:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  195:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  215:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  215:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  215:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  215:74  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  215:94  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  225:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  231:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/routes/academics.tsx
+   25:91   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+   25:152  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+   25:200  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+   68:20   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+   69:18   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+   70:16   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+   71:16   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+   72:22   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+   76:52   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  102:23   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  111:8    warning  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array    react-hooks/exhaustive-deps
+  117:8    warning  React Hook useEffect has a missing dependency: 'editingItem'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  124:26   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  126:70   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  159:23   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  166:71   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  194:39   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  268:33   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  268:57   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  320:80   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  374:65   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  382:73   error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/routes/chat.tsx
+   29:18  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+   93:8   warning  React Hook useEffect has a missing dependency: 'sessions'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  139:29  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  153:41  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  164:40  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  177:55  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  245:50  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  249:68  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  254:74  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  275:25  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  457:79  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  457:95  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/routes/dashboard.tsx
+   23:26   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   41:59   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   41:73   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   41:93   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   41:107  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   94:33   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   97:39   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  221:68   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/routes/debugger.tsx
+  53:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  77:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/routes/goals.tsx
+    7:60  error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+   31:26  error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+   79:8   warning  React Hook useEffect has a missing dependency: 'fetchGoals'. Either include it or remove the dependency array    react-hooks/exhaustive-deps
+   89:8   warning  React Hook useEffect has a missing dependency: 'selectedGoal'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   96:26  error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+   98:70  error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+  150:82  error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+  195:46  error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+  574:26  error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/routes/notion.tsx
+   10:48   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   12:48   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   45:27   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   49:33   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   52:57   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   52:88   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   56:32   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   58:73   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  145:117  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/routes/obsidian.tsx
+  12:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/routes/oka.tsx
+  113:23  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  137:23  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  419:23  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  704:8   warning  React Hook useEffect has a missing dependency: 'sessions'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  755:23  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  777:23  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/routes/settings.tsx
+   39:14   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  317:31   error  Forbidden extra non-null assertion        @typescript-eslint/no-extra-non-null-assertion
+  323:53   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  359:88   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  360:112  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  421:68   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  436:56   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  447:42   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  499:49   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  694:58   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  699:85   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop/src/routes/strategist.tsx
+   156:92   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   785:155  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   836:30   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   838:74   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   860:26   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1048:31   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1255:86   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1683:108  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1762:86   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1816:89   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 122 problems (116 errors, 6 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
+/Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @life-os/desktop@0.1.0 lint: `eslint .`
+Exit status 1

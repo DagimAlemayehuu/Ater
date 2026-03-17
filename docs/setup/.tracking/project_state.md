@@ -1,44 +1,38 @@
-# Project State: Life OS (v1.0-RC)
+# Project State: Life OS (v1.1-REFACTORED)
 
-## Current Status: SYSTEM OPERATIONAL (Phase 4.0: Cognitive Core Integration)
+## Current Status: SYSTEM OPERATIONAL (Phase 4.5: Workspace Consolidation)
 
-Life OS has evolved from a basic UI shell into a sophisticated, offline-first personal operating system with deep integrations for Notion, Obsidian, and AI-driven knowledge management.
+Life OS has been streamlined to provide a focused, high-performance workspace. The complex OKA background synthesis has been replaced by a real-time, instruction-driven **Obsidian Intelligence** hub and a consolidated **Notion Hub**.
 
 ---
 
 ## 🚀 Progress & Completed Features
 
 ### 1. Dashboard (The Nerve Center)
-- **Live Metrics**: Real-time counting and status monitoring of the Notion Synapse (pages) and Obsidian Vault (local MD files).
-- **Active Missions**: Automated fetching of high-priority goals directly from Notion with deep-link navigation.
-- **Academic Alerts**: Integrated display of upcoming "Immediate Threats" (Exams) and "Deadlines" (Assignments) from the Academics database.
-- **System Health**: Dynamic monitoring of the Python Sidecar, LLM Engine (Gemini), and workspace connectivity.
+- **Live Metrics**: Real-time status monitoring of goals, course deadlines, and courses.
+- **Quick Actions**: Instant access to Notion (Management), Obsidian (Reasoning), and Settings.
+- **Refined Navigation**: sidebar limited to exactly: Dashboard, Notion, Obsidian, Settings.
 
-### 2. Academics (The Learning Layer)
-- **Database Synapse**: Direct two-way sync with Notion databases (Courses, Semesters, Study Planner, CRM, Exams, Assignments).
-- **Unit Command**: Visual tracking of course units with confidence levels and link verification to Obsidian-stored notes.
-- **Knowledge Deficit Tracking**: Automatically identifies units requiring study or AI synthesis based on confidence scores.
-- **Automated Profile Context**: One-click sync that generates a comprehensive `academic_profile.md` context file for the AI.
+### 2. Notion Hub (Structured Management)
+- **Consolidated Workspace**: Academics and Goals are now integrated as high-speed tabs within a single view.
+- **Academics Layer**: Direct sync with Notion databases (Courses, Study Planner, Exams).
+- **Goals Layer**: Real-time tracking and management of personal priorities.
+- **Automated Profile Context**: One-click sync that generates grounding context for AI reasoning.
 
-### 3. OKA - Obsidian Knowledge Architect (The Synthesis Core)
-- **Multi-Phase Pipeline**:
-    - **Ingest**: Support for PDF, DOCX, TXT, MD, and PPTX via automated sidecar resource management.
-    - **Architecture**: AI-driven generation of a structural plan (Notes, Hubs, Concepts) before actual note creation.
-    - **Batching**: Large-scale note generation with a robust background worker queue and job monitoring.
-    - **Deployment**: Automatic creation of directory structures, YAML frontmatter, and file linking within the Obsidian vault.
-- **Bi-Directional Linking**: Generated notes are automatically linked back to the originating Notion unit page via `obsidian://` URIs.
-- **Integrated Chat**: Direct interaction with the Gemini AI about specific source documents or unit contexts.
+### 3. Obsidian Intelligence (Localized Reasoning)
+- **Side-by-Side Interface**:
+    - **System Instructions**: A dedicated pane to define AI behavior and rules (docked on the left).
+    - **Gemini Chat**: Interactive Reasoning powered by the latest Gemini 2.5 Flash SDK.
+- **Real-Time File Uploads**: Integrated Support for PDF, Code, and Text files via Gemini Files API.
+- **Vault Explorer**: 
+    - Hierarchical folder-based navigation of the local Obsidian vault.
+    - Professional single-pane Markdown reader with high-fidelity typography.
+    - Independent scrolling content for maximum readability.
 
-### 4. Strategist (The Cognitive Layer)
-- **AI Persona Engine**: Personalized advisor that uses the "Academic Profile" and "Master Plan" as grounding context.
-- **Goal Management**: Full CRUD operations on Notion goals, including rich text editing and property syncing.
-- **Context Awareness**: The AI can list your Obsidian files and read note content to provide highly specific advice.
-- **Dynamic Prompting**: Custom system prompts and persona files stored locally for complete user control.
-
-### 5. Settings & Infrastructure
-- **Dynamic Config**: Secure storage of Notion/Gemini API keys and Obsidian vault paths via Tauri Store.
-- **Python Sidecar**: High-performance FastAPI backend handling all heavy lifting (Gemini API, File parsing, Notion API).
-- **The Obsidian Hub**: Automated validation of vault paths and structural parsing of the knowledge base.
+### 4. Infrastructure & Security
+- **Backend Refactor**: Python FastAPI sidecar updated to support secure file uploads and dynamic history mapping.
+- **Direct Header Injection**: API keys passed securely per-request from Tauri Store.
+- **Offline-First Reading**: Local Obsidian files are read directly from the filesystem without external dependencies.
 
 ---
 
@@ -49,13 +43,13 @@ Life OS has evolved from a basic UI shell into a sophisticated, offline-first pe
 - [x] Phase 3.2: Configuration & Persistence
 - [x] Phase 3.3: Shadcn UI Shell & Themis Layout
 - [x] Phase 3.4: Notion/Obsidian Connectors
-- [x] Phase 4.1: Academics Database Integration
-- [x] Phase 4.2: OKA Synthesis Engine (Generation + Deployment)
-- [x] Phase 4.3: Dashboard & Contextual Syncing
-- [ ] Phase 4.4: Advanced RAG across entire Vault (Ongoing)
+- [x] Phase 4.1: Academics & Goals Integration
+- [x] Phase 4.2: Obsidian Intelligence (Chat + System Instructions)
+- [x] Phase 4.3: Real-time Document Analysis (File Uploads)
+- [x] Phase 4.4: High-Fidelity Vault Reader
 - [ ] Phase 5.0: Final Polish & Packaging (Pending)
 
 ## Next Objectives
-1.  **Context Injection Tuning**: Refine how OKA uses the `academic_profile.md` for better note contextualization.
-2.  **Dashboard Polish**: Add interactive charts for academic progress over time.
-3.  **Vault Search**: Implement a local vector-based search within the sidecar for instant retrieval.
+1.  **Vault Search**: Implement a local vector-based search within the sidecar for instant retrieval.
+2.  **Contextual Linking**: Allow the AI to automatically suggest links between the active document and the vault.
+3.  **Refined Typography**: Further optimize the Markdown reader for complex technical notes (math/code).
