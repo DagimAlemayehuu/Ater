@@ -327,7 +327,7 @@ async def chat_with_financer(
         raise HTTPException(status_code=401, detail="X-Gemini-Key or X-Notion-Key missing")
     try:
         agent = Financer(secrets.gemini_key, secrets.notion_key, secrets.gemini_model or 'gemini-2.5-flash')
-        response = await agent.chat(query_data.get("query"), history=query_data.get("history"), context=query_data.get("context"))
+        response = await agent.chat(query_data.get("query", ""), history=query_data.get("history"), context=query_data.get("context", ""))
         return {"response": response}
     except Exception as e:
         logger.error(f"Financer failed: {e}")
@@ -343,7 +343,7 @@ async def chat_with_scout(
         raise HTTPException(status_code=401, detail="X-Gemini-Key missing")
     try:
         agent = Scout(secrets.gemini_key, secrets.gemini_model or 'gemini-2.5-flash')
-        response = await agent.chat(query_data.get("query"), history=query_data.get("history"), context=query_data.get("context"))
+        response = await agent.chat(query_data.get("query", ""), history=query_data.get("history"), context=query_data.get("context", ""))
         return {"response": response}
     except Exception as e:
         logger.error(f"Scout failed: {e}")
@@ -359,7 +359,7 @@ async def chat_with_scribe(
         raise HTTPException(status_code=401, detail="X-Gemini-Key or X-Vault-Path missing")
     try:
         agent = Scribe(secrets.gemini_key, secrets.vault_path, secrets.gemini_model or 'gemini-2.5-flash')
-        response = await agent.chat(query_data.get("query"), history=query_data.get("history"), context=query_data.get("context"))
+        response = await agent.chat(query_data.get("query", ""), history=query_data.get("history"), context=query_data.get("context", ""))
         return {"response": response}
     except Exception as e:
         logger.error(f"Scribe failed: {e}")
@@ -375,7 +375,7 @@ async def chat_with_architect(
         raise HTTPException(status_code=401, detail="X-Gemini-Key missing")
     try:
         agent = Architect(secrets.gemini_key, secrets.gemini_model or 'gemini-2.5-flash')
-        response = await agent.chat(query_data.get("query"), history=query_data.get("history"), context=query_data.get("context"))
+        response = await agent.chat(query_data.get("query", ""), history=query_data.get("history"), context=query_data.get("context", ""))
         return {"response": response}
     except Exception as e:
         logger.error(f"Architect failed: {e}")
@@ -391,7 +391,7 @@ async def chat_with_auditor(
         raise HTTPException(status_code=401, detail="X-Gemini-Key or X-Notion-Key missing")
     try:
         agent = Auditor(secrets.gemini_key, secrets.notion_key, secrets.gemini_model or 'gemini-2.5-flash')
-        response = await agent.chat(query_data.get("query"), history=query_data.get("history"), context=query_data.get("context"))
+        response = await agent.chat(query_data.get("query", ""), history=query_data.get("history"), context=query_data.get("context", ""))
         return {"response": response}
     except Exception as e:
         logger.error(f"Auditor failed: {e}")

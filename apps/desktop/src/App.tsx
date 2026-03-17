@@ -18,6 +18,7 @@ import Automations from '@/routes/automations'
 import AutomationDetail from '@/routes/automation-detail'
 import Agents from '@/routes/agents'
 import AgentDetail from '@/routes/agent-detail'
+import Coach from '@/routes/coach'
 import { Loader2 } from 'lucide-react'
 
 export default function App() {
@@ -68,6 +69,7 @@ function AppContent() {
           <Route path="/automations/:id" element={<AutomationDetail />} />
           <Route path="/agents" element={<Agents />} />
           <Route path="/agents/:id" element={<AgentDetail />} />
+          <Route path="/coach" element={<Coach />} />
           <Route path="/debugger" element={<Debugger />} />
         </Route>
       </Routes>

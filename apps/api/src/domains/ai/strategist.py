@@ -109,7 +109,7 @@ class Strategist:
         if not self.notion_key: return "Error: Notion key not configured."
         client = NotionClient(self.notion_key)
         
-        properties = {}
+        properties: dict = {}
         if title:
             properties["Name"] = {"title": [{"text": {"content": title}}]}
         if goal_type:
