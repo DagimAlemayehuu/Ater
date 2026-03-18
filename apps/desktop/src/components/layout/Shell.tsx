@@ -37,6 +37,13 @@ const navGroups = [
         ],
     },
     {
+        title: 'Intelligence',
+        items: [
+            { label: 'Agents', path: '/agents', icon: Brain },
+            { label: 'Automations', path: '/automations', icon: Zap },
+        ],
+    },
+    {
         title: 'System',
         items: [
             { label: 'Settings', path: '/settings', icon: Settings },

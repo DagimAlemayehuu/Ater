@@ -8,6 +8,8 @@ import Shell from '@/components/layout/Shell'
 import Dashboard from '@/routes/dashboard'
 import Obsidian from '@/routes/obsidian'
 import Notion from '@/routes/notion'
+import Agents from '@/routes/agents'
+import Automations from '@/routes/automations'
 import Settings from '@/routes/settings'
 
 // Placeholder components
@@ -111,6 +113,8 @@ export default function App() {
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/obsidian" element={<Obsidian />} />
                       <Route path="/notion" element={<Notion />} />
+                      <Route path="/agents" element={<Agents />} />
+                      <Route path="/automations" element={<Automations />} />
                       <Route path="/settings" element={<Settings />} />
                       <Route path="/debugger" element={<PlaceholderPage title="The Debugger" />} />
                     </Routes>

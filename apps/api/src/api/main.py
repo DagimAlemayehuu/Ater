@@ -35,12 +35,12 @@ from src.domains.notion.client import NotionClient
 from src.domains.obsidian.client import ObsidianClient
 from src.domains.ai.strategist import Strategist
 from src.domains.oka.service import OkaService
-from src.domains.oka.watcher import OkaWatcher
+from src.domains.oka.watcher import OkaQueueManager
 
 from src.domains.academics.router import router as academics_router
 
 # Global watcher instance
-oka_watcher: Optional[OkaWatcher] = None
+oka_watcher: Optional[OkaQueueManager] = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -339,17 +339,17 @@ async def oka_confirm_plan(
     try:
         results = await service.confirm_plan(session_id, command=command)
         
-        # Move file to .processed only when all batches are done
+        # Move file to note generated only when all batches are done
         if not results.get("has_more") and not session_id.startswith("text_"):
             path = Path(session_id)
             if path.exists():
-                processed_dir = path.parent / ".processed"
+                processed_dir = path.parent / "note generated"
                 processed_dir.mkdir(exist_ok=True)
                 new_path = processed_dir / path.name
                 if new_path.exists():
                     new_path = processed_dir / f"{int(time.time())}_{path.name}"
                 path.rename(new_path)
-                print(f"[Life OS Sidecar] Moved {path.name} to .processed after all batches complete")
+                print(f"[Life OS Sidecar] Moved {path.name} to note generated after all batches complete")
 
         return results
     except ValueError as e:
@@ -364,50 +364,113 @@ async def oka_confirm_plan(
 async def oka_watcher_toggle(
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
-    """Starts or stops the Inbox watcher."""
+    """Starts or updates the OKA Queue Manager."""
     global oka_watcher
     
     if not secrets.gemini_key or not secrets.vault_path or not secrets.inbox_path:
         raise HTTPException(status_code=400, detail="Gemini Key, Vault Path, and Inbox Path are required")
     
-    if secrets.auto_deploy:
-        # If already running, stop it first to apply new settings (path, etc.)
-        if oka_watcher:
-            print("[Life OS Sidecar] Restarting OKA Watcher with new settings...")
-            oka_watcher.stop()
-            oka_watcher = None
-        
+    # If the watcher exists but the path changed, kill it.
+    if oka_watcher and str(oka_watcher.inbox_path.absolute()) != str(Path(secrets.inbox_path).absolute()):
+        print("[Life OS Sidecar] Inbox path changed. Restarting OKA Watcher...")
+        oka_watcher.stop()
+        oka_watcher = None
+
+    # Always keep the watcher alive if we have settings, just toggle its auto_process state
+    if not oka_watcher:
         root_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
         si_path = root_dir / "OKA_System_Instruction.md"
         
         service = OkaService(secrets.gemini_key, secrets.vault_path)
-        oka_watcher = OkaWatcher(service, secrets.inbox_path, str(si_path))
+        oka_watcher = OkaQueueManager(service, secrets.inbox_path, str(si_path))
         
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = asyncio.get_event_loop()
             
-        oka_watcher.start(loop)
-        logger.info(f"[OKA] Watcher started for inbox: {secrets.inbox_path}")
-        return {"status": "watcher_started", "inbox": secrets.inbox_path}
+        oka_watcher.start(loop, auto_process=secrets.auto_deploy)
+        logger.info(f"[OKA] QueueManager started for inbox: {secrets.inbox_path} | Auto: {secrets.auto_deploy}")
     else:
-        if oka_watcher:
-            oka_watcher.stop()
-            oka_watcher = None
-            return {"status": "watcher_stopped"}
-        else:
-            return {"status": "already_stopped"}
+        oka_watcher.update_settings(auto_process=secrets.auto_deploy)
+        
+    return {"status": "watcher_active", "auto_deploy": secrets.auto_deploy, "inbox": secrets.inbox_path}
 
-@app.get("/api/oka/watcher/status")
-async def oka_watcher_status(
+@app.get("/api/oka/queue/status")
+async def oka_queue_status(
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
-    """Returns the current status of the OKA watcher."""
-    return {
-        "is_running": oka_watcher is not None,
-        "inbox": str(oka_watcher.inbox_path) if oka_watcher else secrets.inbox_path
-    }
+    """Returns the current detailed queue status."""
+    global oka_watcher
+    
+    if oka_watcher and secrets.inbox_path and str(oka_watcher.inbox_path.absolute()) != str(Path(secrets.inbox_path).absolute()):
+        print("[Life OS Sidecar] Inbox path changed during status check. Restarting OKA Watcher...")
+        oka_watcher.stop()
+        oka_watcher = None
+
+    if not oka_watcher and secrets.gemini_key and secrets.vault_path and secrets.inbox_path:
+        root_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
+        si_path = root_dir / "OKA_System_Instruction.md"
+        
+        service = OkaService(secrets.gemini_key, secrets.vault_path)
+        oka_watcher = OkaQueueManager(service, secrets.inbox_path, str(si_path))
+        
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.get_event_loop()
+            
+        oka_watcher.start(loop, auto_process=secrets.auto_deploy)
+        logger.info(f"[OKA] Watcher Auto-started for inbox: {secrets.inbox_path} | Auto: {secrets.auto_deploy}")
+        
+    if not oka_watcher:
+        return {"status": "offline", "pending_files": []}
+        
+    # Sync settings just in case
+    oka_watcher.update_settings(auto_process=secrets.auto_deploy)
+    return oka_watcher.get_status()
+
+@app.get("/api/oka/generated")
+async def oka_list_generated(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Lists files that have been successfully generated."""
+    if not secrets.inbox_path:
+        return {"files": []}
+    
+    generated_dir = Path(secrets.inbox_path) / "note generated"
+    if not generated_dir.exists() or not generated_dir.is_dir():
+        return {"files": []}
+        
+    files = []
+    supported_extensions = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
+    try:
+        import json
+        for f in generated_dir.iterdir():
+            if f.is_file() and not f.name.startswith('.') and f.suffix.lower() in supported_extensions:
+                hub_path = None
+                meta_file = f.with_suffix(".oka.json")
+                if meta_file.exists():
+                    try:
+                        with open(meta_file, "r") as mf:
+                            meta = json.load(mf)
+                            hub_path = meta.get("hub_path")
+                    except: pass
+                
+                files.append({
+                    "name": f.name,
+                    "path": str(f.absolute()),
+                    "size": f.stat().st_size,
+                    "suffix": f.suffix.lower(),
+                    "mtime": f.stat().st_mtime,
+                    "hub_path": hub_path
+                })
+        # Sort by modification time (newest first)
+        files.sort(key=lambda x: x["mtime"], reverse=True)
+    except Exception as e:
+        print(f"[Life OS Sidecar] Error scanning generated folder: {e}")
+    
+    return {"files": files}
 
 @app.get("/api/oka/inbox")
 async def oka_list_inbox(

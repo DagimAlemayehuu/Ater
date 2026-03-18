@@ -3,29 +3,23 @@ import time
 import os
 import asyncio
 import logging
+import traceback
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional, List, Dict, Any
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from .service import OkaService
 
-# Create a file logger for debugging
-file_handler = logging.FileHandler("/tmp/oka_watcher.log")
+file_handler = logging.log = logging.FileHandler("/tmp/oka_watcher.log")
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-watcher_logger = logging.getLogger("OkaWatcher")
+watcher_logger = logging.getLogger("OkaQueueManager")
 watcher_logger.setLevel(logging.INFO)
 watcher_logger.addHandler(file_handler)
 
 class InboxHandler(FileSystemEventHandler):
-    """
-    Handles file creation events in the Inbox folder.
-    """
-    def __init__(self, service: OkaService, system_instruction_path: str, loop: asyncio.AbstractEventLoop):
-        self.service = service
-        self.si_path = system_instruction_path
-        self.loop = loop
-        self.loop = loop
+    def __init__(self, manager: 'OkaQueueManager'):
+        self.manager = manager
         self.logger = watcher_logger
 
     def on_created(self, event):
@@ -34,43 +28,26 @@ class InboxHandler(FileSystemEventHandler):
     def on_moved(self, event):
         self._handle_event(event, is_move=True)
 
+    def on_modified(self, event):
+        self._handle_event(event)
+
     def _handle_event(self, event, is_move=False):
         if event.is_directory:
             return
         
         src_path = Path(event.dest_path) if is_move else Path(event.src_path)
-        
-        # Supported extensions
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
         
-        if src_path.suffix.lower() in supported:
-            self.logger.info(f"File detected in Inbox: {src_path.name} (Move: {is_move})")
-            
-            # Use the existing asyncio loop to process the file
-            asyncio.run_coroutine_threadsafe(
-                self.process_with_retry(src_path), self.loop
-            )
+        if src_path.suffix.lower() in supported and not src_path.name.startswith('.'):
+            # Check if it's not in the note generated folder
+            generated_dir = self.manager.inbox_path / "note generated"
+            if not str(src_path.absolute()).startswith(str(generated_dir.absolute())):
+                self.logger.info(f"New file detected: {src_path.name}")
+                self.manager.add_to_queue(src_path)
 
-    async def process_with_retry(self, path: Path):
-        """Initializes planning for a file and waits for manual confirmation."""
-        try:
-            # Wait a moment to ensure file is fully written
-            await asyncio.sleep(2)
-            
-            self.logger.info(f"Starting autonomous OKA planning for: {path.name}")
-            # This triggers the initial chat session and plan generation
-            # The session will be stored in OkaService._sessions for later confirmation
-            results = await self.service.process_file(str(path.absolute()), self.si_path)
-            
-            self.logger.info(f"Plan generated for {path.name}. Awaiting manual confirmation.")
-            print(f"[OKA Watcher] Plan ready for {path.name} (Session: {results['session_id']})")
-            
-        except Exception as e:
-            self.logger.error(f"Failed to process {path.name}: {str(e)}")
-
-class OkaWatcher:
+class OkaQueueManager:
     """
-    The background service that monitors the Inbox folder.
+    Watches the Inbox, maintains a queue, and processes files autonomously if enabled.
     """
     def __init__(self, service: OkaService, inbox_path: str, system_instruction_path: str):
         self.service = service
@@ -78,44 +55,164 @@ class OkaWatcher:
         self.si_path = system_instruction_path
         self.observer: Optional[Observer] = None
         self.loop: Optional[asyncio.AbstractEventLoop] = None
+        
+        # Queue State
+        self.auto_process = False
+        self.status = "idle" # 'idle', 'planning', 'deploying', 'error'
+        self.current_file: Optional[str] = None
+        self.current_batch = 0
+        self.total_batches = 0
+        self.pending_files: List[str] = []
+        self.worker_task: Optional[asyncio.Task] = None
+        
+        self._lock = asyncio.Lock()
 
-    def start(self, loop: asyncio.AbstractEventLoop):
+    def start(self, loop: asyncio.AbstractEventLoop, auto_process: bool = False):
         if not self.inbox_path.exists():
             self.inbox_path.mkdir(parents=True, exist_ok=True)
             
+        generated_dir = self.inbox_path / "note generated"
+        generated_dir.mkdir(exist_ok=True)
+            
         self.loop = loop
-        event_handler = InboxHandler(self.service, self.si_path, loop)
+        self.auto_process = auto_process
+        
+        event_handler = InboxHandler(self)
         self.observer = Observer()
         self.observer.schedule(event_handler, str(self.inbox_path), recursive=False)
         self.observer.start()
         
-        print(f"[OKA Watcher] Monitoring Inbox: {self.inbox_path}")
+        print(f"[OKA Queue] Monitoring: {self.inbox_path} | Auto Process: {self.auto_process}")
         
-        # Process existing files
-        asyncio.run_coroutine_threadsafe(self.process_existing_files(), loop)
+        self.scan_existing_files()
+        
+        if self.worker_task is None or self.worker_task.done():
+            self.worker_task = self.loop.create_task(self._worker_loop())
 
-    async def process_existing_files(self):
-        """Scans the inbox and processes any files already there."""
-        if not self.loop:
-            return
-            
-        loop = self.loop
+    def update_settings(self, auto_process: bool):
+        self.auto_process = auto_process
+        print(f"[OKA Queue] Auto process updated to: {self.auto_process}")
+
+    def scan_existing_files(self):
+        """Scans the inbox for existing files and adds them to the queue if not already there."""
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
+        generated_dir = self.inbox_path / "note generated"
         
         try:
-            # Create a single handler for efficiency
-            handler = InboxHandler(self.service, self.si_path, loop)
             for item in self.inbox_path.iterdir():
                 if item.is_file() and not item.name.startswith('.') and item.suffix.lower() in supported:
-                    print(f"[OKA Watcher] Processing existing file: {item.name}")
-                    # We are in the loop, so use create_task
-                    asyncio.create_task(handler.process_with_retry(item))
+                    if str(item.absolute()) not in self.pending_files and self.current_file != str(item.absolute()):
+                        self.pending_files.append(str(item.absolute()))
         except Exception as e:
-            print(f"[OKA Watcher] Error processing existing files: {e}")
-            watcher_logger.error(f"Error processing existing files: {e}")
+            print(f"[OKA Queue] Error scanning files: {e}")
+
+    def add_to_queue(self, path: Path):
+        path_str = str(path.absolute())
+        if path_str not in self.pending_files and self.current_file != path_str:
+            self.pending_files.append(path_str)
+
+    async def _worker_loop(self):
+        """Continuous background loop for autonomous processing."""
+        while True:
+            await asyncio.sleep(2)
+            
+            if not self.auto_process:
+                continue
+                
+            if self.status != "idle" or len(self.pending_files) == 0:
+                continue
+                
+            async with self._lock:
+                if len(self.pending_files) == 0:
+                    continue
+                file_to_process = self.pending_files.pop(0)
+                self.current_file = file_to_process
+                self.status = "planning"
+                self.current_batch = 0
+                self.total_batches = 0
+                
+            try:
+                path = Path(file_to_process)
+                watcher_logger.info(f"Starting autonomous planning for: {path.name}")
+                
+                # 1. Planning
+                res = await self.service.process_file(str(path.absolute()), self.si_path)
+                session_id = res["session_id"]
+                batches = res["plan_structured"].get("batches", [])
+                self.total_batches = len(batches) if batches else 1
+                self.status = "deploying"
+                
+                watcher_logger.info(f"Plan generated for {path.name}. Total batches: {self.total_batches}")
+                
+                # 2. Deployment Loop
+                has_more = True
+                temp_batch = 0
+                hub_path = None
+                
+                while has_more and self.auto_process:
+                    command = "Confirm Final Plan & Proceed Batch 1" if temp_batch == 0 else f"Proceed Batch {temp_batch + 1}"
+                    
+                    self.current_batch = temp_batch + 1
+                    confirm_res = await self.service.confirm_plan(session_id, command=command)
+                    
+                    # Capture hub note from results
+                    for res_note in confirm_res.get("results", []):
+                        if "_Hub" in res_note.get("title", ""):
+                            hub_path = res_note.get("path")
+                        elif hub_path is None: # Fallback to first note
+                            hub_path = res_note.get("path")
+                            
+                    temp_batch = confirm_res["current_batch"]
+                    has_more = confirm_res["has_more"]
+                    
+                    if has_more:
+                        await asyncio.sleep(10) # Rate limit guard (10s between batches)
+                
+                # 3. Move to note generated
+                generated_dir = self.inbox_path / "note generated"
+                generated_dir.mkdir(exist_ok=True)
+                new_path = generated_dir / path.name
+                if new_path.exists():
+                    new_path = generated_dir / f"{int(time.time())}_{path.name}"
+                path.rename(new_path)
+                
+                # Save metadata
+                if hub_path:
+                    import json
+                    meta_path = new_path.with_suffix(".oka.json")
+                    with open(meta_path, "w") as f:
+                        json.dump({"hub_path": hub_path, "processed_at": time.time()}, f)
+                
+                watcher_logger.info(f"Completed and moved to note generated: {path.name}")
+                
+                # Cool down between files
+                await asyncio.sleep(10)
+                
+            except Exception as e:
+                watcher_logger.error(f"Error processing {self.current_file}: {traceback.format_exc()}")
+                print(f"[OKA Queue] Error: {e}")
+            finally:
+                async with self._lock:
+                    self.status = "idle"
+                    self.current_file = None
+                    self.current_batch = 0
+                    self.total_batches = 0
+
+    def get_status(self) -> Dict[str, Any]:
+        return {
+            "status": self.status,
+            "auto_process": self.auto_process,
+            "current_file": Path(self.current_file).name if self.current_file else None,
+            "current_batch": self.current_batch,
+            "total_batches": self.total_batches,
+            "pending_count": len(self.pending_files),
+            "pending_files": [Path(p).name for p in self.pending_files]
+        }
 
     def stop(self):
         if self.observer:
             self.observer.stop()
             self.observer.join()
-            print("[OKA Watcher] Stopped.")
+        if self.worker_task:
+            self.worker_task.cancel()
+        print("[OKA Queue] Stopped.")

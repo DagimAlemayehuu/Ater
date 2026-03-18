@@ -52,6 +52,21 @@ export const sidebarData: SidebarData = {
       ],
     },
     {
+      title: 'Intelligence',
+      items: [
+        {
+          title: 'Agents',
+          url: '/agents',
+          icon: Brain,
+        },
+        {
+          title: 'Automations',
+          url: '/automations',
+          icon: Zap,
+        },
+      ],
+    },
+    {
       title: 'System',
       items: [
         {

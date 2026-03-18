@@ -161,8 +161,14 @@ export const sidecarApi = {
     okaWatcherStatus: () =>
         request<{ is_running: boolean, inbox: string | null }>('/api/oka/watcher/status'),
 
+    okaQueueStatus: () =>
+        request<{ status: string, auto_process: boolean, current_file: string | null, current_batch: number, total_batches: number, pending_count: number, pending_files: string[] }>('/api/oka/queue/status'),
+
     okaListInbox: () =>
         request<{ files: any[] }>('/api/oka/inbox'),
+
+    okaListGenerated: () =>
+        request<{ files: any[] }>('/api/oka/generated'),
 
     // ── Academics ───────────────────────────────────────────
 
