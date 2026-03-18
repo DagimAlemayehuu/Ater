@@ -3,9 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
     LayoutDashboard,
     Settings,
-    MessageSquare,
     Brain,
-    GraduationCap,
     Zap,
     Menu,
     Command,
