@@ -39,12 +39,16 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     const geminiKey = (await store.get<string>('geminiApiKey')) || ''
     const geminiModel = (await store.get<string>('geminiModel')) || 'gemini-2.5-flash'
     const vaultPath = (await store.get<string>('obsidianVaultPath')) || ''
+    const inboxPath = (await store.get<string>('inboxPath')) || ''
+    const autoDeploy = (await store.get<boolean>('autoDeploy')) ? 'true' : 'false'
 
     return {
         'X-Notion-Key': notionKey,
         'X-Gemini-Key': geminiKey,
         'X-Gemini-Model': geminiModel,
         'X-Vault-Path': vaultPath,
+        'X-Inbox-Path': inboxPath,
+        'X-Auto-Deploy': autoDeploy,
     }
 }
 
@@ -133,6 +137,32 @@ export const sidecarApi = {
             method: 'POST',
             body: JSON.stringify({ name, content })
         }),
+
+    // ── OKA (Autonomous Ingestion) ──────────────────────────
+
+    okaProcess: (payload: { file_path?: string; text?: string }) =>
+        request<{ session_id: string; plan_raw: string; plan_structured: any; status: string }>('/api/oka/process', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
+    okaConfirm: (payload: { session_id: string; command?: string }) =>
+        request<{ ai_output: string; results: any[]; count: number; has_more: boolean; next_batch?: number; status: string }>('/api/oka/confirm', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
+
+    okaWatcherToggle: () =>
+        request<{ status: string, inbox?: string }>('/api/oka/watcher/toggle', {
+            method: 'POST'
+        }),
+
+    okaWatcherStatus: () =>
+        request<{ is_running: boolean, inbox: string | null }>('/api/oka/watcher/status'),
+
+    okaListInbox: () =>
+        request<{ files: any[] }>('/api/oka/inbox'),
 
     // ── Academics ───────────────────────────────────────────
 

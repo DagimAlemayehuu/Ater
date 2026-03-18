@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import {
-    Database, Key, HardDrive, Trash2, Edit2, FolderOpen, ShieldCheck, Sun, Moon,
+    Database, Key, HardDrive, Trash2, Edit2, FolderOpen, ShieldCheck, Sun, Moon, Zap,
     User, BookOpen, DollarSign, Activity, Brain, Bot, Sliders, ChevronLeft, ArrowRight, Wand2, Info, Settings as SettingsIcon, Target, MessageSquare
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
@@ -342,7 +342,6 @@ export default function Settings() {
                                     className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                                 >
                                     <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                                 </select>
                             </div>
                         </div>
@@ -365,14 +364,72 @@ export default function Settings() {
                             {editingKey === 'obsidianVaultPath' && (
                                 <button
                                     onClick={async () => {
-                                        await handlePickDirectory();
-                                        if (editValue) await sidecarApi.okaUpdateSettings({ vault_path: editValue });
+                                        try {
+                                            const selected = await open({ directory: true, multiple: false, title: 'Select Obsidian Vault' });
+                                            if (selected) setEditValue(selected as string);
+                                        } catch (err) { console.error(err); }
                                     }}
                                     className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground border border-input bg-background shadow-sm px-3 py-2 shrink-0"
                                 >
                                     <FolderOpen size={16} />
                                 </button>
                             )}
+                        </div>
+                    </SettingsCard>
+
+                    {/* Inbox Watcher */}
+                    <SettingsCard
+                        title="Inbox Watcher"
+                        icon={<Zap size={18} className="text-primary" />}
+                        value="Autonomous file ingestion pipeline"
+                        isEditing={editingKey === 'inboxPath'}
+                        onEdit={() => startEditing('inboxPath', config?.inboxPath || '')}
+                        onSave={handleSave}
+                        onCancel={() => setEditingKey(null)}
+                    >
+                        <div className="space-y-4">
+                            <div className="flex gap-2">
+                                <div className="flex-1 px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm overflow-hidden content-center">
+                                    <span className="truncate pr-2">{editingKey === 'inboxPath' ? editValue : (config?.inboxPath || 'Not selected')}</span>
+                                </div>
+                                {editingKey === 'inboxPath' && (
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const selected = await open({ directory: true, multiple: false, title: 'Select Inbox Folder' });
+                                                if (selected) setEditValue(selected as string);
+                                            } catch (err) { console.error(err); }
+                                        }}
+                                        className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground border border-input bg-background shadow-sm px-3 py-2 shrink-0"
+                                    >
+                                        <FolderOpen size={16} />
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                                <div className="space-y-0.5">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Auto-Deploy</label>
+                                    <p className="text-[10px] text-muted-foreground">Automatically process new files</p>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        const newVal = !config.autoDeploy;
+                                        await saveConfig({ autoDeploy: newVal });
+                                        // If watcher is active, we might need to tell the sidecar to toggle
+                                        try { await sidecarApi.okaWatcherToggle(); } catch(e) {}
+                                    }}
+                                    className={cn(
+                                        "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                        config.autoDeploy ? "bg-primary" : "bg-input"
+                                    )}
+                                >
+                                    <span className={cn(
+                                        "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
+                                        config.autoDeploy ? "translate-x-4" : "translate-x-1"
+                                    )} />
+                                </button>
+                            </div>
                         </div>
                     </SettingsCard>
                 </div>

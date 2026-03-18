@@ -8,6 +8,7 @@ This is the high-performance reasoning and data orchestration layer for Life OS.
     - **Instruction Injection**: Dynamic system prompt management.
     - **Multimodal Context**: Real-time file processing via Gemini Files API.
     - **Role Mapping**: Automatic conversion between frontend and SDK messaging schemas.
+- **OKA Engine**: Refined academic knowledge synthesis. Note: The system is designed to generate only the **initial Knowledge Asset Plan and the first batch of notes (Unit Hub & Questions)**. Generation of further atomic note batches is explicitly disabled.
 - **Notion Synapse**: High-speed connectors for Goals, Academics, and Task databases.
 - **Obsidian Vault Hub**: Filesystem-based reader and hierarchical structure parser for local Markdown vaults.
 

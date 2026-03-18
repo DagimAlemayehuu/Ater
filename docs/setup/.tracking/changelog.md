@@ -1,6 +1,14 @@
 # Changelog
 
-## Phase 4.5 - Workspace Consolidation & Intelligence Refactor (Current)
+## Phase 4.6 - OKA Restoration & Single-Batch Policy (Current)
+
+- **Restored OKA (Obsidian Knowledge Architect)**: Re-implemented the academic ingestion engine with a focused single-session flow.
+- **First-Batch-Only Limitation**: System now generates the Knowledge Asset Plan and the **first batch of notes only** (Unit Hub & Questions). Subsequent batches are explicitly disabled to ensure high-fidelity focus.
+- **Modern SDK Migration**: Upgraded `OkaService` to use the latest `google-generativeai` SDK with `gemini-2.5-flash` exclusivity.
+- **UI Integration**: Added a dedicated **Autonomous** tab in Obsidian Hub for OKA processing with plan preview and single-click deployment.
+- **Protocol Restoration**: Recovered the missing `OKA_Visual_Protocol_V2.md` for mandatory visual/technical asset standards.
+
+## Phase 4.5 - Workspace Consolidation & Intelligence Refactor
 
 - **Completely removed OKA (Obsidian Knowledge Architect)** synthesis engine and background workers.
 - **Refactored Obsidian Hub**:

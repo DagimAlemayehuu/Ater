@@ -43,6 +43,8 @@ export interface AppConfig {
     notionApiKey: string;
     geminiApiKey: string;
     obsidianVaultPath: string;
+    inboxPath: string;
+    autoDeploy: boolean;
     profilePersonal: string;
     profileAcademic: string;
     profileFinancial: string;
@@ -73,6 +75,8 @@ export const DEFAULT_CONFIG: AppConfig = {
     notionApiKey: '',
     geminiApiKey: '',
     obsidianVaultPath: '',
+    inboxPath: '',
+    autoDeploy: false,
     profilePersonal: DEFAULT_PROFILE_PERSONAL,
     profileAcademic: DEFAULT_PROFILE_ACADEMIC,
     profileFinancial: DEFAULT_PROFILE_FINANCIAL,
@@ -99,6 +103,8 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const notionKey = (await store.get<string>('notionApiKey')) || '';
                 const geminiKey = (await store.get<string>('geminiApiKey')) || '';
                 const vaultPath = (await store.get<string>('obsidianVaultPath')) || '';
+                const inboxPath = (await store.get<string>('inboxPath')) || '';
+                const autoDeploy = (await store.get<boolean>('autoDeploy')) || false;
                 const pPersonal = (await store.get<string>('profilePersonal')) || DEFAULT_CONFIG.profilePersonal;
                 const pAcademic = (await store.get<string>('profileAcademic')) || DEFAULT_CONFIG.profileAcademic;
                 const pFinancial = (await store.get<string>('profileFinancial')) || DEFAULT_CONFIG.profileFinancial;
@@ -115,6 +121,8 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     notionApiKey: notionKey,
                     geminiApiKey: geminiKey,
                     obsidianVaultPath: vaultPath,
+                    inboxPath: inboxPath,
+                    autoDeploy: autoDeploy,
                     profilePersonal: pPersonal,
                     profileAcademic: pAcademic,
                     profileFinancial: pFinancial,
@@ -151,6 +159,8 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             if (newConfig.notionApiKey !== undefined) await store.set('notionApiKey', newConfig.notionApiKey);
             if (newConfig.geminiApiKey !== undefined) await store.set('geminiApiKey', newConfig.geminiApiKey);
             if (newConfig.obsidianVaultPath !== undefined) await store.set('obsidianVaultPath', newConfig.obsidianVaultPath);
+            if (newConfig.inboxPath !== undefined) await store.set('inboxPath', newConfig.inboxPath);
+            if (newConfig.autoDeploy !== undefined) await store.set('autoDeploy', newConfig.autoDeploy);
             if (newConfig.profilePersonal !== undefined) await store.set('profilePersonal', newConfig.profilePersonal);
             if (newConfig.profileAcademic !== undefined) await store.set('profileAcademic', newConfig.profileAcademic);
             if (newConfig.profileFinancial !== undefined) await store.set('profileFinancial', newConfig.profileFinancial);

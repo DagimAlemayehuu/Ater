@@ -61,8 +61,18 @@ function SidecarGate({ children }: { children: React.ReactNode }) {
  * Gate to force onboarding if configuration is missing.
  */
 function ConfigGate({ children }: { children: React.ReactNode }) {
-  const { isLoading, isConfigured } = useConfig()
+  const { isLoading, isConfigured, config } = useConfig()
   const location = useLocation()
+
+  // Sync OKA Watcher status on load
+  useEffect(() => {
+    if (isConfigured && config?.autoDeploy) {
+      console.log('[Life OS] Auto-deploy enabled. Syncing watcher state...')
+      sidecarApi.okaWatcherToggle().catch(err => {
+        console.error('[Life OS] Failed to auto-start OKA watcher:', err)
+      })
+    }
+  }, [isConfigured, config?.autoDeploy])
 
   if (isLoading) {
     return (

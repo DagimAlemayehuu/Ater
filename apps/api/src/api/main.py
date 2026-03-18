@@ -13,8 +13,18 @@ import asyncio
 import traceback
 import shutil
 import time
+import logging
+from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
+
+# Configure Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger("LifeOS")
 
 import uvicorn
 from fastapi import FastAPI, Depends, Header, HTTPException, Body, UploadFile, File
@@ -24,9 +34,13 @@ from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.notion.client import NotionClient
 from src.domains.obsidian.client import ObsidianClient
 from src.domains.ai.strategist import Strategist
+from src.domains.oka.service import OkaService
+from src.domains.oka.watcher import OkaWatcher
 
 from src.domains.academics.router import router as academics_router
 
+# Global watcher instance
+oka_watcher: Optional[OkaWatcher] = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,6 +48,9 @@ async def lifespan(app: FastAPI):
     print("[Life OS Sidecar] Starting up...")
     yield
     print("[Life OS Sidecar] Shutting down...")
+    if oka_watcher:
+        logger.info("[OKA] Stopping watcher during shutdown")
+        oka_watcher.stop()
 
 
 app = FastAPI(
@@ -257,6 +274,175 @@ async def brainstorm_with_ai(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# --- OKA (Autonomous Ingestion) Endpoints ---
+
+@app.post("/api/oka/process")
+async def oka_process_manual(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Manually process a text block or file path through OKA."""
+    if not secrets.gemini_key or not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Gemini Key and Vault Path are required")
+    
+    # Robust discovery of OKA_System_Instruction.md
+    # Search upwards from this file's location for the project root
+    current = Path(__file__).resolve().parent
+    si_path = None
+    for _ in range(6):
+        test_path = current / "OKA_System_Instruction.md"
+        if test_path.exists():
+            si_path = test_path
+            break
+        current = current.parent
+    
+    if not si_path:
+        # Final fallback to current directory
+        si_path = Path("OKA_System_Instruction.md")
+        if not si_path.exists():
+            raise HTTPException(status_code=500, detail="System Instruction file not found. Check root directory.")
+    
+    service = OkaService(secrets.gemini_key, secrets.vault_path)
+    
+    text = payload.get("text")
+    file_path = payload.get("file_path")
+    
+    try:
+        if file_path:
+            print(f"[Life OS Sidecar] Initializing OKA plan for file: {file_path}")
+            results = await service.process_file(file_path, str(si_path))
+        elif text:
+            print(f"[Life OS Sidecar] Initializing OKA plan for raw text")
+            results = await service.process_text(text, str(si_path))
+        else:
+            raise HTTPException(status_code=400, detail="Either 'text' or 'file_path' must be provided")
+            
+        return results
+    except Exception as e:
+        print(f"[Life OS Sidecar] OKA Initialization failed: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/oka/confirm")
+async def oka_confirm_plan(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Confirms an existing OKA plan and trigger deployment."""
+    session_id = payload.get("session_id")
+    command = payload.get("command", "Confirm Final Plan & Proceed Batch 1")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+
+    service = OkaService(secrets.gemini_key, secrets.vault_path)
+    try:
+        results = await service.confirm_plan(session_id, command=command)
+        
+        # If it was a file session, move the file to .processed
+        if not session_id.startswith("text_"):
+            path = Path(session_id)
+            if path.exists():
+                processed_dir = path.parent / ".processed"
+                processed_dir.mkdir(exist_ok=True)
+                new_path = processed_dir / path.name
+                if new_path.exists():
+                    new_path = processed_dir / f"{int(time.time())}_{path.name}"
+                path.rename(new_path)
+                print(f"[Life OS Sidecar] Moved {path.name} to .processed after confirmation")
+
+        return results
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        print(f"[Life OS Sidecar] OKA Confirmation failed: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/oka/watcher/toggle")
+async def oka_watcher_toggle(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Starts or stops the Inbox watcher."""
+    global oka_watcher
+    
+    if not secrets.gemini_key or not secrets.vault_path or not secrets.inbox_path:
+        raise HTTPException(status_code=400, detail="Gemini Key, Vault Path, and Inbox Path are required")
+    
+    if secrets.auto_deploy:
+        # If already running, stop it first to apply new settings (path, etc.)
+        if oka_watcher:
+            print("[Life OS Sidecar] Restarting OKA Watcher with new settings...")
+            oka_watcher.stop()
+            oka_watcher = None
+        
+        root_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
+        si_path = root_dir / "OKA_System_Instruction.md"
+        
+        service = OkaService(secrets.gemini_key, secrets.vault_path)
+        oka_watcher = OkaWatcher(service, secrets.inbox_path, str(si_path))
+        
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.get_event_loop()
+            
+        oka_watcher.start(loop)
+        logger.info(f"[OKA] Watcher started for inbox: {secrets.inbox_path}")
+        return {"status": "watcher_started", "inbox": secrets.inbox_path}
+    else:
+        if oka_watcher:
+            oka_watcher.stop()
+            oka_watcher = None
+            return {"status": "watcher_stopped"}
+        else:
+            return {"status": "already_stopped"}
+
+@app.get("/api/oka/watcher/status")
+async def oka_watcher_status(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Returns the current status of the OKA watcher."""
+    return {
+        "is_running": oka_watcher is not None,
+        "inbox": str(oka_watcher.inbox_path) if oka_watcher else secrets.inbox_path
+    }
+
+@app.get("/api/oka/inbox")
+async def oka_list_inbox(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Lists files currently in the Inbox folder."""
+    print(f"[Life OS Sidecar] Listing inbox. Path from header: '{secrets.inbox_path}'")
+    if not secrets.inbox_path or secrets.inbox_path.strip() == "":
+        print("[Life OS Sidecar] Inbox path is effectively empty")
+        return {"files": []}
+    
+    inbox = Path(secrets.inbox_path)
+    print(f"[Life OS Sidecar] Resolved inbox path: {inbox.absolute()}")
+    if not inbox.exists():
+        print(f"[Life OS Sidecar] Inbox path DOES NOT EXIST on disk: {inbox.absolute()}")
+        return {"files": []}
+    
+    if not inbox.is_dir():
+        print(f"[Life OS Sidecar] Inbox path is NOT a directory: {inbox.absolute()}")
+        return {"files": []}
+    
+    files = []
+    supported_extensions = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
+    try:
+        for f in inbox.iterdir():
+            if f.is_file() and not f.name.startswith('.') and f.suffix.lower() in supported_extensions:
+                files.append({
+                    "name": f.name,
+                    "path": str(f.absolute()),
+                    "size": f.stat().st_size,
+                    "suffix": f.suffix.lower()
+                })
+        print(f"[Life OS Sidecar] Found {len(files)} files in inbox")
+    except Exception as e:
+        print(f"[Life OS Sidecar] Error scanning inbox: {e}")
+    
+    return {"files": files}
 
 @app.patch("/api/notion/pages/{page_id}")
 async def update_notion_page(

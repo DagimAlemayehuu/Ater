@@ -13,6 +13,7 @@ Life OS is a local-first desktop application built as a polyglot monorepo. It op
     - **System Instructions**: Custom-tuned AI behavior permanently docked for precise reasoning.
     - **Vault Explorer**: Hierarchical folder navigation with a professional single-pane Markdown reader.
     - **AI File Uploads**: Real-time document analysis (PDF, Code, Text) powered by Gemini Files API.
+    - **OKA (Obsidian Knowledge Architect)**: Autonomous academic ingestion system. Note: Currently limited to generating the **Knowledge Asset Plan and the first batch of notes only**; subsequent batches are not supported in this version.
 
 ## Stack
 
