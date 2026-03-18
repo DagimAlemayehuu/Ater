@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react'
-import { sidecarApi } from '@/lib/sidecarApi'
+import { useState } from 'react'
+
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
 import Academics from './notion/academics'
 import Goals from './notion/goals'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, GraduationCap, Target } from 'lucide-react'
+import { GraduationCap, Target } from 'lucide-react'
 
 export default function Notion() {
     const [activeTab, setActiveTab] = useState<'overview' | 'academics' | 'goals'>('academics')

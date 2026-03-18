@@ -19,12 +19,20 @@
         "lint": {
             "dependsOn": [
                 "^lint"
-            ]
+            ],
+            "inputs": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.py", "pyproject.toml", "uv.lock"]
         },
         "typecheck": {
             "dependsOn": [
                 "^typecheck"
-            ]
+            ],
+            "inputs": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.py", "pyproject.toml", "uv.lock"]
+        },
+        "test": {
+            "dependsOn": [
+                "^build"
+            ],
+            "inputs": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.py", "tests/**/*.py", "tests/**/*.ts", "pyproject.toml", "uv.lock"]
         },
         "clean": {
             "cache": false

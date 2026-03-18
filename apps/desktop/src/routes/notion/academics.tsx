@@ -59,7 +59,7 @@ function TableView({ items, columns, onRowClick, emptyMessage, selectedItemId }:
 }
 
 export default function Academics() {
-    const navigate = useNavigate()
+    // const navigate = useNavigate()
     const [loading, setLoading] = useState(true)
     const [syncing, setSyncing] = useState(false)
     const [data, setData] = useState<{
