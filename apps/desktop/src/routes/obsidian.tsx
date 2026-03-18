@@ -3,7 +3,7 @@ import {
     Send, Bot, User, Trash2, ShieldCheck, RefreshCw, 
     Sparkles, Paperclip, FileText, Folder, ChevronRight, 
     Search, LayoutGrid, BrainCircuit, X, Activity, 
-    Upload, CheckCircle2, Zap, AlertCircle, Inbox, FileSearch, Play
+    CheckCircle2, Zap, AlertCircle, Inbox, FileSearch, Play
 } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
@@ -13,7 +13,7 @@ import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface Message {
     role: 'user' | 'assistant'
@@ -65,7 +65,6 @@ export default function Obsidian() {
     const [searchQuery, setSearchQuery] = useState('')
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['/']))
 
-    // --- OKA Manual Selection State ---
     const [inboxFiles, setInboxFiles] = useState<InboxFile[]>([])
     const [loadingInbox, setLoadingInbox] = useState(false)
     const [selectedInboxFile, setSelectedInboxFile] = useState<InboxFile | null>(null)
@@ -73,13 +72,14 @@ export default function Obsidian() {
     const [processing, setProcessing] = useState(false)
     const [previewResults, setPreviewResults] = useState<OkaResult[]>([])
     const [activePlan, setActivePlan] = useState<string | null>(null)
-    const [structuredPlan, setStructuredPlan] = useState<any | null>(null)
     const [sessionId, setSessionId] = useState<string | null>(null)
     const [isAwaitingConfirmation, setIsAwaitingConfirmation] = useState(false)
     const [currentBatch, setCurrentBatch] = useState<number>(0)
     const [totalBatches, setTotalBatches] = useState<number>(0)
     const [hasMoreBatches, setHasMoreBatches] = useState(false)
-    const [isWatcherRunning, setIsWatcherRunning] = useState(false)
+    const [isCompleted, setIsCompleted] = useState(false)
+    const [batchFeed, setBatchFeed] = useState<{ batch: number; results: OkaResult[]; count: number }[]>([])
+    const [okaError, setOkaError] = useState<string | null>(null)
 
     // --- Effects ---
     useEffect(() => {
@@ -93,7 +93,6 @@ export default function Obsidian() {
             fetchFiles()
         }
         if (activeTab === 'autonomous') {
-            checkWatcherStatus()
             fetchInbox()
             // Auto-refresh inbox every 5 seconds for "instant" detection
             const interval = setInterval(fetchInbox, 5000)
@@ -102,14 +101,6 @@ export default function Obsidian() {
     }, [activeTab])
 
     // --- OKA Actions ---
-    const checkWatcherStatus = async () => {
-        try {
-            const status = await sidecarApi.okaWatcherStatus()
-            setIsWatcherRunning(status.is_running)
-        } catch (err) {
-            console.error('Failed to check watcher status:', err)
-        }
-    }
 
     const fetchInbox = async () => {
         setLoadingInbox(true)
@@ -123,26 +114,46 @@ export default function Obsidian() {
         }
     }
 
+
+
+    const resetOkaSession = () => {
+        setSessionId(null)
+        setIsAwaitingConfirmation(false)
+        setHasMoreBatches(false)
+        setIsCompleted(false)
+        setActivePlan(null)
+        setCurrentBatch(0)
+        setTotalBatches(0)
+        setBatchFeed([])
+        setPreviewResults([])
+        setSelectedInboxFile(null)
+        setOkaError(null)
+        fetchInbox()
+    }
+
     const processSelectedFile = async () => {
         if (!selectedInboxFile) return
 
         setProcessing(true)
         setPreviewResults([])
         setActivePlan(null)
-        setStructuredPlan(null)
         setSessionId(null)
         setIsAwaitingConfirmation(false)
+        setIsCompleted(false)
+        setBatchFeed([])
         setCurrentBatch(0)
+        setOkaError(null)
         try {
             const res = await sidecarApi.okaProcess({ file_path: selectedInboxFile.path })
             setActivePlan(res.plan_raw)
-            setStructuredPlan(res.plan_structured)
             setSessionId(res.session_id)
             setIsAwaitingConfirmation(true)
-            setTotalBatches(res.plan_structured?.batches?.length || 0)
-        } catch (err) {
+            setHasMoreBatches(false)
+            const batchCount = res.plan_structured?.batches?.length || 1
+            setTotalBatches(batchCount)
+        } catch (err: any) {
             console.error('OKA planning failed:', err)
-            alert('Failed to generate plan. Check backend logs.')
+            setOkaError(err.message || 'Failed to generate plan. Check backend logs.')
         } finally {
             setProcessing(false)
         }
@@ -152,30 +163,55 @@ export default function Obsidian() {
         if (!sessionId) return
 
         setProcessing(true)
+        setOkaError(null)
+        
+        let currentHasMore = true
+        let tempBatchCount = currentBatch
+        let tempPreviewResults = [...previewResults]
+        
         try {
-            const res = await sidecarApi.okaConfirm({ 
-                session_id: sessionId,
-                command: "Confirm Final Plan & Proceed Batch 1"
-            })
-            
-            setPreviewResults(res.results)
-            
-            setOkaLogs([{
-                id: Math.random().toString(),
-                name: selectedInboxFile?.name || 'Manual Session',
-                status: 'Success',
-                count: res.count,
-                time: new Date().toLocaleTimeString()
-            }, ...okaLogs])
-            
-            // Final Cleanup - Only one batch allowed
-            setSessionId(null)
-            setIsAwaitingConfirmation(false)
-            setSelectedInboxFile(null)
-            fetchInbox()
-        } catch (err) {
+            while (currentHasMore) {
+                // Determine the correct command for intermediate batches
+                const command = tempBatchCount === 0 
+                    ? "Confirm Final Plan & Proceed Batch 1"
+                    : `Proceed Batch ${tempBatchCount + 1}`
+
+                const res = await sidecarApi.okaConfirm({ session_id: sessionId, command })
+                const batchNum = res.current_batch ?? (tempBatchCount + 1)
+                
+                tempBatchCount = batchNum
+                setCurrentBatch(batchNum)
+                tempPreviewResults = [...tempPreviewResults, ...res.results]
+                setPreviewResults(tempPreviewResults)
+                setBatchFeed(prev => [...prev, { batch: batchNum, results: res.results, count: res.count }])
+                
+                currentHasMore = !!res.has_more
+                
+                if (currentHasMore) {
+                    setHasMoreBatches(true)
+                    setIsAwaitingConfirmation(false)
+                    // Wait 5 seconds to avoid Gemini Free Tier rate limits (15 RPM)
+                    await new Promise(resolve => setTimeout(resolve, 5000))
+                } else {
+                    setHasMoreBatches(false)
+                    setIsCompleted(true)
+                    setIsAwaitingConfirmation(false)
+                    setSessionId(null)
+
+                    setOkaLogs(prevLogs => [{
+                        id: Math.random().toString(),
+                        name: selectedInboxFile?.name || 'Manual Session',
+                        status: 'Success',
+                        count: (tempPreviewResults.length),
+                        time: new Date().toLocaleTimeString()
+                    }, ...prevLogs])
+
+                    setTimeout(() => fetchInbox(), 1500)
+                }
+            }
+        } catch (err: any) {
             console.error('OKA confirmation failed:', err)
-            alert('Failed to confirm and deploy. Check backend logs.')
+            setOkaError(err.message || 'Failed to confirm and deploy. Check backend logs.')
         } finally {
             setProcessing(false)
         }
@@ -538,12 +574,13 @@ export default function Obsidian() {
                                             {inboxFiles.map((file) => (
                                                 <div 
                                                     key={file.path} 
-                                                    onClick={() => setSelectedInboxFile(file)}
+                                                    onClick={() => { if (!isAwaitingConfirmation && !hasMoreBatches && !isCompleted) setSelectedInboxFile(file) }}
                                                     className={cn(
                                                         "p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3",
                                                         selectedInboxFile?.path === file.path 
                                                             ? "bg-primary border-primary text-primary-foreground" 
-                                                            : "bg-background hover:bg-muted/50 text-foreground"
+                                                            : "bg-background hover:bg-muted/50 text-foreground",
+                                                        (isAwaitingConfirmation || hasMoreBatches || isCompleted) && "opacity-40 cursor-not-allowed"
                                                     )}
                                                 >
                                                     <div className={cn("p-2 rounded-md shrink-0", selectedInboxFile?.path === file.path ? "bg-primary-foreground/10" : "bg-muted")}>
@@ -564,97 +601,226 @@ export default function Obsidian() {
                                     </div>
                                 </div>
 
-                                {/* Selection & Log Panel (Right) */}
-                                <div className="flex-1 flex flex-col gap-4">
+                                {/* Main Panel (Right) */}
+                                <div className="flex-1 flex flex-col gap-4 min-w-0">
                                     {/* Action Card */}
                                     <div className="rounded-xl border bg-card shadow-sm p-5">
-                                        {!selectedInboxFile ? (
-                                            <div className="h-[120px] flex flex-col items-center justify-center text-muted-foreground/40 gap-2 border-2 border-dashed rounded-lg">
-                                                <Play size={24} strokeWidth={1} />
+                                        {!selectedInboxFile && !isCompleted ? (
+                                            <div className="h-[72px] flex flex-col items-center justify-center text-muted-foreground/40 gap-2 border-2 border-dashed rounded-lg">
+                                                <Play size={20} strokeWidth={1} />
                                                 <p className="text-sm font-medium">Select a file from the inbox to begin</p>
+                                            </div>
+                                        ) : isCompleted ? (
+                                            <div className="flex items-center justify-between animate-in fade-in zoom-in-95 duration-300">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center border border-green-500/20 shrink-0">
+                                                        <CheckCircle2 className="w-6 h-6 text-green-500" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-base font-bold tracking-tight text-green-500">All Batches Completed</h3>
+                                                        <p className="text-xs text-muted-foreground">{previewResults.length} notes deployed across {totalBatches} batch{totalBatches !== 1 ? 'es' : ''}</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={resetOkaSession}
+                                                    className="px-5 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-semibold text-sm transition-all flex items-center gap-2"
+                                                >
+                                                    <RefreshCw size={14} /> New Session
+                                                </button>
                                             </div>
                                         ) : (
                                             <div className="flex items-center justify-between animate-in fade-in zoom-in-95 duration-200">
-                                                <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-4 min-w-0">
                                                     <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
-                                                        {selectedInboxFile.suffix === '.pdf' ? <FileSearch className="w-6 h-6 text-primary" /> : <FileText className="w-6 h-6 text-primary" />}
+                                                        {selectedInboxFile!.suffix === '.pdf' ? <FileSearch className="w-6 h-6 text-primary" /> : <FileText className="w-6 h-6 text-primary" />}
                                                     </div>
-                                                    <div className="flex flex-col">
-                                                        <h3 className="text-lg font-bold tracking-tight">{selectedInboxFile.name}</h3>
-                                                        <p className="text-xs text-muted-foreground font-mono truncate max-w-[300px]">{selectedInboxFile.path}</p>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <h3 className="text-base font-bold tracking-tight truncate">{selectedInboxFile!.name}</h3>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            {totalBatches > 0 && (
+                                                                <span className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded">
+                                                                    Batch {currentBatch}/{totalBatches}
+                                                                </span>
+                                                            )}
+                                                            {isAwaitingConfirmation && (
+                                                                <span className="text-[10px] font-bold text-amber-500 uppercase bg-amber-500/10 px-2 py-0.5 rounded animate-pulse">
+                                                                    Awaiting Confirm
+                                                                </span>
+                                                            )}
+                                                            {hasMoreBatches && !processing && (
+                                                                <span className="text-[10px] font-bold text-blue-500 uppercase bg-blue-500/10 px-2 py-0.5 rounded animate-pulse">
+                                                                    Ready to Continue
+                                                                </span>
+                                                            )}
+                                                            {processing && (
+                                                                <span className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded animate-pulse">
+                                                                    Deploying...
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    {isAwaitingConfirmation ? (
-                                                        <div className="flex items-center gap-3">
-                                                            <button 
-                                                                onClick={() => confirmDeployment()}
-                                                                disabled={processing}
-                                                                className="px-6 py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-green-700 transition-all flex items-center gap-2 disabled:opacity-50"
-                                                            >
-                                                                {processing ? <RefreshCw size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
-                                                                Confirm
-                                                            </button>
-                                                            
-                                                            <button 
-                                                                onClick={() => { setSessionId(null); setIsAwaitingConfirmation(false); setSelectedInboxFile(null); setActivePlan(null); }}
-                                                                className="p-2.5 hover:bg-muted text-muted-foreground rounded-xl transition-colors"
-                                                                title="Cancel Session"
-                                                            >
-                                                                <X size={20} />
-                                                            </button>
-                                                        </div>
-                                                    ) : (
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    {/* Generate Plan */}
+                                                    {!isAwaitingConfirmation && !hasMoreBatches && !activePlan && (
                                                         <button 
                                                             onClick={processSelectedFile}
                                                             disabled={processing}
-                                                            className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-bold text-sm shadow-lg hover:bg-primary/90 transition-all flex items-center gap-2 disabled:opacity-50"
+                                                            className="px-5 py-2 bg-primary text-primary-foreground rounded-xl font-bold text-sm shadow hover:bg-primary/90 transition-all flex items-center gap-2 disabled:opacity-50"
                                                         >
-                                                            {processing ? <><RefreshCw size={16} className="animate-spin" /> Planning...</> : <><Play size={16} /> Generate Plan</>}
+                                                            {processing ? <><RefreshCw size={15} className="animate-spin" /> Planning...</> : <><Play size={15} /> Generate Plan</>}
                                                         </button>
                                                     )}
+                                                    {/* Confirm – shown after plan generation */}
+                                                    {isAwaitingConfirmation && (
+                                                        <div className="flex items-center gap-2">
+                                                            <button 
+                                                                onClick={confirmDeployment}
+                                                                disabled={processing}
+                                                                className="px-5 py-2 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-green-700 transition-all flex items-center gap-2 disabled:opacity-50"
+                                                            >
+                                                                {processing ? <RefreshCw size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+                                                                Confirm & Auto-Deploy
+                                                            </button>
+                                                            <button 
+                                                                onClick={resetOkaSession}
+                                                                className="p-2 hover:bg-muted text-muted-foreground rounded-xl transition-colors"
+                                                                title="Cancel Session"
+                                                            >
+                                                                <X size={18} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {/* Continue – shown between batches */}
+                                                    {hasMoreBatches && !isAwaitingConfirmation && (
+                                                        <div className="flex items-center gap-2">
+                                                            <button 
+                                                                onClick={confirmDeployment}
+                                                                disabled={processing}
+                                                                className="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-50"
+                                                            >
+                                                                {processing ? <RefreshCw size={15} className="animate-spin" /> : <Zap size={15} />}
+                                                                Continue
+                                                            </button>
+                                                            <button 
+                                                                onClick={resetOkaSession}
+                                                                className="p-2 hover:bg-muted text-muted-foreground rounded-xl transition-colors"
+                                                                title="Abort Session"
+                                                            >
+                                                                <X size={18} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {/* Progress bar */}
+                                        {totalBatches > 0 && !isCompleted && (
+                                            <div className="mt-4">
+                                                <div className="flex justify-between text-[10px] text-muted-foreground font-bold uppercase mb-1.5">
+                                                    <span>Progress</span>
+                                                    <span>{currentBatch} / {totalBatches} batches</span>
+                                                </div>
+                                                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                                                    <div 
+                                                        className="h-full rounded-full bg-primary transition-all duration-700"
+                                                        style={{ width: `${(currentBatch / totalBatches) * 100}%` }}
+                                                    />
                                                 </div>
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Results & History */}
-                                    <div className="flex-1 flex flex-col rounded-xl border bg-card shadow-sm overflow-hidden">
-                                        <div className="flex-1 overflow-y-auto custom-scrollbar bg-muted/5">
-                                            {activePlan && isAwaitingConfirmation ? (
-                                                <div className="flex flex-col h-full animate-in fade-in duration-500">
-                                                    <div className="p-4 border-b bg-background/50 flex items-center justify-between">
-                                                        <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                                            <FileText size={14} /> Knowledge Asset Plan
-                                                        </h4>
-                                                        <div className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded">
-                                                            Awaiting Confirmation
-                                                        </div>
+                                    {/* Content Panel */}
+                                    <div className="flex-1 flex flex-col rounded-xl border bg-card shadow-sm overflow-hidden min-h-0">
+                                        {/* Plan view */}
+                                        {okaError ? (
+                                            <div className="flex flex-col h-full p-6 animate-in fade-in duration-500 bg-destructive/5">
+                                                <div className="flex items-center gap-2 text-destructive mb-4">
+                                                    <AlertCircle size={20} />
+                                                    <h3 className="font-bold text-lg">OKA Pipeline Error</h3>
+                                                </div>
+                                                <div className="bg-destructive/10 text-destructive/90 p-4 rounded-lg font-mono text-sm whitespace-pre-wrap overflow-auto border border-destructive/20 custom-scrollbar flex-1">
+                                                    {okaError}
+                                                </div>
+                                            </div>
+                                        ) : activePlan && isAwaitingConfirmation && batchFeed.length === 0 ? (
+                                            <div className="flex flex-col h-full animate-in fade-in duration-500">
+                                                <div className="p-4 border-b bg-background/50 flex items-center justify-between shrink-0">
+                                                    <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                                        <FileText size={13} /> Knowledge Asset Plan
+                                                    </h4>
+                                                    <div className="text-[10px] font-bold text-amber-500 uppercase bg-amber-500/10 px-2 py-0.5 rounded">
+                                                        Awaiting Confirmation
                                                     </div>
-                                                    <div className="flex-1 p-6 overflow-y-auto custom-scrollbar bg-background">
-                                                        <div className="max-w-3xl mx-auto prose prose-sm dark:prose-invert prose-headings:font-bold prose-h1:text-2xl prose-p:leading-relaxed">
-                                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{activePlan}</ReactMarkdown>
-                                                        </div>
+                                                </div>
+                                                <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                                                    <div className="max-w-3xl mx-auto prose prose-sm dark:prose-invert prose-headings:font-bold prose-h1:text-2xl prose-p:leading-relaxed">
+                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{activePlan}</ReactMarkdown>
                                                     </div>
-                                                    
-                                                    {previewResults.length > 0 && (
-                                                        <div className="p-4 border-t bg-muted/20">
-                                                            <h4 className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-3">Recently Deployed Assets</h4>
-                                                            <div className="grid grid-cols-3 gap-2">
-                                                                {previewResults.slice(-6).map((res, i) => (
-                                                                    <div key={i} className="bg-background border rounded-lg p-2 flex items-center justify-between text-[10px] shadow-sm animate-in zoom-in-95">
-                                                                        <span className="font-bold truncate pr-2">{res.title}</span>
-                                                                        <span className="text-green-500 font-bold">OK</span>
+                                                </div>
+                                            </div>
+                                        ) : batchFeed.length > 0 ? (
+                                            /* Batch feed view */
+                                            <div className="flex flex-col h-full">
+                                                <div className="p-4 border-b bg-background/50 shrink-0 flex items-center justify-between">
+                                                    <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                                        <Activity size={13} /> Deployment Feed
+                                                    </h4>
+                                                    <span className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded">
+                                                        {previewResults.length} notes total
+                                                    </span>
+                                                </div>
+                                                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+                                                    {batchFeed.map((feed) => (
+                                                        <div key={feed.batch} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <div className="text-[10px] font-bold text-blue-500 uppercase bg-blue-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                                    <Zap size={10} /> Batch {feed.batch}
+                                                                </div>
+                                                                <div className="flex-1 h-px bg-border" />
+                                                                <span className="text-[10px] text-muted-foreground font-bold">{feed.count} notes</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                {feed.results.map((r, i) => (
+                                                                    <div key={i} className="bg-background border rounded-lg p-2.5 flex items-center gap-2.5 shadow-sm animate-in zoom-in-95 duration-200">
+                                                                        <div className={cn(
+                                                                            "w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-[9px] font-black uppercase",
+                                                                            r.status === 'created' ? "bg-green-500/10 text-green-500" :
+                                                                            r.status === 'updated' ? "bg-blue-500/10 text-blue-500" :
+                                                                            "bg-amber-500/10 text-amber-500"
+                                                                        )}>
+                                                                            {r.status === 'created' ? 'N' : r.status === 'updated' ? 'U' : 'M'}
+                                                                        </div>
+                                                                        <div className="flex flex-col min-w-0">
+                                                                            <span className="text-xs font-semibold truncate">{r.title}</span>
+                                                                            <span className="text-[9px] text-muted-foreground truncate">{r.path}</span>
+                                                                        </div>
                                                                     </div>
                                                                 ))}
                                                             </div>
                                                         </div>
+                                                    ))}
+                                                    {processing && (
+                                                        <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/30 border animate-pulse">
+                                                            <RefreshCw size={16} className="animate-spin text-primary shrink-0" />
+                                                            <span className="text-sm text-muted-foreground">Deploying batch {currentBatch + 1}...</span>
+                                                        </div>
+                                                    )}
+                                                    {isCompleted && (
+                                                        <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/5 border border-green-500/20 animate-in fade-in duration-500">
+                                                            <CheckCircle2 size={16} className="text-green-500 shrink-0" />
+                                                            <span className="text-sm font-semibold text-green-500">All knowledge assets deployed successfully.</span>
+                                                        </div>
                                                     )}
                                                 </div>
-                                            ) : (
-                                                <div className="divide-y divide-border h-full">
+                                            </div>
+                                        ) : (
+                                            /* History / Empty state */
+                                            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                                                <div className="divide-y divide-border">
                                                     {okaLogs.map((log) => (
-                                                        <div key={log.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between group">
+                                                        <div key={log.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between">
                                                             <div className="flex items-center gap-4">
                                                                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
                                                                     <FileText className="w-5 h-5 text-primary" />
@@ -675,7 +841,7 @@ export default function Obsidian() {
                                                     ))}
 
                                                     {okaLogs.length === 0 && !processing && (
-                                                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40 gap-3 text-center">
+                                                        <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground/40 gap-3 text-center">
                                                             <Activity size={48} strokeWidth={1} />
                                                             <p className="text-sm font-medium">Recent Activity</p>
                                                             <p className="text-xs">Select and process files to see deployment logs.</p>
@@ -683,7 +849,7 @@ export default function Obsidian() {
                                                     )}
                                                     
                                                     {processing && (
-                                                        <div className="h-full flex flex-col items-center justify-center gap-4 animate-pulse">
+                                                        <div className="h-[300px] flex flex-col items-center justify-center gap-4 animate-pulse">
                                                             <div className="relative">
                                                                 <BrainCircuit size={48} className="text-primary/20" />
                                                                 <RefreshCw size={24} className="absolute inset-0 m-auto animate-spin text-primary" />
@@ -692,12 +858,13 @@ export default function Obsidian() {
                                                         </div>
                                                     )}
                                                 </div>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         )}
+
 
                         {/* --- Explorer View --- */}
                         {activeTab === 'explorer' && (

@@ -34,7 +34,9 @@ class OkaService:
             with open(system_instruction_path, "r", encoding="utf-8") as f:
                 si = f.read()
             
-            project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+            # Path logic: apps/api/src/domains/oka/service.py -> apps/api/src/domains/oka -> apps/api/src/domains -> apps/api/src -> apps/api -> apps -> root
+            # That's 6 levels up
+            project_root = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
             protocol_names = ["OKA_Visual_Protocol_V2.md", "OKA_VISUAL_PROTOCOL_V2.md"]
             protocol_content = ""
             
@@ -43,7 +45,10 @@ class OkaService:
                 if p.exists():
                     with open(p, "r", encoding="utf-8") as f:
                         protocol_content = f.read()
+                        print(f"[OKA Service] Appended protocol from: {p}")
                         break
+            else:
+                print(f"[OKA Service] WARNING: Visual Protocol not found in {project_root}")
             
             if protocol_content:
                 si += "\n\n" + protocol_content
@@ -87,11 +92,14 @@ class OkaService:
             plan_output = res_plan.text
             structured_plan = self._parse_plan_to_json(plan_output)
 
+            total_batches = len(structured_plan.get("batches", [])) or 1
             OkaService._sessions[session_id] = {
                 "chat": chat,
                 "path": file_path,
                 "plan": plan_output,
-                "metadata": structured_plan
+                "metadata": structured_plan,
+                "current_batch": 0,
+                "total_batches": total_batches
             }
             
             return {
@@ -111,21 +119,31 @@ class OkaService:
         
         session = OkaService._sessions[session_id]
         chat = session["chat"]
+        current_batch = session.get("current_batch", 0)
+        total_batches = session.get("total_batches", 1)
+
+        batch_number = current_batch + 1
         
-        print(f"[OKA Service] Executing: {command}")
+        print(f"[OKA Service] Executing batch {batch_number}/{total_batches}: {command}")
         res = await asyncio.to_thread(chat.send_message, content=command)
         deployment_results = self.deployer.deploy(res.text)
         
-        # Always terminate session after first batch in this version
-        OkaService._sessions.pop(session_id, None)
+        session["current_batch"] = batch_number
+        has_more = batch_number < total_batches
+
+        if not has_more:
+            OkaService._sessions.pop(session_id, None)
+            print(f"[OKA Service] All {total_batches} batch(es) complete. Session terminated.")
 
         return {
             "ai_output": res.text,
             "results": deployment_results,
             "count": len(deployment_results),
-            "has_more": False,
-            "next_batch": None,
-            "status": "completed"
+            "has_more": has_more,
+            "current_batch": batch_number,
+            "total_batches": total_batches,
+            "next_batch": batch_number + 1 if has_more else None,
+            "status": "has_more" if has_more else "completed"
         }
 
     async def process_text(self, text: str, system_instruction_path: str) -> Dict[str, Any]:
@@ -143,7 +161,14 @@ class OkaService:
         plan_output = res_plan.text
         structured_plan = self._parse_plan_to_json(plan_output)
         
-        OkaService._sessions[session_id] = {"chat": chat, "plan": plan_output, "metadata": structured_plan}
+        total_batches = len(structured_plan.get("batches", [])) or 1
+        OkaService._sessions[session_id] = {
+            "chat": chat, 
+            "plan": plan_output, 
+            "metadata": structured_plan,
+            "current_batch": 0,
+            "total_batches": total_batches
+        }
         return {
             "session_id": session_id, 
             "plan_raw": plan_output, 
@@ -165,7 +190,7 @@ class OkaService:
         notes_match = re.findall(r"\[\[(.*?)\]\]", plan_text)
         metadata["notes"] = list(dict.fromkeys(notes_match))
 
-        batch_matches = re.findall(r"Batch (\d+).*?:\s*\n(.*?)(?=\n\n|\Z)", plan_text, re.DOTALL)
+        batch_matches = re.findall(r"(?i)(?:^|\n)\s*\**Batch\s+(\d+).*?[\n\r]+(.*?)(?=\n\s*(?:\**Batch|#|---)|\Z)", plan_text, re.DOTALL)
         for b_num, b_content in batch_matches:
             b_notes = re.findall(r"\[\[(.*?)\]\]", b_content)
             metadata["batches"].append({"id": int(b_num), "notes": b_notes})

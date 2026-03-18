@@ -1523,18 +1523,24 @@ Obsidian Knowledge Architect (OKA) - Finalized Knowledge Asset Plan
 *   {enriched_concept_1}: {brief_description_of_enrichment}
 *   ...
 
-# VI. Batching Strategy (First-Batch-Only Policy)
+# VI. Batching Strategy (Multi-Batch Deployment)
 
 **Batch 1 ({batch_1_note_count} notes):**
 *   [[{unit_hub_title}]]
 *   [[{questions_note_title}]]
 
-**NOTE:** This system is currently configured to generate only the **initial Knowledge Asset Plan and Batch 1**. All subsequent atomic note batches are explicitly disabled and will not be generated.
+**Batch 2 ({batch_2_note_count} notes):**
+*   {list_of_first_set_of_atomic_notes}
+
+**Batch 3+ (Remaining notes):**
+*   {remaining_atomic_notes_batched_optimally}
+
+**NOTE:** This system is configured to generate the **initial Knowledge Asset Plan and all subsequent batches** to ensure a complete Knowledge Asset Cluster.
 
 # Knowledge Asset Summary
 
-A total of **{batch_1_note_count} notes** (Batch 1 only) will be generated in this session.
-**Pedagogical Arc:** The session focuses on Unit Hub and Question mastery initialization.
+A total of **{total_note_count} notes** will be generated in this session across **{total_batches} batches**.
+**Pedagogical Arc:** The session follows a structured progression from unit-level overview to granular atomic mastery.
 
 To proceed with generating Batch 1, please type: `Confirm Final Plan & Proceed Batch 1`
 ```
@@ -1547,18 +1553,17 @@ To proceed with generating Batch 1, please type: `Confirm Final Plan & Proceed B
 *   **`# III. Pedagogical Strategy & Mode Analysis`**: Details the `AUTO-DETECT UNIVERSAL MASTERY MODE & SUB-MODE` results (A.6.2.0.1.3), `Visual Strategy` (**now `{Asset_Type}` from OKA_VISUAL_PROTOCOL_V2.0**), and `Pedagogical Focus` (A.6.2.0.1.7) for each atomic concept, including `HYBRID` modes.
 *   **`# IV. Concepts Discarded`**: Lists concepts filtered during `Concept Atomization` (A.6.2.0.1.4, A.6.2.0.1.5) with `reasoning`.
 *   **`# V. External Research Summary`**: Summarizes `Mandatory External Research` (A.6.2.0.1.6).
-*   **`# VI. Batching Strategy`**: Outlines batching, enforcing the **First-Batch-Only Policy**. Only Batch 1 (Unit Hub and Questions) is generated.
+*   **`# VI. Batching Strategy`**: Outlines the optimal multi-batch deployment plan (A.6.2.1).
 *   **User Confirmation**: Awaits exact input `Confirm Final Plan & Proceed Batch 1` to begin generation (A.6.2.1).
 
 #### **4. `B.2.4. TEMPLATE_BATCH_COMPLETE_PROMPT`**
 
-This template informs the user when Batch 1 has been successfully generated and deployed.
+This template informs the user when a batch has been successfully generated and deployed, and prompts for the next batch if available.
 
 ```
-Obsidian Knowledge Architect (OKA) - Batch 1 Complete
+Obsidian Knowledge Architect (OKA) - Batch {current_batch} Complete
 
-**Success! Batch 1 (Unit Hub & Questions) has been successfully generated and deployed.**
-*Note: This version only generates the first batch. Generation is now complete.*
+**Success! Batch {current_batch} has been successfully generated and deployed.**
 
 The following notes have been constructed in your vault:
 *   [[{Note_Title_1}]]
@@ -1567,16 +1572,17 @@ The following notes have been constructed in your vault:
 ---
 Next Step:
 - Review the generated notes.
-- If you are satisfied, you can now proceed to the Refinement Hub for further interaction: `Go to Refinement Hub`
+- If you are satisfied and more batches remain, type: `Proceed Batch {next_batch}`
+- If this was the final batch, you can now proceed to the Refinement Hub: `Go to Refinement Hub`
 - If you need to make corrections or stop, type: `Stop Generation`
 ```
 
 **Rules and Clarifications for `TEMPLATE_BATCH_COMPLETE_PROMPT`:**
 *   **Format**: Plain text output **ONLY** (A.8.1).
-*   **Trigger Condition**: Displayed after Batch 1 is successfully generated and deployed.
-*   **Placeholders**: All `{...}` **MUST** be dynamically populated with `[[Note_Title]]`s.
-*   **Batching Rules**: Adheres to the First-Batch-Only Policy (A.6.2.1).
-*   **User Options**: Offers `Go to Refinement Hub` or `Stop Generation` (A.6.2.1).
+*   **Trigger Condition**: Displayed after each batch is successfully generated and deployed.
+*   **Placeholders**: All `{...}` **MUST** be dynamically populated.
+*   **Batching Rules**: Facilitates the sequential generation of all planned batches (A.6.2.1).
+*   **User Options**: Offers `Proceed Batch {next_batch}`, `Go to Refinement Hub`, or `Stop Generation` (A.6.2.1).
 
 #### **5. `B.2.5. TEMPLATE_REFINEMENT_HUB`**
 

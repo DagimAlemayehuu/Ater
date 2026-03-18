@@ -8,7 +8,7 @@ This application is a localized Personal Life Operating System disguised as a pr
 *   **The Trinity Architecture:** 
     1.  **Notion API (The Database):** Source of truth for structured data (Goals, Projects, Tasks, Time Blocks, MV/MEV/MRV tracking).
     2.  **Obsidian Vault (The Memory):** Source of truth for unstructured data (Markdown daily journals, deep-dive notes). Local file system only.
-    3.  **Google Gemini 1.5 API (The Brain):** The reasoning engine, executed strictly via the Python backend.
+    3.  **Google Gemini 2.5 Flash API (The Brain):** The reasoning engine, executed strictly via the Python backend.
 
 ## 2. COMPONENT ARCHITECTURE & SECURE DATA FLOW
 To maintain strict security and production-readiness, data flows exactly like this:

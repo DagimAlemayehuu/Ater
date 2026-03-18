@@ -69,7 +69,7 @@ Output EXACTLY this message and STOP:
 # PROJECT BRIEF
 **Name:** Life OS
 **Type:** Local-First Desktop Application (Tier 3)
-**Requirement:** A personal mentorship and management OS. It requires a Tauri v2 desktop shell to access the local file system (Obsidian), a React frontend (Vite), and a Python FastAPI sidecar to handle heavy AI logic using the Google Gemini API. It must be production-ready, configurable via a UI, and abstract complex API logic from the user. Begin Phase 1 immediately.
+**Requirement:** A personal mentorship and management OS. It requires a Tauri v2 desktop shell to access the local file system (Obsidian), a React frontend (Vite), and a Python FastAPI sidecar to handle heavy AI logic using the Google Gemini 2.5 Flash API. It must be production-ready, configurable via a UI, and abstract complex API logic from the user. Begin Phase 1 immediately.
 ```
 
 ---
@@ -111,7 +111,7 @@ The `apps/api` folder contains the Python sidecar. It must expose a REST API to 
 2.  `POST /api/config/verify` - Takes API keys and Vault path from the frontend and verifies them (pings Notion, pings Gemini, checks if path exists).
 3.  `POST /api/strategist/briefing` - 
     *   *Inputs:* User Profile text, today's date.
-    *   *Action:* Fetches incomplete tasks from Notion API. Reads today's and yesterday's `.md` journal from the Obsidian path. Packages this data into a system prompt for Google Gemini 1.5.
+    *   *Action:* Fetches incomplete tasks from Notion API. Reads today's and yesterday's `.md` journal from the Obsidian path. Packages this data into a system prompt for Google Gemini 2.5 Flash.
     *   *Outputs:* A structured JSON response containing the "Morning Briefing" text and a calculated "Burnout Risk" score to be displayed on the React Dashboard.
 4.  `POST /api/debugger/query` - 
     *   *Inputs:* User query string.

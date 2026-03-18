@@ -1,12 +1,15 @@
 # Changelog
 
-## Phase 4.6 - OKA Restoration & Single-Batch Policy (Current)
+## Phase 4.7 - Automated Multi-Batch OKA (Current)
 
-- **Restored OKA (Obsidian Knowledge Architect)**: Re-implemented the academic ingestion engine with a focused single-session flow.
-- **First-Batch-Only Limitation**: System now generates the Knowledge Asset Plan and the **first batch of notes only** (Unit Hub & Questions). Subsequent batches are explicitly disabled to ensure high-fidelity focus.
-- **Modern SDK Migration**: Upgraded `OkaService` to use the latest `google-generativeai` SDK with `gemini-2.5-flash` exclusivity.
-- **UI Integration**: Added a dedicated **Autonomous** tab in Obsidian Hub for OKA processing with plan preview and single-click deployment.
-- **Protocol Restoration**: Recovered the missing `OKA_Visual_Protocol_V2.md` for mandatory visual/technical asset standards.
+- **Automated Multi-Batch Deployment**: Implemented an autonomous loop in the frontend that sequentially generates and deploys all planned OKA batches (Hub, Questions, and Atomic Notes) with a single click.
+- **Rate-Limit Awareness**: Integrated a 5-second mandatory pause between batches to respect Gemini Free Tier rate limits (15 RPM).
+- **Robust Batch Parsing**: Overhauled the OKA regex parser to be fully Markdown-aware, correctly identifying batches even with bold formatting (`**Batch X**`).
+- **Standardized Model**: Solidified `gemini-2.5-flash` as the absolute system-wide default for all reasoning and ingestion tasks.
+- **Detailed Error Reporting**: Added a dedicated OKA Pipeline Error UI that displays full Python tracebacks for instant debugging of API or parsing failures.
+- **Refined Protocol Discovery**: Fixed pathing logic to ensure the `OKA_Visual_Protocol_V2.md` is always correctly appended to system instructions from any execution context.
+
+## Phase 4.6 - OKA Restoration & Single-Batch Policy (Deprecated)
 
 ## Phase 4.5 - Workspace Consolidation & Intelligence Refactor
 

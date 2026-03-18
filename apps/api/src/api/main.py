@@ -320,8 +320,9 @@ async def oka_process_manual(
         return results
     except Exception as e:
         print(f"[Life OS Sidecar] OKA Initialization failed: {e}")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        error_details = traceback.format_exc()
+        print(error_details)
+        raise HTTPException(status_code=500, detail=f"OKA Initialization failed: {str(e)}\n\nTraceback:\n{error_details}")
 
 @app.post("/api/oka/confirm")
 async def oka_confirm_plan(
@@ -338,8 +339,8 @@ async def oka_confirm_plan(
     try:
         results = await service.confirm_plan(session_id, command=command)
         
-        # If it was a file session, move the file to .processed
-        if not session_id.startswith("text_"):
+        # Move file to .processed only when all batches are done
+        if not results.get("has_more") and not session_id.startswith("text_"):
             path = Path(session_id)
             if path.exists():
                 processed_dir = path.parent / ".processed"
@@ -348,15 +349,16 @@ async def oka_confirm_plan(
                 if new_path.exists():
                     new_path = processed_dir / f"{int(time.time())}_{path.name}"
                 path.rename(new_path)
-                print(f"[Life OS Sidecar] Moved {path.name} to .processed after confirmation")
+                print(f"[Life OS Sidecar] Moved {path.name} to .processed after all batches complete")
 
         return results
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         print(f"[Life OS Sidecar] OKA Confirmation failed: {e}")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        error_details = traceback.format_exc()
+        print(error_details)
+        raise HTTPException(status_code=500, detail=f"OKA Confirmation failed: {str(e)}\n\nTraceback:\n{error_details}")
 
 @app.post("/api/oka/watcher/toggle")
 async def oka_watcher_toggle(

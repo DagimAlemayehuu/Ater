@@ -12,8 +12,8 @@ Life OS is a local-first desktop application built as a polyglot monorepo. It op
 - **Obsidian Intelligence**: A high-fidelity reasoning engine and vault explorer.
     - **System Instructions**: Custom-tuned AI behavior permanently docked for precise reasoning.
     - **Vault Explorer**: Hierarchical folder navigation with a professional single-pane Markdown reader.
-    - **AI File Uploads**: Real-time document analysis (PDF, Code, Text) powered by Gemini Files API.
-    - **OKA (Obsidian Knowledge Architect)**: Autonomous academic ingestion system. Note: Currently limited to generating the **Knowledge Asset Plan and the first batch of notes only**; subsequent batches are not supported in this version.
+    - **AI File Uploads**: Real-time document analysis (PDF, Code, Text) powered by **Gemini 2.5 Flash**.
+    - **OKA (Obsidian Knowledge Architect)**: Fully automated multi-batch academic ingestion. It now supports the complete lifecycle from plan generation to unattended deployment of all planned notes.
 
 ## Stack
 
@@ -22,7 +22,7 @@ Life OS is a local-first desktop application built as a polyglot monorepo. It op
 | Desktop Shell | Tauri v2 (Rust) | Native OS access, filesystem, secure store, sidecar management |
 | Frontend | React + Vite + TypeScript | UI layer. Shadcn-admin aesthetic. |
 | Styling | Tailwind CSS + shadcn/ui | Component library and design system |
-| Backend Sidecar | Python FastAPI (compiled binary via PyInstaller) | AI logic, Gemini API calls, Notion API calls |
+| Backend Sidecar | Python FastAPI (compiled binary via PyInstaller) | AI logic, Gemini 2.5 Flash, Notion API calls |
 | Local State | Tauri-plugin-store | API Keys, Vault Path, User Profiles |
 | Knowledge Base | Local Obsidian `.md` files | Unstructured data for RAG |
 | Cloud Database | Notion API | Structured data: Tasks, Projects, Goals |

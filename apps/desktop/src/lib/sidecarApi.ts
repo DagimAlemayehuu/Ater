@@ -147,7 +147,7 @@ export const sidecarApi = {
         }),
 
     okaConfirm: (payload: { session_id: string; command?: string }) =>
-        request<{ ai_output: string; results: any[]; count: number; has_more: boolean; next_batch?: number; status: string }>('/api/oka/confirm', {
+        request<{ ai_output: string; results: any[]; count: number; has_more: boolean; next_batch?: number; current_batch?: number; total_batches?: number; status: string }>('/api/oka/confirm', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
