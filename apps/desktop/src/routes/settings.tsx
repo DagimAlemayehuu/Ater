@@ -362,7 +362,7 @@ export default function Settings() {
                             />
                         ) : (
                             <div className="px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm border border-transparent">
-                                <span>{config?.notionApiKey ? '••••••••' + config.notionApiKey.slice(-4) : 'Not configured'}</span>
+                                <span>{config?.notionApiKey ? '••••••••' + config?.notionApiKey.slice(-4) : 'Not configured'}</span>
                                 <ShieldCheck size={14} className="opacity-50" />
                             </div>
                         )}
@@ -417,7 +417,7 @@ export default function Settings() {
                                     />
                                 ) : (
                                     <div className="px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm">
-                                        <span>{config?.aiApiKey ? '••••••••' + config.aiApiKey.slice(-4) : 'Not configured'}</span>
+                                        <span>{config?.aiApiKey ? '••••••••' + config?.aiApiKey.slice(-4) : 'Not configured'}</span>
                                         <Key size={14} className="opacity-50" />
                                     </div>
                                 )}
@@ -547,19 +547,19 @@ export default function Settings() {
                                 </div>
                                 <button
                                     onClick={async () => {
-                                        const newVal = !config.autoDeploy;
+                                        const newVal = !config?.autoDeploy;
                                         await saveConfig({ autoDeploy: newVal });
                                         // If watcher is active, we might need to tell the sidecar to toggle
                                         try { await sidecarApi.okaWatcherToggle(); } catch(e) {}
                                     }}
                                     className={cn(
                                         "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                                        config.autoDeploy ? "bg-primary" : "bg-input"
+                                        config?.autoDeploy ? "bg-primary" : "bg-input"
                                     )}
                                 >
                                     <span className={cn(
                                         "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
-                                        config.autoDeploy ? "translate-x-4" : "translate-x-1"
+                                        config?.autoDeploy ? "translate-x-4" : "translate-x-1"
                                     )} />
                                 </button>
                             </div>
@@ -760,7 +760,7 @@ export default function Settings() {
                         <CardHeader title="Strategist Blueprint" description="Visual calibration of personality traits and response styles." icon={<Sliders size={18} className="text-primary" />} />
                         <CardContent>
                             <StrategistSliders
-                                value={config.strategistSliders || '{}'}
+                                value={config?.strategistSliders || '{}'}
                                 onChange={(val) => saveConfig({ strategistSliders: val })}
                                 type="strategist"
                             />
