@@ -21,6 +21,7 @@ This repository strictly adheres to the `AGENTS.md` protocol. It uses a `.system
     - **AI File Uploads**: Real-time document analysis (PDF, Code, Text) powered by **Gemini 2.5 Flash**.
     - **OKA (Obsidian Knowledge Architect)**: Fully automated multi-batch academic ingestion.
 - **Notion Mirror (V2)**: Modernized, numbered, and hierarchical mirroring of Notion databases into Obsidian (1-NotionMirror, 2-Academic).
+- **Full Autonomous Agent Permissions**: Specialized AI units have programmatic read, write, edit, and delete access to local Obsidian vaults and cloud-based Notion databases via an integrated backend toolset.
 
 ## Stack
 

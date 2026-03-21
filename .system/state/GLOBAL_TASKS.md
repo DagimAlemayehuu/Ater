@@ -54,6 +54,7 @@
 ### Completed Epics
 *   [x] **Orchestrator Backend State**: Real-time status tracking (prompt, plan, active agents, logs).
 *   [x] **Specialist Agent Logic**: 8 functional agents (Scholar, Wealth, Gym, etc.) with mapped vault paths.
+*   [x] **Specialist Autonomy**: Agents given full CRUD power across local Obsidian vault and Notion APIs.
 *   [x] **Data-Driven Dashboards**: All agent UI pages (Chronos, Wealth, Scholar, etc.) fetch live status from FastAPI.
 *   [x] **Logo & Brand Refinement**: Finalized "Zap" branding and strict monochrome aesthetic.
 *   [x] **Agent Workforce Registry**: Integrated all specialized units into a unified dashboard.

@@ -40,9 +40,10 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     // Fetch all config values into a single object
     const config = {
         notionApiKey: (await store.get<string>('notionApiKey')) || '',
-        aiProvider: (await store.get<string>('aiProvider')) || 'google', // New AI provider setting
-        aiApiKey: (await store.get<string>('aiApiKey')) || '', // New generic AI key
-        aiModel: (await store.get<string>('aiModel')) || 'gemini-2.5-flash', // New generic AI model
+        geminiApiKey: (await store.get<string>('geminiApiKey')) || '',
+        aiProvider: (await store.get<string>('aiProvider')) || 'google', 
+        aiApiKey: (await store.get<string>('aiApiKey')) || '', 
+        aiModel: (await store.get<string>('aiModel')) || 'gemini-1.5-flash', 
         obsidianVaultPath: (await store.get<string>('obsidianVaultPath')) || '',
         inboxPath: (await store.get<string>('inboxPath')) || '',
         autoDeploy: (await store.get<boolean>('autoDeploy')) || false,
@@ -51,8 +52,8 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     return {
         'X-Notion-Key': config.notionApiKey || '',
         'X-AI-Provider': config.aiProvider || 'google',
-        'X-AI-Key': config.aiApiKey || '',
-        'X-AI-Model': config.aiModel || 'gemini-2.5-flash',
+        'X-AI-Key': config.aiApiKey || config.geminiApiKey || '',
+        'X-AI-Model': config.aiModel || 'gemini-1.5-flash',
         'X-Vault-Path': config.obsidianVaultPath || '',
         'X-Inbox-Path': config.inboxPath || '',
         'X-Auto-Deploy': String(config.autoDeploy || false),

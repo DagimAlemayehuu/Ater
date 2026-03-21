@@ -106,6 +106,100 @@ class AgentTools:
         await client.create_page_in_database(target_id, properties)
         return f"SUCCESS: Logged {exercise} | {sets}x{reps} @ {weight}kg"
 
+    async def create_page_in_database(self, database_id: str, properties: Dict[str, Any]) -> str:
+        """Creates a new page within a specific Notion database."""
+        if not self.notion_key: return "Error: Notion key missing."
+        client = NotionClient(self.notion_key)
+        res = await client.create_page_in_database(database_id, properties)
+        return f"SUCCESS: Created page with ID {res['id']}"
+
+    async def update_notion_page(self, page_id: str, properties: Dict[str, Any]) -> str:
+        """Updates properties of an existing Notion page."""
+        if not self.notion_key: return "Error: Notion key missing."
+        client = NotionClient(self.notion_key)
+        await client.update_page_properties(page_id, properties)
+        return f"SUCCESS: Updated page {page_id}"
+
+    async def archive_notion_page(self, page_id: str) -> str:
+        """Archives (deletes) a Notion page."""
+        if not self.notion_key: return "Error: Notion key missing."
+        client = NotionClient(self.notion_key)
+        await client.archive_page(page_id)
+        return f"SUCCESS: Archived page {page_id}"
+
+    async def write_obsidian_note(self, path: str, content: str) -> str:
+        """Creates or overwrites an Obsidian note."""
+        if not self.vault_path: return "Error: Vault path missing."
+        client = ObsidianClient(self.vault_path)
+        client.write_note(path, content)
+        return f"SUCCESS: Wrote note to {path}"
+
+    async def delete_obsidian_note(self, path: str) -> str:
+        """Deletes an Obsidian note."""
+        if not self.vault_path: return "Error: Vault path missing."
+        client = ObsidianClient(self.vault_path)
+        if client.delete_note(path):
+            return f"SUCCESS: Deleted note {path}"
+        return f"ERROR: Note {path} not found."
+
+    async def list_notion_pages(self, query: str = "") -> str:
+        """Search for pages in Notion."""
+        if not self.notion_key: return "Error: Notion key missing."
+        client = NotionClient(self.notion_key)
+        pages = await client.list_pages() # search with filter=page
+        summary = []
+        for p in pages:
+            # Handle different title formats for pages
+            props = p.get("properties", {})
+            title_prop = props.get("title", props.get("Name", {}))
+            title_list = title_prop.get("title", [])
+            title = title_list[0].get("plain_text", "Untitled") if title_list else "Untitled"
+            summary.append({"id": p["id"], "title": title, "url": p.get("url")})
+        return json.dumps(summary, indent=2)
+
+    async def read_notion_page_content(self, page_id: str) -> str:
+        """Reads all blocks from a Notion page and returns a summary."""
+        if not self.notion_key: return "Error: Notion key missing."
+        client = NotionClient(self.notion_key)
+        blocks = await client.get_page_content(page_id)
+        
+        content = ""
+        for block in blocks:
+            b_type = block.get("type")
+            if b_type in block:
+                text_list = block[b_type].get("rich_text", [])
+                text = "".join([t.get("plain_text", "") for t in text_list])
+                content += f"[{b_type}] {text}\n"
+        return content if content else "Page is empty."
+
+    async def append_notion_content(self, block_id: str, markdown_text: str) -> str:
+        """Appends a paragraph block to a Notion page/block."""
+        if not self.notion_key: return "Error: Notion key missing."
+        client = NotionClient(self.notion_key)
+        # Simple paragraph conversion
+        children = [
+            {
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [{"type": "text", "text": {"content": markdown_text}}]
+                }
+            }
+        ]
+        await client.append_block_children(block_id, children)
+        return f"SUCCESS: Appended content to {block_id}"
+
+    async def move_obsidian_note(self, old_path: str, new_path: str) -> str:
+        """Moves or renames an Obsidian note."""
+        if not self.vault_path: return "Error: Vault path missing."
+        old_full = Path(self.vault_path) / old_path
+        new_full = Path(self.vault_path) / new_path
+        if not old_full.exists(): return f"ERROR: Source {old_path} does not exist."
+        
+        new_full.parent.mkdir(parents=True, exist_ok=True)
+        old_full.rename(new_full)
+        return f"SUCCESS: Moved {old_path} to {new_path}"
+
     async def repair_index(self) -> str:
         """Force a full re-index by clearing the vector store."""
         return "SUCCESS: RAG index repair initiated. Background re-indexing in progress."

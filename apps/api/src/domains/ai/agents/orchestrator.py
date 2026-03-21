@@ -82,10 +82,12 @@ class Orchestrator(BaseAgent):
             "You are the Life OS Orchestrator (Master Planner).\n"
             "You manage an autonomous workforce of specialists: Notion Librarian, Obsidian Scribe, OKA Sentinel, Chronos, Scholar, Wealth Strategist, Gym Coach, and DevOps Guardian.\n"
             "RULES:\n"
-            "1. DELEGATE tasks to the appropriate specialist using their delegation tools.\n"
-            "2. SYNTHESIZE the results into a final, highly technical, and concise response.\n"
-            "3. NO emojis. NO conversational filler.\n"
-            "4. If a task requires searching the vault, use search_vault first."
+            "1. PLAN BEFORE ACT: Every response MUST start with a 'STRATEGIC PLAN' section. Explain exactly which agents you will call and why.\n"
+            "2. DELEGATE: Use your specialized units for all execution. Do not do their jobs. Delegate.\n"
+            "3. EFFECTIVENESS: Coordinate multi-agent workflows for complex tasks.\n"
+            "4. SYNTHESIZE the results into a final, technical, and concise response.\n"
+            "5. NO emojis. NO conversational filler.\n"
+            "6. DATA-DRIVEN: Use 'search_vault' to get context before assuming."
         )
         tools = [
             delegate_to_notion_librarian, delegate_to_obsidian_scribe, 
@@ -94,7 +96,7 @@ class Orchestrator(BaseAgent):
             delegate_to_gym_coach, delegate_to_devops_guardian,
             search_vault
         ]
-        super().__init__(persona, tools, name="Orchestrator")
+        super().__init__(secrets, persona, tools, name="Orchestrator")
 
     def _notion_tools(self):
         @tool
@@ -102,10 +104,34 @@ class Orchestrator(BaseAgent):
             """Lists all available Notion databases to find specific IDs."""
             return await self.at.get_notion_databases()
         @tool
+        async def list_pages() -> str:
+            """Lists/Searches for Notion pages."""
+            return await self.at.list_notion_pages()
+        @tool
+        async def read_page_blocks(page_id: str) -> str:
+            """Reads the content (blocks) of a specific Notion page."""
+            return await self.at.read_notion_page_content(page_id)
+        @tool
+        async def append_content(page_id: str, markdown_text: str) -> str:
+            """Appends content to a Notion page."""
+            return await self.at.append_notion_content(page_id, markdown_text)
+        @tool
         async def list_goals() -> str:
             """Lists current life goals from Notion."""
             return await self.at.list_notion_goals()
-        return [list_databases, list_goals]
+        @tool
+        async def create_page(database_id: str, properties: Dict[str, Any]) -> str:
+            """Creates a new page in a database. Example properties: {'Name': {'title': [{'text': {'content': 'Task Name'}}]}, 'Status': {'select': {'name': 'Done'}}}"""
+            return await self.at.create_page_in_database(database_id, properties)
+        @tool
+        async def update_page(page_id: str, properties: Dict[str, Any]) -> str:
+            """Updates properties of a specific Notion page."""
+            return await self.at.update_notion_page(page_id, properties)
+        @tool
+        async def archive_page(page_id: str) -> str:
+            """Archives (deletes) a specific Notion page."""
+            return await self.at.archive_notion_page(page_id)
+        return [list_databases, list_pages, read_page_blocks, append_content, list_goals, create_page, update_page, archive_page]
 
     def _obsidian_tools(self):
         @tool
@@ -117,10 +143,22 @@ class Orchestrator(BaseAgent):
             """Reads the full content of a specified markdown file."""
             return await self.at.read_note(path)
         @tool
+        async def write_note(path: str, content: str) -> str:
+            """Creates or overwrites a markdown file. Use this for all long-form note taking."""
+            return await self.at.write_obsidian_note(path, content)
+        @tool
+        async def move_note(old_path: str, new_path: str) -> str:
+            """Moves or renames a markdown file in the vault."""
+            return await self.at.move_obsidian_note(old_path, new_path)
+        @tool
+        async def delete_note(path: str) -> str:
+            """Deletes a markdown file from the vault."""
+            return await self.at.delete_obsidian_note(path)
+        @tool
         async def list_structure() -> str:
             """Lists the numbered folder structure of the vault."""
             return await self.at.list_vault_folders()
-        return [list_notes, read_note, list_structure]
+        return [list_notes, read_note, write_note, move_note, delete_note, list_structure]
 
     def _oka_tools(self):
         @tool

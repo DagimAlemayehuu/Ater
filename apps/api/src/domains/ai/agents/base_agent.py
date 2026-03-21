@@ -34,16 +34,18 @@ class BaseAgent:
         )
         self.llm_with_tools = self.llm.bind_tools(self.tools)
 
-    def log(self, message: str):
+    def log(self, message: str, level: str = "INFO"):
         now = datetime.datetime.now().strftime("%H:%M:%S")
-        self.status["logs"].append(f"[{now}] {message}")
-        if len(self.status["logs"]) > 20:
+        log_entry = f"[{now}] [{level}] {message}"
+        self.status["logs"].append(log_entry)
+        if len(self.status["logs"]) > 30:
             self.status["logs"].pop(0)
+        print(f"[Agent Log] {self.name}: {log_entry}") # Also log to terminal
 
     async def run(self, input_text: str, history: Optional[List[Dict[str, str]]] = None, max_iterations: int = 12) -> str:
         """Standard Agent Loop (ReAct)"""
         self.status["current_prompt"] = input_text
-        self.status["stage"] = "reasoning"
+        self.status["stage"] = "Initializing"
         self.log(f"{self.name} starting mission.")
         
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -58,12 +60,20 @@ class BaseAgent:
         messages.append(HumanMessage(content=input_text))
 
         for i in range(max_iterations):
-            self.status["stage"] = f"iteration_{i+1}"
+            self.status["stage"] = "Synthesizing" if i > 0 else "Thinking"
             response = await self.llm_with_tools.ainvoke(messages)
             messages.append(response)
 
+            # Extra: Extract Strategic Plan if present for status monitoring
+            if "STRATEGIC PLAN" in response.content.upper():
+                import re
+                plan_match = re.search(r"STRATEGIC PLAN[:\s]*(.*?)(?=\n\n|\n[A-Z]|$)", response.content, re.DOTALL | re.IGNORECASE)
+                if plan_match:
+                    self.status["current_plan"] = plan_match.group(1).strip()
+                    self.log(f"Plan updated: {self.status['current_plan'][:50]}...")
+
             if not response.tool_calls:
-                self.status["stage"] = "completed"
+                self.status["stage"] = "Completed"
                 self.status["next_agent"] = "None"
                 self.log(f"{self.name} finished task.")
                 return response.content
@@ -74,6 +84,7 @@ class BaseAgent:
                 
                 tool = next((t for t in self.tools if t.name == t_name), None)
                 if tool:
+                    self.status["stage"] = f"Using {t_name.replace('delegate_to_', '').replace('_', ' ').title()}"
                     self.log(f"Executing Tool: {t_name}")
                     if "delegate_to_" in t_name:
                         agent_name = t_name.replace("delegate_to_", "").replace("_", " ").title()
@@ -91,5 +102,5 @@ class BaseAgent:
                     self.log(f"Error: Tool '{t_name}' not found.")
                     messages.append(ToolMessage(content=f"Error: Tool '{t_name}' not found.", tool_call_id=tool_call["id"]))
         
-        self.status["stage"] = "failed"
+        self.status["stage"] = "Failed"
         return f"[{self.name}] I've reached my thinking limit."

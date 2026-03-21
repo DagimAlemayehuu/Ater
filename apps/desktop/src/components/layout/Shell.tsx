@@ -5,63 +5,58 @@ import {
     Settings,
     Brain,
     Menu,
-    Command,
     Moon,
     Sun,
     Database,
     FileText,
     Zap,
-    Users
+    Users,
+    Command
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/theme-provider'
-
 import { SidebarProvider } from '@/components/ui/sidebar'
 
-/**
- * Sidebar definition — grouped navigation
- */
 const navGroups = [
     {
-        title: 'Overview',
+        title: '0- SYSTEM',
         items: [
-            { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+            { label: '0- Dashboard', path: '/dashboard', icon: LayoutDashboard },
         ],
     },
     {
-        title: 'Workspaces',
+        title: '1- WORKSPACES',
         items: [
-            { label: 'Notion', path: '/notion', icon: Database },
-            { label: 'Obsidian', path: '/obsidian', icon: FileText },
+            { label: '1- Notion', path: '/notion', icon: Database },
+            { label: '2- Obsidian', path: '/obsidian', icon: FileText },
         ],
     },
     {
-        title: 'Intelligence',
+        title: '2- INTELLIGENCE',
         items: [
-            { label: 'Orchestrator', path: '/chat', icon: Zap },
-            { label: 'Workforce', path: '/agents', icon: Users },
-            { label: 'Automations', path: '/automations', icon: Command },
+            { label: '3- Orchestrator', path: '/chat', icon: Zap },
+            { label: '4- Workforce', path: '/agents', icon: Users },
+            { label: '5- Automations', path: '/automations', icon: Command },
         ],
     },
     {
-        title: 'System',
+        title: '3- CONFIG',
         items: [
-            { label: 'Settings', path: '/settings', icon: Settings },
+            { label: '6- Settings', path: '/settings', icon: Settings },
         ],
     },
 ]
 
-// Flat list for breadcrumb lookup
 const allNavItems = navGroups.flatMap(g => g.items)
 
 export default function Shell({ children }: { children: React.ReactNode }) {
     const [collapsed, setCollapsed] = useState(false)
-    const [chatCollapsed, setChatCollapsed] = useState(false)
     const [mobileOpen, setMobileOpen] = useState(false)
     const location = useLocation()
     const { theme, setTheme } = useTheme()
 
     const currentItem = allNavItems.find(n => n.path === location.pathname)
+    const isFullPage = location.pathname === '/chat'
 
     return (
         <SidebarProvider defaultOpen={!collapsed}>
@@ -85,7 +80,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             >
                 {/* Logo Area */}
                 <div className={cn("flex h-14 items-center shrink-0 border-b border-border/40", collapsed ? "justify-center px-2" : "px-4 gap-3")}>
-                    <div className="flex items-center justify-center shrink-0 w-8 h-8 rounded-lg bg-foreground text-background">
+                    <div className="flex items-center justify-center shrink-0 w-8 h-8 rounded-lg bg-foreground text-background font-black">
                         <Zap className="w-4 h-4 fill-current" />
                     </div>
                     {!collapsed && (
@@ -104,12 +99,13 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                             )}
                             <div className="space-y-1.5">
                                 {group.items.map((item) => {
+                                    const isActive = location.pathname === item.path
                                     return (
                                         <NavLink
                                             key={item.path}
                                             to={item.path}
                                             onClick={() => setMobileOpen(false)}
-                                            className={({ isActive }) => cn(
+                                            className={cn(
                                                 "flex items-center rounded-md transition-all duration-150 group relative",
                                                 collapsed ? "justify-center p-2.5 mx-auto" : "px-3 py-2 gap-3",
                                                 isActive
@@ -118,7 +114,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                                             )}
                                         >
                                             <item.icon className={cn("shrink-0", collapsed ? "w-4 h-4" : "w-4 h-4")} />
-                                            {!collapsed && <span className="text-sm">{item.label}</span>}
+                                            {!collapsed && <span className="text-sm tracking-tight">{item.label}</span>}
 
                                             {/* Tooltip for collapsed view */}
                                             {collapsed && (
@@ -134,13 +130,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                     ))}
                 </nav>
 
-                {/* Collapse Toggle */}
+                {/* Bottom Actions: Theme Toggle */}
                 <div className="p-2 border-t border-border/40 shrink-0">
                     <button
-                        onClick={() => setCollapsed(!collapsed)}
+                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                         className={cn("w-full flex items-center justify-center p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-all focus:outline-none")}
                     >
-                        <Menu className="w-4 h-4 shrink-0" />
+                        {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                        {!collapsed && <span className="ml-3 text-[10px] font-black uppercase tracking-widest">Theme</span>}
                     </button>
                 </div>
             </aside>
@@ -159,26 +156,29 @@ export default function Shell({ children }: { children: React.ReactNode }) {
 
                         {/* Breadcrumbs */}
                         <div className="hidden sm:flex items-center gap-2 text-sm">
-                            <span className="font-semibold text-foreground tracking-tight">
+                            <span className="font-bold text-foreground tracking-tight uppercase text-xs">
                                 {currentItem?.label || 'Page'}
                             </span>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3 md:gap-4 ml-auto">
-                        {/* Theme Toggle */}
                         <button
-                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                            className="p-2 mr-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
+                            onClick={() => setCollapsed(!collapsed)}
+                            className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
+                            title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
                         >
-                            {theme === 'dark' ? <Moon className="w-[18px] h-[18px]" /> : <Sun className="w-[18px] h-[18px]" />}
+                            <Menu className="w-4 h-4" />
                         </button>
                     </div>
                 </header>
 
                 {/* Dynamic Content Area */}
-                <div className="flex-1 overflow-auto p-6 sm:p-8 custom-scrollbar relative">
-                    <div className="mx-auto max-w-7xl h-full">
+                <div className={cn(
+                    "flex-1 overflow-auto custom-scrollbar relative",
+                    isFullPage ? "p-0" : "p-6 sm:p-8"
+                )}>
+                    <div className={cn("mx-auto h-full", isFullPage ? "max-w-none" : "max-w-7xl")}>
                         {children}
                     </div>
                 </div>

@@ -50,3 +50,24 @@ class ObsidianClient:
             with open(full_path, "r", encoding="utf-8") as f:
                 return f.read()
         return None
+
+    def write_note(self, relative_path: str, content: str) -> bool:
+        """
+        Writes (creates or updates) a specific note.
+        """
+        full_path = self.vault_path / relative_path
+        # Ensure parent directory exists
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(full_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return True
+
+    def delete_note(self, relative_path: str) -> bool:
+        """
+        Deletes a specific note.
+        """
+        full_path = self.vault_path / relative_path
+        if full_path.exists() and full_path.is_file():
+            full_path.unlink()
+            return True
+        return False
