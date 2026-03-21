@@ -39,6 +39,7 @@ export interface CustomPersona {
 }
 
 export interface AppConfig {
+  [key: string]: any;
     notionApiKey: string;
     aiProvider: string;
     aiApiKey: string;
@@ -120,7 +121,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const creatorSliders = (await store.get<string>('creatorSliders')) || DEFAULT_CONFIG.creatorSliders;
                 const customPersonas = (await store.get<CustomPersona[]>('customPersonas')) || [];
 
-                const loadedConfig: AppConfig = {
+                const loadedConfig: any = {
                     notionApiKey,
                     aiProvider,
                     aiApiKey,
@@ -157,7 +158,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         try {
             const store = await load(STORE_FILENAME, { autoSave: true, defaults: DEFAULT_CONFIG });
-            const updatedConfig = { ...config, ...newConfig } as AppConfig;
+            const updatedConfig = { ...config, ...newConfig } as any;
 
             // Update store for keys present in newConfig
             for (const key of Object.keys(newConfig)) {

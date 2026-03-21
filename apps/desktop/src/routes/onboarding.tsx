@@ -8,7 +8,7 @@ export default function Onboarding() {
     const { config, saveConfig } = useConfig();
     const [formData, setFormData] = useState({
         notionApiKey: config?.notionApiKey || '',
-        geminiApiKey: config?.geminiApiKey || '',
+        aiApiKey: config?.aiApiKey || '',
         obsidianVaultPath: config?.obsidianVaultPath || '',
     });
     const [isSaving, setIsSaving] = useState(false);
@@ -94,8 +94,8 @@ export default function Onboarding() {
                             <input
                                 type="password"
                                 placeholder="AIza..."
-                                value={formData.geminiApiKey}
-                                onChange={e => setFormData(prev => ({ ...prev, geminiApiKey: e.target.value }))}
+                                value={formData.aiApiKey}
+                                onChange={e => setFormData(prev => ({ ...prev, aiApiKey: e.target.value }))}
                                 required
                                 className="w-full bg-muted/30 border border-border rounded-xl px-5 py-4 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary/20 focus:bg-background transition-all placeholder:text-muted-foreground/30"
                             />

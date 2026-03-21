@@ -4,36 +4,101 @@ import {
   FileText,
   Brain,
   Zap,
-  Settings
-} from "lucide-react"
+  Settings,
+  Users,
+  Target,
+  UserCircle
+} from 'lucide-react'
+import { type SidebarData } from '../types'
 
-export const sidebarData = {
-  navMain: [
+export const sidebarData: SidebarData = {
+  user: {
+    name: 'User',
+    email: 'user@lifeos.local',
+    avatar: '',
+  },
+  teams: [
     {
-      title: "Overview",
+      name: 'Life OS',
+      logo: Zap,
+      plan: 'Local',
+    },
+  ],
+  navGroups: [
+    {
+      title: 'Overview',
       items: [
-        { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard }
-      ]
+        {
+          title: 'Dashboard',
+          url: '/dashboard',
+          icon: LayoutDashboard,
+        },
+      ],
     },
     {
-      title: "Workspaces",
+      title: 'Workspaces',
       items: [
-        { title: "Notion Hub", url: "/notion", icon: Database },
-        { title: "Obsidian Vault", url: "/obsidian", icon: FileText }
-      ]
+        {
+          title: 'Notion',
+          url: '/notion',
+          icon: Database,
+        },
+        {
+          title: 'Obsidian',
+          url: '/obsidian',
+          icon: FileText,
+        },
+      ],
     },
     {
-      title: "Intelligence",
+      title: 'Intelligence',
       items: [
-        { title: "Agents", url: "/agents", icon: Brain },
-        { title: "Automations", url: "/automations", icon: Zap }
-      ]
+        {
+          title: 'Orchestrator',
+          url: '/chat',
+          icon: Zap,
+        },
+        {
+          title: 'Workforce',
+          url: '/agents',
+          icon: Users,
+        },
+        {
+          title: 'Automations',
+          url: '/automations',
+          icon: Zap,
+        },
+      ],
     },
     {
-      title: "System",
+      title: 'Planning',
       items: [
-        { title: "Settings", url: "/settings", icon: Settings }
-      ]
-    }
-  ]
+        {
+          title: 'Strategist',
+          url: '/strategist',
+          icon: Brain,
+        },
+        {
+          title: 'Profiles',
+          url: '/profiles',
+          icon: UserCircle,
+        },
+        {
+          title: 'Goals',
+          url: '/goals',
+          icon: Target,
+        },
+      ],
+    },
+    {
+      title: 'System',
+      items: [
+        {
+          title: 'Settings',
+          url: '/settings',
+          icon: Settings,
+        },
+      ],
+    },
+  ],
 }

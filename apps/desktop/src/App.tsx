@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { ConfigProvider, useConfig } from '@/lib/ConfigContext'
 import { ThemeProvider } from '@/context/theme-provider'
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import Onboarding from '@/routes/onboarding'
-import Shell from '@/components/layout/Shell'
 import Dashboard from '@/routes/dashboard'
 import Obsidian from '@/routes/obsidian'
 import Notion from '@/routes/notion'
@@ -110,7 +110,7 @@ export default function App() {
             <Routes>
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="*" element={
-                <Shell>
+                <AuthenticatedLayout>
                   <Routes>
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<Dashboard />} />
@@ -121,11 +121,11 @@ export default function App() {
                     <Route path="/strategist" element={<Strategist />} />
                     <Route path="/chat" element={<ChatPage />} />
                     <Route path="/profiles" element={<Profiles />} />
-              <Route path="/goals" element={<Goals />} />
+                    <Route path="/goals" element={<Goals />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/debugger" element={<PlaceholderPage title="The Debugger" />} />
                   </Routes>
-                </Shell>
+                </AuthenticatedLayout>
               } />
             </Routes>
           </BrowserRouter>
