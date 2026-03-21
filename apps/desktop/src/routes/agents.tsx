@@ -547,6 +547,7 @@ function FileCheck(props: any) {
 export default function Agents() {
     const { config, saveConfig } = useConfig()
     const [activeAgent, setActiveAgent] = useState<string | null>(null)
+    const navigate = useNavigate()
 
     const toggleAutoDeploy = async (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -612,6 +613,38 @@ export default function Agents() {
                     </div>
 
                     <Sparkles className="absolute -right-4 -top-4 w-24 h-24 text-primary/5 rotate-12 group-hover:scale-110 transition-transform" />
+                </div>
+
+                {/* Strategist Agent Card */}
+                <div 
+                    onClick={() => navigate('/strategist')}
+                    className="group relative flex flex-col p-6 rounded-2xl border bg-card hover:bg-muted/50 hover:border-primary/50 transition-all cursor-pointer shadow-sm hover:shadow-md overflow-hidden"
+                >
+                    <div className="flex items-start justify-between mb-4">
+                        <div className="p-3 rounded-xl bg-purple-500/10 text-purple-500 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                            <Zap className="w-6 h-6" />
+                        </div>
+                    </div>
+                    
+                    <h3 className="text-lg font-bold tracking-tight mb-2 flex items-center gap-2">
+                        Strategist
+                        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+                        Your personal life strategist. Calibrate your identity, simulate life pivots, and receive tactical advice based on your Master Plan.
+                    </p>
+
+                    <div className="mt-auto pt-4 border-t border-border/50 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                            <Activity className="w-3.5 h-3.5" />
+                            Ready
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-purple-500 group-hover:underline">
+                            Open Console
+                        </div>
+                    </div>
+
+                    <Zap className="absolute -right-4 -top-4 w-24 h-24 text-purple-500/5 rotate-12 group-hover:scale-110 transition-transform" />
                 </div>
 
                 {/* Placeholder Cards */}

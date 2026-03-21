@@ -37,19 +37,26 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} })
     const notionKey = (await store.get<string>('notionApiKey')) || ''
     const geminiKey = (await store.get<string>('geminiApiKey')) || ''
-    const geminiModel = (await store.get<string>('geminiModel')) || 'gemini-2.5-flash'
-    const vaultPath = (await store.get<string>('obsidianVaultPath')) || ''
-    const inboxPath = (await store.get<string>('inboxPath')) || ''
-    const autoDeploy = (await store.get<boolean>('autoDeploy')) ? 'true' : 'false'
+    // Fetch all config values into a single object
+    const config = {
+        notionApiKey: (await store.get<string>('notionApiKey')) || '',
+        aiProvider: (await store.get<string>('aiProvider')) || 'google', // New AI provider setting
+        aiApiKey: (await store.get<string>('aiApiKey')) || '', // New generic AI key
+        aiModel: (await store.get<string>('aiModel')) || 'gemini-2.5-flash', // New generic AI model
+        obsidianVaultPath: (await store.get<string>('obsidianVaultPath')) || '',
+        inboxPath: (await store.get<string>('inboxPath')) || '',
+        autoDeploy: (await store.get<boolean>('autoDeploy')) || false,
+    }
 
     return {
-        'X-Notion-Key': notionKey,
-        'X-Gemini-Key': geminiKey,
-        'X-Gemini-Model': geminiModel,
-        'X-Vault-Path': vaultPath,
-        'X-Inbox-Path': inboxPath,
-        'X-Auto-Deploy': autoDeploy,
-    }
+        'X-Notion-Key': config.notionApiKey || '',
+        'X-AI-Provider': config.aiProvider || 'google',
+        'X-AI-Key': config.aiApiKey || '',
+        'X-AI-Model': config.aiModel || 'gemini-2.5-flash',
+        'X-Vault-Path': config.obsidianVaultPath || '',
+        'X-Inbox-Path': config.inboxPath || '',
+        'X-Auto-Deploy': String(config.autoDeploy || false),
+    };
 }
 
 /**
@@ -158,6 +165,27 @@ export const sidecarApi = {
             method: 'POST'
         }),
 
+    ragWatcherToggle: () =>
+        request<{ status: string, vault?: string }>('/api/rag/watcher/toggle', {
+            method: 'POST'
+        }),
+
+    ragSyncVault: () =>
+        request<{ status: string, message: string }>('/api/rag/sync', {
+            method: 'POST'
+        }),
+
+    ragSyncStatus: () =>
+        request<{ status: string, progress: number, total: number, message: string }>('/api/rag/sync-status'),
+
+    syncNotionMirror: () =>
+        request<{ status: string, message: string }>('/api/notion/sync-mirror', {
+            method: 'POST'
+        }),
+
+    syncNotionMirrorStatus: () =>
+        request<{ status: string, progress: number, total: number, message: string }>('/api/notion/sync-mirror/status'),
+
     okaWatcherStatus: () =>
         request<{ is_running: boolean, inbox: string | null }>('/api/oka/watcher/status'),
 
@@ -177,6 +205,11 @@ export const sidecarApi = {
 
     academicsSyncProfile: () =>
         request<{ success: boolean; profile_path: string }>('/api/academics/sync-profile', {
+            method: 'POST'
+        }),
+
+    testAiConnection: () =>
+        request<{ success: boolean; message?: string; error?: string }>('/api/ai/test-connection', {
             method: 'POST'
         }),
 }

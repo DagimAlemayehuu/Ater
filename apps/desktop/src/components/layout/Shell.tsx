@@ -4,7 +4,6 @@ import {
     LayoutDashboard,
     Settings,
     Brain,
-    Zap,
     Menu,
     Command,
     Moon,
@@ -38,7 +37,7 @@ const navGroups = [
         title: 'Intelligence',
         items: [
             { label: 'Agents', path: '/agents', icon: Brain },
-            { label: 'Automations', path: '/automations', icon: Zap },
+            { label: 'Automations', path: '/automations', icon: Command },
         ],
     },
     {

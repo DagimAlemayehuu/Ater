@@ -39,9 +39,10 @@ export interface CustomPersona {
 }
 
 export interface AppConfig {
-    [key: string]: any;
     notionApiKey: string;
-    geminiApiKey: string;
+    aiProvider: string;
+    aiApiKey: string;
+    aiModel: string;
     obsidianVaultPath: string;
     inboxPath: string;
     autoDeploy: boolean;
@@ -55,7 +56,6 @@ export interface AppConfig {
     creatorPrompt: string;
     creatorSliders: string;
     customPersonas: CustomPersona[];
-    geminiModel: string;
 }
 
 interface ConfigContextType {
@@ -71,9 +71,12 @@ interface ConfigContextType {
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
 const STORE_FILENAME = 'life-os-config.json';
+
 export const DEFAULT_CONFIG: AppConfig = {
     notionApiKey: '',
-    geminiApiKey: '',
+    aiProvider: 'google',
+    aiApiKey: '',
+    aiModel: 'gemini-2.5-flash',
     obsidianVaultPath: '',
     inboxPath: '',
     autoDeploy: false,
@@ -87,7 +90,6 @@ export const DEFAULT_CONFIG: AppConfig = {
     creatorPrompt: DEFAULT_SYSTEM_PROMPT_CREATOR,
     creatorSliders: JSON.stringify({ innovation: 8, detail: 6, collaboration: 7, polish: 5 }),
     customPersonas: [],
-    geminiModel: 'gemini-2.5-flash',
 };
 
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -100,44 +102,47 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const store = await load(STORE_FILENAME, { autoSave: true, defaults: DEFAULT_CONFIG });
 
                 // Load existing values or use defaults
-                const notionKey = (await store.get<string>('notionApiKey')) || '';
-                const geminiKey = (await store.get<string>('geminiApiKey')) || '';
-                const vaultPath = (await store.get<string>('obsidianVaultPath')) || '';
+                const notionApiKey = (await store.get<string>('notionApiKey')) || '';
+                const aiProvider = (await store.get<string>('aiProvider')) || DEFAULT_CONFIG.aiProvider;
+                const aiApiKey = (await store.get<string>('aiApiKey')) || '';
+                const aiModel = (await store.get<string>('aiModel')) || DEFAULT_CONFIG.aiModel;
+                const obsidianVaultPath = (await store.get<string>('obsidianVaultPath')) || '';
                 const inboxPath = (await store.get<string>('inboxPath')) || '';
-                const autoDeploy = (await store.get<boolean>('autoDeploy')) || false;
-                const pPersonal = (await store.get<string>('profilePersonal')) || DEFAULT_CONFIG.profilePersonal;
-                const pAcademic = (await store.get<string>('profileAcademic')) || DEFAULT_CONFIG.profileAcademic;
-                const pFinancial = (await store.get<string>('profileFinancial')) || DEFAULT_CONFIG.profileFinancial;
-                const pFitness = (await store.get<string>('profileFitness')) || DEFAULT_CONFIG.profileFitness;
-                const pMasterPlan = (await store.get<string>('profileMasterPlan')) || DEFAULT_CONFIG.profileMasterPlan;
-                const sPrompt = (await store.get<string>('strategistPrompt')) || DEFAULT_CONFIG.strategistPrompt;
-                const sSliders = (await store.get<string>('strategistSliders')) || '';
-                const cPrompt = (await store.get<string>('creatorPrompt')) || DEFAULT_CONFIG.creatorPrompt;
-                const cSliders = (await store.get<string>('creatorSliders')) || DEFAULT_CONFIG.creatorSliders;
-                const customP = (await store.get<CustomPersona[]>('customPersonas')) || [];
-                const gModel = (await store.get<string>('geminiModel')) || DEFAULT_CONFIG.geminiModel;
+                const autoDeploy = (await store.get<boolean>('autoDeploy')) ?? false;
+                const profilePersonal = (await store.get<string>('profilePersonal')) || DEFAULT_CONFIG.profilePersonal;
+                const profileAcademic = (await store.get<string>('profileAcademic')) || DEFAULT_CONFIG.profileAcademic;
+                const profileFinancial = (await store.get<string>('profileFinancial')) || DEFAULT_CONFIG.profileFinancial;
+                const profileFitness = (await store.get<string>('profileFitness')) || DEFAULT_CONFIG.profileFitness;
+                const profileMasterPlan = (await store.get<string>('profileMasterPlan')) || DEFAULT_CONFIG.profileMasterPlan;
+                const strategistPrompt = (await store.get<string>('strategistPrompt')) || DEFAULT_CONFIG.strategistPrompt;
+                const strategistSliders = (await store.get<string>('strategistSliders')) || '';
+                const creatorPrompt = (await store.get<string>('creatorPrompt')) || DEFAULT_CONFIG.creatorPrompt;
+                const creatorSliders = (await store.get<string>('creatorSliders')) || DEFAULT_CONFIG.creatorSliders;
+                const customPersonas = (await store.get<CustomPersona[]>('customPersonas')) || [];
 
-                setConfig({
-                    notionApiKey: notionKey,
-                    geminiApiKey: geminiKey,
-                    obsidianVaultPath: vaultPath,
-                    inboxPath: inboxPath,
-                    autoDeploy: autoDeploy,
-                    profilePersonal: pPersonal,
-                    profileAcademic: pAcademic,
-                    profileFinancial: pFinancial,
-                    profileFitness: pFitness,
-                    profileMasterPlan: pMasterPlan,
-                    strategistPrompt: sPrompt,
-                    strategistSliders: sSliders,
-                    creatorPrompt: cPrompt,
-                    creatorSliders: cSliders,
-                    customPersonas: customP,
-                    geminiModel: gModel,
-                });
+                const loadedConfig: AppConfig = {
+                    notionApiKey,
+                    aiProvider,
+                    aiApiKey,
+                    aiModel,
+                    obsidianVaultPath,
+                    inboxPath,
+                    autoDeploy,
+                    profilePersonal,
+                    profileAcademic,
+                    profileFinancial,
+                    profileFitness,
+                    profileMasterPlan,
+                    strategistPrompt,
+                    strategistSliders,
+                    creatorPrompt,
+                    creatorSliders,
+                    customPersonas,
+                };
+
+                setConfig(loadedConfig);
             } catch (err) {
                 console.error('[Config] Failed to initialize store:', err);
-                // Fallback to empty config if store fails
                 setConfig(DEFAULT_CONFIG);
             } finally {
                 setIsLoading(false);
@@ -152,26 +157,12 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         try {
             const store = await load(STORE_FILENAME, { autoSave: true, defaults: DEFAULT_CONFIG });
-
             const updatedConfig = { ...config, ...newConfig } as AppConfig;
 
-            // Save to store
-            if (newConfig.notionApiKey !== undefined) await store.set('notionApiKey', newConfig.notionApiKey);
-            if (newConfig.geminiApiKey !== undefined) await store.set('geminiApiKey', newConfig.geminiApiKey);
-            if (newConfig.obsidianVaultPath !== undefined) await store.set('obsidianVaultPath', newConfig.obsidianVaultPath);
-            if (newConfig.inboxPath !== undefined) await store.set('inboxPath', newConfig.inboxPath);
-            if (newConfig.autoDeploy !== undefined) await store.set('autoDeploy', newConfig.autoDeploy);
-            if (newConfig.profilePersonal !== undefined) await store.set('profilePersonal', newConfig.profilePersonal);
-            if (newConfig.profileAcademic !== undefined) await store.set('profileAcademic', newConfig.profileAcademic);
-            if (newConfig.profileFinancial !== undefined) await store.set('profileFinancial', newConfig.profileFinancial);
-            if (newConfig.profileFitness !== undefined) await store.set('profileFitness', newConfig.profileFitness);
-            if (newConfig.profileMasterPlan !== undefined) await store.set('profileMasterPlan', newConfig.profileMasterPlan);
-            if (newConfig.strategistPrompt !== undefined) await store.set('strategistPrompt', newConfig.strategistPrompt);
-            if (newConfig.strategistSliders !== undefined) await store.set('strategistSliders', newConfig.strategistSliders);
-            if (newConfig.creatorPrompt !== undefined) await store.set('creatorPrompt', newConfig.creatorPrompt);
-            if (newConfig.creatorSliders !== undefined) await store.set('creatorSliders', newConfig.creatorSliders);
-            if (newConfig.customPersonas !== undefined) await store.set('customPersonas', newConfig.customPersonas);
-            if (newConfig.geminiModel !== undefined) await store.set('geminiModel', newConfig.geminiModel);
+            // Update store for keys present in newConfig
+            for (const key of Object.keys(newConfig)) {
+                await store.set(key, (newConfig as any)[key]);
+            }
 
             await store.save();
             setConfig(updatedConfig);
@@ -184,7 +175,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const isConfigured = Boolean(
         config?.notionApiKey &&
-        config?.geminiApiKey &&
+        config?.aiApiKey &&
         config?.obsidianVaultPath
     );
 

@@ -36,11 +36,15 @@ from src.domains.obsidian.client import ObsidianClient
 from src.domains.ai.strategist import Strategist
 from src.domains.oka.service import OkaService
 from src.domains.oka.watcher import OkaQueueManager
+from src.domains.rag.watcher import RAGWatcherService
+from src.domains.rag.indexer import VaultIndexer
+from src.domains.rag.vector_store import ChromaManager
 
 from src.domains.academics.router import router as academics_router
 
-# Global watcher instance
+# Global watcher instances
 oka_watcher: Optional[OkaQueueManager] = None
+rag_watcher: Optional[RAGWatcherService] = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -51,6 +55,9 @@ async def lifespan(app: FastAPI):
     if oka_watcher:
         logger.info("[OKA] Stopping watcher during shutdown")
         oka_watcher.stop()
+    if rag_watcher:
+        logger.info("[RAG] Stopping Vault Watcher during shutdown")
+        rag_watcher.stop()
 
 
 app = FastAPI(
@@ -213,9 +220,9 @@ async def save_persona_prompt(payload: Dict[str, str] = Body(...)):
 
 @app.post("/api/ai/upload")
 async def ai_upload(file: UploadFile = File(...), secrets: AppSecrets = Depends(get_app_secrets)):
-    """Uploads a file to Gemini Files API for reasoning context."""
-    if not secrets.gemini_key:
-        raise HTTPException(status_code=400, detail="Gemini API Key missing")
+    """Uploads a file for reasoning context. Currently multi-provider support is limited."""
+    if not secrets.ai_key:
+        raise HTTPException(status_code=400, detail="AI API Key missing")
     
     # Save temporary file
     temp_path = f"temp_{file.filename}"
@@ -223,27 +230,58 @@ async def ai_upload(file: UploadFile = File(...), secrets: AppSecrets = Depends(
         shutil.copyfileobj(file.file, buffer)
     
     try:
-        from google import genai
-        client = genai.Client(api_key=secrets.gemini_key)
-        uploaded_file = client.files.upload(file=temp_path)
-        
-        # Wait for file to process
-        import time
-        max_retries = 60
-        for _ in range(max_retries):
-            file_info = client.files.get(name=uploaded_file.name)
-            if file_info.state.name == "ACTIVE":
-                break
-            if file_info.state.name == "FAILED":
-                raise HTTPException(status_code=500, detail="File processing failed in Gemini")
-            time.sleep(2)
-        else:
-            raise HTTPException(status_code=500, detail="File processing timed out")
+        if secrets.ai_provider == "google":
+            import google.generativeai as genai
+            genai.configure(api_key=secrets.ai_key)
+            uploaded_file = await asyncio.to_thread(genai.upload_file, temp_path)
+            
+            # Wait for file to process
+            max_retries = 30
+            for _ in range(max_retries):
+                file_info = await asyncio.to_thread(genai.get_file, uploaded_file.name)
+                if file_info.state.name == "ACTIVE":
+                    break
+                if file_info.state.name == "FAILED":
+                    raise HTTPException(status_code=500, detail="File processing failed in Gemini")
+                await asyncio.sleep(2)
+            else:
+                raise HTTPException(status_code=500, detail="File processing timed out")
 
-        return {"file_uri": uploaded_file.uri, "name": file.filename}
+            return {"file_uri": uploaded_file.uri, "name": file.filename}
+        else:
+            return {"file_uri": str(Path(temp_path).absolute()), "name": file.filename, "note": "Provider does not support direct file upload yet."}
+    except Exception as e:
+        print(f"[Life OS Sidecar] File upload failed: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
-        if os.path.exists(temp_path):
+        if os.path.exists(temp_path) and secrets.ai_provider == "google":
             os.remove(temp_path)
+
+@app.post("/api/ai/test-connection")
+async def test_ai_connection(secrets: AppSecrets = Depends(get_app_secrets)):
+    """Tests if the current AI configuration is valid."""
+    if not secrets.ai_key:
+        return {"success": False, "error": "AI API Key missing"}
+    
+    try:
+        from src.domains.ai.factory import ModelFactory
+        from langchain_core.messages import HumanMessage
+        
+        llm = ModelFactory.get_model(
+            provider=secrets.ai_provider,
+            model_name=secrets.ai_model,
+            api_key=secrets.ai_key,
+            temperature=0.1 # Keep it simple
+        )
+        
+        # Simple test prompt
+        response = await llm.ainvoke([HumanMessage(content="Hello. Respond with exactly one word: 'Connected'.")])
+        content = response.content.strip() if hasattr(response, 'content') else str(response)
+        
+        return {"success": True, "message": content}
+    except Exception as e:
+        print(f"[Life OS Sidecar] AI Connection Test failed: {traceback.format_exc()}")
+        return {"success": False, "error": str(e)}
 
 @app.post("/api/ai/brainstorm")
 async def brainstorm_with_ai(
@@ -253,20 +291,23 @@ async def brainstorm_with_ai(
     """
     Strategizes and brainstorms based on the query using Gemini.
     """
-    if not secrets.gemini_key:
-        raise HTTPException(status_code=401, detail="X-Gemini-Key header missing")
+    if not secrets.ai_key:
+        raise HTTPException(status_code=401, detail="X-AI-Key header missing")
     
     query = query_data.get("query")
     if not query:
         raise HTTPException(status_code=400, detail="Query missing in request body")
     
     try:
-        agent = Strategist(secrets.gemini_key, notion_key=secrets.notion_key, vault_path=secrets.vault_path)
-        response = await agent.brainstorm(
+        strategist = Strategist(
+            secrets=secrets,
+            notion_key=secrets.notion_key,
+            vault_path=secrets.vault_path
+        )
+        response = await strategist.brainstorm(
             query,
             context=query_data.get("context"),
             system_prompt=query_data.get("system_prompt"),
-            model=secrets.gemini_model or 'gemini-2.5-flash',
             history=query_data.get("history", []),
             file_uri=query_data.get("file_uri")
         )
@@ -282,27 +323,21 @@ async def oka_process_manual(
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Manually process a text block or file path through OKA."""
-    if not secrets.gemini_key or not secrets.vault_path:
-        raise HTTPException(status_code=400, detail="Gemini Key and Vault Path are required")
+    if not secrets.ai_key or not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="AI Key and Vault Path are required")
     
     # Robust discovery of OKA_System_Instruction.md
-    # Search upwards from this file's location for the project root
-    current = Path(__file__).resolve().parent
-    si_path = None
-    for _ in range(6):
-        test_path = current / "OKA_System_Instruction.md"
-        if test_path.exists():
-            si_path = test_path
-            break
-        current = current.parent
+    project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+    si_path = project_root / ".system" / "prompts" / "OKA_System_Instruction.md"
     
-    if not si_path:
-        # Final fallback to current directory
-        si_path = Path("OKA_System_Instruction.md")
-        if not si_path.exists():
-            raise HTTPException(status_code=500, detail="System Instruction file not found. Check root directory.")
+    if not si_path.exists():
+        # Fallback to older location or current dir for legacy support
+        si_path = project_root / "OKA_System_Instruction.md"
+        
+    if not si_path.exists():
+        raise HTTPException(status_code=500, detail=f"System Instruction file not found at {si_path}. Check .system/prompts directory.")
     
-    service = OkaService(secrets.gemini_key, secrets.vault_path)
+    service = OkaService(secrets)
     
     text = payload.get("text")
     file_path = payload.get("file_path")
@@ -335,7 +370,7 @@ async def oka_confirm_plan(
     if not session_id:
         raise HTTPException(status_code=400, detail="session_id is required")
 
-    service = OkaService(secrets.gemini_key, secrets.vault_path)
+    service = OkaService(secrets)
     try:
         results = await service.confirm_plan(session_id, command=command)
         
@@ -367,8 +402,8 @@ async def oka_watcher_toggle(
     """Starts or updates the OKA Queue Manager."""
     global oka_watcher
     
-    if not secrets.gemini_key or not secrets.vault_path or not secrets.inbox_path:
-        raise HTTPException(status_code=400, detail="Gemini Key, Vault Path, and Inbox Path are required")
+    if not secrets.ai_key or not secrets.vault_path or not secrets.inbox_path:
+        raise HTTPException(status_code=400, detail="AI Key, Vault Path, and Inbox Path are required")
     
     # If the watcher exists but the path changed, kill it.
     if oka_watcher and str(oka_watcher.inbox_path.absolute()) != str(Path(secrets.inbox_path).absolute()):
@@ -378,10 +413,12 @@ async def oka_watcher_toggle(
 
     # Always keep the watcher alive if we have settings, just toggle its auto_process state
     if not oka_watcher:
-        root_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
-        si_path = root_dir / "OKA_System_Instruction.md"
+        project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+        si_path = project_root / ".system" / "prompts" / "OKA_System_Instruction.md"
+        if not si_path.exists():
+            si_path = project_root / "OKA_System_Instruction.md"
         
-        service = OkaService(secrets.gemini_key, secrets.vault_path)
+        service = OkaService(secrets)
         oka_watcher = OkaQueueManager(service, secrets.inbox_path, str(si_path))
         
         try:
@@ -408,11 +445,11 @@ async def oka_queue_status(
         oka_watcher.stop()
         oka_watcher = None
 
-    if not oka_watcher and secrets.gemini_key and secrets.vault_path and secrets.inbox_path:
+    if not oka_watcher and secrets.ai_key and secrets.vault_path and secrets.inbox_path:
         root_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
         si_path = root_dir / "OKA_System_Instruction.md"
         
-        service = OkaService(secrets.gemini_key, secrets.vault_path)
+        service = OkaService(secrets)
         oka_watcher = OkaQueueManager(service, secrets.inbox_path, str(si_path))
         
         try:
@@ -666,6 +703,95 @@ async def update_notion_page_content(
     except Exception as e:
         print(f"[Life OS Sidecar] Notion update blocks failed: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- RAG Endpoints ---
+
+rag_sync_status = {"status": "idle", "progress": 0, "total": 0, "message": ""}
+
+@app.post("/api/rag/watcher/toggle")
+async def rag_watcher_toggle(secrets: AppSecrets = Depends(get_app_secrets)):
+    """Starts or stops the Global Obsidian Watcher for RAG."""
+    global rag_watcher
+    
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault Path is required")
+        
+    if not rag_watcher:
+        chroma = ChromaManager()
+        indexer = VaultIndexer(chroma)
+        rag_watcher = RAGWatcherService(indexer, secrets.vault_path)
+        
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.get_event_loop()
+            
+        rag_watcher.start(loop)
+        return {"status": "started", "vault": secrets.vault_path}
+    else:
+        rag_watcher.stop()
+        rag_watcher = None
+        return {"status": "stopped"}
+
+@app.get("/api/rag/sync-status")
+async def get_rag_sync_status():
+    """Returns the current status of the vault sync."""
+    return rag_sync_status
+
+@app.post("/api/rag/sync")
+async def rag_sync_vault(secrets: AppSecrets = Depends(get_app_secrets)):
+    """Forces a full re-index of the Obsidian Vault."""
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault Path is required")
+        
+    global rag_sync_status
+    if rag_sync_status.get("status") == "syncing":
+        return {"status": "sync_started", "message": "A sync is already in progress."}
+        
+    def _status_callback(state: Dict[str, Any]):
+        global rag_sync_status
+        rag_sync_status.update(state)
+
+    def run_sync():
+        chroma = ChromaManager()
+        indexer = VaultIndexer(chroma)
+        service = RAGWatcherService(indexer, secrets.vault_path)
+        service.initial_sync(status_callback=_status_callback)
+        
+    asyncio.create_task(asyncio.to_thread(run_sync))
+    return {"status": "sync_started", "message": "Vault sync started in the background."}
+
+notion_mirror_status = {"status": "idle", "progress": 0, "total": 0, "message": ""}
+
+@app.get("/api/notion/sync-mirror/status")
+async def get_sync_notion_mirror_status():
+    """Returns the current status of the Notion mirror sync."""
+    return notion_mirror_status
+
+@app.post("/api/notion/sync-mirror")
+async def sync_notion_mirror(secrets: AppSecrets = Depends(get_app_secrets)):
+    """Triggers the background service to mirror Notion to Obsidian."""
+    if not secrets.notion_key or not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Notion Key and Vault Path are required")
+        
+    global notion_mirror_status
+    if notion_mirror_status.get("status") == "syncing":
+        return {"status": "mirror_started", "message": "A mirror sync is already in progress."}
+        
+    from src.domains.notion.mirror_service import NotionMirrorService
+    
+    def _status_callback(state: Dict[str, Any]):
+        global notion_mirror_status
+        notion_mirror_status.update(state)
+    
+    def run_mirror():
+        service = NotionMirrorService(secrets.notion_key, secrets.vault_path)
+        # Using asyncio.run inside the thread since sync_all_databases is async
+        asyncio.run(service.sync_all_databases(status_callback=_status_callback))
+        
+    asyncio.create_task(asyncio.to_thread(run_mirror))
+    return {"status": "mirror_started", "message": "Notion mirror sync started in the background."}
+
 
 def handle_shutdown(signum, frame):
     """Clean shutdown handler for when Tauri terminates the process."""

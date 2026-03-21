@@ -1,25 +1,38 @@
-from google import genai
-from google.genai import types
-from typing import List, Dict, Any, Optional
+from src.api.deps import AppSecrets
+from src.domains.ai.factory import ModelFactory
+from src.domains.rag.vector_store import ChromaManager
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
+from langchain_core.tools import tool, BaseTool
 import json
 import datetime
-
+from typing import List, Dict, Any, Optional
 from src.domains.notion.client import NotionClient
 from src.domains.obsidian.client import ObsidianClient
+
+from langchain_community.document_loaders import PyPDFLoader
+import asyncio
+from pathlib import Path
 
 GOALS_DB_ID = "2a9219ed-7519-815f-ac0f-ebfcd1dcd003"
 
 class Strategist:
     """
-    Life OS Strategist - Powered by Google Gemini (New SDK).
+    Life OS Strategist - Powered by LangChain.
     Responsible for high-level reasoning, knowledge synthesis, and brainstorming.
     Equipped with Notion Goal Management tools.
     """
 
-    def __init__(self, api_key: str, notion_key: Optional[str] = None, vault_path: Optional[str] = None):
-        self.client = genai.Client(api_key=api_key)
+    def __init__(self, secrets: AppSecrets, notion_key: Optional[str] = None, vault_path: Optional[str] = None):
+        self.secrets = secrets
         self.notion_key = notion_key
         self.vault_path = vault_path
+        
+        # Initialize the LangChain model via Factory
+        self.llm = ModelFactory.get_model(
+            provider=secrets.ai_provider,
+            model_name=secrets.ai_model,
+            api_key=secrets.ai_key
+        )
 
     async def _list_notion_goals(self):
         """Retrieves all current goals from the Notion database."""
@@ -142,112 +155,69 @@ class Strategist:
             return f"Error reading obsidian note: {str(e)}"
 
 
-    async def brainstorm(self, query: str, context: Optional[str] = None, system_prompt: Optional[str] = None, model: str = 'gemini-2.5-flash', history: Optional[List[Dict[str, str]]] = None, file_uri: Optional[str] = None) -> str:
+    async def brainstorm(self, query: str, context: Optional[str] = None, system_prompt: Optional[str] = None, history: Optional[List[Dict[str, str]]] = None, file_uri: Optional[str] = None) -> str:
         """
         Brainstorms and potentially executes actions in Notion based on the query.
         """
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Use provided system prompt or fallback to default
+        # RAG Context Retrieval
+        rag_context = ""
+        try:
+            print(f"[Strategist] Querying local RAG Memory for: '{query}'")
+            chroma = ChromaManager()
+            # Fetch top 5 most relevant chunks from the Obsidian/Notion Vault
+            results = chroma.query(query, n_results=5)
+            if results:
+                rag_context = "\n--- RELEVANT KNOWLEDGE FROM USER'S VAULT ---\n"
+                for i, r in enumerate(results):
+                    source = r.get("metadata", {}).get("filename", "Unknown File")
+                    rag_context += f"\n[Source: {source}]\n{r['content']}\n"
+                rag_context += "\n--------------------------------------------\n"
+        except Exception as e:
+            print(f"[Strategist] RAG Memory query failed: {e}")
+
+        system_instruction = ""
         if system_prompt and system_prompt.strip():
-            print(f"[Life OS Sidecar] Using provided system_prompt (len: {len(system_prompt)})")
             system_instruction = f"{system_prompt.strip()}\n\n[System Info: Current Time is {now}. Notion Database ID: {GOALS_DB_ID}]"
-        else:
-            # ... (keep existing fallback prompt logic)
-            system_instruction = f"""
-            You are THE STRATEGIST, an AI-driven Chief of Staff and Strategic Orchestrator. 
-            Current System Time: {now}.
-            
-            ### PHILOSOPHY & TONE
-            - You are rigid, objective, and data-driven. 
-            - DO NOT act as a cheerleader. No emojis. No fluff. No motivational quotes.
-            - Your primary directive is to calculate and enforce the shortest, most resilient path to goals using a 70% execution consistency threshold.
-            - Failures are strictly "data points" for system correction.
-            - You follow Ray Dalio’s 5-Step Process (Set Goals, Identify Problems, Identify Root Causes, Design Game Plan, Execute).
-
-            ### OPERATIONAL FRAMEWORKS
-            - 3-1 Cadence: 3 weeks of progressive overload/intensity, followed by 1 "Deload Week".
-            - 5-2 Cadence: 5 days of high-leverage structured work, 2 "Flex/Buffer Days".
-            - MV/MEV/MRV Framework: 
-                1. Keystone (Primary Focus - Deep Work).
-                2. Supporting Growth (Calibrated MEV).
-                3. Maintenance (Minimum Volume).
-                4. Sacrifice (Zero Effort).
-
-            ### STRATEGIC CONTEXT (THE MASTER PLAN)
-            Always refer to the provided "USER PROFILES" and specifically the "MASTER PLAN" box. 
-            If no Master Plan exists in the context, your FIRST and ONLY priority is to guide the user through creating one using the structure provided in your core knowledge (Start Date, Achievability, Hindrances, Prioritization Matrix, Quarterly Breakdown, Habits).
-            
-            Once a Master Plan exists, all Notion actions (creating, updating, deleting goals) MUST align with it. 
-            If a user tries to add a goal that contradicts the Master Plan or exceeds their MRV (e.g., too many gym days for a 'low discipline' trait), you MUST challenge them and suggest a recalibration.
-
-            ### NOTION CAPABILITIES (Database ID: {GOALS_DB_ID})
-            - list_notion_goals: Use this to audit current execution against the Master Plan.
-            - create_notion_goal: Every goal must have an Outcome (Result), Trait (Identity), and Process (Action).
-            - update_notion_goal: Use for status changes or tactical re-routing.
-            - delete_notion_goal: Archive goals that no longer serve the Master Plan.
-            """
-
-        # Define tools using simpler declarations for GenAI
-        notion_tools = [self._list_notion_goals, self._create_notion_goal, self._update_notion_goal, self._delete_notion_goal]
-        obsidian_tools = [self._list_obsidian_notes, self._read_obsidian_note]
-        all_tools = notion_tools + obsidian_tools
-
-        # Prepare history for the SDK (map 'assistant' to 'model')
-        formatted_history = []
+            if rag_context:
+                system_instruction += f"\n\n{rag_context}"
+        
+        # Mapping history
+        messages = [SystemMessage(content=system_instruction)]
         if history:
             for msg in history:
-                role = "user" if msg["role"] == "user" else "model"
-                formatted_history.append({"role": role, "parts": [{"text": msg["content"]}]})
+                if msg["role"] == "user":
+                    messages.append(HumanMessage(content=msg["content"]))
+                else:
+                    messages.append(AIMessage(content=msg["content"]))
+        
+        # Add the current query
+        query_content = f"User Query: {query}\n\nContext: {context if context else ''}"
+        
+        # Process attached file if present
+        if file_uri:
+            # Check if file_uri is a local path and is a PDF
+            f_path = Path(file_uri)
+            if f_path.exists() and f_path.suffix.lower() == ".pdf":
+                print(f"[Strategist] Extracting PDF context from: {file_uri}")
+                try:
+                    loader = PyPDFLoader(str(f_path.absolute()))
+                    docs = await asyncio.to_thread(loader.load)
+                    full_text = "\n\n".join([doc.page_content for doc in docs])
+                    query_content += f"\n\n[Attached PDF Content]:\n{full_text}"
+                except Exception as ex:
+                    print(f"[Strategist] PDF Load Error: {ex}")
+                    query_content += f"\n\n[Error reading attached PDF file at {file_uri}]"
+            else:
+                query_content += f"\n\n[Attached File Context URL]: {file_uri}"
+        
+        messages.append(HumanMessage(content=query_content))
 
         try:
-            # Using Chat with automatic tool resolution
-            chat = self.client.aio.chats.create(
-                model=model,
-                history=formatted_history,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    tools=all_tools,
-                    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
-                    thinking_config=types.ThinkingConfig(thinking_budget=-1) if "2.5" in model else (
-                        types.ThinkingConfig(thinking_level="HIGH") if "3.1" in model else None
-                    )
-                )
-            )
-
-            parts = []
-            if file_uri:
-                # Determine mime type from URI/filename if possible, default to pdf for safety
-                mime_type = "application/pdf"
-                if any(ext in file_uri.lower() for ext in [".txt", ".md", ".py", ".js", ".ts", ".json"]):
-                    mime_type = "text/plain"
-                
-                parts.append(types.Part.from_uri(file_uri=file_uri, mime_type=mime_type))
-            
-            parts.append(types.Part.from_text(text=f"""
-            User Query: {query}
-            
-            Optional Context from Knowledge Base:
-            {context if context else 'No specific context provided.'}
-            """))
-
-            response = await chat.send_message(parts)
-            return response.text
+            # Simple invocation for now. 
+            response = await self.llm.ainvoke(messages)
+            return response.content
         except Exception as e:
-            print(f"[Life OS Sidecar] Strategist Agent Fail: {e}")
-            
-            # Simple fallback content if chat fails
-            contents = []
-            if file_uri:
-                mime_type = "application/pdf"
-                if any(ext in file_uri.lower() for ext in [".txt", ".md", ".py", ".js", ".ts", ".json"]):
-                    mime_type = "text/plain"
-                contents.append(types.Part.from_uri(file_uri=file_uri, mime_type=mime_type))
-            contents.append(query)
-
-            response = await self.client.aio.models.generate_content(
-                model=model,
-                contents=contents,
-                config=types.GenerateContentConfig(system_instruction=system_instruction)
-            )
-            return response.text
+            print(f"[Life OS Sidecar] Strategist LangChain Fail: {e}")
+            return f"Error: {str(e)}"

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
     ArrowRight, RefreshCw, Calendar, CheckCircle2,
     Circle, GraduationCap, Target, BookOpen, Zap,
-    MessageSquare, ArrowUpRight
+    MessageSquare, ArrowUpRight, Brain
 } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
@@ -139,16 +139,18 @@ export default function Dashboard() {
             </div>
 
             {/* Stats Row */}
-            <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
                 <StatCard label="Active Goals" value={loading ? '—' : String(activeGoals.length)} sub={`${completedGoals.length} completed`} icon={<Target className="h-3.5 w-3.5" />} onClick={() => navigate('/notion')} />
                 <StatCard label="Deadlines" value={loading ? '—' : String(deadlines.length)} sub={deadlines.filter(d => isUrgent(d.date)).length > 0 ? `${deadlines.filter(d => isUrgent(d.date)).length} this week` : 'none this week'} icon={<Calendar className="h-3.5 w-3.5" />} onClick={() => navigate('/notion')} />
                 <StatCard label="Courses" value={loading ? '—' : String(academics.courses.length)} sub={`${academics.units.length} units`} icon={<BookOpen className="h-3.5 w-3.5" />} onClick={() => navigate('/notion')} />
+                <StatCard label="Knowledge" value={loading ? '—' : String(notionCount + obsidianCount)} sub={`${notionCount} pages · ${obsidianCount} files`} icon={<Zap className="h-3.5 w-3.5" />} />
             </div>
 
             {/* Quick Actions */}
-            <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
                 <QuickAction label="Notion" sub="Manage goals & work" icon={<MessageSquare className="h-4 w-4" />} onClick={() => navigate('/notion')} />
                 <QuickAction label="Obsidian" sub="Knowledge chat" icon={<Target className="h-4 w-4" />} onClick={() => navigate('/obsidian')} />
+                <QuickAction label="Strategist" sub="Simulate life pivot" icon={<Brain className="h-4 w-4" />} onClick={() => navigate('/strategist')} />
                 <QuickAction label="Settings" sub="System config" icon={<GraduationCap className="h-4 w-4" />} onClick={() => navigate('/settings')} />
             </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
     Database, Key, HardDrive, Trash2, Edit2, FolderOpen, ShieldCheck, Sun, Moon, Zap,
-    User, BookOpen, DollarSign, Activity, Brain, Bot, Sliders, ChevronLeft, ArrowRight, Wand2, Info, Settings as SettingsIcon, Target, MessageSquare
+    User, BookOpen, DollarSign, Activity, Brain, Bot, Sliders, ChevronLeft, ArrowRight, Wand2, Info, Settings as SettingsIcon, Target, MessageSquare, RefreshCw
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
 import { useConfig } from '@/lib/ConfigContext'
@@ -10,6 +10,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { cn } from '@/lib/utils'
 import { sidecarApi } from '@/lib/sidecarApi'
 import ProfileEditor from '@/components/profiles/ProfileEditor'
+import StrategistSliders from '@/components/profiles/StrategistSliders'
 import {
     PERSONAL_PROFILE_SCHEMA,
     ACADEMIC_PROFILE_SCHEMA,
@@ -19,7 +20,7 @@ import {
 
 /* ─────────────────────── Types ─────────────────────── */
 
-type SettingsSection = 'general' | 'profiles'
+type SettingsSection = 'general' | 'profiles' | 'intelligence'
 type ProfileId = string
 
 interface ProfileCardDef {
@@ -52,6 +53,16 @@ const PROFILE_CARDS: ProfileCardDef[] = [
         id: 'fitness', title: 'Fitness', icon: <Activity size={16} />,
         description: 'Body data, training plan, nutrition, and recovery.',
         category: 'profiles', configKey: 'profileFitness', schema: FITNESS_PROFILE_SCHEMA,
+    },
+    {
+        id: 'master_plan', title: 'Master Strategic Plan', icon: <Target size={16} />,
+        description: 'The "Ground Truth" for your life. Vision, Kadence, and Core Process.',
+        category: 'master_plan', configKey: 'profileMasterPlan',
+    },
+    {
+        id: 'strategist_prompt', title: 'Strategist Prompt', icon: <Bot size={16} />,
+        description: 'The high-level system instructions for the AI Strategist.',
+        category: 'system_prompts', configKey: 'strategistPrompt',
     },
 ]
 
@@ -139,13 +150,47 @@ function StrategistPromptTextarea({ value, onSave, placeholder }: { value: strin
 /* ─────────────────── Main Component ─────────────────── */
 
 export default function Settings() {
-    const { config, saveConfig, updateCustomPersona, deleteCustomPersona } = useConfig()
+    const { config, saveConfig, updateCustomPersona, deleteCustomPersona, isLoading } = useConfig()
     const { theme, setTheme } = useTheme()
     const [editingKey, setEditingKey] = useState<string | null>(null)
     const [editValue, setEditValue] = useState('')
     const [activeSection, setActiveSection] = useState<SettingsSection>('general')
     const [activeProfileId, setActiveProfileId] = useState<ProfileId | null>(null)
     const [showMasterPlanGen, setShowMasterPlanGen] = useState(false)
+
+    const [ragStatus, setRagStatus] = useState<{status: string, progress: number, total: number, message: string} | null>(null)
+    const [notionStatus, setNotionStatus] = useState<{status: string, progress: number, total: number, message: string} | null>(null)
+
+    useEffect(() => {
+        if (activeSection !== 'intelligence') return;
+        
+        let interval: ReturnType<typeof setInterval>;
+        const poll = async () => {
+            try {
+                const ragRes = await sidecarApi.ragSyncStatus();
+                setRagStatus(ragRes);
+                const notionRes = await sidecarApi.syncNotionMirrorStatus();
+                setNotionStatus(notionRes);
+            } catch (e) {
+                // Handle silently
+            }
+        };
+
+        poll();
+        interval = setInterval(poll, 1000);
+        return () => clearInterval(interval);
+    }, [activeSection]);
+
+    if (isLoading || !config) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-background">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                    <p className="text-sm font-medium text-muted-foreground">Initializing engine settings...</p>
+                </div>
+            </div>
+        )
+    }
 
     if (!config) return null
 
@@ -162,6 +207,24 @@ export default function Settings() {
         } catch (err) {
             alert('Failed to save setting')
         }
+    }
+
+    const [testStatus, setTestStatus] = useState<{ loading: boolean; success?: boolean; message?: string }>({ loading: false })
+
+    const handleTestConnection = async () => {
+        setTestStatus({ loading: true })
+        try {
+            const res = await sidecarApi.testAiConnection()
+            if (res.success) {
+                setTestStatus({ loading: false, success: true, message: res.message || 'Connected successfully!' })
+            } else {
+                setTestStatus({ loading: false, success: false, message: res.error || 'Connection failed.' })
+            }
+        } catch (err: any) {
+            setTestStatus({ loading: false, success: false, message: err.message || 'System error' })
+        }
+        // Reset status after 5s
+        setTimeout(() => setTestStatus({ loading: false }), 5000)
     }
 
     const handlePickDirectory = async () => {
@@ -186,7 +249,7 @@ export default function Settings() {
         if (confirm('Are you sure? This will reset all API keys and local paths.')) {
             await saveConfig({
                 notionApiKey: '',
-                geminiApiKey: '',
+                aiApiKey: '',
                 obsidianVaultPath: '',
             })
             window.location.reload()
@@ -197,6 +260,7 @@ export default function Settings() {
     const sidebarItems: { section: SettingsSection; label: string; icon: React.ReactNode }[] = [
         { section: 'general', label: 'General', icon: <SettingsIcon size={16} /> },
         { section: 'profiles', label: 'Profiles', icon: <User size={16} /> },
+        { section: 'intelligence', label: 'Intelligence', icon: <Zap size={16} /> },
     ]
 
     /* ────── Profile Detail View ────── */
@@ -305,44 +369,114 @@ export default function Settings() {
                         )}
                     </SettingsCard>
 
-                    {/* Gemini */}
+                    {/* AI Provider & Model */}
                     <SettingsCard
-                        title="Gemini AI Engine"
+                        title="AI Engine"
                         icon={<Brain size={18} />}
-                        value="LLM API key and model selection"
-                        isEditing={editingKey === 'geminiApiKey'}
-                        onEdit={() => startEditing('geminiApiKey', config?.geminiApiKey || '')}
+                        value="Select Provider and Configure API Keys"
+                        isEditing={editingKey === 'aiApiKey'}
+                        onEdit={() => startEditing('aiApiKey', config?.aiApiKey || '')}
                         onSave={handleSave}
                         onCancel={() => setEditingKey(null)}
                     >
                         <div className="space-y-4">
-                            {editingKey === 'geminiApiKey' ? (
-                                <input
-                                    type="password"
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                    autoFocus
-                                />
-                            ) : (
-                                <div className="px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm">
-                                    <span>{config?.geminiApiKey ? '••••••••' + config.geminiApiKey.slice(-4) : 'Not configured'}</span>
-                                    <Key size={14} className="opacity-50" />
-                                </div>
-                            )}
-
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground">Model</label>
+                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Provider</label>
                                 <select
-                                    value={config?.geminiModel || 'gemini-2.5-flash'}
+                                    value={config?.aiProvider || 'google'}
                                     onChange={(e) => {
-                                        const val = e.target.value;
-                                        saveConfig({ geminiModel: val });
+                                        const provider = e.target.value;
+                                        // Reset model to a safe default for provider
+                                        let defaultModel = 'gemini-2.5-flash';
+                                        if (provider === 'openai') defaultModel = 'gpt-4o';
+                                        if (provider === 'anthropic') defaultModel = 'claude-3-5-sonnet-latest';
+                                        if (provider === 'groq') defaultModel = 'llama3-8b-8192';
+                                        if (provider === 'openrouter') defaultModel = 'google/gemini-2.0-flash-001';
+                                        
+                                        saveConfig({ aiProvider: provider, aiModel: defaultModel });
                                     }}
                                     className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                                 >
-                                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                    <option value="google">Google Gemini (Free/Pro)</option>
+                                    <option value="openai">OpenAI (GPT-4o/o1)</option>
+                                    <option value="anthropic">Anthropic Claude</option>
+                                    <option value="groq">Groq (Ultra-Fast/Free)</option>
+                                    <option value="openrouter">OpenRouter (Unified/Free)</option>
                                 </select>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">API Key</label>
+                                {editingKey === 'aiApiKey' ? (
+                                    <input
+                                        type="password"
+                                        value={editValue}
+                                        onChange={(e) => setEditValue(e.target.value)}
+                                        className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                        autoFocus
+                                        placeholder={`Enter ${config?.aiProvider.toUpperCase()} Key`}
+                                    />
+                                ) : (
+                                    <div className="px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm">
+                                        <span>{config?.aiApiKey ? '••••••••' + config.aiApiKey.slice(-4) : 'Not configured'}</span>
+                                        <Key size={14} className="opacity-50" />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Model ID</label>
+                                <input
+                                    type="text"
+                                    value={config?.aiModel || ''}
+                                    onChange={(e) => {
+                                        saveConfig({ aiModel: e.target.value });
+                                    }}
+                                    className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                    placeholder="e.g. gemini-2.5-flash, gpt-4o, etc."
+                                />
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                    {config?.aiProvider === 'google' && "Recommended: gemini-2.5-flash (Free/Fast)"}
+                                    {config?.aiProvider === 'groq' && "Recommended: llama-3.3-70b-versatile"}
+                                    {config?.aiProvider === 'openai' && "Recommended: gpt-4o"}
+                                    {config?.aiProvider === 'anthropic' && "Recommended: claude-3-5-sonnet-latest"}
+                                    {config?.aiProvider === 'openrouter' && "Recommended: google/gemini-2.0-flash-001"}
+                                </p>
+                            </div>
+
+                            <div className="pt-2">
+                                <button
+                                    onClick={handleTestConnection}
+                                    disabled={testStatus.loading || !config?.aiApiKey}
+                                    className={cn(
+                                        "w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-all border shadow-sm",
+                                        testStatus.loading ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
+                                            testStatus.success === true ? "bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400" :
+                                                testStatus.success === false ? "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400" :
+                                                    "bg-background hover:bg-accent text-foreground"
+                                    )}
+                                >
+                                    {testStatus.loading ? (
+                                        <>
+                                            <Icons.Loader2 size={14} className="animate-spin" />
+                                            Testing Connection...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Zap size={14} className={cn(testStatus.success ? "fill-current" : "")} />
+                                            {testStatus.success === true ? "Connection Valid" :
+                                                testStatus.success === false ? "Connection Failed" : "Test Connection"}
+                                        </>
+                                    )}
+                                </button>
+                                {testStatus.message && (
+                                    <p className={cn(
+                                        "text-[10px] mt-2 px-2 py-1 rounded border",
+                                        testStatus.success ? "bg-green-500/5 border-green-500/10 text-green-600 dark:text-green-500" : "bg-red-500/5 border-red-500/10 text-red-600 dark:text-red-500"
+                                    )}>
+                                        {testStatus.message}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </SettingsCard>
@@ -530,6 +664,111 @@ export default function Settings() {
         )
     }
 
+    /* ────── Intelligence Section ────── */
+    function renderIntelligence() {
+        return (
+            <div className="w-full space-y-6 animate-in fade-in duration-300">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight">Intelligence Tuning</h2>
+                    <p className="text-muted-foreground">Calibrate the Strategist persona, memory engine, and core directives.</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                    {/* RAG & Memory Controls */}
+                    <Card>
+                        <CardHeader title="Memory & Context (RAG Engine)" description="Manage the local vector database that gives your AI access to your entire Obsidian Vault and Notion databases." icon={<Database size={18} className="text-primary" />} />
+                        <CardContent className="space-y-4">
+                            <div className="flex flex-col gap-3">
+                                <div className="flex flex-col gap-3 p-3 rounded-md bg-muted/50 border">
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <div className="text-sm font-medium">Vault Sync (Local Memory)</div>
+                                            <div className="text-xs text-muted-foreground">Force the AI to re-read and embed your entire Obsidian Vault.</div>
+                                        </div>
+                                        <button
+                                            onClick={async () => {
+                                                if (ragStatus?.status === 'syncing') return;
+                                                try {
+                                                    await sidecarApi.ragSyncVault()
+                                                } catch (e: any) { alert('Failed: ' + e.message) }
+                                            }}
+                                            disabled={ragStatus?.status === 'syncing'}
+                                            className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                        >
+                                            {ragStatus?.status === 'syncing' ? (
+                                                <span className="flex items-center gap-2"><RefreshCw size={12} className="animate-spin" /> Syncing...</span>
+                                            ) : 'Force Sync Vault'}
+                                        </button>
+                                    </div>
+                                    {ragStatus?.status === 'syncing' && ragStatus.total > 0 && (
+                                        <div className="w-full space-y-1">
+                                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                                                <span>{ragStatus.message}</span>
+                                                <span>{Math.round((ragStatus.progress / ragStatus.total) * 100)}% ({ragStatus.progress}/{ragStatus.total})</span>
+                                            </div>
+                                            <div className="w-full h-1.5 bg-background border border-border/50 rounded-full overflow-hidden">
+                                                <div className="h-full bg-primary transition-all duration-300" style={{ width: `${Math.max(5, (ragStatus.progress / ragStatus.total) * 100)}%` }} />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-col gap-3 p-3 rounded-md bg-muted/50 border">
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <div className="text-sm font-medium">Notion Mirror Sync</div>
+                                            <div className="text-xs text-muted-foreground">Pull all Notion databases into Obsidian Markdown files for the AI to read.</div>
+                                        </div>
+                                        <button
+                                            onClick={async () => {
+                                                if (notionStatus?.status === 'syncing') return;
+                                                try {
+                                                    await sidecarApi.syncNotionMirror()
+                                                } catch (e: any) { alert('Failed: ' + e.message) }
+                                            }}
+                                            disabled={notionStatus?.status === 'syncing'}
+                                            className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                        >
+                                            {notionStatus?.status === 'syncing' ? (
+                                                <span className="flex items-center gap-2"><RefreshCw size={12} className="animate-spin" /> Syncing...</span>
+                                            ) : 'Sync Notion to Obsidian'}
+                                        </button>
+                                    </div>
+                                    {notionStatus?.status === 'syncing' && notionStatus.total > 0 && (
+                                        <div className="w-full space-y-1">
+                                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                                                <span>{notionStatus.message}</span>
+                                                <span>{Math.round((notionStatus.progress / notionStatus.total) * 100)}% ({notionStatus.progress}/{notionStatus.total})</span>
+                                            </div>
+                                            <div className="w-full h-1.5 bg-background border border-border/50 rounded-full overflow-hidden">
+                                                <div className="h-full bg-primary transition-all duration-300" style={{ width: `${Math.max(5, (notionStatus.progress / notionStatus.total) * 100)}%` }} />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Persona Tuning Sliders */}
+                    <Card>
+                        <CardHeader title="Strategist Blueprint" description="Visual calibration of personality traits and response styles." icon={<Sliders size={18} className="text-primary" />} />
+                        <CardContent>
+                            <StrategistSliders
+                                value={config.strategistSliders || '{}'}
+                                onChange={(val) => saveConfig({ strategistSliders: val })}
+                                type="strategist"
+                            />
+                        </CardContent>
+                    </Card>
+
+                    {/* Ground Truth & Prompting */}
+                    {renderProfileCategory('Logic & Ground Truth', PROFILE_CARDS.filter(c => c.category !== 'profiles'))}
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="space-y-6 md:block w-full mx-auto animate-in fade-in duration-300">
             <div className="space-y-0.5">
@@ -552,8 +791,7 @@ export default function Settings() {
                                 key={item.section}
                                 onClick={() => {
                                     setActiveSection(item.section)
-                                    if (item.section === 'master_plan') setActiveProfileId('master_plan')
-                                    else setActiveProfileId(null)
+                                    setActiveProfileId(null)
                                 }}
                                 className={cn(
                                     "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground justify-start shrink-0 lg:w-full",
@@ -571,7 +809,8 @@ export default function Settings() {
                     {activeProfileId ? renderProfileDetail() : (
                         activeSection === 'general' ? renderGeneral() :
                             activeSection === 'profiles' ? renderProfiles() :
-                                renderGeneral()
+                                activeSection === 'intelligence' ? renderIntelligence() :
+                                    renderGeneral()
                     )}
                 </div>
             </div>

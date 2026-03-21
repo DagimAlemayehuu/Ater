@@ -5,15 +5,17 @@ import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
 import Academics from './notion/academics'
 import Goals from './notion/goals'
+import Databases from './notion/databases'
 import { cn } from '@/lib/utils'
-import { GraduationCap, Target } from 'lucide-react'
+import { GraduationCap, Target, Database } from 'lucide-react'
 
 export default function Notion() {
-    const [activeTab, setActiveTab] = useState<'overview' | 'academics' | 'goals'>('academics')
+    const [activeTab, setActiveTab] = useState<'overview' | 'academics' | 'goals' | 'databases'>('academics')
 
     const tabs = [
         { id: 'academics', label: 'Academics', icon: GraduationCap },
         { id: 'goals', label: 'Goals', icon: Target },
+        { id: 'databases', label: 'Databases', icon: Database },
     ]
 
     return (
@@ -56,6 +58,7 @@ export default function Notion() {
                     <div className="flex-1 min-h-0">
                         {activeTab === 'academics' && <Academics />}
                         {activeTab === 'goals' && <Goals />}
+                        {activeTab === 'databases' && <Databases />}
                     </div>
                 </div>
             </Main>

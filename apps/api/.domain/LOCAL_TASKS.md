@@ -1,14 +1,16 @@
-# OKA Backend Tasks
+# RAG & Notion Backend Tasks
 
 ## 🟢 Completed
-- [x] **Greeting Loop Bypass**: Modified the Gemini prompt to use a headless session override, bypass the interactive status report, and proceed directly to note generation.
-- [x] **Auto-Deployment**: Integrated `deploy_notes_to_vault` into the `process_job` worker logic. Notes are now automatically pushed to Obsidian upon successful generation.
-- [x] **Embedding Fallback**: Added a 404 handler for `text-embedding-004` that falls back to `embedding-001` to prevent RAG failures.
-- [x] **YAML Frontmatter Injection**: Guaranteed that all generated notes have the correct YAML structure required for hierarchical path resolution.
+- [x] **Hierarchical Mirroring**: Ported Notion macro-categorization logic to backend for folder structures.
+- [x] **Individual Page Sync**: Switched from monolithic files to one .md file per Notion page.
+- [x] **YAML Injection**: Automated property mapping to Obsidian frontmatter.
+- [x] **Progress Callbacks**: Added real-time status reporting for sync operations.
+- [x] **Robust RAG**: Integrated ChromaDB with local embeddings for $0 cost search.
+- [x] **Escape YAML Newlines**: Fixed crash during sync caused by unescaped newlines in Notion properties.
 
 ## 🟡 In Progress
-- [ ] **Job Queue Monitoring**: Verifying that the background worker handles the `processing` state correctly for long-running batch jobs.
-- [ ] **RAG Performance Audit**: Testing the similarity search with the `embedding-001` fallback.
+- [ ] **Large DB Support**: Verifying 100+ item database extraction stability.
+- [ ] **Search Tuning**: Adjusting RAG k-results for optimal context injection.
 
 ## 🔴 Blocked
 - None.

@@ -11,6 +11,9 @@ import Notion from '@/routes/notion'
 import Agents from '@/routes/agents'
 import Automations from '@/routes/automations'
 import Settings from '@/routes/settings'
+import Strategist from '@/routes/strategist'
+import Profiles from '@/routes/profiles'
+import Goals from '@/routes/goals'
 
 // Placeholder components
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -103,25 +106,26 @@ export default function App() {
       <ConfigProvider>
         <SidecarGate>
           <BrowserRouter>
-            <ConfigGate>
-              <Routes>
-                <Route path="/onboarding" element={<Onboarding />} />
-                <Route path="*" element={
-                  <Shell>
-                    <Routes>
-                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/obsidian" element={<Obsidian />} />
-                      <Route path="/notion" element={<Notion />} />
-                      <Route path="/agents" element={<Agents />} />
-                      <Route path="/automations" element={<Automations />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="/debugger" element={<PlaceholderPage title="The Debugger" />} />
-                    </Routes>
-                  </Shell>
-                } />
-              </Routes>
-            </ConfigGate>
+            <Routes>
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="*" element={
+                <Shell>
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/obsidian" element={<Obsidian />} />
+                    <Route path="/notion" element={<Notion />} />
+                    <Route path="/agents" element={<Agents />} />
+                    <Route path="/automations" element={<Automations />} />
+                    <Route path="/strategist" element={<Strategist />} />
+                    <Route path="/profiles" element={<Profiles />} />
+              <Route path="/goals" element={<Goals />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/debugger" element={<PlaceholderPage title="The Debugger" />} />
+                  </Routes>
+                </Shell>
+              } />
+            </Routes>
           </BrowserRouter>
         </SidecarGate>
       </ConfigProvider>

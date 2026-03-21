@@ -319,9 +319,12 @@ export default function Obsidian() {
                                 <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-muted/5">
                                     {messages.length === 0 && (
                                         <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40 gap-3 text-center">
-                                            <Bot size={48} strokeWidth={1} className="mb-2" />
-                                            <p className="text-sm font-medium">Start a session using custom instructions</p>
-                                            <p className="text-xs max-w-[200px]">Upload a file to provide specific knowledge context.</p>
+                                            <div className="relative">
+                                                <Bot size={48} strokeWidth={1} className="mb-2" />
+                                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-card animate-pulse" title="RAG Memory Active" />
+                                            </div>
+                                            <p className="text-sm font-medium text-foreground/60">Local Vault Memory is Active</p>
+                                            <p className="text-xs max-w-[250px]">Your Obsidian notes and Notion data are automatically searched and injected as context for every query.</p>
                                         </div>
                                     )}
                                     
@@ -379,7 +382,7 @@ export default function Obsidian() {
                                             value={input}
                                             onChange={(e) => setInput(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                                            placeholder="Ask Gemini anything..."
+                                            placeholder="Ask your Vault anything..."
                                             className="flex-1 bg-muted/30 border border-input rounded-xl px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring transition-all"
                                         />
                                         <button
