@@ -141,9 +141,8 @@ export default function OrchestratorPage() {
                         </div>
                     </div>
 
-                    <div className="flex-1 relative overflow-hidden bg-background/30">
-                        <ScrollArea className="h-full" ref={scrollRef}>
-                            <div className="p-6 md:p-12 space-y-12 max-w-4xl mx-auto pb-32">
+                    <div className="flex-1 relative overflow-y-auto custom-scrollbar bg-background/30 w-full" ref={scrollRef}>
+                        <div className="p-6 md:p-12 space-y-12 max-w-4xl mx-auto pb-32">
                                 {messages.length === 0 && (
                                     <div className="py-24 flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
                                         <div className="w-16 h-16 rounded-3xl bg-foreground text-background flex items-center justify-center shadow-2xl mb-8 rotate-3 hover:rotate-0 transition-transform duration-500">
@@ -221,7 +220,6 @@ export default function OrchestratorPage() {
                                     </div>
                                 )}
                             </div>
-                        </ScrollArea>
                     </div>
 
                     {/* Input Area */}

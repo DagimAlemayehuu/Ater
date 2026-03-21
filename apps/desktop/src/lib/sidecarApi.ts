@@ -160,6 +160,12 @@ export const sidecarApi = {
             body: JSON.stringify(payload)
         }),
 
+    // Direct Ext
+    executeAgent: (agentName: string, query: string) =>
+        request<{ response: string }>(`/api/ai/execute/${agentName}`, {
+            method: 'POST',
+            body: JSON.stringify({ query })
+        }),
 
     okaWatcherToggle: () =>
         request<{ status: string, inbox?: string }>('/api/oka/watcher/toggle', {

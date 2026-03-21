@@ -45,6 +45,15 @@ class VaultIndexer:
                 logger.error(f"Failed to load indexed mtimes: {e}")
         return {}
 
+    def clear_all(self):
+        """Clears the entire ChromaDB and resets local tracker."""
+        success = self.chroma.clear_db()
+        if success:
+            self.indexed_mtimes = {}
+            self._save_mtimes()
+            logger.info("ChromaDB and local mtimes tracking cleared successfully.")
+        return success
+
     def _save_mtimes(self):
         """Saves mtimes to disk."""
         try:
@@ -128,10 +137,12 @@ class VaultIndexer:
         """Public method to force save the mtimes to disk."""
         self._save_mtimes()
 
-    def remove_file(self, file_path: str):
-        """Removes a file's chunks from the index."""
-        logger.info(f"Removing {file_path} from index")
-        self.chroma.delete_file_chunks(file_path)
-        if file_path in self.indexed_mtimes:
-            del self.indexed_mtimes[file_path]
+    def remove_file(self, file_path: str, should_save: bool = True):
+        """Removes a file's chunks from the vector store and tracking when deleted."""
+        path_str = str(file_path)
+        self.chroma.delete_file_chunks(path_str)
+        if path_str in self.indexed_mtimes:
+            self.indexed_mtimes.pop(path_str)
+        if should_save:
             self._save_mtimes()
+        logger.info(f"Removed chunks for deleted file: {file_path}")

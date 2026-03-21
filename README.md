@@ -59,3 +59,14 @@ This repository strictly adheres to the `AGENTS.md` protocol. It uses a `.system
 
 - No API keys are hardcoded. Ever.
 - All secrets are stored in Tauri's secure local store, fetched by the frontend and passed per-request to the Python sidecar.
+
+## Changelog
+
+### 2026-03-21 — Agent Autonomy & UI Refactor
+- **Agent Console**: Every specialist dashboard now includes a direct execution interface — type a natural language directive and the agent executes it autonomously.
+- **Full Agent Permissions**: All agents (Librarian, Scribe, Chronos, Scholar, Wealth, Gym, DevOps) have unrestricted read/write/edit/delete access to their data domains via `/api/ai/execute/{agent_name}`.
+- **Orchestrator Hardened**: Always plans before delegating. Logs reflected in real-time in Mission Control.
+- **Chat UI Fixed**: Scrollable message pane, removed double dark-mode toggles and non-functional sidebar toggle.
+- **Mission Control Live**: Stage label and last log line updated dynamically during execution.
+- **RAG System**: `remove_file` and `clear_all` methods added to `VaultIndexer` for full lifecycle management.
+- **Shell Cleaned**: Sidebar navigation has no numeric prefixes. Redundant header toggles removed.

@@ -19,30 +19,30 @@ import { SidebarProvider } from '@/components/ui/sidebar'
 
 const navGroups = [
     {
-        title: '0- SYSTEM',
+        title: 'Overview',
         items: [
-            { label: '0- Dashboard', path: '/dashboard', icon: LayoutDashboard },
+            { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
         ],
     },
     {
-        title: '1- WORKSPACES',
+        title: 'Workspaces',
         items: [
-            { label: '1- Notion', path: '/notion', icon: Database },
-            { label: '2- Obsidian', path: '/obsidian', icon: FileText },
+            { label: 'Notion', path: '/notion', icon: Database },
+            { label: 'Obsidian', path: '/obsidian', icon: FileText },
         ],
     },
     {
-        title: '2- INTELLIGENCE',
+        title: 'Intelligence',
         items: [
-            { label: '3- Orchestrator', path: '/chat', icon: Zap },
-            { label: '4- Workforce', path: '/agents', icon: Users },
-            { label: '5- Automations', path: '/automations', icon: Command },
+            { label: 'Orchestrator', path: '/chat', icon: Zap },
+            { label: 'Workforce', path: '/agents', icon: Users },
+            { label: 'Automations', path: '/automations', icon: Command },
         ],
     },
     {
-        title: '3- CONFIG',
+        title: 'System',
         items: [
-            { label: '6- Settings', path: '/settings', icon: Settings },
+            { label: 'Settings', path: '/settings', icon: Settings },
         ],
     },
 ]
@@ -129,17 +129,6 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                         </div>
                     ))}
                 </nav>
-
-                {/* Bottom Actions: Theme Toggle */}
-                <div className="p-2 border-t border-border/40 shrink-0">
-                    <button
-                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                        className={cn("w-full flex items-center justify-center p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-all focus:outline-none")}
-                    >
-                        {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-                        {!collapsed && <span className="ml-3 text-[10px] font-black uppercase tracking-widest">Theme</span>}
-                    </button>
-                </div>
             </aside>
 
             {/* Main Content */}
@@ -163,13 +152,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                     </div>
 
                     <div className="flex items-center gap-3 md:gap-4 ml-auto">
-                        <button
-                            onClick={() => setCollapsed(!collapsed)}
-                            className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
-                            title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-                        >
-                            <Menu className="w-4 h-4" />
-                        </button>
+                        {/* Removed redundant toggles per user request */}
                     </div>
                 </header>
 

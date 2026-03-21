@@ -5,7 +5,7 @@ import {
     CheckCircle2, Zap, AlertCircle, Inbox, FileSearch, X,
     Brain, ArrowLeft, Bot, Sparkles, ChevronRight, ListChecks,
     CheckCheck, Archive, PauseCircle, PlayCircle,
-    Database, Calendar, GraduationCap, Coins, Dumbbell, Lock, Eye
+    Database, Calendar, GraduationCap, Coins, Dumbbell, Lock, Eye, Terminal
 } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
@@ -163,6 +163,57 @@ function OrchestratorDashboard({ onBack }: { onBack: () => void }) {
     )
 }
 
+/* ─── Generic Agent Console ─── */
+function AgentConsole({ agentName, title }: { agentName: string, title: string }) {
+    const [query, setQuery] = useState('')
+    const [response, setResponse] = useState('')
+    const [loading, setLoading] = useState(false)
+
+    const handleExecute = async () => {
+        if (!query) return
+        setLoading(true)
+        setResponse('')
+        try {
+            const res = await sidecarApi.executeAgent(agentName, query)
+            setResponse(res.response)
+        } catch (err: any) {
+             setResponse(`Error executing query: ${err.message}`)
+        } finally {
+             setLoading(false)
+        }
+    }
+
+    return (
+        <div className="rounded-xl border bg-card p-6 shadow-sm mt-6 mb-6">
+            <h3 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                <Terminal size={16} /> {title} Interface
+            </h3>
+            <div className="flex gap-4">
+               <input 
+                   type="text" 
+                   value={query}
+                   onChange={e => setQuery(e.target.value)}
+                   onKeyDown={e => e.key === 'Enter' && handleExecute()}
+                   placeholder={`Instruct ${title}...`}
+                   className="flex-1 bg-background border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20"
+               />
+               <button 
+                   onClick={handleExecute} 
+                   disabled={loading || !query}
+                   className="px-6 py-2 bg-foreground text-background rounded-xl text-xs font-black uppercase tracking-widest hover:bg-foreground/90 transition-all disabled:opacity-50"
+               >
+                   {loading ? 'Executing...' : 'Execute'}
+               </button>
+            </div>
+            {response && (
+                <div className="mt-4 p-4 border rounded-xl bg-muted/20 text-sm overflow-auto max-h-[300px] prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{response}</ReactMarkdown>
+                </div>
+            )}
+        </div>
+    )
+}
+
 /* ─── Librarian Dashboard ─── */
 function LibrarianDashboard({ onBack }: { onBack: () => void }) {
     const [loading, setLoading] = useState(true)
@@ -208,6 +259,7 @@ function LibrarianDashboard({ onBack }: { onBack: () => void }) {
                 </button>
             </div>
 
+            <AgentConsole agentName="librarian" title="Librarian" />
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 shrink-0">
                 {[
                     { label: 'Databases', val: dbs.length.toString(), icon: ListChecks },
@@ -300,6 +352,7 @@ function ScribeDashboard({ onBack }: { onBack: () => void }) {
                 </div>
             </div>
 
+            <AgentConsole agentName="scribe" title="Scribe" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="rounded-xl border p-4 bg-card">
                     <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Vault Inventory</p>
@@ -387,6 +440,7 @@ function ChronosDashboard({ onBack }: { onBack: () => void }) {
                 </button>
             </div>
 
+            <AgentConsole agentName="chronos" title="Chronos" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
                 <div className="rounded-xl border bg-card p-6 flex flex-col gap-6">
                     <h3 className="text-sm font-black uppercase tracking-widest border-b pb-4">Connection Status</h3>
@@ -475,6 +529,7 @@ function ScholarDashboard({ onBack }: { onBack: () => void }) {
                 </button>
             </div>
 
+            <AgentConsole agentName="scholar" title="Scholar" />
             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 overflow-hidden">
                 <div className="md:col-span-1 border rounded-xl bg-card p-6 flex flex-col">
                     <h3 className="text-sm font-black uppercase tracking-widest mb-4">Research Feed</h3>
@@ -553,6 +608,7 @@ function WealthDashboard({ onBack }: { onBack: () => void }) {
                 </button>
             </div>
 
+            <AgentConsole agentName="wealth" title="Wealth Strategist" />
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {[
                     { label: 'Net Position', val: data?.net_position || '---' },
@@ -624,6 +680,7 @@ function GymDashboard({ onBack }: { onBack: () => void }) {
                 </button>
             </div>
 
+            <AgentConsole agentName="gym" title="Gym Coach" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-1 rounded-xl border bg-card p-6 shadow-sm flex flex-col">
                     <h3 className="text-sm font-black uppercase tracking-widest mb-6">Physique Delta</h3>
@@ -700,6 +757,7 @@ function DevOpsDashboard({ onBack }: { onBack: () => void }) {
                 </div>
             </div>
 
+            <AgentConsole agentName="devops" title="DevOps Guardian" />
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {[
                     { label: 'System Uptime', val: '99.99%', icon: Activity },

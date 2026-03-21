@@ -325,6 +325,51 @@ async def brainstorm_with_ai(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/ai/execute/{agent_name}")
+async def execute_specific_agent(
+    agent_name: str,
+    query_data: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """
+    Directly execute a specific agent (e.g., 'notion', 'obsidian', 'scholar').
+    """
+    if not secrets.ai_key:
+        raise HTTPException(status_code=401, detail="X-AI-Key header missing")
+    
+    query = query_data.get("query")
+    if not query:
+        raise HTTPException(status_code=400, detail="Query missing in request body")
+
+    try:
+        strategist = Strategist(secrets, secrets.notion_key, secrets.vault_path)
+        orchestrator = strategist._orchestrator
+        
+        # Mapping to the instantiated specialist inside orchestrator
+        agent_map = {
+            "notion": orchestrator.notion_agent,
+            "obsidian": orchestrator.obsidian_agent,
+            "oka": orchestrator.oka_agent,
+            "chronos": orchestrator.chronos_agent,
+            "scholar": orchestrator.scholar_agent,
+            "wealth": orchestrator.wealth_agent,
+            "gym": orchestrator.gym_agent,
+            "devops": orchestrator.devops_agent,
+            "librarian": orchestrator.notion_agent,
+            "scribe": orchestrator.obsidian_agent
+        }
+
+        agent = agent_map.get(agent_name.lower())
+        if not agent:
+            raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found.")
+
+        response = await agent.run(query)
+        return {"response": response}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 active_orchestrator: Optional[Any] = None
 
 @app.get("/api/ai/orchestrator/status")
