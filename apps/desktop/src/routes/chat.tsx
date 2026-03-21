@@ -44,6 +44,7 @@ export default function OrchestratorPage() {
     const [activeTab, setActiveTab] = useState<'mission' | 'history'>('mission')
     const [history, setHistory] = useState<{ query: string, response: string, timestamp: string }[]>([])
     const [showLog, setShowLog] = useState(true)
+    const [configError, setConfigError] = useState<string | null>(null)
     
     const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -94,6 +95,7 @@ export default function OrchestratorPage() {
 
             const assistantMsg: Message = { role: 'assistant', content: res.response }
             setMessages([...newMessages, assistantMsg])
+            setConfigError(null)
             
             // Add to history
             setHistory(prev => [{
@@ -102,9 +104,14 @@ export default function OrchestratorPage() {
                 timestamp: new Date().toLocaleTimeString()
             }, ...prev].slice(0, 20))
             
-        } catch (err) {
+        } catch (err: any) {
             console.error('Orchestrator Chat failed:', err)
-            setMessages([...newMessages, { role: 'assistant', content: 'Error: Failed to communicate with the Orchestrator.' }])
+            const errMsg = err?.message || 'Unknown error'
+            setConfigError(errMsg)
+            setMessages([...newMessages, { 
+                role: 'assistant', 
+                content: `**Orchestrator Error**\n\n\`\`\`\n${errMsg}\n\`\`\`\n\nCheck your API key and model in **Settings**.` 
+            }])
         } finally {
             setLoading(false)
         }
@@ -140,6 +147,18 @@ export default function OrchestratorPage() {
                             </Button>
                         </div>
                     </div>
+
+                    {/* Config Error Banner */}
+                    {configError && (
+                        <div className="shrink-0 bg-red-500/10 border-b border-red-500/20 px-6 py-2 flex items-center justify-between gap-4">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-red-500 truncate flex-1">
+                                {configError.includes('API key') || configError.includes('INVALID_ARGUMENT') 
+                                    ? 'Invalid API Key — Verify key in Settings > AI Configuration' 
+                                    : configError}
+                            </p>
+                            <button onClick={() => setConfigError(null)} className="text-red-500/60 hover:text-red-500 shrink-0 text-[9px] font-black uppercase">Dismiss</button>
+                        </div>
+                    )}
 
                     <div className="flex-1 relative overflow-y-auto custom-scrollbar bg-background/30 w-full" ref={scrollRef}>
                         <div className="p-6 md:p-12 space-y-12 max-w-4xl mx-auto pb-32">

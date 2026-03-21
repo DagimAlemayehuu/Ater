@@ -43,7 +43,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         geminiApiKey: (await store.get<string>('geminiApiKey')) || '',
         aiProvider: (await store.get<string>('aiProvider')) || 'google', 
         aiApiKey: (await store.get<string>('aiApiKey')) || '', 
-        aiModel: (await store.get<string>('aiModel')) || 'gemini-1.5-flash', 
+        aiModel: (await store.get<string>('aiModel')) || 'gemini-2.5-flash', 
         obsidianVaultPath: (await store.get<string>('obsidianVaultPath')) || '',
         inboxPath: (await store.get<string>('inboxPath')) || '',
         autoDeploy: (await store.get<boolean>('autoDeploy')) || false,
@@ -53,7 +53,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         'X-Notion-Key': config.notionApiKey || '',
         'X-AI-Provider': config.aiProvider || 'google',
         'X-AI-Key': config.aiApiKey || config.geminiApiKey || '',
-        'X-AI-Model': config.aiModel || 'gemini-1.5-flash',
+        'X-AI-Model': config.aiModel || 'gemini-2.5-flash',
         'X-Vault-Path': config.obsidianVaultPath || '',
         'X-Inbox-Path': config.inboxPath || '',
         'X-Auto-Deploy': String(config.autoDeploy || false),
@@ -65,6 +65,13 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
  */
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const authHeaders = await getAuthHeaders()
+    
+    // Guard: AI routes require a key configured in Settings
+    const isAiRoute = path.includes('/api/ai/')
+    if (isAiRoute && !authHeaders['X-AI-Key']) {
+        throw new Error('AI API Key is not configured. Go to Settings > AI Configuration to add your key.')
+    }
+    
     const response = await fetch(`${SIDECAR_BASE_URL}${path}`, {
         ...options,
         headers: {
