@@ -43,6 +43,14 @@ class AgentTools:
         folders = [str(p.relative_to(vault)) for p in vault.rglob("*") if p.is_dir() and ".obsidian" not in p.parts]
         return json.dumps(sorted(folders), indent=2)
 
+    async def list_inbox_files(self) -> str:
+        """Lists all files in the 05-Inbox folder of the vault."""
+        if not self.vault_path: return "Error: Vault path missing."
+        inbox_path = Path(self.vault_path) / "05-Inbox"
+        if not inbox_path.exists(): return "[]"
+        files = [str(p.relative_to(inbox_path)) for p in inbox_path.rglob("*") if p.is_file()]
+        return json.dumps(files, indent=2)
+
     async def read_note(self, path: str) -> str:
         if not self.vault_path: return "Error: Vault path missing."
         client = ObsidianClient(self.vault_path)

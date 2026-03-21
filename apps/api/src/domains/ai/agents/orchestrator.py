@@ -82,12 +82,11 @@ class Orchestrator(BaseAgent):
             "You are the Life OS Orchestrator (Master Planner).\n"
             "You manage an autonomous workforce of specialists: Notion Librarian, Obsidian Scribe, OKA Sentinel, Chronos, Scholar, Wealth Strategist, Gym Coach, and DevOps Guardian.\n"
             "RULES:\n"
-            "1. PLAN BEFORE ACT: Every response MUST start with a 'STRATEGIC PLAN' section. Explain exactly which agents you will call and why.\n"
-            "2. DELEGATE: Use your specialized units for all execution. Do not do their jobs. Delegate.\n"
-            "3. EFFECTIVENESS: Coordinate multi-agent workflows for complex tasks.\n"
-            "4. SYNTHESIZE the results into a final, technical, and concise response.\n"
-            "5. NO emojis. NO conversational filler.\n"
-            "6. DATA-DRIVEN: Use 'search_vault' to get context before assuming."
+            "1. PLAN BEFORE ACT: Every response MUST start with a 'STRATEGIC PLAN' section. Explain which agents you are calling.\n"
+            "2. DELEGATE IMMEDIATELY: If you have enough info, include your STRATEGIC PLAN and call your specialist tools in the SAME turn to save time.\n"
+            "3. NO REPETITION: Do not tell the user what you 'will' do. Tell them what you are doing or have done.\n"
+            "4. DATA-DRIVEN: Use 'search_vault' to get context before assuming.\n"
+            "5. NO emojis. NO conversational filler."
         )
         tools = [
             delegate_to_notion_librarian, delegate_to_obsidian_scribe, 
@@ -121,7 +120,12 @@ class Orchestrator(BaseAgent):
             return await self.at.list_notion_goals()
         @tool
         async def create_page(database_id: str, properties: Dict[str, Any]) -> str:
-            """Creates a new page in a database. Example properties: {'Name': {'title': [{'text': {'content': 'Task Name'}}]}, 'Status': {'select': {'name': 'Done'}}}"""
+            """
+            Creates a new page in a database. 
+            'properties' MUST follow the Notion API schema.
+            Example (Title only): {"Name": {"title": [{"text": {"content": "New Page Name"}}]}}
+            Example (Title + Select): {"Name": {"title": [{"text": {"content": "Task"}}]}, "Status": {"select": {"name": "In Progress"}}}
+            """
             return await self.at.create_page_in_database(database_id, properties)
         @tool
         async def update_page(page_id: str, properties: Dict[str, Any]) -> str:
@@ -131,7 +135,11 @@ class Orchestrator(BaseAgent):
         async def archive_page(page_id: str) -> str:
             """Archives (deletes) a specific Notion page."""
             return await self.at.archive_notion_page(page_id)
-        return [list_databases, list_pages, read_page_blocks, append_content, list_goals, create_page, update_page, archive_page]
+        @tool
+        async def search_vault(query: str) -> str:
+            """Global semantic search across the entire knowledge vault (RAG)."""
+            return await self.at.search_vault(query)
+        return [list_databases, list_pages, read_page_blocks, append_content, list_goals, create_page, update_page, archive_page, search_vault]
 
     def _obsidian_tools(self):
         @tool
@@ -158,49 +166,97 @@ class Orchestrator(BaseAgent):
         async def list_structure() -> str:
             """Lists the numbered folder structure of the vault."""
             return await self.at.list_vault_folders()
-        return [list_notes, read_note, write_note, move_note, delete_note, list_structure]
+        @tool
+        async def search_vault(query: str) -> str:
+            """Global semantic search across the entire knowledge vault (RAG)."""
+            return await self.at.search_vault(query)
+        return [list_notes, read_note, write_note, move_note, delete_note, list_structure, search_vault]
 
     def _oka_tools(self):
         @tool
         async def list_inbox() -> str:
             """Lists files waiting in the 05-Inbox folder."""
-            return await self.at.list_vault_folders() # Placeholder for inbox content
-        return [list_inbox]
+            return await self.at.list_inbox_files()
+        @tool
+        async def read_file(path: str) -> str:
+            """Reads a file from the vault (including the inbox). Path should be relative to vault root."""
+            return await self.at.read_note(path)
+        @tool
+        async def deploy_to_vault(path: str, content: str) -> str:
+            """Deploys a processed note to the vault. Use this to move info from Inbox to structured folders."""
+            return await self.at.write_obsidian_note(path, content)
+        @tool
+        async def delete_processed_file(path: str) -> str:
+            """Deletes a file from the inbox after it has been successfully deployed."""
+            return await self.at.delete_obsidian_note(path)
+        @tool
+        async def search_vault(query: str) -> str:
+            """Global semantic search across the entire knowledge vault (RAG)."""
+            return await self.at.search_vault(query)
+        return [list_inbox, read_file, deploy_to_vault, delete_processed_file, search_vault]
 
     def _chronos_tools(self):
         @tool
         async def get_calendar_events() -> str:
             """Combined view of all deadlines and events from Notion and System calendars."""
             return await self.at.get_calendar_events()
-        return [get_calendar_events]
+        @tool
+        async def update_notion_deadline(page_id: str, properties: Dict[str, Any]) -> str:
+            """Updates date/deadline properties in a Notion page."""
+            return await self.at.update_notion_page(page_id, properties)
+        @tool
+        async def search_vault(query: str) -> str:
+            """Global semantic search across the entire knowledge vault (RAG)."""
+            return await self.at.search_vault(query)
+        return [get_calendar_events, update_notion_deadline, search_vault]
 
     def _scholar_tools(self):
         @tool
         async def search_scholar_vault(query: str) -> str:
             """Deep search across academic notes and research papers."""
             return await self.at.search_vault(f"Academic Research: {query}")
-        return [search_scholar_vault]
+        @tool
+        async def write_research_note(path: str, content: str) -> str:
+            """Saves a structured research summary to the vault."""
+            return await self.at.write_obsidian_note(path, content)
+        return [search_scholar_vault, write_research_note]
 
     def _wealth_tools(self):
         @tool
         async def audit_finances() -> str:
             """Fetches recent transactions and budget alignment data."""
             return await self.at.query_finance_db()
-        return [audit_finances]
+        @tool
+        async def update_budget(page_id: str, properties: Dict[str, Any]) -> str:
+            """Updates financial records in Notion."""
+            return await self.at.update_notion_page(page_id, properties)
+        @tool
+        async def search_vault(query: str) -> str:
+            """Global semantic search across the entire knowledge vault (RAG)."""
+            return await self.at.search_vault(query)
+        return [audit_finances, update_budget, search_vault]
 
     def _gym_tools(self):
         @tool
         async def log_workout(exercise: str, sets: int, reps: int, weight: float) -> str:
             """Logs a specific exercise set to the Workout Logger."""
             return await self.at.track_workout_log(exercise, sets, reps, weight)
-        return [log_workout]
+        @tool
+        async def search_vault(query: str) -> str:
+            """Global semantic search across the entire knowledge vault (RAG)."""
+            return await self.at.search_vault(query)
+        return [log_workout, search_vault]
 
     def _devops_tools(self):
         @tool
         async def repair_rag() -> str:
             """Forces a re-index of the knowledge base if search is failing."""
             return await self.at.repair_index()
-        return [repair_rag]
+        @tool
+        async def search_vault(query: str) -> str:
+            """Global semantic search across the entire knowledge vault (RAG)."""
+            return await self.at.search_vault(query)
+        return [repair_rag, search_vault]
 
     async def brainstorm(self, query: str, context: Optional[str] = None, history: Optional[List[Dict[str, str]]] = None) -> str:
         input_text = f"User Request: {query}"

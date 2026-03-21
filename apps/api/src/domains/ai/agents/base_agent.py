@@ -60,47 +60,76 @@ class BaseAgent:
         messages.append(HumanMessage(content=input_text))
 
         for i in range(max_iterations):
-            self.status["stage"] = "Synthesizing" if i > 0 else "Thinking"
+            self.status["stage"] = "Synthesizing" if i > 0 else "Generating Plan"
             response = await self.llm_with_tools.ainvoke(messages)
             messages.append(response)
 
-            # Extra: Extract Strategic Plan if present for status monitoring
-            if "STRATEGIC PLAN" in response.content.upper():
+            content = response.content or ""
+            has_explicit_plan = "STRATEGIC PLAN" in content.upper()
+            
+            # Only the Orchestrator is REQUIRED to plan first. 
+            # Specialists should be allowed to act immediately (i=0 with tool_calls).
+            is_orchestrator = self.name == "Orchestrator"
+            
+            # Check if this is a plan-only response that needs a push to execute
+            if is_orchestrator and has_explicit_plan and not response.tool_calls:
                 import re
-                plan_match = re.search(r"STRATEGIC PLAN[:\s]*(.*?)(?=\n\n|\n[A-Z]|$)", response.content, re.DOTALL | re.IGNORECASE)
+                plan_match = re.search(r"STRATEGIC PLAN[:\s]*(.*?)(?=\n\n|\n[A-Z]|$)", content, re.DOTALL | re.IGNORECASE)
                 if plan_match:
                     self.status["current_plan"] = plan_match.group(1).strip()
-                    self.log(f"Plan updated: {self.status['current_plan'][:50]}...")
+                    self.log(f"Plan identified: {self.status['current_plan'][:80]}...")
+                
+                self.status["stage"] = "Delegating"
+                messages.append(HumanMessage(content=(
+                    "Plan acknowledged. Execute the plan NOW by calling the necessary tools. "
+                    "Do NOT explain further. Just call the tools."
+                )))
+                continue
 
             if not response.tool_calls:
+                # If no tools are called and we aren't forcing a plan transition, this is the end.
                 self.status["stage"] = "Completed"
                 self.status["next_agent"] = "None"
-                self.log(f"{self.name} finished task.")
-                return response.content
+                self.log(f"{self.name} completed task.")
+                return content
 
+            # Execute all tool calls in this response
             for tool_call in response.tool_calls:
                 t_name = tool_call["name"]
                 t_args = tool_call["args"]
                 
                 tool = next((t for t in self.tools if t.name == t_name), None)
                 if tool:
-                    self.status["stage"] = f"Using {t_name.replace('delegate_to_', '').replace('_', ' ').title()}"
+                    self.status["stage"] = f"Calling: {t_name.replace('delegate_to_', '').replace('_', ' ').title()}"
                     self.log(f"Executing Tool: {t_name}")
                     if "delegate_to_" in t_name:
-                        agent_name = t_name.replace("delegate_to_", "").replace("_", " ").title()
-                        self.status["active_agents"].append(agent_name)
-                        self.status["next_agent"] = agent_name
+                        agent_label = t_name.replace("delegate_to_", "").replace("_", " ").title()
+                        self.status["active_agents"].append(agent_label)
+                        self.status["next_agent"] = agent_label
                     
-                    output = await tool.ainvoke(t_args)
+                    try:
+                        output = await tool.ainvoke(t_args)
+                    except Exception as tool_err:
+                        output = f"[Tool Error] {t_name}: {str(tool_err)}"
+                        self.log(f"Tool error: {t_name} — {tool_err}", level="ERROR")
+
                     messages.append(ToolMessage(content=str(output), tool_call_id=tool_call["id"]))
                     
+                    # After tool execution, give a nudge to continue or finish
+                    messages.append(HumanMessage(content=(
+                        f"Tool {t_name} returned results. "
+                        "Process this data and either take the NEXT step in your plan "
+                        "or provide your FINAL synthesis if the task is complete."
+                    )))
+
                     if "delegate_to_" in t_name:
-                        agent_name = t_name.replace("delegate_to_", "").replace("_", " ").title()
-                        if agent_name in self.status["active_agents"]:
-                            self.status["active_agents"].remove(agent_name)
+                        agent_label = t_name.replace("delegate_to_", "").replace("_", " ").title()
+                        if agent_label in self.status["active_agents"]:
+                            self.status["active_agents"].remove(agent_label)
                 else:
                     self.log(f"Error: Tool '{t_name}' not found.")
                     messages.append(ToolMessage(content=f"Error: Tool '{t_name}' not found.", tool_call_id=tool_call["id"]))
         
-        self.status["stage"] = "Failed"
-        return f"[{self.name}] I've reached my thinking limit."
+        self.status["stage"] = "Limit Reached"
+        return f"[{self.name}] Reached iteration limit after {max_iterations} steps. Partial results may be in the conversation history."
+
