@@ -125,7 +125,7 @@ export default function OrchestratorPage() {
     ]
 
     return (
-        <div className="flex flex-col h-full w-full bg-background selection:bg-foreground selection:text-background overflow-hidden border-t border-border/40">
+        <div className="flex h-full w-full bg-background selection:bg-foreground selection:text-background overflow-hidden">
             <div className="flex-1 flex min-h-0 w-full overflow-hidden">
                 {/* Main Interaction Area */}
                 <div className="flex-1 flex flex-col min-w-0">

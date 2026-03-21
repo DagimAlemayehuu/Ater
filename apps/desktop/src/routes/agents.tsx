@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { 
     ShieldCheck, RefreshCw, 
-    FileText, Play, Activity, 
-    CheckCircle2, Zap, AlertCircle, Inbox, FileSearch, X,
+    FileText, Activity, 
+    Zap, Inbox, X,
     Brain, ArrowLeft, Bot, Sparkles, ChevronRight, ListChecks,
-    CheckCheck, Archive, PauseCircle, PlayCircle,
-    Database, Calendar, GraduationCap, Coins, Dumbbell, Lock, Eye, Terminal
+    Archive, PauseCircle,
+    Database, Calendar, GraduationCap, Coins, Dumbbell, Lock, Terminal
 } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
@@ -53,7 +53,7 @@ function OrchestratorDashboard({ onBack }: { onBack: () => void }) {
 
     return (
         <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex items-center justify-between border-b pb-4 shrink-0">
+            <div className="flex items-center justify-between pb-4 shrink-0">
                 <div className="flex items-center gap-4">
                     <button onClick={onBack} className="p-2 hover:bg-muted rounded-full transition-colors">
                         <ArrowLeft size={20} />
@@ -184,7 +184,7 @@ function AgentConsole({ agentName, title }: { agentName: string, title: string }
     }
 
     return (
-        <div className="rounded-xl border bg-card p-6 shadow-sm mt-6 mb-6">
+        <div className="rounded-xl border bg-card p-6 shadow-sm mb-6">
             <h3 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2">
                 <Terminal size={16} /> {title} Interface
             </h3>
@@ -235,7 +235,7 @@ function LibrarianDashboard({ onBack }: { onBack: () => void }) {
 
     return (
         <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex items-center justify-between border-b pb-4 shrink-0">
+            <div className="flex items-center justify-between pb-4 shrink-0">
                 <div className="flex items-center gap-4">
                     <button onClick={onBack} className="p-2 hover:bg-muted rounded-full transition-colors">
                         <ArrowLeft size={20} />
@@ -262,7 +262,7 @@ function LibrarianDashboard({ onBack }: { onBack: () => void }) {
             <AgentConsole agentName="librarian" title="Librarian" />
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 shrink-0">
                 {[
-                    { label: 'Databases', val: dbs.length.toString(), icon: ListChecks },
+                    { label: 'Databases', val: dbs.length.toString(), icon: Database },
                     { label: 'Records Indexed', val: '---', icon: Database },
                     { label: 'Property Errors', val: '0', icon: ShieldCheck },
                     { label: 'Uptime', val: '99.9%', icon: Activity }
@@ -337,7 +337,7 @@ function ScribeDashboard({ onBack }: { onBack: () => void }) {
 
     return (
         <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex items-center justify-between border-b pb-4 shrink-0">
+            <div className="flex items-center justify-between pb-4 shrink-0">
                 <div className="flex items-center gap-4">
                     <button onClick={onBack} className="p-2 hover:bg-muted rounded-full transition-colors">
                         <ArrowLeft size={20} />
@@ -417,7 +417,7 @@ function ChronosDashboard({ onBack }: { onBack: () => void }) {
 
     return (
         <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden text-foreground">
-            <div className="flex items-center justify-between border-b pb-4 shrink-0">
+            <div className="flex items-center justify-between pb-4 shrink-0">
                 <div className="flex items-center gap-4">
                     <button onClick={onBack} className="p-2 hover:bg-muted rounded-full transition-colors">
                         <ArrowLeft size={20} />
@@ -504,7 +504,7 @@ function ScholarDashboard({ onBack }: { onBack: () => void }) {
 
     return (
         <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex items-center justify-between border-b pb-4 shrink-0">
+            <div className="flex items-center justify-between pb-4 shrink-0">
                 <div className="flex items-center gap-4">
                     <button onClick={onBack} className="p-2 hover:bg-muted rounded-full transition-colors">
                         <ArrowLeft size={20} />
@@ -583,7 +583,7 @@ function WealthDashboard({ onBack }: { onBack: () => void }) {
 
     return (
         <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex items-center justify-between border-b pb-4 shrink-0">
+            <div className="flex items-center justify-between pb-4 shrink-0">
                 <div className="flex items-center gap-4">
                     <button onClick={onBack} className="p-2 hover:bg-muted rounded-full transition-colors">
                         <ArrowLeft size={20} />
@@ -655,7 +655,7 @@ function GymDashboard({ onBack }: { onBack: () => void }) {
 
     return (
         <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex items-center justify-between border-b pb-4 shrink-0">
+            <div className="flex items-center justify-between pb-4 shrink-0">
                 <div className="flex items-center gap-4">
                     <button onClick={onBack} className="p-2 hover:bg-muted rounded-full transition-colors">
                         <ArrowLeft size={20} />
@@ -742,7 +742,7 @@ function DevOpsDashboard({ onBack }: { onBack: () => void }) {
 
     return (
         <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex items-center justify-between border-b pb-4 shrink-0">
+            <div className="flex items-center justify-between pb-4 shrink-0">
                 <div className="flex items-center gap-4">
                     <button onClick={onBack} className="p-2 hover:bg-muted rounded-full transition-colors">
                         <ArrowLeft size={20} />
@@ -835,7 +835,6 @@ function OkaAgent({ onBack }: { onBack: () => void }) {
     const [loadingInbox, setLoadingInbox] = useState(false)
     const [selectedInboxFile, setSelectedInboxFile] = useState<InboxFile | null>(null)
     const [processing, setProcessing] = useState(false)
-    const [previewResults, setPreviewResults] = useState<OkaResult[]>([])
     const [activePlan, setActivePlan] = useState<string | null>(null)
     const [sessionId, setSessionId] = useState<string | null>(null)
     const [isAwaitingConfirmation, setIsAwaitingConfirmation] = useState(false)
@@ -894,7 +893,6 @@ function OkaAgent({ onBack }: { onBack: () => void }) {
         setIsCompleted(false)
         setActivePlan(null)
         setBatchFeed([])
-        setPreviewResults([])
         setSelectedInboxFile(null)
         setOkaError(null)
         fetchInbox()
@@ -943,7 +941,7 @@ function OkaAgent({ onBack }: { onBack: () => void }) {
     return (
         <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                <div className="flex items-center justify-between border-b pb-4 shrink-0">
+                <div className="flex items-center justify-between pb-4 shrink-0">
                     <div className="flex items-center gap-4">
                         <button onClick={onBack} className="p-2 hover:bg-muted rounded-full transition-colors">
                             <ArrowLeft size={20} />
@@ -1066,16 +1064,6 @@ function OkaAgent({ onBack }: { onBack: () => void }) {
                 </div>
             </Tabs>
         </div>
-    )
-}
-
-function FileCheck(props: any) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-            <path d="m9 15 2 2 4-4" />
-        </svg>
     )
 }
 

@@ -124,22 +124,6 @@ export default function Dashboard() {
 
     return (
         <div className="flex-1 space-y-6 animate-in fade-in duration-300">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-                    <p className="text-sm text-muted-foreground mt-0.5">{todayStr}</p>
-                </div>
-                <button
-                    onClick={handleRefresh}
-                    disabled={syncing}
-                    className="inline-flex items-center justify-center rounded-md border text-sm font-medium transition-colors disabled:opacity-50 hover:bg-muted h-9 px-3"
-                >
-                    <RefreshCw className={cn("mr-2 h-3.5 w-3.5", syncing && "animate-spin")} />
-                    Refresh
-                </button>
-            </div>
-
             {/* Stats Row */}
             <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
                 <StatCard label="Active Goals" value={loading ? '—' : String(activeGoals.length)} sub={`${completedGoals.length} completed`} icon={<Target className="h-3.5 w-3.5" />} onClick={() => navigate('/notion')} />

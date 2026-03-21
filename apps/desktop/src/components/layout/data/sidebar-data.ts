@@ -2,12 +2,9 @@ import {
   LayoutDashboard,
   Database,
   FileText,
-  Brain,
-  Zap,
   Settings,
   Users,
-  Target,
-  UserCircle
+  Zap
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -67,26 +64,6 @@ export const sidebarData: SidebarData = {
           title: 'Automations',
           url: '/automations',
           icon: Zap,
-        },
-      ],
-    },
-    {
-      title: 'Planning',
-      items: [
-        {
-          title: 'Strategist',
-          url: '/strategist',
-          icon: Brain,
-        },
-        {
-          title: 'Profiles',
-          url: '/profiles',
-          icon: UserCircle,
-        },
-        {
-          title: 'Goals',
-          url: '/goals',
-          icon: Target,
         },
       ],
     },

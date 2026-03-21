@@ -6,6 +6,7 @@ import { SearchProvider } from '@/context/search-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { SkipToMain } from '@/components/skip-to-main'
+import { Header } from '@/components/layout/header'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
@@ -30,10 +31,17 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
 
               // If layout is fixed and sidebar is inset,
               // set the height to 100svh - spacing (total margins) to prevent overflow
-              'peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]'
+              'peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]',
+              
+              'flex flex-col'
             )}
           >
-            {children ?? <Outlet />}
+            <Header fixed>
+              {/* Optional: Add breadcrumbs or title here */}
+            </Header>
+            <main className='flex-1 overflow-auto p-4 md:p-6'>
+              {children ?? <Outlet />}
+            </main>
           </SidebarInset>
         </SidebarProvider>
       </LayoutProvider>

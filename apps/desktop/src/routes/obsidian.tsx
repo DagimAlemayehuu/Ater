@@ -194,7 +194,7 @@ export default function Obsidian() {
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 overflow-hidden">
                 <div className="flex h-full gap-6 overflow-hidden pb-6">
                     {/* Folder Tree (Left) */}
                     <div className="w-[300px] flex flex-col gap-4">
