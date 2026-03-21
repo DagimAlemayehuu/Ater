@@ -212,6 +212,21 @@ export const sidecarApi = {
         request<{ success: boolean; message?: string; error?: string }>('/api/ai/test-connection', {
             method: 'POST'
         }),
+
+    getOrchestratorStatus: () =>
+        request<{
+            current_prompt: string;
+            current_plan: string;
+            active_agents: string[];
+            stage: string;
+            next_agent: string;
+            logs: string[];
+        }>('/api/ai/orchestrator/status'),
+
+    getChronosStatus: () => request<any>('/api/ai/specialists/chronos'),
+    getWealthStatus: () => request<any>('/api/ai/specialists/wealth'),
+    getGymStatus: () => request<any>('/api/ai/specialists/gym'),
+    getScholarStatus: () => request<any>('/api/ai/specialists/scholar'),
 }
 
 

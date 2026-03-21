@@ -12,12 +12,15 @@ This repository strictly adheres to the `AGENTS.md` protocol. It uses a `.system
 
 ## Key Features
 
+- **Agent Workforce Registry**: A centralized hub for specialized autonomous units (Chronos, Scholar, Wealth Strategist, Gym Coach, Scribe, Librarian, DevOps) to monitor and manage every aspect of your life.
+- **Orchestrator Control**: The **Zap-powered** master planner that coordinates all specialized agents and executes complex strategic workflows.
 - **Notion Hub**: Consolidated workspace for managing **Academics** and **Goals**.
-- **Obsidian Intelligence**: A high-fidelity reasoning engine and vault explorer.
-    - **System Instructions**: Custom-tuned AI behavior permanently docked for precise reasoning.
+- **Obsidian Intelligence**: A high-fidelity reasoning engine and vault explorer with a local **RAG (Retrieval-Augmented Generation)** pipeline.
+    - **Local RAG**: ChromaDB-powered indexing for real-time document retrieval and context-aware chatting.
     - **Vault Explorer**: Hierarchical folder navigation with a professional single-pane Markdown reader.
     - **AI File Uploads**: Real-time document analysis (PDF, Code, Text) powered by **Gemini 2.5 Flash**.
-    - **OKA (Obsidian Knowledge Architect)**: Fully automated multi-batch academic ingestion. It supports the complete lifecycle from plan generation to unattended deployment of planned notes.
+    - **OKA (Obsidian Knowledge Architect)**: Fully automated multi-batch academic ingestion.
+- **Notion Mirror (V2)**: Modernized, numbered, and hierarchical mirroring of Notion databases into Obsidian (1-NotionMirror, 2-Academic).
 
 ## Stack
 

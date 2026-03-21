@@ -160,6 +160,7 @@ export default function Settings() {
 
     const [ragStatus, setRagStatus] = useState<{status: string, progress: number, total: number, message: string} | null>(null)
     const [notionStatus, setNotionStatus] = useState<{status: string, progress: number, total: number, message: string} | null>(null)
+    const [testStatus, setTestStatus] = useState<{ loading: boolean; success?: boolean; message?: string }>({ loading: false })
 
     useEffect(() => {
         if (activeSection !== 'intelligence') return;
@@ -208,8 +209,6 @@ export default function Settings() {
             alert('Failed to save setting')
         }
     }
-
-    const [testStatus, setTestStatus] = useState<{ loading: boolean; success?: boolean; message?: string }>({ loading: false })
 
     const handleTestConnection = async () => {
         setTestStatus({ loading: true })
@@ -688,6 +687,7 @@ export default function Settings() {
                                         <button
                                             onClick={async () => {
                                                 if (ragStatus?.status === 'syncing') return;
+                                                setRagStatus(prev => ({ ...(prev || { progress: 0, total: 0 }), status: 'syncing', message: 'Requesting force sync...' }));
                                                 try {
                                                     await sidecarApi.ragSyncVault()
                                                 } catch (e: any) { alert('Failed: ' + e.message) }
@@ -700,14 +700,16 @@ export default function Settings() {
                                             ) : 'Force Sync Vault'}
                                         </button>
                                     </div>
-                                    {ragStatus?.status === 'syncing' && ragStatus.total > 0 && (
+                                    {ragStatus?.status === 'syncing' && (
                                         <div className="w-full space-y-1">
                                             <div className="flex justify-between text-[10px] text-muted-foreground">
                                                 <span>{ragStatus.message}</span>
-                                                <span>{Math.round((ragStatus.progress / ragStatus.total) * 100)}% ({ragStatus.progress}/{ragStatus.total})</span>
+                                                {ragStatus.total > 0 && (
+                                                    <span>{Math.round((ragStatus.progress / ragStatus.total) * 100)}% ({ragStatus.progress}/{ragStatus.total})</span>
+                                                )}
                                             </div>
                                             <div className="w-full h-1.5 bg-background border border-border/50 rounded-full overflow-hidden">
-                                                <div className="h-full bg-primary transition-all duration-300" style={{ width: `${Math.max(5, (ragStatus.progress / ragStatus.total) * 100)}%` }} />
+                                                <div className="h-full bg-primary transition-all duration-300" style={{ width: ragStatus.total > 0 ? `${Math.max(5, (ragStatus.progress / ragStatus.total) * 100)}%` : '5%' }} />
                                             </div>
                                         </div>
                                     )}
@@ -722,6 +724,7 @@ export default function Settings() {
                                         <button
                                             onClick={async () => {
                                                 if (notionStatus?.status === 'syncing') return;
+                                                setNotionStatus(prev => ({ ...(prev || { progress: 0, total: 0 }), status: 'syncing', message: 'Requesting Notion sync...' }));
                                                 try {
                                                     await sidecarApi.syncNotionMirror()
                                                 } catch (e: any) { alert('Failed: ' + e.message) }
@@ -734,14 +737,16 @@ export default function Settings() {
                                             ) : 'Sync Notion to Obsidian'}
                                         </button>
                                     </div>
-                                    {notionStatus?.status === 'syncing' && notionStatus.total > 0 && (
+                                    {notionStatus?.status === 'syncing' && (
                                         <div className="w-full space-y-1">
                                             <div className="flex justify-between text-[10px] text-muted-foreground">
                                                 <span>{notionStatus.message}</span>
-                                                <span>{Math.round((notionStatus.progress / notionStatus.total) * 100)}% ({notionStatus.progress}/{notionStatus.total})</span>
+                                                {notionStatus.total > 0 && (
+                                                    <span>{Math.round((notionStatus.progress / notionStatus.total) * 100)}% ({notionStatus.progress}/{notionStatus.total})</span>
+                                                )}
                                             </div>
                                             <div className="w-full h-1.5 bg-background border border-border/50 rounded-full overflow-hidden">
-                                                <div className="h-full bg-primary transition-all duration-300" style={{ width: `${Math.max(5, (notionStatus.progress / notionStatus.total) * 100)}%` }} />
+                                                <div className="h-full bg-primary transition-all duration-300" style={{ width: notionStatus.total > 0 ? `${Math.max(5, (notionStatus.progress / notionStatus.total) * 100)}%` : '5%' }} />
                                             </div>
                                         </div>
                                     )}

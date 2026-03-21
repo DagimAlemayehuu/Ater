@@ -163,3 +163,15 @@ class NotionClient:
             )
             response.raise_for_status()
             return response.json()
+
+    async def get_page(self, page_id: str) -> Dict[str, Any]:
+        """
+        Retrieves a single Notion page.
+        """
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.BASE_URL}/pages/{page_id}",
+                headers=self.headers
+            )
+            response.raise_for_status()
+            return response.json()

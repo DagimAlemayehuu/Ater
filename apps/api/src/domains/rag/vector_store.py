@@ -1,4 +1,13 @@
 import os
+
+# FORCE TRUE LIGHTWEIGHT MODE: Restrict embedding models to a single CPU thread to prevent overheating
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -79,11 +88,18 @@ class ChromaManager:
         Queries the vector store for the most relevant chunks.
         """
         try:
+            # Ensure n_results doesn't exceed total collection size to avoid Chroma errors
+            collection_size = self.collection.count()
+            if collection_size == 0:
+                return []
+            
+            actual_n_results = min(n_results, collection_size)
+
             query_embedding = self.embeddings.embed_query(query_text)
             
             results = self.collection.query(
                 query_embeddings=[query_embedding],
-                n_results=n_results,
+                n_results=actual_n_results,
                 where=where,
                 include=["documents", "metadatas", "distances"]
             )

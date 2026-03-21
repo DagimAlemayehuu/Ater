@@ -9,7 +9,9 @@ import {
     Moon,
     Sun,
     Database,
-    FileText
+    FileText,
+    Zap,
+    Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/theme-provider'
@@ -36,7 +38,8 @@ const navGroups = [
     {
         title: 'Intelligence',
         items: [
-            { label: 'Agents', path: '/agents', icon: Brain },
+            { label: 'Orchestrator', path: '/chat', icon: Zap },
+            { label: 'Workforce', path: '/agents', icon: Users },
             { label: 'Automations', path: '/automations', icon: Command },
         ],
     },
@@ -53,6 +56,7 @@ const allNavItems = navGroups.flatMap(g => g.items)
 
 export default function Shell({ children }: { children: React.ReactNode }) {
     const [collapsed, setCollapsed] = useState(false)
+    const [chatCollapsed, setChatCollapsed] = useState(false)
     const [mobileOpen, setMobileOpen] = useState(false)
     const location = useLocation()
     const { theme, setTheme } = useTheme()
@@ -82,10 +86,10 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                 {/* Logo Area */}
                 <div className={cn("flex h-14 items-center shrink-0 border-b border-border/40", collapsed ? "justify-center px-2" : "px-4 gap-3")}>
                     <div className="flex items-center justify-center shrink-0 w-8 h-8 rounded-lg bg-foreground text-background">
-                        <Command className="w-4 h-4" />
+                        <Zap className="w-4 h-4 fill-current" />
                     </div>
                     {!collapsed && (
-                        <span className="font-semibold text-sm tracking-tight">Workspace</span>
+                        <span className="font-black text-xs uppercase tracking-[0.2em] text-foreground/90">LifeOS</span>
                     )}
                 </div>
 
@@ -174,7 +178,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
 
                 {/* Dynamic Content Area */}
                 <div className="flex-1 overflow-auto p-6 sm:p-8 custom-scrollbar relative">
-                    <div className="mx-auto max-w-7xl">
+                    <div className="mx-auto max-w-7xl h-full">
                         {children}
                     </div>
                 </div>

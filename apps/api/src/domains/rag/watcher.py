@@ -5,6 +5,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from src.domains.rag.indexer import VaultIndexer
 import time
+from typing import Optional, Dict, Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -54,63 +55,153 @@ class VaultSyncHandler(FileSystemEventHandler):
 
 class RAGWatcherService:
     """
-    Manages the watchdog observer for the RAG system.
+    Manages the watchdog observer and periodic consistency checks for the RAG system.
     """
     def __init__(self, indexer: VaultIndexer, vault_path: str):
         self.indexer = indexer
         self.vault_path = Path(vault_path)
         self.observer = None
+        self.loop = None
+        self._sync_task: Optional[asyncio.Task] = None
+        self._is_running = False
+        self._status_callback: Optional[Callable[[Dict[str, Any]], None]] = None
 
-    def start(self, loop: asyncio.AbstractEventLoop):
+    def start(self, loop: asyncio.AbstractEventLoop, status_callback: Optional[Callable[[Dict[str, Any]], None]] = None):
         if not self.vault_path.exists():
             logger.error(f"Cannot start RAG Watcher. Vault path does not exist: {self.vault_path}")
             return
 
+        self.loop = loop
+        self._is_running = True
+        self._status_callback = status_callback
+
+        # 1. Start Watchdog (Real-time)
         event_handler = VaultSyncHandler(self.indexer, loop)
         self.observer = Observer()
         self.observer.schedule(event_handler, str(self.vault_path), recursive=True)
         self.observer.start()
         logger.info(f"🚀 Global RAG Watcher started for vault: {self.vault_path}")
 
+        # 2. Start Periodic Consistency Check (Every 60s)
+        self._sync_task = self.loop.create_task(self._periodic_sync())
+
     def stop(self):
+        self._is_running = False
         if self.observer:
             self.observer.stop()
             self.observer.join()
             logger.info("🛑 Global RAG Watcher stopped.")
+        if self._sync_task:
+            self._sync_task.cancel()
 
-    def initial_sync(self, status_callback=None):
+    async def _periodic_sync(self):
+        """Background task that runs a full sync check every 10 minutes."""
+        # Initial sync on start (not forced)
+        self.initial_sync(status_callback=self._status_callback, force=False)
+
+        while self._is_running:
+            try:
+                # Wait 10 minutes (600s) between checks - real-time watcher handles the rest
+                await asyncio.sleep(600)
+                logger.info("[RAGWatcher] Running periodic consistency check...")
+                # Run sync in a thread to not block the event loop
+                await asyncio.to_thread(self.initial_sync, status_callback=self._status_callback, force=False)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"[RAGWatcher] Periodic sync error: {e}")
+
+    def initial_sync(self, status_callback: Optional[Callable[[Dict[str, Any]], None]] = None, force: bool = False):
         """
-        Crawls the entire vault and indexes everything.
-        Usually called once on startup or manually.
+        Finds all markdown files and indexes them.
         """
         if not self.vault_path.exists():
             if status_callback:
                 status_callback({"status": "error", "message": "Vault path does not exist."})
             return
-            
-        logger.info("Starting initial Vault RAG Sync... This may take a moment.")
-        if status_callback:
-            status_callback({"status": "syncing", "progress": 0, "total": 0, "message": "Scanning for files..."})
-            
-        md_files = list(self.vault_path.rglob("*.md"))
+
+        logger.info(f"Starting {'Force ' if force else 'Incremental '}Vault RAG Sync...")
         
-        # Filter out hidden folders or specific folders we might want to ignore later
-        files_to_index = [str(f) for f in md_files if not f.name.startswith('.') and ".obsidian" not in str(f)]
-        total = len(files_to_index)
-        
-        if status_callback:
-            status_callback({"status": "syncing", "progress": 0, "total": total, "message": f"Found {total} files. Starting indexing..."})
-        
-        for i, file_path in enumerate(files_to_index):
-            if i % 50 == 0:
-                logger.info(f"Indexing progress: {i}/{total} files...")
+        try:
+            # Fast direct globbing, filtering out common system directories
+            files_to_index = [
+                str(f) for f in self.vault_path.rglob("*.md")
+                if not f.name.startswith('.') 
+                and ".obsidian" not in f.parts
+                and "node_modules" not in f.parts
+                and ".git" not in f.parts
+                and ".venv" not in f.parts
+                and ".trash" not in f.parts
+                and "Trash" not in f.parts
+            ]
+
+            total = len(files_to_index)
             
-            if status_callback and i % 5 == 0:
-                p = Path(file_path)
-                status_callback({"status": "syncing", "progress": i, "total": total, "message": f"Indexing {p.name}..."})
+            # --- CLEANUP PHASE: Remove deleted files from memory AND vector DB ---
+            current_files_set = set(files_to_index)
+            deleted_count = 0
+            
+            try:
+                # 1. Clean up JSON memory
+                indexed_files = list(self.indexer.indexed_mtimes.keys())
+                for indexed_file in indexed_files:
+                    if indexed_file not in current_files_set:
+                        logger.info(f"File deleted from vault, removing from memory: {indexed_file}")
+                        self.indexer.remove_file(indexed_file)
+                        deleted_count += 1
                 
-            self.indexer.index_file(file_path)
+                # 2. Deep Clean: Interrogate Vector DB for orphaned chunks
+                db_data = self.indexer.chroma.collection.get(include=["metadatas"])
+                if db_data and db_data.get("metadatas"):
+                    db_sources = set()
+                    for meta in db_data["metadatas"]:
+                        if meta and "source" in meta:
+                            db_sources.add(meta["source"])
+                            
+                    for source in db_sources:
+                        if source not in current_files_set:
+                            logger.info(f"Purging orphaned file from Vector DB: {source}")
+                            self.indexer.chroma.delete_file_chunks(source)
+                            deleted_count += 1
+                            
+            except Exception as e:
+                logger.error(f"Cleanup phase encountered an error: {e}")
+                
+            if deleted_count > 0:
+                self.indexer.save_index()
+            # -------------------------------------------------------
+
+            if total == 0:
+                logger.info("No markdown files found to sync.")
+                if status_callback:
+                    status_callback({"status": "synced", "progress": 0, "total": 0, "message": "No files found to sync."})
+                return
+
+            # Jump straight into the syncing status
+            if status_callback:
+                status_callback({"status": "syncing", "progress": 0, "total": total, "message": f"Starting sync of {total} files..."})
+
+            for i, file_path in enumerate(files_to_index):
+                # Batch mtime saves: only save to disk every 100 files to reduce I/O pressure
+                is_batch_end = (i % 100 == 0) or (i == total - 1)
+                self.indexer.index_file(file_path, force=force, should_save=is_batch_end)
+
+                # Update UI dynamically
+                if status_callback and (i % 5 == 0 or i == total - 1):
+                    p = Path(file_path)
+                    status_callback({"status": "syncing", "progress": i + 1, "total": total, "message": f"Indexing {p.name}..."})
+                    
+                # FORCE LIGHTWEIGHT: Yield CPU significantly to prevent Mac overheating/fans spinning
+                time.sleep(0.05) 
             
-        logger.info(f"✅ Initial Vault RAG Sync complete. Indexed {total} files.")
-        if status_callback:
-            status_callback({"status": "completed", "progress": total, "total": total, "message": "Vault RAG sync complete."})
+            # Ensure final state is saved
+            self.indexer.save_index()
+
+            logger.info(f"✅ Vault RAG Sync complete. Processed {total} files.")
+            if status_callback:
+                status_callback({"status": "synced", "progress": total, "total": total, "message": "Vault is synced."})
+                
+        except Exception as e:
+            logger.error(f"Vault RAG Sync failed: {e}")
+            if status_callback:
+                status_callback({"status": "error", "progress": 0, "total": 0, "message": f"Sync failed: {str(e)}"})

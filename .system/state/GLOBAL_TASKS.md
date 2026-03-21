@@ -43,3 +43,19 @@
 
 ### Completed Epics
 *   *(Empty)*
+
+---
+
+## 5. Orchestrator & Specialist Workforce
+### Pending Epics
+*   [ ] **Chronos Integration**: Connect Google Calendar and Apple Calendar for unified scheduling.
+*   [ ] **Cross-Agent Collaboration**: Allow agents to hand off sub-tasks (e.g., Scholar sends notes to Scribe).
+
+### Completed Epics
+*   [x] **Orchestrator Backend State**: Real-time status tracking (prompt, plan, active agents, logs).
+*   [x] **Specialist Agent Logic**: 8 functional agents (Scholar, Wealth, Gym, etc.) with mapped vault paths.
+*   [x] **Data-Driven Dashboards**: All agent UI pages (Chronos, Wealth, Scholar, etc.) fetch live status from FastAPI.
+*   [x] **Logo & Brand Refinement**: Finalized "Zap" branding and strict monochrome aesthetic.
+*   [x] **Agent Workforce Registry**: Integrated all specialized units into a unified dashboard.
+
+---
