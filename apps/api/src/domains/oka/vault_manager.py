@@ -21,9 +21,9 @@ class VaultManager:
         "Questions": ""
     }
 
-    def __init__(self, vault_path: str):
+    def __init__(self, vault_path: str, academic_base: str = "1-Academic"):
         self.vault_path = Path(vault_path)
-        self.academic_root = self.vault_path / "1-Academic"
+        self.academic_root = self.vault_path / academic_base.strip("/")
 
     def process_code_blocks(self, content: str) -> str:
         """Processes custom code block markers into standard Markdown."""

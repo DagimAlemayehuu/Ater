@@ -23,22 +23,35 @@ class ObsidianClient:
         Recursively lists files in the vault.
         """
         if not self.is_valid_vault():
+            print(f"[ObsidianClient] Invalid or missing vault path: {self.vault_path}")
             return []
 
         files = []
-        for file_path in self.vault_path.rglob(f"*{extension}"):
-            # Skip hidden folders like .obsidian
-            if ".obsidian" in file_path.parts:
-                continue
+        try:
+            abs_vault = self.vault_path.absolute()
+            print(f"[ObsidianClient] Scanning: {abs_vault}")
+            
+            for file_path in abs_vault.rglob(f"*{extension}"):
+                # Skip hidden folders like .obsidian
+                if ".obsidian" in file_path.parts:
+                    continue
 
-            stats = file_path.stat()
-            files.append({
-                "name": file_path.name,
-                "path": str(file_path.relative_to(self.vault_path)),
-                "full_path": str(file_path),
-                "modified": datetime.datetime.fromtimestamp(stats.st_mtime).isoformat(),
-                "size": stats.st_size,
-            })
+                try:
+                    stats = file_path.stat()
+                    files.append({
+                        "name": file_path.name,
+                        "path": str(file_path.relative_to(abs_vault)),
+                        "full_path": str(file_path.absolute()),
+                        "modified": datetime.datetime.fromtimestamp(stats.st_mtime).isoformat(),
+                        "size": stats.st_size,
+                    })
+                except Exception as e:
+                    print(f"[ObsidianClient] Skip file {file_path}: {e}")
+            
+            print(f"[ObsidianClient] Found {len(files)} notes.")
+        except Exception as e:
+            print(f"[ObsidianClient] Scan error: {e}")
+            
         return files
 
     def read_note(self, relative_path: str) -> Optional[str]:

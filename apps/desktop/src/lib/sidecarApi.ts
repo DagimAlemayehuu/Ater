@@ -46,7 +46,9 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         aiModel: (await store.get<string>('aiModel')) || 'gemini-2.5-flash', 
         obsidianVaultPath: (await store.get<string>('obsidianVaultPath')) || '',
         inboxPath: (await store.get<string>('inboxPath')) || '',
+        academicFolderPath: (await store.get<string>('academicFolderPath')) || '1-Academic',
         autoDeploy: (await store.get<boolean>('autoDeploy')) || false,
+        googleCalendarToken: (await store.get<string>('googleCalendarToken')) || '',
     }
 
     return {
@@ -56,7 +58,9 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         'X-AI-Model': config.aiModel || 'gemini-2.5-flash',
         'X-Vault-Path': config.obsidianVaultPath || '',
         'X-Inbox-Path': config.inboxPath || '',
+        'X-Academic-Path': config.academicFolderPath || '1-Academic',
         'X-Auto-Deploy': String(config.autoDeploy || false),
+        'X-Google-Calendar-Token': config.googleCalendarToken || '',
     };
 }
 
@@ -67,7 +71,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const authHeaders = await getAuthHeaders()
     
     // Guard: AI routes require a key configured in Settings
-    const isAiRoute = path.includes('/api/ai/')
+    const isAiRoute = path.includes('/api/ai/') || path.includes('/api/oka/')
     if (isAiRoute && !authHeaders['X-AI-Key']) {
         throw new Error('AI API Key is not configured. Go to Settings > AI Configuration to add your key.')
     }
@@ -238,6 +242,7 @@ export const sidecarApi = {
         }>('/api/ai/orchestrator/status'),
 
     getChronosStatus: () => request<any>('/api/ai/specialists/chronos'),
+    getChronosTimeline: () => request<any[]>('/api/ai/chronos/timeline'),
     getWealthStatus: () => request<any>('/api/ai/specialists/wealth'),
     getGymStatus: () => request<any>('/api/ai/specialists/gym'),
     getScholarStatus: () => request<any>('/api/ai/specialists/scholar'),

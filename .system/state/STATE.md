@@ -1,6 +1,6 @@
 # Project State
 ## 1. Status Summary
-**Current Status:** Optimized Agent Loop Implemented. The `BaseAgent` ReAct loop has been refined for turn-efficiency and robust plan detection. The Orchestrator can now plan and delegate in a single turn, and all specialists (Notion Librarian, Obsidian Scribe, OKA Sentinel, etc.) have expanded toolsets with full CRUD access and vault search. Goal creation and iteration limit errors have been resolved.
+**Current Status:** OKA and Chronos Enhanced. The Obsidian Knowledge Architect (OKA) has been fully decoupled into a dedicated ingestion dashboard, separate from the primary Obsidian Vault viewer (now a professional side-by-side explorer). The Chronos agent now features a Unified Timeline, autonomously merging events from all accessible Notion databases and Google Calendar into a single interface. Settings have been updated to support Google Calendar connections and local native folder browsing for the academic root.
 
 ## 2. Global Milestones
 *   [x] Initialization & Architecture
@@ -11,6 +11,9 @@
 *   [x] Expanded Specialist Toolsets (Full CRUD + RAG Access)
 *   [x] Backend API (Status Tracking & Dashboarding)
 *   [x] Frontend UI (Orchestrator Page + Agent Hubs)
+*   [x] UI/UX Overhaul (Professional Aesthetic, Real-time Sync)
+*   [x] OKA Ingestion & Vault Explorer Decoupling
+*   [x] Chronos Unified Timeline (Notion + Google Calendar)
 *   [ ] Global E2E Tests Pass
 *   [ ] Production Deployment
 

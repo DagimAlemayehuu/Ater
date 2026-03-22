@@ -188,7 +188,7 @@ export default function Goals() {
         : goals.filter(g => g.type.includes(filter))
 
     return (
-        <div className="flex h-[calc(100vh-140px)] gap-0 animate-in fade-in duration-700 overflow-hidden">
+        <div className="flex h-full gap-0 animate-in fade-in duration-700 overflow-hidden">
             {/* Main Content */}
             <div className={cn(
                 "flex flex-col gap-6 transition-all duration-500 overflow-hidden",

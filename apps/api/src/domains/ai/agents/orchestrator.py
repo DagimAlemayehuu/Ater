@@ -2,8 +2,8 @@ from typing import List, Dict, Any, Optional
 from langchain_core.tools import tool
 from src.domains.ai.agents.base_agent import BaseAgent
 from src.domains.ai.agents.specialists import (
-    NotionLibrarian, ObsidianScribe, OKASentinel, 
-    ChronosChronometer, Scholar, WealthStrategist, 
+    NotionLibrarian, ObsidianScribe, ObsidianKnowledgeArchitect,
+    ChronosChronometer, Scholar, WealthStrategist,
     GymCoach, DevOpsGuardian
 )
 from src.domains.ai.agents.tools import AgentTools
@@ -25,7 +25,7 @@ class Orchestrator(BaseAgent):
         # Specialist instantiation
         self.notion_agent = NotionLibrarian(secrets, self._notion_tools())
         self.obsidian_agent = ObsidianScribe(secrets, self._obsidian_tools())
-        self.oka_agent = OKASentinel(secrets, self._oka_tools())
+        self.oka_agent = ObsidianKnowledgeArchitect(secrets, self._oka_tools())
         self.chronos_agent = ChronosChronometer(secrets, self._chronos_tools())
         self.scholar_agent = Scholar(secrets, self._scholar_tools())
         self.wealth_agent = WealthStrategist(secrets, self._wealth_tools())
@@ -44,7 +44,7 @@ class Orchestrator(BaseAgent):
             return await self.obsidian_agent.run(task)
 
         @tool
-        async def delegate_to_oka_sentinel(task: str) -> str:
+        async def delegate_to_obsidian_knowledge_architect(task: str) -> str:
             """Delegates raw file ingestion and document deployment from the Inbox."""
             return await self.oka_agent.run(task)
 
@@ -80,8 +80,7 @@ class Orchestrator(BaseAgent):
 
         persona = (
             "You are the Life OS Orchestrator (Master Planner).\n"
-            "You manage an autonomous workforce of specialists: Notion Librarian, Obsidian Scribe, OKA Sentinel, Chronos, Scholar, Wealth Strategist, Gym Coach, and DevOps Guardian.\n"
-            "RULES:\n"
+            "You manage an autonomous workforce of specialists: Notion Librarian, Obsidian Scribe, Obsidian Knowledge Architect, Chronos, Scholar, Wealth Strategist, Gym Coach, and DevOps Guardian.\n"            "RULES:\n"
             "1. PLAN BEFORE ACT: Every response MUST start with a 'STRATEGIC PLAN' section. Explain which agents you are calling.\n"
             "2. DELEGATE IMMEDIATELY: If you have enough info, include your STRATEGIC PLAN and call your specialist tools in the SAME turn to save time.\n"
             "3. NO REPETITION: Do not tell the user what you 'will' do. Tell them what you are doing or have done.\n"
@@ -89,8 +88,8 @@ class Orchestrator(BaseAgent):
             "5. NO emojis. NO conversational filler."
         )
         tools = [
-            delegate_to_notion_librarian, delegate_to_obsidian_scribe, 
-            delegate_to_oka_sentinel, delegate_to_chronos,
+            delegate_to_notion_librarian, delegate_to_obsidian_scribe,
+            delegate_to_obsidian_knowledge_architect, delegate_to_chronos,
             delegate_to_scholar, delegate_to_wealth_strategist,
             delegate_to_gym_coach, delegate_to_devops_guardian,
             search_vault

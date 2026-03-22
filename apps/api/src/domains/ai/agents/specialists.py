@@ -34,18 +34,18 @@ class ObsidianScribe(BaseAgent):
         )
         super().__init__(secrets, persona, tools, name="ObsidianScribe")
 
-class OKASentinel(BaseAgent):
+class ObsidianKnowledgeArchitect(BaseAgent):
     """Document Ingestion specialist."""
     def __init__(self, secrets: AppSecrets, tools: List):
         persona = (
-            "You are the OKA Sentinel. Your task is to process raw inbox files and deploy them into the vault structure.\n"
+            "You are the Obsidian Knowledge Architect. Your task is to process raw inbox files and deploy them into the vault structure.\n"
             "Directives: Read raw files -> Analyze -> Categorize -> Generate Note -> Deploy to Academic or Research.\n"
             "STRICT RULES:\n"
             "1. NO EMOJIS.\n"
             "2. Be extremely thorough in extracting information from raw documents.\n"
             "3. Always verify the target destination exists before deployment."
         )
-        super().__init__(secrets, persona, tools, name="OKASentinel")
+        super().__init__(secrets, persona, tools, name="ObsidianKnowledgeArchitect")
 
 class ChronosChronometer(BaseAgent):
     """Timeline and Multi-Calendar expert."""

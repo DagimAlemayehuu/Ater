@@ -184,7 +184,7 @@ export default function Settings() {
 
     if (isLoading || !config) {
         return (
-            <div className="flex h-screen w-full items-center justify-center bg-background">
+            <div className="flex h-full w-full items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-4">
                     <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                     <p className="text-sm font-medium text-muted-foreground">Initializing engine settings...</p>
@@ -368,6 +368,32 @@ export default function Settings() {
                         )}
                     </SettingsCard>
 
+                    {/* Google Calendar */}
+                    <SettingsCard
+                        title="Google Calendar"
+                        icon={<Icons.Calendar size={18} />}
+                        value="Connect your unified timeline"
+                        isEditing={editingKey === 'googleCalendarToken'}
+                        onEdit={() => startEditing('googleCalendarToken', config?.googleCalendarToken || '')}
+                        onSave={handleSave}
+                        onCancel={() => setEditingKey(null)}
+                    >
+                        {editingKey === 'googleCalendarToken' ? (
+                            <textarea
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                placeholder='Paste Authorized User JSON here...'
+                                className="w-full h-24 bg-background border border-input rounded-md px-3 py-2 text-[10px] font-mono shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+                                autoFocus
+                            />
+                        ) : (
+                            <div className="px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm">
+                                <span>{config?.googleCalendarToken ? 'Connected (JSON Set)' : 'Not connected'}</span>
+                                <Icons.Lock size={14} className="opacity-50" />
+                            </div>
+                        )}
+                    </SettingsCard>
+
                     {/* AI Provider & Model */}
                     <SettingsCard
                         title="AI Engine"
@@ -481,34 +507,76 @@ export default function Settings() {
                     </SettingsCard>
 
                     {/* Obsidian */}
-                    <SettingsCard
-                        title="Obsidian Vault"
-                        icon={<HardDrive size={18} />}
-                        value="Local directory for markdown notes"
-                        isEditing={editingKey === 'obsidianVaultPath'}
-                        onEdit={() => startEditing('obsidianVaultPath', config?.obsidianVaultPath || '')}
-                        onSave={handleSave}
-                        onCancel={() => setEditingKey(null)}
-                    >
-                        <div className="flex gap-2">
-                            <div className="flex-1 px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm overflow-hidden content-center">
-                                <span className="truncate pr-2">{editingKey === 'obsidianVaultPath' ? editValue : (config?.obsidianVaultPath || 'Not selected')}</span>
+                    <div className="flex flex-col gap-4">
+                        <SettingsCard
+                            title="Obsidian Vault"
+                            icon={<HardDrive size={18} />}
+                            value="Local directory for markdown notes"
+                            isEditing={editingKey === 'obsidianVaultPath'}
+                            onEdit={() => startEditing('obsidianVaultPath', config?.obsidianVaultPath || '')}
+                            onSave={handleSave}
+                            onCancel={() => setEditingKey(null)}
+                        >
+                            <div className="flex gap-2">
+                                <div className="flex-1 px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm overflow-hidden content-center border border-transparent">
+                                    <span className="truncate pr-2">{editingKey === 'obsidianVaultPath' ? editValue : (config?.obsidianVaultPath || 'Not selected')}</span>
+                                </div>
+                                {editingKey === 'obsidianVaultPath' && (
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const selected = await open({ directory: true, multiple: false, title: 'Select Obsidian Vault' });
+                                                if (selected) setEditValue(selected as string);
+                                            } catch (err) { console.error(err); }
+                                        }}
+                                        className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground border border-input bg-background shadow-sm px-3 py-2 shrink-0"
+                                    >
+                                        <FolderOpen size={16} />
+                                    </button>
+                                )}
                             </div>
-                            {editingKey === 'obsidianVaultPath' && (
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            const selected = await open({ directory: true, multiple: false, title: 'Select Obsidian Vault' });
-                                            if (selected) setEditValue(selected as string);
-                                        } catch (err) { console.error(err); }
-                                    }}
-                                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground border border-input bg-background shadow-sm px-3 py-2 shrink-0"
-                                >
-                                    <FolderOpen size={16} />
-                                </button>
-                            )}
-                        </div>
-                    </SettingsCard>
+                        </SettingsCard>
+
+                        <SettingsCard
+                            title="Academic Base Folder"
+                            icon={<BookOpen size={18} />}
+                            value="Folder for academic notes (relative to vault)"
+                            isEditing={editingKey === 'academicFolderPath'}
+                            onEdit={() => startEditing('academicFolderPath', config?.academicFolderPath || '1-Academic')}
+                            onSave={handleSave}
+                            onCancel={() => setEditingKey(null)}
+                        >
+                            <div className="flex gap-2">
+                                <div className="flex-1 px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm overflow-hidden content-center border border-transparent">
+                                    <span className="truncate pr-2">{editingKey === 'academicFolderPath' ? editValue : (config?.academicFolderPath || '1-Academic')}</span>
+                                </div>
+                                {editingKey === 'academicFolderPath' && (
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const selected = await open({ 
+                                                    directory: true, 
+                                                    multiple: false, 
+                                                    title: 'Select Academic Folder',
+                                                    defaultPath: config?.obsidianVaultPath
+                                                });
+                                                if (selected) {
+                                                    // We want to store it relative to the vault if possible, 
+                                                    // but for UX simplicity let's just take the folder name if it's inside, 
+                                                    // or the full path. The backend handles Path(base).
+                                                    setEditValue(selected as string);
+                                                }
+                                            } catch (err) { console.error(err); }
+                                        }}
+                                        className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground border border-input bg-background shadow-sm px-3 py-2 shrink-0"
+                                    >
+                                        <FolderOpen size={16} />
+                                    </button>
+                                )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-2">All OKA notes will be architected relative to this folder.</p>
+                        </SettingsCard>
+                    </div>
 
                     {/* Inbox Watcher */}
                     <SettingsCard

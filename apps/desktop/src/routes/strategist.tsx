@@ -28,9 +28,6 @@ import { slidersToPromptFragment } from '@/components/profiles/StrategistSliders
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Link } from 'react-router-dom'
-import { Header } from '@/components/layout/header'
-import { Main } from '@/components/layout/main'
-import { ThemeSwitch } from '@/components/theme-switch'
 
 interface Message {
     role: 'user' | 'model'
@@ -234,55 +231,39 @@ Let's start with Step 1: Tell me about your current state and when you want to o
 
     if (!hasMasterPlan) {
         return (
-            <>
-                <Header>
-                    <div className='ms-auto flex items-center space-x-4'>
-                        <ThemeSwitch />
-                    </div>
-                </Header>
-                <Main>
-                    <div className="flex flex-col items-center justify-center h-full gap-8 animate-in fade-in duration-700">
-                        <div className="p-6 rounded-xl bg-muted border border-border">
-                            <Sparkles size={48} className="text-muted-foreground" />
-                        </div>
-                        <div className="text-center max-w-md space-y-3">
-                            <h2 className="text-2xl font-bold tracking-tight text-foreground">No Master Plan Yet</h2>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                                The Strategist needs a Master Plan to operate. Create one to enable goal tracking and tactical advice.
-                            </p>
-                        </div>
-                        <div className="flex gap-3 w-full max-w-xs">
-                            <button
-                                onClick={startOnboarding}
-                                className="flex-1 px-5 py-2.5 bg-foreground text-background rounded-lg text-xs font-semibold hover:opacity-90 transition-all"
-                            >
-                                Create Plan
-                            </button>
-                            <Link
-                                to="/settings"
-                                className="flex-1 px-5 py-2.5 bg-muted text-muted-foreground border border-border rounded-lg text-xs font-semibold hover:text-foreground transition-all text-center"
-                            >
-                                Configure
-                            </Link>
-                        </div>
-                    </div>
-                </Main>
-            </>
+            <div className="flex flex-col items-center justify-center h-full gap-8 animate-in fade-in duration-700">
+                <div className="p-6 rounded-xl bg-muted border border-border">
+                    <Sparkles size={48} className="text-muted-foreground" />
+                </div>
+                <div className="text-center max-w-md space-y-3">
+                    <h2 className="text-2xl font-bold tracking-tight text-foreground">No Master Plan Yet</h2>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                        The Strategist needs a Master Plan to operate. Create one to enable goal tracking and tactical advice.
+                    </p>
+                </div>
+                <div className="flex gap-3 w-full max-w-xs">
+                    <button
+                        onClick={startOnboarding}
+                        className="flex-1 px-5 py-2.5 bg-foreground text-background rounded-lg text-xs font-semibold hover:opacity-90 transition-all"
+                    >
+                        Create Plan
+                    </button>
+                    <Link
+                        to="/settings"
+                        className="flex-1 px-5 py-2.5 bg-muted text-muted-foreground border border-border rounded-lg text-xs font-semibold hover:text-foreground transition-all text-center"
+                    >
+                        Configure
+                    </Link>
+                </div>
+            </div>
         )
     }
 
     return (
-        <>
-            <Header>
-                <div className='ms-auto flex items-center space-x-4'>
-                    <ThemeSwitch />
-                </div>
-            </Header>
-            <Main>
-                <div className="flex flex-col h-full gap-5 transition-all duration-300">
-                    {/* Header & Nav */}
-                    {/* Minimal Header & Nav */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-5">
+        <div className="flex flex-col h-full gap-5 transition-all duration-300">
+            {/* Header & Nav */}
+            {/* Minimal Header & Nav */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-5">
                         <div className="flex items-center gap-3">
                             <div className="p-2 rounded-xl bg-muted border border-border">
                                 <Zap size={16} className="text-foreground" />
@@ -631,9 +612,7 @@ Let's start with Step 1: Tell me about your current state and when you want to o
                             />
                         )}
                     </div>
-                </div>
-            </Main>
-        </>
+        </div>
     )
 }
 
@@ -658,7 +637,7 @@ function ChatView({ messages, loading, query, setQuery, handleSend }: {
     ]
 
     return (
-        <div className="flex flex-col flex-1 border bg-background shadow-xs sm:rounded-md max-w-4xl mx-auto w-full overflow-hidden mb-6 h-[calc(100vh-160px)] animate-in fade-in duration-500">
+        <div className="flex flex-col flex-1 border bg-background shadow-xs sm:rounded-md max-w-4xl mx-auto w-full overflow-hidden mb-6 h-full animate-in fade-in duration-500">
             <div className="flex flex-1 flex-col gap-2 px-4 pt-4 pb-4 overflow-hidden">
                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-6">
                     {messages.length === 0 && (

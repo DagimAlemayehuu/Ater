@@ -231,7 +231,7 @@ export default function Goals() {
         : goals.filter(g => g.type.includes(filter))
 
     return (
-        <div className="flex h-[calc(100vh-140px)] gap-6 animate-in fade-in duration-500 overflow-hidden font-sans relative">
+        <div className="flex h-full gap-6 animate-in fade-in duration-500 overflow-hidden font-sans relative">
             {/* Main Content */}
             <div className="flex flex-col transition-all duration-300 overflow-hidden h-full rounded-xl border bg-card text-card-foreground shadow-sm w-full">
                 {/* Header Section */}

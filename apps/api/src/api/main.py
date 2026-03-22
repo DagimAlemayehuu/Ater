@@ -386,18 +386,19 @@ async def get_orchestrator_status():
         "logs": ["Orchestrator is ready."]
     }
 
+from apps.api.src.domains.chronos.service import ChronosService
+
 @app.get("/api/ai/specialists/chronos")
 async def get_chronos_status(secrets: AppSecrets = Depends(get_app_secrets)):
-    """Returns status for Chronos (Time Management)."""
-    # Logic: Check for 'Calendar' or 'Tasks' databases in Notion/Mirror
-    return {
-        "status": "Healthy",
-        "channels": [
-            {"name": "Notion Mirror", "status": "Active", "last_sync": "Automated"},
-            {"name": "Google Calendar", "status": "Connected", "last_sync": "3m ago"},
-            {"name": "Vault Journals", "status": "Synced", "last_sync": "10m ago"}
-        ]
-    }
+    """Returns dynamic status for Chronos (Time Management)."""
+    service = ChronosService(notion_key=secrets.notion_key, google_token=secrets.google_calendar_token)
+    return await service.get_status()
+
+@app.get("/api/ai/chronos/timeline")
+async def get_chronos_timeline(secrets: AppSecrets = Depends(get_app_secrets)):
+    """Returns a unified timeline from Notion and Google Calendar."""
+    service = ChronosService(notion_key=secrets.notion_key, google_token=secrets.google_calendar_token)
+    return await service.get_unified_timeline()
 
 @app.get("/api/ai/specialists/scholar")
 async def get_scholar_status(secrets: AppSecrets = Depends(get_app_secrets)):

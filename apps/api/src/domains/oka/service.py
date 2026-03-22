@@ -4,49 +4,61 @@ import asyncio
 import re
 import traceback
 import uuid
+import time
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_community.document_loaders import PyPDFLoader
+
 from .vault_manager import VaultManager
 from .deployer import OkaDeployer
 from src.domains.ai.factory import ModelFactory
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_community.document_loaders import PyPDFLoader
 
 class OkaService:
     """
-    Orchestrates OKA using LangChain via ModelFactory.
-    Maintains stateful sessions for the multi-batch deployment flow.
+    Main orchestrator for OKA.
     """
-    _sessions: Dict[str, Any] = {}
+    _sessions: Dict[str, Dict[str, Any]] = {}
 
-    def __init__(self, secrets: Any):
+    def __init__(self, secrets):
         self.secrets = secrets
-        self.vm = VaultManager(secrets.vault_path)
+        self.vm = VaultManager(secrets.vault_path, academic_base=secrets.academic_path)
         self.deployer = OkaDeployer(self.vm)
+        
+        # Initialize LLM
         self.llm = ModelFactory.get_model(
             provider=secrets.ai_provider,
             model_name=secrets.ai_model,
-            api_key=secrets.ai_key
+            api_key=secrets.ai_key,
+            temperature=0.1 # Low temperature for structural integrity
         )
 
     async def _get_si(self, system_instruction_path: str) -> str:
         si_path = Path(system_instruction_path)
         if not si_path.exists():
-            # Try to find it in the standard location if the passed path fails
-            project_root = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
-            si_path = project_root / ".system" / "prompts" / "OKA_System_Instruction.md"
+            print(f"[OKA Service] SI Path not found: {si_path}. Trying standard location.")
+            # Resolve project root more robustly: search upwards
+            curr = Path(__file__).resolve()
+            found = False
+            for _ in range(10):
+                target = curr / ".system" / "prompts" / "OKA_System_Instruction.md"
+                if target.exists():
+                    si_path = target
+                    found = True
+                    break
+                if curr.parent == curr: break
+                curr = curr.parent
             
-        if not si_path.exists():
-            print(f"[OKA Service] CRITICAL: System instruction not found at {system_instruction_path} or fallback.")
-            raise FileNotFoundError(f"System instruction not found at {si_path}")
-        
+            if not found:
+                print(f"[OKA Service] CRITICAL: Could not find OKA_System_Instruction.md anywhere.")
+                raise FileNotFoundError("OKA_System_Instruction.md not found.")
+
         try:
             with open(si_path, "r", encoding="utf-8") as f:
                 si = f.read()
             
             # Load Visual Protocol
-            project_root = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
-            protocol_path = project_root / ".system" / "architecture" / "OKA_Visual_Protocol_V2.md"
+            protocol_path = si_path.parent.parent / "architecture" / "OKA_Visual_Protocol_V2.md"
             protocol_content = ""
             
             if protocol_path.exists():
@@ -66,7 +78,6 @@ class OkaService:
     async def process_file(self, file_path: str, system_instruction_path: str) -> Dict[str, Any]:
         """Initializes planning using a stateful chat."""
         print(f"[OKA Service] --- STARTING PROCESS_FILE ({self.secrets.ai_model}) ---")
-        si = await self._get_si(system_instruction_path)
         path = Path(file_path)
         session_id = str(path.absolute())
         
@@ -80,33 +91,40 @@ class OkaService:
             source_type = "Lecture_Slides" if path.suffix.lower() == ".pdf" else "Supplementary_Notes"
             
             if path.suffix.lower() == ".pdf" and self.secrets.ai_provider == "google":
+                print(f"[OKA Service] Using Gemini PDF upload for: {path.name}")
                 import google.generativeai as genai
                 genai.configure(api_key=self.secrets.ai_key)
                 uploaded_file = await asyncio.to_thread(genai.upload_file, path)
-                while uploaded_file.state.name == "PROCESSING":
-                    await asyncio.sleep(2)
-                    uploaded_file = await asyncio.to_thread(genai.get_file, uploaded_file.name)
-                # For Google, we use the file attribute if possible, but LangChain Google GenAI 
-                # might not support direct file objects in messages easily without specific wrappers.
-                # However, for the PLAN, text description is often enough if the model is multi-modal.
+                
+                # Protocol: 'start' -> Wait for Plan
                 content_text = f"Type_of_Source: {source_type}\nSource_Content: [PDF File {uploaded_file.name} processed]"
+                
+                # For Gemini multimodal, we should ideally pass the file_uri
+                # but let's try text first as the SI is very specific about the protocol
+                messages.append(HumanMessage(content="start"))
+                messages.append(HumanMessage(content=[
+                    {"type": "text", "text": f"Type_of_Source: {source_type}\nSource_Content:"},
+                    {"type": "file_data", "file_uri": uploaded_file.uri, "mime_type": "application/pdf"}
+                ]))
             elif path.suffix.lower() == ".pdf":
-                print(f"[OKA Service] Fallback to PyPDFLoader for provider: {self.secrets.ai_provider}")
+                print(f"[OKA Service] Fallback to PyPDFLoader for: {path.name}")
                 loader = PyPDFLoader(str(path.absolute()))
                 docs = await asyncio.to_thread(loader.load)
                 full_text = "\n\n".join([doc.page_content for doc in docs])
                 content_text = f"Type_of_Source: {source_type}\nSource_Content:\n\n{full_text}"
+                messages.append(HumanMessage(content="start"))
+                messages.append(HumanMessage(content=content_text))
             else:
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, "r", encoding="utf-8", errors="ignore") as f:
                     content_text = f"Type_of_Source: {source_type}\nSource_Content:\n\n{f.read()}"
+                messages.append(HumanMessage(content="start"))
+                messages.append(HumanMessage(content=content_text))
             
-            # protocol: 'start' -> 'Source_Content' -> Wait for Plan
-            messages.append(HumanMessage(content="start"))
-            messages.append(HumanMessage(content=content_text))
-            
-            print(f"[OKA Service] Generating plan...")
+            print(f"[OKA Service] Generating plan via {self.secrets.ai_provider}...")
             response = await self.llm.ainvoke(messages)
             plan_output = response.content
+            print(f"[OKA Service] Plan generated (length: {len(plan_output)})")
+            
             structured_plan = self._parse_plan_to_json(plan_output)
 
             total_batches = len(structured_plan.get("batches", [])) or 1
@@ -126,8 +144,7 @@ class OkaService:
                 "status": "awaiting_confirmation"
             }
         except Exception as e:
-            print(f"[OKA Service] CRITICAL ERROR: {e}")
-            traceback.print_exc()
+            print(f"[OKA Service] CRITICAL ERROR: {traceback.format_exc()}")
             raise
 
     async def confirm_plan(self, session_id: str, command: str = "Confirm Final Plan & Proceed Batch 1") -> Dict[str, Any]:
@@ -161,78 +178,41 @@ class OkaService:
             "has_more": has_more,
             "current_batch": batch_number,
             "total_batches": total_batches,
-            "next_batch": batch_number + 1 if has_more else None,
-            "status": "has_more" if has_more else "completed"
-        }
-
-    async def process_text(self, text: str, system_instruction_path: str) -> Dict[str, Any]:
-        si = await self._get_si(system_instruction_path)
-        session_id = f"text_{uuid.uuid4()}"
-        
-        messages = [
-            SystemMessage(content=si),
-            HumanMessage(content="start"),
-            HumanMessage(content=f"Type_of_Source: Note_Snippets\nSource_Content:\n\n{text}")
-        ]
-        
-        res_plan = await self.llm.ainvoke(messages)
-        plan_output = res_plan.content
-        structured_plan = self._parse_plan_to_json(plan_output)
-        
-        total_batches = len(structured_plan.get("batches", [])) or 1
-        OkaService._sessions[session_id] = {
-            "messages": messages + [res_plan],
-            "plan": plan_output, 
-            "metadata": structured_plan,
-            "current_batch": 0,
-            "total_batches": total_batches
-        }
-        return {
-            "session_id": session_id, 
-            "plan_raw": plan_output, 
-            "plan_structured": structured_plan, 
-            "status": "awaiting_confirmation"
+            "status": "complete" if not has_more else "in_progress"
         }
 
     def _parse_plan_to_json(self, plan_text: str) -> Dict[str, Any]:
-        metadata: Dict[str, Any] = {"context": {}, "notes": [], "batches": [], "modes": []}
-        # More robust Context extraction for varied LLM layouts
-        # Match section after I until next section or Batch
-        ctx_match = re.search(r"#\s*I\.\s*Current Academic Context\s*(.*?)(?=#|Batch|---|\Z)", plan_text, re.DOTALL | re.IGNORECASE)
-        if ctx_match:
-            ctx_text = ctx_match.group(1).strip()
-            # Clean up Markdown bolding and handle split lines
-            for key, yaml_key in [("Year", "year"), ("Semester", "semester"), ("Course", "course"), ("Unit", "unit")]:
-                m = re.search(fr"(?i)\**{key}:\**\s*(.*)", ctx_text)
-                if m:
-                    val = m.group(1).split("\n")[0].strip()
-                    metadata["context"][yaml_key] = re.sub(r"[\*`]", "", val)
+        """
+        Extracts key metadata from the LLM's plan response.
+        """
+        metadata = {
+            "course": "Unknown",
+            "unit": "Unknown",
+            "notes": [],
+            "batches": []
+        }
 
+        # 1. Extract Course/Unit
+        course_match = re.search(r"\* \*\*Course:\*\* (.*)", plan_text)
+        if course_match: metadata["course"] = course_match.group(1).strip()
+
+        unit_match = re.search(r"\* \*\*Unit:\*\* (.*)", plan_text)
+        if unit_match: metadata["unit"] = unit_match.group(1).strip()
+
+        # 2. Extract Notes (anything in wiki-links [[...]])
         notes_match = re.findall(r"\[\[(.*?)\]\]", plan_text)
-        metadata["notes"] = list(dict.fromkeys(notes_match))
+        metadata["notes"] = list(dict.fromkeys(notes_match)) # unique
 
-        # Better batch detection for varied LLM outputs
-        # Look for "Batch X" headers and content until the next Batch or Section header
-        batch_blocks = re.split(r"(?i)\n\s*\**Batch\s+(\d+)\**", plan_text)
-        if len(batch_blocks) > 1:
-            # First element is pre-batch text
-            for i in range(1, len(batch_blocks), 2):
-                if i + 1 < len(batch_blocks):
-                    b_num = batch_blocks[i]
-                    b_content = batch_blocks[i+1]
-                    b_notes = re.findall(r"\[\[(.*?)\]\]", b_content)
-                    metadata["batches"].append({"id": int(b_num), "notes": list(dict.fromkeys(b_notes))})
-        
-        # Fallback if the above split fails
-        if not metadata["batches"]:
-            # Robust batch finding even if the header is slightly different
-            batch_matches = re.findall(r"(?i)(?:^|\n)\s*\**Batch\s+(\d+)\**.*?\n(.*?)(?=\n\s*(?:\**Batch|#|---)|\Z)", plan_text, re.DOTALL)
-            for b_num, b_content in batch_matches:
-                b_notes = re.findall(r"\[\[(.*?)\]\]", b_content)
-                if b_notes:
-                    metadata["batches"].append({"id": int(b_num), "notes": list(dict.fromkeys(b_notes))})
-        
-        # Final safety: If there are NO batches detected but notes WERE found, put them in Batch 1
+        # 3. Detect Batches
+        batch_sections = re.findall(r"\*\*Batch (\d+).*?\*\*:(.*?)(?=\*\*Batch|\#|Knowledge Asset Summary|$)", plan_text, re.S)
+        for b_id, b_content in batch_sections:
+            b_notes = re.findall(r"\[\[(.*?)\]\]", b_content)
+            metadata["batches"].append({
+                "id": int(b_id),
+                "notes": list(dict.fromkeys(b_notes))
+            })
+
+        # If there are NO batches detected but notes WERE found, put them in Batch 1
         if not metadata["batches"] and metadata["notes"]:
              metadata["batches"].append({"id": 1, "notes": metadata["notes"]})
 

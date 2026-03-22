@@ -138,20 +138,22 @@ class OkaQueueManager:
                 # 1. Planning
                 res = await self.service.process_file(str(path.absolute()), self.si_path)
                 session_id = res["session_id"]
-                batches = res["plan_structured"].get("batches", [])
-                self.total_batches = len(batches) if batches else 1
+                structured_plan = res["plan_structured"]
+                self.total_batches = len(structured_plan.get("batches", [])) or 1
                 self.status = "deploying"
                 
                 watcher_logger.info(f"Plan generated for {path.name}. Total batches: {self.total_batches}")
                 
-                # 2. Deployment Loop
+                # 2. Deployment Loop - AUTONOMOUS (Confirming automatically)
                 has_more = True
                 temp_batch = 0
                 hub_path = None
                 
                 while has_more and self.auto_process:
+                    # In autonomous mode, we send the exact protocol commands required by the SI
                     command = "Confirm Final Plan & Proceed Batch 1" if temp_batch == 0 else f"Proceed Batch {temp_batch + 1}"
                     
+                    watcher_logger.info(f"Auto-confirming {command} for {path.name}")
                     self.current_batch = temp_batch + 1
                     confirm_res = await self.service.confirm_plan(session_id, command=command)
                     
@@ -166,7 +168,8 @@ class OkaQueueManager:
                     has_more = confirm_res["has_more"]
                     
                     if has_more:
-                        await asyncio.sleep(10) # Rate limit guard (10s between batches)
+                        # Rate limit guard (shorter for auto)
+                        await asyncio.sleep(5) 
                 
                 # 3. Move to note generated
                 generated_dir = self.inbox_path / "note generated"

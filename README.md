@@ -62,6 +62,12 @@ This repository strictly adheres to the `AGENTS.md` protocol. It uses a `.system
 
 ## Changelog
 
+### 2026-03-23 — System Decoupling & Unified Chronos
+- **Obsidian Vault Explorer Decoupled**: The primary Obsidian workspace is now a dedicated, professional side-by-side Markdown file explorer, fully separated from AI ingestion tasks.
+- **Dedicated OKA Agent Hub**: The Obsidian Knowledge Architect (OKA) now resides securely within the Agent Registry, acting as a focused workspace for autonomous ingestion and multi-batch deployment.
+- **Chronos Unified Timeline**: The Chronos Agent now autonomously aggregates events from all accessible Notion databases and merges them with Google Calendar for a consolidated, life-wide timeline.
+- **UI/UX Polished**: Standardized professional aesthetic (eliminated aggressive sci-fi themes), fixed native directory picking for academic folder selection, and improved overall layout constraints.
+
 ### 2026-03-21 — Agent Autonomy & UI Refactor
 - **Agent Console**: Every specialist dashboard now includes a direct execution interface — type a natural language directive and the agent executes it autonomously.
 - **Full Agent Permissions**: All agents (Librarian, Scribe, Chronos, Scholar, Wealth, Gym, DevOps) have unrestricted read/write/edit/delete access to their data domains via `/api/ai/execute/{agent_name}`.

@@ -6,7 +6,7 @@ import { ThemeProvider } from '@/context/theme-provider'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import Onboarding from '@/routes/onboarding'
 import Dashboard from '@/routes/dashboard'
-import Obsidian from '@/routes/obsidian'
+import ObsidianKnowledgeArchitect from '@/routes/obsidian'
 import Notion from '@/routes/notion'
 import Agents from '@/routes/agents'
 import Automations from '@/routes/automations'
@@ -114,7 +114,7 @@ export default function App() {
                   <Routes>
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/obsidian" element={<Obsidian />} />
+                    <Route path="/obsidian" element={<ObsidianKnowledgeArchitect />} />
                     <Route path="/notion" element={<Notion />} />
                     <Route path="/agents" element={<Agents />} />
                     <Route path="/automations" element={<Automations />} />

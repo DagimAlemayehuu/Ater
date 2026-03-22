@@ -77,7 +77,7 @@ const Profiles = () => {
     ];
 
     return (
-        <div className="p-8 max-w-7xl mx-auto min-h-screen bg-[#030303] text-zinc-100">
+        <div className="p-8 max-w-7xl mx-auto min-h-full bg-[#030303] text-zinc-100">
             <header className="mb-10 flex justify-between items-end">
                 <div>
                     <h1 className="text-4xl font-bold tracking-tight mb-2">Life Profiles</h1>

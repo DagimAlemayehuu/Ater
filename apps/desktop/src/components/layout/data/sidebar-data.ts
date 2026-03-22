@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   Database,
   FileText,
-  Settings,
   Users,
   Zap
 } from 'lucide-react'
@@ -56,7 +55,7 @@ export const sidebarData: SidebarData = {
           icon: Zap,
         },
         {
-          title: 'Workforce',
+          title: 'Agents',
           url: '/agents',
           icon: Users,
         },
@@ -64,16 +63,6 @@ export const sidebarData: SidebarData = {
           title: 'Automations',
           url: '/automations',
           icon: Zap,
-        },
-      ],
-    },
-    {
-      title: 'System',
-      items: [
-        {
-          title: 'Settings',
-          url: '/settings',
-          icon: Settings,
         },
       ],
     },
