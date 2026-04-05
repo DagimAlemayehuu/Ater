@@ -150,17 +150,18 @@ function StrategistPromptTextarea({ value, onSave, placeholder }: { value: strin
 /* ─────────────────── Main Component ─────────────────── */
 
 export default function Settings() {
-    const { config, saveConfig, updateCustomPersona, deleteCustomPersona, isLoading } = useConfig()
+    const { config, saveConfig, isLoading } = useConfig()
     const { theme, setTheme } = useTheme()
     const [editingKey, setEditingKey] = useState<string | null>(null)
     const [editValue, setEditValue] = useState('')
     const [activeSection, setActiveSection] = useState<SettingsSection>('general')
     const [activeProfileId, setActiveProfileId] = useState<ProfileId | null>(null)
-    const [showMasterPlanGen, setShowMasterPlanGen] = useState(false)
 
     const [ragStatus, setRagStatus] = useState<{status: string, progress: number, total: number, message: string} | null>(null)
     const [notionStatus, setNotionStatus] = useState<{status: string, progress: number, total: number, message: string} | null>(null)
     const [testStatus, setTestStatus] = useState<{ loading: boolean; success?: boolean; message?: string }>({ loading: false })
+    const [aiTab, setAiTab] = useState<'primary' | 'planner'>('primary')
+    const [testTarget, setTestTarget] = useState<'primary' | 'planner'>('primary')
 
     useEffect(() => {
         if (activeSection !== 'intelligence') return;
@@ -193,8 +194,6 @@ export default function Settings() {
         )
     }
 
-    if (!config) return null
-
     const startEditing = (key: string, current: string) => {
         setEditingKey(key)
         setEditValue(current)
@@ -210,10 +209,11 @@ export default function Settings() {
         }
     }
 
-    const handleTestConnection = async () => {
+    const handleTestConnection = async (target: 'primary' | 'planner' | 'utility' = 'primary') => {
+        setTestTarget(target)
         setTestStatus({ loading: true })
         try {
-            const res = await sidecarApi.testAiConnection()
+            const res = await sidecarApi.testAiConnection(target)
             if (res.success) {
                 setTestStatus({ loading: false, success: true, message: res.message || 'Connected successfully!' })
             } else {
@@ -225,24 +225,6 @@ export default function Settings() {
         // Reset status after 5s
         setTimeout(() => setTestStatus({ loading: false }), 5000)
     }
-
-    const handlePickDirectory = async () => {
-        try {
-            const selected = await open({
-                directory: true,
-                multiple: false,
-                title: 'Select Obsidian Vault Directory'
-            });
-            if (selected) {
-                setEditValue(selected as string);
-                if (editingKey !== 'obsidianVaultPath') {
-                    await saveConfig({ obsidianVaultPath: selected as string });
-                }
-            }
-        } catch (err) {
-            console.error('Failed to open directory picker:', err);
-        }
-    };
 
     const handleClear = async () => {
         if (confirm('Are you sure? This will reset all API keys and local paths.')) {
@@ -266,9 +248,7 @@ export default function Settings() {
     function renderProfileDetail() {
         if (!activeProfileId) return null
         const card = PROFILE_CARDS.find(c => c.id === activeProfileId)
-
         if (!card) return null
-
         const profileValue = (config as any)?.[card.configKey!] || ''
 
         return (
@@ -394,119 +374,282 @@ export default function Settings() {
                         )}
                     </SettingsCard>
 
-                    {/* AI Provider & Model */}
+                    {/* AI Engine */}
                     <SettingsCard
                         title="AI Engine"
                         icon={<Brain size={18} />}
                         value="Select Provider and Configure API Keys"
-                        isEditing={editingKey === 'aiApiKey'}
-                        onEdit={() => startEditing('aiApiKey', config?.aiApiKey || '')}
+                        isEditing={editingKey === 'aiApiKey' || editingKey === 'plannerApiKey' || editingKey === 'utilityApiKey'}
+                        onEdit={() => {
+                            if (aiTab === 'primary') startEditing('aiApiKey', config?.aiApiKey || '')
+                            else if (aiTab === 'planner') startEditing('plannerApiKey', config?.plannerApiKey || '')
+                            else startEditing('utilityApiKey', config?.utilityApiKey || '')
+                        }}
                         onSave={handleSave}
                         onCancel={() => setEditingKey(null)}
                     >
                         <div className="space-y-4">
-                            <div className="space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Provider</label>
-                                <select
-                                    value={config?.aiProvider || 'google'}
-                                    onChange={(e) => {
-                                        const provider = e.target.value;
-                                        // Reset model to a safe default for provider
-                                        let defaultModel = 'gemini-2.5-flash';
-                                        if (provider === 'openai') defaultModel = 'gpt-4o';
-                                        if (provider === 'anthropic') defaultModel = 'claude-3-5-sonnet-latest';
-                                        if (provider === 'groq') defaultModel = 'llama3-8b-8192';
-                                        if (provider === 'openrouter') defaultModel = 'google/gemini-2.0-flash-001';
-                                        
-                                        saveConfig({ aiProvider: provider, aiModel: defaultModel });
-                                    }}
-                                    className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                >
-                                    <option value="google">Google Gemini (Free/Pro)</option>
-                                    <option value="openai">OpenAI (GPT-4o/o1)</option>
-                                    <option value="anthropic">Anthropic Claude</option>
-                                    <option value="groq">Groq (Ultra-Fast/Free)</option>
-                                    <option value="openrouter">OpenRouter (Unified/Free)</option>
-                                </select>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">API Key</label>
-                                {editingKey === 'aiApiKey' ? (
-                                    <input
-                                        type="password"
-                                        value={editValue}
-                                        onChange={(e) => setEditValue(e.target.value)}
-                                        className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                        autoFocus
-                                        placeholder={`Enter ${config?.aiProvider.toUpperCase()} Key`}
-                                    />
-                                ) : (
-                                    <div className="px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm">
-                                        <span>{config?.aiApiKey ? '••••••••' + config?.aiApiKey.slice(-4) : 'Not configured'}</span>
-                                        <Key size={14} className="opacity-50" />
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Model ID</label>
-                                <input
-                                    type="text"
-                                    value={config?.aiModel || ''}
-                                    onChange={(e) => {
-                                        saveConfig({ aiModel: e.target.value });
-                                    }}
-                                    className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                    placeholder="e.g. gemini-2.5-flash, gpt-4o, etc."
-                                />
-                                <p className="text-[10px] text-muted-foreground mt-1">
-                                    {config?.aiProvider === 'google' && "Recommended: gemini-2.5-flash (Free/Fast)"}
-                                    {config?.aiProvider === 'groq' && "Recommended: llama-3.3-70b-versatile"}
-                                    {config?.aiProvider === 'openai' && "Recommended: gpt-4o"}
-                                    {config?.aiProvider === 'anthropic' && "Recommended: claude-3-5-sonnet-latest"}
-                                    {config?.aiProvider === 'openrouter' && "Recommended: google/gemini-2.0-flash-001"}
-                                </p>
-                            </div>
-
-                            <div className="pt-2">
-                                <button
-                                    onClick={handleTestConnection}
-                                    disabled={testStatus.loading || !config?.aiApiKey}
+                            {/* Tabs Header */}
+                            <div className="flex p-1 bg-muted rounded-lg border">
+                                <button 
+                                    onClick={() => setAiTab('primary')}
                                     className={cn(
-                                        "w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-all border shadow-sm",
-                                        testStatus.loading ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
-                                            testStatus.success === true ? "bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400" :
-                                                testStatus.success === false ? "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400" :
-                                                    "bg-background hover:bg-accent text-foreground"
+                                        "flex-1 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all",
+                                        aiTab === 'primary' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                                     )}
                                 >
-                                    {testStatus.loading ? (
-                                        <>
-                                            <Icons.Loader2 size={14} className="animate-spin" />
-                                            Testing Connection...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Zap size={14} className={cn(testStatus.success ? "fill-current" : "")} />
-                                            {testStatus.success === true ? "Connection Valid" :
-                                                testStatus.success === false ? "Connection Failed" : "Test Connection"}
-                                        </>
-                                    )}
+                                    L1: Synthesis
                                 </button>
-                                {testStatus.message && (
-                                    <p className={cn(
-                                        "text-[10px] mt-2 px-2 py-1 rounded border",
-                                        testStatus.success ? "bg-green-500/5 border-green-500/10 text-green-600 dark:text-green-500" : "bg-red-500/5 border-red-500/10 text-red-600 dark:text-red-500"
-                                    )}>
-                                        {testStatus.message}
-                                    </p>
-                                )}
+                                <button 
+                                    onClick={() => setAiTab('planner')}
+                                    className={cn(
+                                        "flex-1 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all",
+                                        aiTab === 'planner' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    L2: Planning
+                                </button>
+                                <button 
+                                    onClick={() => setAiTab('utility')}
+                                    className={cn(
+                                        "flex-1 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all",
+                                        aiTab === 'utility' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    L3: Utility
+                                </button>
                             </div>
+
+                            {aiTab === 'primary' && (
+                                <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-200">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L1 Provider</label>
+                                        <select
+                                            value={config?.aiProvider || 'google'}
+                                            onChange={(e) => {
+                                                const provider = e.target.value;
+                                                let defaultModel = 'gemini-2.0-flash';
+                                                if (provider === 'openai') defaultModel = 'gpt-4o';
+                                                if (provider === 'anthropic') defaultModel = 'claude-3-5-sonnet-latest';
+                                                if (provider === 'groq') defaultModel = 'llama-3.3-70b-versatile';
+                                                if (provider === 'openrouter') defaultModel = 'google/gemini-2.0-flash-001';
+                                                saveConfig({ aiProvider: provider, aiModel: defaultModel });
+                                            }}
+                                            className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                        >
+                                            <option value="google">Google Gemini</option>
+                                            <option value="openai">OpenAI</option>
+                                            <option value="anthropic">Anthropic</option>
+                                            <option value="groq">Groq (Fast/Free)</option>
+                                            <option value="openrouter">OpenRouter</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L1 API Key</label>
+                                        {editingKey === 'aiApiKey' ? (
+                                            <input
+                                                type="password"
+                                                value={editValue}
+                                                onChange={(e) => setEditValue(e.target.value)}
+                                                className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                                autoFocus
+                                                placeholder={`Enter ${config?.aiProvider.toUpperCase()} Key`}
+                                            />
+                                        ) : (
+                                            <div className="px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm">
+                                                <span>{config?.aiApiKey ? '••••••••' + config?.aiApiKey.slice(-4) : 'Not configured'}</span>
+                                                <Key size={14} className="opacity-50" />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L1 Model ID</label>
+                                        <input
+                                            type="text"
+                                            value={config?.aiModel || ''}
+                                            onChange={(e) => saveConfig({ aiModel: e.target.value })}
+                                            className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                        />
+                                    </div>
+
+                                    <div className="pt-2">
+                                        <button
+                                            onClick={() => handleTestConnection('primary')}
+                                            disabled={testStatus.loading || !config?.aiApiKey}
+                                            className={cn(
+                                                "w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-all border shadow-sm",
+                                                testStatus.loading && testTarget === 'primary' ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
+                                                    testStatus.success === true && testTarget === 'primary' ? "bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400" :
+                                                        testStatus.success === false && testTarget === 'primary' ? "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400" :
+                                                            "bg-background hover:bg-accent text-foreground"
+                                            )}
+                                        >
+                                            {testStatus.loading && testTarget === 'primary' ? (
+                                                <><Icons.Loader2 size={14} className="animate-spin" /> Testing...</>
+                                            ) : (
+                                                <><Zap size={14} className={cn(testStatus.success && testTarget === 'primary' ? "fill-current" : "")} /> Test L1 Connection</>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {aiTab === 'planner' && (
+                                <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-200">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L2 Provider</label>
+                                        <select
+                                            value={config?.plannerProvider || 'google'}
+                                            onChange={(e) => {
+                                                const provider = e.target.value;
+                                                let defaultModel = 'gemini-2.0-flash';
+                                                saveConfig({ plannerProvider: provider, plannerModel: defaultModel });
+                                            }}
+                                            className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                        >
+                                            <option value="google">Google Gemini</option>
+                                            <option value="groq">Groq</option>
+                                            <option value="openrouter">OpenRouter</option>
+                                            <option value="openai">OpenAI</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L2 API Key (Optional)</label>
+                                        {editingKey === 'plannerApiKey' ? (
+                                            <input
+                                                type="password"
+                                                value={editValue}
+                                                onChange={(e) => setEditValue(e.target.value)}
+                                                className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                                autoFocus
+                                                placeholder="Defaults to L1 Key"
+                                            />
+                                        ) : (
+                                            <div className="px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm">
+                                                <span>{config?.plannerApiKey ? '••••••••' + config?.plannerApiKey.slice(-4) : 'Using L1 Key'}</span>
+                                                <Key size={14} className="opacity-50" />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L2 Model ID</label>
+                                        <input
+                                            type="text"
+                                            value={config?.plannerModel || ''}
+                                            onChange={(e) => saveConfig({ plannerModel: e.target.value })}
+                                            className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                        />
+                                    </div>
+
+                                    <div className="pt-2">
+                                        <button
+                                            onClick={() => handleTestConnection('planner')}
+                                            disabled={testStatus.loading || (!config?.plannerApiKey && !config?.aiApiKey)}
+                                            className={cn(
+                                                "w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-all border shadow-sm",
+                                                testStatus.loading && testTarget === 'planner' ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
+                                                    testStatus.success === true && testTarget === 'planner' ? "bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400" :
+                                                        testStatus.success === false && testTarget === 'planner' ? "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400" :
+                                                            "bg-background hover:bg-accent text-foreground"
+                                            )}
+                                        >
+                                            {testStatus.loading && testTarget === 'planner' ? (
+                                                <><Icons.Loader2 size={14} className="animate-spin" /> Testing...</>
+                                            ) : (
+                                                <><Zap size={14} className={cn(testStatus.success && testTarget === 'planner' ? "fill-current" : "")} /> Test L2 Connection</>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {aiTab === 'utility' && (
+                                <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-200">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L3 Provider</label>
+                                        <select
+                                            value={config?.utilityProvider || 'google'}
+                                            onChange={(e) => {
+                                                const provider = e.target.value;
+                                                let defaultModel = 'gemini-1.5-flash-8b';
+                                                saveConfig({ utilityProvider: provider, utilityModel: defaultModel });
+                                            }}
+                                            className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                        >
+                                            <option value="google">Google Gemini (Recommended)</option>
+                                            <option value="groq">Groq</option>
+                                            <option value="openrouter">OpenRouter</option>
+                                            <option value="openai">OpenAI</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L3 API Key (Optional)</label>
+                                        {editingKey === 'utilityApiKey' ? (
+                                            <input
+                                                type="password"
+                                                value={editValue}
+                                                onChange={(e) => setEditValue(e.target.value)}
+                                                className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                                autoFocus
+                                                placeholder="Defaults to L2 Key"
+                                            />
+                                        ) : (
+                                            <div className="px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm">
+                                                <span>{config?.utilityApiKey ? '••••••••' + config?.utilityApiKey.slice(-4) : 'Using L2 Key'}</span>
+                                                <Key size={14} className="opacity-50" />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L3 Model ID</label>
+                                        <input
+                                            type="text"
+                                            value={config?.utilityModel || ''}
+                                            onChange={(e) => saveConfig({ utilityModel: e.target.value })}
+                                            className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                        />
+                                    </div>
+
+                                    <div className="pt-2">
+                                        <button
+                                            onClick={() => handleTestConnection('utility')}
+                                            disabled={testStatus.loading || (!config?.utilityApiKey && !config?.plannerApiKey && !config?.aiApiKey)}
+                                            className={cn(
+                                                "w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-all border shadow-sm",
+                                                testStatus.loading && testTarget === 'utility' ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
+                                                    testStatus.success === true && testTarget === 'utility' ? "bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400" :
+                                                        testStatus.success === false && testTarget === 'utility' ? "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400" :
+                                                            "bg-background hover:bg-accent text-foreground"
+                                            )}
+                                        >
+                                            {testStatus.loading && testTarget === 'utility' ? (
+                                                <><Icons.Loader2 size={14} className="animate-spin" /> Testing...</>
+                                            ) : (
+                                                <><Zap size={14} className={cn(testStatus.success && testTarget === 'utility' ? "fill-current" : "")} /> Test L3 Connection</>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {testStatus.message && (
+                                <p className={cn(
+                                    "text-[10px] mt-2 px-2 py-1 rounded border animate-in fade-in zoom-in-95",
+                                    testStatus.success ? "bg-green-500/5 border-green-500/10 text-green-600 dark:text-green-500" : "bg-red-500/5 border-red-500/10 text-red-600 dark:text-red-500"
+                                )}>
+                                    {testStatus.message}
+                                </p>
+                            )}
                         </div>
                     </SettingsCard>
 
-                    {/* Obsidian */}
+                    {/* Obsidian & Inbox */}
                     <div className="flex flex-col gap-4">
                         <SettingsCard
                             title="Obsidian Vault"
@@ -518,7 +661,7 @@ export default function Settings() {
                             onCancel={() => setEditingKey(null)}
                         >
                             <div className="flex gap-2">
-                                <div className="flex-1 px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm overflow-hidden content-center border border-transparent">
+                                <div className="flex-1 px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm overflow-hidden border border-transparent">
                                     <span className="truncate pr-2">{editingKey === 'obsidianVaultPath' ? editValue : (config?.obsidianVaultPath || 'Not selected')}</span>
                                 </div>
                                 {editingKey === 'obsidianVaultPath' && (
@@ -529,7 +672,7 @@ export default function Settings() {
                                                 if (selected) setEditValue(selected as string);
                                             } catch (err) { console.error(err); }
                                         }}
-                                        className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground border border-input bg-background shadow-sm px-3 py-2 shrink-0"
+                                        className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent border border-input bg-background shadow-sm px-3 py-2 shrink-0"
                                     >
                                         <FolderOpen size={16} />
                                     </button>
@@ -547,7 +690,7 @@ export default function Settings() {
                             onCancel={() => setEditingKey(null)}
                         >
                             <div className="flex gap-2">
-                                <div className="flex-1 px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm overflow-hidden content-center border border-transparent">
+                                <div className="flex-1 px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm overflow-hidden border border-transparent">
                                     <span className="truncate pr-2">{editingKey === 'academicFolderPath' ? editValue : (config?.academicFolderPath || '1-Academic')}</span>
                                 </div>
                                 {editingKey === 'academicFolderPath' && (
@@ -560,79 +703,71 @@ export default function Settings() {
                                                     title: 'Select Academic Folder',
                                                     defaultPath: config?.obsidianVaultPath
                                                 });
-                                                if (selected) {
-                                                    // We want to store it relative to the vault if possible, 
-                                                    // but for UX simplicity let's just take the folder name if it's inside, 
-                                                    // or the full path. The backend handles Path(base).
-                                                    setEditValue(selected as string);
-                                                }
-                                            } catch (err) { console.error(err); }
-                                        }}
-                                        className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground border border-input bg-background shadow-sm px-3 py-2 shrink-0"
-                                    >
-                                        <FolderOpen size={16} />
-                                    </button>
-                                )}
-                            </div>
-                            <p className="text-[10px] text-muted-foreground mt-2">All OKA notes will be architected relative to this folder.</p>
-                        </SettingsCard>
-                    </div>
-
-                    {/* Inbox Watcher */}
-                    <SettingsCard
-                        title="Inbox Watcher"
-                        icon={<Zap size={18} className="text-primary" />}
-                        value="Autonomous file ingestion pipeline"
-                        isEditing={editingKey === 'inboxPath'}
-                        onEdit={() => startEditing('inboxPath', config?.inboxPath || '')}
-                        onSave={handleSave}
-                        onCancel={() => setEditingKey(null)}
-                    >
-                        <div className="space-y-4">
-                            <div className="flex gap-2">
-                                <div className="flex-1 px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm overflow-hidden content-center">
-                                    <span className="truncate pr-2">{editingKey === 'inboxPath' ? editValue : (config?.inboxPath || 'Not selected')}</span>
-                                </div>
-                                {editingKey === 'inboxPath' && (
-                                    <button
-                                        onClick={async () => {
-                                            try {
-                                                const selected = await open({ directory: true, multiple: false, title: 'Select Inbox Folder' });
                                                 if (selected) setEditValue(selected as string);
                                             } catch (err) { console.error(err); }
                                         }}
-                                        className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground border border-input bg-background shadow-sm px-3 py-2 shrink-0"
+                                        className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent border border-input bg-background shadow-sm px-3 py-2 shrink-0"
                                     >
                                         <FolderOpen size={16} />
                                     </button>
                                 )}
                             </div>
+                        </SettingsCard>
 
-                            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                                <div className="space-y-0.5">
-                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Auto-Deploy</label>
-                                    <p className="text-[10px] text-muted-foreground">Automatically process new files</p>
-                                </div>
-                                <button
-                                    onClick={async () => {
-                                        const newVal = !config?.autoDeploy;
-                                        await saveConfig({ autoDeploy: newVal });
-                                        // If watcher is active, we might need to tell the sidecar to toggle
-                                        try { await sidecarApi.okaWatcherToggle(); } catch(e) {}
-                                    }}
-                                    className={cn(
-                                        "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                                        config?.autoDeploy ? "bg-primary" : "bg-input"
+                        <SettingsCard
+                            title="Inbox Watcher"
+                            icon={<Zap size={18} className="text-primary" />}
+                            value="Autonomous file ingestion pipeline"
+                            isEditing={editingKey === 'inboxPath'}
+                            onEdit={() => startEditing('inboxPath', config?.inboxPath || '')}
+                            onSave={handleSave}
+                            onCancel={() => setEditingKey(null)}
+                        >
+                            <div className="space-y-4">
+                                <div className="flex gap-2">
+                                    <div className="flex-1 px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm overflow-hidden">
+                                        <span className="truncate pr-2">{editingKey === 'inboxPath' ? editValue : (config?.inboxPath || 'Not selected')}</span>
+                                    </div>
+                                    {editingKey === 'inboxPath' && (
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const selected = await open({ directory: true, multiple: false, title: 'Select Inbox Folder' });
+                                                    if (selected) setEditValue(selected as string);
+                                                } catch (err) { console.error(err); }
+                                            }}
+                                            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent border border-input bg-background shadow-sm px-3 py-2 shrink-0"
+                                        >
+                                            <FolderOpen size={16} />
+                                        </button>
                                     )}
-                                >
-                                    <span className={cn(
-                                        "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
-                                        config?.autoDeploy ? "translate-x-4" : "translate-x-1"
-                                    )} />
-                                </button>
+                                </div>
+
+                                <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                                    <div className="space-y-0.5">
+                                        <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Auto-Deploy</label>
+                                        <p className="text-[10px] text-muted-foreground">Automatically process new files</p>
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            const newVal = !config?.autoDeploy;
+                                            await saveConfig({ autoDeploy: newVal });
+                                            try { await sidecarApi.okaWatcherToggle(); } catch(e) {}
+                                        }}
+                                        className={cn(
+                                            "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                            config?.autoDeploy ? "bg-primary" : "bg-input"
+                                        )}
+                                    >
+                                        <span className={cn(
+                                            "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
+                                            config?.autoDeploy ? "translate-x-4" : "translate-x-1"
+                                        )} />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    </SettingsCard>
+                        </SettingsCard>
+                    </div>
                 </div>
 
                 <div className="mt-8">
@@ -646,9 +781,6 @@ export default function Settings() {
                                 <Trash2 size={16} className="mr-2" />
                                 Reset Config
                             </button>
-                            <p className="text-sm text-muted-foreground mt-4 leading-relaxed">
-                                Keys are securely stored via your OS keychain system. Clearing this will remove integrations.
-                            </p>
                         </CardContent>
                     </Card>
                 </div>
@@ -664,7 +796,6 @@ export default function Settings() {
                     <h2 className="text-2xl font-bold tracking-tight">Identity Profiles</h2>
                     <p className="text-muted-foreground">Manage your core foundational profiles.</p>
                 </div>
-
                 {renderProfileCategory('Domains', PROFILE_CARDS)}
             </div>
         )
@@ -675,57 +806,22 @@ export default function Settings() {
             <div className="space-y-4">
                 <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {cards.map((card) => {
-                        const profileValue = (config as any)?.[card.configKey!]?.trim() || '';
-                        let completionPct = 0;
-                        let status: 'Setup' | 'Partial' | 'Complete' = 'Setup';
-
-                        if (profileValue.length > 0 && card.schema) {
-                            const totalFields = card.schema.reduce((acc: number, s: any) => acc + s.fields.length, 0);
-                            const filledFieldMatches = profileValue.match(/^[-*]\s+.+?:\s*(.+)$/gm);
-                            const filledFieldsCount = filledFieldMatches
-                                ? filledFieldMatches.filter((m: string) => {
-                                    const val = m.split(/:\s*(.*)/s)[1];
-                                    return val && val.trim().length > 0;
-                                }).length
-                                : 0;
-
-                            completionPct = Math.min(100, Math.round((filledFieldsCount / totalFields) * 100));
-                            if (completionPct === 100) status = 'Complete';
-                            else if (completionPct > 0) status = 'Partial';
-                        } else if (profileValue.length > 0) {
-                            status = 'Complete';
-                        }
-
-                        return (
-                            <button
-                                key={card.id}
-                                onClick={() => setActiveProfileId(card.id)}
-                                className="group flex items-start gap-4 p-4 rounded-xl border bg-card text-card-foreground shadow-sm hover:border-primary/50 transition-colors text-left"
-                            >
-                                <div className="p-2 rounded-md bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors mt-0.5">
-                                    {card.icon}
-                                </div>
-                                <div className="flex-1 space-y-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <h4 className="font-semibold">{card.title}</h4>
-                                        {status !== 'Setup' && (
-                                            <span className={cn(
-                                                "text-[10px] px-1.5 py-0.5 rounded-full font-medium leading-none",
-                                                status === 'Complete' ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-primary/10 text-primary"
-                                            )}>
-                                                {status === 'Complete' ? 'Done' : `${completionPct}%`}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-sm text-muted-foreground line-clamp-2">
-                                        {card.description}
-                                    </p>
-                                </div>
-                                <ArrowRight size={16} className="opacity-0 group-hover:opacity-50 transition-opacity mt-1 shrink-0" />
-                            </button>
-                        )
-                    })}
+                    {cards.map((card) => (
+                        <button
+                            key={card.id}
+                            onClick={() => setActiveProfileId(card.id)}
+                            className="group flex items-start gap-4 p-4 rounded-xl border bg-card text-card-foreground shadow-sm hover:border-primary/50 transition-colors text-left"
+                        >
+                            <div className="p-2 rounded-md bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors mt-0.5">
+                                {card.icon}
+                            </div>
+                            <div className="flex-1 space-y-1 min-w-0">
+                                <h4 className="font-semibold">{card.title}</h4>
+                                <p className="text-sm text-muted-foreground line-clamp-2">{card.description}</p>
+                            </div>
+                            <ArrowRight size={16} className="opacity-0 group-hover:opacity-50 transition-opacity mt-1 shrink-0" />
+                        </button>
+                    ))}
                 </div>
             </div>
         )
@@ -737,105 +833,64 @@ export default function Settings() {
             <div className="w-full space-y-6 animate-in fade-in duration-300">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">Intelligence Tuning</h2>
-                    <p className="text-muted-foreground">Calibrate the Strategist persona, memory engine, and core directives.</p>
+                    <p className="text-muted-foreground">Calibrate memory and persona directives.</p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
-                    {/* RAG & Memory Controls */}
                     <Card>
-                        <CardHeader title="Memory & Context (RAG Engine)" description="Manage the local vector database that gives your AI access to your entire Obsidian Vault and Notion databases." icon={<Database size={18} className="text-primary" />} />
+                        <CardHeader title="Memory & Context (RAG Engine)" description="Manage the local vector database." icon={<Database size={18} className="text-primary" />} />
                         <CardContent className="space-y-4">
                             <div className="flex flex-col gap-3">
                                 <div className="flex flex-col gap-3 p-3 rounded-md bg-muted/50 border">
                                     <div className="flex items-center justify-between">
                                         <div className="space-y-0.5">
-                                            <div className="text-sm font-medium">Vault Sync (Local Memory)</div>
-                                            <div className="text-xs text-muted-foreground">Force the AI to re-read and embed your entire Obsidian Vault.</div>
+                                            <div className="text-sm font-medium">Vault Sync</div>
+                                            <div className="text-xs text-muted-foreground">Force re-read of Obsidian Vault.</div>
                                         </div>
                                         <button
                                             onClick={async () => {
                                                 if (ragStatus?.status === 'syncing') return;
-                                                setRagStatus(prev => ({ ...(prev || { progress: 0, total: 0 }), status: 'syncing', message: 'Requesting force sync...' }));
-                                                try {
-                                                    await sidecarApi.ragSyncVault()
-                                                } catch (e: any) { alert('Failed: ' + e.message) }
+                                                setRagStatus(prev => ({ ...(prev || { progress: 0, total: 0 }), status: 'syncing', message: 'Syncing...' }));
+                                                try { await sidecarApi.ragSyncVault() } catch (e: any) { alert(e.message) }
                                             }}
                                             disabled={ragStatus?.status === 'syncing'}
-                                            className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                            className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 disabled:opacity-50"
                                         >
-                                            {ragStatus?.status === 'syncing' ? (
-                                                <span className="flex items-center gap-2"><RefreshCw size={12} className="animate-spin" /> Syncing...</span>
-                                            ) : 'Force Sync Vault'}
+                                            {ragStatus?.status === 'syncing' ? 'Syncing...' : 'Force Sync Vault'}
                                         </button>
                                     </div>
-                                    {ragStatus?.status === 'syncing' && (
-                                        <div className="w-full space-y-1">
-                                            <div className="flex justify-between text-[10px] text-muted-foreground">
-                                                <span>{ragStatus.message}</span>
-                                                {ragStatus.total > 0 && (
-                                                    <span>{Math.round((ragStatus.progress / ragStatus.total) * 100)}% ({ragStatus.progress}/{ragStatus.total})</span>
-                                                )}
-                                            </div>
-                                            <div className="w-full h-1.5 bg-background border border-border/50 rounded-full overflow-hidden">
-                                                <div className="h-full bg-primary transition-all duration-300" style={{ width: ragStatus.total > 0 ? `${Math.max(5, (ragStatus.progress / ragStatus.total) * 100)}%` : '5%' }} />
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
 
                                 <div className="flex flex-col gap-3 p-3 rounded-md bg-muted/50 border">
                                     <div className="flex items-center justify-between">
                                         <div className="space-y-0.5">
-                                            <div className="text-sm font-medium">Notion Mirror Sync</div>
-                                            <div className="text-xs text-muted-foreground">Pull all Notion databases into Obsidian Markdown files for the AI to read.</div>
+                                            <div className="text-sm font-medium">Notion Mirror</div>
+                                            <div className="text-xs text-muted-foreground">Pull all Notion databases to Obsidian.</div>
                                         </div>
                                         <button
                                             onClick={async () => {
                                                 if (notionStatus?.status === 'syncing') return;
-                                                setNotionStatus(prev => ({ ...(prev || { progress: 0, total: 0 }), status: 'syncing', message: 'Requesting Notion sync...' }));
-                                                try {
-                                                    await sidecarApi.syncNotionMirror()
-                                                } catch (e: any) { alert('Failed: ' + e.message) }
+                                                setNotionStatus(prev => ({ ...(prev || { progress: 0, total: 0 }), status: 'syncing', message: 'Syncing...' }));
+                                                try { await sidecarApi.syncNotionMirror() } catch (e: any) { alert(e.message) }
                                             }}
                                             disabled={notionStatus?.status === 'syncing'}
-                                            className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                            className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 disabled:opacity-50"
                                         >
-                                            {notionStatus?.status === 'syncing' ? (
-                                                <span className="flex items-center gap-2"><RefreshCw size={12} className="animate-spin" /> Syncing...</span>
-                                            ) : 'Sync Notion to Obsidian'}
+                                            {notionStatus?.status === 'syncing' ? 'Syncing...' : 'Sync Notion'}
                                         </button>
                                     </div>
-                                    {notionStatus?.status === 'syncing' && (
-                                        <div className="w-full space-y-1">
-                                            <div className="flex justify-between text-[10px] text-muted-foreground">
-                                                <span>{notionStatus.message}</span>
-                                                {notionStatus.total > 0 && (
-                                                    <span>{Math.round((notionStatus.progress / notionStatus.total) * 100)}% ({notionStatus.progress}/{notionStatus.total})</span>
-                                                )}
-                                            </div>
-                                            <div className="w-full h-1.5 bg-background border border-border/50 rounded-full overflow-hidden">
-                                                <div className="h-full bg-primary transition-all duration-300" style={{ width: notionStatus.total > 0 ? `${Math.max(5, (notionStatus.progress / notionStatus.total) * 100)}%` : '5%' }} />
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Persona Tuning Sliders */}
                     <Card>
-                        <CardHeader title="Strategist Blueprint" description="Visual calibration of personality traits and response styles." icon={<Sliders size={18} className="text-primary" />} />
+                        <CardHeader title="Strategist Blueprint" description="Visual trait calibration." icon={<Sliders size={18} className="text-primary" />} />
                         <CardContent>
-                            <StrategistSliders
-                                value={config?.strategistSliders || '{}'}
-                                onChange={(val) => saveConfig({ strategistSliders: val })}
-                                type="strategist"
-                            />
+                            <StrategistSliders value={config?.strategistSliders || '{}'} onChange={(val) => saveConfig({ strategistSliders: val })} type="strategist" />
                         </CardContent>
                     </Card>
 
-                    {/* Ground Truth & Prompting */}
                     {renderProfileCategory('Logic & Ground Truth', PROFILE_CARDS.filter(c => c.category !== 'profiles'))}
                 </div>
             </div>
@@ -849,9 +904,7 @@ export default function Settings() {
                     <SettingsIcon size={24} className="text-muted-foreground" />
                     Settings
                 </h2>
-                <p className="text-muted-foreground">
-                    Manage your preferences, profiles, API keys, and system architecture.
-                </p>
+                <p className="text-muted-foreground">Manage your architecture and credentials.</p>
             </div>
 
             <div className="shrink-0 bg-border h-[1px] w-full my-6" />
@@ -862,10 +915,7 @@ export default function Settings() {
                         {sidebarItems.map((item) => (
                             <button
                                 key={item.section}
-                                onClick={() => {
-                                    setActiveSection(item.section)
-                                    setActiveProfileId(null)
-                                }}
+                                onClick={() => { setActiveSection(item.section); setActiveProfileId(null); }}
                                 className={cn(
                                     "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground justify-start shrink-0 lg:w-full",
                                     activeSection === item.section ? "bg-muted text-foreground" : "text-muted-foreground"

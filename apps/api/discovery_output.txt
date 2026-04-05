@@ -1,0 +1,454 @@
+Connecting to Notion...
+
+--- DISCOVERY COMPLETED: Found 35 Databases ---
+
+DATABASE: Projects
+ID: 2a9219ed-7519-81fb-a4ca-f81ce93f1501
+PROPERTIES:
+  - Tasks (relation)
+  - Edited (last_edited_time)
+  - Archive (checkbox)
+  - Goal Relation (relation)
+  - Progress (rollup)
+  - Duration (date)
+  - Status (status)
+  - Area (select)
+  - Created (created_time)
+  - Priority (select)
+  - Name (title)
+------------------------------
+DATABASE: Notes Archive
+ID: 2a9219ed-7519-8150-8f1f-dbea104e37d7
+PROPERTIES:
+  - Area (select)
+  - Name (title)
+------------------------------
+DATABASE: Time Block
+ID: 2df219ed-7519-805e-a692-c77fbfb55778
+PROPERTIES:
+  - Type of Block (select)
+  - Unit (relation)
+  - Task (relation)
+  - Status (status)
+  - Start Time (date)
+  - Name (title)
+------------------------------
+DATABASE: Study Planner
+ID: 2a9219ed-7519-81e2-81f8-de21e47c26fc
+PROPERTIES:
+  - 1 (checkbox)
+  - 2 (checkbox)
+  - 3 (checkbox)
+  - Study Blocks (relation)
+  - NoteBookLM  (url)
+  - Confidence (select)
+  - Upcoming Exam Date (rollup)
+  -  Unit (select)
+  - Course (relation)
+  - Display (formula)
+  - Review Date (formula)
+  - Start Session (button)
+  - Tested On (relation)
+  - Difficulty (select)
+  - Study Date (date)
+  - Name of Unit (title)
+------------------------------
+DATABASE: Exams
+ID: 2a9219ed-7519-8182-be2c-e7e7523dcf3b
+PROPERTIES:
+  - Edited (last_edited_time)
+  - Total Score (number)
+  - Type of Exam (select)
+  - Units in Exam (relation)
+  - Mode (select)
+  - Goal (number)
+  - Exam Date (date)
+  - Remaining (formula)
+  - Scored (number)
+  - Created (created_time)
+  - Course (relation)
+  - Name (title)
+------------------------------
+DATABASE: Calendar
+ID: 2a9219ed-7519-81f8-bfab-cccbc720a78c
+PROPERTIES:
+  - Date (date)
+  - Type (select)
+  - Start and Ending (formula)
+  - Name (title)
+------------------------------
+DATABASE: Courses
+ID: 2a9219ed-7519-817e-aedb-da156d06134c
+PROPERTIES:
+  - Difficulty (select)
+  - Exam Date (formula)
+  - Display (formula)
+  - Semester (relation)
+  - Exam Date Data (rollup)
+  - Units (relation)
+  - Professor (relation)
+  - Grade (select)
+  - Exams (relation)
+  - Course Code (rich_text)
+  - Credit Hour (number)
+  - Goal (select)
+  - Course Name (title)
+------------------------------
+DATABASE: Tasks
+ID: 2a9219ed-7519-8185-8d5d-fd7cf8081bc0
+PROPERTIES:
+  - Parent Task (relation)
+  - Due Date (date)
+  - Sub Task (relation)
+  - Project Relation (relation)
+  - Priority (select)
+  - Time Entities (relation)
+  - Assignment Relation (relation)
+  - Start Tracking (button)
+  - Do Date (date)
+  - Done (checkbox)
+  - Task Type (select)
+  - Goal Relation (relation)
+  - Stop Tracking (button)
+  - Name (title)
+------------------------------
+DATABASE: Assignments
+ID: 2a9219ed-7519-816a-a0cf-ed1a32abce49
+PROPERTIES:
+  - Edited (last_edited_time)
+  - Tasks (relation)
+  - Archive (checkbox)
+  - Due Date (date)
+  - Remaining (formula)
+  - Progress (formula)
+  - Status (status)
+  - Created (created_time)
+  - Priority (select)
+  - Course (relation)
+  - Name (title)
+------------------------------
+DATABASE: Untitled
+ID: 2a9219ed-7519-816f-bcd9-f1bcc9d3aa78
+PROPERTIES:
+  - Name (title)
+------------------------------
+DATABASE: Goals
+ID: 2a9219ed-7519-815f-ac0f-ebfcd1dcd003
+PROPERTIES:
+  - Priority (select)
+  - Yearly Quarter (select)
+  - Completed (checkbox)
+  - Due Date (date)
+  - Related Goals (relation)
+  - Week (select)
+  - Type of Goal (select)
+  - Remaining (formula)
+  - Related Projects (relation)
+  - Tasks Related (relation)
+  - Area (select)
+  - Year (select)
+  - Month (select)
+  - Name (title)
+------------------------------
+DATABASE: Workouts
+ID: 2a9219ed-7519-813b-b977-cc9b3f329f81
+PROPERTIES:
+  - Date (date)
+  - Sets (relation)
+  - No. of Exercises (rollup)
+  - Exercises (relation)
+  - Workout Summary (formula)
+  - Muscle Groups Worked (rollup)
+  - Name (title)
+------------------------------
+DATABASE: Muscle Groups
+ID: 2a9219ed-7519-814c-8187-f73dbece70dc
+PROPERTIES:
+  - Exercises (relation)
+  - Area (select)
+  - Day (rollup)
+  - Last Workout (formula)
+  - Picture (files)
+  - Name (title)
+------------------------------
+DATABASE: Body Measurements and Progress
+ID: 2a9219ed-7519-8189-9092-e8388fdc517e
+PROPERTIES:
+  - Waist (Narrowest) (number)
+  - Shoulder (number)
+  - Side (files)
+  - Bicep Flexed (L) (number)
+  - Measurment Date (date)
+  - Bicep Relaxed (R) (number)
+  - Body Weight (Kg) (number)
+  - Calf (L) (number)
+  - Bicep Relaxed (L) (number)
+  - Thigh (L) (number)
+  - Front (files)
+  - Back (files)
+  - Height (cm) (number)
+  - Calf (R) (number)
+  - Bicep Flexed (R) (number)
+  - Hips (Widest) (number)
+  - Thigh (R) (number)
+  - Chest (number)
+  - Forearm (R) (number)
+  - Forearm (L) (number)
+  - Notes (title)
+------------------------------
+DATABASE: Exercises
+ID: 2a9219ed-7519-81ce-9eec-d64821c61062
+PROPERTIES:
+  - Day (select)
+  - Workouts (relation)
+  - Sets (relation)
+  - Days Ago (formula)
+  - Last Workout (formula)
+  - Type (select)
+  - Muscle Groups (relation)
+  - Best Weight (rollup)
+  - Name (title)
+------------------------------
+DATABASE: Workout logger
+ID: 2a9219ed-7519-81fe-b7a8-fed542505d07
+PROPERTIES:
+  - Set 1 (number)
+  - Date (date)
+  - Priority (select)
+  - Set 3 (number)
+  - Muscles Worked (rollup)
+  - Weight (number)
+  - Rollup (rollup)
+  - Volume (formula)
+  - Set 2 (number)
+  - Workouts (relation)
+  - Exercise (relation)
+  - Next Set (formula)
+  - Display (formula)
+  - name (title)
+------------------------------
+DATABASE: Semesters
+ID: 2a9219ed-7519-8106-8a97-dfdc9c88911b
+PROPERTIES:
+  - Name (title)
+------------------------------
+DATABASE: Journal
+ID: 2a9219ed-7519-8110-b509-e05d052b3fe8
+PROPERTIES:
+  - Comment (rich_text)
+  - Carbs (number)
+  - Calories (number)
+  - Date (date)
+  - Calendar Weight Formula (formula)
+  - Weight (number)
+  - Protein (number)
+  - Fat (number)
+  - Calendar Carbs Formula (formula)
+  - Calendar Calories Formula (formula)
+  - Calendar Protein Formula (formula)
+  - Calendar Fat Formula (formula)
+  -   (title)
+------------------------------
+DATABASE: CRM
+ID: 2a9219ed-7519-8126-a08f-c31d107035ee
+PROPERTIES:
+  - Email (email)
+  - Phone (phone_number)
+  - Type (select)
+  - Course (relation)
+  - Name (title)
+------------------------------
+DATABASE: Meals
+ID: 2a9219ed-7519-8134-88c3-da8248a01020
+PROPERTIES:
+  - Carbs Value (formula)
+  - Fat Value (formula)
+  - Total Calories (rollup)
+  - Price Value (formula)
+  - Ingridients (relation)
+  - Total Price (rollup)
+  - Protien Value (formula)
+  - Total Fat (rollup)
+  - Meal Type (select)
+  - Total Carbs (rollup)
+  - Calories Value (formula)
+  - Total Protien (rollup)
+  - Name (title)
+------------------------------
+DATABASE: Food Reference
+ID: 2a9219ed-7519-815e-8c77-eb95a02d28e6
+PROPERTIES:
+  - Fat (g) (number)
+  - Serving Size (g) (number)
+  - Measured in (select)
+  - Calories (kcal) (number)
+  - Carbs (g) (number)
+  - Protein (g) (number)
+  - Shopping Cart (relation)
+  - Price (number)
+  - Type (select)
+  - Quantity (number)
+  - Add to Cart (button)
+  - Food (title)
+------------------------------
+DATABASE: Nutrition Targets 
+ID: 2a9219ed-7519-8181-9e81-ca35e1081dd5
+PROPERTIES:
+  - Calorie Goal (number)
+  - Protein Goal (number)
+  - Name (title)
+------------------------------
+DATABASE: Ingredient Nutrition Calculator
+ID: 2a9219ed-7519-8192-95c3-ce3b91a92696
+PROPERTIES:
+  - Carb Reference (rollup)
+  - Ammount (number)
+  - Meals (relation)
+  - Total Fat (formula)
+  - Total Price (formula)
+  - Protien Reference (rollup)
+  - Total Carbs (formula)
+  - Reference (relation)
+  - Serving Size Reference (rollup)
+  - Calories Reference (rollup)
+  - Total Protien (formula)
+  - Fat Reference (rollup)
+  - Price Reference (rollup)
+  - Measured in (rollup)
+  - Total Calories (formula)
+  - Ingredient (title)
+------------------------------
+DATABASE: Meal Plan
+ID: 2a9219ed-7519-8193-8cb6-e764a9ab4240
+PROPERTIES:
+  - Dinner (relation)
+  - Lunch (relation)
+  - Other (relation)
+  - Breakfast (relation)
+  - Day (title)
+------------------------------
+DATABASE: Groceries
+ID: 2a9219ed-7519-81b3-9b77-f72ac2ae63e3
+PROPERTIES:
+  - Shopping Cart (relation)
+  - Total Price (rollup)
+  - Date (date)
+  - Name (title)
+------------------------------
+DATABASE: Daily Tracker
+ID: 2a9219ed-7519-81cd-948b-fa3f60a50748
+PROPERTIES:
+  - Total Calories (rollup)
+  - Date (date)
+  - Protein Goal (rollup)
+  - Calorie Goal (rollup)
+  - Total Protien (rollup)
+  - Total Carbs (rollup)
+  - Total Fat (rollup)
+  - Spent (rollup)
+  - Remaining (formula)
+  - Calorie Progress (formula)
+  - Nutrition Target (relation)
+  - Protein Progress (formula)
+  - Meals (relation)
+  - Notes (title)
+------------------------------
+DATABASE: Shopping Cart
+ID: 2a9219ed-7519-81e7-be16-d581ded931da
+PROPERTIES:
+  - Price (rollup)
+  - Groceries (relation)
+  - Date (date)
+  - Purchased (checkbox)
+  - Food Reference (relation)
+  - Price Value (formula)
+  - Name (title)
+------------------------------
+DATABASE: Bank Accounts
+ID: 2a9219ed-7519-8115-9787-eded557f5203
+PROPERTIES:
+  - Transfer In (relation)
+  - Total Transfer In (rollup)
+  - Expense Record (relation)
+  - Board Display (formula)
+  - Total Transfer Out (rollup)
+  - Transfer Out (relation)
+  - Total Income (rollup)
+  - Initial (number)
+  - Balance (formula)
+  - Total Expense (rollup)
+  - Type (select)
+  - Income Record (relation)
+  - Account Name (title)
+------------------------------
+DATABASE: Summary Archive
+ID: 2a9219ed-7519-8137-b61a-c632d7aca9f4
+PROPERTIES:
+  - Type (select)
+  - By (rich_text)
+  - Area (select)
+  - Name (title)
+------------------------------
+DATABASE: Income Type
+ID: 2a9219ed-7519-819d-aa9e-d7a3a6997845
+PROPERTIES:
+  - Income this Month (rollup)
+  - Display Formula (formula)
+  - (Hide) This Mo. Income (formula)
+  - Total Income This Month (formula)
+  - Income Record (relation)
+  - Income Type (title)
+------------------------------
+DATABASE: Prompt Library
+ID: 2a9219ed-7519-81a0-82a8-d2220372e4f9
+PROPERTIES:
+  - Area (select)
+  - Name (title)
+------------------------------
+DATABASE: Transfer Record
+ID: 2a9219ed-7519-81a1-b7c6-d4379a5db942
+PROPERTIES:
+  - Amount (number)
+  - To (relation)
+  - Transfer Type (select)
+  - Transaction Date (date)
+  - From (relation)
+  - Record Name (title)
+------------------------------
+DATABASE: Income Record
+ID: 2a9219ed-7519-81a5-b213-e4d46a49743f
+PROPERTIES:
+  - Income Type (relation)
+  - Transaction Date (date)
+  - Notes (rich_text)
+  - Income this Month (formula)
+  - Total Income (formula)
+  - Bank Account (relation)
+  - Amount (number)
+  - Name of Record (title)
+------------------------------
+DATABASE: Expense Record
+ID: 2a9219ed-7519-81a7-9528-e8f12c07fb69
+PROPERTIES:
+  - Bank Account (relation)
+  - Total Expense (formula)
+  - Transaction Date (date)
+  - Expense This Month (formula)
+  - Expense Type (relation)
+  - Amount (number)
+  - Note (rich_text)
+  - Name of Record (title)
+------------------------------
+DATABASE: Expense Type & Budget
+ID: 2a9219ed-7519-81c9-acc9-d428ca071c4f
+PROPERTIES:
+  - Expense this Month (rollup)
+  - (Hide) Monthly Budget (formula)
+  - Budget Calculation (formula)
+  - Formula (formula)
+  - Remaining Budget (formula)
+  - Monthly Budget (number)
+  - (Hide) This Mo. Expense (formula)
+  - Expense Record (relation)
+  - Expense Type (title)
+------------------------------

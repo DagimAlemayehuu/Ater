@@ -44,6 +44,12 @@ export interface AppConfig {
     aiProvider: string;
     aiApiKey: string;
     aiModel: string;
+    plannerProvider: string;
+    plannerApiKey: string;
+    plannerModel: string;
+    utilityProvider: string;
+    utilityApiKey: string;
+    utilityModel: string;
     obsidianVaultPath: string;
     inboxPath: string;
     autoDeploy: boolean;
@@ -77,7 +83,10 @@ export const DEFAULT_CONFIG: AppConfig = {
     notionApiKey: '',
     aiProvider: 'google',
     aiApiKey: '',
-    aiModel: 'gemini-2.5-flash',
+    aiModel: 'gemini-2.0-flash',
+    plannerProvider: 'google',
+    plannerApiKey: '',
+    plannerModel: 'gemini-2.0-flash',
     obsidianVaultPath: '',
     inboxPath: '',
     autoDeploy: false,
@@ -107,6 +116,11 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const aiProvider = (await store.get<string>('aiProvider')) || DEFAULT_CONFIG.aiProvider;
                 const aiApiKey = (await store.get<string>('aiApiKey')) || '';
                 const aiModel = (await store.get<string>('aiModel')) || DEFAULT_CONFIG.aiModel;
+                
+                const plannerProvider = (await store.get<string>('plannerProvider')) || DEFAULT_CONFIG.plannerProvider;
+                const plannerApiKey = (await store.get<string>('plannerApiKey')) || '';
+                const plannerModel = (await store.get<string>('plannerModel')) || DEFAULT_CONFIG.plannerModel;
+
                 const obsidianVaultPath = (await store.get<string>('obsidianVaultPath')) || '';
                 const inboxPath = (await store.get<string>('inboxPath')) || '';
                 const autoDeploy = (await store.get<boolean>('autoDeploy')) ?? false;
@@ -126,6 +140,12 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     aiProvider,
                     aiApiKey,
                     aiModel,
+                    plannerProvider,
+                    plannerApiKey,
+                    plannerModel,
+                    utilityProvider,
+                    utilityApiKey,
+                    utilityModel,
                     obsidianVaultPath,
                     inboxPath,
                     autoDeploy,

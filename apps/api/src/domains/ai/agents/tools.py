@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional
 from src.domains.notion.client import NotionClient
 from src.domains.obsidian.client import ObsidianClient
 from src.domains.rag.vector_store import ChromaManager
+from src.domains.chronos.service import ChronosService
 from pathlib import Path
 
 GOALS_DB_ID = "2a9219ed-7519-815f-ac0f-ebfcd1dcd003"
@@ -15,6 +16,7 @@ class AgentTools:
         self.secrets = secrets
         self.notion_key = notion_key
         self.vault_path = vault_path
+        self.chronos = ChronosService(notion_key, secrets.google_calendar_token if hasattr(secrets, 'google_calendar_token') else None)
 
     async def list_notion_goals(self) -> str:
         if not self.notion_key: return "Error: Notion key missing."
@@ -30,7 +32,7 @@ class AgentTools:
 
     async def search_vault(self, query: str) -> str:
         chroma = ChromaManager()
-        results = chroma.query(query, n_results=10)
+        results = chroma.query(query, n_results=20)
         output = "Search Results:\n"
         for r in results:
             source = r.get("metadata", {}).get("filename", "Unknown")
@@ -81,20 +83,9 @@ class AgentTools:
         return json.dumps(results, indent=2)
 
     async def get_calendar_events(self) -> str:
-        """Combine events from Notion 'Calendar' database and Google Calendar."""
-        dbs_json = await self.get_notion_databases()
-        dbs = json.loads(dbs_json)
-        target_id = next((db["id"] for db in dbs if "Calendar" in db["title"] or "Planning" in db["title"]), None)
-        
-        events = []
-        if target_id:
-            client = NotionClient(self.notion_key)
-            notion_events = await client.query_database(target_id, limit=50)
-            events.extend([{"source": "notion", "data": e} for e in notion_events])
-            
-        # Placeholder for Google Calendar logic (requires OAuth)
-        events.append({"source": "system", "message": "Google Calendar integration pending OAuth setup in Workforce settings."})
-        return json.dumps(events, indent=2)
+        """Combine events from Notion 'Calendar' database and Google Calendar using ChronosService."""
+        unified_events = await self.chronos.get_unified_timeline()
+        return json.dumps(unified_events, indent=2)
 
     async def track_workout_log(self, exercise: str, sets: int, reps: int, weight: float) -> str:
         """Logs a workout entry to the 'Workout logger' database."""

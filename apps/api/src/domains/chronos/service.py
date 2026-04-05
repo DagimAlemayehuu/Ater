@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
-from apps.api.src.domains.chronos.google_calendar import GoogleCalendar
-from apps.api.src.domains.chronos.notion_calendar import NotionCalendar
-from apps.api.src.domains.notion.client import NotionClient
+from src.domains.chronos.google_calendar import GoogleCalendar
+from src.domains.chronos.notion_calendar import NotionCalendar
+from src.domains.notion.client import NotionClient
 import asyncio
 
 class ChronosService:

@@ -7,10 +7,11 @@
 - [x] **Progress Callbacks**: Added real-time status reporting for sync operations.
 - [x] **Robust RAG**: Integrated ChromaDB with local embeddings for $0 cost search.
 - [x] **Escape YAML Newlines**: Fixed crash during sync caused by unescaped newlines in Notion properties.
+- [x] **Large DB Support**: Implemented pagination for Notion database queries and block extraction (>100 items).
+- [x] **Search Tuning**: Adjusted RAG k-results to 20 for optimal context injection.
 
 ## 🟡 In Progress
-- [ ] **Large DB Support**: Verifying 100+ item database extraction stability.
-- [ ] **Search Tuning**: Adjusting RAG k-results for optimal context injection.
+- [ ] **Hybrid Search**: Integrating BM25 with Vector search for better keyword matching.
 
 ## 🔴 Blocked
 - None.

@@ -14,36 +14,38 @@ class NotionClient:
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Notion-Version": self.VERSION,
-            "Content-Type": "application/json"
         }
 
-    async def list_pages(self, page_size: int = 100) -> List[Dict[str, Any]]:
+    async def list_databases(self) -> List[Dict[str, Any]]:
         """
-        Retrieves a list of pages/databases accessible by the integration.
+        Retrieves all databases accessible by the integration using pagination.
         """
+        results = []
+        has_more = True
+        next_cursor = None
+        
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.BASE_URL}/search",
-                headers=self.headers,
-                json={"filter": {"value": "page", "property": "object"}, "page_size": page_size}
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data.get("results", [])
-
-    async def list_databases(self, page_size: int = 100) -> List[Dict[str, Any]]:
-        """
-        Retrieves a list of databases accessible by the integration.
-        """
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.BASE_URL}/search",
-                headers=self.headers,
-                json={"filter": {"value": "database", "property": "object"}, "page_size": page_size}
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data.get("results", [])
+            while has_more:
+                payload = {
+                    "filter": {"value": "database", "property": "object"},
+                    "page_size": 100
+                }
+                if next_cursor:
+                    payload["start_cursor"] = next_cursor
+                    
+                response = await client.post(
+                    f"{self.BASE_URL}/search",
+                    headers=self.headers,
+                    json=payload
+                )
+                response.raise_for_status()
+                data = response.json()
+                results.extend(data.get("results", []))
+                
+                has_more = data.get("has_more", False)
+                next_cursor = data.get("next_cursor")
+                
+            return results
 
     async def query_database(self, database_id: str, limit: int = 100) -> List[Dict[str, Any]]:
         """
@@ -56,7 +58,13 @@ class NotionClient:
         
         async with httpx.AsyncClient() as client:
             while has_more:
-                payload = {"page_size": 100 if limit == 0 else limit}
+                # Notion API page_size max is 100
+                current_page_size = 100
+                if limit != 0:
+                    remaining = limit - len(results)
+                    current_page_size = min(100, remaining)
+                
+                payload = {"page_size": current_page_size}
                 if next_cursor:
                     payload["start_cursor"] = next_cursor
                     
@@ -79,15 +87,31 @@ class NotionClient:
 
     async def get_page_content(self, page_id: str) -> List[Dict[str, Any]]:
         """
-        Retrieves the blocks (content) of a specific page.
+        Retrieves all blocks (content) of a specific page using pagination.
         """
+        results = []
+        has_more = True
+        next_cursor = None
+        
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{self.BASE_URL}/blocks/{page_id}/children",
-                headers=self.headers
-            )
-            response.raise_for_status()
-            return response.json().get("results", [])
+            while has_more:
+                params = {"page_size": 100}
+                if next_cursor:
+                    params["start_cursor"] = next_cursor
+                    
+                response = await client.get(
+                    f"{self.BASE_URL}/blocks/{page_id}/children",
+                    headers=self.headers,
+                    params=params
+                )
+                response.raise_for_status()
+                data = response.json()
+                results.extend(data.get("results", []))
+                
+                has_more = data.get("has_more", False)
+                next_cursor = data.get("next_cursor")
+                
+            return results
 
     async def update_page_properties(self, page_id: str, properties: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -164,6 +188,63 @@ class NotionClient:
             response.raise_for_status()
             return response.json()
 
+    async def update_page_content(self, page_id: str, markdown: str) -> None:
+        """
+        Replaces the entire content of a page with the provided markdown text.
+        It deletes all existing top-level blocks and appends new paragraph blocks.
+        """
+        # 1. Get existing blocks
+        existing_blocks = await self.get_page_content(page_id)
+        
+        # 2. Delete existing blocks
+        for block in existing_blocks:
+            await self.delete_block(block["id"])
+            
+        # 3. Create new blocks from markdown
+        if not markdown.strip():
+            return
+            
+        paragraphs = markdown.split("\n\n")
+        new_blocks = []
+        
+        for para in paragraphs:
+            if not para.strip():
+                continue
+                
+            # Handle Notion's 2000 char limit per rich_text block roughly
+            chunk_size = 1900
+            rich_texts = []
+            for i in range(0, len(para), chunk_size):
+                rich_texts.append({
+                    "type": "text",
+                    "text": {"content": para[i:i+chunk_size]}
+                })
+                
+            new_blocks.append({
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": rich_texts
+                }
+            })
+            
+        # 4. Append new blocks (Max 100 blocks per request in Notion API)
+        for i in range(0, len(new_blocks), 100):
+            batch = new_blocks[i:i+100]
+            await self.append_block_children(page_id, batch)
+
+    async def get_database(self, database_id: str) -> Dict[str, Any]:
+        """
+        Retrieves metadata/schema for a specific database.
+        """
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.BASE_URL}/databases/{database_id}",
+                headers=self.headers
+            )
+            response.raise_for_status()
+            return response.json()
+
     async def get_page(self, page_id: str) -> Dict[str, Any]:
         """
         Retrieves a single Notion page.
@@ -175,3 +256,34 @@ class NotionClient:
             )
             response.raise_for_status()
             return response.json()
+
+    async def list_pages(self) -> List[Dict[str, Any]]:
+        """
+        Retrieves all pages accessible by the integration using pagination.
+        """
+        results = []
+        has_more = True
+        next_cursor = None
+        
+        async with httpx.AsyncClient() as client:
+            while has_more:
+                payload = {
+                    "filter": {"value": "page", "property": "object"},
+                    "page_size": 100
+                }
+                if next_cursor:
+                    payload["start_cursor"] = next_cursor
+                    
+                response = await client.post(
+                    f"{self.BASE_URL}/search",
+                    headers=self.headers,
+                    json=payload
+                )
+                response.raise_for_status()
+                data = response.json()
+                results.extend(data.get("results", []))
+                
+                has_more = data.get("has_more", False)
+                next_cursor = data.get("next_cursor")
+                
+            return results

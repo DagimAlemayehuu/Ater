@@ -46,6 +46,7 @@ from src.domains.rag.indexer import VaultIndexer
 from src.domains.rag.vector_store import ChromaManager
 
 from src.domains.academics.router import router as academics_router
+from src.domains.notion.router import router as notion_router
 
 # Global watcher instances
 oka_watcher: Optional[OkaQueueManager] = None
@@ -87,6 +88,7 @@ app.add_middleware(
 
 # Mount routers
 app.include_router(academics_router, prefix="/api")
+app.include_router(notion_router, prefix="/api")
 
 
 @app.get("/api/health")
@@ -263,29 +265,40 @@ async def ai_upload(file: UploadFile = File(...), secrets: AppSecrets = Depends(
             os.remove(temp_path)
 
 @app.post("/api/ai/test-connection")
-async def test_ai_connection(secrets: AppSecrets = Depends(get_app_secrets)):
-    """Tests if the current AI configuration is valid."""
-    if not secrets.ai_key:
-        return {"success": False, "error": "AI API Key missing"}
+async def test_ai_connection(
+    payload: Dict[str, str] = Body({"target": "primary"}),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Tests if the specified AI tier configuration is valid."""
+    target = payload.get("target", "primary")
+    
+    if target == "primary":
+        provider, model, key = secrets.ai_provider, secrets.ai_model, secrets.ai_key
+    elif target == "planner":
+        provider, model, key = secrets.planner_provider, secrets.planner_model, secrets.planner_key
+    else: # utility
+        provider, model, key = secrets.utility_provider, secrets.utility_model, secrets.utility_key
+
+    if not key:
+        return {"success": False, "error": f"API Key for {target} is missing"}
     
     try:
         from src.domains.ai.factory import ModelFactory
         from langchain_core.messages import HumanMessage
         
         llm = ModelFactory.get_model(
-            provider=secrets.ai_provider,
-            model_name=secrets.ai_model,
-            api_key=secrets.ai_key,
-            temperature=0.1 # Keep it simple
+            provider=provider,
+            model_name=model,
+            api_key=key,
+            temperature=0.1
         )
         
-        # Simple test prompt
         response = await llm.ainvoke([HumanMessage(content="Hello. Respond with exactly one word: 'Connected'.")])
         content = response.content.strip() if hasattr(response, 'content') else str(response)
         
-        return {"success": True, "message": content}
+        return {"success": True, "message": f"{target.capitalize()} Tier: {content}"}
     except Exception as e:
-        print(f"[Life OS Sidecar] AI Connection Test failed: {traceback.format_exc()}")
+        print(f"[Life OS Sidecar] AI Connection Test ({target}) failed: {traceback.format_exc()}")
         return {"success": False, "error": str(e)}
 
 @app.post("/api/ai/brainstorm")
@@ -386,7 +399,7 @@ async def get_orchestrator_status():
         "logs": ["Orchestrator is ready."]
     }
 
-from apps.api.src.domains.chronos.service import ChronosService
+from src.domains.chronos.service import ChronosService
 
 @app.get("/api/ai/specialists/chronos")
 async def get_chronos_status(secrets: AppSecrets = Depends(get_app_secrets)):
@@ -437,70 +450,27 @@ async def get_scholar_status(secrets: AppSecrets = Depends(get_app_secrets)):
         }
     }
 
+from src.domains.wealth.service import WealthService
+
 @app.get("/api/ai/specialists/wealth")
 async def get_wealth_status(secrets: AppSecrets = Depends(get_app_secrets)):
-    """Returns status for Wealth Strategist by checking mirror records."""
-    if not secrets.vault_path:
+    """Returns dynamic status for Wealth Strategist by querying Notion Income/Expense databases."""
+    if not secrets.notion_key:
         return {"net_position": "$0.00", "recent_transactions": []}
 
-    finance_path = Path(secrets.vault_path) / "1-NotionMirror" / "1-Personal" / "2-Finance"
-    transactions = []
-    if finance_path.exists():
-        try:
-            all_files_list = sorted(list(finance_path.glob("**/*.md")), key=lambda p: p.stat().st_mtime, reverse=True)
-            count = 0
-            for p in all_files_list:
-                if count >= 10: break
-                count += 1
-                transactions.append({
-                    "date": time.strftime('%Y-%m-%d', time.localtime(p.stat().st_mtime)),
-                    "desc": p.stem,
-                    "amount": "Confirmed"
-                })
-        except Exception as e:
-            logger.error(f"Wealth status scan failed: {e}")
+    service = WealthService(notion_key=secrets.notion_key, vault_path=secrets.vault_path)
+    return await service.get_status()
 
-    return {
-        "net_position": "$24,500.00", # Aggregation would require deeper parsing
-        "monthly_delta": "+$1,200.00",
-        "savings_rate": "15%",
-        "burn_rate": "$2,100.00",
-        "recent_transactions": transactions if transactions else [
-            {"date": "2026-03-21", "desc": "Ledger Synchronized", "amount": "Ready"}
-        ]
-    }
+from src.domains.gym.service import GymService
 
 @app.get("/api/ai/specialists/gym")
 async def get_gym_status(secrets: AppSecrets = Depends(get_app_secrets)):
-    """Returns functional fitness data from mirror."""
-    if not secrets.vault_path:
+    """Returns functional fitness data from Notion 'Workout logger'."""
+    if not secrets.notion_key:
         return {"training_intensity": "0%", "recent_sessions": []}
 
-    fitness_path = Path(secrets.vault_path) / "1-NotionMirror" / "1-Personal" / "4-Fitness"
-    sessions = []
-    if fitness_path.exists():
-        try:
-            all_sessions = sorted(list(fitness_path.glob("**/*.md")), key=lambda p: p.stat().st_mtime, reverse=True)
-            count = 0
-            for p in all_sessions:
-                if count >= 5: break
-                count += 1
-                sessions.append({
-                    "date": time.strftime('%Y-%m-%d', time.localtime(p.stat().st_mtime)),
-                    "name": p.stem,
-                    "volume": "Logged"
-                })
-        except Exception as e:
-            logger.error(f"Gym status scan failed: {e}")
-
-    return {
-        "training_intensity": "84%",
-        "volume_accumulation": "12,200kg",
-        "recovery_status": "Ready",
-        "recent_sessions": sessions if sessions else [
-            {"date": "2026-03-21", "name": "Bio-Sync Active", "volume": "Nominal"}
-        ]
-    }
+    service = GymService(notion_key=secrets.notion_key, vault_path=secrets.vault_path)
+    return await service.get_status()
 
 # --- OKA (Autonomous Ingestion) Endpoints ---
 

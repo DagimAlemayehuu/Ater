@@ -14,7 +14,12 @@
 
 ## 2. Backend Agent (apps/api)
 ### Pending Epics
-*   [ ] Implement pagination for large Notion database queries (>100 items).
+*   [x] **Pagination Support**: Implemented pagination for Notion database queries and block extraction (>100 items).
+*   [ ] **Hybrid Search**: Implement hybrid search (BM25 + Vector) for better keyword retrieval.
+*   [ ] **Custom Templates**: Allow users to define custom YAML mapping for Notion properties.
+*   [ ] **Conflict Resolution**: Logic for handling simultaneous edits in Notion and Obsidian.
+*   [ ] **Offline Mode**: Local caching of Notion data to allow limited offline access.
+*   [ ] **Attachment Sync**: Syncing images and PDFs from Notion pages to Obsidian attachment folder.
 *   [ ] Add image-to-text OCR for OKA ingestion.
 
 ### Completed Epics
@@ -56,6 +61,7 @@
 *   [x] **Specialist Agent Logic**: 8 functional agents (Scholar, Wealth, Gym, etc.) with mapped vault paths.
 *   [x] **Specialist Autonomy**: Agents given full CRUD power across local Obsidian vault and Notion APIs.
 *   [x] **Data-Driven Dashboards**: All agent UI pages (Chronos, Wealth, Scholar, etc.) fetch live status from FastAPI.
+*   [x] **Dynamic Specialist Services**: Integrated `WealthService`, `GymService`, and `ChronosService` for live data tracking.
 *   [x] **Logo & Brand Refinement**: Finalized "Zap" branding and strict monochrome aesthetic.
 *   [x] **Agent Workforce Registry**: Integrated all specialized units into a unified dashboard.
 

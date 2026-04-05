@@ -35,15 +35,24 @@ export interface ObsidianFile {
  */
 async function getAuthHeaders(): Promise<Record<string, string>> {
     const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} })
-    const notionKey = (await store.get<string>('notionApiKey')) || ''
-    const geminiKey = (await store.get<string>('geminiApiKey')) || ''
+    
     // Fetch all config values into a single object
     const config = {
         notionApiKey: (await store.get<string>('notionApiKey')) || '',
         geminiApiKey: (await store.get<string>('geminiApiKey')) || '',
         aiProvider: (await store.get<string>('aiProvider')) || 'google', 
         aiApiKey: (await store.get<string>('aiApiKey')) || '', 
-        aiModel: (await store.get<string>('aiModel')) || 'gemini-2.5-flash', 
+        aiModel: (await store.get<string>('aiModel')) || 'gemini-2.0-flash', 
+        
+        // Tiered Reasoning
+        plannerProvider: (await store.get<string>('plannerProvider')) || 'google',
+        plannerApiKey: (await store.get<string>('plannerApiKey')) || '',
+        plannerModel: (await store.get<string>('plannerModel')) || 'gemini-2.0-flash',
+        
+        utilityProvider: (await store.get<string>('utilityProvider')) || 'google',
+        utilityApiKey: (await store.get<string>('utilityApiKey')) || '',
+        utilityModel: (await store.get<string>('utilityModel')) || 'gemini-1.5-flash-8b',
+
         obsidianVaultPath: (await store.get<string>('obsidianVaultPath')) || '',
         inboxPath: (await store.get<string>('inboxPath')) || '',
         academicFolderPath: (await store.get<string>('academicFolderPath')) || '1-Academic',
@@ -55,7 +64,17 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         'X-Notion-Key': config.notionApiKey || '',
         'X-AI-Provider': config.aiProvider || 'google',
         'X-AI-Key': config.aiApiKey || config.geminiApiKey || '',
-        'X-AI-Model': config.aiModel || 'gemini-2.5-flash',
+        'X-AI-Model': config.aiModel || 'gemini-2.0-flash',
+        
+        // Tiered Reasoning
+        'X-Planner-Provider': config.plannerProvider || 'google',
+        'X-Planner-Key': config.plannerApiKey || config.aiApiKey || config.geminiApiKey || '',
+        'X-Planner-Model': config.plannerModel || 'gemini-2.0-flash',
+
+        'X-Utility-Provider': config.utilityProvider || 'google',
+        'X-Utility-Key': config.utilityApiKey || config.plannerApiKey || config.aiApiKey || '',
+        'X-Utility-Model': config.utilityModel || 'gemini-1.5-flash-8b',
+
         'X-Vault-Path': config.obsidianVaultPath || '',
         'X-Inbox-Path': config.inboxPath || '',
         'X-Academic-Path': config.academicFolderPath || '1-Academic',
@@ -99,10 +118,96 @@ export const sidecarApi = {
         if (!response.ok) throw new Error('Health check failed')
         return response.json()
     },
-    listNotionPages: () => request<{ pages: NotionPage[] }>('/api/notion/pages'),
-    listNotionDatabases: () => request<{ databases: any[] }>('/api/notion/databases'),
-    queryNotionDatabase: (databaseId: string) => request<{ results: any[] }>(`/api/notion/databases/${databaseId}/query`),
+
+    // ── Notion Headless Engine ──────────────────────────────
+    listNotionDatabases: () =>
+        request<any[]>('/api/notion/databases'),
+    
+    getNotionDatabaseData: (databaseId: string, forceSync: boolean = false) =>
+        request<{ metadata: any; rows: any[] }>(`/api/notion/databases/${databaseId}?force_sync=${forceSync}`),
+    
+    getNotionPage: (pageId: string) =>
+        request<any>(`/api/notion/pages/${pageId}`),
+    
+    syncNotionDatabase: (databaseId: string) =>
+        request<{ success: boolean; message: string }>(`/api/notion/databases/${databaseId}/sync`, {
+            method: 'POST'
+        }),
+    
+    updateNotionPage: (pageId: string, properties: any) =>
+        request<{ success: boolean; page: any }>(`/api/notion/pages/${pageId}`, {
+            method: 'PATCH',
+            body: JSON.stringify(properties)
+        }),
+
+    createNotionPage: (databaseId: string, properties: any) =>
+        request<{ success: boolean; page: any }>(`/api/notion/databases/${databaseId}/pages`, {
+            method: 'POST',
+            body: JSON.stringify({ properties })
+        }),
+
+    deleteNotionPage: (pageId: string) =>
+        request<{ success: boolean }>(`/api/notion/pages/${pageId}`, {
+            method: 'DELETE'
+        }),
+
+    getNotionPageContent: (pageId: string) =>
+        request<{ blocks: any[] }>(`/api/notion/pages/${pageId}/content`),
+
+    updateNotionPageContent: (pageId: string, markdown: string) =>
+        request<{ success: boolean }>(`/api/notion/pages/${pageId}/content`, {
+            method: 'PUT',
+            body: JSON.stringify({ markdown })
+        }),
+
+    // Keep legacy queryNotionDatabase for backwards compatibility with older routes
+    queryNotionDatabase: (databaseId: string) =>
+        request<{ results: any[] }>(`/api/notion/databases/${databaseId}`).then((res: any) => ({ results: res.rows || [] })),
+        
+    listNotionPages: () => 
+        request<{ pages: any[] }>('/api/notion/pages'),
+
+    // ── AI & Agents ─────────────────────────────────────────
+    testAiConnection: (target: 'primary' | 'planner' | 'utility' = 'primary') =>
+        request<{ success: boolean; message?: string; error?: string }>('/api/ai/test-connection', {
+            method: 'POST',
+            body: JSON.stringify({ target })
+        }),
+
+    brainstorm: (query: string, context?: string, systemPrompt?: string, history?: any[], fileUri?: string) =>
+        request<{ response: string }>('/api/ai/brainstorm', {
+            method: 'POST',
+            body: JSON.stringify({ query, context, system_prompt: systemPrompt, history, file_uri: fileUri })
+        }),
+
+    executeAgent: (agentName: string, query: string) =>
+        request<{ response: string }>(`/api/ai/execute/${agentName}`, {
+            method: 'POST',
+            body: JSON.stringify({ query })
+        }),
+
+    getOrchestratorStatus: () =>
+        request<{
+            current_prompt: string;
+            current_plan: string;
+            active_agents: string[];
+            stage: string;
+            next_agent: string;
+            logs: string[];
+        }>('/api/ai/orchestrator/status'),
+
+    // ── Obsidian & OKA ──────────────────────────────────────
     listObsidianFiles: () => request<{ files: ObsidianFile[] }>('/api/obsidian/files'),
+    
+    readObsidianNote: (path: string) =>
+        request<{ content: string }>(`/api/obsidian/files/${path}`),
+    
+    updateObsidianNote: (path: string, content: string) =>
+        request<{ success: boolean }>(`/api/obsidian/files/${path}`, {
+            method: 'PUT',
+            body: JSON.stringify({ content })
+        }),
+
     aiUpload: async (file: File): Promise<{ file_uri: string, name: string }> => {
         const authHeaders = await getAuthHeaders()
         const formData = new FormData()
@@ -118,46 +223,6 @@ export const sidecarApi = {
         }
         return response.json()
     },
-    brainstorm: (query: string, context?: string, systemPrompt?: string, history?: any[], fileUri?: string) =>
-        request<{ response: string }>('/api/ai/brainstorm', {
-            method: 'POST',
-            body: JSON.stringify({ query, context, system_prompt: systemPrompt, history, file_uri: fileUri })
-        }),
-    updateNotionPage: (pageId: string, properties: Record<string, any>) =>
-        request<{ page: any }>(`/api/notion/pages/${pageId}`, {
-            method: 'PATCH',
-            body: JSON.stringify(properties)
-        }),
-    createNotionPage: (databaseId: string, properties: Record<string, any>) =>
-        request<{ page: any }>(`/api/notion/databases/${databaseId}/pages`, {
-            method: 'POST',
-            body: JSON.stringify({ properties })
-        }),
-    deleteNotionPage: (pageId: string) =>
-        request<{ success: boolean }>(`/api/notion/pages/${pageId}`, {
-            method: 'DELETE'
-        }),
-    getNotionPageContent: (pageId: string) =>
-        request<{ blocks: any[] }>(`/api/notion/pages/${pageId}/content`),
-    updateNotionPageContent: (pageId: string, markdown: string) =>
-        request<{ success: boolean }>(`/api/notion/pages/${pageId}/content`, {
-            method: 'PUT',
-            body: JSON.stringify({ markdown })
-        }),
-    readObsidianNote: (path: string) =>
-        request<{ content: string }>(`/api/obsidian/files/${path}`),
-    updateObsidianNote: (path: string, content: string) =>
-        request<{ success: boolean }>(`/api/obsidian/files/${path}`, {
-            method: 'PUT',
-            body: JSON.stringify({ content })
-        }),
-    savePersonaPrompt: (name: string, content: string) =>
-        request<{ success: boolean, path: string }>('/api/personae/save', {
-            method: 'POST',
-            body: JSON.stringify({ name, content })
-        }),
-
-    // ── OKA (Autonomous Ingestion) ──────────────────────────
 
     okaProcess: (payload: { file_path?: string; text?: string }) =>
         request<{ session_id: string; plan_raw: string; plan_structured: any; status: string }>('/api/oka/process', {
@@ -171,18 +236,24 @@ export const sidecarApi = {
             body: JSON.stringify(payload)
         }),
 
-    // Direct Ext
-    executeAgent: (agentName: string, query: string) =>
-        request<{ response: string }>(`/api/ai/execute/${agentName}`, {
-            method: 'POST',
-            body: JSON.stringify({ query })
-        }),
-
     okaWatcherToggle: () =>
         request<{ status: string, inbox?: string }>('/api/oka/watcher/toggle', {
             method: 'POST'
         }),
 
+    okaWatcherStatus: () =>
+        request<{ is_running: boolean, inbox: string | null }>('/api/oka/watcher/status'),
+
+    okaQueueStatus: () =>
+        request<{ status: string, auto_process: boolean, current_file: string | null, current_batch: number, total_batches: number, pending_count: number, pending_files: string[] }>('/api/oka/queue/status'),
+
+    okaListInbox: () =>
+        request<{ files: any[] }>('/api/oka/inbox'),
+
+    okaListGenerated: () =>
+        request<{ files: any[] }>('/api/oka/generated'),
+
+    // ── RAG & Mirror ────────────────────────────────────────
     ragWatcherToggle: () =>
         request<{ status: string, vault?: string }>('/api/rag/watcher/toggle', {
             method: 'POST'
@@ -204,20 +275,7 @@ export const sidecarApi = {
     syncNotionMirrorStatus: () =>
         request<{ status: string, progress: number, total: number, message: string }>('/api/notion/sync-mirror/status'),
 
-    okaWatcherStatus: () =>
-        request<{ is_running: boolean, inbox: string | null }>('/api/oka/watcher/status'),
-
-    okaQueueStatus: () =>
-        request<{ status: string, auto_process: boolean, current_file: string | null, current_batch: number, total_batches: number, pending_count: number, pending_files: string[] }>('/api/oka/queue/status'),
-
-    okaListInbox: () =>
-        request<{ files: any[] }>('/api/oka/inbox'),
-
-    okaListGenerated: () =>
-        request<{ files: any[] }>('/api/oka/generated'),
-
-    // ── Academics ───────────────────────────────────────────
-
+    // ── Legacy / Specialists ────────────────────────────────
     academicsDashboard: () =>
         request<{ semesters: any[]; courses: any[]; units: any[]; exams: any[]; assignments: any[] }>('/api/academics/dashboard'),
 
@@ -226,26 +284,9 @@ export const sidecarApi = {
             method: 'POST'
         }),
 
-    testAiConnection: () =>
-        request<{ success: boolean; message?: string; error?: string }>('/api/ai/test-connection', {
-            method: 'POST'
-        }),
-
-    getOrchestratorStatus: () =>
-        request<{
-            current_prompt: string;
-            current_plan: string;
-            active_agents: string[];
-            stage: string;
-            next_agent: string;
-            logs: string[];
-        }>('/api/ai/orchestrator/status'),
-
     getChronosStatus: () => request<any>('/api/ai/specialists/chronos'),
     getChronosTimeline: () => request<any[]>('/api/ai/chronos/timeline'),
     getWealthStatus: () => request<any>('/api/ai/specialists/wealth'),
     getGymStatus: () => request<any>('/api/ai/specialists/gym'),
     getScholarStatus: () => request<any>('/api/ai/specialists/scholar'),
 }
-
-

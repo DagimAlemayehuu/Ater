@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from apps.api.src.domains.notion.client import NotionClient
+from src.domains.notion.client import NotionClient
 import asyncio
 from datetime import datetime
 
