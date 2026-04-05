@@ -95,7 +95,7 @@ export default function ObsidianVaultPage() {
         }, 5000)
         
         return () => clearInterval(interval)
-    }, [])
+    }, [config?.obsidianVaultPath])
 
     // --- Actions ---
     const fetchFiles = async () => {

@@ -207,7 +207,7 @@ function LibrarianDashboard({ onBack }: { onBack: () => void }) {
         const fetchDbs = async () => {
             try {
                 const res = await sidecarApi.listNotionDatabases()
-                setDbs(res.databases || [])
+                setDbs(res || [])
             } catch (err) {
                 console.error("Failed to fetch databases", err)
             } finally {
@@ -302,6 +302,7 @@ function LibrarianDashboard({ onBack }: { onBack: () => void }) {
 
 /* ─── Scribe Dashboard ─── */
 function ScribeDashboard({ onBack }: { onBack: () => void }) {
+    const { config } = useConfig()
     const [files, setFiles] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
@@ -323,7 +324,7 @@ function ScribeDashboard({ onBack }: { onBack: () => void }) {
 
     useEffect(() => {
         fetchFiles()
-    }, [])
+    }, [config?.obsidianVaultPath])
 
     const handleSelectFile = async (file: any) => {
         setSelectedFile(file)
@@ -462,6 +463,7 @@ function ScribeDashboard({ onBack }: { onBack: () => void }) {
 /* ─── Obsidian Knowledge Architect (OKA) Dashboard ─── */
 function OkaDashboard({ onBack }: { onBack: () => void }) {
     const { config, saveConfig } = useConfig()
+    const navigate = useNavigate()
     const [queueStatus, setQueueStatus] = useState<any>(null)
     const [inboxFiles, setInboxFiles] = useState<any[]>([])
     const [loadingInbox, setLoadingInbox] = useState(false)

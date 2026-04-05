@@ -87,6 +87,9 @@ export const DEFAULT_CONFIG: AppConfig = {
     plannerProvider: 'google',
     plannerApiKey: '',
     plannerModel: 'gemini-2.0-flash',
+    utilityProvider: 'google',
+    utilityApiKey: '',
+    utilityModel: 'gemini-1.5-flash-8b',
     obsidianVaultPath: '',
     inboxPath: '',
     autoDeploy: false,
@@ -120,6 +123,10 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const plannerProvider = (await store.get<string>('plannerProvider')) || DEFAULT_CONFIG.plannerProvider;
                 const plannerApiKey = (await store.get<string>('plannerApiKey')) || '';
                 const plannerModel = (await store.get<string>('plannerModel')) || DEFAULT_CONFIG.plannerModel;
+
+                const utilityProvider = (await store.get<string>('utilityProvider')) || DEFAULT_CONFIG.utilityProvider;
+                const utilityApiKey = (await store.get<string>('utilityApiKey')) || '';
+                const utilityModel = (await store.get<string>('utilityModel')) || DEFAULT_CONFIG.utilityModel;
 
                 const obsidianVaultPath = (await store.get<string>('obsidianVaultPath')) || '';
                 const inboxPath = (await store.get<string>('inboxPath')) || '';

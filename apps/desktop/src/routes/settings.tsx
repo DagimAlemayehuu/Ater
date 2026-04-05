@@ -160,8 +160,8 @@ export default function Settings() {
     const [ragStatus, setRagStatus] = useState<{status: string, progress: number, total: number, message: string} | null>(null)
     const [notionStatus, setNotionStatus] = useState<{status: string, progress: number, total: number, message: string} | null>(null)
     const [testStatus, setTestStatus] = useState<{ loading: boolean; success?: boolean; message?: string }>({ loading: false })
-    const [aiTab, setAiTab] = useState<'primary' | 'planner'>('primary')
-    const [testTarget, setTestTarget] = useState<'primary' | 'planner'>('primary')
+    const [aiTab, setAiTab] = useState<'primary' | 'planner' | 'utility'>('primary')
+    const [testTarget, setTestTarget] = useState<'primary' | 'planner' | 'utility'>('primary')
 
     useEffect(() => {
         if (activeSection !== 'intelligence') return;

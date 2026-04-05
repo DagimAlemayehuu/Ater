@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
+import { useConfig } from '@/lib/ConfigContext'
 
 const GOALS_DB_ID = '2a9219ed-7519-815f-ac0f-ebfcd1dcd003'
 
@@ -37,6 +38,7 @@ function parseGoal(page: any): Goal {
 
 export default function Dashboard() {
     const navigate = useNavigate()
+    const { config } = useConfig()
     const [loading, setLoading] = useState(true)
     const [syncing, setSyncing] = useState(false)
     const [goals, setGoals] = useState<Goal[]>([])
@@ -54,7 +56,7 @@ export default function Dashboard() {
             ])
 
             const parsed = goalsRes.results.map(parseGoal)
-            parsed.sort((a, b) => {
+            parsed.sort((a: any, b: any) => {
                 if (a.completed && !b.completed) return 1
                 if (!a.completed && b.completed) return -1
                 const pw: Record<string, number> = { High: 3, Medium: 2, Low: 1, None: 0 }
@@ -76,7 +78,7 @@ export default function Dashboard() {
         }
     }, [])
 
-    useEffect(() => { fetchData() }, [fetchData])
+    useEffect(() => { fetchData() }, [fetchData, config?.obsidianVaultPath])
 
     const handleRefresh = async () => {
         setSyncing(true)

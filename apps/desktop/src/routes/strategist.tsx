@@ -133,7 +133,7 @@ export default function Strategist() {
 
             // Priority 2: Auto-discover if the default is empty/fails
             const dbList = await sidecarApi.listNotionDatabases()
-            const candidate = dbList.databases.find(d =>
+            const candidate = dbList.find((d: any) =>
                 d.title?.[0]?.plain_text?.toLowerCase().includes('goal') ||
                 d.title?.[0]?.plain_text?.toLowerCase().includes('target')
             )

@@ -93,7 +93,7 @@ export default function Goals() {
             setGoals(parsedGoals)
             // If detail panel is open, refresh it
             if (selectedGoal) {
-                const updated = parsedGoals.find(g => g.id === selectedGoal.id)
+                const updated = parsedGoals.find((g: any) => g.id === selectedGoal.id)
                 if (updated) setSelectedGoal(updated)
             }
         } catch (err) {
