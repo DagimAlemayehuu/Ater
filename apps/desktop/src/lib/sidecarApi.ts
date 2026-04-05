@@ -25,9 +25,14 @@ export interface NotionPage {
 export interface ObsidianFile {
     name: string
     path: string
-    full_path: string
-    modified: string
-    size: number
+    is_dir: boolean
+    modified?: string
+    size?: number
+}
+
+export interface ObsidianNote {
+    metadata: Record<string, any>
+    content: string
 }
 
 /**
@@ -200,7 +205,7 @@ export const sidecarApi = {
     listObsidianFiles: () => request<{ files: ObsidianFile[] }>('/api/obsidian/files'),
     
     readObsidianNote: (path: string) =>
-        request<{ content: string }>(`/api/obsidian/files/${path}`),
+        request<ObsidianNote>(`/api/obsidian/files/${path}`),
     
     updateObsidianNote: (path: string, content: string) =>
         request<{ success: boolean }>(`/api/obsidian/files/${path}`, {

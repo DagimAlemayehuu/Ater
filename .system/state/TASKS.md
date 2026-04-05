@@ -16,4 +16,6 @@ This file tracks the step-by-step technical implementation path generated during
 - [x] Implement multi-agent turn efficiency (Plan + Delegate in one turn).
 - [x] Expand specialist CRUD tools (Obsidian, Notion, Inbox).
 - [x] Resolve iteration limit errors in `BaseAgent` loop.
+- [x] Implement real-time Obsidian vault path synchronization (Dashboard + Vault).
+- [x] Fix utility AI configuration loading and defaults in `ConfigContext`.
 - [x] Update `STATE.md` and sync codebase improvements.

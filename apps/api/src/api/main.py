@@ -172,10 +172,10 @@ async def read_obsidian_file(path: str, secrets: AppSecrets = Depends(get_app_se
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
     try:
         client = ObsidianClient(secrets.vault_path)
-        content = client.read_note(path)
-        if content is None:
+        result = client.read_note(path)
+        if result is None:
             raise HTTPException(status_code=404, detail="File not found")
-        return {"content": content}
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

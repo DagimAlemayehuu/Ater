@@ -28,6 +28,29 @@ interface FileNode {
     children?: FileNode[]
 }
 
+function NoteProperties({ metadata }: { metadata: Record<string, any> }) {
+    if (!metadata || Object.keys(metadata).length === 0) return null
+    
+    return (
+        <div className="mb-8 p-4 rounded-lg bg-muted/30 border border-border/50">
+            <div className="flex items-center gap-2 mb-3 text-muted-foreground">
+                <Database size={12} />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Properties</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+                {Object.entries(metadata).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between py-1 border-b border-border/20 last:border-0">
+                        <span className="text-[10px] font-medium text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
+                        <span className="text-[11px] font-semibold truncate max-w-[150px]">
+                            {Array.isArray(value) ? value.join(', ') : String(value)}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
 export default function ObsidianVaultPage() {
     const { config, saveConfig } = useConfig()
     const location = useLocation()
@@ -40,6 +63,7 @@ export default function ObsidianVaultPage() {
     const [files, setFiles] = useState<ObsidianFile[]>([])
     const [loadingFiles, setLoadingFiles] = useState(false)
     const [selectedPath, setSelectedPath] = useState<string | null>(null)
+    const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     const [noteContent, setNoteContent] = useState('')
     const [loadingNote, setLoadingNote] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
@@ -130,9 +154,11 @@ export default function ObsidianVaultPage() {
         setLoadingNote(true)
         try {
             const res = await sidecarApi.readObsidianNote(path)
+            setNoteMetadata(res.metadata || {})
             setNoteContent(res.content || '')
         } catch (err) {
             console.error('Failed to read note:', err)
+            setNoteMetadata({})
             setNoteContent('# Error\nFailed to load content.')
         } finally { setLoadingNote(false) }
     }
@@ -218,11 +244,12 @@ export default function ObsidianVaultPage() {
                 let existing = currentLevel.find(node => node.name === part)
                 
                 if (!existing) {
+                    const isFolder = !isLast || file.is_dir
                     existing = {
                         name: part,
                         path: currentPath,
-                        isFolder: !isLast,
-                        children: isLast ? undefined : []
+                        isFolder: isFolder,
+                        children: isFolder ? [] : undefined
                     }
                     currentLevel.push(existing)
                 }
@@ -385,10 +412,13 @@ export default function ObsidianVaultPage() {
                                             <p className="text-[10px] font-bold uppercase tracking-widest">Deciphering...</p>
                                         </div>
                                     ) : (
-                                        <div className="prose prose-sm dark:prose-invert prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-p:leading-relaxed max-w-none animate-in fade-in duration-500">
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                {noteContent}
-                                            </ReactMarkdown>
+                                        <div className="animate-in fade-in duration-500">
+                                            <NoteProperties metadata={noteMetadata} />
+                                            <div className="prose prose-sm dark:prose-invert prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-p:leading-relaxed max-w-none">
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                    {noteContent}
+                                                </ReactMarkdown>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

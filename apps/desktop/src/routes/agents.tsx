@@ -300,6 +300,29 @@ function LibrarianDashboard({ onBack }: { onBack: () => void }) {
     )
 }
 
+function NoteProperties({ metadata }: { metadata: Record<string, any> }) {
+    if (!metadata || Object.keys(metadata).length === 0) return null
+    
+    return (
+        <div className="mb-6 p-3 rounded-lg bg-muted/30 border border-border/50">
+            <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+                <Database size={10} />
+                <span className="text-[9px] font-bold uppercase tracking-wider">Properties</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+                {Object.entries(metadata).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between py-1 border-b border-border/10 last:border-0">
+                        <span className="text-[9px] font-medium text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
+                        <span className="text-[10px] font-semibold truncate max-w-[120px]">
+                            {Array.isArray(value) ? value.join(', ') : String(value)}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
 /* ─── Scribe Dashboard ─── */
 function ScribeDashboard({ onBack }: { onBack: () => void }) {
     const { config } = useConfig()
@@ -307,6 +330,7 @@ function ScribeDashboard({ onBack }: { onBack: () => void }) {
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedFile, setSelectedFile] = useState<any>(null)
+    const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     const [noteContent, setNoteContent] = useState('')
     const [loadingNote, setLoadingNote] = useState(false)
 
@@ -331,8 +355,10 @@ function ScribeDashboard({ onBack }: { onBack: () => void }) {
         setLoadingNote(true)
         try {
             const res = await sidecarApi.readObsidianNote(file.path)
+            setNoteMetadata(res.metadata || {})
             setNoteContent(res.content || '')
         } catch (err) {
+            setNoteMetadata({})
             setNoteContent("Error loading content.")
         } finally {
             setLoadingNote(false)
@@ -340,8 +366,10 @@ function ScribeDashboard({ onBack }: { onBack: () => void }) {
     }
 
     const filteredFiles = files.filter(f => 
-        f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        f.path.toLowerCase().includes(searchQuery.toLowerCase())
+        !f.is_dir && (
+            f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            f.path.toLowerCase().includes(searchQuery.toLowerCase())
+        )
     )
 
     return (
@@ -447,8 +475,11 @@ function ScribeDashboard({ onBack }: { onBack: () => void }) {
                                         <RefreshCw size={24} className="animate-spin text-primary opacity-50" />
                                     </div>
                                 ) : (
-                                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{noteContent}</ReactMarkdown>
+                                    <div className="animate-in fade-in duration-500">
+                                        <NoteProperties metadata={noteMetadata} />
+                                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{noteContent}</ReactMarkdown>
+                                        </div>
                                     </div>
                                 )}
                             </div>

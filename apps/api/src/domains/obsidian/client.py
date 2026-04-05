@@ -20,48 +20,63 @@ class ObsidianClient:
 
     def list_files(self, extension: str = ".md") -> List[Dict[str, Any]]:
         """
-        Recursively lists files in the vault.
+        Recursively lists all markdown files and directories in the vault.
         """
         if not self.is_valid_vault():
             print(f"[ObsidianClient] Invalid or missing vault path: {self.vault_path}")
             return []
 
-        files = []
+        items = []
         try:
             abs_vault = self.vault_path.absolute()
             print(f"[ObsidianClient] Scanning: {abs_vault}")
             
-            for file_path in abs_vault.rglob(f"*{extension}"):
-                # Skip hidden folders like .obsidian
-                if ".obsidian" in file_path.parts:
+            # Using rglob("*") to find everything
+            for entry in abs_vault.rglob("*"):
+                # Skip hidden folders like .obsidian and anything inside them
+                if ".obsidian" in entry.parts:
                     continue
 
                 try:
-                    stats = file_path.stat()
-                    files.append({
-                        "name": file_path.name,
-                        "path": str(file_path.relative_to(abs_vault)),
-                        "full_path": str(file_path.absolute()),
-                        "modified": datetime.datetime.fromtimestamp(stats.st_mtime).isoformat(),
-                        "size": stats.st_size,
-                    })
+                    rel_path = str(entry.relative_to(abs_vault))
+                    
+                    if entry.is_dir():
+                        items.append({
+                            "name": entry.name,
+                            "path": rel_path,
+                            "is_dir": True
+                        })
+                    elif entry.suffix == extension:
+                        stats = entry.stat()
+                        items.append({
+                            "name": entry.name,
+                            "path": rel_path,
+                            "is_dir": False,
+                            "size": stats.st_size,
+                            "modified": datetime.datetime.fromtimestamp(stats.st_mtime).isoformat()
+                        })
                 except Exception as e:
-                    print(f"[ObsidianClient] Skip file {file_path}: {e}")
+                    print(f"[ObsidianClient] Skip entry {entry}: {e}")
             
-            print(f"[ObsidianClient] Found {len(files)} notes.")
+            print(f"[ObsidianClient] Found {len(items)} items.")
         except Exception as e:
             print(f"[ObsidianClient] Scan error: {e}")
             
-        return files
+        return items
 
-    def read_note(self, relative_path: str) -> Optional[str]:
+    def read_note(self, relative_path: str) -> Optional[Dict[str, Any]]:
         """
-        Reads the content of a specific note.
+        Reads the content of a specific note and its frontmatter.
         """
+        import frontmatter
         full_path = self.vault_path / relative_path
         if full_path.exists() and full_path.is_file():
             with open(full_path, "r", encoding="utf-8") as f:
-                return f.read()
+                post = frontmatter.load(f)
+                return {
+                    "metadata": post.metadata,
+                    "content": post.content
+                }
         return None
 
     def write_note(self, relative_path: str, content: str) -> bool:
