@@ -34,7 +34,7 @@ export default function Onboarding() {
         setIsSaving(true);
         try {
             await saveConfig(formData);
-            navigate('/dashboard');
+            navigate('/obsidian');
         } catch (err) {
             alert('Failed to save configuration');
         } finally {

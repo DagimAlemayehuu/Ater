@@ -90,7 +90,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     utilityProvider: 'google',
     utilityApiKey: '',
     utilityModel: 'gemini-1.5-flash-8b',
-    obsidianVaultPath: '',
+    obsidianVaultPath: '/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault',
     inboxPath: '',
     autoDeploy: false,
     profilePersonal: DEFAULT_PROFILE_PERSONAL,
@@ -128,7 +128,12 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const utilityApiKey = (await store.get<string>('utilityApiKey')) || '';
                 const utilityModel = (await store.get<string>('utilityModel')) || DEFAULT_CONFIG.utilityModel;
 
-                const obsidianVaultPath = (await store.get<string>('obsidianVaultPath')) || '';
+                let obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+                if (!obsidianVaultPath || obsidianVaultPath.trim() === '') {
+                    obsidianVaultPath = '/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault';
+                    await store.set('obsidianVaultPath', obsidianVaultPath);
+                    await store.save();
+                }
                 const inboxPath = (await store.get<string>('inboxPath')) || '';
                 const autoDeploy = (await store.get<boolean>('autoDeploy')) ?? false;
                 const profilePersonal = (await store.get<string>('profilePersonal')) || DEFAULT_CONFIG.profilePersonal;

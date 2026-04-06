@@ -4,6 +4,7 @@ from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from src.domains.rag.indexer import VaultIndexer
+from src.domains.obsidian.events import vault_events
 import time
 from typing import Optional, Dict, Any, Callable
 
@@ -29,13 +30,23 @@ class VaultSyncHandler(FileSystemEventHandler):
             return True
         return False
 
+    def _publish_event(self, event_type: str, file_path: str):
+        # We also notify the frontend of the change for the database view
+        path_obj = Path(file_path)
+        if "3-Database" in path_obj.parts:
+            db_name = path_obj.parent.name
+            file_name = path_obj.name
+            self.loop.call_soon_threadsafe(
+                vault_events.publish, event_type, {"db_name": db_name, "file_name": file_name}
+            )
+
     def on_modified(self, event):
         if event.is_directory or not event.src_path.endswith('.md'):
             return
         if self._should_process(event.src_path):
             logger.debug(f"[VaultWatcher] Modified detected: {event.src_path}")
-            # We use call_soon_threadsafe because watchdog runs in a separate thread
             self.loop.call_soon_threadsafe(self.indexer.index_file, event.src_path)
+            self._publish_event("modified", event.src_path)
 
     def on_created(self, event):
         if event.is_directory or not event.src_path.endswith('.md'):
@@ -43,12 +54,14 @@ class VaultSyncHandler(FileSystemEventHandler):
         if self._should_process(event.src_path):
             logger.debug(f"[VaultWatcher] Created detected: {event.src_path}")
             self.loop.call_soon_threadsafe(self.indexer.index_file, event.src_path)
+            self._publish_event("created", event.src_path)
 
     def on_deleted(self, event):
         if event.is_directory or not event.src_path.endswith('.md'):
             return
         logger.debug(f"[VaultWatcher] Deleted detected: {event.src_path}")
         self.loop.call_soon_threadsafe(self.indexer.remove_file, event.src_path)
+        self._publish_event("deleted", event.src_path)
         if event.src_path in self._last_processed:
             del self._last_processed[event.src_path]
 

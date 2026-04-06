@@ -47,6 +47,7 @@ from src.domains.rag.vector_store import ChromaManager
 
 from src.domains.academics.router import router as academics_router
 from src.domains.notion.router import router as notion_router
+from src.domains.obsidian.router import router as obsidian_router
 
 # Global watcher instances
 oka_watcher: Optional[OkaQueueManager] = None
@@ -86,9 +87,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Vault Path Auto-Sync Logic ---
+
+async def _ensure_watcher_path(vault_path: str):
+    """Internal helper to ensure watcher is on the right path."""
+    global rag_watcher
+    if rag_watcher and str(rag_watcher.vault_path) != str(Path(vault_path)):
+        logger.info(f"[RAG] Vault path changed from {rag_watcher.vault_path} to {vault_path}. Restarting watcher...")
+        rag_watcher.stop()
+        rag_watcher = None
+        
+        # Auto-restart on new path
+        chroma = ChromaManager()
+        indexer = VaultIndexer(chroma)
+        rag_watcher = RAGWatcherService(indexer, vault_path)
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.get_event_loop()
+        rag_watcher.start(loop, status_callback=_update_rag_status)
+
+async def validate_vault_path(secrets: AppSecrets = Depends(get_app_secrets)):
+    """Dependency to ensure vault path is valid and watcher is synced."""
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+    
+    # Auto-sync the background watcher to the header path
+    await _ensure_watcher_path(secrets.vault_path)
+    return secrets.vault_path
+
 # Mount routers
 app.include_router(academics_router, prefix="/api")
 app.include_router(notion_router, prefix="/api")
+app.include_router(obsidian_router, prefix="/api", dependencies=[Depends(validate_vault_path)])
 
 
 @app.get("/api/health")

@@ -5,11 +5,9 @@ import { ConfigProvider, useConfig } from '@/lib/ConfigContext'
 import { ThemeProvider } from '@/context/theme-provider'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import Onboarding from '@/routes/onboarding'
-import Dashboard from '@/routes/dashboard'
 import ObsidianKnowledgeArchitect from '@/routes/obsidian'
-import Notion from '@/routes/notion'
+import VaultSync from '@/routes/vault-sync'
 import Agents from '@/routes/agents'
-import Automations from '@/routes/automations'
 import Settings from '@/routes/settings'
 import Strategist from '@/routes/strategist'
 import Profiles from '@/routes/profiles'
@@ -95,7 +93,7 @@ function ConfigGate({ children }: { children: React.ReactNode }) {
 
   // Prevent accessing onboarding if already configured
   if (isConfigured && location.pathname === '/onboarding') {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/obsidian" replace />
   }
 
   return <>{children}</>
@@ -112,12 +110,10 @@ export default function App() {
               <Route path="*" element={
                 <AuthenticatedLayout>
                   <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/" element={<Navigate to="/obsidian" replace />} />
                     <Route path="/obsidian" element={<ObsidianKnowledgeArchitect />} />
-                    <Route path="/notion" element={<Notion />} />
+                    <Route path="/vault-sync" element={<VaultSync />} />
                     <Route path="/agents" element={<Agents />} />
-                    <Route path="/automations" element={<Automations />} />
                     <Route path="/strategist" element={<Strategist />} />
                     <Route path="/chat" element={<ChatPage />} />
                     <Route path="/profiles" element={<Profiles />} />

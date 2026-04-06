@@ -41,6 +41,11 @@ export interface ObsidianNote {
 async function getAuthHeaders(): Promise<Record<string, string>> {
     const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} })
     
+    let obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+    if (!obsidianVaultPath || obsidianVaultPath.trim() === '') {
+        obsidianVaultPath = '/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault';
+    }
+
     // Fetch all config values into a single object
     const config = {
         notionApiKey: (await store.get<string>('notionApiKey')) || '',
@@ -58,7 +63,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         utilityApiKey: (await store.get<string>('utilityApiKey')) || '',
         utilityModel: (await store.get<string>('utilityModel')) || 'gemini-1.5-flash-8b',
 
-        obsidianVaultPath: (await store.get<string>('obsidianVaultPath')) || '',
+        obsidianVaultPath,
         inboxPath: (await store.get<string>('inboxPath')) || '',
         academicFolderPath: (await store.get<string>('academicFolderPath')) || '1-Academic',
         autoDeploy: (await store.get<boolean>('autoDeploy')) || false,
@@ -80,7 +85,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         'X-Utility-Key': config.utilityApiKey || config.plannerApiKey || config.aiApiKey || '',
         'X-Utility-Model': config.utilityModel || 'gemini-1.5-flash-8b',
 
-        'X-Vault-Path': config.obsidianVaultPath || '',
+        'X-Vault-Path': config.obsidianVaultPath,
         'X-Inbox-Path': config.inboxPath || '',
         'X-Academic-Path': config.academicFolderPath || '1-Academic',
         'X-Auto-Deploy': String(config.autoDeploy || false),
@@ -171,6 +176,33 @@ export const sidecarApi = {
         
     listNotionPages: () => 
         request<{ pages: any[] }>('/api/notion/pages'),
+
+    // ── Obsidian Local Headless CMS ─────────────────────────
+    listVaultDatabases: () =>
+        request<{ databases: any[] }>('/api/vault/databases'),
+    
+    queryVaultDatabase: (dbName: string) =>
+        request<{ results: any[] }>(`/api/vault/databases/${dbName}`),
+    
+    updateVaultRow: (dbName: string, fileName: string, properties: any) =>
+        request<{ success: boolean; id: string; properties: any }>(`/api/vault/databases/${dbName}/${fileName}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ properties })
+        }),
+        
+    createVaultRow: (dbName: string, title: string, properties: any) =>
+        request<{ success: boolean; id: string; title: string; properties: any }>(`/api/vault/databases/${dbName}`, {
+            method: 'POST',
+            body: JSON.stringify({ title, properties })
+        }),
+        
+    deleteVaultRow: (dbName: string, fileName: string) =>
+        request<{ success: boolean }>(`/api/vault/databases/${dbName}/${fileName}`, {
+            method: 'DELETE'
+        }),
+
+    findVaultPage: (pageName: string) =>
+        request<{ found: boolean; type?: 'database' | 'note'; db_id?: string; file_name?: string; path?: string }>(`/api/vault/search?page_name=${encodeURIComponent(pageName)}`),
 
     // ── AI & Agents ─────────────────────────────────────────
     testAiConnection: (target: 'primary' | 'planner' | 'utility' = 'primary') =>

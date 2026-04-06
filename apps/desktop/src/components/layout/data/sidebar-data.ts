@@ -1,9 +1,8 @@
 import {
-  LayoutDashboard,
-  Database,
   FileText,
   Users,
-  Zap
+  Zap,
+  RefreshCw
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -22,27 +21,17 @@ export const sidebarData: SidebarData = {
   ],
   navGroups: [
     {
-      title: 'Overview',
+      title: 'Knowledge Base',
       items: [
-        {
-          title: 'Dashboard',
-          url: '/dashboard',
-          icon: LayoutDashboard,
-        },
-      ],
-    },
-    {
-      title: 'Workspaces',
-      items: [
-        {
-          title: 'Notion',
-          url: '/notion',
-          icon: Database,
-        },
         {
           title: 'Obsidian',
           url: '/obsidian',
           icon: FileText,
+        },
+        {
+          title: 'Vault Sync',
+          url: '/vault-sync',
+          icon: RefreshCw,
         },
       ],
     },
@@ -58,11 +47,6 @@ export const sidebarData: SidebarData = {
           title: 'Agents',
           url: '/agents',
           icon: Users,
-        },
-        {
-          title: 'Automations',
-          url: '/automations',
-          icon: Zap,
         },
       ],
     },
