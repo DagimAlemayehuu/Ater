@@ -66,3 +66,23 @@
 *   [x] **Agent Workforce Registry**: Integrated all specialized units into a unified dashboard.
 
 ---
+
+## 6. Obsidian Database Engine (Notion Clone)
+### Pending Epics
+*   **[PHASE 1] The Core Database Engine (Structure & Views)**
+    *   [ ] **Multi-View System**: Implementation of `.base` configuration for Table, Board, and Gallery layouts.
+    *   [ ] **Dynamic View State**: Save/Load custom filters, sorts, and column ordering in the database config.
+    *   [ ] **Tabbed Navigation**: UI transition to a multi-tab layout for switching views effortlessly.
+*   **[PHASE 2] Property Intelligence & Interaction**
+    *   [ ] **Rich Property Rendering**: Pill-style Select/Multi-Select badges, Date pickers, and Type-specific icons.
+    *   [ ] **Relation Logic**: Linking notes across database folders using wikilinks and auto-discovery.
+    *   [ ] **Database Templates**: Folder-level `_template.md` support for auto-populating new rows.
+*   **[PHASE 3] Premium Experience & Aesthetics**
+    *   [ ] **Page Chrome (Cover/Icons)**: Aesthetic headers on individual pages with YAML-driven backgrounds/icons.
+    *   [ ] **Side-Peek Editor**: Notion-style side panel for editing page content without leaving the database view.
+    *   [ ] **Global Sidebar Org**: Refactoring the vault sidebar to group by "Areas" and "Database" types dynamically.
+
+### Completed Epics
+*   [x] **Backend Hardening**: Safe YAML parsing and reordered routing to fix API collisions.
+*   [x] **Architect Panel**: Reactive UI for adding rows/columns without browser prompts.
+*   [x] **Dynamic Area Support**: Automated database categorization based on the `Areas` database.

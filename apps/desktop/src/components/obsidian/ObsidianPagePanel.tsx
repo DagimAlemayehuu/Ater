@@ -63,10 +63,14 @@ export function ObsidianPagePanel({
             
             // If we're a generic note, we might want to show its metadata
             if (!databaseId) {
-                setLocalProps(res.metadata || {});
+                const metadata = res.metadata || {};
+                setLocalProps(metadata);
                 const derivedSchema: Record<string, string> = {};
-                Object.entries(res.metadata || {}).forEach(([k, v]) => {
-                    derivedSchema[k] = Array.isArray(v) ? 'list' : typeof v === 'boolean' ? 'bool' : 'str';
+                Object.entries(metadata).forEach(([k, v]) => {
+                    if (k === 'last_synced' || k === 'links') return;
+                    derivedSchema[k] = Array.isArray(v) ? 'list' : 
+                                     typeof v === 'boolean' ? 'bool' : 
+                                     typeof v === 'number' ? (Number.isInteger(v) ? 'int' : 'float') : 'str';
                 });
                 setLocalSchema(derivedSchema);
             } else {

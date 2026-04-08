@@ -1,6 +1,6 @@
 # Project State
 ## 1. Status Summary
-**Current Status:** Tiered Reasoning & Elite Workforce Active. The system has been refactored for "Tiered Reasoning," using Gemini 2.0 Flash as a planning/routing layer to preserve high-precision rate limits (Groq/OpenRouter) for final synthesis. The agent workforce has been consolidated from 8 units into 4 elite specialists: **Notion Librarian**, **Obsidian Scribe**, **Scholar (Technical Intelligence)**, and **OKA (Autonomous Ingestion)**. This maximizes efficiency for CS students and AI Engineers.
+**Current Status:** Tiered Reasoning & Elite Workforce Active. The system has been recently expanded with the **Obsidian Database Engine**, a local-markdown-powered Notion clone. The backend has been hardened for robust filesystem operations, and we are now moving into **Phase 1: Structure & Views** to move beyond static lists into dynamic Kanban and Gallery layouts.
 
 ## 2. Global Milestones
 *   [x] Initialization & Architecture

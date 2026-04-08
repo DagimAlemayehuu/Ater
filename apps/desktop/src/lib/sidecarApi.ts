@@ -15,6 +15,14 @@ export interface HealthResponse {
     version: string
 }
 
+export interface VaultDatabase {
+    id: string;
+    name: string;
+    area?: string;
+    schema: Record<string, string | { type: string; source?: string }>;
+    type: 'obsidian';
+}
+
 export interface NotionPage {
     id: string
     object: string
@@ -181,6 +189,26 @@ export const sidecarApi = {
     listVaultDatabases: () =>
         request<{ databases: any[] }>('/api/vault/databases'),
     
+    fetchVaultAreas: () =>
+        request<{ areas: string[] }>(`/api/vault/areas`),
+
+    createVaultDatabase: (name: string, area?: string) =>
+        request<{ success: boolean; id: string }>(`/api/vault/databases`, {
+            method: 'POST',
+            body: JSON.stringify({ name, area })
+        }),
+    
+    deleteVaultDatabase: (dbName: string) =>
+        request<{ success: boolean }>(`/api/vault/databases/${dbName}`, {
+            method: 'DELETE'
+        }),
+
+    updateVaultDatabaseSchema: (dbName: string, properties: Record<string, any>, renameFrom?: string, renameTo?: string) =>
+        request<{ success: boolean }>(`/api/vault/databases/${dbName}/schema`, {
+            method: 'PATCH',
+            body: JSON.stringify({ properties, rename_from: renameFrom, rename_to: renameTo })
+        }),
+    
     queryVaultDatabase: (dbName: string) =>
         request<{ results: any[] }>(`/api/vault/databases/${dbName}`),
     
@@ -199,6 +227,15 @@ export const sidecarApi = {
     deleteVaultRow: (dbName: string, fileName: string) =>
         request<{ success: boolean }>(`/api/vault/databases/${dbName}/${fileName}`, {
             method: 'DELETE'
+        }),
+
+    getVaultOptions: (source: string) =>
+        request<{ options: string[] }>(`/api/vault/options?source=${encodeURIComponent(source)}`),
+
+    createVaultOption: (source: string, name: string) =>
+        request<{ success: boolean; name: string }>('/api/vault/options', {
+            method: 'POST',
+            body: JSON.stringify({ source, name })
         }),
 
     findVaultPage: (pageName: string) =>

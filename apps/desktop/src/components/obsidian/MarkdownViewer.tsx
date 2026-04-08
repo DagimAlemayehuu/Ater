@@ -8,6 +8,24 @@ interface MarkdownViewerProps {
     onNavigate: (pageName: string) => void
 }
 
+interface WikiLinkProps {
+    pageName: string
+    onNavigate: (pageName: string) => void
+}
+
+const WikiLink = ({ pageName, onNavigate }: WikiLinkProps) => (
+    <button
+        onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onNavigate(pageName);
+        }}
+        className="text-primary hover:underline font-bold transition-all inline-block px-0.5"
+    >
+        {pageName}
+    </button>
+);
+
 export function MarkdownViewer({ content, onNavigate }: MarkdownViewerProps) {
     
     // Simple custom component to handle wikilinks in text strings
@@ -18,19 +36,7 @@ export function MarkdownViewer({ content, onNavigate }: MarkdownViewerProps) {
             const match = part.match(/^\[\[(.*?)\]\]$/);
             if (match) {
                 const pageName = match[1];
-                return (
-                    <button
-                        key={i}
-                        onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onNavigate(pageName);
-                        }}
-                        className="text-primary hover:underline font-bold transition-all inline-block"
-                    >
-                        {pageName}
-                    </button>
-                );
+                return <WikiLink key={i} pageName={pageName} onNavigate={onNavigate} />;
             }
             return part;
         });
@@ -49,18 +55,25 @@ export function MarkdownViewer({ content, onNavigate }: MarkdownViewerProps) {
                             )}
                         </p>
                     ),
-                    h1: ({ children }) => <h1 className="text-2xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-border/20 text-foreground">{children}</h1>,
-                    h2: ({ children }) => <h2 className="text-xl font-black mt-8 mb-4 tracking-tight opacity-90 text-foreground/90">{children}</h2>,
-                    h3: ({ children }) => <h3 className="text-lg font-bold mt-6 mb-3 tracking-tight opacity-80">{children}</h3>,
+                    h1: ({ children }) => <h1 className="text-2xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-border/20 text-foreground">
+                        {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child) : child)}
+                    </h1>,
+                    h2: ({ children }) => <h2 className="text-xl font-black mt-8 mb-4 tracking-tight opacity-90 text-foreground/90">
+                        {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child) : child)}
+                    </h2>,
+                    h3: ({ children }) => <h3 className="text-lg font-bold mt-6 mb-3 tracking-tight opacity-80">
+                        {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child) : child)}
+                    </h3>,
                     h4: ({ children }) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] opacity-40">{children}</h4>,
                     ul: ({ children }) => <ul className="list-disc pl-5 space-y-1 mb-4 text-[13px] opacity-80">{children}</ul>,
                     ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] opacity-80">{children}</ol>,
                     li: ({ children, ...props }: any) => {
+                        const content = React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child) : child);
                         // Check if it's a task list item
                         if (props.className?.includes('task-list-item')) {
-                            return <li className="flex items-start gap-2 list-none -ml-5 mb-1">{children}</li>;
+                            return <li className="flex items-start gap-2 list-none -ml-5 mb-1">{content}</li>;
                         }
-                        return <li className="mb-0.5">{children}</li>;
+                        return <li className="mb-0.5">{content}</li>;
                     },
                     input: ({ type, checked }) => {
                         if (type === 'checkbox') {

@@ -5,8 +5,13 @@ import asyncio
 import ruamel.yaml
 import uuid
 import datetime
+import traceback
 from pathlib import Path
 from pydantic import BaseModel
+import shutil
+import io
+import json
+from fastapi.responses import StreamingResponse
 
 from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.obsidian.client import ObsidianClient
@@ -22,8 +27,19 @@ class CreateRowRequest(BaseModel):
     title: str
     properties: Dict[str, Any]
 
-import json
-from fastapi.responses import StreamingResponse
+class CreateOptionRequest(BaseModel):
+    source: str
+    name: str
+
+class CreateDatabaseRequest(BaseModel):
+    name: str
+    area: Optional[str] = None
+
+class UpdateSchemaRequest(BaseModel):
+    properties: Dict[str, Any] # PropertyName -> {type: str, source: Optional[str]}
+    rename_from: Optional[str] = None
+    rename_to: Optional[str] = None
+
 from src.domains.obsidian.events import vault_events
 
 @router.get("/vault/events")
@@ -46,7 +62,8 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
     if not secrets.vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
         
-    db_path = Path(secrets.vault_path) / DB_DIR_PREFIX
+    vault_root = Path(secrets.vault_path)
+    db_path = vault_root / DB_DIR_PREFIX
     if not db_path.exists():
         return {"databases": []}
         
@@ -55,8 +72,26 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
     
     for entry in db_path.iterdir():
         if entry.is_dir() and not entry.name.startswith("."):
-            # Deduce schema by aggregating from all .md files
+            # 1. Try to load schema from .base file first for rich metadata
             schema = {}
+            area = "Other"
+            base_file = vault_root / "0-Bases" / f"{entry.name}.base"
+            if base_file.exists():
+                try:
+                    with open(base_file, "r", encoding="utf-8") as bf:
+                        base_data = yaml.load(bf)
+                        area = base_data.get("area", "Other")
+                        # Extract schema from columns definition
+                        for view in base_data.get("views", []):
+                            if view.get("type") == "table":
+                                for col in view.get("columns", []):
+                                    if isinstance(col, dict):
+                                        for k, v in col.items():
+                                            schema[k] = v # This includes {type: "select", source: "..."}
+                except Exception as e:
+                    print(f"Error reading .base file {base_file}: {e}")
+
+            # 2. Augment/Deduce schema from .md files if base schema is incomplete
             for md_file in entry.glob("*.md"):
                 try:
                     with open(md_file, "r", encoding="utf-8") as f:
@@ -67,13 +102,14 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                                 frontmatter = yaml.load(content[3:end_idx])
                                 if isinstance(frontmatter, dict):
                                     for k, v in frontmatter.items():
-                                        if k not in ["last_synced", "links"]:
-                                            # If we haven't seen this property yet, or we saw it as None/str, 
-                                            # prefer more specific types like list or bool.
-                                            current_type = schema.get(k)
-                                            new_type = type(v).__name__
-                                            if not current_type or current_type == 'NoneType' or new_type in ['list', 'bool', 'int', 'float']:
-                                                schema[k] = new_type
+                                        if k in ["last_synced", "links"]: continue
+                                        if k not in schema:
+                                            # Map python types to frontend-friendly type names
+                                            new_type = 'list' if isinstance(v, list) else \
+                                                     'bool' if isinstance(v, bool) else \
+                                                     'int' if isinstance(v, int) else \
+                                                     'float' if isinstance(v, float) else 'str'
+                                            schema[k] = new_type
                 except Exception:
                     pass
             
@@ -81,10 +117,28 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                 "id": entry.name,
                 "name": entry.name.split(" - ")[-1] if " - " in entry.name else entry.name,
                 "schema": schema,
+                "area": area,
                 "type": "obsidian"
             })
             
     return {"databases": databases}
+
+@router.get("/vault/areas")
+async def list_vault_areas(secrets: AppSecrets = Depends(get_app_secrets)):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+        
+    vault_root = Path(secrets.vault_path)
+    areas_path = vault_root / DB_DIR_PREFIX / "01 - Areas"
+    if not areas_path.exists():
+        return {"areas": ["Core", "Academic", "Projects", "Resources", "Reference"]}
+        
+    areas = []
+    for md_file in areas_path.glob("*.md"):
+        areas.append(md_file.stem)
+        
+    if "Other" not in areas: areas.append("Other")
+    return {"areas": sorted(areas)}
 
 @router.get("/vault/databases/{db_name}")
 async def query_vault_database(db_name: str, secrets: AppSecrets = Depends(get_app_secrets)):
@@ -120,6 +174,88 @@ async def query_vault_database(db_name: str, secrets: AppSecrets = Depends(get_a
             print(f"Error parsing {md_file.name}: {e}")
             
     return {"results": rows}
+
+@router.patch("/vault/databases/{db_name}/schema")
+async def update_database_schema(db_name: str, req: UpdateSchemaRequest, secrets: AppSecrets = Depends(get_app_secrets)):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+        
+    vault_root = Path(secrets.vault_path)
+    base_file = vault_root / "0-Bases" / f"{db_name}.base"
+    db_path = vault_root / DB_DIR_PREFIX / db_name
+    
+    if not base_file.exists():
+        raise HTTPException(status_code=404, detail="Database configuration not found")
+        
+    try:
+        yaml_in = ruamel.yaml.YAML(typ='safe')
+        with open(base_file, "r", encoding="utf-8") as f:
+            base_data = yaml_in.load(f)
+            
+        if not base_data:
+            base_data = {"views": [{"type": "table", "name": "Table", "columns": []}]}
+            
+        # Construct new column list
+        new_columns = [{"file.name": {"type": "title"}}]
+        for prop_name, prop_meta in req.properties.items():
+            # Normalize to dict if it is just a string (legacy format)
+            normalized_meta = prop_meta if isinstance(prop_meta, dict) else {"type": prop_meta}
+            new_columns.append({prop_name: normalized_meta})
+            
+            # If it's a new selective property, ensure its directory exists
+            if normalized_meta.get("type") in ["select", "relation"] and normalized_meta.get("source"):
+                source_path = vault_root / normalized_meta["source"]
+                source_path.mkdir(parents=True, exist_ok=True)
+
+        # Update base data
+        found_table = False
+        for view in base_data.get("views", []):
+            if view.get("type") == "table":
+                view["columns"] = new_columns
+                found_table = True
+        
+        if not found_table:
+             base_data["views"].append({
+                "type": "table",
+                "name": "Table",
+                "columns": new_columns,
+                "filters": {"and": [{"file.inFolder": f"{DB_DIR_PREFIX}/{db_name}"}]}
+            })
+                
+        yaml_out = ruamel.yaml.YAML(typ='safe')
+        with open(base_file, "w", encoding="utf-8") as f:
+            yaml_out.dump(base_data, f)
+            
+        # 4. Perform bulk migration if renaming
+        if req.rename_from and req.rename_to:
+            print(f"Renaming property '{req.rename_from}' to '{req.rename_to}' in {db_name}")
+            for md_file in db_path.glob("*.md"):
+                try:
+                    with open(md_file, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    
+                    if content.startswith("---"):
+                        end_idx = content.find("---", 3)
+                        if end_idx != -1:
+                            fm_str = content[3:end_idx]
+                            fm_data = yaml_in.load(fm_str)
+                            if isinstance(fm_data, dict) and req.rename_from in fm_data:
+                                fm_data[req.rename_to] = fm_data.pop(req.rename_from)
+                                
+                                import io
+                                buf = io.StringIO()
+                                yaml_out.dump(fm_data, buf)
+                                new_content = f"---\n{buf.getvalue()}---{content[end_idx+3:]}"
+                                with open(md_file, "w", encoding="utf-8") as f:
+                                    f.write(new_content)
+                except Exception as e:
+                    print(f"Failed to migrate {md_file.name}: {e}")
+
+        return {"success": True}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.patch("/vault/databases/{db_name}/{file_name}")
 async def update_vault_row(db_name: str, file_name: str, req: UpdateRowRequest, secrets: AppSecrets = Depends(get_app_secrets)):
@@ -259,3 +395,116 @@ async def find_vault_page(page_name: str, secrets: AppSecrets = Depends(get_app_
         }
                 
     return {"found": False}
+
+@router.get("/vault/options")
+async def get_property_options(source: str, secrets: AppSecrets = Depends(get_app_secrets)):
+    """
+    Returns a list of all markdown files in a given source folder path (relative to vault root).
+    Used for populating select/relation dropdowns.
+    """
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+        
+    source_path = Path(secrets.vault_path) / source
+    if not source_path.exists():
+        return {"options": []}
+        
+    options = []
+    # Only look at immediate children
+    for md_file in source_path.glob("*.md"):
+        options.append(md_file.stem)
+        
+    return {"options": sorted(options)}
+
+@router.post("/vault/options")
+async def create_property_option(req: CreateOptionRequest, secrets: AppSecrets = Depends(get_app_secrets)):
+    """
+    Creates a new markdown file (option/relation) in the specified source folder.
+    """
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+        
+    source_path = Path(secrets.vault_path) / req.source
+    if not source_path.exists():
+        source_path.mkdir(parents=True, exist_ok=True)
+        
+    # Sanitize name for filename
+    safe_name = "".join([c for c in req.name if c.isalnum() or c in (' ', '-', '_')]).strip()
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="Invalid name")
+        
+    file_path = source_path / f"{safe_name}.md"
+    if not file_path.exists():
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(f"---\ntitle: {safe_name}\n---\n\n")
+            
+            
+    return {"success": True, "name": safe_name}
+
+@router.post("/vault/databases")
+async def create_vault_database(req: CreateDatabaseRequest, secrets: AppSecrets = Depends(get_app_secrets)):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+        
+    db_name = req.name
+    vault_root = Path(secrets.vault_path)
+    db_path = vault_root / DB_DIR_PREFIX / db_name
+    base_file = vault_root / "0-Bases" / f"{db_name}.base"
+    
+    if db_path.exists():
+        raise HTTPException(status_code=400, detail="Database folder already exists")
+        
+    try:
+        # 1. Create directory structure
+        db_path.mkdir(parents=True, exist_ok=True)
+        (db_path / "_properties").mkdir(exist_ok=True)
+        
+        # 2. Create initial .base file
+        yaml_out = ruamel.yaml.YAML(typ='safe')
+        base_data = {
+            "area": req.area or "Other",
+            "views": [
+                {
+                    "type": "table",
+                    "name": "Table",
+                    "filters": {"and": [{"file.inFolder": f"{DB_DIR_PREFIX}/{db_name}"}]},
+                    "columns": [
+                        {"file.name": {"type": "title"}}
+                    ]
+                }
+            ]
+        }
+        
+        # Ensure 0-Bases exists
+        base_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(base_file, "w", encoding="utf-8") as f:
+            yaml_out.dump(base_data, f)
+            
+        return {"success": True, "id": db_name}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/vault/databases/{db_name}")
+async def delete_vault_database(db_name: str, secrets: AppSecrets = Depends(get_app_secrets)):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+        
+    vault_root = Path(secrets.vault_path)
+    db_path = vault_root / DB_DIR_PREFIX / db_name
+    base_file = vault_root / "0-Bases" / f"{db_name}.base"
+    
+    try:
+        # Move to archive or delete? For now, let us just remove the .base reference 
+        # but keep the folder or move to 12-Archive.
+        archive_path = vault_root / "3-Database" / "12 - Archive" / f"{db_name}_{uuid.uuid4().hex[:4]}"
+        if db_path.exists():
+            archive_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(db_path), str(archive_path))
+            
+        if base_file.exists():
+            base_file.unlink()
+            
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
