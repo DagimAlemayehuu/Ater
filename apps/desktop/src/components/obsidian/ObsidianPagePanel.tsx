@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Trash2, RefreshCw, Eye, Edit3 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { sidecarApi } from "@/lib/sidecarApi";
 import { Input } from "@/components/ui/input";
 import { EditableCell } from "./EditableCell";
@@ -123,26 +124,50 @@ export function ObsidianPagePanel({
     return (
         <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <SheetContent className="sm:max-w-2xl w-full h-full flex flex-col p-0 gap-0 border-l border-border/40 bg-background shadow-2xl">
-                
-                <div className="px-6 py-4 border-b flex justify-between items-center bg-secondary/5">
-                    <div className="flex-1 mr-4 overflow-hidden">
+                <SheetTitle className="sr-only">{localTitle}</SheetTitle>
+                <SheetDescription className="sr-only">Viewing {relativePath}</SheetDescription>
+
+                {/* Page Chrome: Cover & Icon */}
+                <div className="relative group/chrome shrink-0">
+                    <div className="h-32 w-full bg-secondary/10 relative overflow-hidden">
+                        {displayProps.cover ? (
+                            <img src={displayProps.cover} className="w-full h-full object-cover opacity-80 group-hover/chrome:opacity-100 transition-opacity" alt="" />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-b from-secondary/20 to-transparent" />
+                        )}
+                        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover/chrome:opacity-100 transition-opacity pointer-events-none" />
+                    </div>
+
+                    {displayProps.icon && (
+                        <div className="absolute -bottom-6 left-8 text-5xl bg-background p-2 rounded-2xl border border-border/20 shadow-xl z-10 hover:scale-105 transition-transform cursor-default">
+                            {displayProps.icon}
+                        </div>
+                    )}
+                </div>
+
+                <div className="px-8 pt-10 pb-4 flex justify-between items-start gap-4 shrink-0">
+                    <div className="flex-1 min-w-0">
                         <Input 
                             value={localTitle} 
                             onChange={(e) => setLocalTitle(e.target.value)}
                             onBlur={handleTitleBlur}
                             readOnly
-                            className="text-lg font-black border-transparent hover:border-border/40 focus-visible:ring-0 bg-transparent px-0 h-auto w-full mb-0 tracking-tight truncate"
+                            className="text-3xl font-black border-transparent hover:border-border/40 focus-visible:ring-0 bg-transparent px-0 h-auto w-full tracking-tighter truncate leading-none mb-1"
                         />
-                        <SheetTitle className="sr-only">{localTitle}</SheetTitle>
-                        <SheetDescription className="text-[10px] opacity-40 truncate">{relativePath}</SheetDescription>
+                        <div className="flex items-center gap-2 text-[9px] uppercase font-black tracking-widest opacity-20 hover:opacity-100 transition-opacity">
+                            <RefreshCw size={10} className={loadingContent ? "animate-spin" : ""} />
+                            {relativePath}
+                        </div>
                     </div>
-                    <div className="flex gap-2 shrink-0">
+                    <div className="flex gap-2 pt-2">
                         <button 
                             onClick={() => setMode(mode === 'view' ? 'edit' : 'view')}
-                            className="p-1.5 hover:bg-secondary rounded transition-colors text-muted-foreground/50 hover:text-foreground"
-                            title={mode === 'view' ? 'Edit Markdown' : 'View Markdown'}
+                            className={cn(
+                                "flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all",
+                                mode === 'edit' ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "hover:bg-secondary text-muted-foreground"
+                            )}
                         >
-                            {mode === 'view' ? <Edit3 size={14} /> : <Eye size={14} />}
+                            {mode === 'view' ? <><Edit3 size={12} /> Edit</> : <><Eye size={12} /> Preview</>}
                         </button>
                         {onDelete && (
                             <button onClick={() => {
@@ -150,8 +175,8 @@ export function ObsidianPagePanel({
                                     onDelete();
                                     onClose();
                                 }
-                            }} className="p-1.5 hover:bg-destructive/10 hover:text-destructive rounded transition-colors text-muted-foreground/50">
-                                <Trash2 size={14} />
+                            }} className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-full transition-colors text-muted-foreground/30">
+                                <Trash2 size={16} />
                             </button>
                         )}
                     </div>

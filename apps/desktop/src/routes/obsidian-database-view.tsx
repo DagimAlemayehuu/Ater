@@ -1,42 +1,42 @@
-import React, { useState, useEffect } from 'react'
-import { ArrowLeft, RefreshCw, Plus, Search, Trash, Settings } from 'lucide-react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { ArrowLeft, RefreshCw, Plus, Search, Table, Kanban, LayoutGrid, Filter, ArrowUpDown, MoreVertical } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 
-import { EditableCell } from '@/components/obsidian/EditableCell'
+import { TableView } from '@/components/obsidian/views/TableView'
+import { BoardView } from '@/components/obsidian/views/BoardView'
+import { GalleryView } from '@/components/obsidian/views/GalleryView'
 import { ObsidianPagePanel } from '@/components/obsidian/ObsidianPagePanel'
+import { DatabaseSettingsPanel } from '@/components/obsidian/DatabaseSettingsPanel'
 
 interface ObsidianDatabaseViewProps {
     database: {
         id: string
         name: string
-        schema: Record<string, string>
+        schema: Record<string, any>
+        views?: any[]
     }
     onBack: () => void
     onNavigate: (pageName: string) => void
+    onRefresh: () => void
     initialSelectedRowId?: string | null
 }
 
-export default function ObsidianDatabaseView({ database, onBack, onNavigate, initialSelectedRowId }: ObsidianDatabaseViewProps) {
+export default function ObsidianDatabaseView({ database, onBack, onNavigate, onRefresh, initialSelectedRowId }: ObsidianDatabaseViewProps) {
     const [rows, setRows] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedRowId, setSelectedRowId] = useState<string | null>(initialSelectedRowId || null)
+    const [activeTab, setActiveTab] = useState<'table' | 'board' | 'gallery'>('table')
     
-    // Architect Panel State
-    const [architectMode, setArchitectMode] = useState<'idle' | 'add_row' | 'add_column' | 'edit_column'>('idle')
-    const [architectData, setArchitectData] = useState({
-        name: '',
-        type: 'str',
-        source: '',
-        oldName: ''
-    })
-
-    useEffect(() => {
-        if (initialSelectedRowId) {
-            setSelectedRowId(initialSelectedRowId);
-        }
-    }, [initialSelectedRowId])
+    // Settings State
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const [isCreatingRow, setIsCreatingRow] = useState(false)
+    const [newRowName, setNewRowName] = useState('')
+    
+    // View Customization State
+    const [hiddenProperties, setHiddenProperties] = useState<string[]>([])
+    const [sortConfig, setSortConfig] = useState<{ col: string, dir: 'asc' | 'desc' } | null>(null)
 
     const fetchRows = async () => {
         setLoading(true)
@@ -52,31 +52,20 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, ini
 
     useEffect(() => {
         fetchRows()
-
-        // Phase 3: Real-Time Sync via SSE
+        // SSE Logic
         const eventSource = new EventSource('http://127.0.0.1:8765/api/vault/events');
-        
         eventSource.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                // Only react if the event is for the current database
-                if (data.data?.db_name === database.id) {
-                    console.log("[VaultSync] Real-time event received:", data);
-                    // Instead of full refetch on every keystroke, we just trigger a debounced fetch
-                    fetchRows();
-                }
+                if (data.data?.db_name === database.id) fetchRows();
             } catch (e) {
-                console.error("Failed to parse SSE event", e);
+                console.error("SSE error", e);
             }
         };
-
-        return () => {
-            eventSource.close();
-        };
+        return () => eventSource.close();
     }, [database.id])
 
     const handleUpdate = async (fileName: string, propertyName: string, value: any) => {
-        // Optimistic update
         setRows(prev => prev.map(r => r.id === fileName ? {
             ...r,
             properties: { ...r.properties, [propertyName]: value }
@@ -86,16 +75,15 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, ini
             await sidecarApi.updateVaultRow(database.id, fileName, { [propertyName]: value })
         } catch (e) {
             console.error(e)
-            fetchRows() // Revert on failure
+            fetchRows()
         }
     }
 
     const handleAddRow = async () => {
-        if (!architectData.name.trim()) return;
-        
+        if (!newRowName.trim()) return;
         const initialProps: Record<string, any> = {};
         Object.keys(database.schema).forEach(key => {
-            const meta = (database.schema as any)[key];
+            const meta = database.schema[key];
             const typeStr = typeof meta === 'string' ? meta : (meta?.type || 'str');
             if (typeStr === 'list') initialProps[key] = [];
             else if (typeStr === 'bool') initialProps[key] = false;
@@ -103,302 +91,205 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, ini
         });
 
         try {
-            await sidecarApi.createVaultRow(database.id, architectData.name, initialProps)
-            setArchitectMode('idle');
-            setArchitectData(prev => ({ ...prev, name: '' }));
+            await sidecarApi.createVaultRow(database.id, newRowName, initialProps)
+            setIsCreatingRow(false);
+            setNewRowName('');
             fetchRows();
-        } catch (e) {
-            console.error(e)
-            alert("Failed to create row");
-        }
+        } catch (e) { console.error(e); }
     }
 
-    const handleDeleteRow = async (fileName: string) => {
-        if (!confirm(`Delete ${fileName}?`)) return;
-        try {
-            await sidecarApi.deleteVaultRow(database.id, fileName)
-            fetchRows()
-        } catch (e) {
-            console.error(e)
-            alert("Failed to delete row");
-        }
-    }
+    const filteredRows = useMemo(() => {
+        let result = rows.filter(r => 
+            r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            Object.values(r.properties).some(v => String(v).toLowerCase().includes(searchQuery.toLowerCase()))
+        );
 
-    const handleAddColumn = async () => {
-        const { name, type, source } = architectData;
-        if (!name.trim()) return;
+        if (sortConfig) {
+            result = [...result].sort((a, b) => {
+                const valA = sortConfig.col === 'title' ? a.title : a.properties[sortConfig.col];
+                const valB = sortConfig.col === 'title' ? b.title : b.properties[sortConfig.col];
+                
+                const strA = String(valA || "").toLowerCase();
+                const strB = String(valB || "").toLowerCase();
+                
+                if (strA < strB) return sortConfig.dir === 'asc' ? -1 : 1;
+                if (strA > strB) return sortConfig.dir === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
         
-        const newSchema = { 
-            ...database.schema, 
-            [name]: type === 'select' || type === 'relation' 
-                ? { type, source: source || `3-Database/${database.id}/_properties/${name}` } 
-                : { type } 
-        } as any;
-        
-        try {
-            await sidecarApi.updateVaultDatabaseSchema(database.id, newSchema);
-            // Update local schema prop if possible (optimistic)
-            (database.schema as any)[name] = newSchema[name];
-            setArchitectMode('idle');
-            setArchitectData(prev => ({ ...prev, name: '', source: '' }));
-            fetchRows();
-        } catch (err) {
-            console.error(err);
-            alert("Failed to add column");
-        }
-    }
+        return result;
+    }, [rows, searchQuery, sortConfig])
 
-    const handleEditColumn = async () => {
-        const { name, type, source, oldName } = architectData;
-        if (!name.trim()) return;
-        
-        const newSchema = { ...database.schema } as any;
-        delete newSchema[oldName];
-        newSchema[name] = type === 'select' || type === 'relation' 
-            ? { type, source: source || `3-Database/${database.id}/_properties/${name}` } 
-            : { type };
-        
-        try {
-            await sidecarApi.updateVaultDatabaseSchema(
-                database.id, 
-                newSchema, 
-                oldName !== name ? oldName : undefined, 
-                oldName !== name ? name : undefined
-            );
-            (database.schema as any)[name] = newSchema[name];
-            if (oldName !== name) delete (database.schema as any)[oldName];
-            
-            setArchitectMode('idle');
-            setArchitectData(prev => ({ ...prev, name: '', source: '', oldName: '' }));
-            fetchRows();
-        } catch (err) {
-            console.error(err);
-            alert("Failed to update column");
-        }
-    }
-
-    const handleDeleteColumn = async (colName: string) => {
-        if (!confirm(`Remove column "${colName}"?`)) return;
-        const newSchema = { ...database.schema } as any;
-        delete newSchema[colName];
-        try {
-            await sidecarApi.updateVaultDatabaseSchema(database.id, newSchema);
-            delete (database.schema as any)[colName];
-            fetchRows();
-        } catch (err) {
-            console.error(err);
-            alert("Failed to remove column");
-        }
-    }
-
-    const columns = ['title', ...Object.keys(database.schema).sort()]
-    
-    const filteredRows = rows.filter(r => 
-        r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        Object.values(r.properties).some(v => String(v).toLowerCase().includes(searchQuery.toLowerCase()))
-    )
+    const columns = useMemo(() => {
+        const all = ['title', ...Object.keys(database.schema).sort()];
+        return all.filter(col => col === 'title' || !hiddenProperties.includes(col));
+    }, [database.schema, hiddenProperties])
 
     return (
-        <div className="h-full flex flex-col space-y-4 animate-in slide-in-from-right-4 duration-300">
-            <div className="flex items-center justify-between pb-2 border-b border-border/20">
-                <div className="flex items-center gap-2">
-                    <button onClick={onBack} className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground/50 hover:text-foreground"><ArrowLeft size={14} /></button>
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-30">{database.name}</h2>
+        <div className="h-full flex flex-col space-y-0 animate-in fade-in duration-500 relative">
+            {/* Header / Breadcrumbs */}
+            <div className="flex flex-col px-4 pt-2 pb-0 shrink-0">
+                <div className="flex items-center gap-2 mb-2">
+                    <button onClick={onBack} className="p-1.5 hover:bg-secondary rounded-full transition-all text-muted-foreground/40 hover:text-foreground">
+                        <ArrowLeft size={14} />
+                    </button>
+                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.2em] opacity-40">
+                        <span>Vault</span>
+                        <span className="opacity-20">/</span>
+                        <span>Databases</span>
+                        <span className="opacity-20">/</span>
+                        <span className="text-foreground opacity-100">{database.name}</span>
                     </div>
                 </div>
-                
-                <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground/30" />
-                        <input
-                            type="text"
-                            placeholder="Filter rows"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-8 h-6 text-[10px] w-32 bg-secondary/10 border-none rounded focus:outline-none focus:ring-1 focus:ring-border/40 tracking-tight"
-                        />
+
+                <div className="flex items-center justify-between pb-2 border-b border-border/10">
+                    <div className="flex items-center gap-1">
+                        <button 
+                            onClick={() => setActiveTab('table')}
+                            className={cn(
+                                "flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all",
+                                activeTab === 'table' ? "border-primary text-foreground" : "border-transparent text-muted-foreground/40 hover:text-muted-foreground"
+                            )}
+                        >
+                            <Table size={12} /> Table
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('board')}
+                            className={cn(
+                                "flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all",
+                                activeTab === 'board' ? "border-primary text-foreground" : "border-transparent text-muted-foreground/40 hover:text-muted-foreground"
+                            )}
+                        >
+                            <Kanban size={12} /> Board
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('gallery')}
+                            className={cn(
+                                "flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all",
+                                activeTab === 'gallery' ? "border-primary text-foreground" : "border-transparent text-muted-foreground/40 hover:text-muted-foreground"
+                            )}
+                        >
+                            <LayoutGrid size={12} /> Gallery
+                        </button>
                     </div>
-                    <button onClick={fetchRows} disabled={loading} className="p-1.5 opacity-20 hover:opacity-100 transition-opacity"><RefreshCw size={12} className={loading ? 'animate-spin' : ''} /></button>
-                    <button 
-                        onClick={() => {
-                            setArchitectMode('add_column');
-                            setArchitectData({ name: '', type: 'str', source: '', oldName: '' });
-                        }}
-                        className="flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground text-[10px] font-black uppercase tracking-widest rounded hover:bg-secondary/80 transition-colors"
-                    >
-                        <Plus size={10} /> Add Column
-                    </button>
-                    <button 
-                        onClick={() => {
-                            setArchitectMode('add_row');
-                            setArchitectData({ name: '', type: '', source: '', oldName: '' });
-                        }}
-                        className="flex items-center gap-1 px-2 py-1 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded hover:bg-primary/90 transition-colors"
-                    >
-                        <Plus size={12} /> New Row
-                    </button>
+
+                    <div className="flex items-center gap-1">
+                        <div className="relative group">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground/30 group-focus-within:text-primary/50 transition-colors" />
+                            <input
+                                type="text"
+                                placeholder="Search records..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-8 h-7 text-[10px] w-40 bg-secondary/10 border-none rounded-md focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all focus:w-56 tracking-tight bg-[#0f0f0f]"
+                            />
+                        </div>
+                        <button onClick={fetchRows} className="p-2 opacity-30 hover:opacity-100 transition-opacity"><RefreshCw size={12} className={loading ? 'animate-spin' : ''} /></button>
+                        <div className="w-px h-4 bg-border/20 mx-1" />
+                        
+                        {/* More Menu / Settings Trigger */}
+                        <button 
+                            onClick={() => setSettingsOpen(!settingsOpen)}
+                            className={cn(
+                                "flex items-center justify-center p-1.5 hover:bg-secondary rounded-md transition-all",
+                                settingsOpen ? "bg-secondary text-primary" : "text-muted-foreground/40 dark:text-muted-foreground/60"
+                            )}
+                        >
+                            <MoreVertical size={14} />
+                        </button>
+
+                        <button 
+                            onClick={() => setIsCreatingRow(true)}
+                            className="flex items-center gap-1.5 px-4 h-7 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-[0.1em] rounded-md hover:opacity-90 transition-all shadow-md shadow-primary/10 ml-2"
+                        >
+                            <Plus size={12} /> New
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Architect Panel */}
-            {architectMode !== 'idle' && (
-                <div className="p-4 border border-border/40 rounded bg-secondary/5 mb-4 animate-in slide-in-from-top-4 duration-300">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest">
-                            {architectMode === 'add_row' && 'Create New Row'}
-                            {architectMode === 'add_column' && 'Add New Column'}
-                            {architectMode === 'edit_column' && `Edit Property: ${architectData.oldName}`}
-                        </h3>
-                        <button onClick={() => setArchitectMode('idle')} className="text-[9px] font-bold uppercase opacity-30 hover:opacity-100 transition-opacity">Cancel</button>
-                    </div>
+            {/* Settings Overlay */}
+            <DatabaseSettingsPanel 
+                isOpen={settingsOpen} 
+                onClose={() => setSettingsOpen(false)} 
+                database={database}
+                activeTab={activeTab}
+                hiddenProperties={hiddenProperties}
+                onToggleVisibility={(name) => {
+                    setHiddenProperties(prev => 
+                        prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name]
+                    )
+                }}
+                sortConfig={sortConfig}
+                onSortChange={setSortConfig}
+                onUpdateSchema={() => {
+                    fetchRows();
+                    onRefresh();
+                }}
+                onLayoutChange={setActiveTab}
+            />
 
-                    <div className="flex flex-wrap gap-3">
-                        <div className="flex-1 min-w-[200px]">
-                            <label className="block text-[8px] font-black uppercase opacity-30 mb-1">Name / Title</label>
-                            <input
-                                autoFocus
-                                type="text"
-                                value={architectData.name}
-                                onChange={(e) => setArchitectData(prev => ({ ...prev, name: e.target.value }))}
-                                className="w-full h-8 bg-background border border-border/40 px-2 text-xs rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
-                                placeholder={architectMode === 'add_row' ? "Page Title" : "Property Name"}
-                            />
+            {/* Dynamic View Content */}
+            <div className="flex-1 min-h-0 bg-background/50 relative">
+                {/* Add Row Overlay */}
+                {isCreatingRow && (
+                    <div className="absolute inset-x-0 top-0 z-[60] p-6 bg-background/95 backdrop-blur-md border-b border-border/40 animate-in slide-in-from-top-4 duration-300 shadow-2xl">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xs font-black uppercase tracking-[0.2em] opacity-40">Create New Entry</h3>
+                            <button onClick={() => setIsCreatingRow(false)} className="text-[10px] font-bold uppercase opacity-30 hover:opacity-100 transition-opacity">Cancel</button>
                         </div>
-
-                        {(architectMode === 'add_column' || architectMode === 'edit_column') && (
-                            <>
-                                <div className="w-[120px]">
-                                    <label className="block text-[8px] font-black uppercase opacity-30 mb-1">Type</label>
-                                    <select 
-                                        value={architectData.type}
-                                        onChange={(e) => setArchitectData(prev => ({ ...prev, type: e.target.value }))}
-                                        className="w-full h-8 bg-background border border-border/40 px-2 text-xs rounded focus:outline-none"
-                                    >
-                                        <option value="str">Text</option>
-                                        <option value="number">Number</option>
-                                        <option value="bool">Checkbox</option>
-                                        <option value="date">Date</option>
-                                        <option value="list">List</option>
-                                        <option value="select">Select</option>
-                                        <option value="relation">Relation</option>
-                                    </select>
-                                </div>
-
-                                {(architectData.type === 'select' || architectData.type === 'relation') && (
-                                    <div className="flex-1 min-w-[300px]">
-                                        <label className="block text-[8px] font-black uppercase opacity-30 mb-1">Source Folder</label>
-                                        <input
-                                            type="text"
-                                            value={architectData.source}
-                                            onChange={(e) => setArchitectData(prev => ({ ...prev, source: e.target.value }))}
-                                            className="w-full h-8 bg-background border border-border/40 px-2 text-xs rounded focus:outline-none"
-                                            placeholder={`3-Database/${database.id}/_properties/${architectData.name}`}
-                                        />
-                                    </div>
-                                )}
-                            </>
-                        )}
-
-                        <div className="flex items-end">
+                        <div className="flex gap-4 items-end max-w-2xl">
+                            <div className="flex-1 space-y-1.5">
+                                <label className="text-[9px] font-black uppercase opacity-20 tracking-wider">Entry Title</label>
+                                <input 
+                                    autoFocus 
+                                    className="w-full h-10 bg-secondary/10 border border-border/20 px-4 rounded-xl focus:ring-1 focus:ring-primary/40 focus:outline-none text-sm font-bold"
+                                    placeholder="Untitled Note"
+                                    value={newRowName}
+                                    onChange={(e) => setNewRowName(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddRow()}
+                                />
+                            </div>
                             <button 
-                                onClick={() => {
-                                    if (architectMode === 'add_row') handleAddRow();
-                                    else if (architectMode === 'add_column') handleAddColumn();
-                                    else if (architectMode === 'edit_column') handleEditColumn();
-                                }}
-                                className="h-8 px-6 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+                                onClick={handleAddRow}
+                                className="h-10 px-8 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 hover:-translate-y-0.5 active:translate-y-0 transition-all"
                             >
-                                {architectMode === 'edit_column' ? 'Save Changes' : 'Confirm'}
+                                Confirm
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            <div className="flex-1 min-h-0 overflow-auto custom-scrollbar pb-10">
-                <div className="rounded-md border border-border/40">
-                    <table className="w-full text-left text-xs">
-                        <thead className="bg-secondary/20 sticky top-0 z-10 backdrop-blur-sm border-b border-border/40">
-                            <tr>
-                                 {columns.map(col => (
-                                    <th key={col} className="px-3 py-2 font-black uppercase tracking-wider text-[9px] text-muted-foreground whitespace-nowrap group/th relative border-r border-border/10 last:border-r-0">
-                                        <div className="flex items-center justify-between gap-4">
-                                            <div 
-                                                className={cn(
-                                                    "flex items-center gap-2 cursor-pointer hover:text-foreground transition-colors",
-                                                    col === 'title' && "cursor-default hover:text-muted-foreground"
-                                                )}
-                                                onClick={() => {
-                                                    if (col === 'title') return;
-                                                    const meta = (database.schema as any)[col];
-                                                    setArchitectMode('edit_column');
-                                                    setArchitectData({
-                                                        name: col,
-                                                        oldName: col,
-                                                        type: typeof meta === 'string' ? meta : (meta?.type || 'str'),
-                                                        source: typeof meta === 'string' ? '' : (meta?.source || '')
-                                                    });
-                                                }}
-                                            >
-                                                <span>{col}</span>
-                                                {col !== 'title' && <Settings size={8} className="opacity-0 group-hover/th:opacity-100 transition-opacity" />}
-                                            </div>
-                                            {col !== 'title' && (
-                                                <button 
-                                                    onClick={() => handleDeleteColumn(col)}
-                                                    className="opacity-0 group-hover/th:opacity-40 hover:!opacity-100 text-destructive transition-opacity"
-                                                >
-                                                    <Trash size={10} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </th>
-                                ))}
-                                <th className="px-3 py-2 w-10"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border/20">
-                            {filteredRows.map(row => (
-                                <tr key={row.id} className="hover:bg-secondary/10 group">
-                                    <td 
-                                        className="px-3 py-2 whitespace-nowrap font-bold max-w-[200px] truncate cursor-pointer text-primary hover:underline" 
-                                        title={row.title}
-                                        onClick={() => setSelectedRowId(row.id)}
-                                    >
-                                        {row.title}
-                                    </td>
-                                    {columns.slice(1).map(col => {
-                                        const val = row.properties[col]
-                                        const type = database.schema[col]
-                                        
-                                        return (
-                                            <td key={col} className="px-3 py-1.5 whitespace-nowrap">
-                                                <EditableCell 
-                                                    initialValue={val} 
-                                                    type={type} 
-                                                    onSave={(newValue) => handleUpdate(row.id, col, newValue)} 
-                                                    onNavigate={onNavigate}
-                                                />
-                                            </td>
-                                        )
-                                    })}
-                                    <td className="px-3 py-2 text-right">
-                                        <button onClick={() => handleDeleteRow(row.id)} className="opacity-0 group-hover:opacity-50 hover:!opacity-100 text-destructive transition-opacity">
-                                            <Trash size={12} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {filteredRows.length === 0 && !loading && (
-                                <tr>
-                                    <td colSpan={columns.length + 1} className="px-3 py-8 text-center text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest">
-                                        No rows found
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                <div className="h-full p-4 overflow-hidden">
+                    {activeTab === 'table' && (
+                        <TableView 
+                            rows={filteredRows} 
+                            columns={columns} 
+                            schema={database.schema} 
+                            loading={loading}
+                            onUpdate={handleUpdate}
+                            onSelectRow={setSelectedRowId}
+                            onDeleteRow={(id) => sidecarApi.deleteVaultRow(database.id, id).then(fetchRows)}
+                            onNavigate={onNavigate}
+                        />
+                    )}
+                    {activeTab === 'board' && (
+                        <BoardView 
+                            rows={filteredRows} 
+                            schema={database.schema} 
+                            onUpdate={handleUpdate}
+                            onSelectRow={setSelectedRowId}
+                            onNavigate={onNavigate}
+                        />
+                    )}
+                    {activeTab === 'gallery' && (
+                        <GalleryView 
+                            rows={filteredRows} 
+                            schema={database.schema} 
+                            onSelectRow={setSelectedRowId}
+                        />
+                    )}
                 </div>
             </div>
 
@@ -410,9 +301,9 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, ini
                     rowId={selectedRowId}
                     schema={database.schema}
                     properties={rows.find(r => r.id === selectedRowId)?.properties || {}}
-                    onUpdateProperty={(prop, val) => handleUpdate(selectedRowId, prop, val)}
+                    onUpdateProperty={(prop, val) => handleUpdate(selectedRowId!, prop, val)}
                     onNavigate={onNavigate}
-                    onDelete={() => handleDeleteRow(selectedRowId)}
+                    onDelete={() => sidecarApi.deleteVaultRow(database.id, selectedRowId).then(() => { setSelectedRowId(null); fetchRows(); })}
                 />
             )}
         </div>

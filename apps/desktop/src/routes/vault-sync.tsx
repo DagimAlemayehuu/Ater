@@ -11,6 +11,7 @@ interface VaultDatabase {
     schema: Record<string, any>
     type: string
     area?: string
+    views?: any[]
 }
 
 const MACRO_CATEGORIES = [
@@ -147,6 +148,7 @@ export default function VaultSync() {
                         setGlobalNotePath(null)
                     }} 
                     onNavigate={handleNavigate}
+                    onRefresh={fetchDatabases}
                     initialSelectedRowId={preOpenRowId}
                 />
             </div>
@@ -160,7 +162,7 @@ export default function VaultSync() {
     )
 
     return (
-        <div className="h-full flex-1 flex flex-col space-y-4 w-full mx-auto animate-in fade-in duration-300">
+        <div className="h-full flex-1 flex flex-col w-full mx-auto animate-in fade-in zoom-in-95 duration-500 pr-2">
             {/* Global Note Panel */}
             {globalNotePath && (
                 <ObsidianPagePanel
@@ -171,104 +173,145 @@ export default function VaultSync() {
                 />
             )}
 
-            <div className="flex items-center justify-between border-b border-border/40 pb-4">
-                <div>
-                    <h2 className="text-xl font-black tracking-tighter uppercase">Vault Sync Status</h2>
-                    <p className="text-muted-foreground text-[9px] font-bold uppercase tracking-widest mt-0.5 flex items-center gap-2">
-                        Obsidian Local Headless CMS
+            {/* Premium Header */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-border/10 pb-8 mb-8 pt-4 gap-6">
+                <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                        <div className="size-3 bg-primary rounded-full animate-pulse shadow-[0_0_15px_rgba(255,255,255,0.2)]" />
+                        <h2 className="text-4xl font-black tracking-tighter uppercase leading-none">The Vault</h2>
+                    </div>
+                    <p className="text-muted-foreground/40 text-[10px] font-black uppercase tracking-[0.4em] pl-6">
+                        Local Headless Engine • {databases.length} Systems Active
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
+                
+                <div className="flex items-center gap-3">
                     <div className="relative group">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground/30" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3 text-muted-foreground/20" />
                         <input
                             type="text"
-                            placeholder="Search"
+                            placeholder="FIND SYSTEM..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-8 h-8 text-[10px] w-48 bg-secondary/10 border-none rounded focus:outline-none focus:ring-1 focus:ring-border/40 tracking-tight"
+                            className="pl-9 h-10 text-[10px] w-64 bg-secondary/10 border border-transparent rounded-full focus:outline-none focus:border-primary/20 focus:bg-secondary/20 transition-all font-black uppercase tracking-widest placeholder:opacity-20"
                         />
                     </div>
-                    <button onClick={fetchDatabases} className="p-2 opacity-20 hover:opacity-100 transition-opacity"><RefreshCw size={12} /></button>
+                    <button 
+                        onClick={fetchDatabases} 
+                        className={cn(
+                            "p-2.5 rounded-full bg-secondary/10 border border-border/10 hover:bg-secondary/20 transition-all text-muted-foreground hover:text-foreground",
+                            loading && "animate-spin"
+                        )}
+                    >
+                        <RefreshCw size={14} />
+                    </button>
                     <button 
                         onClick={() => setIsCreating(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
                     >
-                        Create Database
+                        New Database
                     </button>
                 </div>
             </div>
 
             {/* Creation UI */}
             {isCreating && (
-                <div className="p-4 border border-border/40 rounded bg-secondary/5 mb-8 animate-in slide-in-from-top-4 duration-300">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest mb-3">Create New Database</h3>
-                    <div className="flex gap-2">
-                        <input
-                            autoFocus
-                            type="text"
-                            placeholder="e.g. 15 - My New Database"
-                            value={newDbName}
-                            onChange={(e) => setNewDbName(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleCreateDatabase()}
-                            className="flex-1 h-9 bg-background border border-border/40 px-3 text-xs rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
-                        />
-                        <div className="w-[180px]">
-                            <select 
-                                value={selectedArea}
-                                onChange={(e) => setSelectedArea(e.target.value)}
-                                className="w-full h-9 bg-background border border-border/40 px-3 text-xs rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
-                            >
-                                {areas.map(area => (
-                                    <option key={area} value={area}>{area}</option>
-                                ))}
-                            </select>
+                <div className="p-6 border border-primary/20 rounded-2xl bg-primary/5 mb-10 animate-in slide-in-from-top-4 duration-500 overflow-hidden relative">
+                    <div className="absolute top-0 right-0 p-8 opacity-5">
+                        <ExternalLink size={120} />
+                    </div>
+                    <div className="relative z-10">
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] mb-4 text-primary">Initialize New Database</h3>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <input
+                                autoFocus
+                                type="text"
+                                placeholder="DATABASE NAME..."
+                                value={newDbName}
+                                onChange={(e) => setNewDbName(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleCreateDatabase()}
+                                className="flex-1 h-12 bg-background border border-border/20 px-4 text-xs font-bold rounded-xl focus:outline-none focus:border-primary/50 shadow-inner"
+                            />
+                            <div className="sm:w-[220px]">
+                                <select 
+                                    value={selectedArea}
+                                    onChange={(e) => setSelectedArea(e.target.value)}
+                                    className="w-full h-12 bg-background border border-border/20 px-4 text-xs font-bold rounded-xl focus:outline-none focus:border-primary/50 appearance-none"
+                                >
+                                    {areas.map(area => (
+                                        <option key={area} value={area}>{area}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={handleCreateDatabase}
+                                    className="flex-1 sm:flex-none px-8 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20"
+                                >
+                                    Deploy
+                                </button>
+                                <button 
+                                    onClick={() => setIsCreating(false)}
+                                    className="px-6 bg-secondary/40 text-secondary-foreground text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-secondary/60 transition-all"
+                                >
+                                    Abort
+                                </button>
+                            </div>
                         </div>
-                        <button 
-                            onClick={handleCreateDatabase}
-                            className="px-4 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded h-9 transition-all active:scale-95"
-                        >
-                            Confirm
-                        </button>
-                        <button 
-                            onClick={() => setIsCreating(false)}
-                            className="px-4 bg-secondary text-secondary-foreground text-[10px] font-black uppercase tracking-widest rounded h-9"
-                        >
-                            Cancel
-                        </button>
                     </div>
                 </div>
             )}
 
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-20 space-y-12 pr-4">
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-32 space-y-16">
                 {Object.entries(categorized).map(([areaName, dbs]) => {
                     if (dbs.length === 0) return null;
                     return (
-                        <div key={areaName} className="space-y-6">
-                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] opacity-20 border-b border-border/20 pb-2">{areaName}</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div key={areaName} className="space-y-8">
+                            <div className="flex items-center gap-4">
+                                <h2 className="text-[12px] font-black uppercase tracking-[0.5em] text-foreground/80">{areaName}</h2>
+                                <div className="h-[1px] flex-1 bg-gradient-to-r from-border/40 to-transparent" />
+                                <span className="text-[10px] font-black opacity-20">{dbs.length} MODULES</span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                                 {dbs.map(db => (
                                     <div 
                                         key={db.id} 
                                         onClick={() => setSelectedDb(db)} 
-                                        className="p-3 border transition-all cursor-pointer group rounded bg-secondary/5 border-transparent hover:border-border/40 relative"
+                                        className="group relative p-6 border border-border/20 rounded-2xl bg-secondary/5 hover:border-primary/40 hover:bg-secondary/10 transition-all cursor-pointer shadow-sm hover:shadow-2xl hover:-translate-y-1 overflow-hidden"
                                     >
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 group-hover:text-primary transition-colors">{db.area || 'Other'}</span>
+                                        <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button 
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleDeleteDatabase(db.id);
                                                 }}
-                                                className="p-1 opacity-0 group-hover:opacity-30 hover:!opacity-100 transition-opacity text-destructive"
+                                                className="p-2 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-full transition-all"
                                             >
-                                                <Trash2 size={10} />
+                                                <Trash2 size={12} />
                                             </button>
                                         </div>
-                                        <h3 className="text-xs font-bold tracking-tight mb-1">{db.name}</h3>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[8px] font-black opacity-30 uppercase">{Object.keys(db.schema).length} Fields</span>
-                                            <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Synced</span>
+
+                                        <div className="flex flex-col h-full justify-between">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <div className="size-1.5 bg-primary/20 rounded-full" />
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">{db.area}</span>
+                                                </div>
+                                                <h3 className="text-sm font-black tracking-tight mb-2 group-hover:text-primary transition-colors">{db.name}</h3>
+                                            </div>
+                                            
+                                            <div className="mt-6 pt-4 border-t border-border/5 flex items-center justify-between">
+                                                <div className="flex gap-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[8px] font-black text-muted-foreground/20 uppercase">Fields</span>
+                                                        <span className="text-[10px] font-black">{Object.keys(db.schema).length}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="px-2 py-1 rounded bg-emerald-500/5 border border-emerald-500/10">
+                                                    <span className="text-[8px] font-black text-emerald-500/60 uppercase tracking-widest">Active</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}

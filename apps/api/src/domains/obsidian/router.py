@@ -75,19 +75,22 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
             # 1. Try to load schema from .base file first for rich metadata
             schema = {}
             area = "Other"
+            views = []
             base_file = vault_root / "0-Bases" / f"{entry.name}.base"
             if base_file.exists():
                 try:
                     with open(base_file, "r", encoding="utf-8") as bf:
                         base_data = yaml.load(bf)
                         area = base_data.get("area", "Other")
-                        # Extract schema from columns definition
-                        for view in base_data.get("views", []):
+                        views = base_data.get("views", [])
+                        # Extract schema from columns definition of the active/first table view
+                        for view in views:
                             if view.get("type") == "table":
                                 for col in view.get("columns", []):
                                     if isinstance(col, dict):
                                         for k, v in col.items():
-                                            schema[k] = v # This includes {type: "select", source: "..."}
+                                            if k not in schema:
+                                                schema[k] = v
                 except Exception as e:
                     print(f"Error reading .base file {base_file}: {e}")
 
@@ -118,6 +121,7 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                 "name": entry.name.split(" - ")[-1] if " - " in entry.name else entry.name,
                 "schema": schema,
                 "area": area,
+                "views": views,
                 "type": "obsidian"
             })
             
@@ -334,13 +338,29 @@ async def create_vault_row(db_name: str, req: CreateRowRequest, secrets: AppSecr
         data["last_synced"] = datetime.datetime.now().isoformat()
         data["links"] = []
         
+        # Check for template content
+        template_path = db_path / "_template.md"
+        body_content = "\n\n"
+        if template_path.exists():
+            try:
+                with open(template_path, "r", encoding="utf-8") as tf:
+                    t_content = tf.read()
+                    if t_content.startswith("---"):
+                        end_idx = t_content.find("---", 3)
+                        if end_idx != -1:
+                            body_content = t_content[end_idx+3:]
+                    else:
+                        body_content = t_content
+            except Exception as te:
+                print(f"Template load failed for {db_name}: {te}")
+
         import io
         buf = io.StringIO()
         yaml.dump(data, buf)
         new_frontmatter = buf.getvalue()
         
         with open(file_path, "w", encoding="utf-8") as f:
-            f.write(f"---\n{new_frontmatter}---\n\n")
+            f.write(f"---\n{new_frontmatter}---{body_content}")
             
         return {"success": True, "id": file_name, "title": file_name.replace(".md", ""), "properties": data}
     except Exception as e:
