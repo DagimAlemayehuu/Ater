@@ -499,9 +499,9 @@ class OkaService:
         metadata["notes"] = list(dict.fromkeys(notes_match))
 
         # Robust batch parsing
-        # Looks for lines like "Batch 1:", "**Batch 1**:", "### Batch 1", "- Batch 1"
+        # Looks for lines like "Batch 1:", "**Batch 1**:", "### Batch 1", "- Batch 1", "Batch 1 - ..."
         batch_headers = list(re.finditer(
-            r"(?:\n|^)(?:[#\-\*\s]*)Batch\s+(\d+)\s*(?::|\s|\*|$)",
+            r"(?:\n|^)(?:[#\-\*\s]*)Batch\s+(\d+)\s*(?::|\s|\*|-|$)",
             plan_text, 
             re.I
         ))

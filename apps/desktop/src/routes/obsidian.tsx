@@ -519,54 +519,78 @@ export default function ObsidianVaultPage() {
 
                                         {activePlan && (
                                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                                                <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
-                                                    <p className="text-[10px] font-medium leading-relaxed">Plan generated. Manual confirmation required below to deploy notes.</p>
+                                                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10">
+                                                    <Sparkles size={12} className="text-primary animate-pulse" />
+                                                    <p className="text-[10px] font-bold text-primary/80 uppercase tracking-wider">Plan Ready for Deployment</p>
                                                 </div>
                                                 
-                                                {/* Dynamic UI for the Plan */}
+                                                {/* Clean & Minimalist Plan Card */}
                                                 {planData && (
-                                                    <div className="space-y-3 bg-muted/10 p-3 rounded-lg border">
-                                                        <div className="flex items-center justify-between pb-2 border-b border-border/50">
-                                                            <div className="space-y-1">
-                                                                <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><FolderOpen size={10} /> Target Directory</h4>
-                                                                <p className="text-[9px] font-mono text-primary truncate max-w-[250px]">{planData.deployment_path || 'Pending Evaluation'}</p>
+                                                    <div className="space-y-4">
+                                                        {/* Context Card */}
+                                                        <div className="p-4 rounded-xl bg-card border shadow-sm space-y-3">
+                                                            <div className="flex items-start justify-between">
+                                                                <div className="space-y-1">
+                                                                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Target Vault</h4>
+                                                                    <div className="flex items-center gap-1.5 text-primary">
+                                                                        <FolderOpen size={12} />
+                                                                        <p className="text-[11px] font-mono font-bold truncate max-w-[200px]">{planData.deployment_path || 'Analyzing...'}</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-right space-y-1">
+                                                                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Notes</h4>
+                                                                    <p className="text-lg font-black leading-none">{planData.notes?.length || 0}</p>
+                                                                </div>
                                                             </div>
-                                                            <div className="text-right space-y-1">
-                                                                <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Notes</h4>
-                                                                <p className="text-[10px] font-bold">{planData.notes?.length || 0}</p>
+                                                            
+                                                            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border/50">
+                                                                <div className="space-y-1">
+                                                                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Course</span>
+                                                                    <p className="text-[10px] font-semibold truncate">{planData.course || 'General'}</p>
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Unit</span>
+                                                                    <p className="text-[10px] font-semibold truncate">{planData.unit || 'Core'}</p>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                        
-                                                        {planData.batches?.map((b: any) => (
-                                                            <div key={b.id} className="space-y-1.5">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                                                                        <span className="text-[8px] font-bold text-primary">{b.id}</span>
-                                                                    </div>
-                                                                    <span className="text-[9px] font-bold tracking-wider uppercase text-foreground">Batch {b.id}</span>
-                                                                    <span className="text-[8px] font-medium text-muted-foreground ml-auto">{b.notes.length} items</span>
-                                                                </div>
-                                                                <div className="pl-6 space-y-1">
-                                                                    {b.notes.map((note: string, idx: number) => (
-                                                                        <div key={idx} className="flex items-center gap-1.5 opacity-80">
-                                                                            <FileText size={8} className="text-primary/70 shrink-0" />
-                                                                            <span className="text-[9px] truncate">{note}</span>
+
+                                                        {/* Batches Preview */}
+                                                        <div className="space-y-2">
+                                                            <h4 className="px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Deployment Batches</h4>
+                                                            <div className="grid gap-2">
+                                                                {planData.batches?.map((b: any) => (
+                                                                    <div key={b.id} className="group p-3 rounded-lg border bg-muted/5 hover:bg-muted/10 transition-colors">
+                                                                        <div className="flex items-center justify-between mb-2">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-black text-primary border border-primary/20">
+                                                                                    {b.id}
+                                                                                </div>
+                                                                                <span className="text-[10px] font-bold uppercase tracking-wider">Batch {b.id}</span>
+                                                                            </div>
+                                                                            <span className="text-[9px] font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{b.notes.length} notes</span>
                                                                         </div>
-                                                                    ))}
-                                                                </div>
+                                                                        <div className="space-y-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                                                                            {b.notes.slice(0, 3).map((note: string, idx: number) => (
+                                                                                <div key={idx} className="flex items-center gap-2 pl-1">
+                                                                                    <div className="w-1 h-1 rounded-full bg-primary/40" />
+                                                                                    <span className="text-[9px] font-medium truncate">{note}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                            {b.notes.length > 3 && (
+                                                                                <p className="text-[8px] italic text-muted-foreground pl-3">+ {b.notes.length - 3} more notes...</p>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
                                                             </div>
-                                                        ))}
+                                                        </div>
                                                     </div>
                                                 )}
 
-                                                {/* Raw Plan Fallback / Toggle could go here, but omitted for clean UI */}
-                                                <div className="prose prose-xs dark:prose-invert max-w-none p-1 overflow-x-hidden opacity-50 scale-95 origin-top hidden">
-                                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{activePlan}</ReactMarkdown>
-                                                </div>
-
                                                 {isAwaitingConfirmation && (
-                                                    <Button onClick={confirmDeployment} className="w-full h-9 text-[10px] font-bold uppercase bg-primary shadow-lg shadow-primary/20">
-                                                        <ShieldCheck size={14} className="mr-2" /> Confirm Deployment
+                                                    <Button onClick={confirmDeployment} className="w-full h-10 text-[10px] font-bold uppercase bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 tracking-widest">
+                                                        <ShieldCheck size={14} className="mr-2" /> Start Deployment
                                                     </Button>
                                                 )}
                                             </div>

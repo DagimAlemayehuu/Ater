@@ -43,11 +43,12 @@ class VaultManager:
         current_code_buffer = []
 
         for line in lines:
-            start_match = re.match(r"^\s*--- START_CODE:(\w+) ---\s*$", line)
-            end_match = re.match(r"^\s*--- END_CODE:(\w+) ---\s*$", line)
+            # More permissive: allow 3 or more dashes
+            start_match = re.match(r"^\s*-{3,}\s*START_CODE:(\w+)\s*-{3,}\s*$", line)
+            end_match = re.match(r"^\s*-{3,}\s*END_CODE:(\w+)\s*-{3,}\s*$", line)
 
             if start_match:
-                language = start_match.group(1)
+                language = start_match.group(1).lower()
                 if language in ["python", "java", "cpp", "sql", "json", "text", "mermaid"]:
                     if in_code_block:
                         processed_lines.extend(current_code_buffer)
@@ -58,7 +59,7 @@ class VaultManager:
                     processed_lines.append(f"```{current_code_language}")
                 else:
                     processed_lines.append(line)
-            elif end_match and in_code_block and end_match.group(1) == current_code_language:
+            elif end_match and in_code_block and end_match.group(1).lower() == current_code_language:
                 processed_lines.extend(current_code_buffer)
                 current_code_buffer = []
                 processed_lines.append("```")
@@ -88,12 +89,17 @@ class VaultManager:
 
     def extract_yaml_and_content(self, note_block: str) -> Tuple[dict, str, bool]:
         """Extracts YAML frontmatter and Markdown body content."""
-        # Try standard --- YAML --- format first
-        yaml_match = re.search(r"^---\s*\n(.*?)\n---\s*(?=\n|$)", note_block.strip(), re.DOTALL)
+        # Try standard --- YAML --- format first (allow leading whitespace and 3+ dashes)
+        # Permissive: allow optional whitespace and any newline style
+        yaml_match = re.search(r"^\s*-{3,}\s*(?:\r?\n)(.*?)(?:\r?\n)-{3,}\s*(?:\r?\n|$)", note_block.strip(), re.DOTALL)
         
-        # Fallback: Model skipped leading --- but kept trailing ---
+        # Fallback 1: Model skipped leading --- but kept trailing ---
         if not yaml_match:
-            yaml_match = re.search(r"^\s*(title:.*?)\n---\s*(?=\n|$)", note_block.strip(), re.DOTALL)
+            yaml_match = re.search(r"^\s*(title:.*?)(?:\r?\n)-{3,}\s*(?:\r?\n|$)", note_block.strip(), re.DOTALL)
+            
+        # Fallback 2: Extremely permissive (just find content between first two --- blocks)
+        if not yaml_match:
+            yaml_match = re.search(r"-{3,}\s*(.*?)\s*-{3,}", note_block, re.DOTALL)
             
         if not yaml_match:
             return {}, note_block, False
@@ -102,9 +108,13 @@ class VaultManager:
         body_content = note_block.strip()[yaml_match.end():]
         
         try:
+            # Use safe_load for robust parsing
             meta = yaml.safe_load(yaml_str) or {}
             # Ensure keys are lowercase for consistent access
-            meta = {k.lower(): v for k, v in meta.items()}
+            if isinstance(meta, dict):
+                meta = {k.lower(): v for k, v in meta.items()}
+            else:
+                meta = {}
             return meta, body_content, False
         except Exception as e:
             print(f"[VaultManager] YAML Parse Fail: {e}")

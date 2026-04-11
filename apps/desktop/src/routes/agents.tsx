@@ -825,17 +825,11 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                                     );
                                                 })}
                                             </div>
-
-                                            <div className="p-6 rounded-xl border bg-card/50 shadow-inner">
-                                                <h5 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Raw Blueprint Output</h5>
-                                                <div className="prose prose-sm dark:prose-invert max-w-none opacity-60 hover:opacity-100 transition-opacity">
-                                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{activePlan}</ReactMarkdown>
-                                                </div>
-                                            </div>
                                         </div>
                                     ) : (
-                                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{activePlan}</ReactMarkdown>
+                                        <div className="flex flex-col items-center justify-center py-12 opacity-50">
+                                            <Brain size={32} className="mb-4 animate-pulse" />
+                                            <p className="text-xs font-bold uppercase tracking-widest">Compiling Architectural Plan...</p>
                                         </div>
                                     )}
                                 </div>

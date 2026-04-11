@@ -26,14 +26,29 @@ class OkaDeployer:
 
         # Universal Note Extraction (Keyword-Targeted)
         # We split by START_NOTE and then for each part, we find the content up to END_NOTE.
-        raw_parts = re.split(r"START_NOTE", content_to_parse, flags=re.IGNORECASE)
+        # Allow 3 or more dashes and optional whitespace
+        raw_parts = re.split(r"-{3,}\s*START_NOTE\s*-{3,}", content_to_parse, flags=re.IGNORECASE)
+        
         blocks = []
         for part in raw_parts[1:]: # Skip text before first START_NOTE
             # Find the content up to the FIRST occurrence of END_NOTE in this part
-            end_match = re.search(r"(?i)(.*?)\s*END_NOTE", part, re.DOTALL)
+            end_match = re.search(r"(?i)(.*?)\s*-{3,}\s*END_NOTE\s*-{3,}", part, re.DOTALL)
             if end_match:
                 blocks.append(end_match.group(1).strip())
+            else:
+                # Fallback: if END_NOTE is missing its dashes or has other variations
+                end_match_fallback = re.search(r"(?i)(.*?)\s*END_NOTE", part, re.DOTALL)
+                if end_match_fallback:
+                    blocks.append(end_match_fallback.group(1).strip())
         
+        if not blocks:
+            # Last resort fallback: if the model used NO dashes for START_NOTE/END_NOTE
+            raw_parts_no_dash = re.split(r"START_NOTE", content_to_parse, flags=re.IGNORECASE)
+            for part in raw_parts_no_dash[1:]:
+                end_match = re.search(r"(?i)(.*?)\s*END_NOTE", part, re.DOTALL)
+                if end_match:
+                    blocks.append(end_match.group(1).strip())
+
         if not blocks:
             print(f"[OKA Deployer] FAIL: No START_NOTE...END_NOTE regions detected. Output len: {len(ai_output)}")
             return []
