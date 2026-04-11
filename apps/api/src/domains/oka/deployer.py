@@ -20,14 +20,22 @@ class OkaDeployer:
         """
         Parses AI output and deploys notes. Returns a list of deployment results.
         """
-        # Capture blocks including START_NOTE and END_NOTE markers (more robust regex)
-        note_pattern = re.compile(
-            r"(---?\s*START_NOTE\s*---?\s*\n.*?\n\s*---?\s*END_NOTE\s*---?)",
-            re.DOTALL | re.IGNORECASE
-        )
-        blocks = [b.strip() for b in note_pattern.findall(ai_output)]
+        # Robust Batch Capture (Permissive Dash/Punctuation)
+        batch_match = re.search(r"START_BATCH(.*?)END_BATCH", ai_output, re.DOTALL | re.IGNORECASE)
+        content_to_parse = batch_match.group(1) if batch_match else ai_output
+
+        # Universal Note Extraction (Keyword-Targeted)
+        # We split by START_NOTE and then for each part, we find the content up to END_NOTE.
+        raw_parts = re.split(r"START_NOTE", content_to_parse, flags=re.IGNORECASE)
+        blocks = []
+        for part in raw_parts[1:]: # Skip text before first START_NOTE
+            # Find the content up to the FIRST occurrence of END_NOTE in this part
+            end_match = re.search(r"(?i)(.*?)\s*END_NOTE", part, re.DOTALL)
+            if end_match:
+                blocks.append(end_match.group(1).strip())
         
         if not blocks:
+            print(f"[OKA Deployer] FAIL: No START_NOTE...END_NOTE regions detected. Output len: {len(ai_output)}")
             return []
 
         # Load existing metadata for UID/Title matching
@@ -38,15 +46,12 @@ class OkaDeployer:
         results = []
         current_utc = datetime.utcnow().isoformat(timespec='seconds') + 'Z'
 
-        for block in blocks:
-            inner_match = re.search(r"---?\s*START_NOTE\s*---?\s*\n(.*?)\n\s*---?\s*END_NOTE\s*---?", block, re.DOTALL | re.IGNORECASE)
-            if not inner_match: continue
-            
-            raw_note = inner_match.group(1)
+        for raw_note in blocks:
             cleaned_note = self.vm.process_code_blocks(raw_note)
             meta, body, err = self.vm.extract_yaml_and_content(cleaned_note)
             
             if err or not meta.get("title"):
+                print(f"[OKA Deployer] WARN: Parsing failed for note block (len: {len(raw_note)}). Meta: {list(meta.keys())}")
                 continue
 
             title = meta["title"]
@@ -98,9 +103,17 @@ class OkaDeployer:
                     status = "updated"
             
             self.vm.write_note(target_path, full_content)
+            print(f"[OKA Deployer] {status.upper()}: {target_path}")
+            
+            try:
+                display_path = str(target_path.relative_to(self.vm.vault_path))
+            except ValueError:
+                # Fallback if target_path is not inside vault_path
+                display_path = str(target_path)
+                
             results.append({
                 "title": title,
-                "path": str(target_path.relative_to(self.vm.vault_path)),
+                "path": display_path,
                 "status": status,
                 "uid": meta["uid"]
             })

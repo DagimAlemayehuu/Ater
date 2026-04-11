@@ -7,22 +7,23 @@ import { FolderOpen, BrainCircuit, Loader2, ShieldCheck, Zap } from 'lucide-reac
 export default function Onboarding() {
     const { config, saveConfig } = useConfig();
     const [formData, setFormData] = useState({
-        notionApiKey: config?.notionApiKey || '',
         aiApiKey: config?.aiApiKey || '',
         obsidianVaultPath: config?.obsidianVaultPath || '',
+        inboxPath: config?.inboxPath || '',
+        academicFolderPath: config?.academicFolderPath || '1-Academic',
     });
     const [isSaving, setIsSaving] = useState(false);
     const navigate = useNavigate();
 
-    const handlePickDirectory = async () => {
+    const handlePickDirectory = async (key: keyof typeof formData, title: string) => {
         try {
             const selected = await open({
                 directory: true,
                 multiple: false,
-                title: 'Select Obsidian Vault Directory'
+                title: title
             });
             if (selected) {
-                setFormData(prev => ({ ...prev, obsidianVaultPath: selected as string }));
+                setFormData(prev => ({ ...prev, [key]: selected as string }));
             }
         } catch (err) {
             console.error('Failed to open directory picker:', err);
@@ -63,31 +64,12 @@ export default function Onboarding() {
                 <form onSubmit={handleSave} className="space-y-8 bg-card border border-border p-10 rounded-[2.5rem] shadow-sm">
 
                     <div className="grid grid-cols-1 gap-8">
-                        {/* Notion */}
+                        {/* Gemini / AI */}
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <label className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground flex items-center gap-2">
                                     <span className="w-1 h-1 rounded-full bg-primary" />
-                                    Notion API Integration
-                                </label>
-                                <span className="text-[10px] text-muted-foreground/50 font-medium">Required</span>
-                            </div>
-                            <input
-                                type="password"
-                                placeholder="secret_..."
-                                value={formData.notionApiKey}
-                                onChange={e => setFormData(prev => ({ ...prev, notionApiKey: e.target.value }))}
-                                required
-                                className="w-full bg-muted/30 border border-border rounded-xl px-5 py-4 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary/20 focus:bg-background transition-all placeholder:text-muted-foreground/30"
-                            />
-                        </div>
-
-                        {/* Gemini */}
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <label className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground flex items-center gap-2">
-                                    <span className="w-1 h-1 rounded-full bg-primary" />
-                                    Google Gemini Key
+                                    AI Provider API Key
                                 </label>
                                 <span className="text-[10px] text-muted-foreground/50 font-medium">Core LLM</span>
                             </div>
@@ -101,7 +83,7 @@ export default function Onboarding() {
                             />
                         </div>
 
-                        {/* Obsidian */}
+                        {/* Obsidian Vault */}
                         <div className="space-y-3">
                             <label className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground flex items-center gap-2">
                                 <span className="w-1 h-1 rounded-full bg-primary" />
@@ -118,7 +100,57 @@ export default function Onboarding() {
                                 />
                                 <button
                                     type="button"
-                                    onClick={handlePickDirectory}
+                                    onClick={() => handlePickDirectory('obsidianVaultPath', 'Select Vault Directory')}
+                                    className="px-5 rounded-xl bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-all active:scale-95"
+                                >
+                                    <FolderOpen size={18} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Inbox */}
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground flex items-center gap-2">
+                                <span className="w-1 h-1 rounded-full bg-primary" />
+                                Inbox Folder
+                            </label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="/Users/name/Vault/4-Inbox"
+                                    value={formData.inboxPath}
+                                    onChange={e => setFormData(prev => ({ ...prev, inboxPath: e.target.value }))}
+                                    required
+                                    className="flex-1 bg-muted/30 border border-border rounded-xl px-5 py-4 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary/20 focus:bg-background transition-all placeholder:text-muted-foreground/30"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => handlePickDirectory('inboxPath', 'Select Inbox Directory')}
+                                    className="px-5 rounded-xl bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-all active:scale-95"
+                                >
+                                    <FolderOpen size={18} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Academic Base Folder */}
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground flex items-center gap-2">
+                                <span className="w-1 h-1 rounded-full bg-primary" />
+                                Academic Folder (relative or absolute)
+                            </label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="1-Academic"
+                                    value={formData.academicFolderPath}
+                                    onChange={e => setFormData(prev => ({ ...prev, academicFolderPath: e.target.value }))}
+                                    required
+                                    className="flex-1 bg-muted/30 border border-border rounded-xl px-5 py-4 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary/20 focus:bg-background transition-all placeholder:text-muted-foreground/30"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => handlePickDirectory('academicFolderPath', 'Select Academic Folder')}
                                     className="px-5 rounded-xl bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-all active:scale-95"
                                 >
                                     <FolderOpen size={18} />

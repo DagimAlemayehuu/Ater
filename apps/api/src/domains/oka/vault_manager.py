@@ -22,8 +22,17 @@ class VaultManager:
     }
 
     def __init__(self, vault_path: str, academic_base: str = "1-Academic"):
-        self.vault_path = Path(vault_path)
-        self.academic_root = self.vault_path / academic_base.strip("/")
+        self.vault_path = Path(vault_path).resolve()
+        
+        # Handle the academic path root carefully
+        # If it's absolute, use it. If it's relative, join it with the vault root.
+        academic_p = Path(academic_base)
+        if academic_p.is_absolute():
+            self.academic_root = academic_p.resolve()
+        else:
+            # Cleanly strip leading/trailing slashes for relative paths
+            clean_rel = academic_base.strip("/")
+            self.academic_root = (self.vault_path / clean_rel).resolve()
 
     def process_code_blocks(self, content: str) -> str:
         """Processes custom code block markers into standard Markdown."""
@@ -79,17 +88,26 @@ class VaultManager:
 
     def extract_yaml_and_content(self, note_block: str) -> Tuple[dict, str, bool]:
         """Extracts YAML frontmatter and Markdown body content."""
-        yaml_match = re.search(r"^---\s*\n(.*?)\n---\s*(?=\n|$)", note_block, re.DOTALL)
+        # Try standard --- YAML --- format first
+        yaml_match = re.search(r"^---\s*\n(.*?)\n---\s*(?=\n|$)", note_block.strip(), re.DOTALL)
+        
+        # Fallback: Model skipped leading --- but kept trailing ---
+        if not yaml_match:
+            yaml_match = re.search(r"^\s*(title:.*?)\n---\s*(?=\n|$)", note_block.strip(), re.DOTALL)
+            
         if not yaml_match:
             return {}, note_block, False
         
         yaml_str = yaml_match.group(1)
-        body_content = note_block[yaml_match.end():]
+        body_content = note_block.strip()[yaml_match.end():]
         
         try:
             meta = yaml.safe_load(yaml_str) or {}
+            # Ensure keys are lowercase for consistent access
+            meta = {k.lower(): v for k, v in meta.items()}
             return meta, body_content, False
-        except yaml.YAMLError:
+        except Exception as e:
+            print(f"[VaultManager] YAML Parse Fail: {e}")
             return {}, body_content, True
 
     def sanitize_filename(self, name: str) -> str:
@@ -149,43 +167,71 @@ class VaultManager:
         return (numeric_part or canonical_rest).strip('_')
 
     def get_note_path(self, meta: dict) -> Path:
-        """Determines the hierarchical file path for a note."""
-        year = self.sanitize_filename(self.get_canonical_title(meta.get("year", "Unsorted_Year")))
-        semester = self.sanitize_filename(self.get_canonical_title(meta.get("semester", "Unsorted_Semester")))
-        course = self.sanitize_filename(self.get_canonical_title(meta.get("course", "Unsorted_Course")))
+        """Determines the hierarchical file path for a note.
         
-        note_type = meta.get("type", "Unknown")
+        Routing logic:
+          - Academic content (has year/semester/course): 1-Academic/{year}/{semester}/{course}/{unit}/
+          - General content (category: Technical/Research/Knowledge): 1-Knowledge/{domain}/{unit}/
+          - Fallback: 1-Academic/Unsorted/
+        """
+        category = meta.get("category", "").strip()
         
-        # Consistent unit directory name across all note types
+        # Resolve unit directory name (shared across all paths)
         unit_val = meta.get("unit")
         if not unit_val:
-            # Fallback for Unit notes if 'unit' field is missing
             unit_val = meta.get("title", "Uncategorized_Unit")
             if unit_val.endswith("_Hub"):
                 unit_val = unit_val[:-4]
-        
-        unit_dir_name = self.get_canonical_title(unit_val)
-        target_dir = self.academic_root / year / semester / course / self.sanitize_filename(unit_dir_name)
+        unit_dir_name = self.sanitize_filename(self.get_canonical_title(unit_val))
         
         title_base = self.sanitize_filename(self.get_canonical_title(meta.get("title", "Untitled_Note")))
+        
+        # Non-academic routing
+        if category in ("Technical", "Research", "Knowledge"):
+            domain = self.sanitize_filename(self.get_canonical_title(
+                meta.get("domain") or meta.get("field") or meta.get("project") or "General"
+            ))
+            
+            # Respect the user's root mapping if possible. 
+            # If academic_root is "2-Academic", knowledge_root should be "2-Knowledge".
+            academic_name = self.academic_root.name
+            if "Academic" in academic_name:
+                knowledge_dir_name = academic_name.replace("Academic", "Knowledge")
+            else:
+                knowledge_dir_name = "1-Knowledge"
+                
+            knowledge_root = self.academic_root.parent / knowledge_dir_name
+            target_dir = knowledge_root / domain / unit_dir_name
+            return target_dir / f"{title_base}.md"
+        
+        # Simple Academic Routing (As requested: Unsorted_Notes)
+        unit_folder = self.sanitize_filename(self.get_canonical_title(meta.get("unit") or "Unsorted_Unit"))
+        target_dir = self.academic_root / "Unsorted_Notes" / unit_folder
+        
         return target_dir / f"{title_base}.md"
 
     def load_metadata(self) -> List[Dict[str, Any]]:
-        """Scans the vault and extracts YAML metadata."""
+        """Scans the vault and extracts YAML metadata from all knowledge directories."""
         all_meta = []
-        if not self.academic_root.is_dir(): return []
+        scan_roots = [
+            self.academic_root,
+            self.vault_path / "1-Knowledge",
+        ]
         
-        for root, _, files in os.walk(self.academic_root):
-            for file in files:
-                if file.endswith(".md"):
-                    path = Path(root) / file
-                    try:
-                        with open(path, "r", encoding="utf-8") as f:
-                            meta, _, _ = self.extract_yaml_and_content(f.read())
-                            if meta.get("title"):
-                                meta["_file_path"] = str(path)
-                                all_meta.append(meta)
-                    except: pass
+        for scan_root in scan_roots:
+            if not scan_root.is_dir():
+                continue
+            for root, _, files in os.walk(scan_root):
+                for file in files:
+                    if file.endswith(".md"):
+                        path = Path(root) / file
+                        try:
+                            with open(path, "r", encoding="utf-8") as f:
+                                meta, _, _ = self.extract_yaml_and_content(f.read())
+                                if meta.get("title"):
+                                    meta["_file_path"] = str(path)
+                                    all_meta.append(meta)
+                        except: pass
         return all_meta
 
     def write_note(self, path: Path, content: str):

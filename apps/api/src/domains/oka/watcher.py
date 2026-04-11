@@ -79,7 +79,7 @@ class OkaQueueManager:
         
         event_handler = InboxHandler(self)
         self.observer = Observer()
-        self.observer.schedule(event_handler, str(self.inbox_path), recursive=False)
+        self.observer.schedule(event_handler, str(self.inbox_path), recursive=True)
         self.observer.start()
         
         print(f"[OKA Queue] Monitoring: {self.inbox_path} | Auto Process: {self.auto_process}")

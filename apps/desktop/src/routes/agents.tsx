@@ -5,7 +5,8 @@ import {
     Zap, Archive, PauseCircle,
     Brain, ArrowLeft, Bot, Sparkles, ChevronRight, ListChecks,
     Database, Calendar, GraduationCap, Coins, Dumbbell, Lock, Terminal,
-    UserCheck, Search, X, Info, Shield, Check, Save, MessageSquare, Layout, Clock, Plus, ExternalLink, Battery, BrainCircuit
+    UserCheck, Search, X, Info, Shield, Check, Save, MessageSquare, Layout, Clock, Plus, ExternalLink, Battery, BrainCircuit,
+    BookOpen, Tag, Layers
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
@@ -16,6 +17,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 /* ─── Orchestrator Dashboard (The Planner) ─── */
 function OrchestratorDashboard({ onBack }: { onBack: () => void }) {
@@ -501,6 +503,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
     const [selectedInboxFile, setSelectedInboxFile] = useState<any>(null)
     const [processing, setProcessing] = useState(false)
     const [activePlan, setActivePlan] = useState<string | null>(null)
+    const [structuredPlan, setStructuredPlan] = useState<any>(null)
     const [sessionId, setSessionId] = useState<string | null>(null)
     const [isAwaitingConfirmation, setIsAwaitingConfirmation] = useState(false)
     const [currentBatch, setCurrentBatch] = useState<number>(0)
@@ -508,6 +511,8 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
     const [isCompleted, setIsCompleted] = useState(false)
     const [batchFeed, setBatchFeed] = useState<any[]>([])
     const [okaError, setOkaError] = useState<string | null>(null)
+
+    const [isAwaitingNextBatch, setIsAwaitingNextBatch] = useState(false)
 
     const fetchStatus = async () => {
         try {
@@ -540,8 +545,10 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
     const resetOkaSession = () => {
         setSessionId(null)
         setIsAwaitingConfirmation(false)
+        setIsAwaitingNextBatch(false)
         setIsCompleted(false)
         setActivePlan(null)
+        setStructuredPlan(null)
         setBatchFeed([])
         setSelectedInboxFile(null)
         setOkaError(null)
@@ -556,10 +563,12 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
         setBatchFeed([])
         setIsCompleted(false)
         setIsAwaitingConfirmation(false)
+        setIsAwaitingNextBatch(false)
         
         try {
             const res = await sidecarApi.okaProcess({ file_path: selectedInboxFile.path })
             setActivePlan(res.plan_raw)
+            setStructuredPlan(res.plan_structured)
             setSessionId(res.session_id)
             setIsAwaitingConfirmation(true)
             setTotalBatches(res.plan_structured?.batches?.length || 1)
@@ -572,20 +581,31 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
     const confirmDeployment = async () => {
         if (!sessionId) return
         setProcessing(true)
+        setIsAwaitingConfirmation(false)
+        setIsAwaitingNextBatch(false)
         try {
-            let currentHasMore = true
-            let tempBatch = 0
-            while (currentHasMore) {
-                const res = await sidecarApi.okaConfirm({ session_id: sessionId })
-                tempBatch = res.current_batch || (tempBatch + 1)
-                setCurrentBatch(tempBatch)
-                setBatchFeed(prev => [...prev, { batch: tempBatch, results: res.results }])
-                currentHasMore = res.has_more
-                if (currentHasMore) await new Promise(r => setTimeout(r, 2000))
+            const command = currentBatch === 0 
+                ? "Confirm Final Plan & Proceed Batch 1" 
+                : `Proceed Batch ${currentBatch + 1}`;
+                
+            const res = await sidecarApi.okaConfirm({ session_id: sessionId, command })
+            const tempBatch = res.current_batch || (currentBatch + 1)
+            setCurrentBatch(tempBatch)
+            setBatchFeed(prev => [...prev, { 
+                batch: tempBatch, 
+                results: res.results || [],
+                ai_output: res.ai_output || ""
+            }])
+            
+            if (res.has_more) {
+                setIsAwaitingNextBatch(true)
+            } else {
+                setIsCompleted(true)
             }
-            setIsCompleted(true)
-            setIsAwaitingConfirmation(false)
-        } catch (err: any) { setOkaError(err.message) }
+        } catch (err: any) { 
+            setOkaError(err.message) 
+            setIsAwaitingNextBatch(true) // allow retry
+        }
         finally { setProcessing(false) }
     }
 
@@ -689,7 +709,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                         </div>
                         
                         <div className="flex items-center gap-2">
-                            {selectedInboxFile && !isAwaitingConfirmation && !isCompleted && (
+                            {selectedInboxFile && !isAwaitingConfirmation && !isAwaitingNextBatch && !isCompleted && (
                                 <Button onClick={processSelectedFile} disabled={processing} size="sm" className="h-8 font-bold text-[10px] uppercase">
                                     {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <Zap className="mr-2" size={12} />}
                                     Analyze File
@@ -698,7 +718,13 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                             {isAwaitingConfirmation && (
                                 <Button onClick={confirmDeployment} disabled={processing} size="sm" className="h-8 font-bold text-[10px] uppercase bg-primary hover:opacity-90 shadow-lg shadow-primary/20">
                                     {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <ShieldCheck className="mr-2" size={12} />}
-                                    Confirm Deployment
+                                    Confirm Plan & Run Batch 1
+                                </Button>
+                            )}
+                            {isAwaitingNextBatch && (
+                                <Button onClick={confirmDeployment} disabled={processing} size="sm" className="h-8 font-bold text-[10px] uppercase bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
+                                    {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <Zap className="mr-2" size={12} />}
+                                    Proceed Batch {currentBatch + 1} of {totalBatches}
                                 </Button>
                             )}
                             {isCompleted && (
@@ -726,8 +752,22 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                             {processing && !batchFeed.length && !activePlan && (
                                 <div className="py-32 flex flex-col items-center justify-center text-center">
                                     <RefreshCw size={48} className="animate-spin text-primary mb-6" />
-                                    <h4 className="text-lg font-bold mb-2">Architecting Knowledge...</h4>
-                                    <p className="text-sm text-muted-foreground">The AI is analyzing the document structure and creating an atomic integration plan.</p>
+                                    <h4 className="text-lg font-bold mb-4">Architecting Knowledge...</h4>
+                                    <p className="text-xs text-primary/80 font-mono bg-primary/10 px-4 py-2 rounded-full border border-primary/20">
+                                        {queueStatus?.manual_status?.[selectedInboxFile?.path] || 'The AI is analyzing the document structure...'}
+                                    </p>
+                                </div>
+                            )}
+
+                            {processing && (activePlan || batchFeed.length > 0) && (
+                                <div className="mb-8 p-4 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-between shadow-sm animate-pulse">
+                                    <div className="flex items-center gap-3">
+                                        <RefreshCw size={20} className="animate-spin text-primary" />
+                                        <p className="text-xs font-bold uppercase tracking-widest text-primary">System Working</p>
+                                    </div>
+                                    <p className="text-[10px] font-mono text-primary/80">
+                                        {queueStatus?.manual_status?.[selectedInboxFile?.path] || 'Executing Batch...'}
+                                    </p>
                                 </div>
                             )}
 
@@ -737,9 +777,67 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                         <Sparkles size={20} className="text-primary" />
                                         <p className="text-xs font-medium">Plan generated. Review the integration strategy below and confirm deployment.</p>
                                     </div>
-                                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{activePlan}</ReactMarkdown>
-                                    </div>
+
+                                    {structuredPlan ? (
+                                        <div className="space-y-8">
+                                            {/* Header Info */}
+                                            <div className="flex flex-wrap gap-3">
+                                                <div className="px-3 py-1.5 rounded-full bg-muted border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                                                    <BookOpen size={12} className="text-primary" />
+                                                    {structuredPlan.course}
+                                                </div>
+                                                <div className="px-3 py-1.5 rounded-full bg-muted border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                                                    <Tag size={12} className="text-primary" />
+                                                    {structuredPlan.unit}
+                                                </div>
+                                                <div className="px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 text-primary">
+                                                    <Layers size={12} />
+                                                    {structuredPlan.batches?.length || 0} Batches
+                                                </div>
+                                            </div>
+
+                                            {/* Batches Grid */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                {structuredPlan.batches?.map((b: any, idx: number) => {
+                                                    const batchNotes = Array.isArray(b) ? b : (b.notes || []);
+                                                    const batchId = b.id || (idx + 1);
+                                                    
+                                                    return (
+                                                        <Card key={idx} className="bg-muted/30 border-dashed overflow-hidden">
+                                                            <div className="px-4 py-2 bg-muted border-b flex items-center justify-between">
+                                                                <span className="text-[10px] font-bold uppercase tracking-tighter">Batch {batchId}</span>
+                                                                <span className="text-[10px] text-muted-foreground">{batchNotes.length} Notes</span>
+                                                            </div>
+                                                            <div className="p-4 space-y-2">
+                                                                {batchNotes.map((note: string, nidx: number) => (
+                                                                    <div key={nidx} className="flex items-center gap-3 group">
+                                                                        <div className="w-1 h-1 rounded-full bg-primary/40 group-hover:bg-primary transition-colors" />
+                                                                        <span className="text-[11px] font-medium text-muted-foreground group-hover:text-foreground truncate transition-colors">
+                                                                            {note.replace(/\[\[|\]\]/g, '')}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                                {batchNotes.length === 0 && (
+                                                                    <span className="text-[10px] italic text-muted-foreground">Empty Batch</span>
+                                                                )}
+                                                            </div>
+                                                        </Card>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <div className="p-6 rounded-xl border bg-card/50 shadow-inner">
+                                                <h5 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Raw Blueprint Output</h5>
+                                                <div className="prose prose-sm dark:prose-invert max-w-none opacity-60 hover:opacity-100 transition-opacity">
+                                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{activePlan}</ReactMarkdown>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{activePlan}</ReactMarkdown>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -751,12 +849,23 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                     </div>
                                     {batchFeed.map(b => (
                                         <div key={b.batch} className="p-6 rounded-lg border bg-muted/5 animate-in fade-in duration-300">
-                                            <div className="flex items-center gap-2 mb-4">
-                                                <div className="w-5 h-5 rounded bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
-                                                    {b.batch}
-                                                </div>
-                                                <span className="text-[10px] font-bold uppercase tracking-wider">Batch Execution Successful</span>
+                                             <div className="flex items-center gap-2 mb-4">
+                                                 <div className="w-5 h-5 rounded bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
+                                                     {b.batch}
+                                                 </div>
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">
+                                                    {b.results.length > 0 ? "Batch Execution Successful" : "Batch Parsing Failed"}
+                                                </span>
                                             </div>
+                                            
+                                            {b.results.length === 0 && (
+                                                <div className="mb-4 mt-2 p-3 rounded bg-destructive/10 border border-destructive/30">
+                                                    <p className="text-[11px] text-destructive font-medium mb-3 whitespace-nowrap overflow-hidden text-ellipsis">No V3.0 delimiters found in response. Review raw output below:</p>
+                                                    <pre className="text-[10px] bg-background/50 p-2 rounded overflow-x-auto whitespace-pre-wrap max-h-40 font-mono">
+                                                        {b.ai_output}
+                                                    </pre>
+                                                </div>
+                                            )}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 {b.results.map((r: any, i: number) => (
                                                     <div key={i} className="p-3 border rounded bg-background flex items-center gap-3 shadow-sm">

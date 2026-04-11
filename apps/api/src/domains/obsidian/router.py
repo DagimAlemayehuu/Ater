@@ -105,7 +105,7 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                                 frontmatter = yaml.load(content[3:end_idx])
                                 if isinstance(frontmatter, dict):
                                     for k, v in frontmatter.items():
-                                        if k in ["last_synced", "links"]: continue
+                                        if k in ["last_synced", "links", "title"]: continue
                                         if k not in schema:
                                             # Map python types to frontend-friendly type names
                                             new_type = 'list' if isinstance(v, list) else \
@@ -200,11 +200,12 @@ async def update_database_schema(db_name: str, req: UpdateSchemaRequest, secrets
             base_data = {"views": [{"type": "table", "name": "Table", "columns": []}]}
             
         # Construct new column list
-        new_columns = [{"file.name": {"type": "title"}}]
+        new_columns = [{"title": {"type": "title"}}]
         for prop_name, prop_meta in req.properties.items():
             # Normalize to dict if it is just a string (legacy format)
             normalized_meta = prop_meta if isinstance(prop_meta, dict) else {"type": prop_meta}
-            new_columns.append({prop_name: normalized_meta})
+            if prop_name not in ["file.name", "title"]:
+                new_columns.append({prop_name: normalized_meta})
             
             # If it's a new selective property, ensure its directory exists
             if normalized_meta.get("type") in ["select", "relation"] and normalized_meta.get("source"):
@@ -489,7 +490,7 @@ async def create_vault_database(req: CreateDatabaseRequest, secrets: AppSecrets 
                     "name": "Table",
                     "filters": {"and": [{"file.inFolder": f"{DB_DIR_PREFIX}/{db_name}"}]},
                     "columns": [
-                        {"file.name": {"type": "title"}}
+                        {"title": {"type": "title"}}
                     ]
                 }
             ]

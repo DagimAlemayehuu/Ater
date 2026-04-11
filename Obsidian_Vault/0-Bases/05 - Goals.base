@@ -1,0 +1,8 @@
+views:
+- columns:
+  - file.name: {type: title}
+  - Test: {type: str}
+  filters:
+    and: [file.inFolder("3-Database/05 - Goals")]
+  name: Table
+  type: table

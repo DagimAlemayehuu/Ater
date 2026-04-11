@@ -1,0 +1,10 @@
+views:
+  - type: table
+    name: Table
+    filters:
+      and:
+        - file.inFolder("3-Database/12 - Archive")
+    columns:
+      - file.name: { type: "title" }
+      - Original Folder: { type: "str" }
+      - Archived Date: { type: "date" }

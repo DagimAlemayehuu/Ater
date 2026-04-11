@@ -25,10 +25,18 @@ class ModelFactory:
         model_name: str, 
         api_key: str, 
         temperature: float = 0.7,
+        timeout: Optional[int] = None,
+        request_timeout: Optional[int] = None,
+        max_retries: Optional[int] = None,
         **kwargs
     ) -> BaseChatModel:
         """
         Instantiates and returns the appropriate LangChain ChatModel.
+        
+        Args:
+            timeout: Override default timeout (seconds). Used by OpenAI/OpenRouter/Anthropic/Groq.
+            request_timeout: Override default timeout (seconds). Used by Google.
+            max_retries: Override default max_retries.
         """
         provider = provider.lower()
         if provider not in ModelFactory.PROVIDERS:
@@ -40,7 +48,15 @@ class ModelFactory:
         config: Dict[str, Any] = {
             "model_name" if provider in ["openai", "openrouter"] else "model": model_name,
             "temperature": temperature,
+            "max_retries": max_retries if max_retries is not None else 2,
         }
+        
+        # Provider-specific timeout configuration
+        effective_timeout = timeout or 300
+        if provider in ["openai", "openrouter", "anthropic", "groq"]:
+            config["timeout"] = effective_timeout
+        else:  # google
+            config["request_timeout"] = request_timeout or effective_timeout
 
         if provider == "google":
             config["google_api_key"] = api_key
@@ -58,9 +74,9 @@ class ModelFactory:
                 "X-Title": "Life OS"
             }
 
-        # Merge with any additional kwargs
-        # Note: ChatOpenAI uses model_name, others use model
-        # We handle this in the initial config dict
-        config.update(kwargs)
+        # Merge additional kwargs, but strip keys already set to avoid conflicts
+        for k, v in kwargs.items():
+            if k not in config:
+                config[k] = v
 
         return model_class(**config)

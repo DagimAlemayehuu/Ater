@@ -63,57 +63,63 @@ export function DatabaseSettingsPanel({
 
     if (!isOpen) return null
 
-    const handleAddProperty = async () => {
+    const handleAddProperty = () => {
         if (!formData.name.trim()) return
-        setLoading(true)
-        try {
-            const newSchema = { 
-                ...database.schema, 
-                [formData.name]: ['select', 'relation'].includes(formData.type) 
-                    ? { type: formData.type, source: formData.source || "" } 
-                    : { type: formData.type } 
-            }
-            await sidecarApi.updateVaultDatabaseSchema(database.id, newSchema)
-            onUpdateSchema()
-            setPage('properties')
-            setFormData({ name: '', type: 'str', source: '' })
-        } catch (e) { console.error(e) }
-        finally { setLoading(true) }
+        
+        const propData = ['select', 'relation'].includes(formData.type) 
+            ? { type: formData.type, source: formData.source || "" } 
+            : { type: formData.type } 
+            
+        const newSchema = { ...database.schema, [formData.name]: propData }
+        
+        // Optimistic UI updates
+        database.schema[formData.name] = propData // Mutate for instant local reflection
+        setPage('properties')
+        setFormData({ name: '', type: 'str', source: '' })
+        
+        // Background sync
+        sidecarApi.updateVaultDatabaseSchema(database.id, newSchema)
+            .then(() => onUpdateSchema())
+            .catch(e => console.error(e))
     }
 
-    const handleUpdateProperty = async () => {
+    const handleUpdateProperty = () => {
         if (!editingProp || !formData.name.trim()) return
-        setLoading(true)
-        try {
-            const updatedSchema = { ...database.schema }
-            const isRename = editingProp !== formData.name
-            
-            if (isRename) {
-                delete updatedSchema[editingProp]
-            }
-            
-            updatedSchema[formData.name] = ['select', 'relation'].includes(formData.type) 
-                ? { type: formData.type, source: formData.source || "" } 
-                : { type: formData.type }
+        
+        const updatedSchema = { ...database.schema }
+        const isRename = editingProp !== formData.name
+        
+        if (isRename) {
+            delete updatedSchema[editingProp]
+            delete database.schema[editingProp] // Mutate local
+        }
+        
+        const propData = ['select', 'relation'].includes(formData.type) 
+            ? { type: formData.type, source: formData.source || "" } 
+            : { type: formData.type }
 
-            await sidecarApi.updateVaultDatabaseSchema(database.id, updatedSchema, isRename ? editingProp : undefined, isRename ? formData.name : undefined)
-            onUpdateSchema()
-            setPage('properties')
-        } catch (e) { console.error(e) }
-        finally { setLoading(false) }
+        updatedSchema[formData.name] = propData
+        database.schema[formData.name] = propData // Mutate local
+        
+        setPage('properties')
+        
+        sidecarApi.updateVaultDatabaseSchema(database.id, updatedSchema, isRename ? editingProp : undefined, isRename ? formData.name : undefined)
+            .then(() => onUpdateSchema())
+            .catch(e => console.error(e))
     }
 
-    const handleDeleteProperty = async (name: string) => {
+    const handleDeleteProperty = (name: string) => {
         if (!confirm(`Delete property "${name}"? This will remove it from all records.`)) return
-        setLoading(true)
-        try {
-            const newSchema = { ...database.schema }
-            delete newSchema[name]
-            await sidecarApi.updateVaultDatabaseSchema(database.id, newSchema)
-            onUpdateSchema()
-            setPage('properties')
-        } catch (e) { console.error(e) }
-        finally { setLoading(false) }
+        
+        const newSchema = { ...database.schema }
+        delete newSchema[name]
+        delete database.schema[name] // Mutate local
+        
+        setPage('properties')
+        
+        sidecarApi.updateVaultDatabaseSchema(database.id, newSchema)
+            .then(() => onUpdateSchema())
+            .catch(e => console.error(e))
     }
 
     const getIcon = (type: string) => {

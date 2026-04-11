@@ -40,7 +40,6 @@ export interface CustomPersona {
 
 export interface AppConfig {
   [key: string]: any;
-    notionApiKey: string;
     aiProvider: string;
     aiApiKey: string;
     aiModel: string;
@@ -52,6 +51,7 @@ export interface AppConfig {
     utilityModel: string;
     obsidianVaultPath: string;
     inboxPath: string;
+    academicFolderPath: string;
     autoDeploy: boolean;
     profilePersonal: string;
     profileAcademic: string;
@@ -80,7 +80,6 @@ const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 const STORE_FILENAME = 'life-os-config.json';
 
 export const DEFAULT_CONFIG: AppConfig = {
-    notionApiKey: '',
     aiProvider: 'google',
     aiApiKey: '',
     aiModel: 'gemini-2.0-flash',
@@ -92,6 +91,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     utilityModel: 'gemini-1.5-flash-8b',
     obsidianVaultPath: '/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault',
     inboxPath: '',
+    academicFolderPath: '1-Academic',
     autoDeploy: false,
     profilePersonal: DEFAULT_PROFILE_PERSONAL,
     profileAcademic: DEFAULT_PROFILE_ACADEMIC,
@@ -115,7 +115,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const store = await load(STORE_FILENAME, { autoSave: true, defaults: DEFAULT_CONFIG });
 
                 // Load existing values or use defaults
-                const notionApiKey = (await store.get<string>('notionApiKey')) || '';
                 const aiProvider = (await store.get<string>('aiProvider')) || DEFAULT_CONFIG.aiProvider;
                 const aiApiKey = (await store.get<string>('aiApiKey')) || '';
                 const aiModel = (await store.get<string>('aiModel')) || DEFAULT_CONFIG.aiModel;
@@ -135,6 +134,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     await store.save();
                 }
                 const inboxPath = (await store.get<string>('inboxPath')) || '';
+                const academicFolderPath = (await store.get<string>('academicFolderPath')) || DEFAULT_CONFIG.academicFolderPath;
                 const autoDeploy = (await store.get<boolean>('autoDeploy')) ?? false;
                 const profilePersonal = (await store.get<string>('profilePersonal')) || DEFAULT_CONFIG.profilePersonal;
                 const profileAcademic = (await store.get<string>('profileAcademic')) || DEFAULT_CONFIG.profileAcademic;
@@ -148,7 +148,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const customPersonas = (await store.get<CustomPersona[]>('customPersonas')) || [];
 
                 const loadedConfig: any = {
-                    notionApiKey,
                     aiProvider,
                     aiApiKey,
                     aiModel,
@@ -160,6 +159,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     utilityModel,
                     obsidianVaultPath,
                     inboxPath,
+                    academicFolderPath,
                     autoDeploy,
                     profilePersonal,
                     profileAcademic,
@@ -207,9 +207,10 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const isConfigured = Boolean(
-        config?.notionApiKey &&
         config?.aiApiKey &&
-        config?.obsidianVaultPath
+        config?.obsidianVaultPath &&
+        config?.inboxPath &&
+        config?.academicFolderPath
     );
 
     const addCustomPersona = async (p: CustomPersona) => {

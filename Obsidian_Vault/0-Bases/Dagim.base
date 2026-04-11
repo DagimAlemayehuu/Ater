@@ -1,0 +1,13 @@
+area: Other
+views:
+- columns:
+  - file.name: {type: title}
+  - file.name: {type: title}
+  - Dagim: {type: bool}
+  - Hello: {type: str}
+  - Ada: {type: str}
+  filters:
+    and:
+    - {file.inFolder: 3-Database/Dagim}
+  name: Table
+  type: table

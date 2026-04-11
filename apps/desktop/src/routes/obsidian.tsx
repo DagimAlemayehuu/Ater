@@ -4,7 +4,7 @@ import {
     Sparkles, Paperclip, FileText, Folder, ChevronRight, 
     Search, LayoutGrid, BrainCircuit, X, Zap, Activity, 
     PauseCircle, ListChecks, Archive, Terminal, Database,
-    ChevronDown, Info, PanelLeft, Layout
+    ChevronDown, Info, PanelLeft, Layout, FolderOpen
 } from 'lucide-react'
 import { sidecarApi, ObsidianFile } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
@@ -76,6 +76,7 @@ export default function ObsidianVaultPage() {
     const [selectedInboxFile, setSelectedInboxFile] = useState<InboxFile | null>(null)
     const [processing, setProcessing] = useState(false)
     const [activePlan, setActivePlan] = useState<string | null>(null)
+    const [planData, setPlanData] = useState<any | null>(null)
     const [sessionId, setSessionId] = useState<string | null>(null)
     const [isAwaitingConfirmation, setIsAwaitingConfirmation] = useState(false)
     const [currentBatch, setCurrentBatch] = useState<number>(0)
@@ -181,6 +182,7 @@ export default function ObsidianVaultPage() {
         setIsAwaitingConfirmation(false)
         setIsCompleted(false)
         setActivePlan(null)
+        setPlanData(null)
         setBatchFeed([])
         setSelectedInboxFile(null)
         setOkaError(null)
@@ -199,6 +201,7 @@ export default function ObsidianVaultPage() {
         try {
             const res = await sidecarApi.okaProcess({ file_path: selectedInboxFile.path })
             setActivePlan(res.plan_raw)
+            setPlanData(res.plan_structured)
             setSessionId(res.session_id)
             setIsAwaitingConfirmation(true)
             setTotalBatches(res.plan_structured?.batches?.length || 1)
@@ -519,9 +522,48 @@ export default function ObsidianVaultPage() {
                                                 <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
                                                     <p className="text-[10px] font-medium leading-relaxed">Plan generated. Manual confirmation required below to deploy notes.</p>
                                                 </div>
-                                                <div className="prose prose-xs dark:prose-invert max-w-none p-1 overflow-x-hidden">
+                                                
+                                                {/* Dynamic UI for the Plan */}
+                                                {planData && (
+                                                    <div className="space-y-3 bg-muted/10 p-3 rounded-lg border">
+                                                        <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                                                            <div className="space-y-1">
+                                                                <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><FolderOpen size={10} /> Target Directory</h4>
+                                                                <p className="text-[9px] font-mono text-primary truncate max-w-[250px]">{planData.deployment_path || 'Pending Evaluation'}</p>
+                                                            </div>
+                                                            <div className="text-right space-y-1">
+                                                                <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Notes</h4>
+                                                                <p className="text-[10px] font-bold">{planData.notes?.length || 0}</p>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {planData.batches?.map((b: any) => (
+                                                            <div key={b.id} className="space-y-1.5">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                                                                        <span className="text-[8px] font-bold text-primary">{b.id}</span>
+                                                                    </div>
+                                                                    <span className="text-[9px] font-bold tracking-wider uppercase text-foreground">Batch {b.id}</span>
+                                                                    <span className="text-[8px] font-medium text-muted-foreground ml-auto">{b.notes.length} items</span>
+                                                                </div>
+                                                                <div className="pl-6 space-y-1">
+                                                                    {b.notes.map((note: string, idx: number) => (
+                                                                        <div key={idx} className="flex items-center gap-1.5 opacity-80">
+                                                                            <FileText size={8} className="text-primary/70 shrink-0" />
+                                                                            <span className="text-[9px] truncate">{note}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Raw Plan Fallback / Toggle could go here, but omitted for clean UI */}
+                                                <div className="prose prose-xs dark:prose-invert max-w-none p-1 overflow-x-hidden opacity-50 scale-95 origin-top hidden">
                                                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{activePlan}</ReactMarkdown>
                                                 </div>
+
                                                 {isAwaitingConfirmation && (
                                                     <Button onClick={confirmDeployment} className="w-full h-9 text-[10px] font-bold uppercase bg-primary shadow-lg shadow-primary/20">
                                                         <ShieldCheck size={14} className="mr-2" /> Confirm Deployment
@@ -534,15 +576,31 @@ export default function ObsidianVaultPage() {
                                             <div className="space-y-3 pt-4 border-t">
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-[9px] font-bold uppercase">Deploy Progress</span>
-                                                    <span className="text-[9px] font-bold">{currentBatch} / {totalBatches}</span>
+                                                    <span className="text-[9px] font-bold">{currentBatch} / {totalBatches} Batches</span>
                                                 </div>
-                                                <div className="grid gap-1.5">
-                                                    {batchFeed.map(b => b.results.map((r: any, idx: number) => (
-                                                        <div key={`${b.batch}-${idx}`} className="p-2 border rounded bg-background flex items-center gap-2">
-                                                            <FileText size={10} className="text-primary opacity-50" />
-                                                            <span className="text-[9px] font-medium truncate">{r.title}</span>
+                                                <div className="space-y-3">
+                                                    {batchFeed.map(b => (
+                                                        <div key={b.batch} className="space-y-1.5">
+                                                            <div className="flex items-center gap-2 py-1">
+                                                                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+                                                                    <span className="text-[8px] font-bold text-primary">{b.batch}</span>
+                                                                </div>
+                                                                <span className="text-[9px] font-bold uppercase text-primary">Batch {b.batch} Deployed</span>
+                                                            </div>
+                                                            {b.results.map((r: any, idx: number) => (
+                                                                <div key={`${b.batch}-${idx}`} className="p-2.5 border rounded-md bg-background space-y-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <FileText size={10} className="text-primary opacity-50 shrink-0" />
+                                                                        <span className="text-[10px] font-semibold truncate">{r.title}</span>
+                                                                        <span className="ml-auto text-[8px] font-bold uppercase px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{r.status || 'created'}</span>
+                                                                    </div>
+                                                                    {r.path && (
+                                                                        <p className="text-[8px] text-muted-foreground font-mono truncate pl-5">{r.path}</p>
+                                                                    )}
+                                                                </div>
+                                                            ))}
                                                         </div>
-                                                    )))}
+                                                    ))}
                                                 </div>
                                             </div>
                                         )}

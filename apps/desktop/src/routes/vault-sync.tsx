@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Search, ExternalLink, RefreshCw, Trash2 } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
+import { SyncDashboard } from '@/components/obsidian/SyncDashboard'
 import ObsidianDatabaseView from './obsidian-database-view'
 import { ObsidianPagePanel } from '@/components/obsidian/ObsidianPagePanel'
 
@@ -213,6 +214,9 @@ export default function VaultSync() {
                     </button>
                 </div>
             </div>
+
+            {/* Sync & Health Controls */}
+            <SyncDashboard />
 
             {/* Creation UI */}
             {isCreating && (

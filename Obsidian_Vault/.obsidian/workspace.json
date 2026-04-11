@@ -1,0 +1,217 @@
+{
+  "main": {
+    "id": "30a1845ffac9efc6",
+    "type": "split",
+    "children": [
+      {
+        "id": "bc29ebe9c5943fe7",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "137e731015dc278e",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "New tab"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "ea6b320ec1a2d17f",
+    "type": "split",
+    "children": [
+      {
+        "id": "1250957646912019",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "810261958577cd9b",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "0cb355cad3c79bee",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "7c64be831eb1575c",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "6bda4f631c51fb20",
+    "type": "split",
+    "children": [
+      {
+        "id": "59b3520411cc18a5",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "e549178fa914ddff",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "d62b67f72b114148",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "0a4510e2629e9f0f",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "e9c9ef7af753f376",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "b1aa24698d4ff011",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "810261958577cd9b",
+  "lastOpenFiles": [
+    "2-Academic/Unsorted_Notes/Conceptual_Database_Design/Attributes.md",
+    "2-Academic/Unsorted_Notes/Conceptual_Database_Design/Conceptual_Database_Design.md",
+    "2-Academic/Unsorted_Notes/Conceptual_Database_Design/Database_Design_Possible_Questions.md",
+    "2-Academic/Unsorted_Notes/Conceptual_Database_Design/Database_Design_Unit_Hub.md",
+    "2-Academic/Unsorted_Notes/Conceptual_Database_Design/Database_Development_Methodology.md",
+    "2-Academic/Unsorted_Notes/Conceptual_Database_Design/Entity_Type.md",
+    "2-Academic/Unsorted_Notes/Conceptual_Database_Design/Relationship_Types.md",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design/Conceptual_Database_Design_Hub.md",
+    "5-Pdf Store/Chapter_3.pdf",
+    "2-Academic/Unsorted_Notes/Conceptual_Database_Design/Database_System_Development_Lifecycle.md",
+    "2-Academic/Unsorted_Notes/Conceptual_Database_Design",
+    "2-Academic/Unsorted_Notes",
+    "5-Pdf Store/Chapter_3.pdf",
+    "5-Pdf Store/Chapter_3.pdf",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design/Er_Diagram_Development.md",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design/Entity_Type.md",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design/Database_System_Development_Lifecycle.md",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design/Database_Development_Methodology.md",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design/Conceptual_Database_Design_Process.md",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design/Conceptual_Database_Design_All_Questions.md",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design/Keys.md",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design/Attributes.md",
+    "1-Meta/2-AI Personas/Google AI Studio/Obsidian Knowledge Architect (OKA).md",
+    "5-Pdf Store/Chapter_3.pdf",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design/Physical_Database_Design.md",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design/Logical_Database_Design.md",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design/Structural_Constraints.md",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design/Relationship_Type.md",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems/Conceptual_Database_Design",
+    "2-Academic/Unsorted_Year/Unsorted_Semester/Database_Systems",
+    "2-Academic/Unsorted_Year/Unsorted_Semester",
+    "2-Academic/Unsorted_Year",
+    "Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault/2-Academic/Unsorted_Year/Unsorted_Semester/Unsorted_Course/Conceptual_Database_Design/Conceptual_Database_Design_All_Questions.md",
+    "Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault/2-Academic/Unsorted_Year/Unsorted_Semester/Unsorted_Course/Conceptual_Database_Design/Structural_Constraints.md",
+    "Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault/2-Academic/Unsorted_Year/Unsorted_Semester/Unsorted_Course/Conceptual_Database_Design/Keys_And_Constraints.md"
+  ]
+}

@@ -75,11 +75,9 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         inboxPath: (await store.get<string>('inboxPath')) || '',
         academicFolderPath: (await store.get<string>('academicFolderPath')) || '1-Academic',
         autoDeploy: (await store.get<boolean>('autoDeploy')) || false,
-        googleCalendarToken: (await store.get<string>('googleCalendarToken')) || '',
     }
 
     return {
-        'X-Notion-Key': config.notionApiKey || '',
         'X-AI-Provider': config.aiProvider || 'google',
         'X-AI-Key': config.aiApiKey || config.geminiApiKey || '',
         'X-AI-Model': config.aiModel || 'gemini-2.0-flash',
@@ -97,7 +95,6 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         'X-Inbox-Path': config.inboxPath || '',
         'X-Academic-Path': config.academicFolderPath || '1-Academic',
         'X-Auto-Deploy': String(config.autoDeploy || false),
-        'X-Google-Calendar-Token': config.googleCalendarToken || '',
     };
 }
 

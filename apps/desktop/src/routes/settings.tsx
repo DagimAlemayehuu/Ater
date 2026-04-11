@@ -322,58 +322,6 @@ export default function Settings() {
                         </CardContent>
                     </Card>
 
-                    {/* Notion */}
-                    <SettingsCard
-                        title="Notion Integration"
-                        icon={<Database size={18} />}
-                        value="Workspace synchronization API key"
-                        isEditing={editingKey === 'notionApiKey'}
-                        onEdit={() => startEditing('notionApiKey', config?.notionApiKey || '')}
-                        onSave={handleSave}
-                        onCancel={() => setEditingKey(null)}
-                    >
-                        {editingKey === 'notionApiKey' ? (
-                            <input
-                                type="password"
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                autoFocus
-                            />
-                        ) : (
-                            <div className="px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm border border-transparent">
-                                <span>{config?.notionApiKey ? '••••••••' + config?.notionApiKey.slice(-4) : 'Not configured'}</span>
-                                <ShieldCheck size={14} className="opacity-50" />
-                            </div>
-                        )}
-                    </SettingsCard>
-
-                    {/* Google Calendar */}
-                    <SettingsCard
-                        title="Google Calendar"
-                        icon={<Icons.Calendar size={18} />}
-                        value="Connect your unified timeline"
-                        isEditing={editingKey === 'googleCalendarToken'}
-                        onEdit={() => startEditing('googleCalendarToken', config?.googleCalendarToken || '')}
-                        onSave={handleSave}
-                        onCancel={() => setEditingKey(null)}
-                    >
-                        {editingKey === 'googleCalendarToken' ? (
-                            <textarea
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                placeholder='Paste Authorized User JSON here...'
-                                className="w-full h-24 bg-background border border-input rounded-md px-3 py-2 text-[10px] font-mono shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-                                autoFocus
-                            />
-                        ) : (
-                            <div className="px-3 py-2 rounded-md bg-muted text-sm font-mono text-muted-foreground flex items-center justify-between shadow-sm">
-                                <span>{config?.googleCalendarToken ? 'Connected (JSON Set)' : 'Not connected'}</span>
-                                <Icons.Lock size={14} className="opacity-50" />
-                            </div>
-                        )}
-                    </SettingsCard>
-
                     {/* AI Engine */}
                     <SettingsCard
                         title="AI Engine"
@@ -857,26 +805,6 @@ export default function Settings() {
                                             className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 disabled:opacity-50"
                                         >
                                             {ragStatus?.status === 'syncing' ? 'Syncing...' : 'Force Sync Vault'}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-3 p-3 rounded-md bg-muted/50 border">
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-0.5">
-                                            <div className="text-sm font-medium">Notion Mirror</div>
-                                            <div className="text-xs text-muted-foreground">Pull all Notion databases to Obsidian.</div>
-                                        </div>
-                                        <button
-                                            onClick={async () => {
-                                                if (notionStatus?.status === 'syncing') return;
-                                                setNotionStatus(prev => ({ ...(prev || { progress: 0, total: 0 }), status: 'syncing', message: 'Syncing...' }));
-                                                try { await sidecarApi.syncNotionMirror() } catch (e: any) { alert(e.message) }
-                                            }}
-                                            disabled={notionStatus?.status === 'syncing'}
-                                            className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 disabled:opacity-50"
-                                        >
-                                            {notionStatus?.status === 'syncing' ? 'Syncing...' : 'Sync Notion'}
                                         </button>
                                     </div>
                                 </div>

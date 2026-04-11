@@ -1,130 +1,328 @@
-#!/usr/bin/env python3
+import re
+import json
 import os
 import asyncio
-import re
 import traceback
 import uuid
 import time
+from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
-from typing import List, Dict, Any, Optional
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from datetime import datetime
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 from langchain_community.document_loaders import PyPDFLoader
 
 from .vault_manager import VaultManager
 from .deployer import OkaDeployer
 from src.domains.ai.factory import ModelFactory
 
+# OKA-specific constants
+OKA_TIMEOUT = 600       # 10 minutes — headroom for large PDFs
+OKA_MAX_RETRIES = 3     # Retry on transient failures (524, timeout, rate-limit)
+OKA_RETRY_BACKOFF = 10  # Seconds between retries (doubles each attempt)
+MAX_SOURCE_CHARS = 200_000  # SI is now ~3.5K tokens, so we can afford much more source text
+
+
 class OkaService:
     """
     Main orchestrator for OKA.
     """
     _sessions: Dict[str, Dict[str, Any]] = {}
+    _status: Dict[str, str] = {}  # Global status map
+    _session_file = Path.home() / ".lifeos" / "oka" / "sessions.json"
 
     def __init__(self, secrets):
         self.secrets = secrets
         self.vm = VaultManager(secrets.vault_path, academic_base=secrets.academic_path)
         self.deployer = OkaDeployer(self.vm)
-        
-        # Initialize LLM
+        self._ensure_session_dir()
+
+        # Initialize LLM with extended timeout for OKA workloads
         self.llm = ModelFactory.get_model(
             provider=secrets.ai_provider,
             model_name=secrets.ai_model,
             api_key=secrets.ai_key,
-            temperature=0.1 # Low temperature for structural integrity
+            temperature=0.1,
+            timeout=OKA_TIMEOUT,
+            request_timeout=OKA_TIMEOUT,
+            max_retries=0,  # We handle retries ourselves for better status feedback
+            max_tokens=4096,
+        )
+
+    def _ensure_session_dir(self):
+        """Ensures the persistent session directory exists."""
+        self._session_file.parent.mkdir(parents=True, exist_ok=True)
+        if not self._session_file.exists():
+            with open(self._session_file, "w") as f:
+                json.dump({}, f)
+
+    def _persist_session(self, session_id: str, data: Dict[str, Any]):
+        """Persists a session state to disk."""
+        try:
+            # Prepare serializable content (convert Messages to strings)
+            serializable = data.copy()
+            if "messages" in serializable:
+                serializable["messages"] = [
+                    {"type": m.type, "content": m.content} 
+                    for m in serializable["messages"]
+                ]
+            
+            # Read, Update, Write
+            with open(self._session_file, "r") as f:
+                all_sessions = json.load(f)
+            
+            all_sessions[session_id] = serializable
+            
+            with open(self._session_file, "w") as f:
+                json.dump(all_sessions, f)
+            
+            # Update memory too
+            OkaService._sessions[session_id] = data
+        except Exception as e:
+            print(f"[OKA Service] Persistence Fail: {e}")
+
+    async def _get_or_restore_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves a session from memory or restores it from disk."""
+        # Check memory first
+        if session_id in OkaService._sessions:
+            return OkaService._sessions[session_id]
+        
+        # Restore from file
+        try:
+            with open(self._session_file, "r") as f:
+                all_sessions = json.load(f)
+            
+            if session_id in all_sessions:
+                data = all_sessions[session_id]
+                # Rehydrate messages (System, Human, AI)
+                from langchain_core.messages import AIMessage
+                rehydrated = []
+                for m in data.get("messages", []):
+                    if m["type"] == "system":
+                        rehydrated.append(SystemMessage(content=m["content"]))
+                    elif m["type"] == "ai":
+                        rehydrated.append(AIMessage(content=m["content"]))
+                    else:
+                        rehydrated.append(HumanMessage(content=m["content"]))
+                
+                data["messages"] = rehydrated
+                OkaService._sessions[session_id] = data
+                return data
+        except Exception as e:
+            print(f"[OKA Service] Restoration Fail: {e}")
+        return None
+
+    # ── SI Resolution ──────────────────────────────────────────
+    @staticmethod
+    def resolve_si_path(hint: Optional[str] = None) -> Path:
+        """
+        Resolves the OKA System Instruction file with the following priority:
+          1. Explicit hint path (if provided and exists)
+          2. <project_root>/OKA.md
+          3. <project_root>/.system/prompts/OKA_System_Instruction.md
+          4. Walk upward from this file looking for OKA.md
+        """
+        if hint:
+            p = Path(hint)
+            if p.exists():
+                return p
+
+        # Determine project root (LifeOs/) — service.py lives at
+        # apps/api/src/domains/oka/service.py  → 5 levels up
+        project_root = Path(__file__).resolve().parents[4]
+
+        candidates = [
+            project_root / "OKA.md",
+            project_root / ".system" / "prompts" / "OKA_System_Instruction.md",
+        ]
+        for c in candidates:
+            if c.exists():
+                return c
+
+        # Fallback: walk up from this file
+        curr = Path(__file__).resolve().parent
+        for _ in range(10):
+            target = curr / "OKA.md"
+            if target.exists():
+                return target
+            if curr.parent == curr:
+                break
+            curr = curr.parent
+
+        raise FileNotFoundError(
+            "OKA.md not found. Searched project root and parent directories."
         )
 
     async def _get_si(self, system_instruction_path: str) -> str:
-        si_path = Path(system_instruction_path)
-        if not si_path.exists():
-            print(f"[OKA Service] SI Path not found: {si_path}. Trying standard location.")
-            # Resolve project root more robustly: search upwards
-            curr = Path(__file__).resolve()
-            found = False
-            for _ in range(10):
-                target = curr / ".system" / "prompts" / "OKA_System_Instruction.md"
-                if target.exists():
-                    si_path = target
-                    found = True
-                    break
-                if curr.parent == curr: break
-                curr = curr.parent
-            
-            if not found:
-                print(f"[OKA Service] CRITICAL: Could not find OKA_System_Instruction.md anywhere.")
-                raise FileNotFoundError("OKA_System_Instruction.md not found.")
+        si_path = self.resolve_si_path(system_instruction_path)
+        with open(si_path, "r", encoding="utf-8") as f:
+            si = f.read()
+        print(f"[OKA Service] Loaded SI ({len(si)} chars) from: {si_path}")
+        return si
 
-        try:
-            with open(si_path, "r", encoding="utf-8") as f:
-                si = f.read()
-            
-            # Load Visual Protocol
-            protocol_path = si_path.parent.parent / "architecture" / "OKA_Visual_Protocol_V2.md"
-            protocol_content = ""
-            
-            if protocol_path.exists():
-                with open(protocol_path, "r", encoding="utf-8") as f:
-                    protocol_content = f.read()
-                    print(f"[OKA Service] Appended protocol from: {protocol_path}")
-            else:
-                print(f"[OKA Service] WARNING: Visual Protocol not found in {protocol_path}")
-            
-            if protocol_content:
-                si += "\n\n" + protocol_content
-            return si
-        except Exception as e:
-            print(f"[OKA Service] Error reading SI: {e}")
-            raise
+    # ── LLM Invocation with retry ──────────────────────────────
+    async def _invoke_with_retry(
+        self, messages: list, session_id: str, phase: str = "Planning"
+    ):
+        """
+        Invokes the LLM with exponential-backoff retry.
+        Updates _status with progress on each attempt.
+        """
+        last_error = None
+        backoff = OKA_RETRY_BACKOFF
 
-    async def process_file(self, file_path: str, system_instruction_path: str) -> Dict[str, Any]:
+        for attempt in range(1, OKA_MAX_RETRIES + 1):
+            try:
+                status_msg = (
+                    f"{phase} with {self.secrets.ai_model}"
+                    + (f" (attempt {attempt}/{OKA_MAX_RETRIES})" if attempt > 1 else "")
+                    + "..."
+                )
+                OkaService._status[session_id] = status_msg
+                print(f"[OKA Service] {status_msg}")
+
+                response = await self.llm.ainvoke(messages)
+                return response
+
+            except Exception as e:
+                last_error = e
+                error_str = str(e)
+                is_transient = any(
+                    marker in error_str.lower()
+                    for marker in [
+                        "524", "timeout", "429", "rate", "503",
+                        "502", "overloaded", "capacity",
+                    ]
+                )
+
+                if is_transient and attempt < OKA_MAX_RETRIES:
+                    wait_msg = (
+                        f"Transient error ({self._classify_error(error_str)}). "
+                        f"Retrying in {backoff}s (attempt {attempt}/{OKA_MAX_RETRIES})..."
+                    )
+                    OkaService._status[session_id] = wait_msg
+                    print(f"[OKA Service] {wait_msg}")
+                    await asyncio.sleep(backoff)
+                    backoff *= 2
+                    continue
+                else:
+                    raise
+
+        # Should not reach here, but safety net
+        raise last_error  # type: ignore
+
+    @staticmethod
+    def _classify_error(error_str: str) -> str:
+        lowered = error_str.lower()
+        if "524" in lowered or "timeout" in lowered:
+            return "Timeout (524)"
+        if "429" in lowered or "rate" in lowered:
+            return "Rate Limited (429)"
+        if "503" in lowered or "502" in lowered:
+            return "Server Overloaded"
+        return "Provider Error"
+
+    # ── Phase 2: Planning ──────────────────────────────────────
+    async def process_file(
+        self, file_path: str, system_instruction_path: str
+    ) -> Dict[str, Any]:
         """Initializes planning using a stateful chat."""
         print(f"[OKA Service] --- STARTING PROCESS_FILE ({self.secrets.ai_model}) ---")
         path = Path(file_path)
         session_id = str(path.absolute())
-        
-        # Clear any existing session for this file path to ensure fresh state
+
+        # Clear any existing session for this file path
         OkaService._sessions.pop(session_id, None)
-        
+        OkaService._status[session_id] = "Initializing Agent..."
+
         try:
             si = await self._get_si(system_instruction_path)
             messages = [SystemMessage(content=si)]
-            
-            source_type = "Lecture_Slides" if path.suffix.lower() == ".pdf" else "Supplementary_Notes"
-            
-            if path.suffix.lower() == ".pdf" and self.secrets.ai_provider == "google":
-                print(f"[OKA Service] Using Gemini PDF upload for: {path.name}")
-                import google.generativeai as genai
-                genai.configure(api_key=self.secrets.ai_key)
-                uploaded_file = await asyncio.to_thread(genai.upload_file, path)
-                
-                # Protocol: 'start' -> Wait for Plan
-                content_text = f"Type_of_Source: {source_type}\nSource_Content: [PDF File {uploaded_file.name} processed]"
-                
-                # For Gemini multimodal, we should ideally pass the file_uri
-                # but let's try text first as the SI is very specific about the protocol
-                messages.append(HumanMessage(content="start"))
-                messages.append(HumanMessage(content=[
-                    {"type": "text", "text": f"Type_of_Source: {source_type}\nSource_Content:"},
-                    {"type": "file_data", "file_uri": uploaded_file.uri, "mime_type": "application/pdf"}
-                ]))
-            elif path.suffix.lower() == ".pdf":
-                print(f"[OKA Service] Fallback to PyPDFLoader for: {path.name}")
+
+            # Determine source type from file extension
+            ext = path.suffix.lower()
+            source_type = {
+                ".pdf": "PDF_Document",
+                ".md": "Markdown_Notes",
+                ".txt": "Text_Document",
+                ".py": "Python_Source",
+                ".js": "JavaScript_Source",
+                ".ts": "TypeScript_Source",
+                ".java": "Java_Source",
+                ".cpp": "CPP_Source",
+                ".rs": "Rust_Source",
+                ".html": "HTML_Document",
+                ".css": "CSS_Document",
+                ".json": "JSON_Document",
+            }.get(ext, "Text_Document")
+
+            # ── Extract source text ────────────────────────────
+            content_text = ""
+            if path.suffix.lower() == ".pdf":
+                print(f"[OKA Service] Using PyPDFLoader for: {path.name}")
+                OkaService._status[session_id] = (
+                    "Extracting text from PDF (this might take a moment)..."
+                )
                 loader = PyPDFLoader(str(path.absolute()))
                 docs = await asyncio.to_thread(loader.load)
                 full_text = "\n\n".join([doc.page_content for doc in docs])
-                content_text = f"Type_of_Source: {source_type}\nSource_Content:\n\n{full_text}"
-                messages.append(HumanMessage(content="start"))
-                messages.append(HumanMessage(content=content_text))
+
+                # Truncate if too large to avoid context-window overflow
+                if len(full_text) > MAX_SOURCE_CHARS:
+                    print(
+                        f"[OKA Service] Source text truncated from "
+                        f"{len(full_text)} to {MAX_SOURCE_CHARS} chars"
+                    )
+                    full_text = full_text[:MAX_SOURCE_CHARS] + (
+                        "\n\n[... remainder of source truncated for context "
+                        "window limits. Process the remaining content in "
+                        "subsequent interactions if needed.]"
+                    )
+
+                content_text = (
+                    f"Type_of_Source: {source_type}\nSource_Content:\n\n{full_text}"
+                )
             else:
+                print(f"[OKA Service] Reading text file: {path.name}")
+                OkaService._status[session_id] = "Reading text file..."
                 with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                    content_text = f"Type_of_Source: {source_type}\nSource_Content:\n\n{f.read()}"
-                messages.append(HumanMessage(content="start"))
-                messages.append(HumanMessage(content=content_text))
-            
-            print(f"[OKA Service] Generating plan via {self.secrets.ai_provider}...")
-            response = await self.llm.ainvoke(messages)
+                    raw = f.read()
+
+                if len(raw) > MAX_SOURCE_CHARS:
+                    print(
+                        f"[OKA Service] Source text truncated from "
+                        f"{len(raw)} to {MAX_SOURCE_CHARS} chars"
+                    )
+                    raw = raw[:MAX_SOURCE_CHARS] + (
+                        "\n\n[... remainder of source truncated for context "
+                        "window limits.]"
+                    )
+
+                content_text = (
+                    f"Type_of_Source: {source_type}\nSource_Content:\n\n{raw}"
+                )
+
+            # V3.0 Prompt: Skip Greeting (T1) and Go Straight to Plan (T2)
+            init_command = (
+                "Source material provided. Skip the greeting and proceed directly to the "
+                "**OKA v3.0 Finalized Knowledge Asset Plan (T2 Template)**.\n\n"
+                f"{content_text}"
+            )
+            messages.append(HumanMessage(content=init_command))
+
+            print(
+                f"[OKA Service] Generating plan via {self.secrets.ai_provider} "
+                f"({self.secrets.ai_model})..."
+            )
+
+            # ── Invoke with retry ─────────────────────────────
+            response = await self._invoke_with_retry(
+                messages, session_id, phase="Generating Plan"
+            )
+
+            OkaService._status[session_id] = "Parsing AI Blueprint..."
             plan_output = response.content
             print(f"[OKA Service] Plan generated (length: {len(plan_output)})")
-            
+
             structured_plan = self._parse_plan_to_json(plan_output)
 
             total_batches = len(structured_plan.get("batches", [])) or 1
@@ -134,86 +332,267 @@ class OkaService:
                 "plan": plan_output,
                 "metadata": structured_plan,
                 "current_batch": 0,
-                "total_batches": total_batches
+                "total_batches": total_batches,
             }
-            
+
+            self._persist_session(session_id, OkaService._sessions[session_id])
+            OkaService._status[session_id] = "Awaiting Confirmation"
+
             return {
                 "session_id": session_id,
                 "plan_raw": plan_output,
                 "plan_structured": structured_plan,
-                "status": "awaiting_confirmation"
+                "status": "awaiting_confirmation",
             }
         except Exception as e:
+            error_msg = self._format_user_error(e)
+            OkaService._status[session_id] = f"Error: {error_msg}"
             print(f"[OKA Service] CRITICAL ERROR: {traceback.format_exc()}")
-            raise
+            raise ValueError(error_msg)
 
-    async def confirm_plan(self, session_id: str, command: str = "Confirm Final Plan & Proceed Batch 1") -> Dict[str, Any]:
-        if session_id not in OkaService._sessions:
-            raise ValueError(f"No active session found for {session_id}")
-        
-        session = OkaService._sessions[session_id]
+    # ── Phase 3: Batch Deployment ──────────────────────────────
+    async def confirm_plan(
+        self,
+        session_id: str,
+        command: str = "Confirm Final Plan & Proceed Batch 1",
+    ) -> Dict[str, Any]:
+        session = await self._get_or_restore_session(session_id)
+        if not session:
+            raise ValueError(f"No active session found for {session_id}. Please restart the file process.")
         messages = session["messages"]
         current_batch = session.get("current_batch", 0)
         total_batches = session.get("total_batches", 1)
 
         batch_number = current_batch + 1
-        
-        print(f"[OKA Service] Executing batch {batch_number}/{total_batches}: {command}")
-        messages.append(HumanMessage(content=command))
-        res = await self.llm.ainvoke(messages)
-        deployment_results = self.deployer.deploy(res.content)
-        
-        messages.append(res)
-        session["current_batch"] = batch_number
-        has_more = batch_number < total_batches
 
-        if not has_more:
-            OkaService._sessions.pop(session_id, None)
-            print(f"[OKA Service] All {total_batches} batch(es) complete. Session terminated.")
+        print(
+            f"[OKA Service] Executing batch {batch_number}/{total_batches}: {command}"
+        )
 
-        return {
-            "ai_output": res.content,
-            "results": deployment_results,
-            "count": len(deployment_results),
-            "has_more": has_more,
-            "current_batch": batch_number,
-            "total_batches": total_batches,
-            "status": "complete" if not has_more else "in_progress"
-        }
+        try:
+            # V3.0 Strict Batch Reinforcement
+            reinforced_command = (
+                f"{command}\n\n"
+                "STRICT V3.0 BATCH PROTOCOL:\n"
+                "1. Confirm Plan (T2 Template) received.\n"
+                "2. Perform <pre_generation_planning> SILENTLY inside your logic.\n"
+                "3. Wrap output EXCLUSIVELY in --- START_BATCH --- and --- END_BATCH ---.\n"
+                "4. EVERY note MUST be delimited with --- START_NOTE --- and --- END_NOTE ---.\n"
+                "5. NO standard backticks (```). USE --- START_CODE:{lang} --- delimiters."
+            )
+            messages.append(HumanMessage(content=reinforced_command))
 
+            res = await self._invoke_with_retry(
+                messages,
+                session_id,
+                phase=f"Generating Batch {batch_number}/{total_batches}",
+            )
+
+            OkaService._status[session_id] = (
+                f"Deploying Batch {batch_number} to Vault..."
+            )
+            deployment_results = self.deployer.deploy(res.content)
+            if not deployment_results:
+                print(f"[OKA Service] ERROR: 0 notes extracted from response (total len: {len(res.content)})")
+                return {
+                    "ai_output": res.content,
+                    "results": [],
+                    "count": 0,
+                    "has_more": True,
+                    "current_batch": current_batch, # Keep it at old batch
+                    "total_batches": total_batches,
+                    "status": "error",
+                    "error": f"No valid note blocks were found in Batch {batch_number}. Ensure the model is outputting START_NOTE/END_NOTE markers on their own lines."
+                }
+                
+            print(f"[OKA Service] Batch {batch_number} deployed: {len(deployment_results)} notes.")
+
+            messages.append(res)
+            session["current_batch"] = batch_number
+            has_more = batch_number < total_batches
+            
+            # Persist progress
+            self._persist_session(session_id, session)
+
+            if not has_more:
+                OkaService._sessions.pop(session_id, None)
+                OkaService._status[session_id] = "Completed"
+                print(
+                    f"[OKA Service] All {total_batches} batch(es) complete. "
+                    f"Session terminated."
+                )
+            else:
+                OkaService._status[session_id] = (
+                    f"Awaiting Batch {batch_number + 1}"
+                )
+
+            return {
+                "ai_output": res.content,
+                "results": deployment_results,
+                "count": len(deployment_results),
+                "has_more": has_more,
+                "current_batch": batch_number,
+                "total_batches": total_batches,
+                "status": "complete" if not has_more else "in_progress",
+            }
+        except Exception as e:
+            error_msg = self._format_user_error(e)
+            OkaService._status[session_id] = f"Error: {error_msg}"
+            raise ValueError(error_msg)
+
+    # ── Plan Parsing ───────────────────────────────────────────
     def _parse_plan_to_json(self, plan_text: str) -> Dict[str, Any]:
-        """
-        Extracts key metadata from the LLM's plan response.
-        """
-        metadata = {
+        """Extracts key metadata from the LLM's plan response."""
+        metadata: Dict[str, Any] = {
             "course": "Unknown",
             "unit": "Unknown",
+            "year": "Unsorted_Year",
+            "semester": "Unsorted_Semester",
             "notes": [],
-            "batches": []
+            "batches": [],
         }
 
-        # 1. Extract Course/Unit
-        course_match = re.search(r"\* \*\*Course:\*\* (.*)", plan_text)
-        if course_match: metadata["course"] = course_match.group(1).strip()
+        # V3.0 style metadata extraction
+        for pattern in [
+            r"Course:\s*(.*)",
+            r"\*\*Course:\*\*\s*(.*)",
+            r"\*\*I\..*?Course:\*\*\s*(.*)",
+            r"\*\*I\..*?(?:Domain|Project):\*\*\s*(.*)",
+        ]:
+            m = re.search(pattern, plan_text, re.I)
+            if m:
+                metadata["course"] = m.group(1).strip()
+                break
 
-        unit_match = re.search(r"\* \*\*Unit:\*\* (.*)", plan_text)
-        if unit_match: metadata["unit"] = unit_match.group(1).strip()
+        for pattern in [
+            r"Unit:\s*(.*)",
+            r"\*\*Unit:\*\*\s*(.*)",
+            r"(?:unit_name):\s*(.*)",
+        ]:
+            m = re.search(pattern, plan_text, re.I)
+            if m:
+                metadata["unit"] = m.group(1).strip()
+                break
 
-        # 2. Extract Notes (anything in wiki-links [[...]])
+        for pattern in [
+            r"Year:\s*(.*)",
+            r"\*\*Year:\*\*\s*(.*)",
+            r"Year\s+(\d+)",
+        ]:
+            m = re.search(pattern, plan_text, re.I)
+            if m:
+                metadata["year"] = m.group(1).strip()
+                break
+
+        for pattern in [
+            r"Semester:\s*(.*)",
+            r"\*\*Semester:\*\*\s*(.*)",
+            r"Semester\s+([IV\d]+)",
+        ]:
+            m = re.search(pattern, plan_text, re.I)
+            if m:
+                metadata["semester"] = m.group(1).strip()
+                break
+
+        # Extract notes (anything in wiki-links [[...]])
         notes_match = re.findall(r"\[\[(.*?)\]\]", plan_text)
-        metadata["notes"] = list(dict.fromkeys(notes_match)) # unique
+        metadata["notes"] = list(dict.fromkeys(notes_match))
 
-        # 3. Detect Batches
-        batch_sections = re.findall(r"\*\*Batch (\d+).*?\*\*:(.*?)(?=\*\*Batch|\#|Knowledge Asset Summary|$)", plan_text, re.S)
-        for b_id, b_content in batch_sections:
+        # Robust batch parsing
+        # Looks for lines like "Batch 1:", "**Batch 1**:", "### Batch 1", "- Batch 1"
+        batch_headers = list(re.finditer(
+            r"(?:\n|^)(?:[#\-\*\s]*)Batch\s+(\d+)\s*(?::|\s|\*|$)",
+            plan_text, 
+            re.I
+        ))
+        
+        assigned_notes = set()
+        for i, match in enumerate(batch_headers):
+            b_id = match.group(1)
+            start_pos = match.end()
+            
+            # Find end of this batch section (start of next batch or summary/header)
+            if i + 1 < len(batch_headers):
+                end_pos = batch_headers[i+1].start()
+            else:
+                summary_match = re.search(r"\n#+\s*(?:Knowledge Asset Summary|Notes|Summary)", plan_text[start_pos:], re.I)
+                if summary_match:
+                    end_pos = start_pos + summary_match.start()
+                else:
+                    end_pos = len(plan_text)
+            
+            b_content = plan_text[start_pos:end_pos]
             b_notes = re.findall(r"\[\[(.*?)\]\]", b_content)
-            metadata["batches"].append({
-                "id": int(b_id),
-                "notes": list(dict.fromkeys(b_notes))
-            })
+            if b_notes:
+                notes_list = list(dict.fromkeys(b_notes))
+                metadata["batches"].append({
+                    "id": int(b_id), 
+                    "notes": notes_list
+                })
+                assigned_notes.update(notes_list)
 
-        # If there are NO batches detected but notes WERE found, put them in Batch 1
+        # Fallback: if no batches detected but we have notes, make it 1 batch
         if not metadata["batches"] and metadata["notes"]:
-             metadata["batches"].append({"id": 1, "notes": metadata["notes"]})
+            metadata["batches"].append({"id": 1, "notes": metadata["notes"]})
+
+        # Calculate predicted deployment path
+        try:
+            # Look for Domain/Category to help pathing
+            m_cat = re.search(r"\*\*(?:Category|Domain|Field|Type|Source Type):\*\*\s*(.*)", plan_text)
+            if m_cat:
+                metadata["category"] = m_cat.group(1).strip()
+            
+            # Predict dir using dummy note title
+            dummy_meta = {
+                "title": "dummy",
+                "course": metadata.get("course", ""),
+                "unit": metadata.get("unit", ""),
+                "year": metadata.get("year"),
+                "semester": metadata.get("semester"),
+                "category": metadata.get("category", ""),
+                "domain": metadata.get("category", "")
+            }
+            target_path = self.vm.get_note_path(dummy_meta)
+            target_dir = target_path.parent
+            
+            try:
+                # Use a more descriptive path for the UI
+                rel = target_dir.relative_to(self.vm.vault_path)
+                metadata["deployment_path"] = f"Vault/{rel}"
+            except ValueError:
+                metadata["deployment_path"] = str(target_dir)
+        except Exception:
+            metadata["deployment_path"] = "Evaluation Pending"
+
+        print(
+            f"[OKA Service] Plan parsed: {len(metadata['notes'])} potential notes, "
+            f"{len(metadata['batches'])} confirmed batches. Path: {metadata.get('deployment_path')}"
+        )
 
         return metadata
+
+        return metadata
+
+    # ── Error Formatting ───────────────────────────────────────
+    def _format_user_error(self, e: Exception) -> str:
+        error_str = str(e)
+        lowered = error_str.lower()
+
+        if "524" in lowered or "timeout" in lowered:
+            return (
+                f"The AI provider ({self.secrets.ai_provider}) timed out after "
+                f"{OKA_MAX_RETRIES} attempts. The document may be too large for "
+                f"{self.secrets.ai_model}, or the provider is slow. "
+                f"Try a faster model (e.g. gemini-2.0-flash or gemini-2.5-pro)."
+            )
+        if "429" in lowered or "rate" in lowered:
+            return (
+                f"Rate limited by {self.secrets.ai_provider}. "
+                f"Wait a minute and try again, or switch to a different model."
+            )
+        if "context" in lowered and ("length" in lowered or "window" in lowered):
+            return (
+                f"The document + system instruction exceeds the context window of "
+                f"{self.secrets.ai_model}. Try a model with a larger context window."
+            )
+        return error_str

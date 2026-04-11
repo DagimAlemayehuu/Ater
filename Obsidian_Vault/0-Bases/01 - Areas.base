@@ -1,0 +1,11 @@
+views:
+  - type: table
+    name: Table
+    filters:
+      and:
+        - file.inFolder("3-Database/01 - Areas")
+    columns:
+      - file.name: { type: "title" }
+      - Description: { type: "str" }
+      - Goals: { type: "relation", source: "3-Database/05 - Goals" }
+      - Projects: { type: "relation", source: "3-Database/02 - Projects" }

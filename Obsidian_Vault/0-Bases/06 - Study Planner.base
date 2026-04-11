@@ -1,0 +1,12 @@
+views:
+  - type: table
+    name: Table
+    filters:
+      and:
+        - file.inFolder("3-Database/06 - Study Planner")
+    columns:
+      - file.name: { type: "title" }
+      - Course: { type: "relation", source: "3-Database/07 - Courses" }
+      - Study Date: { type: "date" }
+      - Confidence: { type: "select", source: "3-Database/06 - Study Planner/_Types" }
+      - Difficulty: { type: "select", source: "3-Database/07 - Courses/_Types" }

@@ -1,0 +1,14 @@
+views:
+  - type: table
+    name: Table
+    filters:
+      and:
+        - file.inFolder("3-Database/07 - Courses")
+    columns:
+      - file.name: { type: "title" }
+      - Semester: { type: "relation", source: "3-Database/08 - Semesters" }
+      - Area: { type: "relation", source: "3-Database/01 - Areas" }
+      - Grade: { type: "str" }
+      - Units: { type: "number" }
+      - Professor: { type: "str" }
+      - Difficulty: { type: "select", source: "3-Database/07 - Courses/_properties/Difficulty" }

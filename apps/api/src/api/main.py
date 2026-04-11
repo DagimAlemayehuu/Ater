@@ -514,16 +514,10 @@ async def oka_process_manual(
     if not secrets.ai_key or not secrets.vault_path:
         raise HTTPException(status_code=400, detail="AI Key and Vault Path are required")
     
-    # Robust discovery of OKA_System_Instruction.md
-    project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
-    si_path = project_root / ".system" / "prompts" / "OKA_System_Instruction.md"
-    
-    if not si_path.exists():
-        # Fallback to older location or current dir for legacy support
-        si_path = project_root / "OKA_System_Instruction.md"
-        
-    if not si_path.exists():
-        raise HTTPException(status_code=500, detail=f"System Instruction file not found at {si_path}. Check .system/prompts directory.")
+    try:
+        si_path = OkaService.resolve_si_path()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
     service = OkaService(secrets)
     
@@ -536,11 +530,22 @@ async def oka_process_manual(
             results = await service.process_file(file_path, str(si_path))
         elif text:
             print(f"[Life OS Sidecar] Initializing OKA plan for raw text")
-            results = await service.process_text(text, str(si_path))
+            # For raw text, create a temp file and process it
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as tmp:
+                tmp.write(text)
+                tmp_path = tmp.name
+            try:
+                results = await service.process_file(tmp_path, str(si_path))
+            finally:
+                os.remove(tmp_path)
         else:
             raise HTTPException(status_code=400, detail="Either 'text' or 'file_path' must be provided")
             
         return results
+    except ValueError as e:
+        print(f"[Life OS Sidecar] OKA Initialization failed: {e}")
+        raise HTTPException(status_code=500, detail=f"OKA Initialization failed: {str(e)}")
     except Exception as e:
         print(f"[Life OS Sidecar] OKA Initialization failed: {e}")
         error_details = traceback.format_exc()
@@ -601,10 +606,10 @@ async def oka_watcher_toggle(
 
     # Always keep the watcher alive if we have settings, just toggle its auto_process state
     if not oka_watcher:
-        project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
-        si_path = project_root / ".system" / "prompts" / "OKA_System_Instruction.md"
-        if not si_path.exists():
-            si_path = project_root / "OKA_System_Instruction.md"
+        try:
+            si_path = OkaService.resolve_si_path()
+        except FileNotFoundError as e:
+            raise HTTPException(status_code=500, detail=str(e))
         
         service = OkaService(secrets)
         oka_watcher = OkaQueueManager(service, secrets.inbox_path, str(si_path))
@@ -634,8 +639,10 @@ async def oka_queue_status(
         oka_watcher = None
 
     if not oka_watcher and secrets.ai_key and secrets.vault_path and secrets.inbox_path:
-        root_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
-        si_path = root_dir / "OKA_System_Instruction.md"
+        try:
+            si_path = OkaService.resolve_si_path()
+        except FileNotFoundError:
+            return {"status": "offline", "pending_files": [], "manual_status": dict(OkaService._status), "error": "OKA.md not found"}
         
         service = OkaService(secrets)
         oka_watcher = OkaQueueManager(service, secrets.inbox_path, str(si_path))
@@ -649,11 +656,14 @@ async def oka_queue_status(
         logger.info(f"[OKA] Watcher Auto-started for inbox: {secrets.inbox_path} | Auto: {secrets.auto_deploy}")
         
     if not oka_watcher:
-        return {"status": "offline", "pending_files": []}
+        return {"status": "offline", "pending_files": [], "manual_status": dict(OkaService._status)}
         
     # Sync settings just in case
     oka_watcher.update_settings(auto_process=secrets.auto_deploy)
-    return oka_watcher.get_status()
+    
+    status_dict = oka_watcher.get_status()
+    status_dict["manual_status"] = dict(OkaService._status)
+    return status_dict
 
 @app.get("/api/oka/generated")
 async def oka_list_generated(
@@ -720,8 +730,13 @@ async def oka_list_inbox(
     files = []
     supported_extensions = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
     try:
-        for f in inbox.iterdir():
+        generated_dir = inbox / "note generated"
+        for f in inbox.rglob("*"):
             if f.is_file() and not f.name.startswith('.') and f.suffix.lower() in supported_extensions:
+                # Ignore files in the note generated archive
+                if generated_dir in f.parents or str(f.absolute()).startswith(str(generated_dir.absolute())):
+                    continue
+                    
                 files.append({
                     "name": f.name,
                     "path": str(f.absolute()),
