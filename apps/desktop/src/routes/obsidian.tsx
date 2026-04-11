@@ -521,72 +521,17 @@ export default function ObsidianVaultPage() {
                                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
                                                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10">
                                                     <Sparkles size={12} className="text-primary animate-pulse" />
-                                                    <p className="text-[10px] font-bold text-primary/80 uppercase tracking-wider">Plan Ready for Deployment</p>
+                                                    <p className="text-[10px] font-bold text-primary/80 uppercase tracking-wider">Architectural Plan</p>
                                                 </div>
                                                 
-                                                {/* Clean & Minimalist Plan Card */}
-                                                {planData && (
-                                                    <div className="space-y-4">
-                                                        {/* Context Card */}
-                                                        <div className="p-4 rounded-xl bg-card border shadow-sm space-y-3">
-                                                            <div className="flex items-start justify-between">
-                                                                <div className="space-y-1">
-                                                                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Target Vault</h4>
-                                                                    <div className="flex items-center gap-1.5 text-primary">
-                                                                        <FolderOpen size={12} />
-                                                                        <p className="text-[11px] font-mono font-bold truncate max-w-[200px]">{planData.deployment_path || 'Analyzing...'}</p>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="text-right space-y-1">
-                                                                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Notes</h4>
-                                                                    <p className="text-lg font-black leading-none">{planData.notes?.length || 0}</p>
-                                                                </div>
-                                                            </div>
-                                                            
-                                                            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border/50">
-                                                                <div className="space-y-1">
-                                                                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Course</span>
-                                                                    <p className="text-[10px] font-semibold truncate">{planData.course || 'General'}</p>
-                                                                </div>
-                                                                <div className="space-y-1">
-                                                                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Unit</span>
-                                                                    <p className="text-[10px] font-semibold truncate">{planData.unit || 'Core'}</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Batches Preview */}
-                                                        <div className="space-y-2">
-                                                            <h4 className="px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Deployment Batches</h4>
-                                                            <div className="grid gap-2">
-                                                                {planData.batches?.map((b: any) => (
-                                                                    <div key={b.id} className="group p-3 rounded-lg border bg-muted/5 hover:bg-muted/10 transition-colors">
-                                                                        <div className="flex items-center justify-between mb-2">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-black text-primary border border-primary/20">
-                                                                                    {b.id}
-                                                                                </div>
-                                                                                <span className="text-[10px] font-bold uppercase tracking-wider">Batch {b.id}</span>
-                                                                            </div>
-                                                                            <span className="text-[9px] font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{b.notes.length} notes</span>
-                                                                        </div>
-                                                                        <div className="space-y-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                                            {b.notes.slice(0, 3).map((note: string, idx: number) => (
-                                                                                <div key={idx} className="flex items-center gap-2 pl-1">
-                                                                                    <div className="w-1 h-1 rounded-full bg-primary/40" />
-                                                                                    <span className="text-[9px] font-medium truncate">{note}</span>
-                                                                                </div>
-                                                                            ))}
-                                                                            {b.notes.length > 3 && (
-                                                                                <p className="text-[8px] italic text-muted-foreground pl-3">+ {b.notes.length - 3} more notes...</p>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
+                                                {/* Clean Text-based Plan Output */}
+                                                <div className="p-4 rounded-xl bg-card border shadow-sm max-h-[400px] overflow-y-auto custom-scrollbar">
+                                                    <div className="prose prose-xs dark:prose-invert max-w-none prose-headings:font-bold prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-ul:text-muted-foreground">
+                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                            {activePlan}
+                                                        </ReactMarkdown>
                                                     </div>
-                                                )}
+                                                </div>
 
                                                 {isAwaitingConfirmation && (
                                                     <Button onClick={confirmDeployment} className="w-full h-10 text-[10px] font-bold uppercase bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 tracking-widest">

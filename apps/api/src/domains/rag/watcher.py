@@ -102,7 +102,7 @@ class RAGWatcherService:
         self._is_running = False
         if self.observer:
             self.observer.stop()
-            self.observer.join()
+            # No join() to avoid blocking the loop
             logger.info("🛑 Global RAG Watcher stopped.")
         if self._sync_task:
             self._sync_task.cancel()

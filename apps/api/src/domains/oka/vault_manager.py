@@ -90,7 +90,6 @@ class VaultManager:
     def extract_yaml_and_content(self, note_block: str) -> Tuple[dict, str, bool]:
         """Extracts YAML frontmatter and Markdown body content."""
         # Try standard --- YAML --- format first (allow leading whitespace and 3+ dashes)
-        # Permissive: allow optional whitespace and any newline style
         yaml_match = re.search(r"^\s*-{3,}\s*(?:\r?\n)(.*?)(?:\r?\n)-{3,}\s*(?:\r?\n|$)", note_block.strip(), re.DOTALL)
         
         # Fallback 1: Model skipped leading --- but kept trailing ---
@@ -102,6 +101,12 @@ class VaultManager:
             yaml_match = re.search(r"-{3,}\s*(.*?)\s*-{3,}", note_block, re.DOTALL)
             
         if not yaml_match:
+            # TITLE RECOVERY FALLBACK: If AI provided "# Title" instead of YAML
+            title_match = re.search(r"^\s*#+\s*(.*?)\s*(?:\n|$)", note_block)
+            if title_match:
+                recov_title = title_match.group(1).strip().replace("[[", "").replace("]]", "")
+                print(f"[VaultManager] Recovered title '{recov_title}' from header")
+                return {"title": recov_title}, note_block, False
             return {}, note_block, False
         
         yaml_str = yaml_match.group(1)
@@ -110,13 +115,20 @@ class VaultManager:
         try:
             # Use safe_load for robust parsing
             meta = yaml.safe_load(yaml_str) or {}
-            # Ensure keys are lowercase for consistent access
+            # Ensure keys are lowercase for consistent access and strip whitespace
             if isinstance(meta, dict):
-                meta = {k.lower(): v for k, v in meta.items()}
+                meta = {str(k).lower().strip(): v for k, v in meta.items()}
             else:
                 meta = {}
             return meta, body_content, False
         except Exception as e:
+            # Try to recover title even on YAML error
+            title_match = re.search(r"title:\s*(.*)", yaml_str, re.I)
+            if title_match:
+                recov_title = title_match.group(1).strip().strip('"').strip("'")
+                print(f"[VaultManager] Non-critical YAML structural error. Recovered title '{recov_title}' for process continuity.")
+                return {"title": recov_title}, body_content, False
+            
             print(f"[VaultManager] YAML Parse Fail: {e}")
             return {}, body_content, True
 
@@ -177,48 +189,19 @@ class VaultManager:
         return (numeric_part or canonical_rest).strip('_')
 
     def get_note_path(self, meta: dict) -> Path:
-        """Determines the hierarchical file path for a note.
+        """
+        Determines the hierarchical file path for a note.
         
         Routing logic:
-          - Academic content (has year/semester/course): 1-Academic/{year}/{semester}/{course}/{unit}/
-          - General content (category: Technical/Research/Knowledge): 1-Knowledge/{domain}/{unit}/
-          - Fallback: 1-Academic/Unsorted/
+          - All notes go directly to: {Selected_Root}/Uncategorized_Notes/
         """
-        category = meta.get("category", "").strip()
-        
-        # Resolve unit directory name (shared across all paths)
-        unit_val = meta.get("unit")
-        if not unit_val:
-            unit_val = meta.get("title", "Uncategorized_Unit")
-            if unit_val.endswith("_Hub"):
-                unit_val = unit_val[:-4]
-        unit_dir_name = self.sanitize_filename(self.get_canonical_title(unit_val))
-        
         title_base = self.sanitize_filename(self.get_canonical_title(meta.get("title", "Untitled_Note")))
         
-        # Non-academic routing
-        if category in ("Technical", "Research", "Knowledge"):
-            domain = self.sanitize_filename(self.get_canonical_title(
-                meta.get("domain") or meta.get("field") or meta.get("project") or "General"
-            ))
-            
-            # Respect the user's root mapping if possible. 
-            # If academic_root is "2-Academic", knowledge_root should be "2-Knowledge".
-            academic_name = self.academic_root.name
-            if "Academic" in academic_name:
-                knowledge_dir_name = academic_name.replace("Academic", "Knowledge")
-            else:
-                knowledge_dir_name = "1-Knowledge"
-                
-            knowledge_root = self.academic_root.parent / knowledge_dir_name
-            target_dir = knowledge_root / domain / unit_dir_name
-            return target_dir / f"{title_base}.md"
-        
-        # Simple Academic Routing (As requested: Unsorted_Notes)
-        unit_folder = self.sanitize_filename(self.get_canonical_title(meta.get("unit") or "Unsorted_Unit"))
-        target_dir = self.academic_root / "Unsorted_Notes" / unit_folder
+        # Route directly to the flat Uncategorized_Notes folder within the user-selected root
+        target_dir = self.academic_root / "Uncategorized_Notes"
         
         return target_dir / f"{title_base}.md"
+
 
     def load_metadata(self) -> List[Dict[str, Any]]:
         """Scans the vault and extracts YAML metadata from all knowledge directories."""

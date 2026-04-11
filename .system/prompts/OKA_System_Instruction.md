@@ -51,7 +51,7 @@ When you receive source material, **classify it** and adapt your output accordin
 
 Based on content type, populate the relevant hierarchy fields:
 
-**Academic sources** → `year`, `semester`, `course`, `course_code`, `unit`, `credits`
+**Academic sources** → `year`, `semester`, `course`, `course_code`, `unit`
 **Technical sources** → `category: "Technical"`, `domain`, `project`, `unit`
 **Research sources** → `category: "Research"`, `field`, `subfield`, `unit`
 **General sources** → `category: "Knowledge"`, `domain`, `unit`

@@ -26,6 +26,8 @@
 *   [x] **Hierarchical Notion Mirror**: Rebuilt sync engine to mirror Notion structure into Obsidian folders.
 *   [x] **Sync Progress Tracking**: Implemented real-time callback-based progress reporting for long-running sync tasks.
 *   [x] **YAML Metadata Injection**: Automated extraction of Notion properties into Obsidian-compatible frontmatter.
+*   [x] **OKA v9.0 Sovereign Logic**: Implemented strict structural validation, 1-note-per-turn generation (Sniper Mode), and permissive yet robust delimiter extraction.
+*   [x] **FastAPI Parity Parser**: Integrated real-time parity checking between the Generation Plan and the deployment queue.
 
 ---
 
@@ -38,6 +40,7 @@
 *   [x] **Notion Hub Overhaul**: Replicated Notion's macro-categorization UI.
 *   [x] **Deep Page View**: Built native block-based renderer for viewing Notion pages without a browser.
 *   [x] **Sync Progress UI**: Integrated real-time progress bars for RAG and Notion syncing in Settings.
+*   [x] **OKA Queue Manager**: High-fidelity dashboard for real-time plan visualization, status tracking, and batch confirmation.
 
 ---
 

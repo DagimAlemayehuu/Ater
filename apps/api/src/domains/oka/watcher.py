@@ -11,7 +11,7 @@ from watchdog.events import FileSystemEventHandler
 
 from .service import OkaService
 
-file_handler = logging.log = logging.FileHandler("/tmp/oka_watcher.log")
+file_handler = logging.FileHandler("/tmp/oka_watcher.log")
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 watcher_logger = logging.getLogger("OkaQueueManager")
 watcher_logger.setLevel(logging.INFO)
@@ -215,7 +215,7 @@ class OkaQueueManager:
     def stop(self):
         if self.observer:
             self.observer.stop()
-            self.observer.join()
+            # No join() here to avoid blocking the event loop during shutdown/reload
         if self.worker_task:
             self.worker_task.cancel()
         print("[OKA Queue] Stopped.")

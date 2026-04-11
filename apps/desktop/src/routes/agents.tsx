@@ -797,33 +797,17 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                             </div>
 
                                             {/* Batches Grid */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                {structuredPlan.batches?.map((b: any, idx: number) => {
-                                                    const batchNotes = Array.isArray(b) ? b : (b.notes || []);
-                                                    const batchId = b.id || (idx + 1);
-                                                    
-                                                    return (
-                                                        <Card key={idx} className="bg-muted/30 border-dashed overflow-hidden">
-                                                            <div className="px-4 py-2 bg-muted border-b flex items-center justify-between">
-                                                                <span className="text-[10px] font-bold uppercase tracking-tighter">Batch {batchId}</span>
-                                                                <span className="text-[10px] text-muted-foreground">{batchNotes.length} Notes</span>
-                                                            </div>
-                                                            <div className="p-4 space-y-2">
-                                                                {batchNotes.map((note: string, nidx: number) => (
-                                                                    <div key={nidx} className="flex items-center gap-3 group">
-                                                                        <div className="w-1 h-1 rounded-full bg-primary/40 group-hover:bg-primary transition-colors" />
-                                                                        <span className="text-[11px] font-medium text-muted-foreground group-hover:text-foreground truncate transition-colors">
-                                                                            {note.replace(/\[\[|\]\]/g, '')}
-                                                                        </span>
-                                                                    </div>
-                                                                ))}
-                                                                {batchNotes.length === 0 && (
-                                                                    <span className="text-[10px] italic text-muted-foreground">Empty Batch</span>
-                                                                )}
-                                                            </div>
-                                                        </Card>
-                                                    );
-                                                })}
+                                            <div className="space-y-6">
+                                                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10">
+                                                    <Sparkles size={12} className="text-primary animate-pulse" />
+                                                    <p className="text-[10px] font-bold text-primary/80 uppercase tracking-wider">Architectural Plan</p>
+                                                </div>
+
+                                                <div className="p-6 rounded-xl border bg-card/50 shadow-inner">
+                                                    <div className="prose prose-sm dark:prose-invert max-w-none opacity-80 hover:opacity-100 transition-opacity">
+                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{activePlan}</ReactMarkdown>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     ) : (
@@ -854,7 +838,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                             
                                             {b.results.length === 0 && (
                                                 <div className="mb-4 mt-2 p-3 rounded bg-destructive/10 border border-destructive/30">
-                                                    <p className="text-[11px] text-destructive font-medium mb-3 whitespace-nowrap overflow-hidden text-ellipsis">No V3.0 delimiters found in response. Review raw output below:</p>
+                                                    <p className="text-[11px] text-destructive font-medium mb-3 whitespace-nowrap overflow-hidden text-ellipsis">No OKA v8.0 START_NOTE/END_NOTE regions detected. AI output failed structural validation. Review raw output below:</p>
                                                     <pre className="text-[10px] bg-background/50 p-2 rounded overflow-x-auto whitespace-pre-wrap max-h-40 font-mono">
                                                         {b.ai_output}
                                                     </pre>

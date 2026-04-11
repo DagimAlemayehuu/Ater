@@ -5,11 +5,21 @@ import yaml
 import uuid
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, List, Tuple, Optional # Added Optional
+from typing import Dict, Any, List, Tuple, Optional
+from dotenv import load_dotenv
 
-# CRITICAL FIX: Direct path to the user's Obsidian Vault
-VAULT_BASE_PATH = Path("/Users/dabodestroyer/Library/Mobile Documents/iCloud~md~obsidian/Documents/Dagim Alemayehus Vault")
-INTERNAL_INDEX_FILE = VAULT_BASE_PATH / "1-Academic" / "vault_index.json"
+# Load environment variables from .env file
+load_dotenv()
+
+# CRITICAL FIX: Dynamically resolve the Obsidian Vault path from settings (.env)
+env_vault_path = os.getenv("OBSIDIAN_VAULT_PATH")
+if env_vault_path:
+    VAULT_BASE_PATH = Path(env_vault_path)
+else:
+    # Fallback to local project path if env var is missing
+    VAULT_BASE_PATH = Path("/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault")
+
+INTERNAL_INDEX_FILE = VAULT_BASE_PATH / "2-Academic" / "vault_index.json"
 
 # New: Define a mapping for note types to their expected subdirectories within unit folder
 # For this change, notes will go into the *unit folder*, and then if there were sub-types,
@@ -260,52 +270,16 @@ def get_unit_folder_name(unit_canonical_title: str) -> str:
 
 def get_note_path_hierarchical(meta: dict, base_path: Path) -> Path:
     """
-    Determines the hierarchical file path for a note based on its YAML metadata.
-    Includes the '1-Academic' top-level directory and uses sanitize_filename for all components.
-    CRITICAL CHANGE: Now includes a unit-specific subfolder within the course folder.
+    FORCED FLAT PATHING: Returns a path strictly within the Uncategorized_Notes directory
+    relative to the base path selected in settings.
     """
-    # Ensure all path components are canonical BEFORE sanitizing for filename.
-    year = get_canonical_title(meta.get("year", "Unsorted_Year"))
-    semester = get_canonical_title(meta.get("semester", "Unsorted_Semester"))
-    course = get_canonical_title(meta.get("course", "Unsorted_Course"))
-    
-    note_type = meta.get("type", "Unknown")
-
-    # Determine the canonical unit title to derive the unit folder name
-    unit_canonical_title = None
-    if note_type == "Unit":
-        # For a Unit Hub, its own title is the base for the unit folder
-        unit_canonical_title = get_canonical_title(meta.get("title", "Uncategorized_Unit_Hub"))
-    else:
-        # For atomic notes, the 'unit' field specifies its parent unit
-        unit_canonical_title = get_canonical_title(meta.get("unit", "Uncategorized_Unit_Hub"))
-
-    # Derive the actual folder name (e.g., "1_Combinatorics" from "1_Combinatorics_Hub")
-    unit_folder_name = get_unit_folder_name(unit_canonical_title)
-    # Sanitize this for the filesystem
-    sanitized_unit_folder_name = sanitize_filename(unit_folder_name)
-
     # Use the canonical title from meta for the note name component, then sanitize it for filename
     title_from_meta = meta.get("title", "Untitled_Note")
-    # CRITICAL: Canonicalize the title before sanitizing for the base filename.
     title_for_filename_base = sanitize_filename(get_canonical_title(title_from_meta))
     
-    # This type_subdir is for sub-subdirectories (e.g., Course/Unit/Foundational/Note.md),
-    # which we are not currently using (empty strings in TYPE_TO_DIR_MAPPING).
-    # Notes will go directly into the unit folder.
-    type_subdir = TYPE_TO_DIR_MAPPING.get(note_type, "")
-
-    # Construct the target directory including the new unit subfolder
-    target_dir = (
-        base_path / "1-Academic" / 
-        sanitize_filename(year) / 
-        sanitize_filename(semester) / 
-        sanitize_filename(course) /
-        sanitized_unit_folder_name # <--- NEW UNIT SUBFOLDER HERE
-    )
-    
-    if type_subdir:
-        target_dir = target_dir / sanitize_filename(type_subdir) # sanitize_filename on type_subdir too, just in case
+    # Ensure the uncategorized directory exists inside the base_path
+    target_dir = base_path / "Uncategorized_Notes"
+    target_dir.mkdir(parents=True, exist_ok=True)
     
     return target_dir / f"{title_for_filename_base}.md"
 
@@ -316,9 +290,10 @@ def load_all_notes_metadata(vault_path: Path) -> List[Dict[str, Any]]:
     """
     all_metadata = []
     
-    scan_root = vault_path / "1-Academic"
+    # Scan the dynamic root path
+    scan_root = vault_path
     if not scan_root.is_dir():
-        scan_root = vault_path # Fallback to root if 1-Academic doesn't exist
+        return []
 
     for root, _, files in os.walk(scan_root):
         for file in files:

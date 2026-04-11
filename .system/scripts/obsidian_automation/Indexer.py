@@ -136,7 +136,7 @@ def generate_mocs(all_notes_metadata: list, output_root_path: Path) -> Tuple[boo
 
     # --- 1. Computer Science Degree MOC ---
     cs_moc_title_canonical = vault_utils.get_canonical_title("Computer Science MOC")
-    cs_moc_path = output_root_path / "1-Academic" / "Mocs" / f"{vault_utils.sanitize_filename(cs_moc_title_canonical)}.md"
+    cs_moc_path = output_root_path / "2-Academic" / "Mocs" / f"{vault_utils.sanitize_filename(cs_moc_title_canonical)}.md"
     cs_moc_path.parent.mkdir(parents=True, exist_ok=True)
 
     current_utc_iso = datetime.utcnow().isoformat(timespec='seconds') + 'Z'
@@ -177,7 +177,7 @@ def generate_mocs(all_notes_metadata: list, output_root_path: Path) -> Tuple[boo
     # --- 2. Year MOCs ---
     for year, semesters_data in notes_by_year.items():
         moc_title_canonical = vault_utils.get_canonical_title(f"{year} MOC")
-        moc_path = output_root_path / "1-Academic" / "Mocs" / "Years" / f"{vault_utils.sanitize_filename(moc_title_canonical)}.md"
+        moc_path = output_root_path / "2-Academic" / "Mocs" / "Years" / f"{vault_utils.sanitize_filename(moc_title_canonical)}.md"
         moc_path.parent.mkdir(parents=True, exist_ok=True)
 
         content = [
@@ -215,7 +215,7 @@ def generate_mocs(all_notes_metadata: list, output_root_path: Path) -> Tuple[boo
     for sem_key, notes in notes_by_semester.items():
         year, semester = sem_key
         moc_title_canonical = vault_utils.get_canonical_title(f"{year} {semester} MOC")
-        moc_path = output_root_path / "1-Academic" / "Mocs" / "Semesters" / f"{vault_utils.sanitize_filename(moc_title_canonical)}.md"
+        moc_path = output_root_path / "2-Academic" / "Mocs" / "Semesters" / f"{vault_utils.sanitize_filename(moc_title_canonical)}.md"
         moc_path.parent.mkdir(parents=True, exist_ok=True)
 
         content = [
@@ -257,7 +257,7 @@ def generate_mocs(all_notes_metadata: list, output_root_path: Path) -> Tuple[boo
     for course_key, notes in notes_by_course.items():
         year, semester, course = course_key
         moc_title_canonical = vault_utils.get_canonical_title(f"{course} MOC")
-        moc_path = output_root_path / "1-Academic" / "Mocs" / "Courses" / f"{vault_utils.sanitize_filename(moc_title_canonical)}.md"
+        moc_path = output_root_path / "2-Academic" / "Mocs" / "Courses" / f"{vault_utils.sanitize_filename(moc_title_canonical)}.md"
         moc_path.parent.mkdir(parents=True, exist_ok=True)
 
         content = [

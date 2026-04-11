@@ -26,13 +26,14 @@ class OkaDeployer:
 
         # Universal Note Extraction (Keyword-Targeted)
         # We split by START_NOTE and then for each part, we find the content up to END_NOTE.
-        # Allow 3 or more dashes and optional whitespace
-        raw_parts = re.split(r"-{3,}\s*START_NOTE\s*-{3,}", content_to_parse, flags=re.IGNORECASE)
+        # Allow any number of dashes and optional title info on the same line
+        raw_parts = re.split(r"-*\s*START_NOTE.*?\n", content_to_parse, flags=re.IGNORECASE)
         
         blocks = []
         for part in raw_parts[1:]: # Skip text before first START_NOTE
             # Find the content up to the FIRST occurrence of END_NOTE in this part
-            end_match = re.search(r"(?i)(.*?)\s*-{3,}\s*END_NOTE\s*-{3,}", part, re.DOTALL)
+            # Again, be permissive with dashes and title info
+            end_match = re.search(r"(?i)(.*?)\s*-*\s*END_NOTE", part, re.DOTALL)
             if end_match:
                 blocks.append(end_match.group(1).strip())
             else:

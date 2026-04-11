@@ -104,6 +104,15 @@ def deploy_notes_from_text(ai_output_text: str, vault_snapshot_before_deployment
                 meta["created_at"] = existing_note_info.get("created_at", current_utc_iso)
                 meta["last_modified"] = current_utc_iso
                 
+                # --- CRITICAL BUG FIX: Preserve existing hierarchy to prevent unintended moves/deletions ---
+                # If the note already exists, we should favor the existing location (Year/Semester/Course/Unit)
+                # unless we explicitly want the AI to be able to move notes (which is risky).
+                # To fix the 'old ones get deleted' bug, we force the new metadata to match the old metadata
+                # for the hierarchical fields.
+                for field in ["year", "semester", "course", "unit"]:
+                    if field in existing_note_info and existing_note_info[field]:
+                        meta[field] = existing_note_info[field]
+
                 # Update ai_refinement_log
                 ai_log_from_input = meta.get("ai_refinement_log")
                 if ai_log_from_input:
@@ -151,21 +160,30 @@ def deploy_notes_from_text(ai_output_text: str, vault_snapshot_before_deployment
                 # the path hierarchy changed, or the filename casing itself changed,
                 # which requires a move/rename.
                 if target_path != original_file_path_obj:
-                    print(f"⬆️ Renaming/Moving: '{original_file_path_obj.relative_to(vault_utils.VAULT_BASE_PATH)}' to '{target_path.relative_to(vault_utils.VAULT_BASE_PATH)}' (UID: {meta['uid']})")
-                    if original_file_path_obj.exists():
-                        try:
-                            original_file_path_obj.unlink(missing_ok=True)
-                            vault_utils.clean_empty_dirs(original_file_path_obj.parent, vault_utils.VAULT_BASE_PATH)
-                        except OSError as e:
-                            print(f"WARNING: Failed to delete old file '{original_file_path_obj.relative_to(vault_utils.VAULT_BASE_PATH)}': {e}")
-                        except Exception as e:
-                            print(f"An unexpected error occurred while deleting '{original_file_path_obj.relative_to(vault_utils.VAULT_BASE_PATH)}': {e}")
+                    # Determine reason for move for better logging
+                    old_rel = original_file_path_obj.relative_to(vault_utils.VAULT_BASE_PATH)
+                    new_rel = target_path.relative_to(vault_utils.VAULT_BASE_PATH)
+                    
+                    move_reason = "Path/Hierarchy change"
+                    if original_file_path_obj.name != target_path.name:
+                        move_reason = f"Title/Filename change ('{original_file_path_obj.stem}' -> '{target_path.stem}')"
+                    
+                    print(f"⬆️ Renaming/Moving: '{old_rel}' to '{new_rel}' (Reason: {move_reason}, UID: {meta['uid']})")
+                    
+                    # SAFE MOVE PROTOCOL: Write new file FIRST, then delete old one.
                     try:
                         vault_utils.write_file(target_path, full_note_content)
+                        # Only delete if write was successful
+                        if original_file_path_obj.exists():
+                            try:
+                                original_file_path_obj.unlink(missing_ok=True)
+                                vault_utils.clean_empty_dirs(original_file_path_obj.parent, vault_utils.VAULT_BASE_PATH)
+                            except OSError as e:
+                                print(f"WARNING: Failed to delete old file '{old_rel}': {e}")
                     except IOError as e:
-                        print(f"ERROR: Could not write new file '{target_path.relative_to(vault_utils.VAULT_BASE_PATH)}' during rename/move: {e}")
+                        print(f"ERROR: Could not write new file '{new_rel}' during rename/move: {e}. Old file preserved.")
                     except Exception as e:
-                        print(f"An unexpected error occurred while writing new file '{target_path.relative_to(vault_utils.VAULT_BASE_PATH)}': {e}")
+                        print(f"An unexpected error occurred during move for '{new_rel}': {e}. Old file preserved.")
                 else:
                     print(f"🔄 Updating: '{target_path.relative_to(vault_utils.VAULT_BASE_PATH)}' (UID: {meta['uid']})")
                     try:

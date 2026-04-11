@@ -301,10 +301,12 @@ class OkaService:
                     f"Type_of_Source: {source_type}\nSource_Content:\n\n{raw}"
                 )
 
-            # V3.0 Prompt: Skip Greeting (T1) and Go Straight to Plan (T2)
+            # OKA v7.0 Dynamic Initialization
             init_command = (
-                "Source material provided. Skip the greeting and proceed directly to the "
-                "**OKA v3.0 Finalized Knowledge Asset Plan (T2 Template)**.\n\n"
+                "Source material provided. ABSOLUTELY NO GREETINGS or preambles.\n"
+                "1. Start with the `<pre_generation_planning>` reasoning block.\n"
+                "2. Extract EVERY single concept from the source.\n"
+                "3. Output the **Finalized Knowledge Asset Plan** exactly as per OKA v7.0.\n\n"
                 f"{content_text}"
             )
             messages.append(HumanMessage(content=init_command))
@@ -370,15 +372,29 @@ class OkaService:
         )
 
         try:
-            # V3.0 Strict Batch Reinforcement
+            # OKA v7.0 Strict Batch Reinforcement
+            batch_notes = []
+            if "batches" in session["metadata"]:
+                for b in session["metadata"]["batches"]:
+                    if b.get("id") == batch_number:
+                        batch_notes = b.get("notes", [])
+                        break
+            
+            notes_context = ""
+            if batch_notes:
+                notes_context = f"Specifically, generate EXACTLY these notes: {', '.join(['[['+n+']]' for n in batch_notes])}."
+
             reinforced_command = (
                 f"{command}\n\n"
-                "STRICT V3.0 BATCH PROTOCOL:\n"
-                "1. Confirm Plan (T2 Template) received.\n"
-                "2. Perform <pre_generation_planning> SILENTLY inside your logic.\n"
-                "3. Wrap output EXCLUSIVELY in --- START_BATCH --- and --- END_BATCH ---.\n"
-                "4. EVERY note MUST be delimited with --- START_NOTE --- and --- END_NOTE ---.\n"
-                "5. NO standard backticks (```). USE --- START_CODE:{lang} --- delimiters."
+                "STRICT OKA v7.0 BATCH PROTOCOL:\n"
+                f"1. You are generating Batch {batch_number} of {total_batches}.\n"
+                f"2. {notes_context}\n"
+                "3. Use EXACT structural templates from OKA v7.0 (Exhaustive & Massive Detail).\n"
+                "4. Wrap output EXCLUSIVELY in --- START_BATCH --- and --- END_BATCH ---.\n"
+                "5. EVERY note MUST be delimited with --- START_NOTE --- and --- END_NOTE ---.\n"
+                "6. EVERY YAML value must be wrapped in double quotes.\n"
+                "7. NO standard backticks (```). USE --- START_CODE:{lang} --- delimiters.\n"
+                "8. After generating, wait for next batch confirmation."
             )
             messages.append(HumanMessage(content=reinforced_command))
 
@@ -394,15 +410,16 @@ class OkaService:
             deployment_results = self.deployer.deploy(res.content)
             if not deployment_results:
                 print(f"[OKA Service] ERROR: 0 notes extracted from response (total len: {len(res.content)})")
+                # DO NOT increment current_batch here so user can retry
                 return {
                     "ai_output": res.content,
                     "results": [],
                     "count": 0,
                     "has_more": True,
-                    "current_batch": current_batch, # Keep it at old batch
+                    "current_batch": current_batch, 
                     "total_batches": total_batches,
                     "status": "error",
-                    "error": f"No valid note blocks were found in Batch {batch_number}. Ensure the model is outputting START_NOTE/END_NOTE markers on their own lines."
+                    "error": f"Batch {batch_number} parsing failed. The AI omitted the required START_NOTE/YAML markers. Please try again or check the raw output below."
                 }
                 
             print(f"[OKA Service] Batch {batch_number} deployed: {len(deployment_results)} notes.")
@@ -452,12 +469,10 @@ class OkaService:
             "batches": [],
         }
 
-        # V3.0 style metadata extraction
+        # Metadata extraction (Strict v5.4 Plan Blueprint Parsing)
         for pattern in [
-            r"Course:\s*(.*)",
-            r"\*\*Course:\*\*\s*(.*)",
-            r"\*\*I\..*?Course:\*\*\s*(.*)",
-            r"\*\*I\..*?(?:Domain|Project):\*\*\s*(.*)",
+            r"Course:\s*\**([^\n\*]*)",
+            r"# I\..*?Course:\s*\**([^\n\*]*)",
         ]:
             m = re.search(pattern, plan_text, re.I)
             if m:
@@ -465,9 +480,8 @@ class OkaService:
                 break
 
         for pattern in [
-            r"Unit:\s*(.*)",
-            r"\*\*Unit:\*\*\s*(.*)",
-            r"(?:unit_name):\s*(.*)",
+            r"Unit:\s*\**([^\n\*]*)",
+            r"# I\..*?Unit:\s*\**([^\n\*]*)",
         ]:
             m = re.search(pattern, plan_text, re.I)
             if m:
@@ -498,44 +512,80 @@ class OkaService:
         notes_match = re.findall(r"\[\[(.*?)\]\]", plan_text)
         metadata["notes"] = list(dict.fromkeys(notes_match))
 
-        # Robust batch parsing
-        # Looks for lines like "Batch 1:", "**Batch 1**:", "### Batch 1", "- Batch 1", "Batch 1 - ..."
-        batch_headers = list(re.finditer(
-            r"(?:\n|^)(?:[#\-\*\s]*)Batch\s+(\d+)\s*(?::|\s|\*|-|$)",
-            plan_text, 
-            re.I
-        ))
+        # Isolate the Batching Strategy section
+        strategy_match = re.search(r"#\s*IV\.\s*BATCHING STRATEGY(.*?)(?=#\s*V\.|$)", plan_text, re.DOTALL | re.I)
+        search_text = strategy_match.group(1) if strategy_match else plan_text
+
+        # Robust batch parsing (Supports table rows: | Batch 1 | [[Note1]], [[Note2]] |)
+        batch_rows = re.findall(r"\|\s*Batch\s+(\d+)\s*\|\s*(.*?)\|", search_text, re.I)
+        if batch_rows:
+            assigned_notes = set()
+            for b_id, b_content in batch_rows:
+                b_notes = re.findall(r"\[\[(.*?)\]\]", b_content)
+                if b_notes:
+                    metadata["batches"].append({
+                        "id": int(b_id),
+                        "notes": list(dict.fromkeys(b_notes))
+                    })
+                    assigned_notes.update(b_notes)
+        else:
+            # Fallback to standard header parsing if table fails
+            batch_headers = list(re.finditer(r"(?:\n|^)(?:[#\-\*\s\d\.\|]*)Batch\s+(\d+)\s*(?::|\s|\*|-|\||$)", search_text, re.I))
+            assigned_notes = set()
+            for i, match in enumerate(batch_headers):
+                b_id = match.group(1)
+                start_pos = match.end()
+                end_pos = batch_headers[i+1].start() if i + 1 < len(batch_headers) else len(search_text)
+                b_notes = re.findall(r"\[\[(.*?)\]\]", search_text[start_pos:end_pos])
+                if b_notes:
+                    metadata["batches"].append({
+                        "id": int(b_id), 
+                        "notes": list(dict.fromkeys(b_notes))
+                    })
+                    assigned_notes.update(b_notes)
+
+        # SNIPER MODE: Force 1-note-per-batch for maximum depth (Batch 2+)
+        sniped_batches = []
+        next_id = 1
         
-        assigned_notes = set()
-        for i, match in enumerate(batch_headers):
-            b_id = match.group(1)
-            start_pos = match.end()
-            
-            # Find end of this batch section (start of next batch or summary/header)
-            if i + 1 < len(batch_headers):
-                end_pos = batch_headers[i+1].start()
+        # 1. Process Manual Batches
+        for b in metadata["batches"]:
+            if b["id"] == 1:
+                # Keep Batch 1 as is (Hub + Questions)
+                b["id"] = next_id
+                sniped_batches.append(b)
+                next_id += 1
             else:
-                summary_match = re.search(r"\n#+\s*(?:Knowledge Asset Summary|Notes|Summary)", plan_text[start_pos:], re.I)
-                if summary_match:
-                    end_pos = start_pos + summary_match.start()
-                else:
-                    end_pos = len(plan_text)
+                # Split Batch 2+ into single-note batches
+                for note in b["notes"]:
+                    sniped_batches.append({
+                        "id": next_id,
+                        "notes": [note]
+                    })
+                    next_id += 1
+        
+        # 2. Add Missing Notes (Parity Guard)
+        missing_notes = [n for n in metadata["notes"] if n not in assigned_notes]
+        for note in missing_notes:
+            sniped_batches.append({
+                "id": next_id,
+                "notes": [note]
+            })
+            next_id += 1
             
-            b_content = plan_text[start_pos:end_pos]
-            b_notes = re.findall(r"\[\[(.*?)\]\]", b_content)
-            if b_notes:
-                notes_list = list(dict.fromkeys(b_notes))
-                metadata["batches"].append({
-                    "id": int(b_id), 
-                    "notes": notes_list
-                })
-                assigned_notes.update(notes_list)
+        metadata["batches"] = sniped_batches
+        metadata["batches"].sort(key=lambda x: x["id"])
 
-        # Fallback: if no batches detected but we have notes, make it 1 batch
-        if not metadata["batches"] and metadata["notes"]:
-            metadata["batches"].append({"id": 1, "notes": metadata["notes"]})
+        # Extract Summary (For progress tracking)
+        try:
+            summary_match = re.search(r"#\s*V\.\s*SUMMARY\s*[\r\n]+(.*?)(?=#|---|$)", plan_text, re.DOTALL | re.I)
+            if summary_match:
+                notes_count_match = re.search(r"Total Atomic Notes:\s*(\d+)", summary_match.group(1), re.I)
+                if notes_count_match:
+                    metadata["total_notes"] = int(notes_count_match.group(1))
+        except: pass
 
-        # Calculate predicted deployment path
+        # Predict deployment path
         try:
             # Look for Domain/Category to help pathing
             m_cat = re.search(r"\*\*(?:Category|Domain|Field|Type|Source Type):\*\*\s*(.*)", plan_text)
@@ -568,8 +618,6 @@ class OkaService:
             f"[OKA Service] Plan parsed: {len(metadata['notes'])} potential notes, "
             f"{len(metadata['batches'])} confirmed batches. Path: {metadata.get('deployment_path')}"
         )
-
-        return metadata
 
         return metadata
 

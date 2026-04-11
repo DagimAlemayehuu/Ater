@@ -62,6 +62,12 @@ This repository strictly adheres to the `AGENTS.md` protocol. It uses a `.system
 
 ## Changelog
 
+### 2026-04-11 — OKA v9.0 "Absolute Sovereign" Protocol
+- **OKA v9.0 Protocol**: Deployed the Absolute Sovereign Instruction set (~600 lines), enforcing 100% structural compliance and textbook-grade technical output.
+- **Sniper Mode Generation**: Transitioned the autonomous pipeline to a high-fidelity 1-note-per-turn logic, maximizing depth (250+ lines per note) and technical accuracy.
+- **YAML Resilience**: Mandated strict double-quoting for all frontmatter values and optimized the parser for permissive delimiter recovery.
+- **Dashboard Integration**: Finalized the OKA Queue Manager with real-time parity checking between AI plans and deployment queues.
+
 ### 2026-03-23 — System Decoupling & Unified Chronos
 - **Obsidian Vault Explorer Decoupled**: The primary Obsidian workspace is now a dedicated, professional side-by-side Markdown file explorer, fully separated from AI ingestion tasks.
 - **Dedicated OKA Agent Hub**: The Obsidian Knowledge Architect (OKA) now resides securely within the Agent Registry, acting as a focused workspace for autonomous ingestion and multi-batch deployment.
