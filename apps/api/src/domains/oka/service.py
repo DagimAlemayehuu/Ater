@@ -316,16 +316,24 @@ class OkaService:
         semester = str(curriculum.get("semester", "")).replace("Unknown", "").strip()
         hub_title = str(curriculum.get("hub_title", "")).replace("Unknown", "").strip()
 
+        # Clean the hub_title of unit numbers and "Hub" suffixes to prevent 3_3_Hub_Hub
+        clean_hub_title = hub_title
+        clean_hub_title = clean_hub_title.lstrip(" _-")
+        while re.match(r"^\d+[\s\-_]*", clean_hub_title):
+            clean_hub_title = re.sub(r"^\d+[\s\-_]*", "", clean_hub_title)
+            clean_hub_title = clean_hub_title.lstrip(" _-")
+        clean_hub_title = clean_hub_title.replace(" Hub", "").replace("_Hub", "").strip("_ ")
+
         anchor_instruction = (
             "\n\nCURRICULUM LOCK (MANDATORY):\n"
             f"You are architecting for:\n"
             f"- Course: [[{course}]]\n"
             f"- Semester: [[{semester}]]\n"
             f"- Unit: {unit_num}\n"
-            f"- Hub Title: {hub_title}\n\n"
+            f"- Hub Title: {clean_hub_title}\n\n"
             "STRICT NAMING CONVENTION:\n"
-            f"1. Master Hub: [[{unit_num}_{hub_title.replace(' ', '_')}_Hub]]\n"
-            f"2. Possible Questions: [[{unit_num}_{hub_title.replace(' ', '_')}_Possible_Questions]]\n"
+            f"1. Master Hub: [[{unit_num}_{clean_hub_title.replace(' ', '_')}_Hub]]\n"
+            f"2. Possible Questions: [[{unit_num}_{clean_hub_title.replace(' ', '_')}_Possible_Questions]]\n"
             "3. Atomic Notes: [[Strict_Title_Case_With_Underscores]] (No Unit Number).\n"
             "4. CONNECTIONS: You MUST maintain hierarchical indentation (2 spaces) in the # Connections section."
         )
@@ -407,9 +415,9 @@ class OkaService:
                         if not err:
                             # Update properties (RE-WRAP in wiki-links for relations)
                             if curriculum_override.get("course"):
-                                meta["course"] = [f"[[{curriculum_override['course']}]]"]
+                                meta["course"] = f"[[{curriculum_override['course']}]]"
                             if curriculum_override.get("semester"):
-                                meta["semester"] = [f"[[{curriculum_override['semester']}]]"]
+                                meta["semester"] = f"[[{curriculum_override['semester']}]]"
                             if curriculum_override.get("unit"):
                                 u = curriculum_override["unit"]
                                 meta["unit"] = int(u) if str(u).isdigit() else u
@@ -489,6 +497,24 @@ class OkaService:
             if not has_more:
                 OkaService._sessions.pop(session_id, None)
                 OkaService._status[session_id] = "Completed"
+                
+                # Mark Hub as Generated
+                hub_to_update = session.get("target_hub")
+                if hub_to_update and hub_to_update.get("path"):
+                    hub_path = Path(hub_to_update["path"])
+                    if hub_path.exists():
+                        try:
+                            with open(hub_path, "r", encoding="utf-8") as f:
+                                content = f.read()
+                            meta, body, err = self.vm.extract_yaml_and_content(content)
+                            if not err:
+                                meta["generated"] = True
+                                yaml_content = self.vm.dump_obsidian_yaml(meta)
+                                full_content = f"---\n{yaml_content}\n---\n\n{body.strip()}\n"
+                                self.vm.write_note(hub_path, full_content)
+                                print(f"[OKA Service] Marked hub as generated: {hub_path.name}")
+                        except Exception as e:
+                            print(f"[OKA Service] Failed to mark hub as generated: {e}")
             else:
                 OkaService._status[session_id] = f"Awaiting Batch {batch_number + 1}"
 

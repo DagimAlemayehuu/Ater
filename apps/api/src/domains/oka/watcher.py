@@ -135,16 +135,34 @@ class OkaQueueManager:
                 path = Path(file_to_process)
                 watcher_logger.info(f"Starting autonomous planning for: {path.name}")
                 
-                # 1. Planning
-                res = await self.service.process_file(str(path.absolute()), self.si_path)
+                # 1. Detection Phase (No AI)
+                detect_res = await self.service.detect_curriculum(str(path.absolute()))
+
+                # Auto-resolve curriculum from anchored hub or use placeholders
+                anchored_hub = detect_res.get("anchored_hub")
+                curriculum = {
+                    "course": anchored_hub.get("course", "") if anchored_hub else "",
+                    "unit": anchored_hub.get("unit", "") if anchored_hub else "",
+                    "semester": anchored_hub.get("semester", "") if anchored_hub else "",
+                    "hub_title": anchored_hub.get("title", path.stem) if anchored_hub else path.stem
+                }
+
+                # 2. Planning Phase (AI)
+                res = await self.service.generate_plan(
+                    str(path.absolute()), 
+                    self.si_path,
+                    curriculum=curriculum,
+                    target_hub_id=anchored_hub.get("id") if anchored_hub else None
+                )
+
                 session_id = res["session_id"]
                 structured_plan = res["plan_structured"]
                 self.total_batches = len(structured_plan.get("batches", [])) or 1
                 self.status = "deploying"
-                
+
                 watcher_logger.info(f"Plan generated for {path.name}. Total batches: {self.total_batches}")
-                
-                # 2. Deployment Loop - AUTONOMOUS (Confirming automatically)
+
+                # 3. Deployment Loop - AUTONOMOUS (Confirming automatically)
                 has_more = True
                 temp_batch = 0
                 hub_path = None

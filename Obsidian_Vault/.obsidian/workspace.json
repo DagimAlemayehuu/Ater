@@ -11,14 +11,10 @@
             "id": "137e731015dc278e",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "3-Database/06 - Study Planner/3_Conceputual_Database_Design_Hub.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "3_Conceputual_Database_Design_Hub"
+              "title": "New tab"
             }
           }
         ]
@@ -182,12 +178,25 @@
   },
   "active": "137e731015dc278e",
   "lastOpenFiles": [
-    "2-Academic/Uncategorized_Notes/3_3_Conceputual_Database_Design_Possible_Questions.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Conceputual_Database_Design/3_Conceputual_Database_Design_Possible_Questions.md",
+    "2-Academic/Autumn 2025/Database Systems/3_3_Conceputual_Database_Design_Hub/Database_Development_Methodology.md",
+    "2-Academic/Autumn 2025/Database Systems/3_3_Conceputual_Database_Design_Hub/3_Conceputual_Database_Design_Possible_Questions.md",
+    "2-Academic/Autumn 2025/Database Systems/3_3_Conceputual_Database_Design_Hub",
+    "2-Academic/Autumn 2025/Database Systems",
+    "3-Database/06 - Study Planner/_Types/3 - High.md",
+    "3-Database/06 - Study Planner/_Types/2 - Medium.md",
+    "3-Database/06 - Study Planner/_Types/1 - Low.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Conceputual_Database_Design/Database_Development_Methodology.md",
     "3-Database/06 - Study Planner/3_Conceputual_Database_Design_Hub.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Conceputual_Database_Design",
+    "2-Academic/Autumn 2025/Database_Systems",
+    "2-Academic/Autumn 2025",
+    "2-Academic/Uncategorized_Notes/Database_Development_Methodology.md",
+    "2-Academic/Uncategorized_Notes/3_Conceputual_Database_Design_Possible_Questions.md",
     "2-Academic/Uncategorized_Notes",
+    "2-Academic/Uncategorized_Notes/3_3_Conceputual_Database_Design_Possible_Questions.md",
     "3-Database/08 - Semesters/ZU.md",
     "3-Database/06 - Study Planner/Collaborative Partnership among Stakeholders_Inclusiveness_Hub.md",
-    "2-Academic/Uncategorized_Notes/Database_Development_Methodology.md",
     "2-Academic/Uncategorized_Notes/3_Conceputual_Database_Design_3_Conceputual_Database_Design_Possible_Questions.md",
     "3-Database/06 - Study Planner/3_3_Conceputual_Database_Design_Possible_Questions.md",
     "Structural_Constraints.md",
@@ -204,18 +213,6 @@
     "3-Database/06 - Study Planner/_Types/1.md",
     "3-Database/06 - Study Planner/_Types",
     "3-Database/06 - Study Planner/_Units/9.md",
-    "3-Database/06 - Study Planner/_Units/8.md",
-    "3-Database/06 - Study Planner/_Units/7.md",
-    "3-Database/06 - Study Planner/_Units/6.md",
-    "3-Database/06 - Study Planner/_Units/5.md",
-    "3-Database/06 - Study Planner/_Units/4.md",
-    "3-Database/06 - Study Planner/_Units/3.md",
-    "3-Database/06 - Study Planner/_Units/2.md",
-    "3-Database/06 - Study Planner/_Units/10.md",
-    "3-Database/06 - Study Planner/_Units",
-    "Academic/Research/NLP",
-    "Academic/Research",
-    "Academic",
-    "inbox"
+    "3-Database/06 - Study Planner/_Units/8.md"
   ]
 }

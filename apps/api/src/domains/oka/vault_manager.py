@@ -50,18 +50,19 @@ class VaultManager:
 
         return '_'.join(words)
 
-    def get_note_path(self, meta: dict, anchored_hub_path: Optional[str] = None) -> Path:
+    def get_note_path(self, meta: dict, session_metadata: Optional[dict] = None, anchored_hub_path: Optional[str] = None) -> Path:
         """
         Determines the hierarchical file path for a note with strict academic naming.
-
-        STRICT PROTOCOL:
-          - Hubs: {Unit}_{Clean_Name}_Hub.md (Prioritizes anchored_hub_path)
-          - Questions: {Unit}_{Clean_Name}_Possible_Questions.md
-          - Atomic: {Strict_Title_Case_With_Underscores}.md
         """
         raw_title = meta.get("title", "Untitled_Note")
         note_type = str(meta.get("type", "")).lower()
-        unit_num = str(meta.get("unit", "")).strip()
+        session_meta = session_metadata or {}
+        
+        # Use session data first, fallback to AI meta
+        unit_num = str(session_meta.get("unit") or meta.get("unit", "")).strip()
+        raw_course = str(session_meta.get("course") or meta.get("course") or "Unknown_Course")
+        raw_semester = str(session_meta.get("semester") or meta.get("semester") or "Unknown_Semester")
+        raw_hub = str(session_meta.get("hub_title") or raw_title)
 
         # Clean unit_num: remove brackets or "Unknown"
         unit_num = unit_num.replace("[[", "").replace("]]", "")
@@ -75,14 +76,11 @@ class VaultManager:
         def super_clean(title: str) -> str:
             """Aggressively and recursively strips all metadata noise from a title."""
             c = str(title)
-            # Remove "Unknown" (case-insensitive)
             c = re.sub(r"(?i)unknown", "", c)
-            # Remove existing unit numbers at start (recursive: handles 3_3_ or 3 3)
-            # Match any leading digit followed by space, underscore, or dash
+            c = c.lstrip(" _-")
             while re.match(r"^\d+[\s\-_]*", c):
                 c = re.sub(r"^\d+[\s\-_]*", "", c)
-            
-            # Strip suffixes recursively to prevent Hub_Hub or Hub_Possible_Questions
+                c = c.lstrip(" _-")
             while True:
                 prev = c
                 c = c.replace(" Hub", "").replace("_Hub", "")
@@ -102,30 +100,37 @@ class VaultManager:
             filename = f"{unit_num}_{canonical_name}_Hub.md" if unit_num else f"{canonical_name}_Hub.md"
             return self.vault_path / "3-Database" / "06 - Study Planner" / filename
 
+        # ── Deep Academic Folder Pathing ──
+        clean_course = self.get_canonical_title(super_clean(raw_course))
+        clean_semester = raw_semester.replace("[[", "").replace("]]", "").strip()
+        
+        # We need the clean Hub Name for the folder
+        clean_hub_base = super_clean(raw_hub)
+        canonical_hub_base = self.get_canonical_title(clean_hub_base)
+        unit_folder_name = f"{unit_num}_{canonical_hub_base}" if unit_num else canonical_hub_base
+        
+        target_dir = self.academic_root / clean_semester / clean_course / unit_folder_name
+
         # ── 2. Possible Questions (Academic Root) ──
         if is_questions:
             clean = super_clean(raw_title)
             canonical_name = self.get_canonical_title(clean)
-            
-            # UNIFIED: Unit_Name_Possible_Questions
             filename = f"{unit_num}_{canonical_name}_Possible_Questions.md" if unit_num else f"{canonical_name}_Possible_Questions.md"
-            return self.academic_root / "Uncategorized_Notes" / filename
+            return target_dir / filename
 
         # ── 3. Atomic Notes (Academic Root) ──
         clean_atomic = super_clean(raw_title)
         canonical_title = self.get_canonical_title(clean_atomic)
-        return self.academic_root / "Uncategorized_Notes" / f"{canonical_title}.md"
+        return target_dir / f"{canonical_title}.md"
 
     def dump_obsidian_yaml(self, meta: dict) -> str:
-        """Dumps YAML and strips quotes from wiki-links for Obsidian compatibility."""
+        """Dumps YAML allowing standard quotes for Obsidian link compatibility."""
         import yaml
-        # Dump with default settings
-        raw_yaml = yaml.dump(meta, sort_keys=False, allow_unicode=True, width=1000).rstrip('\n')
         
-        # Strip quotes from wiki-links: "[[Link]]" -> [[Link]]
-        # Handles both double and single quotes
-        cleaned = re.sub(r"['\"](\[\[.*?\]\])['\"]", r"\1", raw_yaml)
-        return cleaned
+        # Obsidian 1.4+ Properties UI requires valid YAML. 
+        # Unquoted [[Link]] parses as nested lists [["Link"]].
+        # PyYAML handles quoting automatically (e.g. '[[Link]]').
+        return yaml.dump(meta, sort_keys=False, allow_unicode=True, width=1000).rstrip('\n')
 
     def write_note(self, file_path: Path, content: str):
         """Asynchronously writes content to a file, ensuring parent directories exist."""

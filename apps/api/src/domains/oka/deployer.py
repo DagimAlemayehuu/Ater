@@ -50,7 +50,7 @@ class OkaDeployer:
                 # Ensure metadata has unit/course for pathing
                 if "unit" not in meta or not meta["unit"]: meta["unit"] = session_metadata.get("unit")
                 if "course" not in meta or not meta["course"]: meta["course"] = session_metadata.get("course")
-                notes_to_deploy.append({"title": meta["title"], "content": cleaned_note, "metadata": meta})
+                notes_to_deploy.append({"title": meta["title"], "content": body, "metadata": meta})
 
         if not notes_to_deploy:
             print(f"[OKA Deployer] FAIL: 0 valid notes extracted. Raw output length: {len(ai_output)}")
@@ -78,16 +78,60 @@ class OkaDeployer:
             # ── METADATA ENFORCEMENT ──
             # We ignore the AI's messy YAML and inject the perfect curriculum data from the session
             if session_metadata.get("course"):
-                meta["course"] = [f"[[{session_metadata['course']}]]"]
+                meta["course"] = f"[[{session_metadata['course']}]]"
             if session_metadata.get("semester"):
-                meta["semester"] = [f"[[{session_metadata['semester']}]]"]
+                meta["semester"] = f"[[{session_metadata['semester']}]]"
             if session_metadata.get("unit"):
                 u = session_metadata["unit"]
                 meta["unit"] = int(u) if str(u).isdigit() else u
+
+            # Inject type and relational links
+            is_hub = "hub" in title.lower() or "hub" in str(meta.get("type", "")).lower()
+            is_pq = "questions" in title.lower() or "questions" in str(meta.get("type", "")).lower()
+            
+            clean_hub_name = ""
+            if session_metadata.get("hub_title"):
+                # Clean the hub title the exact same way VaultManager does to build the relational link
+                raw_hub = session_metadata.get("hub_title", "")
+                c = re.sub(r"(?i)unknown", "", raw_hub)
+                c = c.lstrip(" _-")
+                while re.match(r"^\d+[\s\-_]*", c):
+                    c = re.sub(r"^\d+[\s\-_]*", "", c)
+                    c = c.lstrip(" _-")
+                while True:
+                    prev = c
+                    c = c.replace(" Hub", "").replace("_Hub", "")
+                    c = c.replace(" Possible Questions", "").replace("_Possible_Questions", "")
+                    c = c.strip("_ ")
+                    if c == prev: break
+                clean_hub_name = self.vm.get_canonical_title(c)
+                
+            unit_str = f"{session_metadata.get('unit')}_" if session_metadata.get("unit") else ""
+
+            if is_hub:
+                meta["type"] = "Hub"
+                meta.setdefault("status", "Not Started")
+                meta.setdefault("confidence", None)
+                meta.setdefault("study_date", None)
+                meta.setdefault("generated", False)
+            elif is_pq:
+                meta["type"] = "Possible Questions"
+                if clean_hub_name:
+                    meta["hub"] = f"[[{unit_str}{clean_hub_name}_Hub]]"
+                meta.setdefault("score", None)
+            else:
+                meta["type"] = "Atomic Note"
+                if clean_hub_name:
+                    meta["hub"] = f"[[{unit_str}{clean_hub_name}_Hub]]"
+                meta.setdefault("mode", meta.get("mode", "ENGINEER"))
             
             # Resolve path via hardened logic in VaultManager
-            target_path = self.vm.get_note_path(meta, anchored_hub_path=anchored_path)
+            target_path = self.vm.get_note_path(meta, session_metadata=session_metadata, anchored_hub_path=anchored_path)
             
+            # ── TITLE ENFORCEMENT ──
+            # The path resolution does intense cleaning. We must reflect that clean name in the YAML title.
+            meta["title"] = target_path.stem
+
             # Prepare content with clean YAML
             yaml_content = self.vm.dump_obsidian_yaml(meta)
             full_content = f"---\n{yaml_content}\n---\n\n{content.strip()}\n"

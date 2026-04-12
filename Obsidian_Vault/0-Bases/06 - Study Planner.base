@@ -6,9 +6,10 @@ views:
         - file.inFolder("3-Database/06 - Study Planner")
     columns:
       - file.name: { type: "title" }
+      - status: { type: "select", options: ["Not Started", "In Progress", "Review", "Mastered"] }
       - course: { type: "relation", source: "3-Database/07 - Courses" }
       - semester: { type: "relation", source: "3-Database/08 - Semesters" }
       - unit: { type: "select", source: "3-Database/06 - Study Planner/_Units" }
-      - Study Date: { type: "date" }
-      - Confidence: { type: "select", source: "3-Database/06 - Study Planner/_Types" }
-      - Difficulty: { type: "select", source: "3-Database/07 - Courses/_Types" }
+      - study_date: { type: "date" }
+      - confidence: { type: "select", options: ["1 - Low", "2 - Medium", "3 - High"] }
+      - generated: { type: "checkbox" }
