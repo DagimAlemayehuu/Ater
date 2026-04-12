@@ -68,6 +68,17 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
     }, [database.id])
 
     const handleUpdate = async (fileName: string, propertyName: string, value: any) => {
+        if (propertyName === 'title') {
+            try {
+                await sidecarApi.renameVaultFile(database.id, fileName, value)
+                fetchRows()
+            } catch (e) {
+                console.error("Rename failed", e)
+                fetchRows()
+            }
+            return
+        }
+
         setRows(prev => prev.map(r => r.id === fileName ? {
             ...r,
             properties: { ...r.properties, [propertyName]: value }
@@ -202,7 +213,7 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
                                 placeholder="Search records..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-8 h-7 text-[10px] w-40 bg-secondary/10 border-none rounded-md focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all focus:w-56 tracking-tight bg-[#0f0f0f]"
+                                className="pl-8 h-7 text-[10px] w-40 bg-secondary/10 border-none rounded-md focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all focus:w-56 tracking-tight"
                             />
                         </div>
                         <button onClick={fetchRows} className="p-2 opacity-30 hover:opacity-100 transition-opacity"><RefreshCw size={12} className={loading ? 'animate-spin' : ''} /></button>
@@ -221,7 +232,7 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
 
                         <button 
                             onClick={() => setIsCreatingRow(true)}
-                            className="flex items-center gap-1.5 px-4 h-7 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-[0.1em] rounded-md hover:opacity-90 transition-all shadow-md shadow-primary/10 ml-2"
+                            className="flex items-center gap-1.5 px-4 h-7 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-[0.1em] rounded-md hover:opacity-90 transition-all ml-2"
                         >
                             <Plus size={12} /> New
                         </button>

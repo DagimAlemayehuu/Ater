@@ -71,12 +71,13 @@ export function TableView({
                                 )}
                                 {group.items.map(row => (
                                     <tr key={row.id} className="hover:bg-secondary/10 group">
-                                        <td 
-                                            className="px-3 py-2 whitespace-nowrap font-bold max-w-[200px] truncate cursor-pointer text-primary hover:underline" 
-                                            title={row.title}
-                                            onClick={() => onSelectRow(row.id)}
-                                        >
-                                            {row.title}
+                                        <td className="px-3 py-1.5 whitespace-nowrap font-bold max-w-[200px] border-r border-border/5">
+                                            <EditableCell 
+                                                initialValue={row.title} 
+                                                type="str" 
+                                                onSave={(newValue) => onUpdate(row.id, 'title', newValue)} 
+                                                onNavigate={() => onSelectRow(row.id)}
+                                            />
                                         </td>
                                         {columns.slice(1).map(col => {
                                             const val = row.properties[col]

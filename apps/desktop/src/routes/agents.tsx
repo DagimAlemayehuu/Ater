@@ -522,7 +522,7 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col gap-4">
                 {hubContent && (
-                    <div className="rounded-xl border bg-card p-5 shadow-sm hover:shadow-md transition-all group border-primary/20 bg-primary/5">
+                    <div className="rounded-xl border bg-secondary/5 p-5 shadow-sm hover:border-primary/20 transition-all group">
                         <div className="flex items-center gap-3 mb-3">
                             <div className="p-2 bg-primary/10 rounded-lg text-primary">
                                 <Brain size={18} />
@@ -535,14 +535,14 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
                     </div>
                 )}
                 {pqContent && (
-                    <div className="rounded-xl border bg-card p-5 shadow-sm hover:shadow-md transition-all group border-emerald-500/20 bg-emerald-500/5">
+                    <div className="rounded-xl border bg-secondary/5 p-5 shadow-sm hover:border-emerald-500/20 transition-all group">
                         <div className="flex items-center gap-3 mb-3">
                             <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
                                 <ShieldCheck size={18} />
                             </div>
                             <h4 className="text-xs font-bold uppercase tracking-widest text-emerald-500">Mastery Assessment</h4>
                         </div>
-                        <div className="prose prose-sm dark:prose-invert max-w-none font-medium text-emerald-900 dark:text-emerald-100">
+                        <div className="prose prose-sm dark:prose-invert max-w-none font-medium text-foreground opacity-90">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{pqContent}</ReactMarkdown>
                         </div>
                     </div>
@@ -561,7 +561,7 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
                             key={i} 
                             style={{ marginLeft: `${node.level * 24}px` }}
                             className={cn(
-                                "p-4 rounded-xl border bg-card shadow-sm hover:border-primary/40 hover:shadow-md transition-all relative overflow-hidden group min-w-0 w-full",
+                                "p-4 rounded-xl border bg-secondary/5 shadow-sm hover:border-primary/40 hover:bg-secondary/10 transition-all relative overflow-hidden group min-w-0 w-full",
                                 node.level > 0 ? "border-dashed opacity-90 scale-[0.99]" : "border-solid border-border/60"
                             )}
                         >
@@ -599,6 +599,52 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
     )
 }
 
+/* ─── Plan UI Components ─── */
+function CurriculumPill({ 
+    label, 
+    value, 
+    onChange, 
+    icon: Icon, 
+    isEditable = true,
+    isDropdown = false,
+    onClick
+}: { 
+    label: string, 
+    value: string, 
+    onChange?: (v: string) => void, 
+    icon: any, 
+    isEditable?: boolean,
+    isDropdown?: boolean,
+    onClick?: () => void
+}) {
+    return (
+        <div 
+            onClick={onClick}
+            className={cn(
+                "px-3 py-1.5 rounded-full bg-muted/50 border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all group hover:bg-muted hover:border-primary/20",
+                isDropdown && "cursor-pointer active:scale-95"
+            )}
+        >
+            <Icon size={12} className="text-primary opacity-40 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-1.5">
+                <span className="opacity-30">{label}:</span>
+                {isEditable ? (
+                    <input 
+                        className="bg-transparent border-none focus:outline-none text-foreground font-black min-w-[20px] placeholder:opacity-20 border-b border-transparent focus:border-primary/30 transition-all"
+                        value={value}
+                        onChange={(e) => onChange?.(e.target.value)}
+                        placeholder="Set..."
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                ) : (
+                    <span className="text-foreground font-black">{value || 'None'}</span>
+                )}
+            </div>
+            {isDropdown && <ChevronDown size={10} className="opacity-20" />}
+        </div>
+    )
+}
+
 /* ─── Obsidian Knowledge Architect (OKA) Dashboard ─── */
 function OkaDashboard({ onBack }: { onBack: () => void }) {
     const { config, saveConfig } = useConfig()
@@ -611,6 +657,9 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
     const [activePlan, setActivePlan] = useState<string | null>(null)
     const [structuredPlan, setStructuredPlan] = useState<any>(null)
     const [sessionId, setSessionId] = useState<string | null>(null)
+    const [anchoredHub, setAnchoredHub] = useState<any>(null)
+    const [availableHubs, setAvailableHubs] = useState<any[]>([])
+    const [curriculum, setCurriculum] = useState({ course: '', unit: '', semester: '', hub_title: '' })
     const [isAwaitingConfirmation, setIsAwaitingConfirmation] = useState(false)
     const [currentBatch, setCurrentBatch] = useState<number>(0)
     const [totalBatches, setTotalBatches] = useState<number>(0)
@@ -661,7 +710,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
         fetchInbox()
     }
 
-    const processSelectedFile = async () => {
+    const processSelectedFile = async (manualHubId?: string) => {
         if (!selectedInboxFile) return
         setProcessing(true)
         setOkaError(null)
@@ -672,16 +721,44 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
         setIsAwaitingNextBatch(false)
         
         try {
-            const res = await sidecarApi.okaProcess({ file_path: selectedInboxFile.path })
+            const res = await sidecarApi.okaProcess({ 
+                file_path: selectedInboxFile.path,
+                target_hub_id: manualHubId
+            })
             setActivePlan(res.plan_raw)
             setStructuredPlan(res.plan_structured)
             setSessionId(res.session_id)
+            setAnchoredHub(res.anchored_hub)
+            setAvailableHubs(res.available_hubs || [])
+            
+            // Set initial curriculum from anchored hub or structured plan
+            setCurriculum({
+                course: res.anchored_hub?.Course || res.plan_structured?.course || '',
+                unit: String(res.anchored_hub?.Unit || res.plan_structured?.unit || ''),
+                semester: res.anchored_hub?.Semester || '',
+                hub_title: res.anchored_hub?.title || res.plan_structured?.unit || ''
+            })
+
             setIsAwaitingConfirmation(true)
             setTotalBatches(res.plan_structured?.batches?.length || 1)
             setCurrentBatch(0)
         } catch (err: any) {
             setOkaError(err.message || 'Workflow failed')
         } finally { setProcessing(false) }
+    }
+
+    const handleHubSelect = (hub: any) => {
+        if (hub === 'new') {
+            setAnchoredHub({ id: 'new', title: 'New Hub' })
+            return
+        }
+        setAnchoredHub(hub)
+        setCurriculum({
+            course: hub.Course || '',
+            unit: String(hub.Unit || ''),
+            semester: hub.Semester || '',
+            hub_title: hub.title || ''
+        })
     }
 
     const confirmDeployment = async () => {
@@ -694,7 +771,17 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                 ? "Confirm Final Plan & Proceed Batch 1" 
                 : `Proceed Batch ${currentBatch + 1}`;
                 
-            const res = await sidecarApi.okaConfirm({ session_id: sessionId, command })
+            const res = await sidecarApi.okaConfirm({ 
+                session_id: sessionId, 
+                command,
+                curriculum_override: currentBatch === 0 ? {
+                    course: curriculum.course,
+                    unit: curriculum.unit,
+                    semester: curriculum.semester,
+                    hub_title: curriculum.hub_title
+                } : undefined,
+                anchored_hub_id: anchoredHub?.id
+            })
             const tempBatch = res.current_batch || (currentBatch + 1)
             setCurrentBatch(tempBatch)
             setBatchFeed(prev => [...prev, { 
@@ -886,20 +973,79 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
 
                                     {structuredPlan ? (
                                         <div className="space-y-8">
-                                            {/* Header Info */}
-                                            <div className="flex flex-wrap gap-3">
-                                                <div className="px-3 py-1.5 rounded-full bg-muted border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
-                                                    <BookOpen size={12} className="text-primary" />
-                                                    {structuredPlan.course}
+                                            {/* Header Info: Dynamic Curriculum Pills */}
+                                            <div className="flex flex-wrap gap-2.5 relative">
+                                                {/* Hub Anchor Pill */}
+                                                <div className="relative group/popover">
+                                                    <CurriculumPill 
+                                                        label="Anchor" 
+                                                        value={anchoredHub?.title || 'Standalone'} 
+                                                        icon={Database} 
+                                                        isEditable={false} 
+                                                        isDropdown={true}
+                                                    />
+                                                    <div className="absolute top-full left-0 mt-2 w-64 bg-background border border-border shadow-2xl rounded-xl z-[100] p-1.5 hidden group-focus-within/popover:block group-hover/popover:block animate-in fade-in slide-in-from-top-1">
+                                                        <div className="px-2 py-1.5 text-[8px] font-black uppercase opacity-30 tracking-widest border-b border-border/10 mb-1 flex items-center justify-between">
+                                                            <span>Study Planner Hubs</span>
+                                                            <div className="size-1.5 rounded-full bg-primary animate-pulse" />
+                                                        </div>
+                                                        <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                                                            <button 
+                                                                onClick={() => handleHubSelect('new')}
+                                                                className="w-full flex items-center gap-2 p-2 hover:bg-primary/10 text-primary rounded-lg transition-all text-left"
+                                                            >
+                                                                <Plus size={12} />
+                                                                <span className="text-[10px] font-bold uppercase tracking-tight">New Hub (Manual)...</span>
+                                                            </button>
+                                                            {availableHubs.map(h => (
+                                                                <button 
+                                                                    key={h.id} 
+                                                                    onClick={() => handleHubSelect(h)}
+                                                                    className={cn(
+                                                                        "w-full flex flex-col p-2 hover:bg-muted rounded-lg transition-all text-left",
+                                                                        anchoredHub?.id === h.id && "bg-muted border-l-2 border-primary"
+                                                                    )}
+                                                                >
+                                                                    <span className="text-[10px] font-bold truncate">{h.title}</span>
+                                                                    <div className="flex items-center gap-2 opacity-40 text-[8px] font-bold uppercase">
+                                                                        <span>{h.Course?.replace(/[\[\]]/g, '') || 'No Course'}</span>
+                                                                        <span>•</span>
+                                                                        <span>Unit {h.Unit || '?'}</span>
+                                                                    </div>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="px-3 py-1.5 rounded-full bg-muted border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
-                                                    <Tag size={12} className="text-primary" />
-                                                    {structuredPlan.unit}
-                                                </div>
-                                                <div className="px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 text-primary">
-                                                    <Layers size={12} />
-                                                    {structuredPlan.batches?.length || 0} Batches
-                                                </div>
+
+                                                {/* Hub Title Pill (Editable when new) */}
+                                                {(anchoredHub?.id === 'new' || !anchoredHub) && (
+                                                    <CurriculumPill 
+                                                        label="Hub Title" 
+                                                        value={curriculum.hub_title} 
+                                                        onChange={v => setCurriculum(p => ({ ...p, hub_title: v }))}
+                                                        icon={FileEdit} 
+                                                    />
+                                                )}
+
+                                                <CurriculumPill 
+                                                    label="Course" 
+                                                    value={curriculum.course} 
+                                                    onChange={v => setCurriculum(p => ({ ...p, course: v }))}
+                                                    icon={BookOpen} 
+                                                />
+                                                <CurriculumPill 
+                                                    label="Unit" 
+                                                    value={curriculum.unit} 
+                                                    onChange={v => setCurriculum(p => ({ ...p, unit: v }))}
+                                                    icon={Tag} 
+                                                />
+                                                <CurriculumPill 
+                                                    label="Semester" 
+                                                    value={curriculum.semester} 
+                                                    onChange={v => setCurriculum(p => ({ ...p, semester: v }))}
+                                                    icon={Calendar} 
+                                                />
                                             </div>
 
                                             {/* Batches Grid */}
@@ -928,25 +1074,24 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                         <span className="text-xs font-bold">{currentBatch} / {totalBatches} Batches</span>
                                     </div>
                                     {batchFeed.map(b => (
-                                        <div key={b.batch} className="p-6 rounded-lg border bg-muted/5 animate-in fade-in duration-300">
-                                             <div className="flex items-center gap-2 mb-4">
-                                                 <div className="w-5 h-5 rounded bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
-                                                     {b.batch}
-                                                 </div>
-                                                <span className="text-[10px] font-bold uppercase tracking-wider">
-                                                    {b.results.length > 0 ? "Batch Execution Successful" : "Batch Parsing Failed"}
-                                                </span>
-                                            </div>
-                                            
-                                            {b.results.length === 0 && (
-                                                <div className="mb-4 mt-2 p-3 rounded bg-destructive/10 border border-destructive/30">
-                                                    <p className="text-[11px] text-destructive font-medium mb-3 whitespace-nowrap overflow-hidden text-ellipsis">No OKA v8.0 START_NOTE/END_NOTE regions detected. AI output failed structural validation. Review raw output below:</p>
-                                                    <pre className="text-[10px] bg-background/50 p-2 rounded overflow-x-auto whitespace-pre-wrap max-h-40 font-mono">
-                                                        {b.ai_output}
-                                                    </pre>
-                                                </div>
-                                            )}
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div key={b.batch} className="p-6 rounded-lg border bg-muted/5 animate-in fade-in duration-300">
+                                     <div className="flex items-center gap-2 mb-4">
+                                         <div className="w-5 h-5 rounded bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
+                                             {b.batch}
+                                         </div>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider">
+                                            {b.results.length > 0 ? "Batch Execution Successful" : "Batch Parsing Failed"}
+                                        </span>
+                                    </div>
+
+                                    {b.results.length === 0 && (
+                                        <div className="mb-4 mt-2 p-3 rounded bg-destructive/10 border border-destructive/30">
+                                            <p className="text-[11px] text-destructive font-medium mb-3 whitespace-nowrap overflow-hidden text-ellipsis">No OKA v8.0 START_NOTE/END_NOTE regions detected. AI output failed structural validation. Review raw output below:</p>
+                                            <pre className="text-[10px] bg-background border border-border/10 p-2 rounded overflow-x-auto whitespace-pre-wrap max-h-40 font-mono">
+                                                {b.ai_output}
+                                            </pre>
+                                        </div>
+                                    )}                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 {b.results.map((r: any, i: number) => (
                                                     <div key={i} className="p-3 border rounded bg-background flex items-center gap-3 shadow-sm">
                                                         <div className="p-1.5 bg-muted rounded">

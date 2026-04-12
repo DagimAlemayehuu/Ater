@@ -203,14 +203,26 @@ class VaultManager:
         Determines the hierarchical file path for a note.
         
         Routing logic:
-          - All notes go directly to: {Selected_Root}/Uncategorized_Notes/
+          - Hubs go to: 3-Database/06 - Study Planner/
+          - All other notes go to: {Selected_Root}/Uncategorized_Notes/
         """
-        title_base = self.sanitize_filename(self.get_canonical_title(meta.get("title", "Untitled_Note")))
+        title = meta.get("title", "Untitled_Note")
+        canonical_title = self.get_canonical_title(title)
+        
+        note_type = str(meta.get("type", "")).lower()
+        is_hub = "hub" in note_type or "hub" in title.lower() or "questions" in note_type
+        
+        if is_hub:
+            # Route to Study Planner
+            target_dir = self.vault_path / "3-Database" / "06 - Study Planner"
+            filename = f"{canonical_title}.md"
+            return target_dir / filename
         
         # Route directly to the flat Uncategorized_Notes folder within the user-selected root
         target_dir = self.academic_root / "Uncategorized_Notes"
+        filename = f"{canonical_title}.md"
         
-        return target_dir / f"{title_base}.md"
+        return target_dir / filename
 
 
     def load_metadata(self) -> List[Dict[str, Any]]:

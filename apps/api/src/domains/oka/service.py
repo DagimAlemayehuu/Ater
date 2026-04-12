@@ -221,9 +221,62 @@ class OkaService:
             return "Server Overloaded"
         return "Provider Error"
 
+    def _get_planner_path(self) -> Path:
+        """Resolves the absolute path to the Study Planner database."""
+        return Path(self.secrets.vault_path) / "3-Database" / "06 - Study Planner"
+
+    def list_planner_hubs(self) -> List[Dict[str, Any]]:
+        """Lists all existing hubs in the Study Planner with their metadata."""
+        planner_path = self._get_planner_path()
+        if not planner_path.exists():
+            return []
+        
+        hubs = []
+        for file in planner_path.glob("*.md"):
+            if file.name.startswith("_"): continue # Skip internal folders
+            
+            # Extract basic metadata from filename
+            # Pattern: [Unit]_[Name]_Hub.md
+            name = file.stem.replace("_", " ")
+            
+            # Read YAML for rich metadata
+            metadata = {"title": name, "path": str(file.absolute()), "id": file.name}
+            try:
+                with open(file, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    yaml_match = re.search(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
+                    if yaml_match:
+                        import yaml
+                        data = yaml.safe_load(yaml_match.group(1))
+                        metadata.update(data)
+            except: pass
+            
+            hubs.append(metadata)
+        return hubs
+
+    def find_best_hub_match(self, source_text: str) -> Optional[Dict[str, Any]]:
+        """Fuzzily matches source text against existing planner hubs."""
+        hubs = self.list_planner_hubs()
+        if not hubs: return None
+        
+        # Simple heuristic: look for unit numbers or keywords in the first 1000 chars
+        sample = source_text[:2000].lower()
+        for hub in hubs:
+            # Check unit number match (e.g. "Unit 3")
+            unit_val = str(hub.get("Unit", ""))
+            if unit_val and f"unit {unit_val}" in sample:
+                return hub
+            
+            # Check title keywords
+            keywords = hub["title"].lower().split()
+            matches = sum(1 for k in keywords if len(k) > 3 and k in sample)
+            if matches >= 2:
+                return hub
+        return None
+
     # ── Phase 2: Planning ──────────────────────────────────────
     async def process_file(
-        self, file_path: str, system_instruction_path: str
+        self, file_path: str, system_instruction_path: str, target_hub_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """Initializes planning using a stateful chat."""
         print(f"[OKA Service] --- STARTING PROCESS_FILE ({self.secrets.ai_model}) ---")
@@ -301,12 +354,35 @@ class OkaService:
                     f"Type_of_Source: {source_type}\nSource_Content:\n\n{raw}"
                 )
 
+            # ── Anchor Detection ──────────────────────────────
+            target_hub = None
+            if target_hub_id:
+                hubs = self.list_planner_hubs()
+                target_hub = next((h for n, h in enumerate(hubs) if h["id"] == target_hub_id), None)
+            
+            if not target_hub:
+                target_hub = self.find_best_hub_match(content_text)
+
+            anchor_instruction = ""
+            if target_hub:
+                print(f"[OKA Service] Anchoring to Hub: {target_hub['title']}")
+                anchor_instruction = (
+                    "\n\nCURRICULUM ANCHOR (MANDATORY):\n"
+                    f"You are augmenting an EXISTING unit hub: [[{target_hub['id']}]].\n"
+                    f"Inherit these metadata values for ALL notes:\n"
+                    f"- Course: {target_hub.get('Course', 'Unknown')}\n"
+                    f"- Semester: {target_hub.get('Semester', 'Unknown')}\n"
+                    f"- Unit: {target_hub.get('Unit', 'Unknown')}\n"
+                    "The generated Master Hub MUST have the exact title above and will be updated in place."
+                )
+
             # OKA v7.0 Dynamic Initialization
             init_command = (
                 "Source material provided. ABSOLUTELY NO GREETINGS or preambles.\n"
                 "1. Start with the `<pre_generation_planning>` reasoning block.\n"
                 "2. Extract EVERY single concept from the source.\n"
-                "3. Output the **Finalized Knowledge Asset Plan** exactly as per OKA v7.0.\n\n"
+                "3. Output the **Finalized Knowledge Asset Plan** exactly as per OKA v7.0.\n"
+                f"{anchor_instruction}\n\n"
                 f"{content_text}"
             )
             messages.append(HumanMessage(content=init_command))
@@ -335,6 +411,7 @@ class OkaService:
                 "metadata": structured_plan,
                 "current_batch": 0,
                 "total_batches": total_batches,
+                "target_hub": target_hub
             }
 
             self._persist_session(session_id, OkaService._sessions[session_id])
@@ -345,6 +422,8 @@ class OkaService:
                 "plan_raw": plan_output,
                 "plan_structured": structured_plan,
                 "status": "awaiting_confirmation",
+                "anchored_hub": target_hub,
+                "available_hubs": self.list_planner_hubs()
             }
         except Exception as e:
             error_msg = self._format_user_error(e)
@@ -357,10 +436,23 @@ class OkaService:
         self,
         session_id: str,
         command: str = "Confirm Final Plan & Proceed Batch 1",
+        curriculum_override: Optional[Dict[str, Any]] = None,
+        anchored_hub_id: Optional[str] = None
     ) -> Dict[str, Any]:
         session = await self._get_or_restore_session(session_id)
         if not session:
             raise ValueError(f"No active session found for {session_id}. Please restart the file process.")
+        
+        # Apply overrides if provided (usually on Batch 1)
+        if curriculum_override:
+            print(f"[OKA Service] Applying Curriculum Overrides: {curriculum_override}")
+            session["metadata"]["course"] = curriculum_override.get("course", session["metadata"].get("course"))
+            session["metadata"]["unit"] = curriculum_override.get("unit", session["metadata"].get("unit"))
+            session["metadata"]["semester"] = curriculum_override.get("semester")
+            session["metadata"]["hub_title"] = curriculum_override.get("hub_title")
+        
+        if anchored_hub_id:
+            session["target_hub"] = next((h for h in self.list_planner_hubs() if h["id"] == anchored_hub_id), None)
         
         # THIN CONTEXT PROTOCOL:
         # We only send the system instruction, the initial plan, and the current command.
@@ -381,10 +473,19 @@ class OkaService:
         
         notes_context = f"EXACT NOTE TO GENERATE: {', '.join(['[['+n+']]' for n in batch_notes])}."
 
+        curriculum_info = (
+            f"- Course: {session['metadata'].get('course', 'Unknown')}\n"
+            f"- Unit: {session['metadata'].get('unit', 'Unknown')}\n"
+            f"- Semester: {session['metadata'].get('semester', 'Unknown')}\n"
+            f"- Hub Title: {session['metadata'].get('hub_title', 'Unknown')}\n"
+        )
+
         reinforced_command = (
             f"STATE 4: [ATOMIC_NOTE] EXECUTION\n"
             f"Batch {batch_number} of {total_batches}\n"
             f"{notes_context}\n\n"
+            "MANDATORY CURRICULUM CONTEXT:\n"
+            f"{curriculum_info}\n"
             "STRICT SYNTAX GUARD:\n"
             "1. Use ONLY --- START_CODE:lang --- markers. Triple backticks (```) are FORBIDDEN.\n"
             "2. Start immediately with --- START_NOTE ---. NO PREAMBLE.\n"

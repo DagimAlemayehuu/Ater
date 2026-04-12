@@ -295,13 +295,20 @@ export const sidecarApi = {
         return response.json()
     },
 
-    okaProcess: (payload: { file_path?: string; text?: string }) =>
-        request<{ session_id: string; plan_raw: string; plan_structured: any; status: string }>('/api/oka/process', {
+    okaProcess: (payload: { file_path?: string; text?: string; target_hub_id?: string }) =>
+        request<{ 
+            session_id: string; 
+            plan_raw: string; 
+            plan_structured: any; 
+            status: string;
+            anchored_hub?: any;
+            available_hubs?: any[];
+        }>('/api/oka/process', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
 
-    okaConfirm: (payload: { session_id: string; command?: string }) =>
+    okaConfirm: (payload: { session_id: string; command?: string; curriculum_override?: any; anchored_hub_id?: string }) =>
         request<{ ai_output: string; results: any[]; count: number; has_more: boolean; next_batch?: number; current_batch?: number; total_batches?: number; status: string }>('/api/oka/confirm', {
             method: 'POST',
             body: JSON.stringify(payload)

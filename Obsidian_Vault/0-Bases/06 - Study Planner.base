@@ -7,6 +7,8 @@ views:
     columns:
       - file.name: { type: "title" }
       - Course: { type: "relation", source: "3-Database/07 - Courses" }
+      - Semester: { type: "relation", source: "3-Database/08 - Semesters" }
+      - Unit: { type: "select", source: "3-Database/06 - Study Planner/_Units" }
       - Study Date: { type: "date" }
       - Confidence: { type: "select", source: "3-Database/06 - Study Planner/_Types" }
       - Difficulty: { type: "select", source: "3-Database/07 - Courses/_Types" }

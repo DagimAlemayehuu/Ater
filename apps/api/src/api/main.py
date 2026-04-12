@@ -523,20 +523,21 @@ async def oka_process_manual(
     
     text = payload.get("text")
     file_path = payload.get("file_path")
+    target_hub_id = payload.get("target_hub_id")
     
     try:
         if file_path:
-            print(f"[Life OS Sidecar] Initializing OKA plan for file: {file_path}")
-            results = await service.process_file(file_path, str(si_path))
+            print(f"[Life OS Sidecar] Initializing OKA plan for file: {file_path} (Anchor: {target_hub_id})")
+            results = await service.process_file(file_path, str(si_path), target_hub_id=target_hub_id)
         elif text:
-            print(f"[Life OS Sidecar] Initializing OKA plan for raw text")
+            print(f"[Life OS Sidecar] Initializing OKA plan for raw text (Anchor: {target_hub_id})")
             # For raw text, create a temp file and process it
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as tmp:
                 tmp.write(text)
                 tmp_path = tmp.name
             try:
-                results = await service.process_file(tmp_path, str(si_path))
+                results = await service.process_file(tmp_path, str(si_path), target_hub_id=target_hub_id)
             finally:
                 os.remove(tmp_path)
         else:
@@ -560,12 +561,20 @@ async def oka_confirm_plan(
     """Confirms an existing OKA plan and trigger deployment."""
     session_id = payload.get("session_id")
     command = payload.get("command", "Confirm Final Plan & Proceed Batch 1")
+    curriculum_override = payload.get("curriculum_override")
+    anchored_hub_id = payload.get("anchored_hub_id")
+    
     if not session_id:
         raise HTTPException(status_code=400, detail="session_id is required")
 
     service = OkaService(secrets)
     try:
-        results = await service.confirm_plan(session_id, command=command)
+        results = await service.confirm_plan(
+            session_id, 
+            command=command, 
+            curriculum_override=curriculum_override, 
+            anchored_hub_id=anchored_hub_id
+        )
         
         # Move file to note generated only when all batches are done
         if not results.get("has_more") and not session_id.startswith("text_"):
