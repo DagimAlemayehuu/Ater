@@ -1,43 +1,164 @@
 #!/usr/bin/env python3
 import os
 import re
-import yaml
 import uuid
+import yaml
 from pathlib import Path
+from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
-from typing import Dict, Any, List, Tuple, Optional
+
+ALWAYS_UPPERCASE = ["ER", "DBMS", "SQL", "IS", "DDLC", "DSDLC", "IS", "IT", "AI", "UI", "UX", "CRUD", "API", "OS"]
 
 class VaultManager:
     """
-    Manages all filesystem operations for the Obsidian Vault.
-    Refactored from vault_utils.py to support dynamic vault paths.
+    High-fidelity Obsidian vault manager.
+    Handles atomic writes, metadata extraction, and strict naming conventions.
     """
-    
-    TYPE_TO_DIR_MAPPING = {
-        "Unit": "",
-        "Foundational": "",
-        "Core": "",
-        "Supporting": "",
-        "Questions": ""
-    }
 
-    def __init__(self, vault_path: str, academic_base: str = "1-Academic"):
-        self.vault_path = Path(vault_path).resolve()
+    def __init__(self, vault_path: str, academic_root: str = "2-Academic"):
+        self.vault_path = Path(vault_path)
+        self.academic_root = self.vault_path / academic_root
+        self.academic_root.mkdir(parents=True, exist_ok=True)
+
+    def get_canonical_title(self, text: str) -> str:
+        """
+        Converts any string into Strict_Title_Case_With_Underscores.
+        PURE FORMATTER: Does not add or preserve prefixes.
+        """
+        if not text: return "Untitled"
         
-        # Handle the academic path root carefully
-        # If it's absolute, use it. If it's relative, join it with the vault root.
-        academic_p = Path(academic_base)
-        if academic_p.is_absolute():
-            self.academic_root = academic_p.resolve()
+        # 1. Protect C++
+        temp = re.sub(r"C\+\+", "__CPP__", text, flags=re.IGNORECASE)
+        
+        # 2. Convert all delimiters to underscores
+        intermediate = re.sub(r"['\.\s\-#\(\)]+", "_", temp)
+        
+        # 3. Strip non-alphanumeric except underscores and plus (for C++)
+        intermediate = re.sub(r"[^\w+]+", "_", intermediate)
+        
+        # 4. Restore C++ and collapse underscores
+        intermediate = intermediate.replace("__CPP__", "C++")
+        intermediate = re.sub(r"_+", "_", intermediate).strip("_")
+        
+        # 5. Apply Title Case logic
+        words = []
+        for segment in intermediate.split('_'):
+            if not segment: continue
+            if segment == "C++": words.append("C++")
+            elif segment.upper() in ALWAYS_UPPERCASE: words.append(segment.upper())
+            else: words.append(segment.title())
+
+        return '_'.join(words)
+
+    def get_note_path(self, meta: dict, anchored_hub_path: Optional[str] = None) -> Path:
+        """
+        Determines the hierarchical file path for a note with strict academic naming.
+
+        STRICT PROTOCOL:
+          - Hubs: {Unit}_{Clean_Name}_Hub.md (Prioritizes anchored_hub_path)
+          - Questions: {Unit}_{Clean_Name}_Possible_Questions.md
+          - Atomic: {Strict_Title_Case_With_Underscores}.md
+        """
+        raw_title = meta.get("title", "Untitled_Note")
+        note_type = str(meta.get("type", "")).lower()
+        unit_num = str(meta.get("unit", "")).strip()
+
+        # Clean unit_num: remove brackets or "Unknown"
+        unit_num = unit_num.replace("[[", "").replace("]]", "")
+        if not unit_num or unit_num.lower() == "unknown":
+            unit_num = ""
+
+        # Identify note categories
+        is_hub = "hub" in note_type or "hub" in raw_title.lower()
+        is_questions = "questions" in note_type or "possible_questions" in raw_title.lower()
+
+        def super_clean(title: str) -> str:
+            """Aggressively and recursively strips all metadata noise from a title."""
+            c = str(title)
+            # Remove "Unknown" (case-insensitive)
+            c = re.sub(r"(?i)unknown", "", c)
+            # Remove existing unit numbers at start (recursive: handles 3_3_ or 3 3)
+            # Match any leading digit followed by space, underscore, or dash
+            while re.match(r"^\d+[\s\-_]*", c):
+                c = re.sub(r"^\d+[\s\-_]*", "", c)
+            
+            # Strip suffixes recursively to prevent Hub_Hub or Hub_Possible_Questions
+            while True:
+                prev = c
+                c = c.replace(" Hub", "").replace("_Hub", "")
+                c = c.replace(" Possible Questions", "").replace("_Possible_Questions", "")
+                c = c.strip("_ ")
+                if c == prev: break
+            return c
+
+        # ── 1. Master Hub (Study Planner Folder) ──
+        if is_hub:
+            if anchored_hub_path:
+                return Path(anchored_hub_path)
+            
+            clean = super_clean(raw_title)
+            canonical_name = self.get_canonical_title(clean)
+            
+            filename = f"{unit_num}_{canonical_name}_Hub.md" if unit_num else f"{canonical_name}_Hub.md"
+            return self.vault_path / "3-Database" / "06 - Study Planner" / filename
+
+        # ── 2. Possible Questions (Academic Root) ──
+        if is_questions:
+            clean = super_clean(raw_title)
+            canonical_name = self.get_canonical_title(clean)
+            
+            # UNIFIED: Unit_Name_Possible_Questions
+            filename = f"{unit_num}_{canonical_name}_Possible_Questions.md" if unit_num else f"{canonical_name}_Possible_Questions.md"
+            return self.academic_root / "Uncategorized_Notes" / filename
+
+        # ── 3. Atomic Notes (Academic Root) ──
+        clean_atomic = super_clean(raw_title)
+        canonical_title = self.get_canonical_title(clean_atomic)
+        return self.academic_root / "Uncategorized_Notes" / f"{canonical_title}.md"
+
+    def dump_obsidian_yaml(self, meta: dict) -> str:
+        """Dumps YAML and strips quotes from wiki-links for Obsidian compatibility."""
+        import yaml
+        # Dump with default settings
+        raw_yaml = yaml.dump(meta, sort_keys=False, allow_unicode=True, width=1000).rstrip('\n')
+        
+        # Strip quotes from wiki-links: "[[Link]]" -> [[Link]]
+        # Handles both double and single quotes
+        cleaned = re.sub(r"['\"](\[\[.*?\]\])['\"]", r"\1", raw_yaml)
+        return cleaned
+
+    def write_note(self, file_path: Path, content: str):
+        """Asynchronously writes content to a file, ensuring parent directories exist."""
+        file_path = Path(file_path)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Perform an atomic swap write to prevent data loss
+        temp_file = file_path.with_suffix(f".tmp_{uuid.uuid4().hex[:8]}")
+        with open(temp_file, "w", encoding="utf-8") as f:
+            f.write(content)
+        
+        if file_path.exists():
+            os.replace(temp_file, file_path)
         else:
-            # Cleanly strip leading/trailing slashes for relative paths
-            clean_rel = academic_base.strip("/")
-            self.academic_root = (self.vault_path / clean_rel).resolve()
+            temp_file.rename(file_path)
+
+    def extract_yaml_and_content(self, content: str) -> Tuple[Dict[str, Any], str, Optional[str]]:
+        """Parses a note into frontmatter and body."""
+        try:
+            match = re.search(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
+            if not match:
+                return {}, content, "No YAML frontmatter found"
+            
+            meta = yaml.safe_load(match.group(1)) or {}
+            body = content[match.end():]
+            return meta, body, None
+        except Exception as e:
+            return {}, content, str(e)
 
     def process_code_blocks(self, content: str) -> str:
-        """Processes custom code block markers into standard Markdown."""
+        """Repairs and converts custom code blocks to standard backticks for Obsidian."""
+        lines = content.split('\n')
         processed_lines = []
-        lines = content.splitlines()
         in_code_block = False
         current_code_language = None
         current_code_buffer = []
@@ -80,197 +201,19 @@ class VaultManager:
             else:
                 # Strip prohibited triple backticks from prose
                 processed_lines.append(line.replace("```", ""))
-
-        if in_code_block and current_code_language:
-            processed_lines.extend(current_code_buffer)
-            processed_lines.append("```")
-
-        processed_content = "\n".join(processed_lines)
         
-        # Removal of Markdown formatting around wiki-links
-        processed_content = re.sub(r"(\*\*?\*)(`?\[\[([^\]]+)\]\]`?)(\*\*?\*)", r"[[\3]]", processed_content)
-        processed_content = re.sub(r"(\*\*?\*)(\[\[([^\]]+)\]\])(\*\*?\*)", r"[[\3]]", processed_content)
-        processed_content = re.sub(r"`(\[\[([^\]]+)\]\])`", r"[[\2]]", processed_content)
-        processed_content = re.sub(r"\*(\[\[([^\]]+)\]\])\*", r"[[\2]]", processed_content)
-        processed_content = re.sub(r"\[\[\s*\]\]", "", processed_content)
-        processed_content = re.sub(r"\[\[([^\]]+?)\|\s*[^\]]+?\]\]", r"[[\1]]", processed_content)
-
-        return processed_content
-
-    def extract_yaml_and_content(self, note_block: str) -> Tuple[dict, str, bool]:
-        """Extracts YAML frontmatter and Markdown body content."""
-        # Try standard --- YAML --- format first (allow leading whitespace and 3+ dashes)
-        yaml_match = re.search(r"^\s*-{3,}\s*(?:\r?\n)(.*?)(?:\r?\n)-{3,}\s*(?:\r?\n|$)", note_block.strip(), re.DOTALL)
-        
-        # Fallback 1: Model skipped leading --- but kept trailing ---
-        if not yaml_match:
-            yaml_match = re.search(r"^\s*(title:.*?)(?:\r?\n)-{3,}\s*(?:\r?\n|$)", note_block.strip(), re.DOTALL)
-            
-        # Fallback 2: Extremely permissive (just find content between first two --- blocks)
-        if not yaml_match:
-            yaml_match = re.search(r"-{3,}\s*(.*?)\s*-{3,}", note_block, re.DOTALL)
-            
-        if not yaml_match:
-            # TITLE RECOVERY FALLBACK: If AI provided "# Title" instead of YAML
-            title_match = re.search(r"^\s*#+\s*(.*?)\s*(?:\n|$)", note_block)
-            if title_match:
-                recov_title = title_match.group(1).strip().replace("[[", "").replace("]]", "")
-                print(f"[VaultManager] Recovered title '{recov_title}' from header")
-                return {"title": recov_title}, note_block, False
-            return {}, note_block, False
-        
-        yaml_str = yaml_match.group(1)
-        body_content = note_block.strip()[yaml_match.end():]
-        
-        try:
-            # Use safe_load for robust parsing
-            meta = yaml.safe_load(yaml_str) or {}
-            # Ensure keys are lowercase for consistent access and strip whitespace
-            if isinstance(meta, dict):
-                meta = {str(k).lower().strip(): v for k, v in meta.items()}
-            else:
-                meta = {}
-            return meta, body_content, False
-        except Exception as e:
-            # Try to recover title even on YAML error
-            title_match = re.search(r"title:\s*(.*)", yaml_str, re.I)
-            if title_match:
-                recov_title = title_match.group(1).strip().strip('"').strip("'")
-                print(f"[VaultManager] Non-critical YAML structural error. Recovered title '{recov_title}' for process continuity.")
-                return {"title": recov_title}, body_content, False
-            
-            print(f"[VaultManager] YAML Parse Fail: {e}")
-            return {}, body_content, True
-
-    def sanitize_filename(self, name: str) -> str:
-        """Sanitizes a string for use as a filesystem path component."""
-        base_name, extension = os.path.splitext(name)
-        prefix = ""
-        rest_of_base_name = base_name
-
-        prefix_match = re.match(r"^(\d+)[-_]?(.*)$", base_name)
-        if prefix_match:
-            prefix = f"{prefix_match.group(1)}_"
-            rest_of_base_name = prefix_match.group(2)
-        
-        canonical_rest = self.get_canonical_title(rest_of_base_name)
-        final_sanitized = re.sub(r"[^\w+]", "_", canonical_rest)
-        final_sanitized = re.sub(r"_+", "_", final_sanitized)
-        final_sanitized = final_sanitized.strip('_')
-        
-        sanitized_base_name = f"{prefix}{final_sanitized}" if final_sanitized else prefix
-        return f"{sanitized_base_name.strip('_')}{extension}"
-
-    def get_canonical_title(self, title: Any) -> str:
-        """Converts a string into Title_Case_With_Underscores format."""
-        if not isinstance(title, str): return ""
-        
-        ALWAYS_UPPERCASE = {
-            "MOC", "OOP", "SQL", "API", "HTML", "CSS", "DOM", "UI", "UX", "CPU", "RAM", "OS", "AI", "NLP",
-            "ERD", "CSV", "PDF", "UML", "MVC", "CRUD", "SDK", "IDE", "JVM", "REST", "SOAP", "URI", "URL",
-            "GUI", "CLI", "FTP", "SSH", "SSL", "TLS", "VPN", "WAN", "LAN", "IOT", "JS", "V1", "V2", "V3",
-            "ROM", "GPU", "IO", "I_O", "HTTP", "HTTPS", "DNS", "DHCP", "NTP", "ARP", "ICMP",
-            "TCP", "UDP", "IP", "MAC", "GAN", "CNN", "RNN", "LSTM", "BERT", "GPT", "DL", "ML", "KBS",
-            "IR", "IT", "SAD", "CD", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "C++"
-        }
-
-        numeric_part = ""
-        rest = title
-        numeric_prefix_match = re.match(r"^(\d+)\s*[-_]?(.*)$", title)
-        if numeric_prefix_match:
-            numeric_part = numeric_prefix_match.group(1)
-            rest = numeric_prefix_match.group(2)
-
-        temp = re.sub(r"C\+\+", "__CPP__", rest, flags=re.IGNORECASE)
-        intermediate = re.sub(r"['\.\s\-#\(\)]+", "_", temp)
-        intermediate = re.sub(r"[^\w+]+", "_", intermediate)
-        intermediate = intermediate.replace("__CPP__", "C++")
-        intermediate = re.sub(r"_+", "_", intermediate)
-        
-        words = []
-        for segment in intermediate.split('_'):
-            if not segment: continue
-            if segment == "C++": words.append("C++")
-            elif segment.upper() in ALWAYS_UPPERCASE: words.append(segment.upper())
-            else: words.append(segment.title())
-
-        canonical_rest = '_'.join(words)
-        if numeric_part and canonical_rest: return f"{numeric_part}_{canonical_rest}".strip('_')
-        return (numeric_part or canonical_rest).strip('_')
-
-    def get_note_path(self, meta: dict) -> Path:
-        """
-        Determines the hierarchical file path for a note.
-        
-        Routing logic:
-          - Hubs go to: 3-Database/06 - Study Planner/
-          - All other notes go to: {Selected_Root}/Uncategorized_Notes/
-        """
-        title = meta.get("title", "Untitled_Note")
-        canonical_title = self.get_canonical_title(title)
-        
-        note_type = str(meta.get("type", "")).lower()
-        is_hub = "hub" in note_type or "hub" in title.lower() or "questions" in note_type
-        
-        if is_hub:
-            # Route to Study Planner
-            target_dir = self.vault_path / "3-Database" / "06 - Study Planner"
-            filename = f"{canonical_title}.md"
-            return target_dir / filename
-        
-        # Route directly to the flat Uncategorized_Notes folder within the user-selected root
-        target_dir = self.academic_root / "Uncategorized_Notes"
-        filename = f"{canonical_title}.md"
-        
-        return target_dir / filename
-
+        return '\n'.join(processed_lines)
 
     def load_metadata(self) -> List[Dict[str, Any]]:
-        """Scans the vault and extracts YAML metadata from all knowledge directories."""
+        """Scans the academic root and extracts YAML metadata from all notes."""
         all_meta = []
-        scan_roots = [
-            self.academic_root,
-            self.vault_path / "1-Knowledge",
-        ]
-        
-        for scan_root in scan_roots:
-            if not scan_root.is_dir():
-                continue
-            for root, _, files in os.walk(scan_root):
-                for file in files:
-                    if file.endswith(".md"):
-                        path = Path(root) / file
-                        try:
-                            with open(path, "r", encoding="utf-8") as f:
-                                meta, _, _ = self.extract_yaml_and_content(f.read())
-                                if meta.get("title"):
-                                    meta["_file_path"] = str(path)
-                                    all_meta.append(meta)
-                        except: pass
-        return all_meta
-
-    def write_note(self, path: Path, content: str):
-        """Writes note content atomically. No deletion logic."""
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temp_path = path.with_suffix(path.suffix + f".{uuid.uuid4().hex[:8]}.tmp")
-        try:
-            with open(temp_path, "w", encoding="utf-8") as f:
-                f.write(content)
-            # Atomic swap
-            temp_path.replace(path)
-        except Exception as e:
-            print(f"[VaultManager] Write Error: {e}")
-            if temp_path.exists():
-                temp_path.unlink()
-            raise e
-
-    def clean_empty_dirs(self, start_path: Path):
-        """Recursively removes empty directories."""
-        curr = start_path
-        while curr != self.vault_path and curr != self.academic_root and curr != curr.parent:
+        for file in self.academic_root.rglob("*.md"):
             try:
-                if not any(entry for entry in curr.iterdir() if entry.name != ".DS_Store"):
-                    curr.rmdir()
-                else: break
-            except: break
-            curr = curr.parent
+                with open(file, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    meta, _, err = self.extract_yaml_and_content(content)
+                    if not err:
+                        meta["_file_path"] = str(file)
+                        all_meta.append(meta)
+            except: pass
+        return all_meta

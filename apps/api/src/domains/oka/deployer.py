@@ -16,116 +16,90 @@ class OkaDeployer:
     def __init__(self, vault_manager: VaultManager):
         self.vm = vault_manager
 
-    def deploy(self, ai_output: str) -> List[Dict[str, str]]:
+    async def deploy(self, ai_output: str, session_metadata: Dict[str, Any] = {}) -> List[Dict[str, str]]:
         """
-        Parses AI output and deploys notes. Returns a list of deployment results.
+        Parses AI output and triggers batch deployment.
         """
-        # Robust Batch Capture (Permissive Dash/Punctuation)
-        batch_match = re.search(r"START_BATCH(.*?)END_BATCH", ai_output, re.DOTALL | re.IGNORECASE)
-        content_to_parse = batch_match.group(1) if batch_match else ai_output
-
-        # Universal Note Extraction (Keyword-Targeted)
-        # We split by START_NOTE and then for each part, we find the content up to END_NOTE.
-        # Allow any number of dashes and optional title info on the same line
-        raw_parts = re.split(r"-*\s*START_NOTE.*?\n", content_to_parse, flags=re.IGNORECASE)
+        # Universal Note Extraction logic: Be extremely permissive with markers
+        # Split by any variation of START_NOTE (with or without dashes)
+        raw_parts = re.split(r"-*\s*START_NOTE\s*-*", ai_output, flags=re.IGNORECASE)
         
         blocks = []
         for part in raw_parts[1:]: # Skip text before first START_NOTE
             # Find the content up to the FIRST occurrence of END_NOTE in this part
-            # Again, be permissive with dashes and title info
-            end_match = re.search(r"(?i)(.*?)\s*-*\s*END_NOTE", part, re.DOTALL)
+            # Be extremely permissive with dashes and whitespace
+            end_match = re.search(r"(?i)(.*?)\s*-*\s*END_NOTE\s*-*", part, re.DOTALL)
             if end_match:
                 blocks.append(end_match.group(1).strip())
             else:
-                # Fallback: if END_NOTE is missing its dashes or has other variations
-                end_match_fallback = re.search(r"(?i)(.*?)\s*END_NOTE", part, re.DOTALL)
-                if end_match_fallback:
-                    blocks.append(end_match_fallback.group(1).strip())
-        
-        if not blocks:
-            # Last resort fallback: if the model used NO dashes for START_NOTE/END_NOTE
-            raw_parts_no_dash = re.split(r"START_NOTE", content_to_parse, flags=re.IGNORECASE)
-            for part in raw_parts_no_dash[1:]:
-                end_match = re.search(r"(?i)(.*?)\s*END_NOTE", part, re.DOTALL)
-                if end_match:
-                    blocks.append(end_match.group(1).strip())
+                # Fallback: just take the rest if END_NOTE is missing but START_NOTE was found
+                blocks.append(part.strip())
 
-        if not blocks:
-            print(f"[OKA Deployer] FAIL: No START_NOTE...END_NOTE regions detected. Output len: {len(ai_output)}")
-            return []
-
-        # Load existing metadata for UID/Title matching
-        existing_notes = self.vm.load_metadata()
-        uid_map = {n["uid"]: n for n in existing_notes if "uid" in n}
-        title_map = {self.vm.get_canonical_title(n["title"]): n for n in existing_notes if "title" in n}
-
-        results = []
-        current_utc = datetime.utcnow().isoformat(timespec='seconds') + 'Z'
-
+        notes_to_deploy = []
         for raw_note in blocks:
             cleaned_note = self.vm.process_code_blocks(raw_note)
             meta, body, err = self.vm.extract_yaml_and_content(cleaned_note)
             
-            if err or not meta.get("title"):
-                print(f"[OKA Deployer] WARN: Parsing failed for note block (len: {len(raw_note)}). Meta: {list(meta.keys())}")
-                continue
-
-            title = meta["title"]
-            canonical_title = self.vm.get_canonical_title(title)
-            uid = meta.get("uid")
-
-            # Match with existing note
-            existing = None
-            orig_path = None
+            # If YAML failed but we have content, try to synthesize a title from the first line
+            if not meta.get("title"):
+                first_line = body.strip().split('\n')[0]
+                if first_line.startswith("# "):
+                    meta["title"] = first_line[2:].strip()
             
-            if uid and uid in uid_map:
-                existing = uid_map[uid]
-            elif canonical_title in title_map:
-                existing = title_map[canonical_title]
-                if not uid: meta["uid"] = existing.get("uid")
-            
-            if existing:
-                orig_path = Path(existing["_file_path"])
-                meta["uid"] = existing["uid"]
-                meta["created_at"] = existing.get("created_at", current_utc)
-                meta["last_modified"] = current_utc
-                
-                # Simple log update
-                existing_log = existing.get("ai_refinement_log", "")
-                new_log = meta.get("ai_refinement_log", "AI updated note")
-                meta["ai_refinement_log"] = f"{existing_log}\n{current_utc}: {new_log}".strip()
-            else:
-                meta["uid"] = meta.get("uid") or str(uuid.uuid4())
-                meta["created_at"] = current_utc
-                meta["last_modified"] = current_utc
-                meta.setdefault("deployment_batch_id", "LIFE_OS_AUTO")
+            if meta.get("title"):
+                # Ensure metadata has unit/course for pathing
+                if "unit" not in meta or not meta["unit"]: meta["unit"] = session_metadata.get("unit")
+                if "course" not in meta or not meta["course"]: meta["course"] = session_metadata.get("course")
+                notes_to_deploy.append({"title": meta["title"], "content": cleaned_note, "metadata": meta})
 
-            # Finalize metadata for pathing
-            target_path = self.vm.get_note_path(meta)
-            
-            # Prepare full file content
-            yaml_content = yaml.dump(meta, sort_keys=False, allow_unicode=True).rstrip('\n')
-            full_content = f"---\n{yaml_content}\n---\n\n{body.strip()}\n"
+        if not notes_to_deploy:
+            print(f"[OKA Deployer] FAIL: 0 valid notes extracted. Raw output length: {len(ai_output)}")
+            return []
 
-            # Execute write (No Deletion Policy)
-            status = "created"
-            if existing:
-                status = "updated"
+        return await self.deploy_batch(notes_to_deploy, session_metadata)
+
+    async def deploy_batch(self, notes: List[Dict[str, Any]], session_metadata: Dict[str, Any]) -> List[Dict[str, str]]:
+        results = []
+        
+        # Determine anchored hub path if any
+        anchored_path = None
+        anchored_id = session_metadata.get("anchored_hub_id")
+        if anchored_id and anchored_id != "new":
+            planner_dir = Path(self.vm.vault_path) / "3-Database" / "06 - Study Planner"
+            target = planner_dir / anchored_id
+            if target.exists():
+                anchored_path = str(target.absolute())
+
+        for note in notes:
+            title = note.get("title", "Untitled")
+            content = note.get("content", "")
+            meta = note.get("metadata", {})
             
+            # ── METADATA ENFORCEMENT ──
+            # We ignore the AI's messy YAML and inject the perfect curriculum data from the session
+            if session_metadata.get("course"):
+                meta["course"] = [f"[[{session_metadata['course']}]]"]
+            if session_metadata.get("semester"):
+                meta["semester"] = [f"[[{session_metadata['semester']}]]"]
+            if session_metadata.get("unit"):
+                u = session_metadata["unit"]
+                meta["unit"] = int(u) if str(u).isdigit() else u
+            
+            # Resolve path via hardened logic in VaultManager
+            target_path = self.vm.get_note_path(meta, anchored_hub_path=anchored_path)
+            
+            # Prepare content with clean YAML
+            yaml_content = self.vm.dump_obsidian_yaml(meta)
+            full_content = f"---\n{yaml_content}\n---\n\n{content.strip()}\n"
+
+            # Write/Update the file
             self.vm.write_note(target_path, full_content)
-            print(f"[OKA Deployer] {status.upper()}: {target_path}")
             
             try:
                 display_path = str(target_path.relative_to(self.vm.vault_path))
-            except ValueError:
-                # Fallback if target_path is not inside vault_path
+            except:
                 display_path = str(target_path)
                 
-            results.append({
-                "title": title,
-                "path": display_path,
-                "status": status,
-                "uid": meta["uid"]
-            })
-
+            results.append({"title": title, "path": display_path})
+                
         return results

@@ -1,14 +1,10 @@
 ---
-file.name: ''
-Course: '[[Database Systems]]'
-Semester: '[[Autumn 2025]]'
-Unit: '[[3]]'
-Study Date: ''
-Confidence: ''
-Difficulty: ''
-Last Reviewed: ''
-Status: ''
-last_synced: '2026-04-12T10:47:36.051086'
-links: []
+title: Unknown_3_Conceputual_Database_Design_Hub
+type: Hub
+course: '[[Database Systems]]'
+semester: '[[Autumn 2025]]'
+unit: '[[3]]'
+last_synced: '2026-04-12T14:48:09.529393'
 ---
+
 

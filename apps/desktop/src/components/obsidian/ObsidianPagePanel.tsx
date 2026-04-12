@@ -113,8 +113,16 @@ export function ObsidianPagePanel({
         return () => clearTimeout(timer);
     }, [content, isDirty, isOpen, relativePath]);
 
-    const handleTitleBlur = () => {
-        // Renaming logic not implemented yet
+    const handleTitleSave = async (newTitle: string) => {
+        if (!newTitle || newTitle === localTitle) return;
+        try {
+            // Use the same rename logic as in the database view
+            await sidecarApi.renameVaultFile(databaseId || 'generic', rowId || relativePath, newTitle);
+            setLocalTitle(newTitle);
+            // Parent will refresh rows
+        } catch (e) {
+            console.error("Rename failed", e);
+        }
     };
 
     const displayProps = databaseId ? properties : localProps;
@@ -150,9 +158,8 @@ export function ObsidianPagePanel({
                         <Input 
                             value={localTitle} 
                             onChange={(e) => setLocalTitle(e.target.value)}
-                            onBlur={handleTitleBlur}
-                            readOnly
-                            className="text-3xl font-black border-transparent hover:border-border/40 focus-visible:ring-0 bg-transparent px-0 h-auto w-full tracking-tighter truncate leading-none mb-1"
+                            onBlur={(e) => handleTitleSave(e.target.value)}
+                            className="text-3xl font-black border-none focus-visible:ring-0 bg-transparent px-0 h-auto w-full tracking-tighter truncate leading-none mb-1 shadow-none"
                         />
                         <div className="flex items-center gap-2 text-[9px] uppercase font-black tracking-widest opacity-20 hover:opacity-100 transition-opacity">
                             <RefreshCw size={10} className={loadingContent ? "animate-spin" : ""} />
@@ -160,15 +167,6 @@ export function ObsidianPagePanel({
                         </div>
                     </div>
                     <div className="flex gap-2 pt-2">
-                        <button 
-                            onClick={() => setMode(mode === 'view' ? 'edit' : 'view')}
-                            className={cn(
-                                "flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all",
-                                mode === 'edit' ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "hover:bg-secondary text-muted-foreground"
-                            )}
-                        >
-                            {mode === 'view' ? <><Edit3 size={12} /> Edit</> : <><Eye size={12} /> Preview</>}
-                        </button>
                         {onDelete && (
                             <button onClick={() => {
                                 if (confirm("Delete this note?")) {
@@ -202,22 +200,28 @@ export function ObsidianPagePanel({
                         </div>
                     )}
 
-                    {/* Markdown Area */}
+                    {/* Markdown Area: Combined View/Edit */}
                     <div className="min-h-[500px]">
                         {loadingContent ? (
                             <div className="h-64 flex items-center justify-center opacity-10"><RefreshCw size={24} className="animate-spin" /></div>
-                        ) : mode === 'edit' ? (
-                            <textarea
-                                value={content}
-                                onChange={(e) => { setContent(e.target.value); setIsDirty(true); }}
-                                className="w-full min-h-[600px] p-0 text-[13px] bg-transparent border-none rounded focus:outline-none font-mono leading-relaxed resize-none custom-scrollbar placeholder:opacity-10"
-                                placeholder="Start writing..."
-                            />
                         ) : (
-                            <MarkdownViewer 
-                                content={content} 
-                                onNavigate={onNavigate} 
-                            />
+                            <div className="space-y-8">
+                                <div className="p-4 rounded-xl bg-secondary/5 border border-border/10">
+                                    <textarea
+                                        value={content}
+                                        onChange={(e) => { setContent(e.target.value); setIsDirty(true); }}
+                                        className="w-full min-h-[300px] p-0 text-[13px] bg-transparent border-none rounded focus:outline-none font-mono leading-relaxed resize-none custom-scrollbar placeholder:opacity-10"
+                                        placeholder="Note content..."
+                                    />
+                                </div>
+                                <div className="pt-8 border-t border-border/5">
+                                    <div className="mb-4 text-[10px] font-black uppercase tracking-widest opacity-20">Preview</div>
+                                    <MarkdownViewer 
+                                        content={content} 
+                                        onNavigate={onNavigate} 
+                                    />
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>

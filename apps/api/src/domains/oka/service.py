@@ -5,6 +5,7 @@ import asyncio
 import traceback
 import uuid
 import time
+import yaml
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 from datetime import datetime
@@ -32,7 +33,7 @@ class OkaService:
 
     def __init__(self, secrets):
         self.secrets = secrets
-        self.vm = VaultManager(secrets.vault_path, academic_base=secrets.academic_path)
+        self.vm = VaultManager(secrets.vault_path, academic_root=secrets.academic_path)
         self.deployer = OkaDeployer(self.vm)
         self._ensure_session_dir()
 
@@ -49,181 +50,149 @@ class OkaService:
         )
 
     def _ensure_session_dir(self):
-        """Ensures the persistent session directory exists."""
         self._session_file.parent.mkdir(parents=True, exist_ok=True)
-        if not self._session_file.exists():
-            with open(self._session_file, "w") as f:
-                json.dump({}, f)
 
     def _persist_session(self, session_id: str, data: Dict[str, Any]):
-        """Persists a session state to disk."""
+        """Saves session state to disk for recovery."""
         try:
-            # Prepare serializable content (convert Messages to strings)
-            serializable = data.copy()
-            if "messages" in serializable:
-                serializable["messages"] = [
-                    {"type": m.type, "content": m.content} 
-                    for m in serializable["messages"]
-                ]
+            # We don't save the actual messages (too large/unserializable), just the metadata
+            persist_data = {
+                "path": data.get("path"),
+                "metadata": data.get("metadata"),
+                "current_batch": data.get("current_batch"),
+                "total_batches": data.get("total_batches"),
+                "target_hub": data.get("target_hub")
+            }
             
-            # Read, Update, Write
-            with open(self._session_file, "r") as f:
-                all_sessions = json.load(f)
+            existing = {}
+            if self._session_file.exists():
+                with open(self._session_file, "r") as f:
+                    existing = json.load(f)
             
-            all_sessions[session_id] = serializable
-            
+            existing[session_id] = persist_data
             with open(self._session_file, "w") as f:
-                json.dump(all_sessions, f)
-            
-            # Update memory too
-            OkaService._sessions[session_id] = data
+                json.dump(existing, f)
         except Exception as e:
-            print(f"[OKA Service] Persistence Fail: {e}")
+            print(f"[OKA Service] Session persistence failed: {e}")
 
     async def _get_or_restore_session(self, session_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieves a session from memory or restores it from disk."""
-        # Check memory first
         if session_id in OkaService._sessions:
             return OkaService._sessions[session_id]
         
-        # Restore from file
-        try:
-            with open(self._session_file, "r") as f:
-                all_sessions = json.load(f)
-            
-            if session_id in all_sessions:
-                data = all_sessions[session_id]
-                # Rehydrate messages (System, Human, AI)
-                from langchain_core.messages import AIMessage
-                rehydrated = []
-                for m in data.get("messages", []):
-                    if m["type"] == "system":
-                        rehydrated.append(SystemMessage(content=m["content"]))
-                    elif m["type"] == "ai":
-                        rehydrated.append(AIMessage(content=m["content"]))
-                    else:
-                        rehydrated.append(HumanMessage(content=m["content"]))
-                
-                data["messages"] = rehydrated
-                OkaService._sessions[session_id] = data
-                return data
-        except Exception as e:
-            print(f"[OKA Service] Restoration Fail: {e}")
+        # Try to restore from disk
+        if self._session_file.exists():
+            try:
+                with open(self._session_file, "r") as f:
+                    existing = json.load(f)
+                if session_id in existing:
+                    data = existing[session_id]
+                    # We need to re-initialize messages from SI and initial prompt
+                    # This is a bit tricky for multi-turn, but for OKA batches it's predictable
+                    si_path = self.resolve_si_path()
+                    si = await self._get_si(str(si_path))
+                    data["messages"] = [SystemMessage(content=si)]
+                    OkaService._sessions[session_id] = data
+                    return data
+            except: pass
         return None
 
-    # ── SI Resolution ──────────────────────────────────────────
     @staticmethod
-    def resolve_si_path(hint: Optional[str] = None) -> Path:
-        """
-        Resolves the OKA System Instruction file with the following priority:
-          1. Explicit hint path (if provided and exists)
-          2. <project_root>/OKA.md
-          3. <project_root>/.system/prompts/OKA_System_Instruction.md
-          4. Walk upward from this file looking for OKA.md
-        """
-        if hint:
-            p = Path(hint)
-            if p.exists():
-                return p
-
-        # Determine project root (LifeOs/) — service.py lives at
-        # apps/api/src/domains/oka/service.py  → 5 levels up
-        project_root = Path(__file__).resolve().parents[4]
-
-        candidates = [
-            project_root / "OKA.md",
-            project_root / ".system" / "prompts" / "OKA_System_Instruction.md",
+    def resolve_si_path() -> Path:
+        # Resolve absolute root (LifeOs/)
+        # Current file is apps/api/src/domains/oka/service.py
+        # parent 1: oka/
+        # parent 2: domains/
+        # parent 3: src/
+        # parent 4: api/
+        # parent 5: apps/
+        # parent 6: LifeOs/
+        root = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
+        paths = [
+            root / "OKA.md",
+            root / ".system/prompts/OKA_System_Instruction.md"
         ]
-        for c in candidates:
-            if c.exists():
-                return c
+        for p in paths:
+            if p.exists(): return p
+        raise FileNotFoundError(f"OKA System Instruction not found in: {[str(p) for p in paths]}")
 
-        # Fallback: walk up from this file
-        curr = Path(__file__).resolve().parent
-        for _ in range(10):
-            target = curr / "OKA.md"
-            if target.exists():
-                return target
-            if curr.parent == curr:
-                break
-            curr = curr.parent
+    async def _get_si(self, path: str) -> str:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
 
-        raise FileNotFoundError(
-            "OKA.md not found. Searched project root and parent directories."
-        )
-
-    async def _get_si(self, system_instruction_path: str) -> str:
-        si_path = self.resolve_si_path(system_instruction_path)
-        with open(si_path, "r", encoding="utf-8") as f:
-            si = f.read()
-        print(f"[OKA Service] Loaded SI ({len(si)} chars) from: {si_path}")
-        return si
-
-    # ── LLM Invocation with retry ──────────────────────────────
-    async def _invoke_with_retry(
-        self, messages: list, session_id: str, phase: str = "Planning"
-    ):
-        """
-        Invokes the LLM with exponential-backoff retry.
-        Updates _status with progress on each attempt.
-        """
+    async def _invoke_with_retry(self, messages: List[BaseMessage], session_id: str, phase: str = "AI Generation") -> AIMessage:
+        attempt = 0
         last_error = None
-        backoff = OKA_RETRY_BACKOFF
-
-        for attempt in range(1, OKA_MAX_RETRIES + 1):
+        
+        while attempt < OKA_MAX_RETRIES:
             try:
-                status_msg = (
-                    f"{phase} with {self.secrets.ai_model}"
-                    + (f" (attempt {attempt}/{OKA_MAX_RETRIES})" if attempt > 1 else "")
-                    + "..."
-                )
-                OkaService._status[session_id] = status_msg
-                print(f"[OKA Service] {status_msg}")
-
-                response = await self.llm.ainvoke(messages)
-                return response
-
+                attempt += 1
+                OkaService._status[session_id] = f"{phase} (Attempt {attempt}/{OKA_MAX_RETRIES})..."
+                return await self.llm.ainvoke(messages)
             except Exception as e:
                 last_error = e
                 error_str = str(e)
-                is_transient = any(
-                    marker in error_str.lower()
-                    for marker in [
-                        "524", "timeout", "429", "rate", "503",
-                        "502", "overloaded", "capacity",
-                    ]
-                )
-
+                print(f"[OKA Service] AI Attempt {attempt} failed: {error_str}")
+                
+                # Check for transient errors
+                is_transient = any(code in error_str for code in ["429", "503", "524", "timeout", "overloaded"])
+                
                 if is_transient and attempt < OKA_MAX_RETRIES:
+                    backoff = OKA_RETRY_BACKOFF * (2 ** (attempt - 1))
                     wait_msg = (
                         f"Transient error ({self._classify_error(error_str)}). "
                         f"Retrying in {backoff}s (attempt {attempt}/{OKA_MAX_RETRIES})..."
                     )
                     OkaService._status[session_id] = wait_msg
-                    print(f"[OKA Service] {wait_msg}")
                     await asyncio.sleep(backoff)
-                    backoff *= 2
-                    continue
                 else:
-                    raise
+                    break
+        
+        raise last_error
 
-        # Should not reach here, but safety net
-        raise last_error  # type: ignore
+    def _classify_error(self, error_str: str) -> str:
+        if "429" in error_str: return "Rate Limited (429)"
+        if "503" in error_str or "overloaded" in error_str.lower(): return "Server Overloaded (503)"
+        if "524" in error_str or "timeout" in error_str.lower(): return "Gateway Timeout"
+        return "Connection Error"
 
-    @staticmethod
-    def _classify_error(error_str: str) -> str:
-        lowered = error_str.lower()
-        if "524" in lowered or "timeout" in lowered:
-            return "Timeout (524)"
-        if "429" in lowered or "rate" in lowered:
-            return "Rate Limited (429)"
-        if "503" in lowered or "502" in lowered:
-            return "Server Overloaded"
-        return "Provider Error"
+    def _format_user_error(self, e: Exception) -> str:
+        err_msg = str(e)
+        if "429" in err_msg: return "Model is rate-limited. Retrying automatically..."
+        if "503" in err_msg: return "Model is overloaded. Retrying automatically..."
+        if "timeout" in err_msg.lower(): return "Request timed out. The document might be too large or the AI is slow."
+        return f"System Error: {err_msg}"
 
     def _get_planner_path(self) -> Path:
         """Resolves the absolute path to the Study Planner database."""
         return Path(self.secrets.vault_path) / "3-Database" / "06 - Study Planner"
+
+    def list_available_options(self) -> Dict[str, List[str]]:
+        """Returns all available options for Course, Semester, and Units from the vault."""
+        base_path = Path(self.secrets.vault_path) / "3-Database"
+        
+        courses = [f.stem for f in (base_path / "07 - Courses").glob("*.md") if not f.name.startswith("_")]
+        semesters = [f.stem for f in (base_path / "08 - Semesters").glob("*.md") if not f.name.startswith("_")]
+        units = [f.stem for f in (base_path / "06 - Study Planner" / "_Units").glob("*.md")]
+        
+        # Sort units numerically if possible
+        try: units.sort(key=lambda x: int(x))
+        except: units.sort()
+
+        return {
+            "courses": courses,
+            "semesters": semesters,
+            "units": units
+        }
+
+    def _clean_prop(self, val: Any) -> str:
+        """Cleans a property value (handles lists and wiki-links)."""
+        if not val: return ""
+        if isinstance(val, list):
+            val = val[0] if len(val) > 0 else ""
+        # Aggressive cleaning of Unknown and brackets
+        s = str(val).replace("[[", "").replace("]]", "").strip()
+        if s.lower() == "unknown": return ""
+        return s
 
     def list_planner_hubs(self) -> List[Dict[str, Any]]:
         """Lists all existing hubs in the Study Planner with their metadata."""
@@ -236,11 +205,13 @@ class OkaService:
             if file.name.startswith("_"): continue # Skip internal folders
             
             # Extract basic metadata from filename
-            # Pattern: [Unit]_[Name]_Hub.md
             name = file.stem.replace("_", " ")
-            
-            # Read YAML for rich metadata
-            metadata = {"title": name, "path": str(file.absolute()), "id": file.name}
+            metadata = {
+                "title": name, 
+                "path": str(file.absolute()), 
+                "id": file.name,
+                "hub_title": file.stem
+            }
             try:
                 with open(file, "r", encoding="utf-8") as f:
                     content = f.read()
@@ -248,188 +219,160 @@ class OkaService:
                     if yaml_match:
                         import yaml
                         data = yaml.safe_load(yaml_match.group(1))
-                        metadata.update(data)
-            except: pass
+                        if data:
+                            # Standardize and CLEAN the values for the UI
+                            metadata["course"] = self._clean_prop(data.get("course") or data.get("Course"))
+                            metadata["unit"] = self._clean_prop(data.get("unit") or data.get("Unit"))
+                            metadata["semester"] = self._clean_prop(data.get("semester") or data.get("Semester"))
+            except Exception as e:
+                print(f"[OKA Service] Error reading hub {file.name}: {e}")
             
             hubs.append(metadata)
         return hubs
 
     def find_best_hub_match(self, source_text: str) -> Optional[Dict[str, Any]]:
-        """Fuzzily matches source text against existing planner hubs."""
+        """Robustly matches source text against existing planner hubs using content-based keyword matching."""
         hubs = self.list_planner_hubs()
         if not hubs: return None
         
-        # Simple heuristic: look for unit numbers or keywords in the first 1000 chars
-        sample = source_text[:2000].lower()
+        sample = source_text[:5000].lower()
+        best_match = None
+        highest_score = 0
+
         for hub in hubs:
-            # Check unit number match (e.g. "Unit 3")
-            unit_val = str(hub.get("Unit", ""))
-            if unit_val and f"unit {unit_val}" in sample:
-                return hub
+            score = 0
+            # 1. Direct Unit Match (High Weight)
+            unit_val = str(hub.get("unit", ""))
+            if unit_val and (f"unit {unit_val}" in sample or f"chapter {unit_val}" in sample):
+                score += 10
             
-            # Check title keywords
-            keywords = hub["title"].lower().split()
-            matches = sum(1 for k in keywords if len(k) > 3 and k in sample)
-            if matches >= 2:
-                return hub
-        return None
+            # 2. Title Keyword Match (Medium Weight)
+            title_clean = hub["title"].lower().replace("hub", "").strip()
+            keywords = [k for k in title_clean.split() if len(k) > 3]
+            for k in keywords:
+                if k in sample: score += 5
+            
+            # 3. Course Match
+            course_val = str(hub.get("course", ""))
+            if course_val.lower() in sample: score += 5
+
+            if score > highest_score:
+                highest_score = score
+                best_match = hub
+
+        return best_match if highest_score >= 5 else None
+
+    # ── Phase 1: Detection ──────────────────────────────────────
+    async def detect_curriculum(self, file_path: str) -> Dict[str, Any]:
+        """Phase 1: Pure detection. No AI generation."""
+        path = Path(file_path)
+        content_text = ""
+        
+        if path.suffix.lower() == ".pdf":
+            loader = PyPDFLoader(str(path))
+            # Only load first few pages for detection to save time/resources
+            pages = loader.load_and_split()
+            content_text = "\n".join([p.page_content for p in pages[:3]])
+        else:
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                content_text = f.read(5000)
+
+        target_hub = self.find_best_hub_match(content_text)
+        
+        return {
+            "anchored_hub": target_hub,
+            "available_hubs": self.list_planner_hubs(),
+            "available_options": self.list_available_options(),
+            "status": "detected"
+        }
 
     # ── Phase 2: Planning ──────────────────────────────────────
-    async def process_file(
-        self, file_path: str, system_instruction_path: str, target_hub_id: Optional[str] = None
+    async def generate_plan(
+        self, file_path: str, system_instruction_path: str, curriculum: Dict[str, Any], target_hub_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Initializes planning using a stateful chat."""
-        print(f"[OKA Service] --- STARTING PROCESS_FILE ({self.secrets.ai_model}) ---")
+        """Phase 2: AI Planning using LOCKED metadata from the user."""
         path = Path(file_path)
         session_id = str(path.absolute())
-
-        # Clear any existing session for this file path
+        
+        # Clear any existing session
         OkaService._sessions.pop(session_id, None)
-        OkaService._status[session_id] = "Initializing Agent..."
+        
+        si = await self._get_si(system_instruction_path)
+        messages = [SystemMessage(content=si)]
 
-        try:
-            si = await self._get_si(system_instruction_path)
-            messages = [SystemMessage(content=si)]
+        # Read full content for planning
+        full_text = ""
+        if path.suffix.lower() == ".pdf":
+            loader = PyPDFLoader(str(path))
+            pages = loader.load_and_split()
+            full_text = "\n".join([p.page_content for p in pages])
+        else:
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                full_text = f.read()
 
-            # Determine source type from file extension
-            ext = path.suffix.lower()
-            source_type = {
-                ".pdf": "PDF_Document",
-                ".md": "Markdown_Notes",
-                ".txt": "Text_Document",
-                ".py": "Python_Source",
-                ".js": "JavaScript_Source",
-                ".ts": "TypeScript_Source",
-                ".java": "Java_Source",
-                ".cpp": "CPP_Source",
-                ".rs": "Rust_Source",
-                ".html": "HTML_Document",
-                ".css": "CSS_Document",
-                ".json": "JSON_Document",
-            }.get(ext, "Text_Document")
+        # Build strict anchor instruction
+        unit_num = str(curriculum.get("unit", "")).replace("Unknown", "").strip()
+        course = str(curriculum.get("course", "")).replace("Unknown", "").strip()
+        semester = str(curriculum.get("semester", "")).replace("Unknown", "").strip()
+        hub_title = str(curriculum.get("hub_title", "")).replace("Unknown", "").strip()
 
-            # ── Extract source text ────────────────────────────
-            content_text = ""
-            if path.suffix.lower() == ".pdf":
-                print(f"[OKA Service] Using PyPDFLoader for: {path.name}")
-                OkaService._status[session_id] = (
-                    "Extracting text from PDF (this might take a moment)..."
-                )
-                loader = PyPDFLoader(str(path.absolute()))
-                docs = await asyncio.to_thread(loader.load)
-                full_text = "\n\n".join([doc.page_content for doc in docs])
+        anchor_instruction = (
+            "\n\nCURRICULUM LOCK (MANDATORY):\n"
+            f"You are architecting for:\n"
+            f"- Course: [[{course}]]\n"
+            f"- Semester: [[{semester}]]\n"
+            f"- Unit: {unit_num}\n"
+            f"- Hub Title: {hub_title}\n\n"
+            "STRICT NAMING CONVENTION:\n"
+            f"1. Master Hub: [[{unit_num}_{hub_title.replace(' ', '_')}_Hub]]\n"
+            f"2. Possible Questions: [[{unit_num}_{hub_title.replace(' ', '_')}_Possible_Questions]]\n"
+            "3. Atomic Notes: [[Strict_Title_Case_With_Underscores]] (No Unit Number).\n"
+            "4. CONNECTIONS: You MUST maintain hierarchical indentation (2 spaces) in the # Connections section."
+        )
 
-                # Truncate if too large to avoid context-window overflow
-                if len(full_text) > MAX_SOURCE_CHARS:
-                    print(
-                        f"[OKA Service] Source text truncated from "
-                        f"{len(full_text)} to {MAX_SOURCE_CHARS} chars"
-                    )
-                    full_text = full_text[:MAX_SOURCE_CHARS] + (
-                        "\n\n[... remainder of source truncated for context "
-                        "window limits. Process the remaining content in "
-                        "subsequent interactions if needed.]"
-                    )
+        init_command = (
+            "Source material provided. ABSOLUTELY NO PREAMBLES.\n"
+            "1. Start with the `<pre_generation_planning>` reasoning block.\n"
+            "2. Extract EVERY concept.\n"
+            "3. Output the **Finalized Knowledge Asset Plan**.\n"
+            f"{anchor_instruction}\n\n"
+            f"{full_text[:MAX_SOURCE_CHARS]}"
+        )
+        messages.append(HumanMessage(content=init_command))
 
-                content_text = (
-                    f"Type_of_Source: {source_type}\nSource_Content:\n\n{full_text}"
-                )
-            else:
-                print(f"[OKA Service] Reading text file: {path.name}")
-                OkaService._status[session_id] = "Reading text file..."
-                with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                    raw = f.read()
+        response = await self._invoke_with_retry(messages, session_id, phase="Generating Plan")
+        plan_output = response.content
+        structured_plan = self._parse_plan_to_json(plan_output)
+        
+        # Inject user curriculum into metadata so it persists
+        structured_plan["course"] = course
+        structured_plan["unit"] = unit_num
+        structured_plan["semester"] = semester
+        structured_plan["hub_title"] = hub_title
 
-                if len(raw) > MAX_SOURCE_CHARS:
-                    print(
-                        f"[OKA Service] Source text truncated from "
-                        f"{len(raw)} to {MAX_SOURCE_CHARS} chars"
-                    )
-                    raw = raw[:MAX_SOURCE_CHARS] + (
-                        "\n\n[... remainder of source truncated for context "
-                        "window limits.]"
-                    )
+        total_batches = len(structured_plan.get("batches", [])) or 1
+        OkaService._sessions[session_id] = {
+            "messages": messages + [response],
+            "path": file_path,
+            "plan": plan_output,
+            "metadata": structured_plan,
+            "current_batch": 0,
+            "total_batches": total_batches,
+            "target_hub": next((h for h in self.list_planner_hubs() if h["id"] == target_hub_id), None) if target_hub_id else None
+        }
+        
+        self._persist_session(session_id, OkaService._sessions[session_id])
+        
+        return {
+            "session_id": session_id,
+            "plan_raw": plan_output,
+            "plan_structured": structured_plan,
+            "status": "awaiting_confirmation"
+        }
 
-                content_text = (
-                    f"Type_of_Source: {source_type}\nSource_Content:\n\n{raw}"
-                )
-
-            # ── Anchor Detection ──────────────────────────────
-            target_hub = None
-            if target_hub_id:
-                hubs = self.list_planner_hubs()
-                target_hub = next((h for n, h in enumerate(hubs) if h["id"] == target_hub_id), None)
-            
-            if not target_hub:
-                target_hub = self.find_best_hub_match(content_text)
-
-            anchor_instruction = ""
-            if target_hub:
-                print(f"[OKA Service] Anchoring to Hub: {target_hub['title']}")
-                anchor_instruction = (
-                    "\n\nCURRICULUM ANCHOR (MANDATORY):\n"
-                    f"You are augmenting an EXISTING unit hub: [[{target_hub['id']}]].\n"
-                    f"Inherit these metadata values for ALL notes:\n"
-                    f"- Course: {target_hub.get('Course', 'Unknown')}\n"
-                    f"- Semester: {target_hub.get('Semester', 'Unknown')}\n"
-                    f"- Unit: {target_hub.get('Unit', 'Unknown')}\n"
-                    "The generated Master Hub MUST have the exact title above and will be updated in place."
-                )
-
-            # OKA v7.0 Dynamic Initialization
-            init_command = (
-                "Source material provided. ABSOLUTELY NO GREETINGS or preambles.\n"
-                "1. Start with the `<pre_generation_planning>` reasoning block.\n"
-                "2. Extract EVERY single concept from the source.\n"
-                "3. Output the **Finalized Knowledge Asset Plan** exactly as per OKA v7.0.\n"
-                f"{anchor_instruction}\n\n"
-                f"{content_text}"
-            )
-            messages.append(HumanMessage(content=init_command))
-
-            print(
-                f"[OKA Service] Generating plan via {self.secrets.ai_provider} "
-                f"({self.secrets.ai_model})..."
-            )
-
-            # ── Invoke with retry ─────────────────────────────
-            response = await self._invoke_with_retry(
-                messages, session_id, phase="Generating Plan"
-            )
-
-            OkaService._status[session_id] = "Parsing AI Blueprint..."
-            plan_output = response.content
-            print(f"[OKA Service] Plan generated (length: {len(plan_output)})")
-
-            structured_plan = self._parse_plan_to_json(plan_output)
-
-            total_batches = len(structured_plan.get("batches", [])) or 1
-            OkaService._sessions[session_id] = {
-                "messages": messages + [response],
-                "path": file_path,
-                "plan": plan_output,
-                "metadata": structured_plan,
-                "current_batch": 0,
-                "total_batches": total_batches,
-                "target_hub": target_hub
-            }
-
-            self._persist_session(session_id, OkaService._sessions[session_id])
-            OkaService._status[session_id] = "Awaiting Confirmation"
-
-            return {
-                "session_id": session_id,
-                "plan_raw": plan_output,
-                "plan_structured": structured_plan,
-                "status": "awaiting_confirmation",
-                "anchored_hub": target_hub,
-                "available_hubs": self.list_planner_hubs()
-            }
-        except Exception as e:
-            error_msg = self._format_user_error(e)
-            OkaService._status[session_id] = f"Error: {error_msg}"
-            print(f"[OKA Service] CRITICAL ERROR: {traceback.format_exc()}")
-            raise ValueError(error_msg)
+    # ── Phase 2 (Legacy redirect) ──────────────────────────────────────
+    async def process_file(self, file_path: str, system_instruction_path: str, target_hub_id: Optional[str] = None) -> Dict[str, Any]:
+        return await self.detect_curriculum(file_path)
 
     # ── Phase 3: Batch Deployment ──────────────────────────────
     async def confirm_plan(
@@ -445,19 +388,49 @@ class OkaService:
         
         # Apply overrides if provided (usually on Batch 1)
         if curriculum_override:
-            print(f"[OKA Service] Applying Curriculum Overrides: {curriculum_override}")
+            print(f"[OKA Service] Applying Curriculum Overrides & Syncing to Vault: {curriculum_override}")
             session["metadata"]["course"] = curriculum_override.get("course", session["metadata"].get("course"))
             session["metadata"]["unit"] = curriculum_override.get("unit", session["metadata"].get("unit"))
             session["metadata"]["semester"] = curriculum_override.get("semester")
             session["metadata"]["hub_title"] = curriculum_override.get("hub_title")
+            
+            # Sync back to the anchored hub file if it exists
+            hub_to_update = session.get("target_hub")
+            if hub_to_update and hub_to_update.get("path"):
+                hub_path = Path(hub_to_update["path"])
+                if hub_path.exists():
+                    try:
+                        with open(hub_path, "r", encoding="utf-8") as f:
+                            content = f.read()
+                        
+                        meta, body, err = self.vm.extract_yaml_and_content(content)
+                        if not err:
+                            # Update properties (RE-WRAP in wiki-links for relations)
+                            if curriculum_override.get("course"):
+                                meta["course"] = [f"[[{curriculum_override['course']}]]"]
+                            if curriculum_override.get("semester"):
+                                meta["semester"] = [f"[[{curriculum_override['semester']}]]"]
+                            if curriculum_override.get("unit"):
+                                u = curriculum_override["unit"]
+                                meta["unit"] = int(u) if str(u).isdigit() else u
+                            
+                            # Preserve lowercase keys strictly
+                            for cap_key in ["Course", "Semester", "Unit"]:
+                                meta.pop(cap_key, None)
+                            
+                            yaml_content = self.vm.dump_obsidian_yaml(meta)
+                            full_content = f"---\n{yaml_content}\n---\n\n{body.strip()}\n"
+                            self.vm.write_note(hub_path, full_content)
+                            print(f"[OKA Service] Synchronized properties to {hub_path.name}")
+                    except Exception as e:
+                        print(f"[OKA Service] Hub sync failed: {e}")
         
         if anchored_hub_id:
+            session["metadata"]["anchored_hub_id"] = anchored_hub_id
             session["target_hub"] = next((h for h in self.list_planner_hubs() if h["id"] == anchored_hub_id), None)
         
-        # THIN CONTEXT PROTOCOL:
-        # We only send the system instruction, the initial plan, and the current command.
-        # We do NOT send previous generated notes to keep the context window small for weak models.
-        initial_messages = session["messages"][:2] # Usually SI + First User Prompt
+        # THIN CONTEXT PROTOCOL
+        initial_messages = session["messages"][:2]
         plan_response = [m for m in session["messages"] if isinstance(m, AIMessage) and "# Knowledge Asset Plan" in m.content][:1]
         
         current_batch = session.get("current_batch", 0)
@@ -474,10 +447,10 @@ class OkaService:
         notes_context = f"EXACT NOTE TO GENERATE: {', '.join(['[['+n+']]' for n in batch_notes])}."
 
         curriculum_info = (
-            f"- Course: {session['metadata'].get('course', 'Unknown')}\n"
-            f"- Unit: {session['metadata'].get('unit', 'Unknown')}\n"
-            f"- Semester: {session['metadata'].get('semester', 'Unknown')}\n"
-            f"- Hub Title: {session['metadata'].get('hub_title', 'Unknown')}\n"
+            f"- Course: {session['metadata'].get('course')}\n"
+            f"- Unit: {session['metadata'].get('unit')}\n"
+            f"- Semester: {session['metadata'].get('semester')}\n"
+            f"- Hub Title: {session['metadata'].get('hub_title')}\n"
         )
 
         reinforced_command = (
@@ -493,54 +466,31 @@ class OkaService:
             "4. Follow the Mastery Mode from the Plan exactly."
         )
         
-        # Build the pruned context
         pruned_messages = initial_messages + plan_response + [HumanMessage(content=reinforced_command)]
 
         try:
             res = await self._invoke_with_retry(
-                pruned_messages, # Use pruned context
+                pruned_messages,
                 session_id,
                 phase=f"Generating Batch {batch_number}/{total_batches}",
             )
 
-            OkaService._status[session_id] = (
-                f"Deploying Batch {batch_number} to Vault..."
-            )
-            deployment_results = self.deployer.deploy(res.content)
-            if not deployment_results:
-                print(f"[OKA Service] ERROR: 0 notes extracted from response (total len: {len(res.content)})")
-                # DO NOT increment current_batch here so user can retry
-                return {
-                    "ai_output": res.content,
-                    "results": [],
-                    "count": 0,
-                    "has_more": True,
-                    "current_batch": current_batch, 
-                    "total_batches": total_batches,
-                    "status": "error",
-                    "error": f"Batch {batch_number} parsing failed. The AI omitted the required START_NOTE/YAML markers. Please try again or check the raw output below."
-                }
-                
+            OkaService._status[session_id] = f"Deploying Batch {batch_number} to Vault..."
+            deployment_results = await self.deployer.deploy(res.content, session_metadata=session["metadata"])
+            
             print(f"[OKA Service] Batch {batch_number} deployed: {len(deployment_results)} notes.")
 
             session["messages"].append(res)
             session["current_batch"] = batch_number
             has_more = batch_number < total_batches
             
-            # Persist progress
             self._persist_session(session_id, session)
 
             if not has_more:
                 OkaService._sessions.pop(session_id, None)
                 OkaService._status[session_id] = "Completed"
-                print(
-                    f"[OKA Service] All {total_batches} batch(es) complete. "
-                    f"Session terminated."
-                )
             else:
-                OkaService._status[session_id] = (
-                    f"Awaiting Batch {batch_number + 1}"
-                )
+                OkaService._status[session_id] = f"Awaiting Batch {batch_number + 1}"
 
             return {
                 "ai_output": res.content,
@@ -549,73 +499,36 @@ class OkaService:
                 "has_more": has_more,
                 "current_batch": batch_number,
                 "total_batches": total_batches,
-                "status": "complete" if not has_more else "in_progress",
+                "status": "success"
             }
         except Exception as e:
             error_msg = self._format_user_error(e)
             OkaService._status[session_id] = f"Error: {error_msg}"
             raise ValueError(error_msg)
 
-    # ── Plan Parsing ───────────────────────────────────────────
     def _parse_plan_to_json(self, plan_text: str) -> Dict[str, Any]:
-        """Extracts key metadata from the LLM's plan response."""
-        metadata: Dict[str, Any] = {
-            "course": "Unknown",
-            "unit": "Unknown",
-            "year": "Unsorted_Year",
-            "semester": "Unsorted_Semester",
-            "notes": [],
-            "batches": [],
+        """Strips 'Unknown' from metadata and extracts notes into individual batches."""
+        metadata = {"course": "", "unit": "", "semester": "", "hub_title": ""}
+        
+        # Extract from text if possible
+        patterns = {
+            "course": [r"Course:\s*\[\[(.*?)\]\]", r"Course:\s*(.*)"],
+            "unit": [r"Unit:\s*(.*)"],
+            "semester": [r"Semester:\s*\[\[(.*?)\]\]", r"Semester:\s*(.*)"]
         }
-
-        # Metadata extraction (Strict v5.4 Plan Blueprint Parsing)
-        # ── Header Extraction (Course & Unit) ──────────────────────
-        # Pattern: # Knowledge Asset Plan: Course - Unit
-        header_match = re.search(r"#\s*Knowledge\s+Asset\s+Plan:\s*([^- \n]+(?:[ -][^- \n]+)*)\s*-\s*([^\n]+)", plan_text, re.I)
-        if header_match:
-            metadata["course"] = header_match.group(1).strip().replace("_", " ")
-            metadata["unit"] = header_match.group(2).strip().replace("_", " ")
-
-        # Fallbacks
-        if not metadata.get("course"):
-            for pattern in [
-                r"Course:\s*\**([^\n\*]*)",
-                r"# I\..*?Course:\s*\**([^\n\*]*)",
-            ]:
-                m = re.search(pattern, plan_text, re.I)
+        for key, p_list in patterns.items():
+            for p in p_list:
+                m = re.search(p, plan_text, re.I)
                 if m:
-                    metadata["course"] = m.group(1).strip().replace("_", " ")
+                    val = m.group(1).strip()
+                    if "unknown" not in val.lower():
+                        metadata[key] = val
                     break
 
-        if not metadata.get("unit"):
-            for pattern in [
-                r"Unit:\s*\**([^\n\*]*)",
-                r"# I\..*?Unit:\s*\**([^\n\*]*)",
-            ]:
-                m = re.search(pattern, plan_text, re.I)
-                if m:
-                    metadata["unit"] = m.group(1).strip().replace("_", " ")
-                    break
-
-        for pattern in [
-            r"Year:\s*(.*)",
-            r"\*\*Year:\*\*\s*(.*)",
-            r"Year\s+(\d+)",
-        ]:
-            m = re.search(pattern, plan_text, re.I)
-            if m:
-                metadata["year"] = m.group(1).strip()
-                break
-
-        for pattern in [
-            r"Semester:\s*(.*)",
-            r"\*\*Semester:\*\*\s*(.*)",
-            r"Semester\s+([IV\d]+)",
-        ]:
-            m = re.search(pattern, plan_text, re.I)
-            if m:
-                metadata["semester"] = m.group(1).strip()
-                break
+        # Clean "Unknown" from all metadata fields
+        for key in ["course", "unit", "semester"]:
+            if metadata.get(key) and "unknown" in str(metadata.get(key)).lower():
+                metadata[key] = ""
 
         # ── Tag-Based Extraction ───────────────────────────────────
         def extract_tag(tag, text):
@@ -626,12 +539,10 @@ class OkaService:
         pq_raw = extract_tag("pq_note", plan_text)
         atomic_raw = extract_tag("atomic_notes", plan_text)
 
-        # Extract wikilinks from each section
         hub_notes = list(dict.fromkeys(re.findall(r"\[\[(.*?)\]\]", hub_raw)))
         pq_notes = list(dict.fromkeys(re.findall(r"\[\[(.*?)\]\]", pq_raw)))
         atomic_notes = list(dict.fromkeys(re.findall(r"\[\[(.*?)\]\]", atomic_raw)))
 
-        # Clean list of all unique notes to be generated
         all_planned_notes = list(dict.fromkeys(hub_notes + pq_notes + atomic_notes))
         metadata["notes"] = all_planned_notes
 
@@ -643,95 +554,23 @@ class OkaService:
         # 1. Individual Hub Batches
         for note in hub_notes:
             if note in processed_notes: continue
-            sniped_batches.append({
-                "id": next_id,
-                "notes": [note],
-                "type": "hub"
-            })
+            sniped_batches.append({"id": next_id, "notes": [note], "type": "hub"})
             next_id += 1
             processed_notes.add(note)
 
         # 2. Individual PQ Batches
         for note in pq_notes:
             if note in processed_notes: continue
-            sniped_batches.append({
-                "id": next_id,
-                "notes": [note],
-                "type": "pq"
-            })
+            sniped_batches.append({"id": next_id, "notes": [note], "type": "pq"})
             next_id += 1
             processed_notes.add(note)
 
         # 3. Individual Atomic Note Batches
         for note in atomic_notes:
             if note in processed_notes: continue
-            sniped_batches.append({
-                "id": next_id,
-                "notes": [note],
-                "type": "atomic"
-            })
+            sniped_batches.append({"id": next_id, "notes": [note], "type": "atomic"})
             next_id += 1
             processed_notes.add(note)
-            
+
         metadata["batches"] = sniped_batches
-        metadata["total_notes"] = len(all_planned_notes)
-
-        # Predict deployment path
-        try:
-            # Look for Domain/Category to help pathing
-            m_cat = re.search(r"\*\*(?:Category|Domain|Field|Type|Source Type):\*\*\s*(.*)", plan_text)
-            if m_cat:
-                metadata["category"] = m_cat.group(1).strip()
-            
-            # Predict dir using dummy note title
-            dummy_meta = {
-                "title": "dummy",
-                "course": metadata.get("course", ""),
-                "unit": metadata.get("unit", ""),
-                "year": metadata.get("year"),
-                "semester": metadata.get("semester"),
-                "category": metadata.get("category", ""),
-                "domain": metadata.get("category", "")
-            }
-            target_path = self.vm.get_note_path(dummy_meta)
-            target_dir = target_path.parent
-            
-            try:
-                # Use a more descriptive path for the UI
-                rel = target_dir.relative_to(self.vm.vault_path)
-                metadata["deployment_path"] = f"Vault/{rel}"
-            except ValueError:
-                metadata["deployment_path"] = str(target_dir)
-        except Exception:
-            metadata["deployment_path"] = "Evaluation Pending"
-
-        print(
-            f"[OKA Service] Plan parsed: {len(metadata['notes'])} potential notes, "
-            f"{len(metadata['batches'])} confirmed batches. Path: {metadata.get('deployment_path')}"
-        )
-
         return metadata
-
-    # ── Error Formatting ───────────────────────────────────────
-    def _format_user_error(self, e: Exception) -> str:
-        error_str = str(e)
-        lowered = error_str.lower()
-
-        if "524" in lowered or "timeout" in lowered:
-            return (
-                f"The AI provider ({self.secrets.ai_provider}) timed out after "
-                f"{OKA_MAX_RETRIES} attempts. The document may be too large for "
-                f"{self.secrets.ai_model}, or the provider is slow. "
-                f"Try a faster model (e.g. gemini-2.0-flash or gemini-2.5-pro)."
-            )
-        if "429" in lowered or "rate" in lowered:
-            return (
-                f"Rate limited by {self.secrets.ai_provider}. "
-                f"Wait a minute and try again, or switch to a different model."
-            )
-        if "context" in lowered and ("length" in lowered or "window" in lowered):
-            return (
-                f"The document + system instruction exceeds the context window of "
-                f"{self.secrets.ai_model}. Try a model with a larger context window."
-            )
-        return error_str

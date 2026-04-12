@@ -303,7 +303,14 @@ export const sidecarApi = {
             status: string;
             anchored_hub?: any;
             available_hubs?: any[];
+            available_options?: any;
         }>('/api/oka/process', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
+    okaGeneratePlan: (payload: { session_id?: string; file_path?: string; curriculum: any; target_hub_id?: string }) =>
+        request<{ session_id: string; plan_raw: string; plan_structured: any; status: string }>('/api/oka/plan', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),

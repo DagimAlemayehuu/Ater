@@ -11,10 +11,14 @@
             "id": "137e731015dc278e",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
+              "type": "markdown",
+              "state": {
+                "file": "3-Database/06 - Study Planner/3_Conceputual_Database_Design_Hub.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "3_Conceputual_Database_Design_Hub"
             }
           }
         ]
@@ -178,8 +182,21 @@
   },
   "active": "137e731015dc278e",
   "lastOpenFiles": [
-    "3-Database/07 - Courses/Database Systems.md",
+    "2-Academic/Uncategorized_Notes/3_3_Conceputual_Database_Design_Possible_Questions.md",
     "3-Database/06 - Study Planner/3_Conceputual_Database_Design_Hub.md",
+    "2-Academic/Uncategorized_Notes",
+    "3-Database/08 - Semesters/ZU.md",
+    "3-Database/06 - Study Planner/Collaborative Partnership among Stakeholders_Inclusiveness_Hub.md",
+    "2-Academic/Uncategorized_Notes/Database_Development_Methodology.md",
+    "2-Academic/Uncategorized_Notes/3_Conceputual_Database_Design_3_Conceputual_Database_Design_Possible_Questions.md",
+    "3-Database/06 - Study Planner/3_3_Conceputual_Database_Design_Possible_Questions.md",
+    "Structural_Constraints.md",
+    "3-Database/06 - Study Planner/3_Conceputual_Database_Design_3_Conceputual_Database_Design_Hub.md",
+    "3-Database/06 - Study Planner/3_Unknown_3_Conceputual_Database_Design_Hub.md",
+    "3-Database/07 - Courses/Database Systems.md",
+    "5-Pdf Store/Chapter_3.pdf",
+    "5-Pdf Store/Chapter_3.pdf",
+    "2-Academic",
     "3-Database/06 - Study Planner/_Types/5.md",
     "3-Database/06 - Study Planner/_Types/4.md",
     "3-Database/06 - Study Planner/_Types/3.md",
@@ -195,24 +212,10 @@
     "3-Database/06 - Study Planner/_Units/3.md",
     "3-Database/06 - Study Planner/_Units/2.md",
     "3-Database/06 - Study Planner/_Units/10.md",
-    "3-Database/06 - Study Planner/_Units/1.md",
     "3-Database/06 - Study Planner/_Units",
-    "3-Database/06 - Study Planner/3_Conceptual_Database_Design.md",
-    "2-Academic/Uncategorized_Notes/Phases_Of_Database_Design.md",
-    "2-Academic/Uncategorized_Notes/Database_Development_Methodology.md",
-    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Relational_Model_Possible_Questions.md",
-    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Relational_Model_Hub.md",
-    "2-Academic/Uncategorized_Notes",
-    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Hub.md",
-    "2-Academic/Uncategorized_Notes/Database_System_Development_Lifecycle.md",
-    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Possible_Questions.md",
-    "2-Academic/Year_II/Semester_I/Computer_Programming/3_Control_Structure_Flow_Of_Control/Assignment_Vs_Equality_Operators.md",
     "Academic/Research/NLP",
     "Academic/Research",
     "Academic",
-    "inbox",
-    "5-Pdf Store/Chapter_3.pdf",
-    "5-Pdf Store/Chapter_3.pdf",
-    "5-Pdf Store/Chapter_3.pdf"
+    "inbox"
   ]
 }

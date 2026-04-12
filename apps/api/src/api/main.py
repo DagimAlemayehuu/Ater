@@ -53,6 +53,10 @@ from src.domains.obsidian.router import router as obsidian_router
 oka_watcher: Optional[OkaQueueManager] = None
 rag_watcher: Optional[RAGWatcherService] = None
 
+def _update_rag_status(state: Dict[str, Any]):
+    global rag_sync_status
+    rag_sync_status.update(state)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
@@ -510,7 +514,24 @@ async def oka_process_manual(
     payload: Dict[str, Any],
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
-    """Manually process a text block or file path through OKA."""
+    """Phase 1: Pure Detection. No AI usage."""
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault Path is required")
+    
+    service = OkaService(secrets)
+    file_path = payload.get("file_path")
+    
+    try:
+        return await service.detect_curriculum(file_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/oka/plan")
+async def oka_generate_plan(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Phase 2: AI Planning with locked curriculum."""
     if not secrets.ai_key or not secrets.vault_path:
         raise HTTPException(status_code=400, detail="AI Key and Vault Path are required")
     
@@ -520,38 +541,14 @@ async def oka_process_manual(
         raise HTTPException(status_code=500, detail=str(e))
     
     service = OkaService(secrets)
-    
-    text = payload.get("text")
     file_path = payload.get("file_path")
+    curriculum = payload.get("curriculum", {})
     target_hub_id = payload.get("target_hub_id")
-    
+
     try:
-        if file_path:
-            print(f"[Life OS Sidecar] Initializing OKA plan for file: {file_path} (Anchor: {target_hub_id})")
-            results = await service.process_file(file_path, str(si_path), target_hub_id=target_hub_id)
-        elif text:
-            print(f"[Life OS Sidecar] Initializing OKA plan for raw text (Anchor: {target_hub_id})")
-            # For raw text, create a temp file and process it
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as tmp:
-                tmp.write(text)
-                tmp_path = tmp.name
-            try:
-                results = await service.process_file(tmp_path, str(si_path), target_hub_id=target_hub_id)
-            finally:
-                os.remove(tmp_path)
-        else:
-            raise HTTPException(status_code=400, detail="Either 'text' or 'file_path' must be provided")
-            
-        return results
-    except ValueError as e:
-        print(f"[Life OS Sidecar] OKA Initialization failed: {e}")
-        raise HTTPException(status_code=500, detail=f"OKA Initialization failed: {str(e)}")
+        return await service.generate_plan(file_path, str(si_path), curriculum, target_hub_id=target_hub_id)
     except Exception as e:
-        print(f"[Life OS Sidecar] OKA Initialization failed: {e}")
-        error_details = traceback.format_exc()
-        print(error_details)
-        raise HTTPException(status_code=500, detail=f"OKA Initialization failed: {str(e)}\n\nTraceback:\n{error_details}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/oka/confirm")
 async def oka_confirm_plan(
@@ -919,10 +916,6 @@ async def update_notion_page_content(
 # --- RAG Endpoints ---
 
 rag_sync_status = {"status": "idle", "progress": 0, "total": 0, "message": ""}
-
-def _update_rag_status(state: Dict[str, Any]):
-    global rag_sync_status
-    rag_sync_status.update(state)
 
 @app.post("/api/rag/watcher/toggle")
 async def rag_watcher_toggle(secrets: AppSecrets = Depends(get_app_secrets)):
