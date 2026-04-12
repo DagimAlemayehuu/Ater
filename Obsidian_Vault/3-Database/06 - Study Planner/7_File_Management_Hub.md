@@ -1,4 +1,6 @@
 ---
+Semester: "[[Autumn 2025]]"
+Unit: 7
 Confidence: 0
 Course:
 - '[[Computer Programming]]'

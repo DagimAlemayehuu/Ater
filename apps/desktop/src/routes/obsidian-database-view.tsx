@@ -37,6 +37,8 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
     // View Customization State
     const [hiddenProperties, setHiddenProperties] = useState<string[]>([])
     const [sortConfig, setSortConfig] = useState<{ col: string, dir: 'asc' | 'desc' } | null>(null)
+    const [filters, setFilters] = useState<any[]>([])
+    const [groupBy, setGroupBy] = useState<string | null>(null)
 
     const fetchRows = async () => {
         setLoading(true)
@@ -103,6 +105,24 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
             r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             Object.values(r.properties).some(v => String(v).toLowerCase().includes(searchQuery.toLowerCase()))
         );
+
+        // Apply advanced filters
+        if (filters.length > 0) {
+            result = result.filter(row => {
+                return filters.every(f => {
+                    const val = f.col === 'title' ? row.title : row.properties[f.col];
+                    const target = String(val || "").toLowerCase();
+                    const filterVal = String(f.val || "").toLowerCase();
+
+                    switch (f.op) {
+                        case 'eq': return target === filterVal;
+                        case 'con': return target.includes(filterVal);
+                        case 'emp': return !val || (Array.isArray(val) && val.length === 0);
+                        default: return true;
+                    }
+                });
+            });
+        }
 
         if (sortConfig) {
             result = [...result].sort((a, b) => {
@@ -223,6 +243,10 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
                 }}
                 sortConfig={sortConfig}
                 onSortChange={setSortConfig}
+                filters={filters}
+                onFiltersChange={setFilters}
+                groupBy={groupBy}
+                onGroupByChange={setGroupBy}
                 onUpdateSchema={() => {
                     fetchRows();
                     onRefresh();
@@ -272,6 +296,7 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
                             onSelectRow={setSelectedRowId}
                             onDeleteRow={(id) => sidecarApi.deleteVaultRow(database.id, id).then(fetchRows)}
                             onNavigate={onNavigate}
+                            groupBy={groupBy}
                         />
                     )}
                     {activeTab === 'board' && (
@@ -281,6 +306,7 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
                             onUpdate={handleUpdate}
                             onSelectRow={setSelectedRowId}
                             onNavigate={onNavigate}
+                            groupBy={groupBy || undefined}
                         />
                     )}
                     {activeTab === 'gallery' && (

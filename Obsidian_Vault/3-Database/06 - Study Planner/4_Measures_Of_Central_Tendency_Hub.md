@@ -1,4 +1,6 @@
 ---
+Semester: "[[Autumn 2025]]"
+Unit: 4
 Confidence: 0
 Course:
 - '[[Statistics And Probability]]'

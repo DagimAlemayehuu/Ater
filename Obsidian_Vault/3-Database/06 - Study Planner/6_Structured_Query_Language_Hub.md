@@ -1,4 +1,6 @@
 ---
+Semester: "[[Autumn 2025]]"
+Unit: 6
 Confidence: 0
 Course:
 - '[[Database Systems]]'
