@@ -723,7 +723,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
         try {
             const res = await sidecarApi.okaProcess({ 
                 file_path: selectedInboxFile.path,
-                target_hub_id: manualHubId
+                target_hub_id: manualHubId ? String(manualHubId) : undefined
             })
             setActivePlan(res.plan_raw)
             setStructuredPlan(res.plan_structured)
@@ -775,12 +775,12 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                 session_id: sessionId, 
                 command,
                 curriculum_override: currentBatch === 0 ? {
-                    course: curriculum.course,
-                    unit: curriculum.unit,
-                    semester: curriculum.semester,
-                    hub_title: curriculum.hub_title
+                    course: String(curriculum.course || ""),
+                    unit: String(curriculum.unit || ""),
+                    semester: String(curriculum.semester || ""),
+                    hub_title: String(curriculum.hub_title || "")
                 } : undefined,
-                anchored_hub_id: anchoredHub?.id
+                anchored_hub_id: anchoredHub?.id ? String(anchoredHub.id) : undefined
             })
             const tempBatch = res.current_batch || (currentBatch + 1)
             setCurrentBatch(tempBatch)
