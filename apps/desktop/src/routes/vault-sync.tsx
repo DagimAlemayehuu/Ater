@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { Search, ExternalLink, RefreshCw, Trash2 } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
-import { SyncDashboard } from '@/components/obsidian/SyncDashboard'
-import ObsidianDatabaseView from './obsidian-database-view'
 import { ObsidianPagePanel } from '@/components/obsidian/ObsidianPagePanel'
+import ObsidianDatabaseView from './obsidian-database-view'
 
 interface VaultDatabase {
     id: string
@@ -174,18 +173,8 @@ export default function VaultSync() {
                 />
             )}
 
-            {/* Premium Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-border/10 pb-8 mb-8 pt-4 gap-6">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                        <div className="size-3 bg-primary rounded-full animate-pulse shadow-[0_0_15px_rgba(255,255,255,0.2)]" />
-                        <h2 className="text-4xl font-black tracking-tighter uppercase leading-none">The Vault</h2>
-                    </div>
-                    <p className="text-muted-foreground/40 text-[10px] font-black uppercase tracking-[0.4em] pl-6">
-                        Local Headless Engine • {databases.length} Systems Active
-                    </p>
-                </div>
-                
+            {/* Header with Search & Add Button */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between py-6 mb-4 gap-6">
                 <div className="flex items-center gap-3">
                     <div className="relative group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3 text-muted-foreground/20" />
@@ -197,6 +186,9 @@ export default function VaultSync() {
                             className="pl-9 h-10 text-[10px] w-64 bg-secondary/10 border border-transparent rounded-full focus:outline-none focus:border-primary/20 focus:bg-secondary/20 transition-all font-black uppercase tracking-widest placeholder:opacity-20"
                         />
                     </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
                     <button 
                         onClick={fetchDatabases} 
                         className={cn(
@@ -215,15 +207,9 @@ export default function VaultSync() {
                 </div>
             </div>
 
-            {/* Sync & Health Controls */}
-            <SyncDashboard />
-
-            {/* Creation UI */}
+            {/* Creation UI Bar */}
             {isCreating && (
                 <div className="p-6 border border-primary/20 rounded-2xl bg-primary/5 mb-10 animate-in slide-in-from-top-4 duration-500 overflow-hidden relative">
-                    <div className="absolute top-0 right-0 p-8 opacity-5">
-                        <ExternalLink size={120} />
-                    </div>
                     <div className="relative z-10">
                         <h3 className="text-[11px] font-black uppercase tracking-[0.3em] mb-4 text-primary">Initialize New Database</h3>
                         <div className="flex flex-col sm:flex-row gap-3">

@@ -62,104 +62,64 @@ export function SyncDashboard() {
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {/* Local RAG Engine Card */}
-            <div className="p-5 border border-border/20 rounded-2xl bg-secondary/5 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Database size={16} className="text-primary" />
-                        <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Local RAG Engine</h3>
-                    </div>
-                    <div className={cn("px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest", 
-                        ragStatus.status === 'indexing' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'
-                    )}>
-                        {ragStatus.status}
-                    </div>
+        <div className="flex flex-col gap-12 p-2">
+            {/* Local RAG Engine Section */}
+            <div className="space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Local RAG Engine</h3>
+                <div className="flex flex-col gap-1">
+                    <span className="text-3xl font-black uppercase leading-none">{ragStatus.status}</span>
+                    <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">{ragStatus.message || 'Ready'}</span>
+                    <span className="text-xl font-black opacity-10">{getProgressPercent(ragStatus)}%</span>
                 </div>
-                
-                <div className="space-y-2">
-                    <div className="flex justify-between text-[10px] font-black opacity-40 uppercase">
-                        <span>{ragStatus.message || 'Ready'}</span>
-                        <span>{getProgressPercent(ragStatus)}%</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-secondary/20 rounded-full overflow-hidden">
-                        <div 
-                            className="h-full bg-primary transition-all duration-500" 
-                            style={{ width: `${getProgressPercent(ragStatus)}%` }} 
-                        />
-                    </div>
-                </div>
-                
                 <button 
                     onClick={handleRagSync}
                     disabled={ragStatus.status === 'indexing'}
-                    className="mt-auto flex items-center justify-center gap-2 w-full py-2 bg-secondary/10 hover:bg-secondary/20 text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50"
+                    className="text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 bg-secondary/20 hover:bg-secondary/30 rounded-lg transition-all disabled:opacity-30"
                 >
-                    <RefreshCw size={12} className={cn(ragStatus.status === 'indexing' && "animate-spin")} />
                     {ragStatus.status === 'indexing' ? 'Indexing...' : 'Re-index Vault'}
                 </button>
             </div>
 
-            {/* Notion Mirror Card */}
-            <div className="p-5 border border-border/20 rounded-2xl bg-secondary/5 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <CloudCog size={16} className="text-blue-500" />
-                        <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Notion Mirror</h3>
-                    </div>
-                    <div className={cn("px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest", 
-                        mirrorStatus.status === 'syncing' ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'
-                    )}>
-                        {mirrorStatus.status}
-                    </div>
+            {/* Notion Mirror Section */}
+            <div className="space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Notion Mirror</h3>
+                <div className="flex flex-col gap-1">
+                    <span className="text-3xl font-black uppercase leading-none">{mirrorStatus.status}</span>
+                    <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">{mirrorStatus.message || 'Ready'}</span>
+                    <span className="text-xl font-black opacity-10">{getProgressPercent(mirrorStatus)}%</span>
                 </div>
-                
-                <div className="space-y-2">
-                    <div className="flex justify-between text-[10px] font-black opacity-40 uppercase">
-                        <span>{mirrorStatus.message || 'Ready'}</span>
-                        <span>{getProgressPercent(mirrorStatus)}%</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-secondary/20 rounded-full overflow-hidden">
-                        <div 
-                            className="h-full bg-blue-500 transition-all duration-500" 
-                            style={{ width: `${getProgressPercent(mirrorStatus)}%` }} 
-                        />
-                    </div>
-                </div>
-                
                 <button 
                     onClick={handleNotionSync}
                     disabled={mirrorStatus.status === 'syncing'}
-                    className="mt-auto flex items-center justify-center gap-2 w-full py-2 bg-secondary/10 hover:bg-secondary/20 text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50"
+                    className="text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 bg-secondary/20 hover:bg-secondary/30 rounded-lg transition-all disabled:opacity-30"
                 >
-                    <RefreshCw size={12} className={cn(mirrorStatus.status === 'syncing' && "animate-spin")} />
                     {mirrorStatus.status === 'syncing' ? 'Syncing...' : 'Deep Sync'}
                 </button>
             </div>
 
-            {/* Health & Diagnostics Card */}
-            <div className="p-5 border border-border/20 rounded-2xl bg-secondary/5 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <ShieldCheck size={16} className="text-emerald-500" />
-                        <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Diagnostics</h3>
-                    </div>
-                </div>
+            {/* Diagnostics Section */}
+            <div className="pt-8 border-t border-border/10 space-y-8">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Diagnostics</h3>
                 
-                <div className="flex flex-col gap-2 flex-1 justify-center">
-                    <button 
-                        onClick={handleWatcherToggle}
-                        className={cn(
-                            "flex items-center justify-between px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-                            watcherActive ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" : "bg-secondary/10 text-muted-foreground border border-transparent"
-                        )}
-                    >
-                        <span className="flex items-center gap-2"><Power size={12} /> Watcher Daemon</span>
-                        <span>{watcherActive ? 'ACTIVE' : 'OFF'}</span>
-                    </button>
-                    <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-secondary/10 text-muted-foreground text-[10px] font-black uppercase tracking-widest border border-transparent">
-                         <span className="flex items-center gap-2"><Search size={12} /> Permissions</span>
-                         <span className="text-emerald-500">OK</span>
+                <div className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Watcher Daemon</span>
+                        <div className="flex items-center gap-4">
+                            <span className={cn("text-xl font-black uppercase", watcherActive ? "text-emerald-500" : "text-foreground/20")}>
+                                {watcherActive ? 'Active' : 'Off'}
+                            </span>
+                            <button 
+                                onClick={handleWatcherToggle}
+                                className="p-1.5 rounded-md bg-secondary/10 hover:bg-secondary/20 transition-all"
+                            >
+                                <Power size={12} className={watcherActive ? "text-emerald-500" : "text-muted-foreground/40"} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Permissions</span>
+                        <span className="text-xl font-black uppercase text-emerald-500">OK</span>
                     </div>
                 </div>
             </div>
