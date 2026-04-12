@@ -39,11 +39,6 @@ export const sidebarData: SidebarData = {
       title: 'Intelligence',
       items: [
         {
-          title: 'Orchestrator',
-          url: '/chat',
-          icon: Zap,
-        },
-        {
           title: 'Agents',
           url: '/agents',
           icon: Users,

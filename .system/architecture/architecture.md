@@ -14,26 +14,35 @@ You must meticulously define the Schema, API Contracts, and System Map.
 *   `apps/desktop`: Tauri v2 (Rust) Desktop Shell + React/Vite Frontend (TypeScript, Tailwind, shadcn/ui)
 *   `apps/api`: Python FastAPI Backend Sidecar (compiled via PyInstaller, managed via uv)
 *   `apps/e2e-tests`: Playwright E2E Tests (TypeScript)
-*   `packages/schemas`: Shared Types/Zod/OpenAPI specs
-*   `packages/config-eslint`: Shared ESLint config
-*   `packages/config-typescript`: Shared TS config
 
-## 2. API-First Contracts
+### Core Reasoning Engine (The Workforce)
+The system has been consolidated from multiple specialists into a **Dual-Agent Core**:
+1.  **Orchestrator**: The master planning and executive interface. Manages high-level brainstorming, history, and oversees all system activities. Integrated as the primary interactive dashboard within the Agent Registry.
+2.  **OKA (Obsidian Knowledge Architect)**: The autonomous data ingestion engine. Transforms raw inputs into structured pedagogical knowledge assets in Obsidian.
+
+## 2. UI/UX Strategy
+> The interface is designed for minimal friction and professional aesthetics.
+
+*   **Streamlined Sidebar**: Focuses on core hubs: "Knowledge Base" (Obsidian Vault Access) and "Intelligence" (Agent Registry).
+*   **Integrated Agent Registry**: Centralized control for all autonomous units. The Orchestrator view is embedded directly as the "Inspect" dashboard for the Orchestrator agent, providing full chat capabilities.
+*   **Shadcn UI & Tailwind**: Consistent, professional styling across all views.
+
+## 3. API-First Contracts
 > The React Frontend (`apps/desktop`) communicates with the Python Backend (`apps/api`) via HTTP (localhost) and the Tauri Shell via IPC.
 
-### Example Flow (Obsidian Knowledge Architect - OKA)
-- **Frontend (React)**: Reads local Tauri store (config, API keys). Invokes Python sidecar commands via HTTP.
-- **Python API (FastAPI)**: Handles heavy processing, RAG logic via local Obsidian `.md` files, and Notion/Gemini API interactions.
-- **Tauri Desktop**: Manages filesystem permissions, launches the Python sidecar process, bridges IPC.
+### Example Flow (Orchestrator Execution)
+- **Frontend (React)**: Captures user input in the `OrchestratorPage`. Invokes `sidecarApi.brainstorm`.
+- **Python API (FastAPI)**: Processes the request using the Reasoning Engine, updates the local status cache, and returns the response.
+- **Polling**: Frontend components poll `/api/ai/orchestrator/status` to maintain real-time mission control data (plans, logs, active stages).
 
-## 3. Data Storage Blueprint
+## 4. Data Storage Blueprint
 > Life OS relies on a combination of local and cloud storage, bypassing a traditional relational database.
 
 *   **Local State**: Tauri-plugin-store (API Keys, Vault Path, User Profiles).
 *   **Knowledge Base**: Local Obsidian `.md` files (Unstructured data for RAG).
 *   **Cloud Database**: Notion API (Structured data: Tasks, Projects, Goals).
 
-## 4. Key Decisions & Trade-offs
-1.  **Local-First & Offline**: Built to operate entirely without internet connectivity for core functions to maximize speed, privacy, and reliability. Network access is strictly limited to explicitly invoked external APIs (Notion, Gemini).
-2.  **Polyglot Approach**: Tauri/React/Rust provide a highly performant native desktop shell, while Python FastAPI provides access to the mature AI/Data Science ecosystem necessary for the reasoning engine.
-3.  **No Hardcoded Secrets**: Strict enforcement of security; all keys exist entirely within the Tauri secure store and are passed strictly per-request in memory to the backend.
+## 5. Key Decisions & Trade-offs
+1.  **Workforce Consolidation**: Reducing the agent count to two primary specialists (Orchestrator and OKA) minimizes token overhead and architectural complexity while maintaining full functional coverage.
+2.  **Local-First & Offline**: Built to operate entirely without internet connectivity for core functions to maximize speed, privacy, and reliability.
+3.  **No Hardcoded Secrets**: All keys exist entirely within the Tauri secure store and are passed strictly per-request in memory to the backend.

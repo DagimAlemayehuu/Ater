@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { 
     Send, Bot, User, Trash2,
     Zap, Activity, History, 
-    Layout, Search, Trash
+    Layout, Search, Trash,
+    ArrowLeft
 } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
@@ -32,7 +33,11 @@ interface HistoryItem {
     timestamp: string
 }
 
-export default function OrchestratorPage() {
+export interface OrchestratorPageProps {
+    onBack?: () => void
+}
+
+export function OrchestratorPage({ onBack }: OrchestratorPageProps = {}) {
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState('')
     const [loading, setLoading] = useState(false)
@@ -164,6 +169,11 @@ export default function OrchestratorPage() {
                     {/* Header */}
                     <div className="h-14 border-b border-border/40 flex items-center justify-between px-6 bg-background shrink-0">
                         <div className="flex items-center gap-2">
+                            {onBack && (
+                                <button onClick={onBack} className="p-2 hover:bg-muted rounded-md transition-colors mr-1">
+                                    <ArrowLeft size={16} />
+                                </button>
+                            )}
                             <Zap className="w-4 h-4 text-primary" />
                             <span className="text-sm font-semibold tracking-tight">Orchestrator</span>
                         </div>

@@ -18,6 +18,7 @@ import remarkGfm from 'remark-gfm'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { OrchestratorPage } from './chat'
 
 /* ─── Orchestrator Dashboard (The Planner) ─── */
 function OrchestratorDashboard({ onBack }: { onBack: () => void }) {
@@ -1393,76 +1394,6 @@ export default function Agents() {
             description: 'Autonomous ingestion engine. Automates the architectural mapping of documents into atomic knowledge clusters.',
             action: () => setActiveAgent('oka'),
             actionText: 'Architect'
-        },
-        {
-            id: 'librarian',
-            title: 'Librarian',
-            icon: Database,
-            color: 'text-foreground',
-            bg: 'bg-muted/30',
-            description: 'Registry and metadata manager. Synchronizes with Notion and maintains structural relational integrity.',
-            action: () => setActiveAgent('librarian'),
-            actionText: 'Registry'
-        },
-        {
-            id: 'scribe',
-            title: 'Scribe',
-            icon: FileText,
-            color: 'text-foreground',
-            bg: 'bg-muted/30',
-            description: 'The master of notation. Navigates your vault, creates atomic notes, and manages structural organization.',
-            action: () => setActiveAgent('scribe'),
-            actionText: 'Vault'
-        },
-        {
-            id: 'chronos',
-            title: 'Chronos',
-            icon: Calendar,
-            color: 'text-foreground',
-            bg: 'bg-muted/30',
-            description: 'Unified time management. Synchronizes calendars and databases into a single life-wide timeline.',
-            action: () => setActiveAgent('chronos'),
-            actionText: 'Timeline'
-        },
-        {
-            id: 'scholar',
-            title: 'Scholar',
-            icon: GraduationCap,
-            color: 'text-foreground',
-            bg: 'bg-muted/30',
-            description: 'Research engine. Summarizes complex PDFs and academic papers into your central research bank.',
-            action: () => setActiveAgent('scholar'),
-            actionText: 'Research'
-        },
-        {
-            id: 'wealth',
-            title: 'Wealth',
-            icon: Coins,
-            color: 'text-foreground',
-            bg: 'bg-muted/30',
-            description: 'Financial auditor. Tracks income, expenses, and budgets to ensure long-term economic alignment.',
-            action: () => setActiveAgent('wealth'),
-            actionText: 'Finance'
-        },
-        {
-            id: 'gym',
-            title: 'Gym Coach',
-            icon: Dumbbell,
-            color: 'text-foreground',
-            bg: 'bg-muted/30',
-            description: 'Performance optimization. Monitors workout logs and physical metrics from fitness trackers.',
-            action: () => setActiveAgent('gym'),
-            actionText: 'Training'
-        },
-        {
-            id: 'devops',
-            title: 'DevOps',
-            icon: Lock,
-            color: 'text-foreground',
-            bg: 'bg-muted/30',
-            description: 'System integrity and security. Monitors RAG health and protects the internal monorepo.',
-            action: () => setActiveAgent('devops'),
-            actionText: 'System'
         }
     ]
 
@@ -1478,23 +1409,9 @@ export default function Agents() {
     const renderDashboard = () => {
         switch (activeAgent) {
             case 'orchestrator':
-                return <OrchestratorDashboard onBack={() => setActiveAgent(null)} />
+                return <OrchestratorPage onBack={() => setActiveAgent(null)} />
             case 'oka':
                 return <OkaDashboard onBack={() => setActiveAgent(null)} />
-            case 'librarian':
-                return <LibrarianDashboard onBack={() => setActiveAgent(null)} />
-            case 'scribe':
-                return <ScribeDashboard onBack={() => setActiveAgent(null)} />
-            case 'chronos':
-                return <ChronosDashboard onBack={() => setActiveAgent(null)} />
-            case 'scholar':
-                return <ScholarDashboard onBack={() => setActiveAgent(null)} />
-            case 'wealth':
-                return <WealthDashboard onBack={() => setActiveAgent(null)} />
-            case 'gym':
-                return <GymDashboard onBack={() => setActiveAgent(null)} />
-            case 'devops':
-                return <DevOpsDashboard onBack={() => setActiveAgent(null)} />
             default:
                 return null
         }
