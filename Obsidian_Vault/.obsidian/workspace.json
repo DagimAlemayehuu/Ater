@@ -11,14 +11,10 @@
             "id": "137e731015dc278e",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "2-Academic/Uncategorized_Notes/Information_System.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "Information_System"
+              "title": "New tab"
             }
           }
         ]
@@ -180,20 +176,29 @@
       "bases:Create new base": false
     }
   },
-  "active": "137e731015dc278e",
+  "active": "810261958577cd9b",
   "lastOpenFiles": [
-    "1-Meta/2-AI Personas/Google AI Studio/Obsidian Knowledge Architect (OKA).md",
-    "2-Academic/Uncategorized_Notes/Entity_Relationship_Model.md",
-    "2-Academic/Uncategorized_Notes/Information_System.md",
-    "2-Academic/Uncategorized_Notes/Phases_Of_Database_Design.md",
-    "2-Academic/Uncategorized_Notes/Database_Development_Methodology.md",
+    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Possible_Questions.md",
+    "2-Academic/Uncategorized_Notes/Database_Development_Life_Cycle.md",
+    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Hub.md",
     "2-Academic/Uncategorized_Notes",
+    "inbox/task_status.md",
+    "Academic/Research/NLP",
+    "Academic/Research",
+    "Academic",
+    "inbox/greeting.md",
+    "inbox",
+    "2-Academic/Uncategorized_Notes/Database_System_Development.md",
+    "2-Academic/Uncategorized_Notes/Entity_Relationship_Modelling.md",
+    "2-Academic/Uncategorized_Notes/Database_Development_Methodology.md",
+    "1-Meta/2-AI Personas/Google AI Studio/Obsidian Knowledge Architect (OKA).md",
+    "2-Academic/Uncategorized_Notes/Information_System.md",
+    "2-Academic/Uncategorized_Notes/Entity_Relationship_Model.md",
+    "2-Academic/Uncategorized_Notes/Phases_Of_Database_Design.md",
     "2-Academic/Uncategorized_Notes/Database_Design_Chapter_3_Possible_Questions.md",
     "2-Academic/Uncategorized_Notes/Database_Design_Chapter_3_Hub.md",
     "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Relational_Model_Possible_Questions.md",
     "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Relational_Model_Hub.md",
-    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Possible_Questions.md",
-    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Hub.md",
     "2-Academic/Uncategorized_Notes/Database_System_Development_Lifecycle.md",
     "2-Academic/Uncategorized_Notes/Conceptual_Database_Design.md",
     "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Questions.md",
@@ -204,15 +209,6 @@
     "2-Academic/Uncategorized_Notes/Relational_Model_Conceptual_Database_Design_Possible_Questions.md",
     "2-Academic/Uncategorized_Notes/Database_Design_Methodology.md",
     "2-Academic/Uncategorized_Notes/Possible_Questions.md",
-    "2-Academic/Uncategorized_Notes/Overview_Of_Conceptual_Database_Design.md",
-    "2-Academic/Uncategorized_Notes/Entity_Relationship_Er_Modelling.md",
-    "5-Pdf Store/Chapter_3.pdf",
-    "3-Database/06 - Study Planner/3_Conceptual_Database_Design_Hub.md",
-    "2-Academic/Uncategorized_Notes/Database_Planning.md",
-    "2-Academic/Uncategorized_Notes/Database_Development_Methodology_Possible_Questions.md",
-    "5-Pdf Store/Chapter_3.pdf",
-    "5-Pdf Store/Chapter_3.pdf",
-    "5-Pdf Store/Chapter_3.pdf",
     "5-Pdf Store/Chapter_3.pdf",
     "5-Pdf Store/Chapter_3.pdf",
     "5-Pdf Store/Chapter_3.pdf",

@@ -12,7 +12,7 @@ import Settings from '@/routes/settings'
 import Strategist from '@/routes/strategist'
 import Profiles from '@/routes/profiles'
 import Goals from '@/routes/goals'
-import ChatPage from '@/routes/chat'
+import { OrchestratorPage } from '@/routes/chat'
 
 // Placeholder components
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -115,7 +115,7 @@ export default function App() {
                     <Route path="/vault-sync" element={<VaultSync />} />
                     <Route path="/agents" element={<Agents />} />
                     <Route path="/strategist" element={<Strategist />} />
-                    <Route path="/chat" element={<ChatPage />} />
+                    <Route path="/chat" element={<OrchestratorPage />} />
                     <Route path="/profiles" element={<Profiles />} />
                     <Route path="/goals" element={<Goals />} />
                     <Route path="/settings" element={<Settings />} />
