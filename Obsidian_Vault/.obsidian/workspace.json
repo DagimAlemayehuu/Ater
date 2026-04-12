@@ -11,10 +11,14 @@
             "id": "137e731015dc278e",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "2-Academic/Uncategorized_Notes/Phases_Of_Database_Design.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "New tab"
+              "title": "Phases_Of_Database_Design"
             }
           }
         ]
@@ -176,12 +180,25 @@
       "bases:Create new base": false
     }
   },
-  "active": "810261958577cd9b",
+  "active": "137e731015dc278e",
   "lastOpenFiles": [
-    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Possible_Questions.md",
-    "2-Academic/Uncategorized_Notes/Database_Development_Life_Cycle.md",
-    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Hub.md",
+    "2-Academic/Uncategorized_Notes/Database_Development_Methodology.md",
+    "2-Academic/Uncategorized_Notes/Phases_Of_Database_Design.md",
+    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Relational_Model_Possible_Questions.md",
+    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Relational_Model_Hub.md",
     "2-Academic/Uncategorized_Notes",
+    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Hub.md",
+    "2-Academic/Uncategorized_Notes/Database_System_Development_Lifecycle.md",
+    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Possible_Questions.md",
+    "2-Academic/Year_II/Semester_I/Computer_Programming/3_Control_Structure_Flow_Of_Control/Assignment_Vs_Equality_Operators.md",
+    "3-Database/06 - Study Planner/1_Counting_Principles_Hub.md",
+    "3-Database/06 - Study Planner/2_Concept_Of_Inclusion_Hub.md",
+    "3-Database/06 - Study Planner/1_Understanding_Disability_And_Vulnerability_Hub.md",
+    "3-Database/06 - Study Planner/3_Elements_Of_Graph_Theory_Hub.md",
+    "3-Database/06 - Study Planner/3_Classification_And_Presentation_Of_Statistical_Data_Hub.md",
+    "3-Database/06 - Study Planner/3_Conceptual_Database_Design_Hub.md",
+    "2-Academic/Year_II/Semester_I/Computer_Programming/1_An_Overview_Of_Programming/CS1220_1_An_Overview_Of_Programming_Possible_Questions.md",
+    "2-Academic/Uncategorized_Notes/Database_Development_Life_Cycle.md",
     "inbox/task_status.md",
     "Academic/Research/NLP",
     "Academic/Research",
@@ -190,25 +207,11 @@
     "inbox",
     "2-Academic/Uncategorized_Notes/Database_System_Development.md",
     "2-Academic/Uncategorized_Notes/Entity_Relationship_Modelling.md",
-    "2-Academic/Uncategorized_Notes/Database_Development_Methodology.md",
     "1-Meta/2-AI Personas/Google AI Studio/Obsidian Knowledge Architect (OKA).md",
     "2-Academic/Uncategorized_Notes/Information_System.md",
     "2-Academic/Uncategorized_Notes/Entity_Relationship_Model.md",
-    "2-Academic/Uncategorized_Notes/Phases_Of_Database_Design.md",
     "2-Academic/Uncategorized_Notes/Database_Design_Chapter_3_Possible_Questions.md",
     "2-Academic/Uncategorized_Notes/Database_Design_Chapter_3_Hub.md",
-    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Relational_Model_Possible_Questions.md",
-    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Relational_Model_Hub.md",
-    "2-Academic/Uncategorized_Notes/Database_System_Development_Lifecycle.md",
-    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design.md",
-    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Questions.md",
-    "2-Academic/Uncategorized_Notes/Information_System_And_Database.md",
-    "2-Academic/Uncategorized_Notes/Conceptual_Database_Design_Relational_Model_Questions.md",
-    "2-Academic/Uncategorized_Notes/Entity_Relationship_Er_Modeling.md",
-    "2-Academic/Uncategorized_Notes/Database_Development_Methodology_Ddlc.md",
-    "2-Academic/Uncategorized_Notes/Relational_Model_Conceptual_Database_Design_Possible_Questions.md",
-    "2-Academic/Uncategorized_Notes/Database_Design_Methodology.md",
-    "2-Academic/Uncategorized_Notes/Possible_Questions.md",
     "5-Pdf Store/Chapter_3.pdf",
     "5-Pdf Store/Chapter_3.pdf",
     "5-Pdf Store/Chapter_3.pdf",

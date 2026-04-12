@@ -494,6 +494,111 @@ function ScribeDashboard({ onBack }: { onBack: () => void }) {
     )
 }
 
+/* ─── Plan Card View Component ─── */
+function PlanCardView({ planRaw }: { planRaw: string }) {
+    const extract = (tag: string) => {
+        const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 's')
+        const match = planRaw.match(regex)
+        return match ? match[1].trim() : null
+    }
+
+    const hubContent = extract('hub_note')
+    const pqContent = extract('pq_note')
+    const atomicContent = extract('atomic_notes')
+
+    const parseAtomicTree = (text: string) => {
+        const lines = text.split('\n').filter(l => l.trim().startsWith('-'))
+        return lines.map(line => {
+            const indentMatch = line.match(/^(\s*)-/)
+            const level = indentMatch ? Math.floor(indentMatch[1].length / 2) : 0
+            const content = line.replace(/^\s*-/, '').trim()
+            return { level, content }
+        })
+    }
+
+    const atomicTree = atomicContent ? parseAtomicTree(atomicContent) : []
+
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex flex-col gap-4">
+                {hubContent && (
+                    <div className="rounded-xl border bg-card p-5 shadow-sm hover:shadow-md transition-all group border-primary/20 bg-primary/5">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                                <Brain size={18} />
+                            </div>
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-primary">Master Unit Hub</h4>
+                        </div>
+                        <div className="prose prose-sm dark:prose-invert max-w-none font-medium">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{hubContent}</ReactMarkdown>
+                        </div>
+                    </div>
+                )}
+                {pqContent && (
+                    <div className="rounded-xl border bg-card p-5 shadow-sm hover:shadow-md transition-all group border-emerald-500/20 bg-emerald-500/5">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
+                                <ShieldCheck size={18} />
+                            </div>
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-emerald-500">Mastery Assessment</h4>
+                        </div>
+                        <div className="prose prose-sm dark:prose-invert max-w-none font-medium text-emerald-900 dark:text-emerald-100">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{pqContent}</ReactMarkdown>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 px-1">
+                    <Layers size={16} className="text-muted-foreground" />
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Architectural Fragments</h4>
+                </div>
+                
+                <div className="flex flex-col gap-3">
+                    {atomicTree.map((node, i) => (
+                        <div 
+                            key={i} 
+                            style={{ marginLeft: `${node.level * 24}px` }}
+                            className={cn(
+                                "p-4 rounded-xl border bg-card shadow-sm hover:border-primary/40 hover:shadow-md transition-all relative overflow-hidden group min-w-0 w-full",
+                                node.level > 0 ? "border-dashed opacity-90 scale-[0.99]" : "border-solid border-border/60"
+                            )}
+                        >
+                            {node.level > 0 && (
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/10 group-hover:bg-primary/30 transition-colors" />
+                            )}
+                            <div className="flex items-center justify-between gap-4 min-w-0">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className={cn(
+                                        "p-1.5 rounded-md shrink-0",
+                                        node.level === 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                                    )}>
+                                        <FileText size={12} />
+                                    </div>
+                                    <div className="font-bold text-[11px] tracking-tight break-words overflow-hidden max-w-full">
+                                        <ReactMarkdown 
+                                            remarkPlugins={[remarkGfm]}
+                                            components={{
+                                                p: ({node, ...props}) => <span {...props} />
+                                            }}
+                                        >
+                                            {node.content}
+                                        </ReactMarkdown>
+                                    </div>
+                                </div>
+                                <div className="text-[9px] font-bold text-muted-foreground/40 bg-muted/50 px-1.5 py-0.5 rounded uppercase shrink-0">
+                                    Note {i + 1}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    )
+}
+
 /* ─── Obsidian Knowledge Architect (OKA) Dashboard ─── */
 function OkaDashboard({ onBack }: { onBack: () => void }) {
     const { config, saveConfig } = useConfig()
@@ -804,11 +909,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                                     <p className="text-[10px] font-bold text-primary/80 uppercase tracking-wider">Architectural Plan</p>
                                                 </div>
 
-                                                <div className="p-6 rounded-xl border bg-card/50 shadow-inner">
-                                                    <div className="prose prose-sm dark:prose-invert max-w-none opacity-80 hover:opacity-100 transition-opacity">
-                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{activePlan}</ReactMarkdown>
-                                                    </div>
-                                                </div>
+                                                <PlanCardView planRaw={activePlan} />
                                             </div>
                                         </div>
                                     ) : (

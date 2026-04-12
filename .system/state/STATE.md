@@ -17,6 +17,10 @@
 *   [x] **Atomic Notion UI Property Renderers (Interactive & Optimistic)**
 *   [x] **OKA v10.5 (Absolute Sovereign Protocol): High-Fidelity Autonomous Logic**
 *   [x] **Full Orchestrator Integration (Chat & Brainstorming inside Agent Registry)**
+*   [x] **Absolute Atomicity (1-Note-per-Batch Deployment Safety)**
+*   [x] **Thin Context Protocol (Memory Isolation for Weak Model Stability)**
+*   [x] **Adaptive High-Fidelity (Auto-Repair Parser + Density Fallbacks)**
+*   [x] **Interactive Card-View UI for Knowledge Plans**
 *   [ ] Global E2E Tests Pass
 *   [ ] Production Deployment
 

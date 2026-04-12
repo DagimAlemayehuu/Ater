@@ -361,45 +361,43 @@ class OkaService:
         session = await self._get_or_restore_session(session_id)
         if not session:
             raise ValueError(f"No active session found for {session_id}. Please restart the file process.")
-        messages = session["messages"]
+        
+        # THIN CONTEXT PROTOCOL:
+        # We only send the system instruction, the initial plan, and the current command.
+        # We do NOT send previous generated notes to keep the context window small for weak models.
+        initial_messages = session["messages"][:2] # Usually SI + First User Prompt
+        plan_response = [m for m in session["messages"] if isinstance(m, AIMessage) and "# Knowledge Asset Plan" in m.content][:1]
+        
         current_batch = session.get("current_batch", 0)
         total_batches = session.get("total_batches", 1)
-
         batch_number = current_batch + 1
 
-        print(
-            f"[OKA Service] Executing batch {batch_number}/{total_batches}: {command}"
+        batch_notes = []
+        if "batches" in session["metadata"]:
+            for b in session["metadata"]["batches"]:
+                if b.get("id") == batch_number:
+                    batch_notes = b.get("notes", [])
+                    break
+        
+        notes_context = f"EXACT NOTE TO GENERATE: {', '.join(['[['+n+']]' for n in batch_notes])}."
+
+        reinforced_command = (
+            f"STATE 4: [ATOMIC_NOTE] EXECUTION\n"
+            f"Batch {batch_number} of {total_batches}\n"
+            f"{notes_context}\n\n"
+            "STRICT SYNTAX GUARD:\n"
+            "1. Use ONLY --- START_CODE:lang --- markers. Triple backticks (```) are FORBIDDEN.\n"
+            "2. Start immediately with --- START_NOTE ---. NO PREAMBLE.\n"
+            "3. Provide MAXIMUM technical detail. Do not summarize.\n"
+            "4. Follow the Mastery Mode from the Plan exactly."
         )
+        
+        # Build the pruned context
+        pruned_messages = initial_messages + plan_response + [HumanMessage(content=reinforced_command)]
 
         try:
-            # OKA v7.0 Strict Batch Reinforcement
-            batch_notes = []
-            if "batches" in session["metadata"]:
-                for b in session["metadata"]["batches"]:
-                    if b.get("id") == batch_number:
-                        batch_notes = b.get("notes", [])
-                        break
-            
-            notes_context = ""
-            if batch_notes:
-                notes_context = f"Specifically, generate EXACTLY these notes: {', '.join(['[['+n+']]' for n in batch_notes])}."
-
-            reinforced_command = (
-                f"{command}\n\n"
-                "STRICT OKA v7.0 BATCH PROTOCOL:\n"
-                f"1. You are generating Batch {batch_number} of {total_batches}.\n"
-                f"2. {notes_context}\n"
-                "3. Use EXACT structural templates from OKA v7.0 (Exhaustive & Massive Detail).\n"
-                "4. Wrap output EXCLUSIVELY in --- START_BATCH --- and --- END_BATCH ---.\n"
-                "5. EVERY note MUST be delimited with --- START_NOTE --- and --- END_NOTE ---.\n"
-                "6. EVERY YAML value must be wrapped in double quotes.\n"
-                "7. NO standard backticks (```). USE --- START_CODE:{lang} --- delimiters.\n"
-                "8. After generating, wait for next batch confirmation."
-            )
-            messages.append(HumanMessage(content=reinforced_command))
-
             res = await self._invoke_with_retry(
-                messages,
+                pruned_messages, # Use pruned context
                 session_id,
                 phase=f"Generating Batch {batch_number}/{total_batches}",
             )
@@ -424,7 +422,7 @@ class OkaService:
                 
             print(f"[OKA Service] Batch {batch_number} deployed: {len(deployment_results)} notes.")
 
-            messages.append(res)
+            session["messages"].append(res)
             session["current_batch"] = batch_number
             has_more = batch_number < total_batches
             
@@ -470,23 +468,33 @@ class OkaService:
         }
 
         # Metadata extraction (Strict v5.4 Plan Blueprint Parsing)
-        for pattern in [
-            r"Course:\s*\**([^\n\*]*)",
-            r"# I\..*?Course:\s*\**([^\n\*]*)",
-        ]:
-            m = re.search(pattern, plan_text, re.I)
-            if m:
-                metadata["course"] = m.group(1).strip()
-                break
+        # ── Header Extraction (Course & Unit) ──────────────────────
+        # Pattern: # Knowledge Asset Plan: Course - Unit
+        header_match = re.search(r"#\s*Knowledge\s+Asset\s+Plan:\s*([^- \n]+(?:[ -][^- \n]+)*)\s*-\s*([^\n]+)", plan_text, re.I)
+        if header_match:
+            metadata["course"] = header_match.group(1).strip().replace("_", " ")
+            metadata["unit"] = header_match.group(2).strip().replace("_", " ")
 
-        for pattern in [
-            r"Unit:\s*\**([^\n\*]*)",
-            r"# I\..*?Unit:\s*\**([^\n\*]*)",
-        ]:
-            m = re.search(pattern, plan_text, re.I)
-            if m:
-                metadata["unit"] = m.group(1).strip()
-                break
+        # Fallbacks
+        if not metadata.get("course"):
+            for pattern in [
+                r"Course:\s*\**([^\n\*]*)",
+                r"# I\..*?Course:\s*\**([^\n\*]*)",
+            ]:
+                m = re.search(pattern, plan_text, re.I)
+                if m:
+                    metadata["course"] = m.group(1).strip().replace("_", " ")
+                    break
+
+        if not metadata.get("unit"):
+            for pattern in [
+                r"Unit:\s*\**([^\n\*]*)",
+                r"# I\..*?Unit:\s*\**([^\n\*]*)",
+            ]:
+                m = re.search(pattern, plan_text, re.I)
+                if m:
+                    metadata["unit"] = m.group(1).strip().replace("_", " ")
+                    break
 
         for pattern in [
             r"Year:\s*(.*)",
@@ -508,82 +516,64 @@ class OkaService:
                 metadata["semester"] = m.group(1).strip()
                 break
 
-        # Extract notes (anything in wiki-links [[...]])
-        notes_match = re.findall(r"\[\[(.*?)\]\]", plan_text)
-        metadata["notes"] = list(dict.fromkeys(notes_match))
+        # ── Tag-Based Extraction ───────────────────────────────────
+        def extract_tag(tag, text):
+            match = re.search(f"<{tag}>(.*?)</{tag}>", text, re.DOTALL | re.I)
+            return match.group(1).strip() if match else ""
 
-        # Isolate the Batching Strategy section
-        strategy_match = re.search(r"#\s*IV\.\s*BATCHING STRATEGY(.*?)(?=#\s*V\.|$)", plan_text, re.DOTALL | re.I)
-        search_text = strategy_match.group(1) if strategy_match else plan_text
+        hub_raw = extract_tag("hub_note", plan_text)
+        pq_raw = extract_tag("pq_note", plan_text)
+        atomic_raw = extract_tag("atomic_notes", plan_text)
 
-        # Robust batch parsing (Supports table rows: | Batch 1 | [[Note1]], [[Note2]] |)
-        batch_rows = re.findall(r"\|\s*Batch\s+(\d+)\s*\|\s*(.*?)\|", search_text, re.I)
-        if batch_rows:
-            assigned_notes = set()
-            for b_id, b_content in batch_rows:
-                b_notes = re.findall(r"\[\[(.*?)\]\]", b_content)
-                if b_notes:
-                    metadata["batches"].append({
-                        "id": int(b_id),
-                        "notes": list(dict.fromkeys(b_notes))
-                    })
-                    assigned_notes.update(b_notes)
-        else:
-            # Fallback to standard header parsing if table fails
-            batch_headers = list(re.finditer(r"(?:\n|^)(?:[#\-\*\s\d\.\|]*)Batch\s+(\d+)\s*(?::|\s|\*|-|\||$)", search_text, re.I))
-            assigned_notes = set()
-            for i, match in enumerate(batch_headers):
-                b_id = match.group(1)
-                start_pos = match.end()
-                end_pos = batch_headers[i+1].start() if i + 1 < len(batch_headers) else len(search_text)
-                b_notes = re.findall(r"\[\[(.*?)\]\]", search_text[start_pos:end_pos])
-                if b_notes:
-                    metadata["batches"].append({
-                        "id": int(b_id), 
-                        "notes": list(dict.fromkeys(b_notes))
-                    })
-                    assigned_notes.update(b_notes)
+        # Extract wikilinks from each section
+        hub_notes = list(dict.fromkeys(re.findall(r"\[\[(.*?)\]\]", hub_raw)))
+        pq_notes = list(dict.fromkeys(re.findall(r"\[\[(.*?)\]\]", pq_raw)))
+        atomic_notes = list(dict.fromkeys(re.findall(r"\[\[(.*?)\]\]", atomic_raw)))
 
-        # SNIPER MODE: Force 1-note-per-batch for maximum depth (Batch 2+)
+        # Clean list of all unique notes to be generated
+        all_planned_notes = list(dict.fromkeys(hub_notes + pq_notes + atomic_notes))
+        metadata["notes"] = all_planned_notes
+
+        # ── Batching Logic (Absolute Atomicity) ────────────────────
         sniped_batches = []
         next_id = 1
-        
-        # 1. Process Manual Batches
-        for b in metadata["batches"]:
-            if b["id"] == 1:
-                # Keep Batch 1 as is (Hub + Questions)
-                b["id"] = next_id
-                sniped_batches.append(b)
-                next_id += 1
-            else:
-                # Split Batch 2+ into single-note batches
-                for note in b["notes"]:
-                    sniped_batches.append({
-                        "id": next_id,
-                        "notes": [note]
-                    })
-                    next_id += 1
-        
-        # 2. Add Missing Notes (Parity Guard)
-        missing_notes = [n for n in metadata["notes"] if n not in assigned_notes]
-        for note in missing_notes:
+        processed_notes = set()
+
+        # 1. Individual Hub Batches
+        for note in hub_notes:
+            if note in processed_notes: continue
             sniped_batches.append({
                 "id": next_id,
-                "notes": [note]
+                "notes": [note],
+                "type": "hub"
             })
             next_id += 1
+            processed_notes.add(note)
+
+        # 2. Individual PQ Batches
+        for note in pq_notes:
+            if note in processed_notes: continue
+            sniped_batches.append({
+                "id": next_id,
+                "notes": [note],
+                "type": "pq"
+            })
+            next_id += 1
+            processed_notes.add(note)
+
+        # 3. Individual Atomic Note Batches
+        for note in atomic_notes:
+            if note in processed_notes: continue
+            sniped_batches.append({
+                "id": next_id,
+                "notes": [note],
+                "type": "atomic"
+            })
+            next_id += 1
+            processed_notes.add(note)
             
         metadata["batches"] = sniped_batches
-        metadata["batches"].sort(key=lambda x: x["id"])
-
-        # Extract Summary (For progress tracking)
-        try:
-            summary_match = re.search(r"#\s*V\.\s*SUMMARY\s*[\r\n]+(.*?)(?=#|---|$)", plan_text, re.DOTALL | re.I)
-            if summary_match:
-                notes_count_match = re.search(r"Total Atomic Notes:\s*(\d+)", summary_match.group(1), re.I)
-                if notes_count_match:
-                    metadata["total_notes"] = int(notes_count_match.group(1))
-        except: pass
+        metadata["total_notes"] = len(all_planned_notes)
 
         # Predict deployment path
         try:

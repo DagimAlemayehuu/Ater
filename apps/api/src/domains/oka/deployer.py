@@ -107,16 +107,10 @@ class OkaDeployer:
             yaml_content = yaml.dump(meta, sort_keys=False, allow_unicode=True).rstrip('\n')
             full_content = f"---\n{yaml_content}\n---\n\n{body.strip()}\n"
 
-            # Execute write/move
+            # Execute write (No Deletion Policy)
             status = "created"
-            if existing and orig_path:
-                if target_path != orig_path:
-                    status = "moved"
-                    if orig_path.exists():
-                        orig_path.unlink()
-                        self.vm.clean_empty_dirs(orig_path.parent)
-                else:
-                    status = "updated"
+            if existing:
+                status = "updated"
             
             self.vm.write_note(target_path, full_content)
             print(f"[OKA Deployer] {status.upper()}: {target_path}")

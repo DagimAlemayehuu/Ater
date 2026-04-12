@@ -46,3 +46,6 @@ The system has been consolidated from multiple specialists into a **Dual-Agent C
 1.  **Workforce Consolidation**: Reducing the agent count to two primary specialists (Orchestrator and OKA) minimizes token overhead and architectural complexity while maintaining full functional coverage.
 2.  **Local-First & Offline**: Built to operate entirely without internet connectivity for core functions to maximize speed, privacy, and reliability.
 3.  **No Hardcoded Secrets**: All keys exist entirely within the Tauri secure store and are passed strictly per-request in memory to the backend.
+4.  **Thin Context Protocol**: To support weak models with small context windows, the backend isolates every note generation turn. It only sends the System Instruction, the Master Plan, and the current task, preventing the history from saturating the model's memory.
+5.  **Absolute Atomicity**: The ingestion engine enforces a strict 1-note-per-batch deployment. This ensures maximum technical detail per note and prevents truncation errors common in high-volume AI generations.
+6.  **Adaptive High-Fidelity**: The system uses an "Auto-Repair" parsing logic to intelligently fix formatting errors (like triple backticks) made by weaker models, ensuring deployment success across all model tiers.

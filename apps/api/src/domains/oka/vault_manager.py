@@ -43,9 +43,19 @@ class VaultManager:
         current_code_buffer = []
 
         for line in lines:
-            # More permissive: allow 3 or more dashes
-            start_match = re.match(r"^\s*-{3,}\s*START_CODE:(\w+)\s*-{3,}\s*$", line)
-            end_match = re.match(r"^\s*-{3,}\s*END_CODE:(\w+)\s*-{3,}\s*$", line)
+            # AUTO-REPAIR: If a weak model uses standard triple backticks, convert them to custom markers on the fly
+            if "```mermaid" in line.lower():
+                line = "--- START_CODE:mermaid ---"
+            elif "```text" in line.lower():
+                line = "--- START_CODE:text ---"
+            elif line.strip() == "```" and in_code_block:
+                line = f"--- END_CODE:{current_code_language or 'text'} ---"
+            elif line.strip() == "```" and not in_code_block:
+                line = "--- START_CODE:text ---"
+
+            # Flexible detection: look for START_CODE:lang and END_CODE:lang regardless of dash count or trailing noise
+            start_match = re.search(r"START_CODE:(\w+)", line, re.IGNORECASE)
+            end_match = re.search(r"END_CODE:(\w+)", line, re.IGNORECASE)
 
             if start_match:
                 language = start_match.group(1).lower()
@@ -228,11 +238,19 @@ class VaultManager:
         return all_meta
 
     def write_note(self, path: Path, content: str):
-        """Writes note content atomically."""
+        """Writes note content atomically. No deletion logic."""
         path.parent.mkdir(parents=True, exist_ok=True)
-        temp = path.with_suffix(path.suffix + ".tmp")
-        with open(temp, "w", encoding="utf-8") as f: f.write(content)
-        temp.rename(path)
+        temp_path = path.with_suffix(path.suffix + f".{uuid.uuid4().hex[:8]}.tmp")
+        try:
+            with open(temp_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            # Atomic swap
+            temp_path.replace(path)
+        except Exception as e:
+            print(f"[VaultManager] Write Error: {e}")
+            if temp_path.exists():
+                temp_path.unlink()
+            raise e
 
     def clean_empty_dirs(self, start_path: Path):
         """Recursively removes empty directories."""
