@@ -38,16 +38,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.notion.client import NotionClient
 from src.domains.obsidian.client import ObsidianClient
-from src.domains.ai.strategist import Strategist
 from src.domains.oka.service import OkaService
 from src.domains.oka.watcher import OkaQueueManager
 from src.domains.rag.watcher import RAGWatcherService
 from src.domains.rag.indexer import VaultIndexer
 from src.domains.rag.vector_store import ChromaManager
 
-from src.domains.academics.router import router as academics_router
 from src.domains.notion.router import router as notion_router
 from src.domains.obsidian.router import router as obsidian_router
+
+# Global watcher instances
 
 # Global watcher instances
 oka_watcher: Optional[OkaQueueManager] = None
@@ -121,7 +121,6 @@ async def validate_vault_path(secrets: AppSecrets = Depends(get_app_secrets)):
     return secrets.vault_path
 
 # Mount routers
-app.include_router(academics_router, prefix="/api")
 app.include_router(notion_router, prefix="/api")
 app.include_router(obsidian_router, prefix="/api", dependencies=[Depends(validate_vault_path)])
 
@@ -335,177 +334,6 @@ async def test_ai_connection(
     except Exception as e:
         print(f"[Life OS Sidecar] AI Connection Test ({target}) failed: {traceback.format_exc()}")
         return {"success": False, "error": str(e)}
-
-@app.post("/api/ai/brainstorm")
-async def brainstorm_with_ai(
-    query_data: Dict[str, Any],
-    secrets: AppSecrets = Depends(get_app_secrets)
-):
-    """
-    Strategizes and brainstorms based on the query using Gemini.
-    """
-    if not secrets.ai_key:
-        raise HTTPException(status_code=401, detail="X-AI-Key header missing")
-    
-    query = query_data.get("query")
-    if not query:
-        raise HTTPException(status_code=400, detail="Query missing in request body")
-    
-    try:
-        strategist = Strategist(
-            secrets=secrets,
-            notion_key=secrets.notion_key,
-            vault_path=secrets.vault_path
-        )
-        
-        # Track active orchestrator for status reporting
-        global active_orchestrator
-        active_orchestrator = strategist._orchestrator
-        
-        response = await strategist.brainstorm(
-            query,
-            context=query_data.get("context"),
-            system_prompt=query_data.get("system_prompt"),
-            history=query_data.get("history", []),
-            file_uri=query_data.get("file_uri")
-        )
-        return {"response": response}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/ai/execute/{agent_name}")
-async def execute_specific_agent(
-    agent_name: str,
-    query_data: Dict[str, Any],
-    secrets: AppSecrets = Depends(get_app_secrets)
-):
-    """
-    Directly execute a specific agent (e.g., 'notion', 'obsidian', 'scholar').
-    """
-    if not secrets.ai_key:
-        raise HTTPException(status_code=401, detail="X-AI-Key header missing")
-    
-    query = query_data.get("query")
-    if not query:
-        raise HTTPException(status_code=400, detail="Query missing in request body")
-
-    try:
-        strategist = Strategist(secrets, secrets.notion_key, secrets.vault_path)
-        orchestrator = strategist._orchestrator
-        
-        # Mapping to the instantiated specialist inside orchestrator
-        agent_map = {
-            "notion": orchestrator.notion_agent,
-            "obsidian": orchestrator.obsidian_agent,
-            "oka": orchestrator.oka_agent,
-            "chronos": orchestrator.chronos_agent,
-            "scholar": orchestrator.scholar_agent,
-            "wealth": orchestrator.wealth_agent,
-            "gym": orchestrator.gym_agent,
-            "devops": orchestrator.devops_agent,
-            "librarian": orchestrator.notion_agent,
-            "scribe": orchestrator.obsidian_agent
-        }
-
-        agent = agent_map.get(agent_name.lower())
-        if not agent:
-            raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found.")
-
-        response = await agent.run(query)
-        return {"response": response}
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-
-active_orchestrator: Optional[Any] = None
-
-@app.get("/api/ai/orchestrator/status")
-async def get_orchestrator_status():
-    """Returns the current status of the AI Orchestrator."""
-    if active_orchestrator:
-        return active_orchestrator.status
-    return {
-        "current_prompt": "",
-        "current_plan": "",
-        "active_agents": [],
-        "stage": "idle",
-        "next_agent": "None",
-        "logs": ["Orchestrator is ready."]
-    }
-
-from src.domains.chronos.service import ChronosService
-
-@app.get("/api/ai/specialists/chronos")
-async def get_chronos_status(secrets: AppSecrets = Depends(get_app_secrets)):
-    """Returns dynamic status for Chronos (Time Management)."""
-    service = ChronosService(notion_key=secrets.notion_key, google_token=secrets.google_calendar_token)
-    return await service.get_status()
-
-@app.get("/api/ai/chronos/timeline")
-async def get_chronos_timeline(secrets: AppSecrets = Depends(get_app_secrets)):
-    """Returns a unified timeline from Notion and Google Calendar."""
-    service = ChronosService(notion_key=secrets.notion_key, google_token=secrets.google_calendar_token)
-    return await service.get_unified_timeline()
-
-@app.get("/api/ai/specialists/scholar")
-async def get_scholar_status(secrets: AppSecrets = Depends(get_app_secrets)):
-    """Returns dynamic status for Scholar dashboard by scanning the Academic vault."""
-    if not secrets.vault_path:
-        return {"research_feed": [], "synthesis_metrics": {"total_papers": 0, "synthesized": 0, "pending": 0}}
-    
-    academic_path = Path(secrets.vault_path) / "2-Academic"
-    feed = []
-    total = 0
-    if academic_path.exists():
-        try:
-            all_pages_list = sorted(list(academic_path.glob("**/*.md")), key=lambda p: p.stat().st_mtime, reverse=True)
-            total = len(all_pages_list)
-            # Use a loop to avoid slicing issues if Pyre is being strict
-            count = 0
-            for p in all_pages_list:
-                if count >= 5: break
-                count += 1
-                feed.append({
-                    "name": p.name,
-                    "type": "Markdown",
-                    "status": "Mirrored" if "NotionMirror" in str(p) else "Ingested"
-                })
-        except Exception as e:
-            logger.error(f"Scholar status scan failed: {e}")
-
-    return {
-        "research_feed": feed if feed else [
-            {"name": "No recent academic notes", "type": "N/A", "status": "Standby"}
-        ],
-        "synthesis_metrics": {
-            "total_papers": total,
-            "synthesized": int(total * 0.85) if total > 0 else 0,
-            "pending": int(total * 0.15) if total > 0 else 0
-        }
-    }
-
-from src.domains.wealth.service import WealthService
-
-@app.get("/api/ai/specialists/wealth")
-async def get_wealth_status(secrets: AppSecrets = Depends(get_app_secrets)):
-    """Returns dynamic status for Wealth Strategist by querying Notion Income/Expense databases."""
-    if not secrets.notion_key:
-        return {"net_position": "$0.00", "recent_transactions": []}
-
-    service = WealthService(notion_key=secrets.notion_key, vault_path=secrets.vault_path)
-    return await service.get_status()
-
-from src.domains.gym.service import GymService
-
-@app.get("/api/ai/specialists/gym")
-async def get_gym_status(secrets: AppSecrets = Depends(get_app_secrets)):
-    """Returns functional fitness data from Notion 'Workout logger'."""
-    if not secrets.notion_key:
-        return {"training_intensity": "0%", "recent_sessions": []}
-
-    service = GymService(notion_key=secrets.notion_key, vault_path=secrets.vault_path)
-    return await service.get_status()
 
 # --- OKA (Autonomous Ingestion) Endpoints ---
 

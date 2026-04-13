@@ -54,19 +54,17 @@
 
 ---
 
-## 5. Orchestrator & Specialist Workforce
+## 5. System Intelligence & OKA Pipeline
 ### Pending Epics
-*   [ ] **Chronos Integration**: Connect Google Calendar and Apple Calendar for unified scheduling.
-*   [ ] **Cross-Agent Collaboration**: Allow agents to hand off sub-tasks (e.g., Scholar sends notes to Scribe).
+*   [ ] Finalize high-fidelity board views for OKA plan visualization.
+*   [ ] Implement advanced metadata auto-detection for PDF ingestion.
 
 ### Completed Epics
-*   [x] **Orchestrator Backend State**: Real-time status tracking (prompt, plan, active agents, logs).
-*   [x] **Specialist Agent Logic**: 8 functional agents (Scholar, Wealth, Gym, etc.) with mapped vault paths.
-*   [x] **Specialist Autonomy**: Agents given full CRUD power across local Obsidian vault and Notion APIs.
-*   [x] **Data-Driven Dashboards**: All agent UI pages (Chronos, Wealth, Scholar, etc.) fetch live status from FastAPI.
-*   [x] **Dynamic Specialist Services**: Integrated `WealthService`, `GymService`, and `ChronosService` for live data tracking.
-*   [x] **Logo & Brand Refinement**: Finalized "Zap" branding and strict monochrome aesthetic.
-*   [x] **Agent Workforce Registry**: Integrated all specialized units into a unified dashboard.
+*   [x] **OKA Autonomous Engine**: Pruned all legacy agent domains (Wealth, Gym, Chronos) to lock into a single high-fidelity pipeline.
+*   [x] **Monochrome Design System**: Implemented a strict grayscale aesthetic for minimal visual distraction and premium feel.
+*   [x] **Single-Agent Registry**: Refactored the `/agents` page to exclusively feature the OKA dashboard.
+*   [x] **Absolute Atomicity**: Enforced 1-note-per-batch generation for maximum parsing reliability.
+
 
 ---
 

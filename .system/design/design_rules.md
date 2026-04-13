@@ -8,30 +8,25 @@ DO NOT put routing or page structures here. Put them in `app_structure.md`.
 
 # UI/UX Specifications & Design System
 ## 1. Visual Identity
-> Define the mood, brand, and target audience. Is it playful and modern or corporate and sleek?
-
-**Brand Essence:** [Insert summary of visual style]
+**Brand Essence**: Monochrome High-Fidelity. A professional, minimalist interface focused on information density without cognitive load. Uses subtle shadows, refined typography (Outfit/Inter), and glassmorphism.
 
 ## 2. Color Palette (Tailwind Tokens)
-> Provide the exact hex codes and corresponding Tailwind variable names.
-
-*   `primary`: `#1A202C` (Deep Blue/Black)
-*   `secondary`: `#E2E8F0` (Light Slate)
-*   `accent`: `#F59E0B` (Amber)
-*   `destructive`: `#EF4444` (Red)
+*   `background`: `#ffffff` (Light) / `#0a0a0a` (Dark)
+*   `foreground`: `#171717` (Light) / `#ededed` (Dark)
+*   `primary`: `#171717` (White on Dark, Black on Light)
+*   `secondary`: `#f5f5f5` (Light) / `#171717` (Dark)
+*   `muted`: `#737373` (Neutral gray for secondary text)
+*   `border`: `#e5e5e5` (Light) / `#262626` (Dark)
 
 ## 3. Typography & Spacing
-> Define fonts, heading hierarchies, and standard padding/margins.
+*   **Primary Font**: Inter / Outfit
+*   **Headings**:
+    *   `h1`: `text-3xl font-bold tracking-tight uppercase`
+    *   `h2`: `text-xl font-semibold tracking-tight`
+*   **Spacing**: Standardized gutters using `p-6` or `p-8`. Consistent `gap-4` for grid items.
 
-*   **Primary Font:** Inter
-*   **Headings:**
-    *   `h1`: `text-4xl font-bold tracking-tight`
-    *   `h2`: `text-2xl font-semibold`
-*   **Spacing Rules:** All containers must have `px-4 py-8` padding. Use `gap-6` for grid/flex items.
+## 4. Component Rules
+*   **Buttons**: Strict `rounded-md` or `rounded-full`. Monochrome only. High-fidelity glass effect on hover.
+*   **Cards**: Sub-pixel borders (`border-[0.5px]`), subtle `shadow-sm`, and `bg-card` with slight transparency if glassmorphism is active.
+*   **Inputs**: Minimalist borders, focus state uses `ring-offset-background` and `ring-1 ring-ring`.
 
-## 4. Component Rules (The "Primitives")
-> Detail how specific UI elements should look and behave (Buttons, Cards, Inputs).
-
-*   **Buttons:** Must have `rounded-md transition-colors`. Primary buttons use `bg-primary text-white hover:bg-primary/90`.
-*   **Cards:** Use `bg-white shadow-sm border border-slate-200 rounded-lg p-6`.
-*   **Inputs:** Use `border border-slate-300 rounded-md focus:ring-2 focus:ring-primary`.

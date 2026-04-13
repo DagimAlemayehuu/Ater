@@ -8,40 +8,32 @@ Define the structure, content, and interactive states in extremely high detail.
 
 # Application Map & Component Specifications
 ## 1. Global Navigation & Layout
-> Define the header, footer, sidebar, and global UI elements present on every page.
-
-*   **Header:** Fixed top navigation. Contains Logo (left), Navigation Links (`/dashboard`, `/settings`), User Profile Menu (right).
-*   **Sidebar:** Hidden on mobile. Contains secondary navigation for active route.
-*   **Footer:** Minimalist. Copyright and links to Privacy/Terms.
+*   **Sidebar (AppSidebar)**: The primary navigation anchor. Grouped by "Main" items and "System" settings at the bottom.
+*   **AuthenticatedLayout**: Wraps all core pages, providing the sidebar and a search-enabled header with Profile dropdown.
 
 ## 2. Route Map (The Pages)
-> List every single route in the application and what it does.
+*   `/obsidian` - **Knowledge Base**: The primary vault explorer and markdown reader.
+*   `/vault-sync` - **Vault Sync**: Management of knowledge clusters and database views.
+*   `/agents` - **Intelligence Hub**: Central registry for the OKA dashboard.
+*   `/settings` - **System Settings**: Global configuration for Appearance, Identity Profiles, and LLM Intelligence.
 
-*   `/` - The Public Landing Page.
-*   `/login` - The Authentication Page.
-*   `/dashboard` - The Main User Workspace.
-*   `/dashboard/settings` - User Profile Configuration.
+## 3. Page Specifications
+### Page: `/obsidian` (Knowledge Base)
+*   **Sidebar**: Nested vault tree.
+*   **Main**: High-fidelity markdown renderer with integrated property card for YAML frontmatter extraction.
 
-## 3. Page Specifications (The "Blueprints")
-> Detail the exact layout and content of every route. This is the blueprint for the Frontend Agent.
+### Page: `/vault-sync` (Vault Sync)
+*   **Header**: Cluster selection (e.g., Study Planner, Reading List).
+*   **View Switcher**: Tabs for Table, Board, and Gallery views.
+*   **Data Grid**: Interactive records tracking confidence, status, and unit alignment.
 
-### Page 1: `/` (Landing Page)
-*   **Hero Section:** Large `h1` ("Build Faster"), subtitle, and two CTA buttons ("Get Started", "Learn More").
-*   **Features Grid:** 3 columns. Each column contains an icon, title, and short description.
-*   **Testimonials:** Carousel of user reviews.
-*   **CTA Section:** Bottom banner to capture emails.
+### Page: `/agents` (OKA Dashboard)
+*   **Pipeline Control**: Inbox for raw documents, status tracking for generation plans.
+*   **Action Hub**: Plan visualization in card-view, batch execution controls.
 
-### Page 2: `/login` (Authentication)
-*   **Form Container:** Centered card, `max-w-md`.
-*   **Inputs:** Email (required), Password (required).
-*   **Buttons:** Submit ("Log In"), OAuth ("Continue with Google").
-*   **Links:** "Forgot Password?", "Create Account" (`/register`).
-*   **Interactive States:** Show loading spinner inside the Submit button on click. Show red error message below form on failure.
+### Page: `/settings` (System Settings)
+*   **Navigation**: Inner sidebar with "General", "Profiles", and "Intelligence".
+*   **General**: Theme toggle (Light/Dark) and Gemini API / LLM provider configuration.
+*   **Profiles**: Management of LifeOS domains (Personal, Academic, Financial, Fitness).
+*   **Intelligence**: RAG engine management and vault synchronization trigger.
 
-## 4. Specific Component Breakdown
-> If a complex, reusable component exists, define it here (e.g., a "Data Table" or "Rich Text Editor").
-
-### Component: `UserCard`
-*   Displays Avatar image (circular, `w-12 h-12`).
-*   Displays User Name (bold) and Email (muted gray text).
-*   Right-aligned `EllipsisVertical` icon for an options menu.

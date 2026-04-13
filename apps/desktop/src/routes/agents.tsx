@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react'
 import { 
     ShieldCheck, RefreshCw, 
     FileText, Activity, 
-    Zap, Archive, PauseCircle,
+    Zap,
     Brain, ArrowLeft, Bot, Sparkles, ChevronRight, ListChecks,
-    Database, Calendar, GraduationCap, Coins, Dumbbell, Lock, Terminal,
+    Database, Calendar,
     UserCheck, Search, X, Info, Shield, Check, Save, MessageSquare, Layout, Clock, Plus, ExternalLink, Battery, BrainCircuit,
-    BookOpen, Tag, Layers, ChevronDown, FileEdit, HelpCircle
+    BookOpen, Tag, Layers, ChevronDown, FileEdit, HelpCircle,
+    Archive, Terminal
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
@@ -18,409 +19,11 @@ import remarkGfm from 'remark-gfm'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { OrchestratorPage } from './chat'
 
-/* ─── Orchestrator Dashboard (The Planner) ─── */
-function OrchestratorDashboard({ onBack }: { onBack: () => void }) {
-    const navigate = useNavigate()
-    const [status, setStatus] = useState<any>(null)
-    const [loading, setLoading] = useState(true)
 
-    useEffect(() => {
-        const fetchStatus = async () => {
-            try {
-                const res = await sidecarApi.getOrchestratorStatus()
-                setStatus(res)
-            } catch (err) {
-                console.error("Orchestrator status failed", err)
-            } finally {
-                setLoading(false)
-            }
-        }
-        fetchStatus()
-        const itv = setInterval(fetchStatus, 3000)
-        return () => clearInterval(itv)
-    }, [])
 
-    return (
-        <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex items-center justify-between pb-4 shrink-0">
-                <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="p-2 hover:bg-muted rounded-md transition-colors">
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <Zap className="w-5 h-5 text-primary" />
-                            <h2 className="text-xl font-bold tracking-tight">The Orchestrator</h2>
-                        </div>
-                        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider mt-0.5">Master Planner & Executor</p>
-                    </div>
-                </div>
-            </div>
 
-            <AgentConsole agentName="orchestrator" title="Orchestrator" />
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {[
-                    { label: 'Uptime', val: '99.9%' },
-                    { label: 'Active Memory', val: '2.4GB' },
-                    { label: 'Task Load', val: 'Optimized' },
-                    { label: 'Security', val: 'Hardened' }
-                ].map((s, i) => (
-                    <div key={i} className="rounded-lg border p-4 bg-card shadow-sm">
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">{s.label}</p>
-                        <p className="text-lg font-bold">{s.val}</p>
-                    </div>
-                ))}
-            </div>
 
-            <div className="flex-1 rounded-lg border bg-card overflow-hidden flex flex-col shadow-sm">
-                <div className="p-3 border-b bg-muted/5 font-bold text-[10px] uppercase tracking-wider text-muted-foreground">Pipeline Insights</div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
-                    <div className="flex flex-col items-center justify-center py-20 text-center opacity-20">
-                        <Activity size={48} className="mb-4" />
-                        <p className="text-sm font-bold uppercase tracking-widest">Real-time status monitoring active</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-/* ─── Scholar Dashboard ─── */
-function ScholarDashboard({ onBack }: { onBack: () => void }) {
-    const [data, setData] = useState<any>(null)
-    const [loading, setLoading] = useState(true)
-
-    useEffect(() => {
-        sidecarApi.getScholarStatus().then(res => {
-            setData(res)
-            setLoading(false)
-        })
-    }, [])
-
-    return (
-        <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex items-center justify-between pb-4 shrink-0">
-                <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="p-2 hover:bg-muted rounded-md transition-colors">
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <GraduationCap className="w-5 h-5 text-primary" />
-                            <h2 className="text-xl font-bold tracking-tight">The Scholar</h2>
-                        </div>
-                        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider mt-0.5">High-Fidelity Academic Synthesis</p>
-                    </div>
-                </div>
-                <button 
-                  onClick={async () => {
-                      setLoading(true)
-                      try { await sidecarApi.syncNotionMirror() } catch(e) {}
-                      setLoading(false)
-                  }}
-                  className="px-4 py-2 border rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-muted transition-all"
-                >
-                    <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Sync Knowledge
-                </button>
-            </div>
-
-            <AgentConsole agentName="scholar" title="Scholar" />
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 overflow-hidden">
-                <div className="md:col-span-1 border rounded-lg bg-card p-6 flex flex-col shadow-sm">
-                    <h3 className="text-xs font-bold uppercase tracking-wider mb-4 text-muted-foreground">Research Feed</h3>
-                    <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1">
-                        {loading ? (
-                            Array.from({ length: 5 }).map((_, i) => (
-                              <div key={i} className="h-9 bg-muted/10 rounded animate-pulse" />
-                            ))
-                        ) : data?.research_feed?.map((doc: any, i: number) => (
-                            <div key={i} className="p-2.5 border rounded-md bg-background flex items-center justify-between text-xs font-medium">
-                                <span className="truncate max-w-[140px]">{doc.name}</span>
-                                <span className="text-[8px] font-bold uppercase bg-muted px-2 py-0.5 rounded opacity-70">{doc.status}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="md:col-span-2 rounded-lg border bg-foreground text-background p-8 flex flex-col items-center justify-center text-center shadow-lg">
-                    <Sparkles className="w-10 h-10 mb-6 opacity-20" />
-                    <h3 className="text-xl font-bold mb-2">Synthesis Pulse</h3>
-                    <p className="text-[10px] font-bold uppercase tracking-wider opacity-50 max-w-xs">
-                        High-density extraction active for academic sectors
-                    </p>
-                    <div className="mt-10 grid grid-cols-2 gap-10 w-full max-w-sm">
-                        <div>
-                            <p className="text-4xl font-black">{data?.synthesis_metrics?.synthesized || 0}</p>
-                            <p className="text-[9px] font-bold uppercase opacity-40">Notes</p>
-                        </div>
-                        <div>
-                            <p className="text-4xl font-black">{data?.synthesis_metrics?.total_papers || 0}</p>
-                            <p className="text-[9px] font-bold uppercase opacity-40">Papers</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-/* ─── Wealth Strategist Dashboard ─── */
-function WealthDashboard({ onBack }: { onBack: () => void }) {
-    const [data, setData] = useState<any>(null)
-    const [loading, setLoading] = useState(true)
-
-    useEffect(() => {
-        sidecarApi.getWealthStatus().then(res => {
-            setData(res)
-            setLoading(false)
-        })
-    }, [])
-
-    return (
-        <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex items-center justify-between pb-4 shrink-0">
-                <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="p-2 hover:bg-muted rounded-md transition-colors">
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <Coins className="w-5 h-5" />
-                            <h2 className="text-xl font-bold tracking-tight">Wealth Console</h2>
-                        </div>
-                        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider mt-0.5">Financial Audit & Alignment</p>
-                    </div>
-                </div>
-                <button 
-                  onClick={async () => {
-                      setLoading(true)
-                      try { await sidecarApi.syncNotionMirror() } catch(e) {}
-                      setLoading(false)
-                  }}
-                  className="px-4 py-2 border rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-muted transition-all"
-                >
-                    <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Audit Mirror
-                </button>
-            </div>
-
-            <AgentConsole agentName="wealth" title="Wealth Strategist" />
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {[
-                    { label: 'Position', val: data?.net_position || '---' },
-                    { label: 'Delta', val: data?.monthly_delta || '---' },
-                    { label: 'Savings', val: data?.savings_rate || '---' },
-                    { label: 'Burn', val: data?.burn_rate || '---' }
-                ].map((s, i) => (
-                    <div key={i} className="rounded-lg border p-4 bg-card shadow-sm">
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">{s.label}</p>
-                        <p className="text-lg font-bold">{loading ? '...' : s.val}</p>
-                    </div>
-                ))}
-            </div>
-
-            <div className="flex-1 rounded-lg border bg-card overflow-hidden flex flex-col shadow-sm">
-                <div className="p-3 border-b bg-muted/5 font-bold text-[10px] uppercase tracking-wider text-muted-foreground">Recent Transactions</div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    {(data?.recent_transactions || []).map((t: any, i: number) => (
-                        <div key={i} className="p-4 border-b last:border-0 flex items-center justify-between hover:bg-muted/5 transition-colors">
-                            <div className="flex items-center gap-4">
-                                <span className="text-[10px] font-mono text-muted-foreground">{t.date}</span>
-                                <span className="text-sm font-semibold">{t.desc}</span>
-                            </div>
-                            <span className="text-sm font-bold">{t.amount}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    )
-}
-
-/* ─── Gym Coach Dashboard ─── */
-function GymDashboard({ onBack }: { onBack: () => void }) {
-    const [data, setData] = useState<any>(null)
-    const [loading, setLoading] = useState(true)
-
-    useEffect(() => {
-        sidecarApi.getGymStatus().then(res => {
-            setData(res)
-            setLoading(false)
-        })
-    }, [])
-
-    return (
-        <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex items-center justify-between pb-4 shrink-0">
-                <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="p-2 hover:bg-muted rounded-md transition-colors">
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <Dumbbell className="w-5 h-5" />
-                            <h2 className="text-xl font-bold tracking-tight">Coach Dashboard</h2>
-                        </div>
-                        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider mt-0.5">Performance Tracking</p>
-                    </div>
-                </div>
-                <button 
-                  onClick={async () => {
-                      setLoading(true)
-                      try { await sidecarApi.syncNotionMirror() } catch(e) {}
-                      setLoading(false)
-                  }}
-                  className="px-4 py-2 border rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-muted transition-all"
-                >
-                    <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Sync Data
-                </button>
-            </div>
-
-            <AgentConsole agentName="gym" title="Gym Coach" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-6">
-                <div className="md:col-span-1 rounded-lg border bg-card p-6 shadow-sm flex flex-col">
-                    <h3 className="text-xs font-bold uppercase tracking-wider mb-6 text-muted-foreground">Performance</h3>
-                    <div className="space-y-6 flex-1">
-                        <div>
-                            <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Consistency</p>
-                            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                <div className="h-full bg-primary" style={{ width: data?.training_intensity || '0%' }} />
-                            </div>
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Volume</p>
-                            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                <div className="h-full bg-primary" style={{ width: data?.volume_accumulation || '0%' }} />
-                            </div>
-                        </div>
-                        <div className="p-4 rounded-md border bg-foreground text-background text-center shadow-md">
-                            <p className="text-[9px] font-bold uppercase opacity-60 mb-1">Current State</p>
-                            <p className="text-md font-bold uppercase">{data?.recovery_status || 'RECOVERING'}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="md:col-span-2 rounded-lg border bg-card overflow-hidden flex flex-col shadow-sm">
-                    <div className="p-3 border-b bg-muted/5 font-bold text-[10px] uppercase tracking-wider text-muted-foreground">Activity History</div>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
-                        {(data?.recent_sessions || []).map((s: any, i: number) => (
-                            <div key={i} className="p-4 border-b last:border-0 flex items-center justify-between hover:bg-muted/5 transition-colors">
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-bold">{s.name}</span>
-                                    <span className="text-[10px] font-mono text-muted-foreground">{s.date}</span>
-                                </div>
-                                <span className="text-[10px] font-bold bg-muted px-2 py-0.5 rounded opacity-70">{s.volume}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-/* ─── DevOps Dashboard ─── */
-function DevOpsDashboard({ onBack }: { onBack: () => void }) {
-    const [status, setStatus] = useState<any>(null)
-    const [sync, setSync] = useState<any>(null)
-
-    useEffect(() => {
-        const fetchStatus = async () => {
-            const s = await sidecarApi.getOrchestratorStatus()
-            const r = await sidecarApi.ragSyncStatus()
-            setStatus(s)
-            setSync(r)
-        }
-        fetchStatus()
-        const itv = setInterval(fetchStatus, 5000)
-        return () => clearInterval(itv)
-    }, [])
-
-    return (
-        <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex items-center justify-between pb-4 shrink-0">
-                <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="p-2 hover:bg-muted rounded-md transition-colors">
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <Lock className="w-5 h-5" />
-                            <h2 className="text-xl font-bold tracking-tight">DevOps Monitor</h2>
-                        </div>
-                        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider mt-0.5">System Health & Security</p>
-                    </div>
-                </div>
-            </div>
-
-            <AgentConsole agentName="devops" title="DevOps Guardian" />
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {[
-                    { label: 'Uptime', val: '99.99%', icon: Activity },
-                    { label: 'Latency', val: '24ms', icon: RefreshCw },
-                    { label: 'Health', val: 'Stable', icon: ShieldCheck },
-                    { label: 'Index', val: (sync?.total || 0).toString(), icon: Database }
-                ].map((s, i) => (
-                    <div key={i} className="rounded-lg border p-4 bg-card shadow-sm">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">{s.label}</p>
-                        <div className="flex items-center justify-between">
-                            <p className="text-lg font-bold">{s.val}</p>
-                            <s.icon size={14} className="text-muted-foreground/30" />
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <div className="flex-1 rounded-lg border bg-card p-6 flex flex-col gap-8 shadow-sm">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider mb-4 border-b pb-3 text-muted-foreground">Indexing Pipeline</h3>
-                  <div className="space-y-4">
-                      <div className="flex items-center justify-between text-[10px] font-bold uppercase mb-1">
-                          <span>{sync?.message || 'Standby'}</span>
-                          <span>{sync?.progress || 0} / {sync?.total || 0}</span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full overflow-hidden border">
-                          <div 
-                              className="h-full bg-primary transition-all duration-1000" 
-                              style={{ width: `${sync?.total > 0 ? (sync.progress / sync.total) * 100 : 0}%` }}
-                          />
-                      </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="p-4 rounded-md border bg-muted/5">
-                        <h4 className="text-[10px] font-bold uppercase tracking-wider mb-4 opacity-50">Background Services</h4>
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold">Oka Watcher</span>
-                                <span className="text-[10px] font-bold text-primary">Live</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold">RAG Indexer</span>
-                                <span className="text-[10px] font-bold text-primary">Live</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="p-4 rounded-md border bg-muted/5">
-                        <h4 className="text-[10px] font-bold uppercase tracking-wider mb-4 opacity-50">System Integrity</h4>
-                        <div className="space-y-2">
-                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold">Permissions</span>
-                                <span className="text-[10px] font-bold">Verified</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold">Disk Space</span>
-                                <span className="text-[10px] font-bold">42GB Free</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
 
 /* ─── Plan UI Components ─── */
 function CurriculumPill({ 
@@ -1142,86 +745,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
     )
 }
 
-/* ─── Chronos Dashboard ─── */
-function ChronosDashboard({ onBack }: { onBack: () => void }) {
-    const [status, setStatus] = useState<any>(null)
-    const [timeline, setTimeline] = useState<any[]>([])
-    const [loading, setLoading] = useState(true)
 
-    const fetchData = async () => {
-        setLoading(true)
-        try {
-            const res = await sidecarApi.getChronosStatus()
-            setStatus(res)
-            setTimeline(res.timeline || [])
-        } catch (err) { console.error(err) }
-        finally { setLoading(false) }
-    }
-
-    useEffect(() => {
-        fetchData()
-    }, [])
-
-    return (
-        <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex items-center justify-between pb-4 shrink-0">
-                <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="p-2 hover:bg-muted rounded-md transition-colors">
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <Clock className="w-5 h-5 text-primary" />
-                            <h2 className="text-xl font-bold tracking-tight">Chronos Monitor</h2>
-                        </div>
-                        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider mt-0.5">Time & Activity Forensics</p>
-                    </div>
-                </div>
-                <Button variant="outline" size="sm" onClick={fetchData} className="h-8 text-[10px] font-bold uppercase">
-                    <RefreshCw size={14} className={cn("mr-2", loading && "animate-spin")} /> Refresh
-                </Button>
-            </div>
-
-            <AgentConsole agentName="chronos" title="Chronos" />
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="rounded-lg border bg-card p-5 shadow-sm">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Focus Score</p>
-                    <p className="text-2xl font-black text-primary">{status?.focus_score || '0'}%</p>
-                </div>
-                <div className="rounded-lg border bg-card p-5 shadow-sm">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Active Time</p>
-                    <p className="text-2xl font-black">{status?.active_duration || '0h 0m'}</p>
-                </div>
-                <div className="rounded-lg border bg-card p-5 shadow-sm">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Context Switches</p>
-                    <p className="text-2xl font-black">{status?.context_switches || '0'}</p>
-                </div>
-            </div>
-
-            <div className="flex-1 rounded-lg border bg-card overflow-hidden flex flex-col shadow-sm">
-                <div className="p-3 border-b bg-muted/5 font-bold text-[10px] uppercase tracking-wider text-muted-foreground">Activity Timeline</div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    {timeline.map((item, i) => (
-                        <div key={i} className="p-4 border-b last:border-0 flex items-center justify-between hover:bg-muted/5 transition-colors">
-                            <div className="flex items-center gap-4">
-                                <span className="text-[10px] font-mono text-muted-foreground">{item.time}</span>
-                                <span className="text-sm font-semibold">{item.activity}</span>
-                            </div>
-                            <span className="text-[10px] font-bold px-2 py-0.5 bg-muted rounded opacity-70 uppercase">{item.category}</span>
-                        </div>
-                    ))}
-                    {!timeline.length && (
-                        <div className="py-20 text-center opacity-20">
-                            <Clock size={32} className="mx-auto mb-2" />
-                            <p className="text-[10px] font-bold uppercase">No activity logged</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    )
-}
 
 /* ─── Agent Console Utility ─── */
 function AgentConsole({ agentName, title }: { agentName: string, title: string }) {
@@ -1249,16 +773,6 @@ export default function Agents() {
 
     const agents = [
         {
-            id: 'orchestrator',
-            title: 'Orchestrator',
-            icon: Zap,
-            color: 'text-primary-foreground',
-            bg: 'bg-primary',
-            description: 'The master planner and executive agent manager. Coordinates specialized units to execute complex workflows.',
-            action: () => setActiveAgent('orchestrator'),
-            actionText: 'Dashboard'
-        },
-        {
             id: 'oka',
             title: 'Obsidian Knowledge Architect',
             icon: Brain,
@@ -1270,7 +784,6 @@ export default function Agents() {
         }
     ]
 
-    if (activeAgent === 'orchestrator') return <OrchestratorDashboard onBack={() => setActiveAgent(null)} />
     if (activeAgent === 'oka') return <OkaDashboard onBack={() => setActiveAgent(null)} />
 
     return (
@@ -1280,20 +793,20 @@ export default function Agents() {
                 <p className="text-muted-foreground text-sm font-medium">Coordinate autonomous agents and high-fidelity synthesis protocols.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex-1 flex items-center justify-center max-w-2xl mx-auto w-full">
                 {agents.map((agent) => (
-                    <Card key={agent.id} className="p-8 flex flex-col gap-6 group hover:border-primary/40 transition-all duration-500 relative overflow-hidden shadow-2xl shadow-black/20">
-                        <div className={cn("absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity", agent.id === 'orchestrator' ? 'text-primary' : '')}>
-                            <agent.icon size={120} strokeWidth={1} />
+                    <Card key={agent.id} className="p-8 flex flex-col gap-8 group hover:border-primary/40 transition-all duration-500 relative overflow-hidden shadow-2xl shadow-black/20 w-full">
+                        <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <agent.icon size={160} strokeWidth={1} />
                         </div>
                         
-                        <div className="flex flex-col gap-4 relative z-10">
-                            <div className={cn("p-3 rounded-2xl w-fit", agent.bg)}>
-                                <agent.icon className={cn("w-6 h-6", agent.color)} />
+                        <div className="flex flex-col gap-6 relative z-10">
+                            <div className={cn("p-4 rounded-2xl w-fit", agent.bg)}>
+                                <agent.icon className={cn("w-8 h-8", agent.color)} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-black tracking-tight">{agent.title}</h2>
-                                <p className="text-muted-foreground text-xs leading-relaxed max-w-xs mt-2 font-medium">
+                                <h2 className="text-2xl font-black tracking-tight">{agent.title}</h2>
+                                <p className="text-muted-foreground text-sm leading-relaxed mt-3 font-medium">
                                     {agent.description}
                                 </p>
                             </div>
@@ -1302,23 +815,15 @@ export default function Agents() {
                         <Button 
                             onClick={agent.action}
                             className={cn(
-                                "w-full h-12 font-black uppercase tracking-widest text-[10px] rounded-xl relative z-10 transition-all active:scale-95",
-                                agent.id === 'orchestrator' ? "" : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+                                "w-full h-14 font-black uppercase tracking-[0.2em] text-[10px] rounded-xl relative z-10 transition-all active:scale-95 bg-primary text-primary-foreground shadow-xl shadow-primary/20",
                             )}
                         >
-                            Initialize {agent.actionText}
+                            INITIALIZE {agent.actionText}
                         </Button>
                     </Card>
                 ))}
             </div>
-
-            <div className="flex-1 rounded-3xl border border-dashed border-border/40 bg-muted/5 flex flex-col items-center justify-center p-12 text-center">
-                <Bot className="w-12 h-12 mb-6 opacity-10" />
-                <h3 className="text-sm font-black uppercase tracking-[0.3em] opacity-20 mb-2">Expansion Sector</h3>
-                <p className="text-muted-foreground text-xs font-medium max-w-xs opacity-40">
-                    Additional specialized agent units (DevOps, Scholar, Wealth) are managed via the Orchestrator protocol.
-                </p>
-            </div>
         </div>
     )
 }
+

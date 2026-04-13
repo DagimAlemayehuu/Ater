@@ -1,26 +1,13 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
-import { ConfigProvider, useConfig } from '@/lib/ConfigContext'
+import { ConfigProvider } from '@/lib/ConfigContext'
 import { ThemeProvider } from '@/context/theme-provider'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
-import Onboarding from '@/routes/onboarding'
 import ObsidianKnowledgeArchitect from '@/routes/obsidian'
 import VaultSync from '@/routes/vault-sync'
 import Agents from '@/routes/agents'
 import Settings from '@/routes/settings'
-import Strategist from '@/routes/strategist'
-import Profiles from '@/routes/profiles'
-import Goals from '@/routes/goals'
-import { OrchestratorPage } from '@/routes/chat'
-
-// Placeholder components
-const PlaceholderPage = ({ title }: { title: string }) => (
-  <div style={{ padding: '2rem', color: '#71717a' }}>
-    <h1 style={{ fontSize: '1.875rem', fontWeight: 700, color: 'white' }}>{title}</h1>
-    <p style={{ opacity: 0.6 }}>This view will be built in the next development cycle.</p>
-  </div>
-)
 
 /**
  * Gate to ensure sidecar is connected before proceeding.
@@ -61,44 +48,6 @@ function SidecarGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-/**
- * Gate to force onboarding if configuration is missing.
- */
-function ConfigGate({ children }: { children: React.ReactNode }) {
-  const { isLoading, isConfigured, config } = useConfig()
-  const location = useLocation()
-
-  // Sync OKA Watcher status on load
-  useEffect(() => {
-    if (isConfigured && config?.autoDeploy) {
-      console.log('[Life OS] Auto-deploy enabled. Syncing watcher state...')
-      sidecarApi.okaWatcherToggle().catch(err => {
-        console.error('[Life OS] Failed to auto-start OKA watcher:', err)
-      })
-    }
-  }, [isConfigured, config?.autoDeploy])
-
-  if (isLoading) {
-    return (
-      <div style={gateStyle}>
-        <span style={{ fontWeight: 800, letterSpacing: '0.3em' }}>INITIALIZING ENGINE</span>
-      </div>
-    )
-  }
-
-  // Mandatory redirect to onboarding if not configured and not already on onboarding page
-  if (!isConfigured && location.pathname !== '/onboarding') {
-    return <Navigate to="/onboarding" replace />
-  }
-
-  // Prevent accessing onboarding if already configured
-  if (isConfigured && location.pathname === '/onboarding') {
-    return <Navigate to="/obsidian" replace />
-  }
-
-  return <>{children}</>
-}
-
 export default function App() {
   return (
     <ThemeProvider>
@@ -106,7 +55,6 @@ export default function App() {
         <SidecarGate>
           <BrowserRouter>
             <Routes>
-              <Route path="/onboarding" element={<Onboarding />} />
               <Route path="*" element={
                 <AuthenticatedLayout>
                   <Routes>
@@ -114,12 +62,7 @@ export default function App() {
                     <Route path="/obsidian" element={<ObsidianKnowledgeArchitect />} />
                     <Route path="/vault-sync" element={<VaultSync />} />
                     <Route path="/agents" element={<Agents />} />
-                    <Route path="/strategist" element={<Strategist />} />
-                    <Route path="/chat" element={<OrchestratorPage />} />
-                    <Route path="/profiles" element={<Profiles />} />
-                    <Route path="/goals" element={<Goals />} />
                     <Route path="/settings" element={<Settings />} />
-                    <Route path="/debugger" element={<PlaceholderPage title="The Debugger" />} />
                   </Routes>
                 </AuthenticatedLayout>
               } />
@@ -141,3 +84,4 @@ const gateStyle: React.CSSProperties = {
   fontFamily: 'Inter, system-ui, sans-serif',
   fontSize: '0.75rem',
 }
+

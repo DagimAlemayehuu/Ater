@@ -14,20 +14,7 @@ interface VaultDatabase {
     views?: any[]
 }
 
-const MACRO_CATEGORIES = [
-    {
-        name: 'Execution',
-        groups: [
-            { name: 'Core', keywords: ['tasks', 'projects', 'goals'] }
-        ]
-    },
-    {
-        name: 'Intellectual',
-        groups: [
-            { name: 'Academic', keywords: ['courses', 'assignments', 'exams', 'study planner', 'semesters', 'years'] }
-        ]
-    }
-]
+
 
 export default function VaultSync() {
     const [databases, setDatabases] = useState<VaultDatabase[]>([])
@@ -173,17 +160,22 @@ export default function VaultSync() {
                 />
             )}
 
+            <div className="flex flex-col space-y-2 mb-10 shrink-0">
+                <h1 className="text-4xl font-black tracking-tighter uppercase">VAULT SYNC</h1>
+                <p className="text-muted-foreground text-sm font-medium">Synchronize high-fidelity knowledge clusters and manage autonomous ingestion sectors.</p>
+            </div>
+
             {/* Header with Search & Add Button */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between py-6 mb-4 gap-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between py-4 mb-8 gap-6">
                 <div className="flex items-center gap-3">
                     <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3 text-muted-foreground/20" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-3 text-muted-foreground/40" />
                         <input
                             type="text"
-                            placeholder="FIND SYSTEM..."
+                            placeholder="SEARCH ARCHITECTURE..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9 h-10 text-[10px] w-64 bg-secondary/10 border border-transparent rounded-full focus:outline-none focus:border-primary/20 focus:bg-secondary/20 transition-all font-black uppercase tracking-widest placeholder:opacity-20"
+                            className="pl-10 h-11 text-[10px] w-72 bg-muted/30 border border-transparent rounded-xl focus:outline-none focus:border-primary/20 focus:bg-background transition-all font-black uppercase tracking-widest placeholder:opacity-40 shadow-sm"
                         />
                     </div>
                 </div>
@@ -298,8 +290,8 @@ export default function VaultSync() {
                                                         <span className="text-[10px] font-black">{Object.keys(db.schema).length}</span>
                                                     </div>
                                                 </div>
-                                                <div className="px-2 py-1 rounded bg-emerald-500/5 border border-emerald-500/10">
-                                                    <span className="text-[8px] font-black text-emerald-500/60 uppercase tracking-widest">Active</span>
+                                                <div className="px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10">
+                                                    <span className="text-[9px] font-black text-primary uppercase tracking-widest opacity-60">Verified</span>
                                                 </div>
                                             </div>
                                         </div>

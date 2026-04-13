@@ -15,17 +15,17 @@ You must meticulously define the Schema, API Contracts, and System Map.
 *   `apps/api`: Python FastAPI Backend Sidecar (compiled via PyInstaller, managed via uv)
 *   `apps/e2e-tests`: Playwright E2E Tests (TypeScript)
 
-### Core Reasoning Engine (The Workforce)
-The system has been consolidated from multiple specialists into a **Dual-Agent Core**:
-1.  **Orchestrator**: The master planning and executive interface. Manages high-level brainstorming, history, and oversees all system activities. Integrated as the primary interactive dashboard within the Agent Registry.
-2.  **OKA (Obsidian Knowledge Architect)**: The autonomous data ingestion engine. Transforms raw inputs into structured pedagogical knowledge assets in Obsidian.
+### Core Reasoning Engine (The Sovereign Engine)
+The system has been consolidated from multiple specialists into a **Single-Agent Sovereign Core**:
+1.  **OKA (Obsidian Knowledge Architect)**: The absolute autonomous ingestion engine. It is the core intelligence unit of Life OS, responsible for transforming unstructured inputs into structured, pedagogical knowledge assets in Obsidian.
 
 ## 2. UI/UX Strategy
-> The interface is designed for minimal friction and professional aesthetics.
+> The interface follows a **Monochrome High-Fidelity** paradigm.
 
-*   **Streamlined Sidebar**: Focuses on core hubs: "Knowledge Base" (Obsidian Vault Access) and "Intelligence" (Agent Registry).
-*   **Integrated Agent Registry**: Centralized control for all autonomous units. The Orchestrator view is embedded directly as the "Inspect" dashboard for the Orchestrator agent, providing full chat capabilities.
-*   **Shadcn UI & Tailwind**: Consistent, professional styling across all views.
+*   **Standardized Navigation**: Sidebar consists of "Knowledge Base" (Vault Access), "Vault Sync" (Database Clusters), "Intelligence" (OKA Hub), and "Settings".
+*   **Aesthetic Purity**: Grayscale-only palette with deep shadows, high-fidelity typography, and blurred glassmorphism.
+*   **Interactive Databases**: Native Board, Table, and Gallery views for managing knowledge metadata.
+
 
 ## 3. API-First Contracts
 > The React Frontend (`apps/desktop`) communicates with the Python Backend (`apps/api`) via HTTP (localhost) and the Tauri Shell via IPC.

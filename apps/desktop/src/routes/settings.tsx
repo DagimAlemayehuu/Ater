@@ -10,7 +10,6 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { cn } from '@/lib/utils'
 import { sidecarApi } from '@/lib/sidecarApi'
 import ProfileEditor from '@/components/profiles/ProfileEditor'
-import StrategistSliders from '@/components/profiles/StrategistSliders'
 import {
     PERSONAL_PROFILE_SCHEMA,
     ACADEMIC_PROFILE_SCHEMA,
@@ -58,11 +57,6 @@ const PROFILE_CARDS: ProfileCardDef[] = [
         id: 'master_plan', title: 'Master Strategic Plan', icon: <Target size={16} />,
         description: 'The "Ground Truth" for your life. Vision, Kadence, and Core Process.',
         category: 'master_plan', configKey: 'profileMasterPlan',
-    },
-    {
-        id: 'strategist_prompt', title: 'Strategist Prompt', icon: <Bot size={16} />,
-        description: 'The high-level system instructions for the AI Strategist.',
-        category: 'system_prompts', configKey: 'strategistPrompt',
     },
 ]
 
@@ -113,39 +107,6 @@ const SettingsCard = ({ title, icon, value, children, onEdit, isEditing, onSave,
         </CardContent>
     </Card>
 )
-
-/* ─────────── Debounced Strategist Prompt Textarea ─────────── */
-
-function StrategistPromptTextarea({ value, onSave, placeholder }: { value: string; onSave: (v: string) => void; placeholder?: string }) {
-    const [local, setLocal] = React.useState(value);
-    const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    React.useEffect(() => { setLocal(value); }, [value]);
-
-    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const v = e.target.value;
-        setLocal(v);
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => onSave(v), 800);
-    };
-
-    return (
-        <div className="space-y-4">
-            <textarea
-                value={local}
-                onChange={handleChange}
-                className="w-full h-[400px] bg-background text-sm p-4 rounded-md border border-input focus:outline-none focus:ring-1 focus:ring-ring leading-relaxed resize-none overflow-y-auto custom-scrollbar shadow-sm"
-                placeholder={placeholder || "Enter core directives..."}
-            />
-            <div className="p-4 rounded-md bg-muted/50 border flex items-start gap-3">
-                <Info size={16} className="text-muted-foreground mt-0.5 shrink-0" />
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                    The sliders associated with this persona are automatically appended to these directives when communicating with the AI. Use this space for behavioral constraints and methodology.
-                </p>
-            </div>
-        </div>
-    );
-}
 
 /* ─────────────────── Main Component ─────────────────── */
 
@@ -812,13 +773,6 @@ export default function Settings() {
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardHeader title="Strategist Blueprint" description="Visual trait calibration." icon={<Sliders size={18} className="text-primary" />} />
-                        <CardContent>
-                            <StrategistSliders value={config?.strategistSliders || '{}'} onChange={(val) => saveConfig({ strategistSliders: val })} type="strategist" />
-                        </CardContent>
-                    </Card>
-
                     {renderProfileCategory('Logic & Ground Truth', PROFILE_CARDS.filter(c => c.category !== 'profiles'))}
                 </div>
             </div>
@@ -826,37 +780,41 @@ export default function Settings() {
     }
 
     return (
-        <div className="space-y-6 md:block w-full mx-auto animate-in fade-in duration-300">
-            <div className="space-y-0.5">
-                <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                    <SettingsIcon size={24} className="text-muted-foreground" />
-                    Settings
-                </h2>
-                <p className="text-muted-foreground">Manage your architecture and credentials.</p>
+        <div className="h-full flex flex-col space-y-10 animate-in fade-in duration-700 overflow-hidden">
+            <div className="flex flex-col space-y-2 shrink-0">
+                <h1 className="text-4xl font-black tracking-tighter uppercase">SYSTEM SETTINGS</h1>
+                <p className="text-muted-foreground text-sm font-medium">Manage core architecture, identity profiles, and intelligence directives.</p>
             </div>
 
-            <div className="shrink-0 bg-border h-[1px] w-full my-6" />
-
-            <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
-                <aside className="-mx-4 lg:w-1/5">
-                    <nav className="flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1 overflow-x-auto pb-4 lg:pb-0 px-4 pt-1">
+            <div className="flex-1 flex flex-col lg:flex-row gap-12 min-h-0">
+                <aside className="lg:w-64 shrink-0">
+                    <nav className="flex flex-col space-y-2">
                         {sidebarItems.map((item) => (
                             <button
                                 key={item.section}
                                 onClick={() => { setActiveSection(item.section); setActiveProfileId(null); }}
                                 className={cn(
-                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground justify-start shrink-0 lg:w-full",
-                                    activeSection === item.section ? "bg-muted text-foreground" : "text-muted-foreground"
+                                    "flex items-center gap-4 px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300",
+                                    activeSection === item.section 
+                                        ? "bg-primary text-primary-foreground shadow-xl shadow-primary/20 scale-[1.02]" 
+                                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
                                 )}
                             >
-                                <span className="mr-2">{item.icon}</span>
+                                <span className={cn(activeSection === item.section ? "opacity-100" : "opacity-40")}>{item.icon}</span>
                                 {item.label}
                             </button>
                         ))}
                     </nav>
+
+                    <div className="mt-12 p-6 rounded-3xl border border-dashed border-border/40 bg-muted/5">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mb-2 italic">Architecture L3</p>
+                        <p className="text-[10px] text-muted-foreground leading-relaxed italic opacity-40">
+                            System configuration is persisted locally. Core engine parameters are immutable unless audited.
+                        </p>
+                    </div>
                 </aside>
 
-                <div className="flex-1 lg:max-w-4xl min-w-0">
+                <div className="flex-1 overflow-y-auto custom-scrollbar pr-6 pb-20">
                     {activeProfileId ? renderProfileDetail() : (
                         activeSection === 'general' ? renderGeneral() :
                             activeSection === 'profiles' ? renderProfiles() :
@@ -868,3 +826,4 @@ export default function Settings() {
         </div>
     )
 }
+

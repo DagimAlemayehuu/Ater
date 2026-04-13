@@ -4,51 +4,38 @@ Instructions for the User (Delete this block before use):
 Use your Gemini Gem to fill out this highly detailed template. The Architect Agent requires absolute clarity to build the system blueprint. Be exhaustive. Do not leave ambiguity.
 -->
 
-# 1. Product Vision & Core Value
-## 1.1 The "Elevator Pitch"
-> What is this product? In one sentence, what problem does it solve?
-[Insert pitch]
+# 1. Product Vision & Sovereign Value
+## 1.1 The Sovereign Pitch
+Life OS is a high-fidelity, local-first digital management system that transforms raw information into structured, pedagogical knowledge assets via the **OKA Sovereign Ingestion Engine**.
 
-## 1.2 Target Audience & Use Case
-> Who is using this? Describe the primary persona and their typical environment (e.g., "A busy warehouse manager on an iPad with a weak 4G connection").
-[Insert audience]
+## 1.2 Target Audience
+Students, engineers, and researchers who require an absolute bridge between their structured data (Notion) and their specialized reasoning (Obsidian).
 
-# 2. Functional Requirements (The "Must-Haves")
+# 2. Functional Requirements
 ## 2.1 Core Capabilities
-> List the absolute minimum features required for the MVP to function. Be specific. Do not say "Authentication", say "Email/Password login with Forgot Password flow."
-*   **Capability 1:** [Name] - [Detailed description of what it does]
-*   **Capability 2:** [Name] - [Detailed description of what it does]
-*   **Capability 3:** [Name] - [Detailed description of what it does]
-
-## 2.2 User Roles & Permissions
-> Who can do what? (e.g., `Admin`, `Member`, `Guest`).
-*   **Role 1:** Can [actions]. Cannot [actions].
-*   **Role 2:** Can [actions]. Cannot [actions].
+*   **OKA Ingestion**: Multi-batch autonomous generation of pedagogical note clusters (Hubs, Units, Questions, Atomic Notes) from PDFs and text.
+*   **Vault Mirroring**: Synchronized folder structures between Notion databases and Obsidian directories.
+*   **High-Fidelity Reader**: Professional-grade Markdown viewing with integrated property visualization.
+*   **Cluster Management**: Native Notion-style database views (Table, Board, Gallery) inside the desktop app.
 
 # 3. Step-by-Step User Journeys
-## 3.1 Journey 1: The Onboarding Flow
-> Describe exactly what happens the first time a user opens the app.
-1. User lands on `/`.
-2. User clicks "Sign Up".
-3. User enters X, Y, Z.
-4. User is redirected to `/dashboard` and sees the welcome modal.
+## 3.1 Knowledge Ingestion
+1. User drops a PDF into the OKA Inbox.
+2. OKA generates a Strategic Mapping Plan.
+3. User confirms the plan, and OKA executes a multi-batch deployment loop.
+4. Notes appear instantly in the dedicated Obsidian cluster.
 
-## 3.2 Journey 2: The Core Loop
-> Describe the primary action the user takes repeatedly.
-1. User clicks...
-2. System calculates...
-3. UI updates to show...
+## 3.2 Profile Alignment
+1. User updates Academics/Financial/Fitness data in Notion.
+2. User triggers "Vault Sync".
+3. Local vault frontmatter and folder hierarchy update to match current ground truth.
 
-# 4. Data Entities (The Nouns)
-> What are the primary "things" in this app? (e.g., "Users, Products, Orders").
-*   **Entity A:** Has properties like [name, price, date_created].
-*   **Entity B:** Belongs to Entity A. Has properties like [status, quantity].
+# 4. Data Entities
+*   **Knowledge Asset**: A folder containing pedagogical notes (Hub, Questions, Notes).
+*   **Database Cluster**: A Notion-synchronized collection of notes with extensive metadata metadata (Status, Type, Confidence).
+*   **Identity Profile**: A collection of domain-specific context (Personal, Academic, etc.) used to ground AI generations.
 
-# 5. Non-Functional & Technical Constraints
-## 5.1 Performance & Scale
-> e.g., "Must support 1,000 concurrent users." "Pages must load in < 1 second."
-[Insert constraints]
+# 5. Technical Constraints
+*   **Model Isolation**: Every generation step must be isolated to support diverse model tiers (L1-L3).
+*   **Zero-Internet Sync**: Once tokens are fetched, core reading/navigation must strictly use local file caches.
 
-## 5.2 Integrations & External Services
-> Does this app need to talk to the outside world? (e.g., "Must use Stripe for billing," "Must use SendGrid for transactional emails").
-*   **Integration 1:** [Service name] - [Purpose]

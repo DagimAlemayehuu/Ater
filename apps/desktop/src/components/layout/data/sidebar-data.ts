@@ -2,7 +2,11 @@ import {
   FileText,
   Users,
   Zap,
-  RefreshCw
+  RefreshCw,
+  Target,
+  ScrollText,
+  UserCog,
+  BrainCircuit
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -46,4 +50,6 @@ export const sidebarData: SidebarData = {
       ],
     },
   ],
+
 }
+
