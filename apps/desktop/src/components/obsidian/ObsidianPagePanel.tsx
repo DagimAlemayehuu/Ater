@@ -131,13 +131,13 @@ export function ObsidianPagePanel({
 
     return (
         <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <SheetContent className="sm:max-w-2xl w-full h-full flex flex-col p-0 gap-0 border-l border-border/40 bg-background shadow-2xl">
+            <SheetContent className="sm:max-w-2xl w-full h-full flex flex-col p-0 gap-0 border-l border-gray-200 bg-white shadow-xl">
                 <SheetTitle className="sr-only">{localTitle}</SheetTitle>
                 <SheetDescription className="sr-only">Viewing {relativePath}</SheetDescription>
 
                 {/* Page Chrome: Cover & Icon */}
                 <div className="relative group/chrome shrink-0">
-                    <div className="h-32 w-full bg-secondary/10 relative overflow-hidden">
+                    <div className="h-32 w-full bg-gray-50 relative overflow-hidden">
                         {displayProps.cover ? (
                             <img src={displayProps.cover} className="w-full h-full object-cover opacity-80 group-hover/chrome:opacity-100 transition-opacity" alt="" />
                         ) : (
@@ -147,7 +147,7 @@ export function ObsidianPagePanel({
                     </div>
 
                     {displayProps.icon && (
-                        <div className="absolute -bottom-6 left-8 text-5xl bg-background p-2 rounded-2xl border border-border/20 shadow-xl z-10 hover:scale-105 transition-transform cursor-default">
+                        <div className="absolute -bottom-6 left-8 text-5xl bg-white p-2 rounded-2xl border border-gray-200/20 shadow-xl z-10 hover:scale-105 transition-transform cursor-default">
                             {displayProps.icon}
                         </div>
                     )}
@@ -183,17 +183,18 @@ export function ObsidianPagePanel({
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-10">
                     {/* Properties Area */}
                     {sortedPropertyKeys.length > 0 && (
-                        <div className="grid grid-cols-1 gap-y-2 pb-6 border-b border-border/10">
+                        <div className="grid grid-cols-1 gap-y-2 pb-6 border-b border-gray-200">
                             {sortedPropertyKeys.map((name) => (
                                 <div key={name} className="flex items-center gap-4 group">
                                     <span className="w-24 text-[9px] font-black text-muted-foreground/30 uppercase tracking-tighter shrink-0 truncate hover:text-muted-foreground/60 transition-colors" title={name}>{name}</span>
                                     <div className="flex-1 min-w-0">
-                                        <EditableCell
-                                            initialValue={displayProps[name]}
-                                            type={displaySchema[name]}
-                                            onSave={(newValue) => handleUpdateLocalProp(name, newValue)}
-                                            onNavigate={onNavigate}
-                                        />
+                                            <EditableCell
+                                                initialValue={displayProps[name]}
+                                                type={displaySchema[name]}
+                                                onSave={(newValue) => handleUpdateLocalProp(name, newValue)}
+                                                onNavigate={onNavigate}
+                                                row={{ properties: displayProps }}
+                                            />
                                     </div>
                                 </div>
                             ))}
@@ -206,7 +207,7 @@ export function ObsidianPagePanel({
                             <div className="h-64 flex items-center justify-center opacity-10"><RefreshCw size={24} className="animate-spin" /></div>
                         ) : (
                             <div className="space-y-8">
-                                <div className="p-4 rounded-xl bg-secondary/5 border border-border/10">
+                                <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                                     <textarea
                                         value={content}
                                         onChange={(e) => { setContent(e.target.value); setIsDirty(true); }}
@@ -214,7 +215,7 @@ export function ObsidianPagePanel({
                                         placeholder="Note content..."
                                     />
                                 </div>
-                                <div className="pt-8 border-t border-border/5">
+                                <div className="pt-8 border-t border-gray-200/5">
                                     <div className="mb-4 text-[10px] font-black uppercase tracking-widest opacity-20">Preview</div>
                                     <MarkdownViewer 
                                         content={content} 

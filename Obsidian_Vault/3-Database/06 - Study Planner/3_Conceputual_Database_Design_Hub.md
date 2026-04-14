@@ -11,30 +11,31 @@ generated: false
 ---
 
 # Overview
-The Conceptual Database Design Hub is a central repository for all knowledge assets related to conceptual database design. This includes the Entity-Relationship (ER) modeling, database development methodology, and the various components involved in designing a database.
+The Conceptual Database Design Hub is a central repository for all knowledge assets related to conceptual database design. This includes understanding the database development methodology, phases of database design, and the use of Entity-Relationship (ER) modeling in database design.
 
 # Learning Objectives
-- Understand the database development methodology (DDLC).
-- Learn the phases of database design.
-- Understand how to use Entity–Relationship (ER) modeling in database design.
-- Familiarize with basic concepts associated with the ER model.
+- Understand the database development methodology and its importance.
+- Identify the phases of database design and their interrelations.
+- Apply Entity-Relationship (ER) modeling in conceptual database design.
+- Learn the basic concepts associated with the ER model.
 
 # Connections
 ## Hierarchical Mirror of the Plan
-- [[Database_Development_Methodology]]
-  - [[Phases_Of_Database_Design]]
+- [[Database_Development_Methodology]] 
+  - [[Phases_of_Database_Design]]
     - [[Database_System_Development_Lifecycle]]
-- [[Entity_Relationship_Modelling]]
-  - [[Basic_Concepts_Associated_With_ER_Model]]
+- [[Entity-Relationship_Modeling]] 
+  - [[Basic_Concepts_of_ER_Model]]
+    - [[Entities_and_Entity_Types]]
+    - [[Relationship_Types_and_Degree]]
+    - [[Attributes_and_Keys]]
 - [[Conceptual_Database_Design]]
-  - [[Developing_an_ER_Diagram]]
-    - [[Concepts_of_the_ER_Model]]
-      - [[Entity_Type]]
-        - [[Relationship_Types]]
-          - [[Attributes]]
-            - [[Keys]]
-              - [[Entity_Type_Strong_and_Weak]]
-                - [[Structural_Constraints]]
+  - [[Developing_ER_Diagrams]]
+    - [[ER_Diagram_Components]]
+    - [[Validating_ER_Models]]
+- [[Structural_Constraints]]
+  - [[Multiplicity_and_Cardinality]]
+    - [[Participation_and_Constraints]]
 
 # Possible Questions
 [[3_Conceputual_Database_Design_Possible_Questions]]

@@ -75,15 +75,23 @@
     *   [ ] **Dynamic View State**: Save/Load custom filters, sorts, and column ordering in the database config.
     *   [ ] **Tabbed Navigation**: UI transition to a multi-tab layout for switching views effortlessly.
 *   **[PHASE 2] Property Intelligence & Interaction**
-    *   [ ] **Rich Property Rendering**: Pill-style Select/Multi-Select badges, Date pickers, and Type-specific icons.
-    *   [ ] **Relation Logic**: Linking notes across database folders using wikilinks and auto-discovery.
+    *   [x] **Rich Property Rendering**: Pill-style Select/Multi-Select badges, Date pickers, and Type-specific icons.
+    *   [x] **Relation Logic (WikiLinks)**: Native `[[Link]]` parsing with alias support and automatic file creation on-the-fly.
     *   [ ] **Database Templates**: Folder-level `_template.md` support for auto-populating new rows.
+*   **[PHASE 3] Neural Architecture (Vault Graph)**
+    *   [x] **Force-Directed Simulation**: Fluid 60FPS 2D graph engine for vault structure visualization.
+    *   [x] **Centrality Scaling**: Automatic node sizing based on inter-note link density.
+    *   [x] **Canvas Text Fading**: Intelligent label rendering that responds to zoom-proximity.
+    *   [x] **Ghost Node Detection**: Visualizing unresolved links to notes that haven't been created yet.
 *   **[PHASE 3] Premium Experience & Aesthetics**
     *   [ ] **Page Chrome (Cover/Icons)**: Aesthetic headers on individual pages with YAML-driven backgrounds/icons.
     *   [ ] **Side-Peek Editor**: Notion-style side panel for editing page content without leaving the database view.
     *   [ ] **Global Sidebar Org**: Refactoring the vault sidebar to group by "Areas" and "Database" types dynamically.
 
 ### Completed Epics
+*   [x] **Interactive Card-View & Database Gallery UI**
+*   [x] **Force-Directed Vault Graph (Visual Knowledge Map)**
+*   [x] **Dynamic WikiLink Engine (Auto-Creation & Nav)**
 *   [x] **Backend Hardening**: Safe YAML parsing and reordered routing to fix API collisions.
 *   [x] **Architect Panel**: Reactive UI for adding rows/columns without browser prompts.
 *   [x] **Dynamic Area Support**: Automated database categorization based on the `Areas` database.

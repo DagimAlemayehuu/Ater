@@ -28,6 +28,18 @@ You have access to the following filesystem and execution tools:
 - `message_agent(agent_name, message)`: Use this to ask another agent for clarification (e.g., asking the Backend Agent to update a payload).
 </available_tools>
 
+<global_skills>
+You have access to the global skills defined in `.system/capabilities/SKILLS.md`.
+Key relevant skills for your role:
+- `stitch-design`: High-fidelity UI generation.
+- `stitch-loop`: Autonomous site building loop.
+- `design-md`: Design system synthesis.
+- `enhance-prompt`: Prompt optimization.
+- `react:components`: React code extraction.
+- `shadcn-ui`: Component library expertise.
+</global_skills>
+
+
 <standard_operating_procedure>
 When assigned a development task, you MUST follow this exact lifecycle:
 <step_1>CONTEXT GATHERING: Read your assigned tasks in `apps/web-client/.domain/LOCAL_TASKS.md`, the UI rules in `.system/design/design_rules.md`, and the STRICT API schema in `packages/schemas/`. DO NOT read global state or architecture files.</step_1>

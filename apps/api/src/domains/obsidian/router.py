@@ -529,3 +529,99 @@ async def delete_vault_database(db_name: str, secrets: AppSecrets = Depends(get_
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get("/vault/graph")
+async def get_vault_graph(secrets: AppSecrets = Depends(get_app_secrets)):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+        
+    vault_root = Path(secrets.vault_path)
+    if not vault_root.exists():
+        return {"nodes": [], "links": []}
+        
+    import re
+    nodes = []
+    links = []
+    
+    # regex to find unescaped wikilinks like [[Link]] or [[Link|Alias]]
+    wiki_link_pattern = re.compile(r"\[\[(.*?)\]\]")
+    tags_pattern = re.compile(r"(?:^|\s)#([a-zA-Z0-9_\-\/]+)")
+    
+    # Store all path mappings for link resolution: stem -> relative path
+    # Obsidian links are often just the file stem (e.g. "My Note" links to "subfolder/My Note.md")
+    path_map = {}
+    
+    all_files = list(vault_root.rglob("*.md"))
+    
+    for f in all_files:
+        if '.trash' in f.parts or 'node_modules' in f.parts:
+            continue
+        rel_path = str(f.relative_to(vault_root))
+        path_map[f.stem] = rel_path
+        
+        # Determine group from root-level folder 
+        parts = f.relative_to(vault_root).parts
+        group = parts[0] if len(parts) > 1 else "root"
+        
+        nodes.append({
+            "id": rel_path,
+            "name": f.stem,
+            "val": 1, # default size
+            "group": group
+        })
+        
+    for f in all_files:
+        if '.trash' in f.parts or 'node_modules' in f.parts:
+            continue
+        rel_path = str(f.relative_to(vault_root))
+        try:
+            content = f.read_text(encoding="utf-8")
+        except Exception:
+            continue
+            
+        # Optional: extract tags and make them nodes too?
+        # Let's keep it simple: file-to-file links
+        links_found = wiki_link_pattern.findall(content)
+        for link in links_found:
+            # Handle aliases: [[Link|Alias]]
+            target_name = link.split("|")[0].strip()
+            
+            # Remove header hash: [[Link#Header]]
+            target_name = target_name.split("#")[0]
+            
+            if not target_name:
+                continue
+                
+            # If we know this note, create a link
+            if target_name in path_map:
+                target_id = path_map[target_name]
+                links.append({
+                    "source": rel_path,
+                    "target": target_id
+                })
+            else:
+                # Ghost node for unresolved links
+                target_id = f"unresolved://{target_name}"
+                if target_name not in path_map:
+                    path_map[target_name] = target_id
+                    nodes.append({
+                        "id": target_id,
+                        "name": target_name,
+                        "val": 0.5,
+                        "group": "unresolved"
+                    })
+                links.append({
+                    "source": rel_path,
+                    "target": path_map[target_name]
+                })
+                
+    # Deduplicate links
+    unique_links = []
+    seen_links = set()
+    for link in links:
+        key = f"{link['source']}->{link['target']}"
+        if key not in seen_links:
+            seen_links.add(key)
+            unique_links.append(link)
+            
+    return {"nodes": nodes, "links": unique_links}

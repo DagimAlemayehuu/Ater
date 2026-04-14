@@ -19,10 +19,10 @@ export function GalleryView({
                 <div 
                     key={row.id}
                     onClick={() => onSelectRow(row.id)}
-                    className="flex flex-col bg-secondary/5 border border-border/20 rounded-xl overflow-hidden hover:border-primary/40 transition-all cursor-pointer group shadow-sm hover:shadow-lg hover:-translate-y-0.5"
+                    className="flex flex-col bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-gray-400 transition-all cursor-pointer group shadow-sm hover:shadow-lg hover:-translate-y-0.5"
                 >
                     {/* Card Header / Image Placeholder */}
-                    <div className="h-24 bg-secondary/20 flex items-center justify-center relative overflow-hidden">
+                    <div className="h-24 bg-gray-50 flex items-center justify-center relative overflow-hidden">
                         {row.properties.cover ? (
                             <img src={row.properties.cover} className="w-full h-full object-cover" alt="" />
                         ) : (
@@ -31,7 +31,7 @@ export function GalleryView({
                             </div>
                         )}
                         {row.properties.icon && (
-                            <div className="absolute -bottom-3 left-4 text-2xl bg-background p-1 rounded-lg border border-border/20 shadow-sm group-hover:scale-110 transition-transform">
+                            <div className="absolute -bottom-3 left-4 text-2xl bg-background p-1 rounded-lg border border-gray-200 shadow-sm group-hover:scale-110 transition-transform">
                                 {row.properties.icon}
                             </div>
                         )}
@@ -47,7 +47,7 @@ export function GalleryView({
                                 
                                 const type = schema[key];
                                 return (
-                                    <div key={key} className="flex items-center gap-1 bg-secondary/20 px-1.5 py-0.5 rounded text-[8px] font-bold opacity-60">
+                                    <div key={key} className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded text-[8px] font-bold opacity-60">
                                         <span className="opacity-40">{key}:</span>
                                         <span className="truncate max-w-[80px]">{String(val)}</span>
                                     </div>

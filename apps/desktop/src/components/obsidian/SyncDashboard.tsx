@@ -62,19 +62,19 @@ export function SyncDashboard() {
     };
 
     return (
-        <div className="flex flex-col gap-12 p-2">
+        <div className="flex flex-col gap-10 p-2">
             {/* Local RAG Engine Section */}
             <div className="space-y-4">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Local RAG Engine</h3>
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Local RAG Engine</h3>
                 <div className="flex flex-col gap-1">
-                    <span className="text-3xl font-black uppercase leading-none">{ragStatus.status}</span>
-                    <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">{ragStatus.message || 'Ready'}</span>
-                    <span className="text-xl font-black opacity-10">{getProgressPercent(ragStatus)}%</span>
+                    <span className="text-3xl font-extrabold tracking-tight text-[#111827] leading-none">{ragStatus.status}</span>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{ragStatus.message || 'Ready'}</span>
+                    <span className="text-xl font-bold text-gray-300">{getProgressPercent(ragStatus)}%</span>
                 </div>
                 <button 
                     onClick={handleRagSync}
                     disabled={ragStatus.status === 'indexing'}
-                    className="text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 bg-secondary/20 hover:bg-secondary/30 rounded-lg transition-all disabled:opacity-30"
+                    className="text-[10px] font-bold uppercase tracking-wider px-4 py-2 bg-white border border-gray-200 text-[#111827] hover:bg-gray-50 rounded transition-all disabled:opacity-50 inline-block w-max"
                 >
                     {ragStatus.status === 'indexing' ? 'Indexing...' : 'Re-index Vault'}
                 </button>
@@ -82,44 +82,44 @@ export function SyncDashboard() {
 
             {/* Notion Mirror Section */}
             <div className="space-y-4">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Notion Mirror</h3>
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Notion Mirror</h3>
                 <div className="flex flex-col gap-1">
-                    <span className="text-3xl font-black uppercase leading-none">{mirrorStatus.status}</span>
-                    <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">{mirrorStatus.message || 'Ready'}</span>
-                    <span className="text-xl font-black opacity-10">{getProgressPercent(mirrorStatus)}%</span>
+                    <span className="text-3xl font-extrabold tracking-tight text-[#111827] leading-none">{mirrorStatus.status}</span>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{mirrorStatus.message || 'Ready'}</span>
+                    <span className="text-xl font-bold text-gray-300">{getProgressPercent(mirrorStatus)}%</span>
                 </div>
                 <button 
                     onClick={handleNotionSync}
                     disabled={mirrorStatus.status === 'syncing'}
-                    className="text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 bg-secondary/20 hover:bg-secondary/30 rounded-lg transition-all disabled:opacity-30"
+                    className="text-[10px] font-bold uppercase tracking-wider px-4 py-2 bg-white border border-gray-200 text-[#111827] hover:bg-gray-50 rounded transition-all disabled:opacity-50 inline-block w-max"
                 >
                     {mirrorStatus.status === 'syncing' ? 'Syncing...' : 'Deep Sync'}
                 </button>
             </div>
 
             {/* Diagnostics Section */}
-            <div className="pt-8 border-t border-border/10 space-y-8">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Diagnostics</h3>
+            <div className="pt-8 border-t border-gray-100 space-y-8">
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Diagnostics</h3>
                 
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-5">
                     <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Watcher Daemon</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Watcher Daemon</span>
                         <div className="flex items-center gap-4">
-                            <span className={cn("text-xl font-black uppercase", watcherActive ? "text-emerald-500" : "text-foreground/20")}>
+                            <span className={cn("text-xl font-extrabold tracking-tight", watcherActive ? "text-green-600" : "text-gray-300")}>
                                 {watcherActive ? 'Active' : 'Off'}
                             </span>
                             <button 
                                 onClick={handleWatcherToggle}
-                                className="p-1.5 rounded-md bg-secondary/10 hover:bg-secondary/20 transition-all"
+                                className="p-1.5 rounded bg-gray-50 hover:bg-gray-100 border border-transparent hover:border-gray-200 transition-all"
                             >
-                                <Power size={12} className={watcherActive ? "text-emerald-500" : "text-muted-foreground/40"} />
+                                <Power size={12} className={watcherActive ? "text-green-600" : "text-gray-400"} />
                             </button>
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Permissions</span>
-                        <span className="text-xl font-black uppercase text-emerald-500">OK</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Permissions</span>
+                        <span className="text-xl font-extrabold tracking-tight text-green-600">OK</span>
                     </div>
                 </div>
             </div>

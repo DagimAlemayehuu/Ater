@@ -36,7 +36,7 @@ export function BoardView({
                             <div className="flex items-center gap-2">
                                 <span className={cn(
                                     "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest",
-                                    "bg-secondary/40 text-secondary-foreground"
+                                    "bg-gray-100 text-gray-900"
                                 )}>
                                     {group}
                                 </span>
@@ -50,7 +50,7 @@ export function BoardView({
                                 <div 
                                     key={row.id} 
                                     onClick={() => onSelectRow(row.id)}
-                                    className="p-3 bg-secondary/5 border border-border/20 rounded-lg hover:border-primary/40 transition-all cursor-pointer group shadow-sm hover:shadow-md"
+                                    className="p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-400 transition-all cursor-pointer group shadow-sm hover:shadow-md"
                                 >
                                     <h4 className="text-xs font-bold mb-3 group-hover:text-primary transition-colors">{row.title}</h4>
                                     
@@ -66,6 +66,7 @@ export function BoardView({
                                                             type={schema[key] || 'str'} 
                                                             onSave={(nv) => onUpdate(row.id, key, nv)} 
                                                             onNavigate={onNavigate} 
+                                                            row={row}
                                                         />
                                                     </div>
                                                 </div>
@@ -75,7 +76,7 @@ export function BoardView({
                                 </div>
                             ))}
                             
-                            <button className="flex items-center gap-2 p-2 text-[10px] font-bold opacity-40 hover:opacity-100 transition-opacity hover:bg-secondary/10 rounded-lg">
+                            <button className="flex items-center gap-2 p-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-opacity hover:bg-gray-50 rounded-lg">
                                 <Plus size={12} /> New Page
                             </button>
                         </div>

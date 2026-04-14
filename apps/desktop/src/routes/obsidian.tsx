@@ -4,9 +4,11 @@ import {
     Sparkles, Paperclip, FileText, Folder, ChevronRight, 
     Search, LayoutGrid, BrainCircuit, X, Zap, Activity, 
     PauseCircle, ListChecks, Archive, Terminal, Database,
-    ChevronDown, Info, PanelLeft, Layout, FolderOpen
+    ChevronDown, Info, PanelLeft, Layout, FolderOpen,
+    Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Users, Settings, Network
 } from 'lucide-react'
 import { sidecarApi, ObsidianFile } from '@/lib/sidecarApi'
+import { ObsidianGraphView } from '@/components/obsidian/ObsidianGraphView'
 import { cn } from '@/lib/utils'
 import { useConfig } from '@/lib/ConfigContext'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -14,7 +16,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
 
 interface InboxFile {
     name: string
@@ -30,23 +32,39 @@ interface FileNode {
 
 function NoteProperties({ metadata }: { metadata: Record<string, any> }) {
     if (!metadata || Object.keys(metadata).length === 0) return null
+
+    const getPropertyIcon = (key: string) => {
+        switch (key.toLowerCase()) {
+            case 'course': return <GraduationCap size={18} />
+            case 'semester': return <Calendar size={18} />
+            case 'department': return <Building size={18} />
+            case 'status': return <Circle size={18} />
+            default: return <Info size={18} />
+        }
+    }
     
     return (
-        <div className="mb-8 p-4 rounded-lg bg-muted/30 border border-border/50">
-            <div className="flex items-center gap-2 mb-3 text-muted-foreground">
-                <Database size={12} />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Properties</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
-                {Object.entries(metadata).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between py-1 border-b border-border/20 last:border-0">
-                        <span className="text-[10px] font-medium text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
-                        <span className="text-[11px] font-semibold truncate max-w-[150px]">
-                            {Array.isArray(value) ? value.join(', ') : String(value)}
+        <div className="grid grid-cols-2 gap-y-6 gap-x-20 py-10 border-y border-gray-100 mb-12" data-purpose="note-metadata">
+            {Object.entries(metadata).map(([key, value]) => (
+                <div key={key} className="flex items-center gap-4">
+                    <div className="w-5 flex justify-center text-gray-400">
+                        {getPropertyIcon(key)}
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{key.replace(/_/g, ' ')}</span>
+                        <span className="text-[14px] font-medium text-gray-800">
+                            {key.toLowerCase() === 'status' ? (
+                                <span className="flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full border border-gray-400"></span>
+                                    {Array.isArray(value) ? value.join(', ') : String(value)}
+                                </span>
+                            ) : (
+                                Array.isArray(value) ? value.join(', ') : String(value)
+                            )}
                         </span>
                     </div>
-                ))}
-            </div>
+                </div>
+            ))}
         </div>
     )
 }
@@ -58,6 +76,7 @@ export default function ObsidianVaultPage() {
     
     // --- Layout State ---
     const [showArchitect, setShowArchitect] = useState(false)
+    const [showGraphView, setShowGraphView] = useState(false)
 
     // --- Vault Explorer State ---
     const [files, setFiles] = useState<ObsidianFile[]>([])
@@ -162,6 +181,26 @@ export default function ObsidianVaultPage() {
             setNoteMetadata({})
             setNoteContent('# Error\nFailed to load content.')
         } finally { setLoadingNote(false) }
+    }
+
+    const handleWikiLinkClick = async (pageName: string) => {
+        try {
+            const res = await sidecarApi.findVaultPage(pageName);
+            if (res.found && res.path) {
+                selectFile(res.path);
+            } else if (res.found && res.type === 'database') {
+                selectFile(`3-Database/${res.db_id}/${res.file_name}`);
+            } else {
+                // Not found. Create a new root note and navigate to it
+                const newPath = `${pageName}.md`;
+                const initialContent = `---\ntitle: ${pageName}\n---\n\n`;
+                await sidecarApi.updateObsidianNote(newPath, initialContent);
+                fetchFiles(); // refresh file tree since we created a new note
+                selectFile(newPath);
+            }
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     const toggleFolder = (path: string) => {
@@ -299,23 +338,26 @@ export default function ObsidianVaultPage() {
                         <div 
                             onClick={() => node.isFolder ? toggleFolder(node.path) : selectFile(node.path)}
                             className={cn(
-                                "flex items-center gap-2 py-1 px-2 rounded-md cursor-pointer text-xs transition-colors",
-                                isSelected ? "bg-primary text-primary-foreground font-semibold" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground",
-                                level > 0 && "ml-4"
+                                "flex items-center gap-2 py-1 cursor-pointer transition-colors px-4",
+                                isSelected ? "bg-[#E5E7EB] text-black font-medium rounded-md mx-2 px-2" : "hover:bg-[#F3F4F6] text-gray-600"
                             )}
                         >
                             {node.isFolder ? (
-                                <>
-                                    <ChevronRight size={14} className={cn("transition-transform shrink-0", isExpanded && "rotate-90")} />
-                                    <Folder size={14} className={cn("shrink-0", isSelected ? "text-primary-foreground" : "text-primary/70")} />
-                                </>
+                                <ChevronRight className={cn("w-3.5 h-3.5 shrink-0 transition-transform", isExpanded ? "rotate-90 text-gray-400" : "text-gray-400")} />
                             ) : (
-                                <FileText size={14} className="shrink-0 ml-5" />
+                                <div className="w-3.5 h-3.5 shrink-0 text-transparent" />
                             )}
-                            <span className="truncate">{node.name}</span>
+                            
+                            {node.isFolder ? (
+                                <Folder className={cn("w-4 h-4 shrink-0", isSelected ? "text-black" : "text-gray-400")} />
+                            ) : (
+                                <FileText className={cn("w-4 h-4 shrink-0", isSelected ? "text-black" : "text-gray-400")} />
+                            )}
+                            
+                            <span className="truncate text-[13px]">{node.name}</span>
                         </div>
                         {node.isFolder && isExpanded && node.children && (
-                            <div className="border-l border-border/50 ml-3 mt-0.5">
+                            <div className="pl-4">
                                 {renderTree(node.children, level + 1)}
                             </div>
                         )}
@@ -325,266 +367,269 @@ export default function ObsidianVaultPage() {
     }
 
     return (
-        <div className="h-full flex flex-col w-full mx-auto animate-in fade-in duration-300 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-background shrink-0">
-                <div className="flex items-center gap-4">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                        <Database className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-bold tracking-tight">Obsidian</h2>
-                        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Local Knowledge Vault</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setShowArchitect(!showArchitect)}
-                        className={cn("h-8 text-[10px] font-bold uppercase", showArchitect ? "bg-primary/10 text-primary" : "text-muted-foreground")}
-                    >
-                        <BrainCircuit size={14} className="mr-2" />
-                        {showArchitect ? "Hide Architect" : "Open Architect"}
-                    </Button>
-                    <div className="h-4 w-[1px] bg-border mx-1" />
-                    <Button variant="outline" size="sm" onClick={fetchFiles} className="h-8 text-[10px] font-bold uppercase">
-                        <RefreshCw size={14} className={cn("mr-2", loadingFiles && "animate-spin")} /> Sync
-                    </Button>
-                </div>
-            </div>
-
-            {/* Main Content Area */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* Left: Vault Explorer */}
-                <div className="w-[280px] flex flex-col border-r bg-muted/5 shrink-0 overflow-hidden">
-                    <div className="p-4 border-b">
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                            <input
-                                type="text"
-                                placeholder="Filter vault..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full h-8 rounded-md border bg-background pl-8 pr-3 text-[11px] focus:outline-none focus:ring-1 focus:ring-primary/20"
-                            />
-                        </div>
-                    </div>
-                    <ScrollArea className="flex-1">
-                        <div className="p-3 space-y-0.5">
-                            {files.length > 0 ? renderTree(fileTree) : (
-                                <div className="py-10 text-center opacity-20">
-                                    <Database size={24} className="mx-auto mb-2" />
-                                    <p className="text-[10px] font-bold uppercase">Vault Empty</p>
-                                </div>
-                            )}
-                        </div>
-                    </ScrollArea>
-                </div>
-
-                {/* Center: Viewer / Editor */}
-                <div className="flex-1 flex flex-col overflow-hidden bg-background">
-                    {!selectedPath ? (
-                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground/20 gap-4">
-                            <Layout size={64} strokeWidth={1} />
-                            <p className="text-xs font-bold uppercase tracking-widest">Select an asset to visualize</p>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col h-full animate-in fade-in duration-300">
-                            <div className="px-6 py-3 border-b bg-muted/5 flex items-center justify-between shrink-0">
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <FileText className="w-4 h-4 text-primary opacity-70" />
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="text-xs font-bold truncate text-foreground">{selectedPath.split('/').pop()}</span>
-                                        <span className="text-[9px] text-muted-foreground truncate uppercase">{selectedPath}</span>
+        <div className="flex flex-col h-full w-full select-none bg-white text-[#111827] overflow-hidden font-sans">
+            <div className="flex flex-1 overflow-hidden h-full">
+                {/* MainContentArea */}
+                <main className="flex-1 flex flex-col min-w-0">
+                    <div className="flex flex-1 overflow-hidden">
+                        {/* ExplorerSidebar */}
+                        <aside className="w-64 border-r border-[#E5E5E5] flex flex-col bg-white shrink-0">
+                            {/* Explorer Toolbar */}
+                            <div className="p-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2 w-full">
+                                    <div className="text-gray-400 hover:text-black cursor-pointer flex items-center justify-center p-1 rounded hover:bg-gray-100 shrink-0" title="New file">
+                                        <Plus className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="relative flex items-center">
+                                            <Search className="absolute left-2 w-3.5 h-3.5 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search..."
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                className="w-full bg-gray-50 border border-gray-200 text-[12px] px-2 py-1.5 pl-7 rounded focus:outline-none focus:ring-1 focus:ring-gray-300 placeholder:text-gray-400 transition-shadow"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="text-gray-400 hover:text-black cursor-pointer flex items-center justify-center p-1 rounded hover:bg-gray-100 shrink-0" title="Collapse sidebar">
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </div>
+                                    <div 
+                                        className={cn("cursor-pointer flex items-center justify-center p-1 rounded hover:bg-gray-100 shrink-0", showGraphView ? "text-black bg-gray-100" : "text-gray-400 hover:text-black")} 
+                                        onClick={() => setShowGraphView(!showGraphView)} 
+                                        title="Toggle Graph View"
+                                    >
+                                        <Network className="w-5 h-5" />
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={() => setSelectedPath(null)}
-                                    className="p-1.5 hover:bg-muted rounded-md transition-colors text-muted-foreground"
-                                >
-                                    <X size={14} />
-                                </button>
                             </div>
                             
-                            <ScrollArea className="flex-1">
-                                <div className="max-w-3xl mx-auto px-8 py-12">
-                                    {loadingNote ? (
-                                        <div className="h-64 flex flex-col items-center justify-center gap-4 opacity-50">
-                                            <RefreshCw size={24} className="animate-spin text-primary" />
-                                            <p className="text-[10px] font-bold uppercase tracking-widest">Deciphering...</p>
+                            {/* File Tree */}
+                            <div className="flex-1 overflow-y-auto min-h-0 text-[13px] text-gray-600 custom-scrollbar">
+                                <div className="py-2">
+                                    {files.length > 0 ? renderTree(fileTree) : (
+                                        <div className="py-10 text-center opacity-40">
+                                            <Database size={24} className="mx-auto mb-2 text-gray-400" />
+                                            <p className="text-[10px] font-bold uppercase">Vault Empty</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </aside>
+
+                        {/* Editor Workspace */}
+                        <section className="flex-1 flex flex-col bg-white overflow-hidden relative">
+                            {showGraphView ? (
+                                <ObsidianGraphView onNodeClick={(path) => {
+                                    selectFile(path);
+                                    setShowGraphView(false);
+                                }} />
+                            ) : (
+                                <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
+                                    {!selectedPath ? (
+                                        <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-gray-300 gap-4 mt-32">
+                                            <FileText size={64} strokeWidth={1} />
+                                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Select an asset to visualize</p>
                                         </div>
                                     ) : (
-                                        <div className="animate-in fade-in duration-500">
-                                            <NoteProperties metadata={noteMetadata} />
-                                            <div className="prose prose-sm dark:prose-invert prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-p:leading-relaxed max-w-none">
-                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                    {noteContent}
-                                                </ReactMarkdown>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </ScrollArea>
-                        </div>
-                    )}
-                </div>
-
-                {/* Right: OKA Architect (Collapsible Panel) */}
-                {showArchitect && (
-                    <div className="w-[400px] border-l bg-card flex flex-col shrink-0 overflow-hidden animate-in slide-in-from-right duration-300">
-                        <div className="p-4 border-b bg-muted/10 flex items-center justify-between shrink-0">
-                            <div className="flex items-center gap-2">
-                                <BrainCircuit size={16} className="text-primary" />
-                                <h3 className="text-xs font-bold uppercase tracking-wider">Knowledge Architect</h3>
-                            </div>
-                            <div className="flex items-center gap-2 bg-muted/30 px-2 py-1 rounded border">
-                                <span className="text-[8px] font-bold uppercase text-muted-foreground">Auto</span>
-                                <button 
-                                    onClick={toggleAutoDeploy}
-                                    className={cn("relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out", config?.autoDeploy ? 'bg-primary' : 'bg-muted')}
-                                >
-                                    <span className={cn("pointer-events-none inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out", config?.autoDeploy ? 'translate-x-3.5' : 'translate-x-0')} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <ScrollArea className="flex-1">
-                            <div className="p-4 space-y-6">
-                                {/* Pipeline Status */}
-                                <div className="rounded-lg border bg-background p-4 shadow-sm">
-                                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Pipeline</h4>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <div className={cn("w-1.5 h-1.5 rounded-full", queueStatus?.status !== 'idle' ? "bg-primary animate-pulse" : "bg-muted-foreground/30")} />
-                                            <span className="text-[10px] font-bold uppercase">{queueStatus?.status || 'Idle'}</span>
-                                        </div>
-                                        <span className="text-[9px] font-medium text-muted-foreground">{queueStatus?.pending_count || 0} Pending</span>
-                                    </div>
-                                    {queueStatus?.status !== 'idle' && (
-                                        <div className="space-y-1.5">
-                                            <p className="text-[9px] text-muted-foreground truncate">{queueStatus?.current_file}</p>
-                                            <div className="h-1 bg-muted rounded-full overflow-hidden">
-                                                <div className="h-full bg-primary transition-all duration-500" style={{ width: `${(queueStatus?.current_batch / (queueStatus?.total_batches || 1)) * 100}%` }} />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Inbox Section */}
-                                <div className="space-y-3">
-                                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Inbox</h4>
-                                    <div className="grid gap-1.5">
-                                        {inboxFiles.length > 0 ? inboxFiles.map(f => (
-                                            <div 
-                                                key={f.path} 
-                                                onClick={() => { setSelectedInboxFile(f); setOkaError(null); setActivePlan(null); setIsAwaitingConfirmation(false); }}
-                                                className={cn(
-                                                    "p-2.5 rounded-md border text-[10px] cursor-pointer transition-all", 
-                                                    selectedInboxFile?.path === f.path ? "bg-primary/5 border-primary/30" : "bg-background hover:bg-muted/50 border-transparent"
-                                                )}
-                                            >
-                                                <p className="font-bold truncate">{f.name}</p>
-                                                <p className="opacity-50 truncate">{f.path}</p>
-                                            </div>
-                                        )) : (
-                                            <div className="py-8 text-center border border-dashed rounded-lg opacity-20">
-                                                <Archive size={20} className="mx-auto mb-1" />
-                                                <p className="text-[9px] font-bold uppercase">Inbox Empty</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Workspace Area */}
-                                {selectedInboxFile && (
-                                    <div className="pt-4 border-t space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-primary">Active Analysis</h4>
-                                            <button onClick={resetOkaSession} className="text-[9px] font-bold text-muted-foreground hover:text-foreground">Reset</button>
-                                        </div>
-                                        
-                                        {!activePlan && !processing && (
-                                            <Button onClick={processSelectedFile} className="w-full h-8 text-[10px] font-bold uppercase">
-                                                <Zap size={12} className="mr-2" /> Analyze Document
-                                            </Button>
-                                        )}
-
-                                        {processing && (
-                                            <div className="py-10 text-center space-y-3">
-                                                <RefreshCw size={24} className="animate-spin mx-auto text-primary opacity-50" />
-                                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Architecting...</p>
-                                            </div>
-                                        )}
-
-                                        {activePlan && (
-                                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                                                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10">
-                                                    <Sparkles size={12} className="text-primary animate-pulse" />
-                                                    <p className="text-[10px] font-bold text-primary/80 uppercase tracking-wider">Architectural Plan</p>
+                                        <div className="max-w-5xl mx-auto px-16 py-12 animate-in fade-in duration-300">
+                                            {loadingNote ? (
+                                                <div className="h-64 flex flex-col items-center justify-center gap-4 text-gray-400">
+                                                    <RefreshCw size={24} className="animate-spin" />
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Loading Document...</p>
                                                 </div>
-                                                
-                                                {/* Clean Text-based Plan Output */}
-                                                <div className="p-4 rounded-xl bg-card border shadow-sm max-h-[400px] overflow-y-auto custom-scrollbar">
-                                                    <div className="prose prose-xs dark:prose-invert max-w-none prose-headings:font-bold prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-ul:text-muted-foreground">
-                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                            {activePlan}
-                                                        </ReactMarkdown>
+                                            ) : (
+                                                <>
+                                                    {/* Breadcrumb Component */}
+                                                    <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-10 overflow-hidden text-ellipsis whitespace-nowrap">
+                                                        {selectedPath.split('/').map((part, idx, arr) => (
+                                                            <div key={idx} className="flex items-center gap-2 overflow-hidden shrink-0">
+                                                                <span className={idx === arr.length - 1 ? "text-gray-600 truncate max-w-[200px]" : "truncate max-w-[150px]"}>
+                                                                    {part.replace('.md', '')}
+                                                                </span>
+                                                                {idx < arr.length - 1 && <ChevronRight className="w-3 h-3 shrink-0" />}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Page Title */}
+                                                    <h1 className="text-5xl font-extrabold text-[#111827] tracking-tight mb-12 leading-tight">
+                                                        {selectedPath.split('/').pop()?.replace('.md', '')}
+                                                    </h1>
+
+                                                    <NoteProperties metadata={noteMetadata} />
+
+                                                    {/* Markdown Content */}
+                                                    <div className="mt-12">
+                                                        <MarkdownViewer content={noteContent} onNavigate={handleWikiLinkClick} />
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </section>
+
+                        {/* Right: OKA Architect (Collapsible Panel) */}
+                        {showArchitect && (
+                            <div className="w-[400px] border-l border-[#E5E5E5] bg-gray-50 flex flex-col shrink-0 overflow-hidden animate-in slide-in-from-right duration-300 relative z-20 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                                {/* OKA Header */}
+                                <div className="p-4 border-b border-[#E5E5E5] bg-white flex items-center justify-between shrink-0">
+                                    <div className="flex items-center gap-2">
+                                        <BrainCircuit size={16} className="text-[#111827]" />
+                                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#111827]">Knowledge Architect</h3>
+                                    </div>
+                                    <div className="flex items-center gap-2 bg-gray-100 px-2 py-1 rounded border border-gray-200">
+                                        <span className="text-[8px] font-bold uppercase text-gray-500">Auto</span>
+                                        <button 
+                                            onClick={toggleAutoDeploy}
+                                            className={cn("relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out", config?.autoDeploy ? 'bg-[#111827]' : 'bg-gray-300')}
+                                        >
+                                            <span className={cn("pointer-events-none inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out", config?.autoDeploy ? 'translate-x-3.5' : 'translate-x-0')} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto bg-gray-50 min-h-0 custom-scrollbar">
+                                    <div className="p-4 space-y-6">
+                                        {/* Pipeline Status */}
+                                        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-3">Pipeline</h4>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={cn("w-1.5 h-1.5 rounded-full", queueStatus?.status !== 'idle' ? "bg-black animate-pulse" : "bg-gray-300")} />
+                                                    <span className="text-[10px] font-bold uppercase text-gray-900">{queueStatus?.status || 'Idle'}</span>
+                                                </div>
+                                                <span className="text-[9px] font-medium text-gray-400">{queueStatus?.pending_count || 0} Pending</span>
+                                            </div>
+                                            {queueStatus?.status !== 'idle' && (
+                                                <div className="space-y-1.5">
+                                                    <p className="text-[9px] text-gray-500 truncate">{queueStatus?.current_file}</p>
+                                                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-black transition-all duration-500" style={{ width: `${(queueStatus?.current_batch / (queueStatus?.total_batches || 1)) * 100}%` }} />
                                                     </div>
                                                 </div>
+                                            )}
+                                        </div>
 
-                                                {isAwaitingConfirmation && (
-                                                    <Button onClick={confirmDeployment} className="w-full h-10 text-[10px] font-bold uppercase bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 tracking-widest">
-                                                        <ShieldCheck size={14} className="mr-2" /> Start Deployment
-                                                    </Button>
+                                        {/* Inbox Section */}
+                                        <div className="space-y-3">
+                                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Inbox</h4>
+                                            <div className="grid gap-1.5">
+                                                {inboxFiles.length > 0 ? inboxFiles.map(f => (
+                                                    <div 
+                                                        key={f.path} 
+                                                        onClick={() => { setSelectedInboxFile(f); setOkaError(null); setActivePlan(null); setIsAwaitingConfirmation(false); }}
+                                                        className={cn(
+                                                            "p-2.5 rounded-md border text-[10px] cursor-pointer transition-all", 
+                                                            selectedInboxFile?.path === f.path ? "bg-gray-100 border-gray-300" : "bg-white hover:bg-gray-50 border-gray-100"
+                                                        )}
+                                                    >
+                                                        <p className="font-bold text-gray-900 truncate">{f.name}</p>
+                                                        <p className="text-gray-400 truncate mt-0.5">{f.path}</p>
+                                                    </div>
+                                                )) : (
+                                                    <div className="py-8 text-center border border-dashed border-gray-200 rounded-lg text-gray-400">
+                                                        <Archive size={20} className="mx-auto mb-1 opacity-50" />
+                                                        <p className="text-[9px] font-bold uppercase">Inbox Empty</p>
+                                                    </div>
                                                 )}
                                             </div>
-                                        )}
+                                        </div>
 
-                                        {batchFeed.length > 0 && (
-                                            <div className="space-y-3 pt-4 border-t">
+                                        {/* Workspace Area */}
+                                        {selectedInboxFile && (
+                                            <div className="pt-4 border-t border-gray-200 space-y-4">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[9px] font-bold uppercase">Deploy Progress</span>
-                                                    <span className="text-[9px] font-bold">{currentBatch} / {totalBatches} Batches</span>
+                                                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#111827]">Active Analysis</h4>
+                                                    <button onClick={resetOkaSession} className="text-[9px] font-bold text-gray-400 hover:text-[#111827] transition-colors">Reset</button>
                                                 </div>
-                                                <div className="space-y-3">
-                                                    {batchFeed.map(b => (
-                                                        <div key={b.batch} className="space-y-1.5">
-                                                            <div className="flex items-center gap-2 py-1">
-                                                                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
-                                                                    <span className="text-[8px] font-bold text-primary">{b.batch}</span>
-                                                                </div>
-                                                                <span className="text-[9px] font-bold uppercase text-primary">Batch {b.batch} Deployed</span>
+                                                
+                                                {!activePlan && !processing && (
+                                                    <Button onClick={processSelectedFile} className="w-full h-8 text-[10px] font-bold uppercase bg-white border border-gray-200 text-[#111827] hover:bg-gray-50">
+                                                        <Zap size={12} className="mr-2" /> Analyze Document
+                                                    </Button>
+                                                )}
+
+                                                {processing && (
+                                                    <div className="py-10 text-center space-y-3">
+                                                        <RefreshCw size={24} className="animate-spin mx-auto text-gray-400" />
+                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Architecting...</p>
+                                                    </div>
+                                                )}
+
+                                                {activePlan && (
+                                                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                                                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 border border-gray-200">
+                                                            <Sparkles size={12} className="text-[#111827] animate-pulse" />
+                                                            <p className="text-[10px] font-bold text-[#111827] uppercase tracking-wider">Architectural Plan</p>
+                                                        </div>
+                                                        
+                                                        {/* Clean Text-based Plan Output */}
+                                                        <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm max-h-[400px] overflow-y-auto">
+                                                            <div className="prose prose-xs max-w-none prose-headings:font-bold prose-headings:text-[#111827] prose-p:text-gray-500 prose-strong:text-[#111827] prose-ul:text-gray-500">
+                                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                                    {activePlan}
+                                                                </ReactMarkdown>
                                                             </div>
-                                                            {b.results.map((r: any, idx: number) => (
-                                                                <div key={`${b.batch}-${idx}`} className="p-2.5 border rounded-md bg-background space-y-1">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <FileText size={10} className="text-primary opacity-50 shrink-0" />
-                                                                        <span className="text-[10px] font-semibold truncate">{r.title}</span>
-                                                                        <span className="ml-auto text-[8px] font-bold uppercase px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{r.status || 'created'}</span>
+                                                        </div>
+
+                                                        {isAwaitingConfirmation && (
+                                                            <Button onClick={confirmDeployment} className="w-full h-10 text-[10px] font-bold uppercase bg-[#111827] text-white hover:bg-black shadow-lg shadow-black/10 tracking-widest">
+                                                                <ShieldCheck size={14} className="mr-2" /> Start Deployment
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {batchFeed.length > 0 && (
+                                                    <div className="space-y-3 pt-4 border-t border-gray-200">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-[9px] font-bold uppercase text-gray-500">Deploy Progress</span>
+                                                            <span className="text-[9px] font-bold text-gray-500">{currentBatch} / {totalBatches} Batches</span>
+                                                        </div>
+                                                        <div className="space-y-3">
+                                                            {batchFeed.map(b => (
+                                                                <div key={b.batch} className="space-y-1.5">
+                                                                    <div className="flex items-center gap-2 py-1">
+                                                                        <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
+                                                                            <span className="text-[8px] font-bold text-[#111827]">{b.batch}</span>
+                                                                        </div>
+                                                                        <span className="text-[9px] font-bold uppercase text-[#111827]">Batch {b.batch} Deployed</span>
                                                                     </div>
-                                                                    {r.path && (
-                                                                        <p className="text-[8px] text-muted-foreground font-mono truncate pl-5">{r.path}</p>
-                                                                    )}
+                                                                    {b.results.map((r: any, idx: number) => (
+                                                                        <div key={`${b.batch}-${idx}`} className="p-2.5 border border-gray-100 rounded-md bg-white space-y-1 shadow-sm">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <FileText size={10} className="text-gray-400 shrink-0" />
+                                                                                <span className="text-[10px] font-semibold truncate text-[#111827]">{r.title}</span>
+                                                                                <span className="ml-auto text-[8px] font-bold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{r.status || 'created'}</span>
+                                                                            </div>
+                                                                            {r.path && (
+                                                                                <p className="text-[8px] text-gray-400 font-mono truncate pl-5">{r.path}</p>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
                                                             ))}
                                                         </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
+                                                    </div>
+                                                )}
 
-                                        {okaError && (
-                                            <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-[10px] font-mono text-destructive">
-                                                {okaError}
+                                                {okaError && (
+                                                    <div className="p-3 rounded-md bg-red-50 border border-red-100 text-[10px] font-mono text-red-600">
+                                                        {okaError}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
-                                )}
+                                </div>
                             </div>
-                        </ScrollArea>
+                        )}
                     </div>
-                )}
+                </main>
             </div>
         </div>
     )

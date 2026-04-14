@@ -1,40 +1,47 @@
-import { Link } from 'react-router-dom'
-import { Settings } from 'lucide-react'
-import { useLayout } from '@/context/layout-provider'
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarRail,
-} from '@/components/ui/sidebar'
-import { sidebarData } from './data/sidebar-data'
-import { NavGroup } from './nav-group'
+import { NavLink } from 'react-router-dom'
+import { FileText, RefreshCw, Users, Settings } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { ThemeSwitch } from '@/components/theme-switch'
 
 export function AppSidebar() {
-  const { collapsible, variant } = useLayout()
   return (
-    <Sidebar collapsible={collapsible} variant={variant}>
-      <SidebarContent>
-        {sidebarData.navGroups.map((props) => (
-          <NavGroup key={props.title} {...props} />
-        ))}
-      </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip='Settings'>
-              <Link to='/settings'>
-                <Settings />
-                <span>Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+    <aside className="w-12 bg-white border-r border-[#E5E5E5] flex flex-col items-center py-4 shrink-0 z-10 h-full">
+        {/* Navigation Links */}
+        <div className="flex flex-col gap-6 flex-1">
+            <NavLink 
+                to="/obsidian"
+                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-black" : "text-gray-400 hover:text-black")} 
+                title="Obsidian Vault"
+            >
+                <FileText className="w-6 h-6" />
+            </NavLink>
+            <NavLink 
+                to="/vault-sync"
+                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-black" : "text-gray-400 hover:text-black")} 
+                title="Vault Sync"
+            >
+                <RefreshCw className="w-6 h-6" />
+            </NavLink>
+            <NavLink 
+                to="/agents"
+                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-black" : "text-gray-400 hover:text-black")} 
+                title="Agents"
+            >
+                <Users className="w-6 h-6" />
+            </NavLink>
+        </div>
+
+        {/* Bottom Actions */}
+        <div className="flex flex-col gap-6 mt-auto px-1 items-center">
+            <ThemeSwitch />
+            <NavLink 
+                to="/settings"
+                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-black" : "text-gray-400 hover:text-black")} 
+                title="Settings"
+            >
+                <Settings className="w-6 h-6" />
+            </NavLink>
+        </div>
+    </aside>
   )
 }

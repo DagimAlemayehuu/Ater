@@ -42,7 +42,7 @@ export function TableView({
         <div className="rounded-md border border-border/40 overflow-hidden h-full">
             <div className="overflow-auto h-full custom-scrollbar">
                 <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-secondary/20 sticky top-0 z-10 backdrop-blur-md border-b border-border/40">
+                    <thead className="bg-gray-50/90 backdrop-blur-md sticky top-0 z-10 border-b border-gray-200">
                         <tr>
                             <th className="px-3 py-2 font-black uppercase tracking-wider text-[9px] text-muted-foreground whitespace-nowrap border-r border-border/10 min-w-[150px]">
                                 Title
@@ -59,7 +59,7 @@ export function TableView({
                         {groups.map(group => (
                             <React.Fragment key={group.name || 'root'}>
                                 {group.name && (
-                                    <tr className="bg-secondary/5">
+                                    <tr className="bg-gray-50">
                                         <td colSpan={columns.length + 1} className="px-3 py-1.5 border-b border-border/10">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[9px] font-black uppercase tracking-widest opacity-40">{groupBy}:</span>
@@ -70,7 +70,7 @@ export function TableView({
                                     </tr>
                                 )}
                                 {group.items.map(row => (
-                                    <tr key={row.id} className="hover:bg-secondary/10 group">
+                                    <tr key={row.id} className="hover:bg-gray-50/80 group">
                                         <td 
                                             className="px-3 py-2 whitespace-nowrap font-bold max-w-[200px] border-r border-border/5 cursor-pointer text-primary hover:underline truncate" 
                                             title={row.title}
@@ -87,6 +87,7 @@ export function TableView({
                                                         type={schema[col] || 'str'} 
                                                         onSave={(newValue) => onUpdate(row.id, col, newValue)} 
                                                         onNavigate={onNavigate}
+                                                        row={row}
                                                     />
                                                 </td>
                                             )
@@ -108,6 +109,19 @@ export function TableView({
                             </tr>
                         )}
                     </tbody>
+                    {!loading && rows.length > 0 && (
+                        <tfoot className="sticky bottom-0 bg-gray-50/90 backdrop-blur-md border-t border-gray-200">
+                            <tr>
+                                <td className="px-3 py-2 text-right text-[10px] font-bold text-gray-500 border-r border-border/10">
+                                    Count {rows.length}
+                                </td>
+                                {columns.slice(1).map(col => (
+                                    <td key={col} className="px-3 py-2 border-r border-border/10"></td>
+                                ))}
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    )}
                 </table>
             </div>
         </div>

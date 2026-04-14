@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Obsidian - Life OS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style data-purpose="custom-config">
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #FFFFFF;
+      color: #111827;
+      overflow: hidden;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #E5E5E5;
+      border-radius: 10px;
+    }
+    .file-tree-item:hover {
+      background-color: #F3F4F6;
+    }
+    .file-tree-active {
+      background-color: #E5E7EB;
+      color: #000000;
+      font-weight: 500;
+    }
+    .properties-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #6B7280;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .properties-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1F2937;
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen select-none">
+<!-- BEGIN: SystemMenuBar -->
+<!-- END: SystemMenuBar -->
+<div class="flex flex-1 overflow-hidden">
+<!-- BEGIN: GlobalSidebar -->
+<aside class="w-12 bg-white border-r border-[#E5E5E5] flex flex-col items-center py-4 gap-6 shrink-0" data-purpose="global-navigation">
+<div class="text-gray-400 hover:text-black cursor-pointer"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div>
+<div class="text-gray-400 hover:text-black cursor-pointer"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div>
+<div class="text-gray-400 hover:text-black cursor-pointer"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div>
+<div class="mt-auto text-gray-400 hover:text-black cursor-pointer"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div>
+</aside>
+<!-- END: GlobalSidebar -->
+<!-- BEGIN: MainContentArea -->
+<main class="flex-1 flex flex-col min-w-0">
+<!-- BEGIN: ApplicationHeader -->
+<!-- END: ApplicationHeader -->
+<div class="flex flex-1 overflow-hidden">
+<!-- BEGIN: ExplorerSidebar -->
+<aside class="w-64 border-r border-[#E5E5E5] flex flex-col bg-white" data-purpose="file-explorer">
+<!-- Explorer Toolbar -->
+<div class="p-3 flex items-center justify-between">
+<div class="flex items-center gap-2 w-full">
+<!-- Add Icon -->
+<div class="text-gray-400 hover:text-black cursor-pointer flex items-center justify-center p-1 rounded hover:bg-gray-100 shrink-0" title="New file">
+<span class="material-symbols-outlined text-[20px]">add</span>
+</div>
+<!-- Search Input -->
+<div class="flex-1">
+<div class="relative flex items-center">
+<input class="w-full bg-gray-50 border border-gray-200 text-[12px] px-2 py-1 rounded focus:outline-none focus:ring-1 focus:ring-gray-300 placeholder:text-gray-400" placeholder="Search..." type="text"/>
+</div>
+</div>
+<!-- Collapse Icon -->
+<div class="text-gray-400 hover:text-black cursor-pointer flex items-center justify-center p-1 rounded hover:bg-gray-100 shrink-0" title="Collapse sidebar">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</div>
+</div>
+</div>
+<!-- File Tree -->
+<div class="flex-1 overflow-y-auto text-[13px] text-gray-600 custom-scrollbar">
+<div class="py-2">
+<div class="flex items-center gap-2 px-4 py-1 file-tree-item cursor-pointer">
+<svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="" style="">0-Bases</span>
+</div>
+<div class="flex items-center gap-2 px-4 py-1 file-tree-item cursor-pointer">
+<svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="" style="">1-Meta</span>
+</div>
+<!-- Active Node: 2-Academic -->
+<div class="">
+<div class="flex items-center gap-2 px-4 py-1 file-tree-item cursor-pointer">
+<svg class="w-3.5 h-3.5 text-gray-400 rotate-90" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="" style="">2-Academic</span>
+</div>
+<!-- Nested: Autumn 2025 -->
+<div class="pl-4">
+<div class="flex items-center gap-2 px-4 py-1 file-tree-item cursor-pointer">
+<svg class="w-3.5 h-3.5 text-gray-400 rotate-90" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg><span class="" style="">Autumn 2025</span>
+</div>
+<!-- Nested: Database Systems -->
+<div class="pl-4">
+<div class="flex items-center gap-2 px-4 py-1 file-tree-item cursor-pointer">
+<svg class="w-3.5 h-3.5 text-gray-400 rotate-90" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="" style="">Database Systems</span>
+</div>
+<!-- Nested: 3_Conceptual_Database... -->
+<div class="pl-4">
+<div class="flex items-center gap-2 px-4 py-1 file-tree-item cursor-pointer">
+<svg class="w-3.5 h-3.5 text-gray-400 rotate-90" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="truncate" style="">3_Conceptual_Database...</span>
+</div>
+<div class="pl-4">
+<div class="flex items-center gap-2 px-4 py-1 file-tree-item cursor-pointer">
+<svg class="w-3.5 h-3.5 text-transparent" fill="none" viewbox="0 0 24 24"></svg>
+<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="truncate" style="">3_Conceptual_Database_...</span>
+</div>
+<div class="flex items-center gap-2 px-4 py-1 file-tree-active cursor-pointer rounded-md mx-2">
+<svg class="w-3.5 h-3.5 text-transparent" fill="none" viewbox="0 0 24 24"></svg>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="truncate" style="">Database_Development_M...</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 px-4 py-1 file-tree-item cursor-pointer">
+<svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="" style="">3-Database</span>
+</div>
+<div class="flex items-center gap-2 px-4 py-1 file-tree-item cursor-pointer">
+<svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="" style="">5-Pdf Store</span>
+</div>
+<div class="flex items-center gap-2 px-4 py-1 file-tree-item cursor-pointer">
+<svg class="w-4 h-4 text-gray-400 ml-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="" style="">Life OS Home.md</span>
+</div>
+<div class="flex items-center gap-2 px-4 py-1 file-tree-item cursor-pointer">
+<svg class="w-4 h-4 text-gray-400 ml-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="" style="">Structural_Constraints.md</span>
+</div>
+<div class="flex items-center gap-2 px-4 py-1 file-tree-item cursor-pointer">
+<svg class="w-4 h-4 text-gray-400 ml-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="" style="">VAULT_STRUCTURE.md</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- END: ExplorerSidebar -->
+<!-- BEGIN: EditorWorkspace -->
+<section class="flex-1 flex flex-col bg-white overflow-hidden" data-purpose="workspace">
+<!-- Content Scroller -->
+<div class="flex-1 overflow-y-auto custom-scrollbar" data-purpose="markdown-renderer">
+<div class="max-w-5xl mx-auto px-16 py-12">
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-10">
+<span>Academic</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span>Autumn 2025</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="text-gray-600">Database Development Methodology</span>
+</div>
+<!-- Page Title -->
+<h1 class="text-5xl font-extrabold text-[#111827] tracking-tight mb-12 leading-tight">
+                Database Development Methodology
+              </h1>
+<!-- BEGIN: NoteProperties (Visual Refresh) -->
+<div class="grid grid-cols-2 gap-y-6 gap-x-20 py-10 border-y border-gray-100 mb-12" data-purpose="note-metadata">
+<div class="flex items-center gap-4">
+<div class="w-5 flex justify-center text-gray-400">
+<span class="material-symbols-outlined text-[18px]">school</span>
+</div>
+<div class="flex flex-col">
+<span class="properties-label">Course</span>
+<span class="properties-value">CS304: Advanced Databases</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-5 flex justify-center text-gray-400">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+</div>
+<div class="flex flex-col">
+<span class="properties-label">Semester</span>
+<span class="properties-value">Spring 2024</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-5 flex justify-center text-gray-400">
+<span class="material-symbols-outlined text-[18px]">apartment</span>
+</div>
+<div class="flex flex-col">
+<span class="properties-label">Department</span>
+<span class="properties-value">Computer Science &amp; Engineering</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-5 flex justify-center text-gray-400">
+<span class="material-symbols-outlined text-[18px]">radio_button_unchecked</span>
+</div>
+<div class="flex flex-col">
+<span class="properties-label">Status</span>
+<span class="properties-value flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full border border-gray-400"></span>
+                      Final Draft
+                    </span>
+</div>
+</div>
+</div>
+<!-- END: NoteProperties -->
+<!-- BEGIN: MarkdownContent -->
+<div class="prose prose-sm max-w-none space-y-16" data-purpose="markdown-body">
+<section>
+<h2 class="text-2xl font-bold text-[#111827] mb-6 tracking-tight">I. Conceptual Architecture</h2>
+<div class="border-t border-gray-100 pt-6 mb-6">
+<p class="text-[16px] leading-relaxed text-gray-600 mb-6">
+                      The database development life cycle (DBLC) is a fundamental process for creating robust, scalable, and efficient data systems. At its core, conceptual design focuses on the "what" of the system rather than the "how." It bridges the gap between high-level business requirements and technical implementation.
+                    </p>
+</div>
+</section>
+<section>
+<h2 class="text-2xl font-bold text-[#111827] mb-6 tracking-tight">II. The Entity-Relationship Model</h2>
+<div class="border-t border-gray-100 pt-6 mb-6">
+<p class="text-[16px] leading-relaxed text-gray-600 mb-10">
+                      Normalization is the process of organizing data in a database to minimize redundancy and dependency. This typically involves dividing large tables into smaller, related tables and defining relationships between them.
+                    </p>
+<!-- Normalization Cards -->
+<div class="grid grid-cols-3 gap-1">
+<div class="bg-gray-50 p-6 flex flex-col gap-4 border-r border-gray-200">
+<span class="text-[12px] font-bold text-gray-900 tracking-wider">1NF</span>
+<p class="text-[13px] text-gray-600 leading-relaxed">Atomic values, no repeating groups.</p>
+</div>
+<div class="bg-gray-50 p-6 flex flex-col gap-4 border-r border-gray-200">
+<span class="text-[12px] font-bold text-gray-900 tracking-wider">2NF</span>
+<p class="text-[13px] text-gray-600 leading-relaxed">Functional dependency on the primary key.</p>
+</div>
+<div class="bg-gray-50 p-6 flex flex-col gap-4">
+<span class="text-[12px] font-bold text-gray-900 tracking-wider">3NF</span>
+<p class="text-[13px] text-gray-600 leading-relaxed">Elimination of transitive dependencies.</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- END: MarkdownContent -->
+</div>
+</div>
+</section>
+<!-- END: EditorWorkspace -->
+</div>
+</main>
+<!-- END: MainContentArea -->
+</div>
+</body></html>

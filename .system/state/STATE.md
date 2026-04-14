@@ -15,6 +15,8 @@
 *   [x] **Thin Context Protocol (Memory Isolation for Weak Model Stability)**
 *   [x] **Adaptive High-Fidelity (Auto-Repair Parser + Density Fallbacks)**
 *   [x] **Interactive Card-View & Database Gallery UI**
+*   [x] **Force-Directed Vault Graph (Visual Knowledge Map)**
+*   [x] **Dynamic WikiLink Engine (Auto-Creation & Nav)**
 *   [ ] Global E2E Tests Pass
 *   [ ] Production Deployment
 

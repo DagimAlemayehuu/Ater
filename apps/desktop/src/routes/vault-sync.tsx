@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Search, ExternalLink, RefreshCw, Trash2 } from 'lucide-react'
+import { Search, ExternalLink, RefreshCw, Trash2, Plus, Database, ChevronRight } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 import { ObsidianPagePanel } from '@/components/obsidian/ObsidianPagePanel'
@@ -13,8 +13,6 @@ interface VaultDatabase {
     area?: string
     views?: any[]
 }
-
-
 
 export default function VaultSync() {
     const [databases, setDatabases] = useState<VaultDatabase[]>([])
@@ -118,7 +116,7 @@ export default function VaultSync() {
 
     if (selectedDb) {
         return (
-            <div className="h-full flex-1 flex flex-col w-full relative">
+            <div className="h-full flex-1 flex flex-col w-full relative bg-white font-sans text-[#111827]">
                 {globalNotePath && (
                     <ObsidianPagePanel
                         isOpen={!!globalNotePath}
@@ -142,15 +140,8 @@ export default function VaultSync() {
         )
     }
 
-    if (loading) return (
-        <div className="h-full flex items-center justify-center opacity-20 animate-pulse">
-            <RefreshCw className="w-4 h-4 animate-spin" />
-        </div>
-    )
-
     return (
-        <div className="h-full flex-1 flex flex-col w-full mx-auto animate-in fade-in zoom-in-95 duration-500 pr-2">
-            {/* Global Note Panel */}
+        <div className="h-full flex-1 flex flex-col w-full bg-white font-sans text-[#111827]">
             {globalNotePath && (
                 <ObsidianPagePanel
                     isOpen={!!globalNotePath}
@@ -160,147 +151,156 @@ export default function VaultSync() {
                 />
             )}
 
-            <div className="flex flex-col space-y-2 mb-10 shrink-0">
-                <h1 className="text-4xl font-black tracking-tighter uppercase">VAULT SYNC</h1>
-                <p className="text-muted-foreground text-sm font-medium">Synchronize high-fidelity knowledge clusters and manage autonomous ingestion sectors.</p>
-            </div>
-
-            {/* Header with Search & Add Button */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between py-4 mb-8 gap-6">
-                <div className="flex items-center gap-3">
-                    <div className="relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-3 text-muted-foreground/40" />
-                        <input
-                            type="text"
-                            placeholder="SEARCH ARCHITECTURE..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-11 text-[10px] w-72 bg-muted/30 border border-transparent rounded-xl focus:outline-none focus:border-primary/20 focus:bg-background transition-all font-black uppercase tracking-widest placeholder:opacity-40 shadow-sm"
-                        />
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="max-w-7xl mx-auto px-16 py-12">
+                    <div className="flex flex-col mb-12">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-6 border-b border-gray-100 pb-4">
+                            <span>System</span>
+                            <span className="material-symbols-outlined text-[12px]"><ChevronRight size={12}/></span>
+                            <span className="text-gray-600">Vault Sync</span>
+                        </div>
+                        <h1 className="text-5xl font-extrabold text-[#111827] tracking-tight mb-4 leading-tight">Vault Modules</h1>
+                        <p className="text-[16px] leading-relaxed text-gray-600">Synchronize high-fidelity knowledge clusters and manage autonomous ingestion sectors.</p>
                     </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                    <button 
-                        onClick={fetchDatabases} 
-                        className={cn(
-                            "p-2.5 rounded-full bg-secondary/10 border border-border/10 hover:bg-secondary/20 transition-all text-muted-foreground hover:text-foreground",
-                            loading && "animate-spin"
-                        )}
-                    >
-                        <RefreshCw size={14} />
-                    </button>
-                    <button 
-                        onClick={() => setIsCreating(true)}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
-                    >
-                        New Database
-                    </button>
-                </div>
-            </div>
 
-            {/* Creation UI Bar */}
-            {isCreating && (
-                <div className="p-6 border border-primary/20 rounded-2xl bg-primary/5 mb-10 animate-in slide-in-from-top-4 duration-500 overflow-hidden relative">
-                    <div className="relative z-10">
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] mb-4 text-primary">Initialize New Database</h3>
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <input
-                                autoFocus
-                                type="text"
-                                placeholder="DATABASE NAME..."
-                                value={newDbName}
-                                onChange={(e) => setNewDbName(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleCreateDatabase()}
-                                className="flex-1 h-12 bg-background border border-border/20 px-4 text-xs font-bold rounded-xl focus:outline-none focus:border-primary/50 shadow-inner"
-                            />
-                            <div className="sm:w-[220px]">
-                                <select 
-                                    value={selectedArea}
-                                    onChange={(e) => setSelectedArea(e.target.value)}
-                                    className="w-full h-12 bg-background border border-border/20 px-4 text-xs font-bold rounded-xl focus:outline-none focus:border-primary/50 appearance-none"
-                                >
-                                    {areas.map(area => (
-                                        <option key={area} value={area}>{area}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="flex gap-2">
-                                <button 
-                                    onClick={handleCreateDatabase}
-                                    className="flex-1 sm:flex-none px-8 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20"
-                                >
-                                    Deploy
-                                </button>
-                                <button 
-                                    onClick={() => setIsCreating(false)}
-                                    className="px-6 bg-secondary/40 text-secondary-foreground text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-secondary/60 transition-all"
-                                >
-                                    Abort
-                                </button>
+                    {/* Header with Search & Add Button */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between py-4 mb-8 border-y border-gray-100 gap-6">
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <div className="relative flex items-center w-full md:w-80">
+                                <Search className="absolute left-3 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search databases..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-gray-50 border border-gray-200 text-[13px] px-3 py-2 pl-9 rounded focus:outline-none focus:ring-1 focus:ring-gray-300 placeholder:text-gray-400 transition-shadow"
+                                />
                             </div>
                         </div>
+                        
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={fetchDatabases} 
+                                className={cn(
+                                    "flex items-center justify-center p-2 rounded hover:bg-gray-100 text-gray-400 hover:text-black transition-colors border border-transparent",
+                                    loading && "animate-spin"
+                                )}
+                                title="Refresh"
+                            >
+                                <RefreshCw size={16} />
+                            </button>
+                            <button 
+                                onClick={() => setIsCreating(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-[#111827] text-white text-[12px] font-medium rounded hover:bg-black transition-all"
+                            >
+                                <Plus size={16} />
+                                New Module
+                            </button>
+                        </div>
                     </div>
-                </div>
-            )}
 
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-32 space-y-16">
-                {Object.entries(categorized).map(([areaName, dbs]) => {
-                    if (dbs.length === 0) return null;
-                    return (
-                        <div key={areaName} className="space-y-8">
-                            <div className="flex items-center gap-4">
-                                <h2 className="text-[12px] font-black uppercase tracking-[0.5em] text-foreground/80">{areaName}</h2>
-                                <div className="h-[1px] flex-1 bg-gradient-to-r from-border/40 to-transparent" />
-                                <span className="text-[10px] font-black opacity-20">{dbs.length} MODULES</span>
+                    {/* Creation UI Bar */}
+                    {isCreating && (
+                        <div className="p-6 border border-gray-200 rounded-lg bg-gray-50 mb-10 overflow-hidden relative">
+                            <div className="relative z-10">
+                                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-4">Initialize New Module</h3>
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        placeholder="Module Name..."
+                                        value={newDbName}
+                                        onChange={(e) => setNewDbName(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleCreateDatabase()}
+                                        className="flex-1 h-10 bg-white border border-gray-200 px-4 text-sm rounded focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                    />
+                                    <div className="sm:w-[220px]">
+                                        <select 
+                                            value={selectedArea}
+                                            onChange={(e) => setSelectedArea(e.target.value)}
+                                            className="w-full h-10 bg-white border border-gray-200 px-4 text-sm rounded focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                        >
+                                            {areas.map(area => (
+                                                <option key={area} value={area}>{area}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={handleCreateDatabase}
+                                            className="px-6 bg-[#111827] text-white text-[12px] font-medium rounded hover:bg-black transition-colors"
+                                        >
+                                            Deploy
+                                        </button>
+                                        <button 
+                                            onClick={() => setIsCreating(false)}
+                                            className="px-6 bg-white border border-gray-200 text-gray-700 text-[12px] font-medium rounded hover:bg-gray-50 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                                {dbs.map(db => (
-                                    <div 
-                                        key={db.id} 
-                                        onClick={() => setSelectedDb(db)} 
-                                        className="group relative p-6 border border-border/20 rounded-2xl bg-secondary/5 hover:border-primary/40 hover:bg-secondary/10 transition-all cursor-pointer shadow-sm hover:shadow-2xl hover:-translate-y-1 overflow-hidden"
-                                    >
-                                        <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteDatabase(db.id);
-                                                }}
-                                                className="p-2 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-full transition-all"
-                                            >
-                                                <Trash2 size={12} />
-                                            </button>
-                                        </div>
+                        </div>
+                    )}
 
-                                        <div className="flex flex-col h-full justify-between">
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-4">
-                                                    <div className="size-1.5 bg-primary/20 rounded-full" />
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">{db.area}</span>
+                    <div className="space-y-16">
+                        {loading && databases.length === 0 ? (
+                            <div className="text-center py-20 text-gray-400">Loading modules...</div>
+                        ) : Object.entries(categorized).map(([areaName, dbs]) => {
+                            if (dbs.length === 0) return null;
+                            return (
+                                <div key={areaName} className="space-y-6">
+                                    <div className="flex items-center gap-4">
+                                        <h2 className="text-[12px] font-bold uppercase tracking-wider text-gray-900">{areaName}</h2>
+                                        <div className="h-[1px] flex-1 bg-gray-100" />
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase">{dbs.length} MODULES</span>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {dbs.map(db => (
+                                            <div 
+                                                key={db.id} 
+                                                onClick={() => setSelectedDb(db)} 
+                                                className="group relative p-6 bg-white border border-gray-200 rounded-lg hover:border-gray-400 hover:shadow-sm transition-all cursor-pointer flex flex-col h-[180px]"
+                                            >
+                                                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteDatabase(db.id);
+                                                        }}
+                                                        className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded transition-colors"
+                                                        title="Delete Module"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 </div>
-                                                <h3 className="text-sm font-black tracking-tight mb-2 group-hover:text-primary transition-colors">{db.name}</h3>
-                                            </div>
-                                            
-                                            <div className="mt-6 pt-4 border-t border-border/5 flex items-center justify-between">
-                                                <div className="flex gap-3">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[8px] font-black text-muted-foreground/20 uppercase">Fields</span>
-                                                        <span className="text-[10px] font-black">{Object.keys(db.schema).length}</span>
+
+                                                <div className="flex flex-col h-full justify-between">
+                                                    <div>
+                                                        <div className="flex items-center gap-2 mb-3">
+                                                            <Database className="w-4 h-4 text-gray-400" />
+                                                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{db.area || 'Module'}</span>
+                                                        </div>
+                                                        <h3 className="text-lg font-bold text-gray-900 tracking-tight leading-tight line-clamp-2">{db.name}</h3>
+                                                    </div>
+                                                    
+                                                    <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Properties</span>
+                                                            <span className="text-[13px] font-medium text-gray-900">{Object.keys(db.schema).length}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10">
-                                                    <span className="text-[9px] font-black text-primary uppercase tracking-widest opacity-60">Verified</span>
-                                                </div>
                                             </div>
-                                        </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    );
-                })}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
         </div>
     )

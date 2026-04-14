@@ -25,6 +25,8 @@ The system has been consolidated from multiple specialists into a **Single-Agent
 *   **Standardized Navigation**: Sidebar consists of "Knowledge Base" (Vault Access), "Vault Sync" (Database Clusters), "Intelligence" (OKA Hub), and "Settings".
 *   **Aesthetic Purity**: Grayscale-only palette with deep shadows, high-fidelity typography, and blurred glassmorphism.
 *   **Interactive Databases**: Native Board, Table, and Gallery views for managing knowledge metadata.
+*   **Neural Graph Visualization**: Global 2D force-directed graph with real-time centrality scaling and zoom-proximate label fading.
+*   **WikiLink Orchestration**: Seamless inter-note navigation and on-demand file creation protocol.
 
 
 ## 3. API-First Contracts
@@ -40,6 +42,7 @@ The system has been consolidated from multiple specialists into a **Single-Agent
 
 *   **Local State**: Tauri-plugin-store (API Keys, Vault Path, User Profiles).
 *   **Knowledge Base**: Local Obsidian `.md` files (Unstructured data for RAG).
+*   **Graph State**: Dynamically computed node-link topology derived from raw markdown wikilink parsing.
 *   **Cloud Database**: Notion API (Structured data: Tasks, Projects, Goals).
 
 ## 5. Key Decisions & Trade-offs

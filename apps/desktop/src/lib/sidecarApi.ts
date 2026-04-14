@@ -226,6 +226,12 @@ export const sidecarApi = {
             method: 'DELETE'
         }),
 
+    renameVaultFile: (dbName: string, oldFileName: string, newFileName: string) =>
+        request<{ success: boolean }>(`/api/vault/databases/${dbName}/${oldFileName}/rename`, {
+            method: 'POST',
+            body: JSON.stringify({ new_name: newFileName })
+        }),
+
     getVaultOptions: (source: string) =>
         request<{ options: string[] }>(`/api/vault/options?source=${encodeURIComponent(source)}`),
 
@@ -237,6 +243,9 @@ export const sidecarApi = {
 
     findVaultPage: (pageName: string) =>
         request<{ found: boolean; type?: 'database' | 'note'; db_id?: string; file_name?: string; path?: string }>(`/api/vault/search?page_name=${encodeURIComponent(pageName)}`),
+
+    getVaultGraph: () =>
+        request<{ nodes: any[]; links: any[] }>('/api/vault/graph'),
 
     // ── AI & Agents ─────────────────────────────────────────
     testAiConnection: (target: 'primary' | 'planner' | 'utility' = 'primary') =>
