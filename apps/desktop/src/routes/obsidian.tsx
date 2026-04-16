@@ -17,6 +17,7 @@ import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
+import { PdfViewer } from '@/components/obsidian/PdfViewer'
 
 interface InboxFile {
     name: string
@@ -172,6 +173,14 @@ export default function ObsidianVaultPage() {
     const selectFile = async (path: string) => {
         setSelectedPath(path)
         setLoadingNote(true)
+        
+        if (path.toLowerCase().endsWith('.pdf')) {
+            setNoteMetadata({})
+            setNoteContent('')
+            setLoadingNote(false)
+            return
+        }
+
         try {
             const res = await sidecarApi.readObsidianNote(path)
             setNoteMetadata(res.metadata || {})
@@ -350,6 +359,8 @@ export default function ObsidianVaultPage() {
                             
                             {node.isFolder ? (
                                 <Folder className={cn("w-4 h-4 shrink-0", isSelected ? "text-black" : "text-gray-400")} />
+                            ) : node.path.toLowerCase().endsWith('.pdf') ? (
+                                <FileText className={cn("w-4 h-4 shrink-0", isSelected ? "text-black" : "text-red-500/70")} />
                             ) : (
                                 <FileText className={cn("w-4 h-4 shrink-0", isSelected ? "text-black" : "text-gray-400")} />
                             )}
@@ -446,7 +457,7 @@ export default function ObsidianVaultPage() {
                                                         {selectedPath.split('/').map((part, idx, arr) => (
                                                             <div key={idx} className="flex items-center gap-2 overflow-hidden shrink-0">
                                                                 <span className={idx === arr.length - 1 ? "text-gray-600 truncate max-w-[200px]" : "truncate max-w-[150px]"}>
-                                                                    {part.replace('.md', '')}
+                                                                    {part.replace('.md', '').replace('.pdf', '')}
                                                                 </span>
                                                                 {idx < arr.length - 1 && <ChevronRight className="w-3 h-3 shrink-0" />}
                                                             </div>
@@ -455,15 +466,23 @@ export default function ObsidianVaultPage() {
 
                                                     {/* Page Title */}
                                                     <h1 className="text-5xl font-extrabold text-[#111827] tracking-tight mb-12 leading-tight">
-                                                        {selectedPath.split('/').pop()?.replace('.md', '')}
+                                                        {selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '')}
                                                     </h1>
 
-                                                    <NoteProperties metadata={noteMetadata} />
+                                                    {selectedPath.toLowerCase().endsWith('.pdf') ? (
+                                                        <div className="h-[800px] -mx-16 mb-20">
+                                                            <PdfViewer path={selectedPath} title={selectedPath.split('/').pop() || ''} />
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <NoteProperties metadata={noteMetadata} />
 
-                                                    {/* Markdown Content */}
-                                                    <div className="mt-12">
-                                                        <MarkdownViewer content={noteContent} onNavigate={handleWikiLinkClick} />
-                                                    </div>
+                                                            {/* Markdown Content */}
+                                                            <div className="mt-12">
+                                                                <MarkdownViewer content={noteContent} onNavigate={handleWikiLinkClick} />
+                                                            </div>
+                                                        </>
+                                                    )}
                                                 </>
                                             )}
                                         </div>

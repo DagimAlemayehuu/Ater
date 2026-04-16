@@ -6,6 +6,7 @@ import { sidecarApi } from "@/lib/sidecarApi";
 import { Input } from "@/components/ui/input";
 import { EditableCell } from "./EditableCell";
 import { MarkdownViewer } from "./MarkdownViewer";
+import { PdfViewer } from "./PdfViewer";
 import { BacklinksView } from "./BacklinksView";
 import { SlashCommandPopover } from "./SlashCommandPopover";
 
@@ -236,15 +237,15 @@ export function ObsidianPagePanel({
                             </div>
                         )}
                     </div>
-
                     {/* Markdown Area: Combined View/Edit */}
                     <div className="space-y-10">
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
-                            Content
-                        </div>
                         <div className="min-h-[500px]">
                             {loadingContent ? (
                                 <div className="h-64 flex items-center justify-center opacity-10"><RefreshCw size={24} className="animate-spin" /></div>
+                            ) : relativePath.toLowerCase().endsWith('.pdf') ? (
+                                <div className="h-[800px] -mx-8">
+                                    <PdfViewer path={relativePath} title={localTitle} />
+                                </div>
                             ) : (
                                 <div className="space-y-16">
                                     <div className="relative group/editor">
@@ -255,7 +256,7 @@ export function ObsidianPagePanel({
                                                 const pos = e.target.selectionStart;
                                                 setContent(val); 
                                                 setIsDirty(true); 
-
+ 
                                                 if (val[pos - 1] === '/') {
                                                     const rect = e.target.getBoundingClientRect();
                                                     setSlashPopover({ open: true, pos: { top: rect.top + 30, left: rect.left + 50 } });
@@ -294,7 +295,7 @@ export function ObsidianPagePanel({
                                             onNavigate={onNavigate} 
                                         />
                                     </div>
-
+ 
                                     <div className="pb-20">
                                         <BacklinksView 
                                             pageName={localTitle} 

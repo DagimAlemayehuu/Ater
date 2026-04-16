@@ -5,6 +5,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from src.domains.rag.indexer import VaultIndexer
 from src.domains.obsidian.events import vault_events
+from src.domains.obsidian.sanitizer import PdfSanitizer
 import time
 from typing import Optional, Dict, Any, Callable
 
@@ -41,16 +42,40 @@ class VaultSyncHandler(FileSystemEventHandler):
             )
 
     def on_modified(self, event):
-        if event.is_directory or not event.src_path.endswith('.md'):
+        if event.is_directory:
             return
+            
+        # PDF Sanitization Bridge
+        if event.src_path.lower().endswith('.pdf') and "5-Pdf Store" in event.src_path:
+            if self._should_process(event.src_path):
+                logger.info(f"[Sanitizer] New or Modified PDF detected: {Path(event.src_path).name}")
+                self.loop.run_in_executor(None, PdfSanitizer.normalize, Path(event.src_path))
+            return
+
+        # Markdown Indexing Logic
+        if not event.src_path.endswith('.md'):
+            return
+            
         if self._should_process(event.src_path):
             logger.debug(f"[VaultWatcher] Modified detected: {event.src_path}")
             self.loop.call_soon_threadsafe(self.indexer.index_file, event.src_path)
             self._publish_event("modified", event.src_path)
 
     def on_created(self, event):
-        if event.is_directory or not event.src_path.endswith('.md'):
+        if event.is_directory:
             return
+            
+        # PDF Sanitization Bridge
+        if event.src_path.lower().endswith('.pdf') and "5-Pdf Store" in event.src_path:
+            if self._should_process(event.src_path):
+                logger.info(f"[Sanitizer] New PDF detected: {Path(event.src_path).name}")
+                self.loop.run_in_executor(None, PdfSanitizer.normalize, Path(event.src_path))
+            return
+
+        # Markdown Indexing Logic
+        if not event.src_path.endswith('.md'):
+            return
+            
         if self._should_process(event.src_path):
             logger.debug(f"[VaultWatcher] Created detected: {event.src_path}")
             self.loop.call_soon_threadsafe(self.indexer.index_file, event.src_path)
@@ -135,6 +160,13 @@ class RAGWatcherService:
 
         logger.info(f"Starting {'Force ' if force else 'Incremental '}Vault RAG Sync...")
         
+        # --- PDF SANITIZER PHASE ---
+        try:
+            from src.domains.obsidian.sanitizer import start_auto_sanitizer
+            start_auto_sanitizer(str(self.vault_path))
+        except Exception as e:
+            logger.error(f"[Sanitizer] Preliminary scan failed: {e}")
+            
         try:
             # Fast direct globbing, filtering out common system directories
             files_to_index = [

@@ -381,6 +381,13 @@ export const sidecarApi = {
             method: 'POST'
         }),
 
+    // ── Scholar & AI ──────────────────────────────────────
+    explainPdfSelection: (payload: { path: string, selection: string, page: number }) =>
+        request<{ answer: string; detail?: string }>('/api/oka/explain', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
     getChronosStatus: () => request<any>('/api/ai/specialists/chronos'),
     getChronosTimeline: () => request<any[]>('/api/ai/chronos/timeline'),
     getWealthStatus: () => request<any>('/api/ai/specialists/wealth'),

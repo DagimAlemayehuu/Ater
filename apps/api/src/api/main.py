@@ -31,6 +31,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("LifeOS")
 
+from urllib.parse import unquote, quote
 import uvicorn
 from fastapi import FastAPI, Depends, Header, HTTPException, Body, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
@@ -111,14 +112,16 @@ async def _ensure_watcher_path(vault_path: str):
             loop = asyncio.get_event_loop()
         rag_watcher.start(loop, status_callback=_update_rag_status)
 
-async def validate_vault_path(secrets: AppSecrets = Depends(get_app_secrets)):
+async def validate_vault_path(vault_path: Optional[str] = None, secrets: AppSecrets = Depends(get_app_secrets)):
     """Dependency to ensure vault path is valid and watcher is synced."""
-    if not secrets.vault_path:
+    effective_vault_path = secrets.vault_path or vault_path
+    
+    if not effective_vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
     
     # Auto-sync the background watcher to the header path
-    await _ensure_watcher_path(secrets.vault_path)
-    return secrets.vault_path
+    await _ensure_watcher_path(effective_vault_path)
+    return effective_vault_path
 
 # Mount routers
 app.include_router(notion_router, prefix="/api")
@@ -582,6 +585,92 @@ async def oka_list_inbox(
         print(f"[Life OS Sidecar] Error scanning inbox: {e}")
     
     return {"files": files}
+
+@app.post("/api/oka/explain")
+async def oka_explain_concept(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Explains a specific concept from the PDF using AI."""
+    relative_path = payload.get("path", "")
+    selection = payload.get("selection", "")
+    page_num = payload.get("page", 1)
+    user_question = payload.get("question", "")
+    
+    logger.info(f"[AI Explain] Request for {relative_path} (Page {page_num})")
+    
+    if not secrets.ai_key:
+        raise HTTPException(status_code=401, detail="AI API Key missing in Settings")
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Obsidian Vault Path not configured")
+
+    # Handle path resolution
+    decoded_path = unquote(relative_path)
+    full_path = Path(secrets.vault_path) / decoded_path
+    
+    if not full_path.exists():
+        # Try case-insensitive fallback for .pdf vs .PDF
+        parent = full_path.parent
+        if parent.exists():
+            for f in parent.iterdir():
+                if f.name.lower() == full_path.name.lower():
+                    full_path = f
+                    break
+    
+    if not full_path.exists():
+        logger.error(f"[AI Explain] File not found: {full_path}")
+        raise HTTPException(status_code=404, detail=f"PDF file not found in vault: {decoded_path}")
+
+    try:
+        from src.domains.ai.factory import ModelFactory
+        from langchain_community.document_loaders import PyPDFLoader
+        from langchain_core.messages import HumanMessage
+        
+        # 1. Load context from page
+        logger.info(f"[AI Explain] Loading PDF: {full_path.name}")
+        loader = PyPDFLoader(str(full_path))
+        pages = loader.load_and_split()
+        
+        if page_num > len(pages):
+            logger.warning(f"[AI Explain] Page {page_num} out of range (Total: {len(pages)})")
+            page_content = pages[-1].page_content if pages else ""
+        else:
+            page_content = pages[page_num - 1].page_content
+        
+        # 2. Build model
+        logger.info(f"[AI Explain] Invoking AI ({secrets.ai_provider}/{secrets.ai_model})")
+        llm = ModelFactory.get_model(
+            provider=secrets.ai_provider or "google",
+            model_name=secrets.ai_model or "gemini-1.5-pro",
+            api_key=secrets.ai_key,
+            temperature=0.2
+        )
+        
+        # 3. Create Prompt
+        prompt = f"""
+        You are an expert Academic AI Assistant. 
+        Context Material (from Page {page_num}):
+        {page_content}
+        
+        The user has selected this specific text to understand:
+        "{selection}"
+        
+        User's Question/Goal:
+        {user_question if user_question else "Please explain this selection in more detail based on the lecture material."}
+        
+        Instructions:
+        - Be technical and precise.
+        - Relate the explanation back to the provided context.
+        - If the user's question is empty, focus on a deep breakdown of the selection.
+        - Use Markdown for formatting.
+        """
+        
+        messages = [HumanMessage(content=prompt)]
+        res = await llm.ainvoke(messages)
+        return {"answer": res.content}
+    except Exception as e:
+        logger.error(f"[AI Explain] Error: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.patch("/api/notion/pages/{page_id}")
 async def update_notion_page(

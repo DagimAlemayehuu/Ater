@@ -18,9 +18,9 @@ class ObsidianClient:
         """
         return self.vault_path.exists() and self.vault_path.is_dir()
 
-    def list_files(self, extension: str = ".md") -> List[Dict[str, Any]]:
+    def list_files(self, extensions: List[str] = [".md", ".pdf"]) -> List[Dict[str, Any]]:
         """
-        Recursively lists all markdown files and directories in the vault.
+        Recursively lists all supported files and directories in the vault.
         """
         if not self.is_valid_vault():
             print(f"[ObsidianClient] Invalid or missing vault path: {self.vault_path}")
@@ -46,7 +46,7 @@ class ObsidianClient:
                             "path": rel_path,
                             "is_dir": True
                         })
-                    elif entry.suffix == extension:
+                    elif entry.suffix.lower() in [ext.lower() for ext in extensions]:
                         stats = entry.stat()
                         items.append({
                             "name": entry.name,

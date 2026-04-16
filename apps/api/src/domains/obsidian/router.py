@@ -10,8 +10,8 @@ from pathlib import Path
 from pydantic import BaseModel
 import shutil
 import io
-import json
-from fastapi.responses import StreamingResponse
+from urllib.parse import unquote, quote
+from fastapi.responses import StreamingResponse, FileResponse, HTMLResponse
 
 from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.obsidian.client import ObsidianClient
@@ -721,3 +721,184 @@ async def get_vault_backlinks(page_name: str, secrets: AppSecrets = Depends(get_
             continue
             
     return {"backlinks": backlinks}
+    
+@router.get("/obsidian/pdf-metadata/{path:path}")
+async def get_pdf_metadata(
+    path: str,
+    vault_path: Optional[str] = None,
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Returns total pages and dimensions for a PDF."""
+    effective_vault_path = secrets.vault_path or vault_path
+    if not effective_vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+        
+    full_path = Path(effective_vault_path) / unquote(path)
+    if not full_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(str(full_path))
+        page = reader.pages[0]
+        return {
+            "page_count": len(reader.pages),
+            "width": float(page.mediabox.width),
+            "height": float(page.mediabox.height)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/obsidian/viewer/{path:path}")
+async def get_pdf_viewer(
+    path: str,
+    vault_path: Optional[str] = None,
+    page: int = 1,
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Returns an HTML wrapper for the PDF that handles selection and scrolling locks using PDF.js."""
+    effective_vault_path = secrets.vault_path or vault_path
+    auth_query = f"?vault_path={quote(effective_vault_path)}" if effective_vault_path else ""
+    # NO OUTER QUOTE: This was the bug. The path is already quoted by FastAPI if needed.
+    pdf_src = f"/api/obsidian/serve/{path}{auth_query}"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+        <style>
+            body, html {{ 
+                margin: 0; padding: 0; width: 100%; height: 100%; 
+                overflow: hidden; background: #f7f7f7; 
+                display: flex; align-items: center; justify-content: center;
+                font-family: -apple-system, system-ui, sans-serif;
+            }}
+            #viewer-container {{
+                position: relative;
+                box-shadow: 0 30px 60px rgba(0,0,0,0.12);
+                background: white;
+                display: none; /* Hidden until rendered */
+            }}
+            canvas {{ display: block; }}
+            .textLayer {{
+                position: absolute;
+                left: 0; top: 0; right: 0; bottom: 0;
+                color: transparent; cursor: text;
+                overflow: hidden; opacity: 1.0; 
+                line-height: 1;
+                pointer-events: auto;
+            }}
+            .textLayer > span {{
+                color: transparent; position: absolute;
+                white-space: pre; cursor: text; transform-origin: 0% 0%;
+            }}
+            ::selection {{ background: rgba(0, 122, 255, 0.2); }}
+            #status {{
+                position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                font-size: 10px; font-weight: 800; text-transform: uppercase;
+                letter-spacing: 0.2em; color: #ccc;
+            }}
+            ::selection {{ background: rgba(0, 0, 0, 0.1); }}
+        </style>
+    </head>
+    <body>
+        <div id="status">Loading Engine...</div>
+        <div id="viewer-container">
+            <canvas id="pdf-canvas"></canvas>
+            <div id="text-layer" class="textLayer"></div>
+        </div>
+
+        <script>
+            const url = "{pdf_src}";
+            const pdfjsLib = window['pdfjs-dist/build/pdf'];
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+            let pdfDoc = null;
+            let pageNum = {page};
+            const status = document.getElementById('status');
+            const container = document.getElementById('viewer-container');
+
+            async function renderPage(num) {{
+                try {{
+                    const page = await pdfDoc.getPage(num);
+                    const viewport = page.getViewport({{ scale: 2.0 }}); // High DPI Base
+                    
+                    const scale = Math.min(window.innerWidth / viewport.width, window.innerHeight / viewport.height) * 2;
+                    const scaledViewport = page.getViewport({{ scale: scale }});
+
+                    const canvas = document.getElementById('pdf-canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.height = scaledViewport.height;
+                    canvas.width = scaledViewport.width;
+                    canvas.style.width = (scaledViewport.width / 2) + 'px';
+                    canvas.style.height = (scaledViewport.height / 2) + 'px';
+                    
+                    container.style.width = canvas.style.width;
+                    container.style.height = canvas.style.height;
+
+                    await page.render({{ canvasContext: ctx, viewport: scaledViewport }}).promise;
+
+                    // Render text layer
+                    const textLayer = document.getElementById('text-layer');
+                    textLayer.innerHTML = '';
+                    const textContent = await page.getTextContent();
+                    await pdfjsLib.renderTextLayer({{
+                        textContent,
+                        container: textLayer,
+                        viewport: page.getViewport({{ scale: scale / 2 }}),
+                        textDivs: []
+                    }}).promise;
+
+                    status.style.display = 'none';
+                    container.style.display = 'block';
+                }} catch (e) {{
+                    status.innerText = "Processing Error: " + e.message;
+                }}
+            }}
+
+            pdfjsLib.getDocument(url).promise.then(pdf => {{
+                pdfDoc = pdf;
+                status.innerText = "Rendering Page...";
+                renderPage(pageNum);
+            }}).catch(err => {{
+                status.innerText = "Load Failed: " + err.message;
+                window.parent.postMessage({{ type: 'error', message: err.message }}, '*');
+            }});
+
+            document.addEventListener('selectionchange', () => {{
+                const selection = window.getSelection().toString().trim();
+                window.parent.postMessage({{ type: 'selection', text: selection }}, '*');
+            }});
+
+            window.addEventListener('keydown', (e) => {{
+                window.parent.postMessage({{ type: 'keydown', key: e.key }}, '*');
+            }});
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+
+@router.get("/obsidian/serve/{path:path}")
+async def serve_obsidian_file(
+    path: str, 
+    vault_path: Optional[str] = None,
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Serves a file directly from the vault (for PDFs, images, etc.)"""
+    # Use vault_path from query param if header is missing (important for iframes/direct links)
+    effective_vault_path = secrets.vault_path or vault_path
+    
+    if not effective_vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing and no vault_path query param")
+    
+    # Unquote to handle encoded spaces/chars from frontend
+    decoded_path = unquote(path)
+    full_path = Path(effective_vault_path) / decoded_path
+    
+    if not full_path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {decoded_path}")
+        
+    return FileResponse(str(full_path))
