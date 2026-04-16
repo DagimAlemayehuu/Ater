@@ -101,14 +101,24 @@ class VaultManager:
             return self.vault_path / "3-Database" / "06 - Study Planner" / filename
 
         # ── Deep Academic Folder Pathing ──
+        # Clean course and semester
         clean_course = self.get_canonical_title(super_clean(raw_course))
-        clean_semester = raw_semester.replace("[[", "").replace("]]", "").strip()
+        clean_semester = raw_semester.replace("[[", "").replace("]]", "").strip() or "General"
+        if clean_course.lower() == "unknown_course": 
+            clean_course = "General_Knowledge"
         
         # We need the clean Hub Name for the folder
         clean_hub_base = super_clean(raw_hub)
         canonical_hub_base = self.get_canonical_title(clean_hub_base)
-        unit_folder_name = f"{unit_num}_{canonical_hub_base}" if unit_num else canonical_hub_base
         
+        # Ensure unit folder name is clean and NOT just a number
+        unit_prefix = f"{unit_num}_" if unit_num else ""
+        unit_folder_name = f"{unit_prefix}{canonical_hub_base}"
+        
+        # Final safety check: if unit_folder_name still contains "Unknown", replace it
+        if "Unknown" in unit_folder_name:
+            unit_folder_name = unit_folder_name.replace("Unknown", "Uncategorized")
+
         target_dir = self.academic_root / clean_semester / clean_course / unit_folder_name
 
         # ── 2. Possible Questions (Academic Root) ──
@@ -139,6 +149,9 @@ class VaultManager:
         
         # Perform an atomic swap write to prevent data loss
         temp_file = file_path.with_suffix(f".tmp_{uuid.uuid4().hex[:8]}")
+        # Explicit absolute path logging for verification
+        print(f"[VaultManager] Persisting Note: {file_path.absolute()}")
+        
         with open(temp_file, "w", encoding="utf-8") as f:
             f.write(content)
         
@@ -150,18 +163,23 @@ class VaultManager:
     def extract_yaml_and_content(self, content: str) -> Tuple[Dict[str, Any], str, Optional[str]]:
         """Parses a note into frontmatter and body."""
         try:
-            match = re.search(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
+            # Relaxed regex: find the first YAML block even if there is noise before it
+            match = re.search(r"---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
             if not match:
                 return {}, content, "No YAML frontmatter found"
             
             meta = yaml.safe_load(match.group(1)) or {}
-            body = content[match.end():]
+            body = content[match.end():].strip()
             return meta, body, None
         except Exception as e:
             return {}, content, str(e)
 
     def process_code_blocks(self, content: str) -> str:
         """Repairs and converts custom code blocks to standard backticks for Obsidian."""
+        # CRITICAL FIX: Strip YAML wrappers entirely so they don't leak into the body
+        content = re.sub(r"--- START_CODE:yaml ---\s*\n", "", content, flags=re.IGNORECASE)
+        content = re.sub(r"\n\s*--- END_CODE:yaml ---", "", content, flags=re.IGNORECASE)
+        
         lines = content.split('\n')
         processed_lines = []
         in_code_block = False

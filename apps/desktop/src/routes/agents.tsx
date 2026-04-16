@@ -7,7 +7,7 @@ import {
     Database, Calendar,
     UserCheck, Search, X, Info, Shield, Check, Save, MessageSquare, Layout, Clock, Plus, ExternalLink, Battery, BrainCircuit,
     BookOpen, Tag, Layers, ChevronDown, FileEdit, HelpCircle,
-    Archive, Terminal
+    Archive, Terminal, CheckCircle
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
@@ -99,6 +99,43 @@ function CurriculumPill({
     )
 }
 
+function BatchTreeView({ batches, processedNotes }: { batches: any[], processedNotes: any[] }) {
+    if (!batches || batches.length === 0) return null;
+    const processedTitles = new Set(processedNotes?.map(n => n.title));
+
+    return (
+        <div className="space-y-3">
+            {batches.map((batch: any) => (
+                <div key={batch.id} className="p-4 rounded border border-gray-100 bg-gray-50/50">
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="w-5 h-5 rounded bg-[#111827] text-[10px] font-bold text-white flex items-center justify-center">
+                            {batch.id}
+                        </div>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Batch {batch.id}</h4>
+                    </div>
+                    <div className="space-y-1.5">
+                        {batch.notes?.map((note: string, idx: number) => {
+                            const isProcessed = processedTitles.has(note);
+                            return (
+                                <div key={idx} className={`flex items-center gap-2 pl-7 group transition-opacity ${isProcessed ? 'opacity-50' : ''}`}>
+                                    {isProcessed ? (
+                                        <CheckCircle size={12} className="text-emerald-500" />
+                                    ) : (
+                                        <FileText size={12} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+                                    )}
+                                    <span className={`text-[11px] font-medium truncate ${isProcessed ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                                        {note}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
+
 /* ─── Plan Card View Component ─── */
 function PlanCardView({ planRaw }: { planRaw: string }) {
     const extract = (tag: string) => {
@@ -114,14 +151,42 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
     const cleanLink = (text: string) => text.replace(/\[\[(.*?)\]\]/g, '$1').replace(/\*\*/g, '').replace(/\*/g, '')
 
     const parseAtomicTree = (text: string) => {
-        const lines = text.split('\n').filter(l => l.trim().startsWith('-'))
+        const lines = text.split('\n').filter(l => 
+            l.trim().match(/^\d+\./) || l.trim().startsWith('-') || l.trim().startsWith('*')
+        )
+        
         return lines.map(line => {
-            // Count leading spaces to determine depth
-            const indentMatch = line.match(/^(\s*)-/)
+            // Determine level from indentation
+            const indentMatch = line.match(/^(\s*)/)
             const spaces = indentMatch ? indentMatch[1].length : 0
-            const level = Math.floor(spaces / 2) // OKA v10.5 uses 2-space increments
-            const content = line.replace(/^\s*-/, '').trim()
-            return { level, content: cleanLink(content) }
+            const level = Math.floor(spaces / 2)
+
+            // Extract content
+            const rawContent = line.replace(/^\s*(\d+\.|-|\*)\s*/, '').trim()
+            
+            // Extract bits
+            const titleMatch = rawContent.match(/\[\[(.*?)\]\]/)
+            const modeMatch = rawContent.match(/\(Mode\s+([A-Z]+)\)/i)
+            const parentMatch = rawContent.match(/Parent:\s*\[\[(.*?)\]\]/)
+            const pagesMatch = rawContent.match(/Pages:\s*\[(.*?)\]/)
+
+            let description = '';
+            if (rawContent.includes(':')) {
+                // Try to find the description which is usually after the mode and before Parent/Pages
+                description = rawContent.split(':').slice(1).join(':')
+                    .split('Parent:')[0]
+                    .split('Pages:')[0]
+                    .trim();
+            }
+
+            return {
+                level,
+                title: titleMatch ? titleMatch[1] : cleanLink(rawContent.split('-')[0]),
+                mode: modeMatch ? modeMatch[1] : null,
+                parent: parentMatch ? parentMatch[1] : null,
+                pages: pagesMatch ? pagesMatch[1].split(',').map(p => p.trim()).filter(p => p) : [],
+                description: description
+            }
         })
     }
 
@@ -171,24 +236,54 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
                             style={{ marginLeft: `${node.level * 24}px` }}
                             className={cn(
                                 "p-3 rounded border bg-white hover:border-gray-300 hover:bg-gray-50 transition-all relative overflow-hidden group min-w-0 w-full",
-                                node.level > 0 ? "border-dashed opacity-90 scale-[0.99] border-gray-200" : "border-solid border-gray-200"
+                                node.level > 0 ? "border-dashed opacity-90 scale-[1] border-gray-200" : "border-solid border-gray-200 shadow-sm"
                             )}
                         >
                             {node.level > 0 && (
-                                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gray-100 group-hover:bg-gray-200 transition-colors" />
+                                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gray-200 group-hover:bg-gray-400 transition-colors" />
                             )}
-                            <div className="flex items-center justify-between gap-4 min-w-0">
-                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-4 min-w-0">
+                                <div className="flex items-start gap-3 min-w-0 flex-1">
                                     <div className={cn(
-                                        "p-1.5 rounded shrink-0",
-                                        node.level === 0 ? "bg-gray-100 text-[#111827]" : "bg-gray-50 text-gray-400"
+                                        "p-1.5 rounded shrink-0 mt-0.5",
+                                        node.level === 0 ? "bg-[#111827] text-white" : "bg-gray-100 text-gray-400"
                                     )}>
-                                        <FileText size={14} />
+                                        <FileText size={12} />
                                     </div>
-                                    <div className="font-medium text-sm text-[#111827] underline decoration-transparent group-hover:decoration-gray-200 underline-offset-2 break-words overflow-hidden max-w-full transition-all">
-                                        {node.content}
+                                    <div className="flex flex-col gap-1 min-w-0">
+                                        <div className="font-bold text-[13px] text-[#111827] truncate group-hover:text-black transition-colors">
+                                            {node.title}
+                                            {node.mode && (
+                                                <span className="ml-2 text-[9px] font-black uppercase text-gray-400 tracking-widest border border-gray-100 px-1 rounded">
+                                                    {node.mode}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {node.description && (
+                                            <p className="text-[11px] text-gray-500 leading-relaxed max-w-lg">
+                                                {node.description}
+                                            </p>
+                                        )}
+                                        {node.pages.length > 0 && (
+                                            <div className="flex items-center gap-1.5 mt-1.5">
+                                                <span className="text-[9px] font-bold uppercase text-gray-300 tracking-tighter">Relevant Pages:</span>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {node.pages.map(p => (
+                                                        <span key={p} className="text-[9px] font-bold px-1.5 py-0.5 bg-gray-50 text-gray-500 border border-gray-100 rounded hover:bg-white hover:border-gray-300 transition-all cursor-default">
+                                                            {p}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
+                                {node.parent && (
+                                    <div className="hidden sm:flex items-center gap-1 text-[9px] font-bold uppercase text-gray-300 shrink-0">
+                                        <ArrowLeft size={10} />
+                                        <span className="truncate max-w-[80px]">{node.parent}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -242,9 +337,10 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
     useEffect(() => {
         fetchStatus()
         fetchInbox()
-        const itv = setInterval(fetchStatus, 3000)
+        // Poll status frequently during active deployments
+        const itv = setInterval(fetchStatus, queueStatus?.status !== 'idle' ? 1500 : 3000)
         return () => clearInterval(itv)
-    }, [])
+    }, [queueStatus?.status])
 
     const toggleAutoDeploy = async () => {
         await saveConfig({ autoDeploy: !config?.autoDeploy })
@@ -410,7 +506,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
 
             <div className="flex-1 flex gap-6 overflow-hidden">
                 <div className="w-[320px] flex flex-col gap-6 shrink-0 overflow-hidden">
-                    <div className="rounded border border-gray-200 bg-white p-5  shrink-0">
+                    <div className="rounded border border-gray-200 bg-white p-5 shrink-0">
                         <h3 className="text-xs font-semibold uppercase tracking-tight text-gray-500 mb-4">Pipeline Status</h3>
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
@@ -420,12 +516,48 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                 </div>
                                 <span className="text-xs font-medium text-gray-500">{queueStatus?.pending_count || 0} Pending</span>
                             </div>
+                            
                             {queueStatus?.status !== 'idle' && (
-                                <div className="space-y-2">
-                                    <p className="text-[10px] text-gray-500 truncate">{queueStatus?.current_file}</p>
-                                    <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                                        <div className="h-full bg-black transition-all duration-500" style={{ width: `${(queueStatus?.current_batch / (queueStatus?.total_batches || 1)) * 100}%` }} />
+                                <div className="space-y-3 pt-2 border-t border-gray-100">
+                                    <div className="flex flex-col gap-1">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Current File</p>
+                                        <p className="text-[11px] font-semibold text-[#111827] truncate">{queueStatus?.current_file}</p>
                                     </div>
+
+                                    <div className="space-y-1.5">
+                                        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-tighter">
+                                            <span className="text-gray-400">Progress</span>
+                                            <span className="text-gray-900">{queueStatus?.current_batch} / {queueStatus?.total_batches} Batches</span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden border border-gray-50">
+                                            <div className="h-full bg-black transition-all duration-700 ease-in-out" style={{ width: `${(queueStatus?.current_batch / (queueStatus?.total_batches || 1)) * 100}%` }} />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-1 p-2 bg-gray-50 rounded border border-gray-100">
+                                        <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Last Action</p>
+                                        <p className="text-[10px] font-medium text-gray-700 truncate">{queueStatus?.last_action || 'Initializing...'}</p>
+                                    </div>
+
+                                    {queueStatus?.processed_notes?.length > 0 && (
+                                        <div className="space-y-1.5">
+                                            <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Recent Assets</p>
+                                            <div className="flex flex-col gap-1">
+                                                {queueStatus?.processed_notes?.slice(-3).reverse().map((note: any, idx: number) => (
+                                                    <div key={idx} className="flex items-center gap-2 text-[10px] text-gray-500">
+                                                        <div className="w-1 h-1 rounded-full bg-emerald-500 shrink-0" />
+                                                        <span className="truncate font-medium">{note.title}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {queueStatus?.status === 'idle' && queueStatus?.pending_count === 0 && (
+                                <div className="py-4 text-center">
+                                    <p className="text-[10px] font-medium text-gray-400">All systems clear. Vault is synchronized.</p>
                                 </div>
                             )}
                         </div>
@@ -634,6 +766,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                 </div>
                             )}
 
+                            {/* Manual Flow View */}
                             {activePlan && (
                                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     <div className="mb-8 p-4 rounded bg-gray-50 border border-gray-200 flex items-center gap-3">
@@ -659,6 +792,33 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                             <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Compiling Architectural Plan...</p>
                                         </div>
                                     )}
+                                </div>
+                            )}
+
+                            {/* Autonomous Pipeline View - Tree Structure */}
+                            {queueStatus && queueStatus.status !== 'idle' && !activePlan && queueStatus.planned_batches && queueStatus.planned_batches.length > 0 && (
+                                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    <div className="mb-8 p-4 rounded bg-[#111827] border border-[#111827] flex items-center justify-between">
+                                        <div className="flex items-center gap-3 text-white">
+                                            <Activity size={18} className="animate-pulse" />
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Autonomous Execution Active</p>
+                                                <p className="text-xs font-medium">{queueStatus?.current_file}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-[#94a3b8]">Progress</p>
+                                            <p className="text-xs font-bold text-white tracking-widest">{queueStatus?.current_batch} / {queueStatus?.total_batches}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 px-1">Architectural Batch Map</h4>
+                                        <BatchTreeView 
+                                            batches={queueStatus?.planned_batches || []} 
+                                            processedNotes={queueStatus?.processed_notes || []} 
+                                        />
+                                    </div>
                                 </div>
                             )}
 

@@ -264,27 +264,72 @@ class OkaService:
 
     # ── Phase 1: Detection ──────────────────────────────────────
     async def detect_curriculum(self, file_path: str) -> Dict[str, Any]:
-        """Phase 1: Pure detection. No AI generation."""
+        """Phase 1: Pure detection + AI-assisted metadata extraction if no hub match."""
         path = Path(file_path)
         content_text = ""
         
         if path.suffix.lower() == ".pdf":
             loader = PyPDFLoader(str(path))
-            # Only load first few pages for detection to save time/resources
             pages = loader.load_and_split()
-            content_text = "\n".join([p.page_content for p in pages[:3]])
+            content_text = "\n".join([p.page_content for p in pages[:5]]) # Scan slightly more for detection
         else:
             with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                content_text = f.read(5000)
+                content_text = f.read(10000)
 
         target_hub = self.find_best_hub_match(content_text)
         
+        # If no hub match, try to detect metadata with AI to avoid "Unknown" placement errors
+        detected_curriculum = None
+        if not target_hub:
+            print(f"[OKA Service] No Hub match for {path.name}. Invoking AI detection...")
+            detected_curriculum = await self._detect_metadata_with_ai(content_text[:20000])
+
         return {
             "anchored_hub": target_hub,
+            "detected_curriculum": detected_curriculum,
             "available_hubs": self.list_planner_hubs(),
             "available_options": self.list_available_options(),
             "status": "detected"
         }
+
+    async def _detect_metadata_with_ai(self, text: str) -> Dict[str, str]:
+        """Uses AI to extract course, semester, unit, and a descriptive hub_title from text snippets."""
+        options = self.list_available_options()
+        
+        prompt = (
+            "Analyze the following text snippet from an academic document and extract exactly these four fields in JSON format:\n"
+            "1. course: The course name (e.g., 'Database Systems').\n"
+            "2. semester: The semester tag (e.g., 'Autumn 2025').\n"
+            "3. unit: The numerical identifier for the chapter or unit (e.g., '3').\n"
+            "4. hub_title: A concise, descriptive title for this unit based on its core subject (e.g., 'Relational Algebra'). Do NOT include the word 'Hub' or the unit number.\n\n"
+            "CONTEXT RULES:\n"
+            f"- EXISTING COURSES: {options['courses']}\n"
+            f"- EXISTING SEMESTERS: {options['semesters']}\n"
+            "- If a course/semester matches one of the existing ones, use that EXACT string.\n"
+            "- If multiple units are mentioned, pick the primary one.\n"
+            "- RETURN ONLY JSON. NO MARKDOWN. NO PREAMBLE.\n\n"
+            f"TEXT:\n{text}"
+        )
+        
+        try:
+            res = await self.llm.ainvoke([HumanMessage(content=prompt)])
+            # Simple extractor for markdown blocks if AI ignored "No Markdown"
+            clean_content = res.content.strip()
+            if "```json" in clean_content:
+                clean_content = re.search(r"```json\s*(.*?)\s*```", clean_content, re.DOTALL).group(1)
+            elif "```" in clean_content:
+                clean_content = re.search(r"```\s*(.*?)\s*```", clean_content, re.DOTALL).group(1)
+            
+            data = json.loads(clean_content)
+            return {
+                "course": str(data.get("course", "")),
+                "semester": str(data.get("semester", "")),
+                "unit": str(data.get("unit", "")),
+                "hub_title": str(data.get("hub_title", ""))
+            }
+        except Exception as e:
+            print(f"[OKA Service] AI Metadata detection failed: {e}")
+            return {"course": "", "semester": "", "unit": "", "hub_title": ""}
 
     # ── Phase 2: Planning ──────────────────────────────────────
     async def generate_plan(
@@ -305,7 +350,8 @@ class OkaService:
         if path.suffix.lower() == ".pdf":
             loader = PyPDFLoader(str(path))
             pages = loader.load_and_split()
-            full_text = "\n".join([p.page_content for p in pages])
+            # Explicitly inject page markers so the AI can attribute concepts to specific sections
+            full_text = "\n".join([f"[PAGE {p.metadata.get('page', 0) + 1}]\n{p.page_content}" for p in pages])
         else:
             with open(path, "r", encoding="utf-8", errors="ignore") as f:
                 full_text = f.read()
@@ -342,7 +388,10 @@ class OkaService:
             "Source material provided. ABSOLUTELY NO PREAMBLES.\n"
             "1. Start with the `<pre_generation_planning>` reasoning block.\n"
             "2. Extract EVERY concept.\n"
-            "3. Output the **Finalized Knowledge Asset Plan**.\n"
+            "3. Output the **Finalized Knowledge Asset Plan** using EXACTLY these tags:\n"
+            "   - Wrap the Hub link in `<hub_note>[[Link]]</hub_note>`\n"
+            "   - Wrap the PQ link in `<pq_note>[[Link]]</pq_note>`\n"
+            "   - Wrap the atomic list in `<atomic_notes>[[Link1]], [[Link2]]</atomic_notes>`\n"
             f"{anchor_instruction}\n\n"
             f"{full_text[:MAX_SOURCE_CHARS]}"
         )
@@ -446,11 +495,20 @@ class OkaService:
         batch_number = current_batch + 1
 
         batch_notes = []
+        batch_type = "atomic"
         if "batches" in session["metadata"]:
             for b in session["metadata"]["batches"]:
                 if b.get("id") == batch_number:
                     batch_notes = b.get("notes", [])
+                    batch_type = b.get("type", "atomic")
                     break
+        
+        state_map = {
+            "hub": "STATE 2: [HUB]",
+            "pq": "STATE 3: [PQ]",
+            "atomic": "STATE 4: [ATOMIC_NOTE]"
+        }
+        state_cmd = state_map.get(batch_type, "STATE 4: [ATOMIC_NOTE]")
         
         notes_context = f"EXACT NOTE TO GENERATE: {', '.join(['[['+n+']]' for n in batch_notes])}."
 
@@ -462,7 +520,7 @@ class OkaService:
         )
 
         reinforced_command = (
-            f"STATE 4: [ATOMIC_NOTE] EXECUTION\n"
+            f"{state_cmd} EXECUTION\n"
             f"Batch {batch_number} of {total_batches}\n"
             f"{notes_context}\n\n"
             "MANDATORY CURRICULUM CONTEXT:\n"
@@ -471,7 +529,7 @@ class OkaService:
             "1. Use ONLY --- START_CODE:lang --- markers. Triple backticks (```) are FORBIDDEN.\n"
             "2. Start immediately with --- START_NOTE ---. NO PREAMBLE.\n"
             "3. Provide MAXIMUM technical detail. Do not summarize.\n"
-            "4. Follow the Mastery Mode from the Plan exactly."
+            "4. Follow the template for the requested state exactly."
         )
         
         pruned_messages = initial_messages + plan_response + [HumanMessage(content=reinforced_command)]
