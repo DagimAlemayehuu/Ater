@@ -17,7 +17,7 @@
 2.  **Review the Finalized Knowledge Asset Plan: **
 3.  **Iterative Batch Generation: **
 links: 
-- "[[Life OS Home]]"
+- [[Life OS Home]]
 ---
 
 `/`--- END_BATCH ---` and an outermost ````markdown` block).

@@ -25,37 +25,49 @@ class OkaDeployer:
         raw_parts = re.split(r"-*\s*START_NOTE\s*-*", ai_output, flags=re.IGNORECASE)
         
         blocks = []
-        for part in raw_parts[1:]: # Skip text before first START_NOTE
-            # Find the content up to the FIRST occurrence of END_NOTE in this part
-            # Be extremely permissive with dashes and whitespace
-            end_match = re.search(r"(?i)(.*?)\s*-*\s*END_NOTE\s*-*", part, re.DOTALL)
-            if end_match:
-                blocks.append(end_match.group(1).strip())
-            else:
-                # Fallback: just take the rest if END_NOTE is missing but START_NOTE was found
-                blocks.append(part.strip())
+        if len(raw_parts) > 1:
+            for part in raw_parts[1:]: # Skip text before first START_NOTE
+                # Find the content up to the FIRST occurrence of END_NOTE in this part
+                # Be extremely permissive with dashes and whitespace
+                end_match = re.search(r"(?i)(.*?)\s*-*\s*END_NOTE\s*-*", part, re.DOTALL)
+                if end_match:
+                    blocks.append(end_match.group(1).strip())
+                else:
+                    # Fallback: just take the rest if END_NOTE is missing but START_NOTE was found
+                    blocks.append(part.strip())
+        else:
+            # CRITICAL FALLBACK: If AI forgot START_NOTE (common on Batch 1/Hub), 
+            # treat the entire cleaned output as a single block.
+            blocks.append(ai_output.strip())
 
         notes_to_deploy = []
-        for raw_note in blocks:
+        for i, raw_note in enumerate(blocks):
             cleaned_note = self.vm.process_code_blocks(raw_note)
             meta, body, err = self.vm.extract_yaml_and_content(cleaned_note)
             
-            # If YAML failed but we have content, try to synthesize a title from the first line
+            # If YAML failed but we have content, try to synthesize a title from the first line or use a generic one
             if not meta.get("title"):
                 first_line = body.strip().split('\n')[0]
                 if first_line.startswith("# "):
                     meta["title"] = first_line[2:].strip()
+                else:
+                    # Final fallback: use the first 30 chars as title if no specific title found
+                    meta["title"] = (first_line[:30] + "...") if len(first_line) > 30 else (first_line or f"Atomic_Note_{i+1}")
             
             if meta.get("title"):
                 # Ensure metadata has unit/course for pathing
                 if "unit" not in meta or not meta["unit"]: meta["unit"] = session_metadata.get("unit")
                 if "course" not in meta or not meta["course"]: meta["course"] = session_metadata.get("course")
                 notes_to_deploy.append({"title": meta["title"], "content": body, "metadata": meta})
+            else:
+                print(f"[OKA Deployer] Warning: Block {i+1} rejected - No title found.")
 
         if not notes_to_deploy:
-            print(f"[OKA Deployer] FAIL: 0 valid notes extracted. Raw output length: {len(ai_output)}")
+            print(f"[OKA Deployer] FAIL: 0 valid notes extracted from {len(blocks)} candidate blocks.")
+            print(f"--- RAW OUTPUT PREVIEW ---\n{ai_output[:200]}...")
             return []
 
+        print(f"[OKA Deployer] Deploying {len(notes_to_deploy)} notes for session {session_metadata.get('hub_title', 'unknown')}")
         return await self.deploy_batch(notes_to_deploy, session_metadata)
 
     async def deploy_batch(self, notes: List[Dict[str, Any]], session_metadata: Dict[str, Any]) -> List[Dict[str, str]]:
@@ -75,6 +87,15 @@ class OkaDeployer:
             content = note.get("content", "")
             meta = note.get("metadata", {})
             
+            # ── METADATA CLEANUP (PYYAML FIX) ──
+            # If PyYAML parsed [[Link]] as a list of lists, flatten it back to a string
+            for key, val in meta.items():
+                if isinstance(val, list) and len(val) == 1 and isinstance(val[0], list) and len(val[0]) == 1:
+                    meta[key] = f"[[{val[0][0]}]]"
+                elif isinstance(val, list) and len(val) == 1 and isinstance(val[0], str) and val[0].startswith("[["):
+                    # Handle single string in list if it looks like a wiki link
+                    meta[key] = val[0]
+
             # ── METADATA ENFORCEMENT ──
             # We ignore the AI's messy YAML and inject the perfect curriculum data from the session
             if session_metadata.get("course"):
@@ -84,6 +105,49 @@ class OkaDeployer:
             if session_metadata.get("unit"):
                 u = session_metadata["unit"]
                 meta["unit"] = int(u) if str(u).isdigit() else u
+            
+            # Inject source PDF if available
+            session_source = None
+            if session_metadata.get("path"):
+                pdf_filename = Path(session_metadata["path"]).name
+                try:
+                    rel_pdf = str(Path(session_metadata["path"]).relative_to(self.vm.vault_path))
+                    session_source = f"[[{rel_pdf}]]"
+                except:
+                    session_source = f"[[{pdf_filename}]]"
+
+            # Sanitization of AI source
+            ai_source = str(meta.get("source", ""))
+            if any(p in ai_source.lower() for p in ["context", "placeholder", "unknown", "none", "pdf_path"]):
+                meta["source"] = session_source or ai_source
+            elif not meta.get("source") and session_source:
+                meta["source"] = session_source
+            
+            if session_source and not meta.get("source"):
+                meta["source"] = session_source
+
+            # Robust Page Extraction — always produce source_pages as a sorted int list.
+            # Priority: [PAGE X] markers injected during planning > AI-provided source_pages > AI source_page
+            page_matches = re.findall(r"\[PAGE\s+(\d+)\]", content, re.IGNORECASE)
+            if page_matches:
+                pages = sorted(set(int(p) for p in page_matches))
+                meta["source_pages"] = pages
+            elif isinstance(meta.get("source_pages"), list):
+                # AI filled in source_pages correctly — normalize to ints
+                try:
+                    meta["source_pages"] = sorted(set(int(p) for p in meta["source_pages"] if str(p).isdigit()))
+                except Exception:
+                    meta["source_pages"] = []
+            elif meta.get("source_page") is not None:
+                # Legacy fallback: AI used singular source_page — promote to list
+                try:
+                    meta["source_pages"] = [int(meta["source_page"])]
+                except Exception:
+                    meta["source_pages"] = []
+            else:
+                meta.setdefault("source_pages", [])
+            # Always remove singular key to keep schema clean
+            meta.pop("source_page", None)
 
             # Inject type and relational links
             is_hub = "hub" in title.lower() or "hub" in str(meta.get("type", "")).lower()
@@ -107,9 +171,16 @@ class OkaDeployer:
                 clean_hub_name = self.vm.get_canonical_title(c)
                 
             unit_str = f"{session_metadata.get('unit')}_" if session_metadata.get("unit") else ""
+            
+            # Additional logic to ensure all notes have source and source_pages if session has path
+            if session_metadata.get("path") and "source" not in meta:
+                # Fallback in case the logic above was skipped
+                meta["source"] = f"[[{Path(session_metadata['path']).name}]]"
 
             if is_hub:
                 meta["type"] = "Hub"
+                meta["source_pages"] = []  # Hub aggregates — pages tracked per atomic note
+                meta.pop("source_page", None)
                 meta.setdefault("status", "Not Started")
                 meta.setdefault("confidence", None)
                 meta.setdefault("study_date", None)

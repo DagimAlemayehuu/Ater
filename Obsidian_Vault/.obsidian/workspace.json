@@ -4,17 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "bc29ebe9c5943fe7",
+        "id": "2559dac680ec8cc1",
         "type": "tabs",
         "children": [
           {
-            "id": "137e731015dc278e",
+            "id": "7f9e47468ad62ed5",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
+              "type": "markdown",
+              "state": {
+                "file": "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Primary_Key.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Primary_Key"
             }
           }
         ]
@@ -176,43 +180,43 @@
       "bases:Create new base": false
     }
   },
-  "active": "137e731015dc278e",
+  "active": "7f9e47468ad62ed5",
   "lastOpenFiles": [
-    "5-Pdf Store/note generated/Semester I/Statistics and Probability/7_3.pdf",
-    "5-Pdf Store/note generated/Semester I/Statistics and Probability/7_2.pdf",
-    "5-Pdf Store/note generated/Semester I/Statistics and Probability/6_6.pdf",
-    "5-Pdf Store/note generated/Semester I/Statistics and Probability/7_1.pdf",
-    "5-Pdf Store/note generated/Semester I/Statistics and Probability/6_5.pdf",
-    "5-Pdf Store/note generated/Semester I/Statistics and Probability/6_4.pdf",
-    "5-Pdf Store/note generated/Semester I/Statistics and Probability/6_3.pdf",
-    "5-Pdf Store/note generated/Semester I/Statistics and Probability/6_2.pdf",
-    "5-Pdf Store/note generated/Semester I/Statistics and Probability/6_1.pdf",
-    "5-Pdf Store/note generated/Semester I/Statistics and Probability/5_4.pdf",
-    "5-Pdf Store/note generated/Semester I/Statistics and Probability/5_3.pdf",
-    "Non_Homogeneous_Linear_Recurrence_Relations.md",
-    "2-Academic/['Autumn 2025']/Database_Systems/3_Conceputual_Database_Design/Phases_Of_Database_Design.md",
-    "2-Academic/['Autumn 2025']/Database_Systems/3_Conceputual_Database_Design/Database_Development_Methodology.md",
-    "2-Academic/['Autumn 2025']/Database_Systems/3_Conceputual_Database_Design/3_Conceputual_Database_Design_Possible_Questions.md",
-    "3-Database/06 - Study Planner/3_Conceputual_Database_Design_Hub.md",
-    "Phases_of_Database_Design.md",
-    "01 - Tasks.base.md",
-    "3-Database/06 - Study Planner/_Units/9.md",
-    "3-Database/06 - Study Planner/_Units/8.md",
-    "3-Database/06 - Study Planner/_Units/7.md",
-    "3-Database/06 - Study Planner/_Units/6.md",
-    "3-Database/06 - Study Planner/_Units/5.md",
-    "3-Database/06 - Study Planner/_Units/4.md",
-    "3-Database/06 - Study Planner/_Units/3.md",
-    "3-Database/06 - Study Planner/_Units/2.md",
-    "3-Database/06 - Study Planner/_Units/10.md",
-    "3-Database/06 - Study Planner/_Units/1.md",
-    "2-Academic/Autumn 2025/Database Systems/3_3_Conceputual_Database_Design_Hub/Database_Development_Methodology.md",
-    "2-Academic/Autumn 2025/Database Systems/3_3_Conceputual_Database_Design_Hub/3_Conceputual_Database_Design_Possible_Questions.md",
-    "2-Academic/Autumn 2025/Database_Systems/3_Conceputual_Database_Design/Database_Development_Methodology.md",
-    "2-Academic/Autumn 2025/Database_Systems/3_Conceputual_Database_Design/3_Conceputual_Database_Design_Possible_Questions.md",
-    "1-Meta/2-AI Personas/Google AI Studio/Obsidian Knowledge Architect (OKA).md",
-    "2-Academic/Autumn 2025/Database_Systems/3_Conceputual_Database_Design/Entity_Relationship_Modeling.md",
-    "2-Academic/Autumn 2025/Database_Systems/3_Conceputual_Database_Design/3_Conceptual_Database_Design_Possible_Questions.md",
-    "3-Database/06 - Study Planner/_Types/3 - High.md"
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Weak_Entity_Type.md",
+    "3-Database/08 - Semesters/Autumn 2025.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Participation.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Cardinality.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Multiplicity.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Structural_Constraints.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Composite_Key.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Primary_Key.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Candidate_Key.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Derived_Attribute.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Multi_Valued_Attribute.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Single_Valued_Attribute.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Composite_Attribute.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Simple_Attribute.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Attributes.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Role_Names_In_Relationships.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Recursive_Relationship.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Degree_Of_Relationship.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Strong_Entity_Type.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Relationship_Types.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Physical_Database_Design.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Information_System.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Entity_Types.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Database_System_Development_Lifecycle.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Conceptual_Database_Design.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design/Logical_Database_Design.md",
+    "2-Academic/Autumn 2025/Database_Systems/3_Relational_Model_And_Database_Design",
+    "2-Academic/Autumn 2025/Database_Systems",
+    "2-Academic/Autumn 2025",
+    "2-Academic",
+    "5-Pdf Store/Chapter_3.pdf",
+    "5-Pdf Store/Chapter_3.pdf",
+    "5-Pdf Store/Chapter_3.pdf",
+    "5-Pdf Store/Chapter_3.pdf",
+    "5-Pdf Store/Chapter_3.pdf",
+    "2-Academic/Unknown_Semester/Course/Title_Conceptual_Database_De"
   ]
 }

@@ -1,6 +1,6 @@
 ---
 links: 
-- "[[Life OS Home]]"
+- [[Life OS Home]]
 ---
 
 |---|

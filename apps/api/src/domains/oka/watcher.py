@@ -211,7 +211,7 @@ class OkaQueueManager:
                     # Batch retry logic for stability
                     batch_retry = 0
                     success = False
-                    while batch_retry < 3 and not success:
+                    while batch_retry < 10 and not success:
                         try:
                             confirm_res = await self.service.confirm_plan(
                                 session_id, 
@@ -249,12 +249,24 @@ class OkaQueueManager:
                                 raise ValueError(confirm_res.get("error", "Unknown service error"))
                         except Exception as e:
                             batch_retry += 1
-                            watcher_logger.error(f"Batch {temp_batch + 1} retry {batch_retry}/3: {e}")
-                            await asyncio.sleep(5)
+                            err_str = str(e).lower()
+                            
+                            # Detect TPD (Daily) vs TPM (Minute)
+                            is_daily = "tpd" in err_str or "daily" in err_str or "day" in err_str
+                            is_limit = "429" in err_str or "rate" in err_str
+                            
+                            if is_daily:
+                                watcher_logger.error(f"CRITICAL: Daily Token Limit (TPD) Reached. Pausing Pipeline.")
+                                self.status = "error"
+                                self.last_action = "Daily Limit Reached. Resuming tomorrow."
+                                self.auto_process = False # Stop the engine
+                                break
+                            
+                            watcher_logger.error(f"Batch {temp_batch + 1} retry {batch_retry}/10: {e}")
+                            self.last_action = f"Retry {batch_retry} (Rate Limit...)"
+                            await asyncio.sleep(20 * batch_retry) # Incremental backoff
                     
-                    if not success:
-                        self.status = "error"
-                        self.last_action = f"Failed at Batch {temp_batch + 1}"
+                    if not self.auto_process or not success:
                         break
                 
                 # 3. Final Move (Safety check for race with service)
@@ -281,8 +293,8 @@ class OkaQueueManager:
                 watcher_logger.info(f"Completed and moved to note generated: {path.name}")
                 
                 # Cool down between files to avoid model over-pressure
-                self.last_action = "Cooling down (30s)..."
-                await asyncio.sleep(30)
+                self.last_action = "Cooling down (10s)..."
+                await asyncio.sleep(10)
                 
             except Exception as e:
                 watcher_logger.error(f"Error processing {self.current_file}: {traceback.format_exc()}")
@@ -309,6 +321,7 @@ class OkaQueueManager:
             "current_batch": self.current_batch,
             "total_batches": self.total_batches,
             "planned_batches": self.planned_batches,
+            "plan_raw": getattr(self, "current_plan_raw", None),
             "last_action": self.last_action,
             "processed_notes": self.processed_notes,
             "pending_count": len(self.pending_files),

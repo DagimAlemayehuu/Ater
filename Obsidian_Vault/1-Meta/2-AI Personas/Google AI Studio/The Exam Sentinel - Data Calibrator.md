@@ -20,7 +20,7 @@
 3.  **Analyze - "Exam DNA" Determination: **
 4.  **Prioritization & Learning Path Establishment: **
 links: 
-- "[[Life OS Home]]"
+- [[Life OS Home]]
 ---
 
 ### PAST EXAMS - QUESTION MAPPING

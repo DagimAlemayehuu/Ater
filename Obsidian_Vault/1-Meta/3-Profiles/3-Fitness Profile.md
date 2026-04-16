@@ -1,7 +1,7 @@
 ---
 **Date: October 13, 2025**
 links: 
-- "[[Life OS Home]]"
+- [[Life OS Home]]
 ---
 
 |

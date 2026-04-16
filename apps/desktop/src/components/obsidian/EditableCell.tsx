@@ -37,6 +37,7 @@ import {
 import { Calendar } from "@/components/ui/calendar"
 import { sidecarApi } from '@/lib/sidecarApi'
 import { format } from "date-fns"
+import { renderWikiLinks } from './WikiLink'
 
 interface EditableCellProps {
     initialValue: any
@@ -719,25 +720,18 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
     }
 
     // Default String / Number
-    const wikiMatch = !isFocused && typeof value === 'string' && value.match(/\[\[(.*?)\]\]/);
-    
     return (
         <div className={cn(
             "flex items-center gap-2 group w-full px-1.5 py-1 rounded border border-transparent hover:border-gray-200 transition-all",
             isFocused && "border-gray-300 bg-gray-50",
             !isFocused && typeof value === 'string' && value && "cursor-text"
-        )} onClick={() => { if (!isFocused && !wikiMatch) setIsFocused(true) }}>
+        )} onClick={() => { if (!isFocused) setIsFocused(true) }}>
             <TypeIcon />
-            {wikiMatch ? (
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onNavigate?.(wikiMatch[1]); }}
-                    className="text-[#111827] hover:underline font-bold text-[10px] truncate flex-1 text-left"
-                >
-                    {wikiMatch[1]}
-                </button>
-            ) : !isFocused && typeof value === 'string' ? (
+            {!isFocused && typeof value === 'string' ? (
                 <div className="text-[10px] flex-1 truncate text-[#111827]">
-                    {value ? renderInlineMarkdown(value) : <span className="text-gray-400 italic">Empty</span>}
+                    {value ? (
+                        onNavigate ? renderWikiLinks(value, onNavigate) : renderInlineMarkdown(value)
+                    ) : <span className="text-gray-400 italic">Empty</span>}
                 </div>
             ) : (
                 <input 

@@ -5,7 +5,8 @@ import {
     Search, LayoutGrid, BrainCircuit, X, Zap, Activity, 
     PauseCircle, ListChecks, Archive, Terminal, Database,
     ChevronDown, Info, PanelLeft, Layout, FolderOpen,
-    Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Users, Settings, Network
+    Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Users, Settings, Network,
+    Edit3, Save
 } from 'lucide-react'
 import { sidecarApi, ObsidianFile } from '@/lib/sidecarApi'
 import { ObsidianGraphView } from '@/components/obsidian/ObsidianGraphView'
@@ -18,6 +19,8 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
 import { PdfViewer } from '@/components/obsidian/PdfViewer'
+import { renderWikiLinks } from '@/components/obsidian/WikiLink'
+import React from 'react'
 
 interface InboxFile {
     name: string
@@ -31,7 +34,7 @@ interface FileNode {
     children?: FileNode[]
 }
 
-function NoteProperties({ metadata }: { metadata: Record<string, any> }) {
+function NoteProperties({ metadata, onNavigate }: { metadata: Record<string, any>, onNavigate: (link: string) => void }) {
     if (!metadata || Object.keys(metadata).length === 0) return null
 
     const getPropertyIcon = (key: string) => {
@@ -40,32 +43,43 @@ function NoteProperties({ metadata }: { metadata: Record<string, any> }) {
             case 'semester': return <Calendar size={18} />
             case 'department': return <Building size={18} />
             case 'status': return <Circle size={18} />
+            case 'source': return <Paperclip size={18} />
+            case 'source_page': return <FileText size={18} />
             default: return <Info size={18} />
         }
     }
     
     return (
-        <div className="grid grid-cols-2 gap-y-6 gap-x-20 py-10 border-y border-gray-100 mb-12" data-purpose="note-metadata">
-            {Object.entries(metadata).map(([key, value]) => (
-                <div key={key} className="flex items-center gap-4">
-                    <div className="w-5 flex justify-center text-gray-400">
-                        {getPropertyIcon(key)}
+        <div className="flex flex-col gap-8 mb-12">
+            <div className="grid grid-cols-2 gap-y-6 gap-x-20 py-10 border-y border-gray-100" data-purpose="note-metadata">
+                {Object.entries(metadata).map(([key, value]) => (
+                    <div key={key} className="flex items-center gap-4">
+                        <div className="w-5 flex justify-center text-gray-400">
+                            {getPropertyIcon(key)}
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{key.replace(/_/g, ' ')}</span>
+                            <span className="text-[14px] font-medium text-gray-800">
+                                {key.toLowerCase() === 'status' ? (
+                                    <span className={cn(
+                                        "px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest",
+                                        value === 'Completed' ? 'bg-black text-white' : 'bg-gray-100 text-gray-500'
+                                    )}>{String(value)}</span>
+                                ) : (
+                                    String(value).startsWith('[[') ? (
+                                        <button 
+                                            onClick={() => onNavigate(String(value).slice(2, -2))}
+                                            className="text-black hover:underline underline-offset-4 decoration-gray-200"
+                                        >
+                                            {String(value).slice(2, -2).split('/').pop()}
+                                        </button>
+                                    ) : String(value)
+                                )}
+                            </span>
+                        </div>
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{key.replace(/_/g, ' ')}</span>
-                        <span className="text-[14px] font-medium text-gray-800">
-                            {key.toLowerCase() === 'status' ? (
-                                <span className="flex items-center gap-1.5">
-                                    <span className="w-1.5 h-1.5 rounded-full border border-gray-400"></span>
-                                    {Array.isArray(value) ? value.join(', ') : String(value)}
-                                </span>
-                            ) : (
-                                Array.isArray(value) ? value.join(', ') : String(value)
-                            )}
-                        </span>
-                    </div>
-                </div>
-            ))}
+                ))}
+            </div>
         </div>
     )
 }
@@ -83,8 +97,28 @@ export default function ObsidianVaultPage() {
     const [files, setFiles] = useState<ObsidianFile[]>([])
     const [loadingFiles, setLoadingFiles] = useState(false)
     const [selectedPath, setSelectedPath] = useState<string | null>(null)
+    const [selectedPage, setSelectedPage] = useState(1)
+    const [selectedFilteredPages, setSelectedFilteredPages] = useState<number[]>([])
     const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     const [noteContent, setNoteContent] = useState('')
+    const [isEditing, setIsEditing] = useState(false)
+    const [editedContent, setEditedContent] = useState('')
+    const [history, setHistory] = useState<string[]>([])
+    const [historyIndex, setHistoryIndex] = useState(-1)
+
+    const handleSaveNote = async () => {
+        if (!selectedPath) return
+        setLoadingNote(true)
+        try {
+            await sidecarApi.updateObsidianNote(selectedPath, editedContent)
+            setNoteContent(editedContent)
+            setIsEditing(false)
+        } catch (err: any) {
+            console.error("Save failed:", err)
+        } finally {
+            setLoadingNote(false)
+        }
+    }
     const [loadingNote, setLoadingNote] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
@@ -170,13 +204,41 @@ export default function ObsidianVaultPage() {
         } finally { setLoadingInbox(false) }
     }
 
-    const selectFile = async (path: string) => {
+    const handleDeleteItem = async (e: React.MouseEvent, path: string, isFolder: boolean) => {
+        e.stopPropagation()
+        try {
+            await sidecarApi.deleteObsidianItem(path)
+            await fetchFiles()
+            if (selectedPath === path || selectedPath?.startsWith(path + '/')) {
+                setSelectedPath(null)
+                setNoteMetadata({})
+                setNoteContent('')
+            }
+        } catch (err: any) {
+            alert(`Delete failed: ${err.message}`)
+        }
+    }
+
+    const selectFile = async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = []) => {
         setSelectedPath(path)
+        setSelectedPage(page)
+        setSelectedFilteredPages(filterPages)
         setLoadingNote(true)
         
+        if (!fromHistory) {
+            const newHistory = history.slice(0, historyIndex + 1);
+            if (newHistory[newHistory.length - 1] !== path) {
+                newHistory.push(path);
+                setHistory(newHistory);
+                setHistoryIndex(newHistory.length - 1);
+            }
+        }
+
         if (path.toLowerCase().endsWith('.pdf')) {
             setNoteMetadata({})
             setNoteContent('')
+            setEditedContent('')
+            setIsEditing(false)
             setLoadingNote(false)
             return
         }
@@ -185,6 +247,8 @@ export default function ObsidianVaultPage() {
             const res = await sidecarApi.readObsidianNote(path)
             setNoteMetadata(res.metadata || {})
             setNoteContent(res.content || '')
+            setEditedContent(res.content || '')
+            setIsEditing(false)
         } catch (err) {
             console.error('Failed to read note:', err)
             setNoteMetadata({})
@@ -192,20 +256,41 @@ export default function ObsidianVaultPage() {
         } finally { setLoadingNote(false) }
     }
 
-    const handleWikiLinkClick = async (pageName: string) => {
+    const handleBack = () => {
+        if (historyIndex > 0) {
+            const newIndex = historyIndex - 1;
+            setHistoryIndex(newIndex);
+            selectFile(history[newIndex], 1, true, []);
+        }
+    }
+
+    const handleForward = () => {
+        if (historyIndex < history.length - 1) {
+            const newIndex = historyIndex + 1;
+            setHistoryIndex(newIndex);
+            selectFile(history[newIndex], 1, true, []);
+        }
+    }
+
+    const handleWikiLinkClick = async (pageName: string, pageNumber?: number, filterPages: number[] = []) => {
         try {
             const res = await sidecarApi.findVaultPage(pageName);
             if (res.found && res.path) {
-                selectFile(res.path);
+                selectFile(res.path, pageNumber, false, filterPages);
             } else if (res.found && res.type === 'database') {
-                selectFile(`3-Database/${res.db_id}/${res.file_name}`);
+                selectFile(`3-Database/${res.db_id}/${res.file_name}`, pageNumber, false, filterPages);
             } else {
-                // Not found. Create a new root note and navigate to it
-                const newPath = `${pageName}.md`;
+                // Not found. Create a new note in the same directory as the currently selected file
+                let folder = '';
+                if (selectedPath && selectedPath.includes('/')) {
+                    folder = selectedPath.substring(0, selectedPath.lastIndexOf('/'));
+                }
+                
+                const newPath = folder ? `${folder}/${pageName}.md` : `${pageName}.md`;
                 const initialContent = `---\ntitle: ${pageName}\n---\n\n`;
                 await sidecarApi.updateObsidianNote(newPath, initialContent);
                 fetchFiles(); // refresh file tree since we created a new note
-                selectFile(newPath);
+                selectFile(newPath, 1, false, []);
             }
         } catch (e) {
             console.error(e);
@@ -251,22 +336,33 @@ export default function ObsidianVaultPage() {
             setActivePlan(res.plan_raw)
             setPlanData(res.plan_structured)
             setSessionId(res.session_id)
-            setIsAwaitingConfirmation(true)
             setTotalBatches(res.plan_structured?.batches?.length || 1)
             setCurrentBatch(0)
+            
+            // Auto Deploy Circuit
+            if (config?.autoDeploy) {
+                // Proceed immediately without manual confirmation
+                setTimeout(() => confirmDeployment(res.session_id), 800);
+            } else {
+                setIsAwaitingConfirmation(true)
+            }
         } catch (err: any) {
             setOkaError(err.message || 'Workflow failed')
         } finally { setProcessing(false) }
     }
 
-    const confirmDeployment = async () => {
-        if (!sessionId) return
+    const confirmDeployment = async (forcedId?: string) => {
+        const targetId = forcedId || sessionId
+        if (!targetId) return
+        
         setProcessing(true)
+        setIsAwaitingConfirmation(false) // Hide button if manual
+        
         try {
             let currentHasMore = true
             let tempBatch = 0
             while (currentHasMore) {
-                const res = await sidecarApi.okaConfirm({ session_id: sessionId })
+                const res = await sidecarApi.okaConfirm({ session_id: targetId })
                 tempBatch = res.current_batch || (tempBatch + 1)
                 setCurrentBatch(tempBatch)
                 setBatchFeed(prev => [...prev, { batch: tempBatch, results: res.results }])
@@ -274,10 +370,12 @@ export default function ObsidianVaultPage() {
                 if (currentHasMore) await new Promise(r => setTimeout(r, 2000))
             }
             setIsCompleted(true)
-            setIsAwaitingConfirmation(false)
             fetchFiles() // Refresh explorer
-        } catch (err: any) { setOkaError(err.message) }
-        finally { setProcessing(false) }
+        } catch (err: any) { 
+            setOkaError(err.message) 
+        } finally { 
+            setProcessing(false) 
+        }
     }
 
     // --- Tree Construction ---
@@ -347,7 +445,7 @@ export default function ObsidianVaultPage() {
                         <div 
                             onClick={() => node.isFolder ? toggleFolder(node.path) : selectFile(node.path)}
                             className={cn(
-                                "flex items-center gap-2 py-1 cursor-pointer transition-colors px-4",
+                                "flex items-center gap-2 py-1.5 cursor-pointer transition-colors px-4 group",
                                 isSelected ? "bg-[#E5E7EB] text-black font-medium rounded-md mx-2 px-2" : "hover:bg-[#F3F4F6] text-gray-600"
                             )}
                         >
@@ -365,7 +463,15 @@ export default function ObsidianVaultPage() {
                                 <FileText className={cn("w-4 h-4 shrink-0", isSelected ? "text-black" : "text-gray-400")} />
                             )}
                             
-                            <span className="truncate text-[13px]">{node.name}</span>
+                            <span className="truncate text-[13px] flex-1">{node.name}</span>
+
+                            <button
+                                onClick={(e) => handleDeleteItem(e, node.path, node.isFolder)}
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 hover:text-red-500 rounded transition-all"
+                                title={`Delete ${node.isFolder ? 'folder' : 'file'}`}
+                            >
+                                <Trash2 size={12} strokeWidth={2.5} />
+                            </button>
                         </div>
                         {node.isFolder && isExpanded && node.children && (
                             <div className="pl-4">
@@ -444,7 +550,7 @@ export default function ObsidianVaultPage() {
                                             <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Select an asset to visualize</p>
                                         </div>
                                     ) : (
-                                        <div className="max-w-5xl mx-auto px-16 py-12 animate-in fade-in duration-300">
+                                        <div className={cn("mx-auto py-12 animate-in fade-in duration-300 px-16", selectedPath.toLowerCase().endsWith('.pdf') ? "max-w-none" : "max-w-5xl")}>
                                             {loadingNote ? (
                                                 <div className="h-64 flex flex-col items-center justify-center gap-4 text-gray-400">
                                                     <RefreshCw size={24} className="animate-spin" />
@@ -452,34 +558,191 @@ export default function ObsidianVaultPage() {
                                                 </div>
                                             ) : (
                                                 <>
-                                                    {/* Breadcrumb Component */}
-                                                    <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-10 overflow-hidden text-ellipsis whitespace-nowrap">
-                                                        {selectedPath.split('/').map((part, idx, arr) => (
-                                                            <div key={idx} className="flex items-center gap-2 overflow-hidden shrink-0">
-                                                                <span className={idx === arr.length - 1 ? "text-gray-600 truncate max-w-[200px]" : "truncate max-w-[150px]"}>
-                                                                    {part.replace('.md', '').replace('.pdf', '')}
-                                                                </span>
-                                                                {idx < arr.length - 1 && <ChevronRight className="w-3 h-3 shrink-0" />}
-                                                            </div>
-                                                        ))}
+                                                    {/* Navigation & Breadcrumb Header */}
+                                                    <div className="flex flex-col gap-4 mb-10">
+                                                        {/* Breadcrumb Path */}
+                                                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest overflow-hidden text-ellipsis whitespace-nowrap">
+                                                            {selectedPath.split('/').map((part, idx, arr) => (
+                                                                <div key={idx} className="flex items-center gap-2 overflow-hidden shrink-0">
+                                                                    <span className={idx === arr.length - 1 ? "text-gray-600 truncate max-w-[200px]" : "truncate max-w-[150px]"}>
+                                                                        {part.replace('.md', '').replace('.pdf', '')}
+                                                                    </span>
+                                                                    {idx < arr.length - 1 && <ChevronRight className="w-3 h-3 shrink-0" />}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+
+                                                        {/* History Controls */}
+                                                        <div className="flex items-center gap-3">
+                                                            <button 
+                                                                onClick={handleBack}
+                                                                disabled={historyIndex <= 0}
+                                                                className={cn(
+                                                                    "flex items-center justify-center w-8 h-8 rounded-md border transition-all shadow-sm",
+                                                                    historyIndex > 0 
+                                                                        ? "bg-white border-gray-100 text-gray-400 hover:text-black hover:border-black" 
+                                                                        : "bg-gray-50 border-gray-50 text-gray-200 cursor-not-allowed"
+                                                                )}
+                                                                title="Go back"
+                                                            >
+                                                                <ChevronLeft size={16} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={handleForward}
+                                                                disabled={historyIndex >= history.length - 1}
+                                                                className={cn(
+                                                                    "flex items-center justify-center w-8 h-8 rounded-md border transition-all shadow-sm",
+                                                                    historyIndex < history.length - 1 
+                                                                        ? "bg-white border-gray-100 text-gray-400 hover:text-black hover:border-black" 
+                                                                        : "bg-gray-50 border-gray-50 text-gray-200 cursor-not-allowed"
+                                                                )}
+                                                                title="Go forward"
+                                                            >
+                                                                <ChevronRight size={16} />
+                                                            </button>
+                                                        </div>
                                                     </div>
 
-                                                    {/* Page Title */}
-                                                    <h1 className="text-5xl font-extrabold text-[#111827] tracking-tight mb-12 leading-tight">
-                                                        {selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '')}
-                                                    </h1>
+                                                    {/* Page Title & Actions */}
+                                                    <div className="flex items-start justify-between mb-12 group">
+                                                        <h1 className="text-5xl font-extrabold text-[#111827] tracking-tight leading-tight flex-1">
+                                                            {selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '')}
+                                                        </h1>
+                                                        {!selectedPath.toLowerCase().endsWith('.pdf') && (
+                                                            <div className="flex flex-col items-end gap-3 opacity-100 transition-opacity">
+                                                                {isEditing ? (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <button 
+                                                                            onClick={handleSaveNote}
+                                                                            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-all shadow-sm"
+                                                                        >
+                                                                            <Save size={14} /> Save
+                                                                        </button>
+                                                                        <button 
+                                                                            onClick={() => {
+                                                                                if (editedContent !== noteContent) {
+                                                                                    if (confirm("Discard unsaved changes?")) {
+                                                                                        setIsEditing(false)
+                                                                                    }
+                                                                                } else {
+                                                                                    setIsEditing(false)
+                                                                                }
+                                                                            }}
+                                                                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-gray-200 transition-all shadow-sm"
+                                                                        >
+                                                                            <X size={14} /> Cancel
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                        <div className="flex flex-col items-end gap-2 shrink-0">
+                                                                            <button 
+                                                                                onClick={() => setIsEditing(true)}
+                                                                                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 text-gray-400 rounded-md text-[10px] font-bold uppercase tracking-widest hover:text-black hover:border-black transition-all shadow-sm w-fit"
+                                                                            >
+                                                                                <Edit3 size={12} /> Edit Note
+                                                                            </button>
+
+                                                                            <button 
+                                                                                onClick={(e) => handleDeleteItem(e as any, selectedPath!, false)}
+                                                                                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 text-gray-400 rounded-md text-[10px] font-bold uppercase tracking-widest hover:text-red-500 hover:border-red-500 transition-all shadow-sm w-fit"
+                                                                            >
+                                                                                <Trash2 size={12} /> Delete Note
+                                                                            </button>
+                                                                            
+                                                                            {(() => {
+                                                                                const metadata = noteMetadata || {};
+                                                                                const source = metadata.source || metadata.Source;
+                                                                                
+                                                                                // Support both source_page (scalar) and source_pages (list)
+                                                                                let pages: number[] = [];
+                                                                                if (Array.isArray(metadata.source_pages)) {
+                                                                                    pages = metadata.source_pages.map(Number);
+                                                                                } else if (metadata.source_page || metadata.Source_Page) {
+                                                                                    pages = [Number(metadata.source_page || metadata.Source_Page)];
+                                                                                } else if (typeof metadata.source_pages === 'string') {
+                                                                                    pages = metadata.source_pages.split(',').map(p => Number(p.trim())).filter(p => !isNaN(p));
+                                                                                }
+                                                                                
+                                                                                if (source) {
+                                                                                    const match = typeof source === 'string' ? source.match(/\[\[(.*?)\]\]/) : null;
+                                                                                    const cleanPath = match ? match[1] : (typeof source === 'string' ? source : null);
+                                                                                    
+                                                                                    if (cleanPath) {
+                                                                                        return (
+                                                                                            <div className="flex flex-col items-end gap-2">
+                                                                                                <button 
+                                                                                                    onClick={() => handleWikiLinkClick(cleanPath, pages[0] || 1, pages)}
+                                                                                                    className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 text-gray-400 rounded-md text-[10px] font-bold uppercase tracking-widest hover:text-black hover:border-black transition-all shadow-sm group/btn w-fit"
+                                                                                                    title="Open Source PDF"
+                                                                                                >
+                                                                                                    <FileText size={12} className="group-hover/btn:rotate-6 transition-transform text-indigo-500/50 group-hover/btn:text-indigo-500" /> 
+                                                                                                    Jump to PDF {pages.length === 1 && pages[0] > 1 ? `(P. ${pages[0]})` : ''}
+                                                                                                </button>
+                                                                                                
+                                                                                                {pages.length > 1 && (
+                                                                                                    <div className="flex flex-wrap items-center justify-end gap-1.5 max-w-[200px]">
+                                                                                                        <span className="text-[9px] font-bold text-gray-300 uppercase tracking-tighter">Occurrences:</span>
+                                                                                                        {pages.slice(0, 5).map((p, idx) => (
+                                                                                                            <button
+                                                                                                                key={idx}
+                                                                                                                onClick={() => handleWikiLinkClick(cleanPath, p, pages)}
+                                                                                                                className="px-1.5 py-0.5 bg-gray-50 border border-gray-100 text-gray-400 rounded hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 text-[9px] font-medium transition-colors"
+                                                                                                            >
+                                                                                                                P.{p}
+                                                                                                            </button>
+                                                                                                        ))}
+                                                                                                        {pages.length > 5 && (
+                                                                                                            <span className="text-[9px] text-gray-300 italic">+{pages.length - 5} more</span>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        );
+                                                                                    }
+                                                                                }
+                                                                                return null;
+                                                                            })()}
+                                                                        </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
 
                                                     {selectedPath.toLowerCase().endsWith('.pdf') ? (
-                                                        <div className="h-[800px] -mx-16 mb-20">
-                                                            <PdfViewer path={selectedPath} title={selectedPath.split('/').pop() || ''} />
+                                                        <div className="h-[calc(100vh-280px)] -mx-16 mb-20">
+                                                            <PdfViewer 
+                                                                path={selectedPath} 
+                                                                title={selectedPath.split('/').pop() || ''} 
+                                                                initialPage={selectedPage} 
+                                                                filterPages={selectedFilteredPages}
+                                                            />
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <NoteProperties metadata={noteMetadata} />
+                                                            <NoteProperties 
+                                                                metadata={noteMetadata} 
+                                                                onNavigate={handleWikiLinkClick} 
+                                                            />
 
                                                             {/* Markdown Content */}
                                                             <div className="mt-12">
-                                                                <MarkdownViewer content={noteContent} onNavigate={handleWikiLinkClick} />
+                                                                {isEditing ? (
+                                                                    <textarea
+                                                                        value={editedContent}
+                                                                        onChange={(e) => setEditedContent(e.target.value)}
+                                                                        onKeyDown={(e) => {
+                                                                            if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+                                                                                e.preventDefault()
+                                                                                handleSaveNote()
+                                                                            }
+                                                                        }}
+                                                                        className="w-full h-[600px] p-8 bg-gray-50 border border-gray-100 rounded-2xl font-mono text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-gray-300 transition-all"
+                                                                        placeholder="Start writing..."
+                                                                        autoFocus
+                                                                    />
+                                                                ) : (
+                                                                    <MarkdownViewer content={noteContent} onNavigate={handleWikiLinkClick} />
+                                                                )}
                                                             </div>
                                                         </>
                                                     )}

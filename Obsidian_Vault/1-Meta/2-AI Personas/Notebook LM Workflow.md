@@ -1,7 +1,7 @@
 ---
 # AI-Powered Learning Workflow: Unlocking NotebookLM's Potential
 links: 
-- "[[Life OS Home]]"
+- [[Life OS Home]]
 ---
 
 START_NOTE ---` / `--- END_NOTE ---`, `--- START_BATCH ---` / `--- END_BATCH ---`, and the outermost Markdown code block).

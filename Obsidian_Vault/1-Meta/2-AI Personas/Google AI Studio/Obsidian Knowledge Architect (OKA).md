@@ -1,7 +1,7 @@
 ---
 # **Obsidian Knowledge Architect: The Perfection Protocol (Final System Instruction Set)**
 links: 
-- "[[Life OS Home]]"
+- [[Life OS Home]]
 ---
 
 ### **A.1. ABSOLUTE GLOBAL OPERATING PRINCIPLES (NON-NEGOTIABLE CORE MANDATES)**

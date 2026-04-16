@@ -27,6 +27,9 @@ class VaultManager:
         """
         if not text: return "Untitled"
         
+        # 0. Strip "Title:" prefix if AI accidentally included it in the string
+        text = re.sub(r"(?i)^title\s*:\s*", "", text)
+        
         # 1. Protect C++
         temp = re.sub(r"C\+\+", "__CPP__", text, flags=re.IGNORECASE)
         
@@ -133,19 +136,104 @@ class VaultManager:
         canonical_title = self.get_canonical_title(clean_atomic)
         return target_dir / f"{canonical_title}.md"
 
+    @staticmethod
+    def _strip_wikilink_quotes(value: Any) -> Any:
+        """Recursively strips ALL quote forms from [[wikilink]] strings."""
+        if isinstance(value, str):
+            # Inside brackets: [["X"]] or [['X']] -> [[X]]
+            value = re.sub(r'\[\[\s*["\'](.+?)["\']\s*\]\]', r'[[\1]]', value)
+            # Wrapping the whole value: "[[X]]" or '[[X]]' -> [[X]]
+            value = re.sub(r'^["\']+(\[\[.+?\]\])["\' ]*$', r'\1', value.strip())
+        elif isinstance(value, list):
+            value = [VaultManager._strip_wikilink_quotes(v) for v in value]
+        elif isinstance(value, dict):
+            value = {k: VaultManager._strip_wikilink_quotes(v) for k, v in value.items()}
+        return value
+
+    @staticmethod
+    def _nuclear_wikilink_clean(text: str) -> str:
+        """Strips every possible quote pattern around/inside [[wikilinks]] in any text.
+        Applied as final defense before bytes hit disk — covers both YAML and body."""
+        # Inside brackets (any nesting of spaces+quotes): [["X"]] -> [[X]]
+        text = re.sub(r'\[\[\s*["\']([^\]"\' ][^\]"\']*)["\']\s*\]\]', r'[[\1]]', text)
+        # YAML scalar: key: "[[X]]" or key: '[[X]]'
+        text = re.sub(r'(:\s*)["\']+(\[\[.*?\]\])["\' ]*$', r'\1\2', text, flags=re.MULTILINE)
+        # YAML list item: - "[[X]]" or - '[[X]]'
+        text = re.sub(r'(^\s*-\s*)["\']+(\[\[.*?\]\])["\' ]*$', r'\1\2', text, flags=re.MULTILINE)
+        # Body prose: "[[X]]" or '[[X]]' (standalone, not in a key: val context)
+        text = re.sub(r'["\']+(\[\[[^\]]+\]\])["\' ]+', r'\1', text)
+        return text
+
     def dump_obsidian_yaml(self, meta: dict) -> str:
-        """Dumps YAML allowing standard quotes for Obsidian link compatibility."""
+        """Dumps YAML with Obsidian-compatible bare [[wikilinks]] — strictly no quotes ever."""
         import yaml
-        
-        # Obsidian 1.4+ Properties UI requires valid YAML. 
-        # Unquoted [[Link]] parses as nested lists [["Link"]].
-        # PyYAML handles quoting automatically (e.g. '[[Link]]').
-        return yaml.dump(meta, sort_keys=False, allow_unicode=True, width=1000).rstrip('\n')
+
+        # LAYER 1: Pre-clean the dict — strip all embedded/wrapping quotes from wikilink strings
+        # This prevents PyYAML from seeing [["X"]] and emitting a YAML flow sequence.
+        cleaned = {k: VaultManager._strip_wikilink_quotes(v) for k, v in meta.items()}
+
+        # LAYER 2: Custom Dumper — force plain scalar style for any string containing [[
+        # PyYAML would normally quote [[...]] because it looks like a YAML flow sequence.
+        # Plain style tells PyYAML to emit the value with NO surrounding quotes.
+        class ObsidianDumper(yaml.Dumper):
+            pass
+
+        def _str_representer(dumper, data):
+            if '[[' in data:
+                return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='')
+            return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+
+        ObsidianDumper.add_representer(str, _str_representer)
+
+        raw = yaml.dump(
+            cleaned,
+            Dumper=ObsidianDumper,
+            allow_unicode=True,
+            default_flow_style=False,
+            sort_keys=False,
+        )
+
+        # LAYER 3: Final safety pass — strip any surviving YAML-level quotes around wikilinks
+        raw = re.sub(r":\s*[\"'](\[\[.*?\]\])[\"']$", r": \1", raw, flags=re.MULTILINE)
+        raw = re.sub(r"-\s*[\"'](\[\[.*?\]\])[\"']$", r"- \1", raw, flags=re.MULTILINE)
+        # Strip internal quotes: [["X"]] -> [[X]] (last resort)
+        raw = re.sub(r'\[\[\s*["\'](.*?)["\']\s*\]\]', r'[[\1]]', raw)
+        # Strip quotes from plain text titles
+        raw = re.sub(r"^title:\s*[\"'](.+?)[\"']$", r"title: \1", raw, flags=re.MULTILINE)
+
+        return raw
 
     def write_note(self, file_path: Path, content: str):
         """Asynchronously writes content to a file, ensuring parent directories exist."""
         file_path = Path(file_path)
         file_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Clean up any AI artifacts that leaked into the content
+        content = re.sub(r"(?i)--- START_CODE:?\s*yaml ---", "", content)
+        content = re.sub(r"(?i)--- END_CODE:?\s*yaml ---", "", content)
+        content = re.sub(r"(?i)--- START_NOTE ---", "", content)
+        content = re.sub(r"(?i)--- END_NOTE ---", "", content)
+
+        # NUCLEAR WIKILINK SANITIZATION: applied to the entire file string before write.
+        # Catches every form of quoted wikilinks regardless of where they appear.
+        content = VaultManager._nuclear_wikilink_clean(content)
+        
+        # Normalize casing for all wikilinks: force Title_Case for any word split by space or underscore
+        def title_case_wikilink(match):
+            inner = match.group(1)
+            parts = re.split(r'([_\s]+)', inner)
+            new_parts = []
+            for p in parts:
+                if re.match(r'[_\s]+', p):
+                    new_parts.append(p)
+                elif p.upper() == "C++":
+                    new_parts.append("C++")
+                else:
+                    # Special case for alphanumeric words that might be caught
+                    new_parts.append(p.title())
+            return "[[" + "".join(new_parts) + "]]"
+            
+        content = re.sub(r'\[\[([^\]]+)\]\]', title_case_wikilink, content)
         
         # Perform an atomic swap write to prevent data loss
         temp_file = file_path.with_suffix(f".tmp_{uuid.uuid4().hex[:8]}")
@@ -153,7 +241,7 @@ class VaultManager:
         print(f"[VaultManager] Persisting Note: {file_path.absolute()}")
         
         with open(temp_file, "w", encoding="utf-8") as f:
-            f.write(content)
+            f.write(content.strip())
         
         if file_path.exists():
             os.replace(temp_file, file_path)
@@ -163,22 +251,30 @@ class VaultManager:
     def extract_yaml_and_content(self, content: str) -> Tuple[Dict[str, Any], str, Optional[str]]:
         """Parses a note into frontmatter and body."""
         try:
-            # Relaxed regex: find the first YAML block even if there is noise before it
-            match = re.search(r"---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
-            if not match:
-                return {}, content, "No YAML frontmatter found"
+            # 1. Try strict match first (must start at top of block or file)
+            match = re.search(r"^\s*---\s*\n(.*?)\n---\s*(\n|$)", content, re.DOTALL | re.MULTILINE)
             
-            meta = yaml.safe_load(match.group(1)) or {}
-            body = content[match.end():].strip()
-            return meta, body, None
+            # 2. Relaxed match: look for ANY block between --- and --- if strict fails
+            if not match:
+                match = re.search(r"---\s*\n(.*?)\n---", content, re.DOTALL)
+
+            if match:
+                meta = yaml.safe_load(match.group(1)) or {}
+                # Body is everything AFTER the second ---
+                body = content[match.end():].strip()
+                return meta, body, None
+            
+            return {}, content, "No YAML frontmatter found"
         except Exception as e:
             return {}, content, str(e)
 
     def process_code_blocks(self, content: str) -> str:
         """Repairs and converts custom code blocks to standard backticks for Obsidian."""
-        # CRITICAL FIX: Strip YAML wrappers entirely so they don't leak into the body
-        content = re.sub(r"--- START_CODE:yaml ---\s*\n", "", content, flags=re.IGNORECASE)
-        content = re.sub(r"\n\s*--- END_CODE:yaml ---", "", content, flags=re.IGNORECASE)
+        # CRITICAL FIX: Strip YAML and NOTE wrappers entirely so they don't leak into the body
+        content = re.sub(r"(?i)--- START_CODE:?\s*yaml ---\s*\n", "", content)
+        content = re.sub(r"(?i)\n\s*--- END_CODE:?\s*yaml ---", "", content)
+        content = re.sub(r"(?i)--- START_NOTE ---\s*\n", "", content)
+        content = re.sub(r"(?i)\n\s*--- END_NOTE ---", "", content)
         
         lines = content.split('\n')
         processed_lines = []
@@ -187,23 +283,24 @@ class VaultManager:
         current_code_buffer = []
 
         for line in lines:
-            # AUTO-REPAIR: If a weak model uses standard triple backticks, convert them to custom markers on the fly
+            # AUTO-REPAIR: If a model uses standard triple backticks, handle them gracefully
             if "```mermaid" in line.lower():
-                line = "--- START_CODE:mermaid ---"
+                line = "--- START_CODE: mermaid ---"
             elif "```text" in line.lower():
-                line = "--- START_CODE:text ---"
+                line = "--- START_CODE: text ---"
             elif line.strip() == "```" and in_code_block:
-                line = f"--- END_CODE:{current_code_language or 'text'} ---"
+                line = f"--- END_CODE: {current_code_language or 'text'} ---"
             elif line.strip() == "```" and not in_code_block:
-                line = "--- START_CODE:text ---"
+                line = "--- START_CODE: text ---"
 
-            # Flexible detection: look for START_CODE:lang and END_CODE:lang regardless of dash count or trailing noise
-            start_match = re.search(r"START_CODE:(\w+)", line, re.IGNORECASE)
-            end_match = re.search(r"END_CODE:(\w+)", line, re.IGNORECASE)
+            # Flexible detection: allow spaces after colons
+            start_match = re.search(r"START_CODE:?\s*(\w+)", line, re.IGNORECASE)
+            end_match = re.search(r"END_CODE:?\s*(\w+)", line, re.IGNORECASE)
 
             if start_match:
                 language = start_match.group(1).lower()
-                if language in ["python", "java", "cpp", "sql", "json", "text", "mermaid"]:
+                # Expand allowed languages
+                if language in ["python", "java", "cpp", "sql", "json", "text", "mermaid", "yaml", "markdown"]:
                     if in_code_block:
                         processed_lines.extend(current_code_buffer)
                         current_code_buffer = []

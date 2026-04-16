@@ -452,30 +452,60 @@ async def find_vault_page(page_name: str, secrets: AppSecrets = Depends(get_app_
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
         
     vault_root = Path(secrets.vault_path)
-    db_root = vault_root / DB_DIR_PREFIX
     
-    # 1. Search in 3-Database first (to prioritize database views)
+    # 0. Try direct relative path first (if page_name is a path)
+    direct_path = vault_root / page_name
+    if direct_path.exists() and direct_path.is_file():
+        return {
+            "found": True,
+            "type": "note" if direct_path.suffix == ".md" else "pdf",
+            "path": str(direct_path.relative_to(vault_root))
+        }
+
+    # 1. Check for PDFs in common locations first (if it looks like a PDF)
+    if page_name.lower().endswith('.pdf') or '.' not in page_name:
+        stem = page_name.replace('.pdf', '')
+        
+        # Check in 5-Pdf Store first (high priority)
+        pdf_store = vault_root / "5-Pdf Store"
+        if pdf_store.exists():
+            # Check for exact name
+            exact_pdf = pdf_store / f"{stem}.pdf"
+            if exact_pdf.exists():
+                return {"found": True, "type": "note", "path": str(exact_pdf.relative_to(vault_root))}
+            
+            # Shallow glob (faster)
+            for p in pdf_store.glob(f"**/{stem}.pdf"):
+                return {"found": True, "type": "note", "path": str(p.relative_to(vault_root))}
+
+    # 2. Search in 3-Database (prioritize database views)
+    db_root = vault_root / DB_DIR_PREFIX
     if db_root.exists():
         for db_dir in db_root.iterdir():
             if db_dir.is_dir():
-                target_file = db_dir / f"{page_name}.md"
-                if target_file.exists():
-                    return {
-                        "found": True,
-                        "type": "database",
-                        "db_id": db_dir.name,
-                        "file_name": target_file.name
-                    }
+                target_md = db_dir / f"{page_name}.md"
+                if target_md.exists():
+                    return {"found": True, "type": "database", "db_id": db_dir.name, "file_name": target_md.name}
                 
-    # 2. Search everywhere else in the vault
-    for md_file in vault_root.rglob(f"{page_name}.md"):
-        # Calculate relative path from vault root
-        rel_path = str(md_file.relative_to(vault_root))
-        return {
-            "found": True,
-            "type": "note",
-            "path": rel_path
-        }
+                target_exact = db_dir / page_name
+                if target_exact.exists() and target_exact.is_file():
+                    return {"found": True, "type": "database", "db_id": db_dir.name, "file_name": target_exact.name}
+
+    # 3. Search everywhere else (targeted extensions first)
+    # Search for .md
+    md_name = f"{page_name}.md" if not page_name.endswith('.md') else page_name
+    for md_file in vault_root.rglob(md_name):
+        return {"found": True, "type": "note", "path": str(md_file.relative_to(vault_root))}
+
+    # Search for exactly as-is
+    for item in vault_root.rglob(page_name):
+        if item.is_file():
+            return {"found": True, "type": "note", "path": str(item.relative_to(vault_root))}
+            
+    # Finally check for .pdf if no extension was provided and not found yet
+    if "." not in page_name:
+        for pdf_file in vault_root.rglob(f"{page_name}.pdf"):
+            return {"found": True, "type": "note", "path": str(pdf_file.relative_to(vault_root))}
                 
     return {"found": False}
 
@@ -754,14 +784,24 @@ async def get_pdf_viewer(
     path: str,
     vault_path: Optional[str] = None,
     page: int = 1,
+    filter_pages: Optional[str] = None,
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Returns an HTML wrapper for the PDF that handles selection and scrolling locks using PDF.js."""
     effective_vault_path = secrets.vault_path or vault_path
     auth_query = f"?vault_path={quote(effective_vault_path)}" if effective_vault_path else ""
-    # NO OUTER QUOTE: This was the bug. The path is already quoted by FastAPI if needed.
     pdf_src = f"/api/obsidian/serve/{path}{auth_query}"
     
+    # Process filter pages
+    filter_list_json = "null"
+    if filter_pages:
+        try:
+            parts = [int(p.strip()) for p in filter_pages.split(',') if p.strip()]
+            if parts:
+                filter_list_json = json.dumps(parts)
+        except:
+            pass
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -771,17 +811,19 @@ async def get_pdf_viewer(
         <style>
             body, html {{ 
                 margin: 0; padding: 0; width: 100%; height: 100%; 
-                overflow: hidden; background: #f7f7f7; 
+                overflow: hidden; background: white; 
                 display: flex; align-items: center; justify-content: center;
                 font-family: -apple-system, system-ui, sans-serif;
             }}
             #viewer-container {{
                 position: relative;
-                box-shadow: 0 30px 60px rgba(0,0,0,0.12);
                 background: white;
                 display: none; /* Hidden until rendered */
             }}
-            canvas {{ display: block; }}
+            canvas {{ 
+                display: block; 
+                pointer-events: none; /* Let clicks pass through to text layer */
+            }}
             .textLayer {{
                 position: absolute;
                 left: 0; top: 0; right: 0; bottom: 0;
@@ -794,17 +836,32 @@ async def get_pdf_viewer(
                 color: transparent; position: absolute;
                 white-space: pre; cursor: text; transform-origin: 0% 0%;
             }}
-            ::selection {{ background: rgba(0, 122, 255, 0.2); }}
+            ::selection {{ background: rgba(0, 122, 255, 0.2) !important; }}
             #status {{
                 position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
                 font-size: 10px; font-weight: 800; text-transform: uppercase;
                 letter-spacing: 0.2em; color: #ccc;
             }}
-            ::selection {{ background: rgba(0, 0, 0, 0.1); }}
+            #filter-indicator {{
+                position: fixed; top: 12px; right: 12px;
+                background: rgba(0,0,0,0.85); color: white;
+                font-size: 9px; font-weight: 800; text-transform: uppercase;
+                letter-spacing: 0.15em; padding: 6px 12px; border-radius: 6px;
+                z-index: 1000; display: none;
+                backdrop-filter: blur(4px);
+                border: 1px solid rgba(255,255,255,0.1);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                align-items: center; gap: 6px;
+            }}
+            #filter-indicator svg {{ opacity: 0.7; }}
         </style>
     </head>
     <body>
         <div id="status">Loading Engine...</div>
+        <div id="filter-indicator">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+            <span>Surgical View</span>
+        </div>
         <div id="viewer-container">
             <canvas id="pdf-canvas"></canvas>
             <div id="text-layer" class="textLayer"></div>
@@ -817,50 +874,79 @@ async def get_pdf_viewer(
 
             let pdfDoc = null;
             let pageNum = {page};
+            const filterList = {filter_list_json};
+            
             const status = document.getElementById('status');
             const container = document.getElementById('viewer-container');
+            const indicator = document.getElementById('filter-indicator');
+
+            if (filterList && filterList.length > 0) {{
+                indicator.style.display = 'flex';
+                // Find nearest index if requested page is not exactly in list
+                if (!filterList.includes(pageNum)) {{
+                    const nearest = filterList.reduce((prev, curr) => 
+                        Math.abs(curr - pageNum) < Math.abs(prev - pageNum) ? curr : prev
+                    );
+                    pageNum = nearest;
+                }}
+            }}
 
             async function renderPage(num) {{
                 try {{
                     const page = await pdfDoc.getPage(num);
-                    const viewport = page.getViewport({{ scale: 2.0 }}); // High DPI Base
+                    const baseViewport = page.getViewport({{ scale: 1.0 }});
                     
-                    const scale = Math.min(window.innerWidth / viewport.width, window.innerHeight / viewport.height) * 2;
-                    const scaledViewport = page.getViewport({{ scale: scale }});
+                    const scaleX = window.innerWidth / baseViewport.width;
+                    const scaleY = window.innerHeight / baseViewport.height;
+                    const scale = Math.min(scaleX, scaleY);
+                    
+                    const viewport = page.getViewport({{ scale: scale * 2 }}); 
 
                     const canvas = document.getElementById('pdf-canvas');
                     const ctx = canvas.getContext('2d');
-                    canvas.height = scaledViewport.height;
-                    canvas.width = scaledViewport.width;
-                    canvas.style.width = (scaledViewport.width / 2) + 'px';
-                    canvas.style.height = (scaledViewport.height / 2) + 'px';
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    canvas.style.width = (viewport.width / 2) + 'px';
+                    canvas.style.height = (viewport.height / 2) + 'px';
                     
                     container.style.width = canvas.style.width;
                     container.style.height = canvas.style.height;
 
-                    await page.render({{ canvasContext: ctx, viewport: scaledViewport }}).promise;
+                    await page.render({{ canvasContext: ctx, viewport: viewport }}).promise;
 
-                    // Render text layer
                     const textLayer = document.getElementById('text-layer');
                     textLayer.innerHTML = '';
                     const textContent = await page.getTextContent();
                     await pdfjsLib.renderTextLayer({{
                         textContent,
                         container: textLayer,
-                        viewport: page.getViewport({{ scale: scale / 2 }}),
+                        viewport: page.getViewport({{ scale: scale }}),
                         textDivs: []
                     }}).promise;
 
                     status.style.display = 'none';
                     container.style.display = 'block';
+                    
+                    // Notify parent of actual page change (for synchronization)
+                    window.parent.postMessage({{ type: 'page_change', page: num }}, '*');
                 }} catch (e) {{
                     status.innerText = "Processing Error: " + e.message;
                 }}
             }}
 
+            window.addEventListener('resize', () => {{
+                if (pdfDoc) renderPage(pageNum);
+            }});
+
             pdfjsLib.getDocument(url).promise.then(pdf => {{
                 pdfDoc = pdf;
                 status.innerText = "Rendering Page...";
+                
+                // If filtered, tell parent about the virtual page count
+                if (filterList) {{
+                    window.parent.postMessage({{ type: 'metadata', pageCount: filterList.length, isFiltered: true, filterList }}, '*');
+                }}
+                
                 renderPage(pageNum);
             }}).catch(err => {{
                 status.innerText = "Load Failed: " + err.message;
@@ -872,8 +958,48 @@ async def get_pdf_viewer(
                 window.parent.postMessage({{ type: 'selection', text: selection }}, '*');
             }});
 
+            const handleNavigate = (direction) => {{
+                if (!filterList) {{
+                    if (direction === 'next') {{
+                        if (pageNum < pdfDoc.numPages) {{
+                            pageNum++;
+                            renderPage(pageNum);
+                        }}
+                    }} else {{
+                        if (pageNum > 1) {{
+                            pageNum--;
+                            renderPage(pageNum);
+                        }}
+                    }}
+                }} else {{
+                    const idx = filterList.indexOf(pageNum);
+                    if (direction === 'next') {{
+                        if (idx < filterList.length - 1) {{
+                            pageNum = filterList[idx+1];
+                            renderPage(pageNum);
+                        }}
+                    }} else {{
+                        if (idx > 0) {{
+                            pageNum = filterList[idx-1];
+                            renderPage(pageNum);
+                        }}
+                    }}
+                }}
+            }};
+
+            window.addEventListener('message', (e) => {{
+                if (e.data.type === 'navigate') {{
+                    handleNavigate(e.data.direction);
+                }} else if (e.data.type === 'jump') {{
+                    pageNum = e.data.page;
+                    renderPage(pageNum);
+                }}
+            }});
+
             window.addEventListener('keydown', (e) => {{
-                window.parent.postMessage({{ type: 'keydown', key: e.key }}, '*');
+                if (e.key === 'ArrowRight') handleNavigate('next');
+                if (e.key === 'ArrowLeft') handleNavigate('prev');
+                window.parent.postMessage({{ type: 'keydown', key: e.key, isControlled: true }}, '*');
             }});
         </script>
     </body>

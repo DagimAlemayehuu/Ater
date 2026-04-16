@@ -796,7 +796,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                             )}
 
                             {/* Autonomous Pipeline View - Tree Structure */}
-                            {queueStatus && queueStatus.status !== 'idle' && !activePlan && queueStatus.planned_batches && queueStatus.planned_batches.length > 0 && (
+                            {queueStatus && queueStatus.status !== 'idle' && (
                                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     <div className="mb-8 p-4 rounded bg-[#111827] border border-[#111827] flex items-center justify-between">
                                         <div className="flex items-center gap-3 text-white">
@@ -811,9 +811,17 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                             <p className="text-xs font-bold text-white tracking-widest">{queueStatus?.current_batch} / {queueStatus?.total_batches}</p>
                                         </div>
                                     </div>
+
+                                    {/* Real-time Plan Preview (Same as Manual) */}
+                                    {queueStatus.plan_raw && (
+                                        <div className="mb-12">
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-6 px-1">Architectural Blueprint</h4>
+                                            <PlanCardView planRaw={queueStatus.plan_raw} />
+                                        </div>
+                                    )}
                                     
                                     <div className="space-y-4">
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 px-1">Architectural Batch Map</h4>
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 px-1">Deployment Queue</h4>
                                         <BatchTreeView 
                                             batches={queueStatus?.planned_batches || []} 
                                             processedNotes={queueStatus?.processed_notes || []} 

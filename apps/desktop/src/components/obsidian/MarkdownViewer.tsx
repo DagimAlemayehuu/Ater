@@ -4,25 +4,12 @@ import { cn } from '@/lib/utils'
 import React, { useState, useEffect } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import ObsidianDatabaseView from '@/routes/obsidian-database-view'
+import { WikiLink, renderWikiLinks } from './WikiLink'
 
 interface MarkdownViewerProps {
     content: string
     onNavigate: (pageName: string) => void
 }
-
-const WikiLink = ({ dest, alias, onNavigate }: { dest: string, alias: string, onNavigate: (page: string) => void }) => (
-    <button
-        onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onNavigate(dest);
-        }}
-        className="text-[#111827] underline decoration-gray-300 hover:decoration-gray-800 font-medium transition-all inline-block px-0.5 mx-0.5 rounded hover:bg-gray-50 bg-transparent border-none cursor-pointer"
-        title={dest !== alias ? dest : undefined}
-    >
-        {alias}
-    </button>
-);
 
 const InlineDatabaseResolver = ({ dbName, onNavigate }: { dbName: string, onNavigate: (p: string) => void }) => {
     const [dbSchema, setDbSchema] = useState<any>(null);
@@ -60,22 +47,6 @@ const InlineDatabaseResolver = ({ dbName, onNavigate }: { dbName: string, onNavi
 
 export function MarkdownViewer({ content, onNavigate }: MarkdownViewerProps) {
     
-    // Simple custom component to handle wikilinks in text strings
-    const renderWikiLinks = (text: string) => {
-        if (typeof text !== 'string') return text;
-        const parts = text.split(/(\[\[.*?\]\])/g);
-        return parts.map((part, i) => {
-            const match = part.match(/^\[\[(.*?)\]\]$/);
-            if (match) {
-                const content = match[1];
-                const [dest, ...aliasParts] = content.split('|');
-                const alias = aliasParts.length > 0 ? aliasParts.join('|') : dest;
-                return <WikiLink key={i} dest={dest} alias={alias} onNavigate={onNavigate} />;
-            }
-            return part;
-        });
-    };
-
     return (
         <div className="prose prose-sm prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0">
             <ReactMarkdown
@@ -95,25 +66,25 @@ export function MarkdownViewer({ content, onNavigate }: MarkdownViewerProps) {
                         return (
                             <p className="mb-3 leading-relaxed text-[13px] opacity-80 antialiased">
                                 {React.Children.map(children, (child) => 
-                                    typeof child === 'string' ? renderWikiLinks(child) : child
+                                    typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child
                                 )}
                             </p>
                         )
                     },
                     h1: ({ children }) => <h1 className="text-2xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-gray-100 text-foreground">
-                        {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child) : child)}
+                        {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
                     </h1>,
                     h2: ({ children }) => <h2 className="text-xl font-black mt-8 mb-4 tracking-tight opacity-90 text-foreground/90">
-                        {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child) : child)}
+                        {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
                     </h2>,
                     h3: ({ children }) => <h3 className="text-lg font-bold mt-6 mb-3 tracking-tight opacity-80">
-                        {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child) : child)}
+                        {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
                     </h3>,
                     h4: ({ children }) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] opacity-40">{children}</h4>,
                     ul: ({ children }) => <ul className="list-disc pl-5 space-y-1 mb-4 text-[13px] opacity-80">{children}</ul>,
                     ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] opacity-80">{children}</ol>,
                     li: ({ children, ...props }: any) => {
-                        const content = React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child) : child);
+                        const content = React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child);
                         // Check if it's a task list item
                         if (props.className?.includes('task-list-item')) {
                             return <li className="flex items-start gap-2 list-none -ml-5 mb-1">{content}</li>;

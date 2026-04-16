@@ -1,7 +1,7 @@
 ---
 ): ** Horizontal rule (`
 links: 
-- "[[Life OS Home]]"
+- [[Life OS Home]]
 ---
 
 Welcome. Here is your current strategic overview.

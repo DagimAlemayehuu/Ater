@@ -237,6 +237,22 @@ async def write_obsidian_file(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.delete("/api/obsidian/files/{path:path}")
+async def delete_obsidian_item(path: str, secrets: AppSecrets = Depends(get_app_secrets)):
+    """Deletes a file or directory from the Obsidian vault."""
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+    try:
+        client = ObsidianClient(secrets.vault_path)
+        decoded_path = unquote(path)
+        success = client.delete_item(decoded_path)
+        if not success:
+            # Check if it was a security error (client prints it) or just not found
+            raise HTTPException(status_code=404, detail="Item not found or deletion failed (Security/Lock)")
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/personae/save")
 async def save_persona_prompt(payload: Dict[str, str] = Body(...)):
     """Saves a customized persona prompt to the system prompts/custom prompts directory."""
@@ -946,7 +962,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, handle_shutdown)
     signal.signal(signal.SIGINT, handle_shutdown)
 
-    host = os.environ.get("API_HOST", "127.0.0.1")
+    host = os.environ.get("API_HOST", "0.0.0.0")
     port = int(os.environ.get("API_PORT", "8765"))
 
     print(f"[Life OS Sidecar] Listening on {host}:{port}")

@@ -90,12 +90,25 @@ class ObsidianClient:
             f.write(content)
         return True
 
-    def delete_note(self, relative_path: str) -> bool:
+    def delete_item(self, relative_path: str) -> bool:
         """
-        Deletes a specific note.
+        Deletes a specific note or folder (recursively).
         """
+        import shutil
         full_path = self.vault_path / relative_path
-        if full_path.exists() and full_path.is_file():
-            full_path.unlink()
-            return True
+        
+        # Security check: ensure the path is within the vault
+        try:
+            full_path.resolve().relative_to(self.vault_path.resolve())
+        except ValueError:
+            print(f"[ObsidianClient] Security error: Attempted to delete outside vault: {full_path}")
+            return False
+
+        if full_path.exists():
+            if full_path.is_file():
+                full_path.unlink()
+                return True
+            elif full_path.is_dir():
+                shutil.rmtree(full_path)
+                return True
         return False

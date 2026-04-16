@@ -7,7 +7,7 @@
 
 import { load } from '@tauri-apps/plugin-store'
 
-const SIDECAR_BASE_URL = 'http://127.0.0.1:8765'
+const SIDECAR_BASE_URL = 'http://localhost:8765'
 const STORE_FILENAME = 'life-os-config.json'
 
 export interface HealthResponse {
@@ -291,6 +291,11 @@ export const sidecarApi = {
             body: JSON.stringify({ content })
         }),
 
+    deleteObsidianItem: (path: string) =>
+        request<{ success: boolean }>(`/api/obsidian/files/${path}`, {
+            method: 'DELETE'
+        }),
+
     aiUpload: async (file: File): Promise<{ file_uri: string, name: string }> => {
         const authHeaders = await getAuthHeaders()
         const formData = new FormData()
@@ -342,7 +347,18 @@ export const sidecarApi = {
         request<{ is_running: boolean, inbox: string | null }>('/api/oka/watcher/status'),
 
     okaQueueStatus: () =>
-        request<{ status: string, auto_process: boolean, current_file: string | null, current_batch: number, total_batches: number, pending_count: number, pending_files: string[] }>('/api/oka/queue/status'),
+        request<{ 
+            status: string, 
+            auto_process: boolean, 
+            current_file: string | null, 
+            current_batch: number, 
+            total_batches: number, 
+            last_action: string,
+            processed_notes: any[],
+            planned_batches: { id: number, notes: string[] }[],
+            pending_count: number, 
+            pending_files: string[] 
+        }>('/api/oka/queue/status'),
 
     okaListInbox: () =>
         request<{ files: any[] }>('/api/oka/inbox'),
