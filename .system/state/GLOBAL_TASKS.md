@@ -71,13 +71,14 @@
 ## 6. Obsidian Database Engine (Notion Clone)
 ### Pending Epics
 *   **[PHASE 1] The Core Database Engine (Structure & Views)**
-    *   [ ] **Multi-View System**: Implementation of `.base` configuration for Table, Board, and Gallery layouts.
-    *   [ ] **Dynamic View State**: Save/Load custom filters, sorts, and column ordering in the database config.
-    *   [ ] **Tabbed Navigation**: UI transition to a multi-tab layout for switching views effortlessly.
+    *   [x] **Multi-View System**: Implementation of `.base` configuration for Table, Board, and Gallery layouts.
+    *   [x] **Dynamic View State**: Save/Load custom filters, sorts, and column ordering in the database config.
+    *   [x] **Tabbed Navigation**: UI transition to a multi-tab layout for switching views effortlessly.
+    *   [x] **Calendar View**: High-fidelity date-based visualization for database entries.
 *   **[PHASE 2] Property Intelligence & Interaction**
     *   [x] **Rich Property Rendering**: Pill-style Select/Multi-Select badges, Date pickers, and Type-specific icons.
     *   [x] **Relation Logic (WikiLinks)**: Native `[[Link]]` parsing with alias support and automatic file creation on-the-fly.
-    *   [ ] **Database Templates**: Folder-level `_template.md` support for auto-populating new rows.
+    *   [x] **Database Templates**: Folder-level `_template.md` support for auto-populating new rows.
 *   **[PHASE 3] Neural Architecture (Vault Graph)**
     *   [x] **Force-Directed Simulation**: Fluid 60FPS 2D graph engine for vault structure visualization.
     *   [x] **Centrality Scaling**: Automatic node sizing based on inter-note link density.
@@ -95,3 +96,4 @@
 *   [x] **Backend Hardening**: Safe YAML parsing and reordered routing to fix API collisions.
 *   [x] **Architect Panel**: Reactive UI for adding rows/columns without browser prompts.
 *   [x] **Dynamic Area Support**: Automated database categorization based on the `Areas` database.
+

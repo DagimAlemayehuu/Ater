@@ -18,7 +18,8 @@ import {
     List,
     ChevronDown,
     Settings as SettingsIcon,
-    Sigma
+    Sigma,
+    Clock
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sidecarApi } from '@/lib/sidecarApi'
@@ -37,11 +38,14 @@ interface DatabaseSettingsPanelProps {
     sortConfigs: { col: string, dir: 'asc' | 'desc' }[]
     onSortConfigsChange: (configs: { col: string, dir: 'asc' | 'desc' }[]) => void
     filters: any[]
-    onFiltersChange: (filters: any[]) => void
+    filterGroupId: 'AND' | 'OR'
+    onFiltersChange: (filters: any[], operator?: 'AND' | 'OR') => void
     groupBy: string | null
     onGroupByChange: (groupBy: string | null) => void
     onUpdateSchema: () => void
-    onLayoutChange: (layout: 'table' | 'board' | 'gallery' | 'calendar') => void
+    onLayoutChange: (layout: 'table' | 'board' | 'gallery' | 'calendar' | 'list' | 'chart' | 'timeline') => void
+    isLocked: boolean
+    onLockToggle: () => void
 }
 
 type SettingsPage = 'main' | 'properties' | 'add_property' | 'edit_property' | 'visibility' | 'sort' | 'filter' | 'group'
@@ -57,10 +61,13 @@ export function DatabaseSettingsPanel({
     onSortConfigsChange,
     filters,
     onFiltersChange,
+    filterGroupId,
     groupBy,
     onGroupByChange,
     onUpdateSchema, 
-    onLayoutChange 
+    onLayoutChange,
+    isLocked,
+    onLockToggle
 }: DatabaseSettingsPanelProps) {
     const [page, setPage] = useState<SettingsPage>('main')
     const [editingProp, setEditingProp] = useState<string | null>(null)
@@ -103,14 +110,25 @@ export function DatabaseSettingsPanel({
     }
 
     const getIcon = (type: string) => {
+        const size = 12;
+        const className = "text-gray-400";
         switch(type) {
-            case 'number': case 'int': case 'float': return <Hash size={12} className="text-gray-400" />
-            case 'date': return <Calendar size={12} className="text-gray-400" />
-            case 'bool': return <CheckSquare size={12} className="text-gray-400" />
-            case 'formula': return <Sigma size={12} className="text-gray-400" />
-            case 'list': return <List size={12} className="text-gray-400" />
-            case 'select': case 'relation': return <LinkIcon size={12} className="text-gray-400" />
-            default: return <Type size={12} className="text-gray-400" />
+            case 'number': case 'int': case 'float': return <Hash size={size} className={className} />
+            case 'date': return <Calendar size={size} className={className} />
+            case 'bool': return <CheckSquare size={size} className={className} />
+            case 'formula': return <Sigma size={size} className={className} />
+            case 'list': return <List size={size} className={className} />
+            case 'select': case 'relation': return <LinkIcon size={size} className={className} />
+            case 'status': return <Clock size={size} className={className} />
+            case 'multi-select': return <Layers size={size} className={className} />
+            case 'rollup': return <ChevronDown size={size} className={className} />
+            case 'id': return <span className="text-[9px] font-bold text-gray-400">ID</span>
+            case 'url': return <LinkIcon size={size} className={className} />
+            case 'email': return <span className="text-[9px] font-bold text-gray-400">@</span>
+            case 'phone': return <span className="text-[9px] font-bold text-gray-400">#</span>
+            case 'created_time': case 'last_edited_time': return <Clock size={size} className={className} />
+            case 'created_by': case 'last_edited_by': return <Type size={size} className={className} />
+            default: return <Type size={size} className={className} />
         }
     }
 
@@ -142,7 +160,23 @@ export function DatabaseSettingsPanel({
             <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
                 {page === 'main' && (
                     <div className="space-y-0.5">
-                        <SettingItem icon={<Layout size={14} />} label="Layout" value={activeTab} onClick={() => onLayoutChange(activeTab === 'table' ? 'board' : activeTab === 'board' ? 'gallery' : activeTab === 'gallery' ? 'calendar' : 'table')} showChevron />
+                        <div className="flex items-center justify-between px-4 py-2 hover:bg-gray-50 rounded transition-all group/item">
+                            <div className="flex items-center gap-3">
+                                <SettingsIcon size={14} className="text-gray-400 group-hover/item:text-black" />
+                                <span className="text-[11px] font-medium text-gray-700">Lock database</span>
+                            </div>
+                            <button 
+                                onClick={onLockToggle}
+                                className={cn(
+                                    "w-8 h-4 rounded-full relative transition-colors duration-200",
+                                    isLocked ? "bg-[#111827]" : "bg-gray-200"
+                                )}
+                            >
+                                <div className={cn("absolute top-0.5 left-0.5 size-3 bg-white rounded-full transition-transform duration-200", isLocked && "translate-x-4")} />
+                            </button>
+                        </div>
+                        <div className="h-px bg-gray-100 my-1 mx-2" />
+                        <SettingItem icon={<Layout size={14} />} label="Layout" value={activeTab} onClick={() => onLayoutChange(activeTab === 'table' ? 'board' : activeTab === 'board' ? 'gallery' : activeTab === 'gallery' ? 'calendar' : activeTab === 'calendar' ? 'list' : activeTab === 'list' ? 'chart' : activeTab === 'chart' ? 'timeline' : 'table')} showChevron />
                         <SettingItem icon={<Eye size={14} />} label="Property visibility" value={String(Object.keys(database.schema).length - hiddenProperties.length)} onClick={() => setPage('visibility')} showChevron />
                         <SettingItem icon={<Filter size={14} />} label="Filter" value={filters.length > 0 ? `${filters.length} active` : 'None'} onClick={() => setPage('filter')} showChevron />
                         <SettingItem icon={<ArrowUpDown size={14} />} label="Sort" value={sortConfigs.length > 0 ? `${sortConfigs.length} active` : 'None'} onClick={() => setPage('sort')} showChevron />
@@ -155,7 +189,20 @@ export function DatabaseSettingsPanel({
                 {page === 'filter' && (
                     <div className="space-y-4 p-4">
                         <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Active Filters</span>
+                            <div className="flex bg-gray-100 p-0.5 rounded-lg">
+                                <button 
+                                    onClick={() => onFiltersChange(filters, 'AND')}
+                                    className={cn("px-2 py-1 text-[8px] font-black uppercase rounded-md transition-all", filterGroupId === 'AND' ? "bg-white shadow-sm text-black" : "text-gray-400")}
+                                >
+                                    And
+                                </button>
+                                <button 
+                                    onClick={() => onFiltersChange(filters, 'OR')}
+                                    className={cn("px-2 py-1 text-[8px] font-black uppercase rounded-md transition-all", filterGroupId === 'OR' ? "bg-white shadow-sm text-black" : "text-gray-400")}
+                                >
+                                    Or
+                                </button>
+                            </div>
                             <button onClick={() => onFiltersChange([...filters, { col: 'title', op: 'con', val: '' }])} className="text-[10px] font-bold text-[#111827] hover:underline">Add Filter</button>
                         </div>
                         <div className="space-y-3">
@@ -173,10 +220,12 @@ export function DatabaseSettingsPanel({
                                         <select className="h-8 bg-white border border-gray-200 px-2 rounded text-[9px] font-bold uppercase tracking-wider text-gray-600 focus:outline-none" value={f.op}
                                             onChange={e => { const nf = [...filters]; nf[i].op = e.target.value; onFiltersChange(nf); }}>
                                             <option value="con">Contains</option>
+                                            <option value="not_con">Not Contain</option>
                                             <option value="eq">Equal</option>
                                             <option value="emp">Is Empty</option>
+                                            <option value="not_emp">Not Empty</option>
                                         </select>
-                                        {f.op !== 'emp' && <input className="flex-1 h-8 bg-white border border-gray-200 px-2 rounded text-[10px] font-medium focus:outline-none focus:border-gray-400" value={f.val}
+                                        {!['emp', 'not_emp'].includes(f.op) && <input className="flex-1 h-8 bg-white border border-gray-200 px-2 rounded text-[10px] font-medium focus:outline-none focus:border-gray-400" value={f.val}
                                             onChange={e => { const nf = [...filters]; nf[i].val = e.target.value; onFiltersChange(nf); }} placeholder="Value..." />}
                                     </div>
                                 </div>
@@ -289,22 +338,37 @@ export function DatabaseSettingsPanel({
                                     <option value="number">Number</option>
                                     <option value="progress">Progress Bar</option>
                                     <option value="select">Select</option>
+                                    <option value="multi-select">Multi-select</option>
+                                    <option value="status">Status</option>
                                     <option value="relation">Relation</option>
+                                    <option value="rollup">Rollup</option>
                                     <option value="date">Date</option>
                                     <option value="bool">Checkbox</option>
+                                    <option value="button">Button (Action)</option>
                                     <option value="formula">Formula</option>
+                                    <option value="id">Unique ID</option>
+                                    <option value="url">URL</option>
+                                    <option value="email">Email</option>
+                                    <option value="phone">Phone</option>
+                                    <option value="created_time">Created time</option>
+                                    <option value="created_by">Created by</option>
+                                    <option value="last_edited_time">Last edited time</option>
+                                    <option value="last_edited_by">Last edited by</option>
                                     <option value="list">List</option>
                                 </select>
                                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-3 text-gray-400 pointer-events-none" />
                             </div>
                         </div>
-                        {['select', 'relation', 'formula'].includes(formData.type) && (
+                        {['select', 'relation', 'formula', 'button'].includes(formData.type) && (
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
-                                    {formData.type === 'formula' ? 'Expression (e.g. prop("Price") * 2)' : 'Link Source'}
+                                    {formData.type === 'formula' ? 'Expression (e.g. prop("Price") * 2)' : 
+                                     formData.type === 'button' ? 'Action (e.g. SET(Status, \'Done\'))' : 'Link Source'}
                                 </label>
                                 <input className="w-full h-8 bg-white border border-gray-200 px-3 rounded text-[11px] placeholder:text-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none transition-all shadow-sm font-mono"
-                                    value={formData.source} onChange={e => setFormData(p => ({ ...p, source: e.target.value }))} placeholder={formData.type === 'formula' ? 'prop("Col") * 5 ...' : 'Folder or Note path...'} />
+                                    value={formData.source} onChange={e => setFormData(p => ({ ...p, source: e.target.value }))} 
+                                    placeholder={formData.type === 'formula' ? 'prop("Col") * 5 ...' : 
+                                                 formData.type === 'button' ? 'SET(Prop, Val); SET(...)' : 'Folder or Note path...'} />
                             </div>
                         )}
                         <div className="flex gap-2 pt-4">

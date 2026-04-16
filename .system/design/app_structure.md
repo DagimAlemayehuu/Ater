@@ -24,8 +24,10 @@ Define the structure, content, and interactive states in extremely high detail.
 
 ### Page: `/vault-sync` (Vault Sync)
 *   **Header**: Cluster selection (e.g., Study Planner, Reading List).
-*   **View Switcher**: Tabs for Table, Board, and Gallery views.
+*   **View Switcher**: Tabs for Table, Board, Gallery, and Calendar views.
 *   **Data Grid**: Interactive records tracking confidence, status, and unit alignment.
+*   **Persistence**: View states (filters, sorts, columns) persist via LocalStorage per-database.
+
 
 ### Page: `/agents` (OKA Dashboard)
 *   **Pipeline Control**: Inbox for raw documents, status tracking for generation plans.

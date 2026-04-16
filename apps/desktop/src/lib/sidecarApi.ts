@@ -247,6 +247,9 @@ export const sidecarApi = {
     getVaultGraph: () =>
         request<{ nodes: any[]; links: any[] }>('/api/vault/graph'),
 
+    getVaultBacklinks: (pageName: string) =>
+        request<{ backlinks: any[] }>(`/api/vault/backlinks?page_name=${encodeURIComponent(pageName)}`),
+
     // ── AI & Agents ─────────────────────────────────────────
     testAiConnection: (target: 'primary' | 'planner' | 'utility' = 'primary') =>
         request<{ success: boolean; message?: string; error?: string }>('/api/ai/test-connection', {

@@ -168,11 +168,25 @@ async def query_vault_database(db_name: str, secrets: AppSecrets = Depends(get_a
                         
                 # Ensure the title is always part of the properties
                 if isinstance(props, dict):
-                    # Replace internal list representation to match frontend expectations
+                    # Extract body content for deep search
+                    body = ""
+                    if content.startswith("---"):
+                        end_idx = content.find("---", 3)
+                        if end_idx != -1:
+                            body = content[end_idx+3:].strip()
+                    else:
+                        body = content.strip()
+
+                    # Inject file metadata if missing or as shadow props
+                    stats = md_file.stat()
+                    props["created_time"] = datetime.datetime.fromtimestamp(stats.st_ctime).isoformat()
+                    props["last_edited_time"] = datetime.datetime.fromtimestamp(stats.st_mtime).isoformat()
+                    
                     rows.append({
                         "id": md_file.name,
                         "title": md_file.stem,
-                        "properties": props
+                        "properties": props,
+                        "content": body # Include body for deep search
                     })
         except Exception as e:
             print(f"Error parsing {md_file.name}: {e}")
@@ -289,19 +303,21 @@ async def update_vault_row(db_name: str, file_name: str, req: UpdateRowRequest, 
                 # Apply updates
                 for k, v in req.properties.items():
                     data[k] = v
-                    
+
                 data["last_synced"] = datetime.datetime.now().isoformat()
-                
+                data["last_edited_time"] = datetime.datetime.now().isoformat()
+                data["last_edited_by"] = "LifeOs User"
+
                 import io
                 buf = io.StringIO()
                 yaml.dump(data, buf)
                 new_frontmatter = buf.getvalue()
-                
+
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(f"---\n{new_frontmatter}---{body_str}")
-                    
+
                 return {"success": True, "id": file_name, "properties": data}
-        
+
         return {"success": False, "message": "No frontmatter found"}
     except Exception as e:
         print(f"Error updating {file_name}: {e}")
@@ -311,34 +327,80 @@ async def update_vault_row(db_name: str, file_name: str, req: UpdateRowRequest, 
 async def create_vault_row(db_name: str, req: CreateRowRequest, secrets: AppSecrets = Depends(get_app_secrets)):
     if not secrets.vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
-        
+
     db_path = Path(secrets.vault_path) / DB_DIR_PREFIX / db_name
     if not db_path.exists():
         db_path.mkdir(parents=True, exist_ok=True)
-        
+
     # Sanitize title
     safe_title = "".join([c for c in req.title if c.isalnum() or c in (' ', '-', '_')]).strip()
     if not safe_title:
         safe_title = "Untitled"
-        
+
     file_name = f"{safe_title}.md"
     file_path = db_path / file_name
-    
+
     # Handle duplicates
     counter = 1
     while file_path.exists():
         file_name = f"{safe_title} ({counter}).md"
         file_path = db_path / file_name
         counter += 1
-        
+
     try:
         yaml = ruamel.yaml.YAML()
         yaml.preserve_quotes = True
-        
+
+        # Load schema to check for 'id' properties
+        vault_root = Path(secrets.vault_path)
+        base_file = vault_root / "0-Bases" / f"{db_name}.base"
+        schema_props = {}
+        if base_file.exists():
+            with open(base_file, "r", encoding="utf-8") as bf:
+                base_data = yaml.load(bf)
+                # base_data["views"][0]["columns"] is a list of {name: meta}
+                for col in base_data.get("views", [{}])[0].get("columns", []):
+                    for k, v in col.items():
+                        schema_props[k] = v
+
         data = req.properties
-        data["last_synced"] = datetime.datetime.now().isoformat()
-        data["links"] = []
         
+        # Handle ID Generation
+        for prop_name, prop_meta in schema_props.items():
+            if isinstance(prop_meta, dict) and prop_meta.get("type") == "id":
+                if prop_name not in data or not data[prop_name]:
+                    # Find max ID in existing files
+                    max_id = 0
+                    for md_file in db_path.glob("*.md"):
+                        try:
+                            with open(md_file, "r", encoding="utf-8") as f:
+                                c = f.read()
+                                if c.startswith("---"):
+                                    idx = c.find("---", 3)
+                                    if idx != -1:
+                                        fm = yaml.load(c[3:idx])
+                                        if fm and prop_name in fm:
+                                            val = fm[prop_name]
+                                            # handle TASK-123 or just 123
+                                            if isinstance(val, (int, float)):
+                                                max_id = max(max_id, int(val))
+                                            elif isinstance(val, str):
+                                                import re
+                                                match = re.search(r'(\d+)', val)
+                                                if match:
+                                                    max_id = max(max_id, int(match.group(1)))
+                        except: pass
+                    
+                    prefix = prop_meta.get("source", "").strip()
+                    data[prop_name] = f"{prefix}{max_id + 1}" if prefix else max_id + 1
+
+        now_iso = datetime.datetime.now().isoformat()
+        data["last_synced"] = now_iso
+        data["created_time"] = now_iso
+        data["created_by"] = "LifeOs User"
+        data["last_edited_time"] = now_iso
+        data["last_edited_by"] = "LifeOs User"
+        data["links"] = []
         # Check for template content
         template_path = db_path / "_template.md"
         body_content = "\n\n"
@@ -625,3 +687,37 @@ async def get_vault_graph(secrets: AppSecrets = Depends(get_app_secrets)):
             unique_links.append(link)
             
     return {"nodes": nodes, "links": unique_links}
+
+
+@router.get("/vault/backlinks")
+async def get_vault_backlinks(page_name: str, secrets: AppSecrets = Depends(get_app_secrets)):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+        
+    vault_root = Path(secrets.vault_path)
+    import re
+    # Match [[PageName]] or [[PageName|Alias]] or [[PageName#Header]]
+    pattern = re.compile(rf"\[\[{re.escape(page_name)}(?:[|#].*?)?\]\]", re.IGNORECASE)
+    
+    backlinks = []
+    for md_file in vault_root.rglob("*.md"):
+        if '.trash' in md_file.parts or 'node_modules' in md_file.parts:
+            continue
+        try:
+            # We only read the first 10k characters to speed up if notes are huge
+            # Generally frontmatter and mentions are near the top or bottom
+            content = md_file.read_text(encoding="utf-8")
+            if pattern.search(content):
+                # Calculate relative path
+                rel_path = str(md_file.relative_to(vault_root))
+                # Check if it is a database file to give better UI info
+                is_db = DB_DIR_PREFIX in rel_path
+                backlinks.append({
+                    "name": md_file.stem,
+                    "path": rel_path,
+                    "type": "database" if is_db else "note"
+                })
+        except Exception:
+            continue
+            
+    return {"backlinks": backlinks}

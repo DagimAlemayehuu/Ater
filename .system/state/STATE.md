@@ -17,11 +17,10 @@
 *   [x] **Interactive Card-View & Database Gallery UI**
 *   [x] **Force-Directed Vault Graph (Visual Knowledge Map)**
 *   [x] **Dynamic WikiLink Engine (Auto-Creation & Nav)**
-*   [ ] Global E2E Tests Pass
-*   [ ] Production Deployment
-
+*   [x] **Database Calendar & Template Logic**
 *   [ ] Global E2E Tests Pass
 *   [ ] Production Deployment
 
 ## 3. Active Blockers
 *   *(None)*
+

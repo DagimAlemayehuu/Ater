@@ -39,7 +39,15 @@ const InlineDatabaseResolver = ({ dbName, onNavigate }: { dbName: string, onNavi
     if (!dbSchema) return <div className="p-8 text-center text-[10px] text-red-500 font-mono tracking-widest uppercase border border-dashed border-red-200 bg-red-50 rounded-lg">Error: Database '{dbName}' Not Found</div>;
 
     return (
-        <div className="my-8 rounded-lg border border-gray-200 shadow-sm overflow-hidden h-[450px] relative not-prose bg-white">
+        <div className="my-10 rounded-xl border border-gray-200 shadow-sm overflow-hidden h-[500px] relative not-prose bg-white group/inline-db hover:ring-1 hover:ring-gray-300 transition-all">
+            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover/inline-db:opacity-100 transition-opacity">
+                <button 
+                    onClick={() => onNavigate(`DATABASE:${dbSchema.id}`)}
+                    className="p-1 px-3 bg-white border border-gray-200 rounded-md text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-black hover:border-black transition-all shadow-sm"
+                >
+                    Expand to Full Page
+                </button>
+            </div>
             <ObsidianDatabaseView 
                 database={{ id: dbSchema.id, name: dbSchema.name, schema: dbSchema.schema, views: dbSchema.views }} 
                 onBack={() => {}} 

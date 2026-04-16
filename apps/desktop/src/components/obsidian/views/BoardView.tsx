@@ -22,13 +22,13 @@ export function BoardView({
 }: BoardViewProps) {
     // Determine unique groups based on the groupBy property
     // We get unique values from the rows for that property
-    const groupValues = Array.from(new Set(rows.map(r => r.properties[groupBy] || 'Untitiled')))
+    const groupValues = Array.from(new Set(rows.map(r => r.properties[groupBy] || 'Untitled')))
     if (groupValues.length === 0) groupValues.push('Other')
 
     return (
         <div className="flex gap-4 overflow-x-auto pb-6 h-full custom-scrollbar">
             {groupValues.map(group => {
-                const groupRows = rows.filter(r => (r.properties[groupBy] || 'Untitiled') === group)
+                const groupRows = rows.filter(r => (r.properties[groupBy] || 'Untitled') === group)
                 
                 return (
                     <div key={group} className="flex-none w-72 flex flex-col gap-3">
