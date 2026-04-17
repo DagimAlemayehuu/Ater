@@ -6,7 +6,7 @@ semester: [[Autumn 2025]]
 unit: 3
 hub: [[3_Relational_Model_And_Database_Design_Hub]]
 parent: [[Candidate_Key]]
-source: [[Chapter_3.Pdf]]
+source: [[Chapter_3.pdf]]
 source_pages:
 - 33
 mode: ENGINEER

@@ -390,6 +390,8 @@ export const sidecarApi = {
 
     // ── Legacy / Specialists ────────────────────────────────
     listHubs: () => request<{ hubs: any[] }>('/api/oka/hubs'),
+    listHubNotes: (hubId: string) => 
+        request<{ notes: any[] }>(`/api/oka/hubs/${hubId}/notes`),
     generatePractice: (hubId: string, config: any) => 
         request<{ session_id: string; questions: any[]; quiz_path: string }>('/api/practice/generate', {
             method: 'POST',

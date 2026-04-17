@@ -224,6 +224,37 @@ class OkaService:
             hubs.append(metadata)
         return hubs
 
+    def list_atomic_notes(self, hub_id: str) -> List[Dict[str, Any]]:
+        """Lists atomic notes linked to a specific hub."""
+        hubs = self.list_planner_hubs()
+        hub = next((h for h in hubs if h["id"] == hub_id), None)
+        if not hub:
+            return []
+            
+        hub_path = Path(hub["path"])
+        semester = hub.get("semester", "General")
+        course = hub.get("course", "General_Knowledge")
+        unit_num = hub.get("unit", "")
+        
+        canonical_hub = self.vm.get_canonical_title(hub["title"])
+        unit_prefix = f"{unit_num}_" if unit_num else ""
+        unit_folder_name = f"{unit_prefix}{canonical_hub}"
+        
+        academic_unit_dir = self.vm.academic_root / semester / self.vm.get_canonical_title(course) / unit_folder_name
+        unit_dir = academic_unit_dir if academic_unit_dir.exists() else hub_path.parent
+        
+        notes = []
+        if unit_dir.exists():
+            for file in unit_dir.glob("*.md"):
+                if file.name == hub_path.name or "Possible_Questions" in file.name or "Practice" in file.name or file.name.startswith("_"):
+                    continue
+                notes.append({
+                    "id": file.stem,
+                    "title": file.stem.replace("_", " "),
+                    "path": str(file.absolute())
+                })
+        return sorted(notes, key=lambda x: x["title"])
+
     def list_practices(self) -> List[Dict[str, Any]]:
         """Lists all existing practices by scanning known storage locations recursively."""
         hubs = self.list_planner_hubs()
@@ -321,53 +352,81 @@ class OkaService:
     async def generate_practice(
         self, 
         hub_id: str, 
-        config: Dict[str, Any]
+        config_raw: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Generates personalized practice questions based on a Hub and its associated notes.
+        Supports advanced pedagogical configurations and heterogeneous question types.
         """
+        from .schemas import AdvancedPracticeConfig
+        
+        try:
+            config = AdvancedPracticeConfig(**config_raw)
+        except Exception:
+            # Fallback for legacy requests or partial configs
+            config = AdvancedPracticeConfig(
+                hubId=hub_id,
+                questionDistribution={
+                    "multipleChoice": config_raw.get("question_count", 5) if config_raw.get("question_type") == "Multiple Choice" else 0,
+                    "trueFalse": config_raw.get("question_count", 5) if config_raw.get("question_type") == "True/False" else 0,
+                    "shortAnswer": config_raw.get("question_count", 5) if config_raw.get("question_type") == "Short Answer" else 0,
+                    "scenario": config_raw.get("question_count", 5) if config_raw.get("question_type") == "Scenario-Based" else 0
+                },
+                difficulty=config_raw.get("difficulty", "L1") if config_raw.get("difficulty") != "Mixed" else "L2"
+            )
+
         hubs = self.list_planner_hubs()
-        hub = next((h for h in hubs if h["id"] == hub_id), None)
+        hub = next((h for h in hubs if h["id"] == config.hubId), None)
         if not hub:
-            raise ValueError(f"Hub not found: {hub_id}")
+            raise ValueError(f"Hub not found: {config.hubId}")
         
         hub_path = Path(hub["path"])
         
-        # Resolve the Academic Unit Folder (where Atomic Notes live)
-        # We mimic the VaultManager's pathing logic
+        # Resolve the Academic Unit Folder
         semester = hub.get("semester", "General")
         course = hub.get("course", "General_Knowledge")
         unit_num = hub.get("unit", "")
         hub_title_raw = hub.get("hub_title", hub["title"])
         
-        # Clean canonical title for folder matching
         canonical_hub = self.vm.get_canonical_title(hub_title_raw)
         unit_prefix = f"{unit_num}_" if unit_num else ""
         unit_folder_name = f"{unit_prefix}{canonical_hub}"
         
-        # Target path in 2-Academic
         academic_unit_dir = self.vm.academic_root / semester / self.vm.get_canonical_title(course) / unit_folder_name
-        
-        # Primary source of truth for context gathering
         unit_dir = academic_unit_dir if academic_unit_dir.exists() else hub_path.parent
-        
-        # User requested storage location: 2-Academic/Practice
         practice_dir = self.vm.academic_root / "Practice"
         practice_dir.mkdir(exist_ok=True)
         
         # 1. Gather Context
         context_parts = []
         
-        # Read Hub content
-        with open(hub_path, "r", encoding="utf-8") as f:
-            hub_content = f.read()
-            context_parts.append(f"## Hub Note: {hub['title']}\n{hub_content}")
-            
-        # Find and read Atomic notes in the resolved folder
+        # Filter files based on config
         atomic_notes = list(unit_dir.glob("*.md"))
+        selected_notes = config.selectedAtomicNotes
+        
+        # Read Hub content if it matches or if no specific notes selected
+        if not selected_notes or any(hub["title"] in s for s in selected_notes):
+            with open(hub_path, "r", encoding="utf-8") as f:
+                context_parts.append(f"## Hub Note: {hub['title']}\n{f.read()}")
+
         for note_path in atomic_notes:
             if note_path.name == hub_path.name or "Possible_Questions" in note_path.name or "Practice" in note_path.name or note_path.name.startswith("_"):
                 continue
+            
+            # Apply exclusion keywords
+            if any(kw.lower() in note_path.name.lower() for kw in config.exclusionKeywords):
+                continue
+                
+            # Apply selection filter
+            if selected_notes and note_path.stem not in selected_notes:
+                continue
+
+            # Apply time bound
+            if config.timeBoundDays:
+                mtime = os.path.getmtime(note_path)
+                if (time.time() - mtime) > (config.timeBoundDays * 86400):
+                    continue
+
             with open(note_path, "r", encoding="utf-8") as f:
                 context_parts.append(f"### Atomic Note: {note_path.stem}\n{f.read()}")
                 
@@ -380,95 +439,94 @@ class OkaService:
         full_context = "\n\n".join(context_parts)
         
         # 2. Build Prompt
-        difficulty = config.get("difficulty", "Mixed")
-        question_count = config.get("count") or config.get("question_count") or 5
+        distribution = config.questionDistribution
+        total_q = sum(distribution.values())
         
-        raw_types = config.get("types") or config.get("question_type") or ["Multiple Choice"]
-        if isinstance(raw_types, str):
-            question_types = [raw_types]
-        else:
-            question_types = raw_types
+        dist_str = ", ".join([f"{count} {type}" for type, count in distribution.items() if count > 0])
         
-        difficulty_desc = {
-            "L1": "L1 (Recall/Identity): Focus on definitions, identification of components, and basic rules.",
-            "L2": "L2 (Apply/Construct): Focus on applying rules to scenarios, constructing artifacts, or solving standard problems.",
-            "L3": "L3 (Analyze/Debug): Focus on finding errors in complex scenarios, optimizing systems, or predicting failures.",
-            "Mixed": "Mixed: A balanced distribution of L1, L2, and L3 questions."
-        }
-        
-        example_type = question_types[0] if question_types else "Multiple Choice"
-        example_fields = '    "options": {"A": "...", "B": "...", "C": "...", "D": "..."},' if "Choice" in example_type else '    "rubric": "...",'
+        # Pedagogy specifics
+        pedagogy_prompts = []
+        if config.difficulty == "L3":
+            pedagogy_prompts.append("FOCUS: Higher-order analysis. Questions should require breaking down concepts or debugging systems.")
+        if config.injectTrickAnswers:
+            pedagogy_prompts.append("TRICK ANSWERS: Occasionally include 'None of the above' or 'A and B only' to test precision.")
+        if config.distractorPlausibility == "High":
+            pedagogy_prompts.append("DISTRACTORS: Ensure incorrect options are highly plausible and common misconceptions.")
 
         prompt = (
-            "You are an expert Pedagogical AI. Your goal is to generate high-fidelity practice questions based on the provided course material.\n\n"
-            f"TARGET CONFIGURATION:\n"
-            f"- Total Questions: {question_count}\n"
-            f"- Target Difficulty: {difficulty_desc.get(difficulty, difficulty)}\n"
-            f"- Question Types Allowed: {', '.join(question_types)}\n\n"
-            "INSTRUCTIONS:\n"
-            "1. Each question MUST be grounded in the provided context material.\n"
-            "2. Ensure questions are diverse and avoid repetition.\n"
-            "3. For Multiple Choice: Provide 4 options (A-D) and the correct answer with an explanation.\n"
-            "4. For Short Answer/Essay: Provide a rubric or sample 'Perfect Response' in the 'answer' field.\n"
-            "5. Use Markdown for formatting. Wrap the entire response in a JSON list of question objects.\n\n"
-            "OUTPUT FORMAT (Strict JSON Array):\n"
-            "[\n"
-            "  {\n"
-            "    \"id\": 1,\n"
-            f"    \"type\": \"{example_type}\",\n"
-            "    \"difficulty\": \"L1\",\n"
-            "    \"question\": \"...\",\n"
-            f"{example_fields}\n"
-            "    \"answer\": \"...\",\n"
-            "    \"explanation\": \"...\"\n"
-            "  }\n"
-            "]\n\n"
-            f"MATERIAL CONTEXT:\n{full_context[:150000]}"
+            "You are OKA, the Sovereign Pedagogical Architect. Your objective is to generate an elite practice session in ONE SINGLE REQUEST.\n\n"
+            "TARGET PROFILE:\n"
+            f"- Question Total: {total_q}\n"
+            f"- Distribution: {dist_str}\n"
+            f"- Cognitive Level: {config.difficulty}\n"
+            f"- Grading Strictness: {config.gradingStrictness}\n"
+            f"{chr(10).join(pedagogy_prompts)}\n\n"
+            "MODALITY SPECIFICATIONS:\n"
+            "- 'mcq': 4 options (A-D).\n"
+            "- 'code': Provide a starting `codeSnippet` (Markdown) and the solution in `answer`.\n"
+            "- 'find_error': Provide `buggyCode` and the fix in `answer`.\n"
+            "- 'cloze': Use `[[blank]]` in `textWithBlanks`. Provide `answer` array (list of strings for each blank).\n"
+            "- 'matching': Provide pairs in `pairs`: [{'left': 'term', 'right': 'definition'}].\n\n"
+            "RULES:\n"
+            "1. STRICT JSON SCHEMA: Follow the provided schema exactly.\n"
+            "2. GROUNDING: Every question must correlate to the specific details in the Atomic Notes provided.\n"
+            "3. EXPLANATIONS: Include a detailed `explanation` for EVERY question, quoting the source material where possible.\n"
+            "4. CONFIDENCE WAGERS: The app will handle the UI, but ensure the difficulty permits a confidence assessment.\n\n"
+            f"MATERIAL CONTEXT:\n{full_context[:MAX_SOURCE_CHARS]}"
         )
         
-        # 3. Invoke LLM
+        # 3. Invoke LLM with Structured Output logic
         session_id = f"practice_{hub_id}_{int(time.time())}"
-        OkaService._status[session_id] = "Generating Practice Session..."
+        OkaService._status[session_id] = "Architecting Advanced Session..."
         
         try:
-            from langchain_core.messages import HumanMessage
-            res = await self.llm.ainvoke([HumanMessage(content=prompt)])
-            content = res.content.strip()
+            # We attempt to use the model's structured output capability if available
+            # Otherwise we fallback to raw prompt + parsing
+            try:
+                from .schemas import PracticeBatch
+                structured_llm = self.llm.with_structured_output(PracticeBatch)
+                batch = await structured_llm.ainvoke(prompt)
+                questions = [q.model_dump() for q in batch.questions]
+            except Exception as e:
+                print(f"[OKA Service] Structured output failed, falling back to raw: {e}")
+                res = await self.llm.ainvoke([HumanMessage(content=prompt + "\n\nRETURN ONLY A JSON LIST.")])
+                content = res.content.strip()
+                if "```json" in content:
+                    content = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL).group(1)
+                elif "```" in content:
+                    content = re.search(r"```\s*(.*?)\s*```", content, re.DOTALL).group(1)
+                questions = json.loads(content)
             
-            if "```json" in content:
-                content = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL).group(1)
-            elif "```" in content:
-                content = re.search(r"```\s*(.*?)\s*```", content, re.DOTALL).group(1)
-                
-            questions = json.loads(content)
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            
-            quiz_title = f"{hub['title']} - Practice {question_types[0]}"
+            quiz_title = f"{hub['title']} - {config.difficulty} Session"
             quiz_filename = f"Practice_{timestamp}.md"
             quiz_path = practice_dir / quiz_filename
             
             # Create YAML frontmatter
-            yaml_frontmatter = f"""---
-type: practice
-hub_id: "{hub_id}"
-date: "{datetime.now().strftime('%Y-%m-%d')}"
-difficulty: "{difficulty}"
-question_types: {json.dumps(question_types)}
-score: null
-completed: false
----
-"""
+            yaml_data = {
+                "type": "practice",
+                "hub_id": hub_id,
+                "date": datetime.now().strftime('%Y-%m-%d'),
+                "difficulty": config.difficulty,
+                "question_types": list(distribution.keys()),
+                "config": config.model_dump(),
+                "score": None,
+                "completed": False
+            }
+            yaml_frontmatter = f"---\n{yaml.dump(yaml_data, sort_keys=False)}---\n"
+            
             # Create Readable Markdown
             md_content = f"# {quiz_title}\n\n"
             for idx, q in enumerate(questions, 1):
-                md_content += f"### Q{idx}: {q.get('question', '')}\n"
-                opts = q.get("options")
-                if opts:
-                    for k, v in opts.items():
+                md_content += f"### Q{idx} [{q.get('type')}]: {q.get('question', '')}\n"
+                if q.get('type') == 'mcq' and q.get('options'):
+                    for k, v in q['options'].items():
                         md_content += f"- **{k})** {v}\n"
+                elif q.get('type') == 'code':
+                    md_content += f"```\n{q.get('codeSnippet', '')}\n```\n"
                 md_content += "\n***\n\n"
             
-            md_content += "## Raw Data\n"
+            md_content += "## Session Data\n"
             md_content += "```json\n"
             md_content += json.dumps(questions, indent=2)
             md_content += "\n```\n"
@@ -480,6 +538,7 @@ completed: false
             return {"session_id": session_id, "questions": questions, "quiz_path": str(quiz_path)}
         except Exception as e:
             OkaService._status[session_id] = f"Error: {str(e)}"
+            traceback.print_exc()
             raise e
 
     def find_best_hub_match(self, source_text: str) -> Optional[Dict[str, Any]]:

@@ -613,6 +613,15 @@ async def oka_list_hubs(
     service = OkaService(secrets)
     return {"hubs": service.list_planner_hubs()}
 
+@app.get("/api/oka/hubs/{hub_id}/notes")
+async def oka_list_hub_notes(
+    hub_id: str,
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Lists atomic notes for a specific hub."""
+    service = OkaService(secrets)
+    return {"notes": service.list_atomic_notes(hub_id)}
+
 @app.post("/api/practice/generate")
 async def generate_practice_session(
     payload: Dict[str, Any],
