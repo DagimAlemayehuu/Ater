@@ -10,49 +10,47 @@ source: [[Chapter_3.Pdf]]
 source_pages:
 - 29
 - 30
-- 31
-- 32
 mode: ENGINEER
 
 ---
 
 # Definition & Mechanics
-An **attribute** is a property of an entity or a relationship type. It has a **name** and a **domain**, which defines the set of allowable values.
+An **attribute** is a property of an entity or a relationship type. It describes a characteristic of the entity or relationship.
 
 * **Types of Attributes:**
   + **Simple Attribute**: composed of a single component with an independent existence.
   + **Composite Attribute**: composed of multiple components, each with an independent existence.
-* **Attribute Characteristics:**
-  + **Single-valued Attribute**: holds a single value for each occurrence of an entity type.
-  + **Multi-valued Attribute**: holds multiple values for each occurrence of an entity type.
+  + **Single-Valued Attribute**: holds a single value for each occurrence of an entity type.
+  + **Multi-Valued Attribute**: holds multiple values for each occurrence of an entity type.
   + **Derived Attribute**: represents a value that is derivable from another attribute or set of attributes.
 
 # Worked Example
 Domain: Film production
 
-Consider a `Movie` entity with attributes:
-
+Consider a film entity with attributes:
 | Attribute Name | Type | Description |
 | --- | --- | --- |
-| title | Simple, Single-valued | Movie title |
-| genres | Multi-valued | List of genres (e.g., Action, Comedy) |
-| duration | Simple, Single-valued | Movie duration in minutes |
-| rating | Derived | Average user rating (derived from user reviews) |
+| film_id | Simple, Single-Valued | Unique film identifier |
+| title | Simple, Single-Valued | Film title |
+| genres | Multi-Valued | List of genres (e.g., action, comedy) |
+| production_cost | Simple, Single-Valued | Total production cost |
+| release_date | Simple, Single-Valued | Release date |
 
 ```mermaid
 erDiagram
-    MOVIE {
+    FILM {
+        int film_id PK
         string title
         string genres
-        int duration
-        float rating
+        float production_cost
+        date release_date
     }
 ```
 
 # Edge Case
-> **Q:** A university course has attributes `course_id`, `name`, and `credits`. The `credits` attribute can be either 3 or 4. Is `credits` single-valued or multi-valued?
-> **A:** Single-valued. Although `credits` has only two possible values, it still holds a single value for each course occurrence. The fact that it has a limited set of values does not make it multi-valued.
+> **Q:** A university course entity has an attribute called `assessment_breakdown` which stores the percentage allocation for each assessment component (e.g., 30% for midterm, 70% for final exam). Is `assessment_breakdown` a simple or composite attribute?
+> **A:** Composite. Although `assessment_breakdown` seems to be a single attribute, it can be broken down further into multiple components (e.g., midterm percentage, final exam percentage). Therefore, it is a composite attribute.
 
 # Connections
 - **Depends on:** [[Entity_Types]] — Attributes are properties of entities or relationships.
-- **Enables:** [[Keys]] — Attributes are used to form candidate keys and primary keys.
+- **Enables:** [[Composite_Attribute]], [[Multi_Valued_Attribute]], [[Derived_Attribute]] — Understanding attributes enables understanding of more specific attribute types.

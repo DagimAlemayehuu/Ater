@@ -23,12 +23,14 @@ A **weak entity type** is an entity type that has no **candidate key** of its ow
 # Worked Example
 Domain: Film production
 
-Suppose we want to model `Movie` and `Scene`. A movie can have many scenes, and each scene belongs to only one movie.
+Suppose we have an entity type `Movie` and a weak entity type `Scene` because a scene is meaningless without knowing which movie it belongs to.
 
 | Entity Type | Attributes | Key | Strong/Weak |
 |---|---|---|---|
-| Movie | movie_id, title, release_year | movie_id | Strong |
-| Scene | scene_id, movie_id, scene_description | (movie_id, scene_id) | Weak (owner: Movie) |
+| Movie | movie_id, title | movie_id | Strong |
+| Scene | scene_id, description | (none alone) | Weak (owner: Movie) |
+
+The composite identifying key for `Scene` is `(movie_id, scene_id)`.
 
 ```mermaid
 erDiagram
@@ -36,17 +38,16 @@ erDiagram
     MOVIE {
         int movie_id PK
         string title
-        int release_year
     }
     SCENE {
         int scene_id
-        int movie_id
+        string description
     }
 ```
 
 # Edge Case
-> **Q:** A university models `Student` (student_id, name) and `Course_Enrollment` (enrollment_date, grade). Each enrollment is for a specific student and course. Is `Course_Enrollment` strong or weak?
-> **A:** Weak. `enrollment_date + grade` can repeat across students and courses. The enrollment is meaningless without knowing *which student and course* — it has no candidate key of its own. The identifying relationships are `Student → Course_Enrollment` and `Course → Course_Enrollment`, and the composite key is `(student_id, course_id)`.
+> **Q:** A university models `Course` (course_id, name) and `Enrollment` (student_id, enrollment_date). Each enrollment is for a specific course. Is `Enrollment` strong or weak?
+> **A:** Weak. `student_id + enrollment_date` can repeat across courses (same student, same date, different courses). The enrollment is meaningless without knowing *which course* — it has no candidate key of its own. The identifying relationship is Course → Enrollment, and the composite key is `(course_id, student_id, enrollment_date)`.
 
 # Connections
 - **Depends on:** [[Entity_Types]] — Weak entity types are a subclassification within the entity type taxonomy.

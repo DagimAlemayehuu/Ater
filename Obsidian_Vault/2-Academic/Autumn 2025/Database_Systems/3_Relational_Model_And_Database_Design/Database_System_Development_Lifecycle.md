@@ -1,12 +1,12 @@
 ---
 title: Database_System_Development_Lifecycle
 type: Atomic Note
-course: [[Database Systems]]
-semester: [[Autumn 2025]]
+course: "[[Database Systems]]"
+semester: "[[Autumn 2025]]"
 unit: 3
-hub: [[3_Relational_Model_And_Database_Design_Hub]]
-parent: [[Database_Design_Methodology]]
-source: [[Chapter_3.Pdf]]
+hub: "[[3_Relational_Model_And_Database_Design_Hub]]"
+parent: "[[Database_Design_Methodology]]"
+source: "[[Chapter_3.Pdf]]"
 source_pages:
 - 4
 - 5

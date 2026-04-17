@@ -17,23 +17,23 @@ mode: ENGINEER
 # Definition & Mechanics
 A **single-valued attribute** is an attribute that holds a single value for each occurrence of an entity type. 
 * **Key characteristics:**
-  + Each entity instance has only one value for the attribute.
-  + No set or list of values; only a single value is allowed.
-* **Notation:** Represented by a simple ellipse in traditional E-R models or a named field in UML.
+  + Holds only one value per entity occurrence
+  + No repeating groups or multiple values
+  + Examples: `employee_id`, `name`, `date_of_birth`
 
 # Worked Example
 Domain: Film production
 
-| Film | Title | Release_Year | Genre |
-| --- | --- | --- | --- |
-| 1    | Inception | 2010      | Action  |
-| 2    | Interstellar | 2014      | Sci-Fi  |
+| Entity Type | Attributes | Values |
+| --- | --- | --- |
+| Movie | title, release_year, genre | The Shawshank Redemption, 1994, Drama |
+| Actor | actor_id, name, nationality | 101, Tom Hanks, American |
 
-In this example, `Title`, `Release_Year`, and `Genre` are single-valued attributes for the `Film` entity type. Each film has only one title, one release year, and one genre.
+In this example, `title`, `release_year`, and `genre` are single-valued attributes of the `Movie` entity type. Similarly, `actor_id`, `name`, and `nationality` are single-valued attributes of the `Actor` entity type.
 
 # Edge Case
-> **Q:** A university course has multiple instructors, but for simplicity, we store only one primary instructor per course. Is the `instructor` attribute single-valued or multi-valued?
-> **A:** At first glance, it seems single-valued because we store only one instructor. However, in reality, a course can have multiple instructors, making `instructor` potentially multi-valued. If the requirement is to store only one primary instructor, it is single-valued under that specific constraint. The nuance: the attribute's nature (single-valued) depends on the specific requirement rather than the inherent property of the attribute itself.
+> **Q:** A university course has multiple instructors, but each instructor has only one role (e.g., lecturer, tutor). Is the `role` attribute single-valued or multi-valued?
+> **A:** The `role` attribute is single-valued. Although there are multiple instructors for a course, each instructor has only one role. This is an example of a single-valued attribute with a many-to-one relationship between instructors and courses.
 
 # Connections
 - **Depends on:** [[Attributes]] — Single-valued attributes are a type of attribute.

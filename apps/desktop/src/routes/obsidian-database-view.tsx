@@ -387,7 +387,7 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
                                                 headers.forEach((h, i) => { props[h] = row[i]; });
                                                 // Title is usually first column
                                                 const title = row[0] || 'Imported Note';
-                                                await sidecarApi.createVaultDatabaseRow(database.id, title, props);
+                                                await sidecarApi.createVaultRow(database.id, title, props);
                                             }
                                             fetchRows();
                                         };
@@ -700,42 +700,7 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
                 </div>
             </div>
 
-            <DatabaseSettingsPanel 
-                isOpen={settingsOpen}
-                onClose={() => setSettingsOpen(false)}
-                database={database}
-                activeTab={activeTab}
-                hiddenProperties={hiddenProperties}
-                onToggleVisibility={(name) => {
-                    const next = hiddenProperties.includes(name) 
-                        ? hiddenProperties.filter(h => h !== name) 
-                        : [...hiddenProperties, name];
-                    setHiddenProperties(next);
-                    saveCurrentView({ hiddenProperties: next });
-                }}
-                sortConfigs={sortConfigs}
-                onSortConfigsChange={(configs) => {
-                    setSortConfigs(configs);
-                    saveCurrentView({ sortConfigs: configs });
-                }}
-                filters={filters}
-                filterGroupId={filterGroupId}
-                onFiltersChange={(nf, op) => {
-                    setFilters(nf);
-                    if (op) setFilterGroupId(op);
-                    saveCurrentView({ filters: nf, filterGroupId: op || filterGroupId });
-                }}
-                groupBy={groupBy}
-                onGroupByChange={(val) => {
-                    setGroupBy(val);
-                    saveCurrentView({ groupBy: val });
-                }}
-                onUpdateSchema={onRefresh}
-                onLayoutChange={(layout) => {
-                    setActiveTab(layout);
-                    saveCurrentView({ activeTab: layout });
-                }}
-            />
+
 
             {selectedRowId && (
                 <ObsidianPagePanel

@@ -15,45 +15,42 @@ mode: ENGINEER
 ---
 
 # Definition & Mechanics
-A **recursive relationship** is a relationship type where the same entity type participates more than once in different roles. This requires **role names** to indicate the purpose that each participating entity type plays in the relationship.
+A **recursive relationship** is a relationship type where the same entity type participates more than once in different roles. This relationship involves an entity type related to itself.
 
-* **Same entity type participates**: both sides of the relationship are the same entity type.
-* **Role names are required**: to clarify the different roles played by the entity type.
-* **Example degrees**: unary (1:1, 1:N), binary (not applicable), ternary/quaternary (rare).
+* **Roles**: Each occurrence of the entity type plays a distinct role in the relationship.
+* **Example roles**: manager and employee in a "supervises" relationship.
+* **Representation**: A recursive relationship is often depicted with role names.
+
+```mermaid
+erDiagram
+    EMPLOYEE ||--o{ EMPLOYEE : "supervises"
+```
 
 # Worked Example
 Domain: Film production
 
-Suppose we want to model a film's cast, where an actor can play multiple roles in the same film, and a role can be played by multiple actors.
+Consider a film production company where some directors also act in their own films. A recursive relationship `DIRECTOR_DIRECTS_ACTOR` can model this.
 
-| Actor | Role |
+| Director (Entity) | Actor (Entity) |
 | --- | --- |
-| Tom Hanks | Captain Phillips |
-| Tom Hanks | Forrest Gump |
-| Meg Ryan | Sleepless in Seattle |
+| John Smith | John Smith |
+| Jane Doe | Tom Hanks |
 
 ```mermaid
 erDiagram
-    ACTOR ||--o{ CASTING : "acts in"
-    ACTOR {
-        int actor_id PK
+    PERSON ||--o{ DIRECTS : "directs"
+    PERSON {
+        string person_id PK
         string name
-    }
-    CASTING {
-        int film_id FK
-        int actor_id FK
-        string role_name
-    }
-    FILM {
-        int film_id PK
-        string title
     }
 ```
 
 # Edge Case
-> **Q:** A company has an organizational hierarchy where an employee manages other employees. Is the "Manages" relationship recursive?
-> **A:** Yes, it is recursive. The same entity type (`Employee`) participates in different roles: `Manager` and `Staff_Member`. Role names clarify these roles.
+> **Q:** In a university setting, can a course be both a prerequisite and a corequisite for another course?
+> **A:** Yes, this can be modeled with a recursive relationship. A course can be related to itself in different roles: 
+  - **prerequisite_of**: A course that must be taken before another.
+  - **corequisite_of**: A course that must be taken alongside another.
 
 # Connections
-- **Depends on:** [[Relationship_Types]] — Recursive relationships are a specific type of relationship.
-- **Enables:** [[Multiplicity]] — Understanding recursive relationships helps in defining multiplicity constraints.
+- **Depends on:** [[Relationship_Types]] — Recursive relationships are a type of relationship.
+- **Enables:** [[Structural_Constraints]] — Understanding recursive relationships helps in defining complex structural constraints.

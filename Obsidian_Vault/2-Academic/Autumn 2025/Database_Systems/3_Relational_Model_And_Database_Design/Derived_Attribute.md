@@ -18,31 +18,29 @@ A **derived attribute** represents a value that is calculable from related attri
 
 * **Characteristics:**
   + **Not stored physically**: The value is calculated when needed.
-  + **Dependent on other attributes**: Its value is derived from one or more attributes.
-  + **Indicated by a dotted line ellipse** in traditional ER diagrams.
+  + **Dependent on other attributes**: Changes in base attributes affect the derived attribute.
+  + **Indicated by a dotted line ellipse** in traditional ER models or a “/” prefix in UML.
 
 # Worked Example
 Domain: Film production
 
-Suppose we have an entity type `Movie` with attributes `title`, `release_year`, and `duration_in_minutes`. We can derive an attribute `age_in_years` based on the current year and `release_year`.
+Suppose we have an entity type `Movie` with attributes `production_cost` and `marketing_cost`. We can derive the `total_cost` as the sum of these two attributes.
 
-| title | release_year | duration_in_minutes |
-| --- | --- | --- |
-| Inception | 2010 | 148 |
-| Interstellar | 2014 | 169 |
-| The Shawshank Redemption | 1994 | 142 |
+| Movie_ID | production_cost | marketing_cost |
+|----------|------------------|-----------------|
+| M1       | 1000000          | 500000          |
+| M2       | 800000           | 300000          |
 
-The derived attribute `age_in_years` (assuming the current year is 2024):
+The derived attribute `total_cost` would be:
 
-| title | release_year | duration_in_minutes | age_in_years |
-| --- | --- | --- | --- |
-| Inception | 2010 | 148 | 14 |
-| Interstellar | 2014 | 169 | 10 |
-| The Shawshank Redemption | 1994 | 142 | 30 |
+| Movie_ID | total_cost |
+|----------|------------|
+| M1       | 1500000    |
+| M2       | 1100000    |
 
 # Edge Case
-> **Q:** Consider an entity type `Employee` with attributes `salary` and `bonus`. Is `total_compensation` (sum of `salary` and `bonus`) a derived attribute if it is stored in the database?
-> **A:** Yes, it is still a derived attribute because its value can be calculated from other attributes. However, it is a **redundant** derived attribute since it is stored. Ideally, `total_compensation` should be calculated on the fly to avoid data inconsistencies.
+> **Q:** Consider an entity type `Order` with attributes `order_date` and `delivery_date`. Is `order_age` (calculated as the difference between `delivery_date` and `order_date`) a derived attribute if `order_age` is stored in the database and updated periodically?
+> **A:** Yes, `order_age` is still a derived attribute because its value is determined by other attributes, even though it is stored. The key characteristic is that it is derived from other data, not that it is never stored.
 
 # Connections
 - **Depends on:** [[Attributes]] — Derived attributes are a type of attribute.

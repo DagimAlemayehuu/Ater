@@ -32,7 +32,7 @@ interface DatabaseSettingsPanelProps {
         name: string
         schema: Record<string, any>
     }
-    activeTab: 'table' | 'board' | 'gallery' | 'calendar'
+    activeTab: 'table' | 'board' | 'gallery' | 'calendar' | 'list' | 'chart' | 'timeline'
     hiddenProperties: string[]
     onToggleVisibility: (name: string) => void
     sortConfigs: { col: string, dir: 'asc' | 'desc' }[]

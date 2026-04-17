@@ -550,7 +550,7 @@ export default function ObsidianVaultPage() {
                                             <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Select an asset to visualize</p>
                                         </div>
                                     ) : (
-                                        <div className={cn("mx-auto py-12 animate-in fade-in duration-300 px-16", selectedPath.toLowerCase().endsWith('.pdf') ? "max-w-none" : "max-w-5xl")}>
+                                        <div className={cn("mx-auto py-12 px-16 w-full max-w-full overflow-hidden", selectedPath.toLowerCase().endsWith('.pdf') ? "max-w-none" : "max-w-5xl")}>
                                             {loadingNote ? (
                                                 <div className="h-64 flex flex-col items-center justify-center gap-4 text-gray-400">
                                                     <RefreshCw size={24} className="animate-spin" />
@@ -605,7 +605,7 @@ export default function ObsidianVaultPage() {
 
                                                     {/* Page Title & Actions */}
                                                     <div className="flex items-start justify-between mb-12 group">
-                                                        <h1 className="text-5xl font-extrabold text-[#111827] tracking-tight leading-tight flex-1">
+                                                        <h1 className="text-5xl font-extrabold text-[#111827] tracking-tight leading-tight flex-1 min-w-0 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                                                             {selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '')}
                                                         </h1>
                                                         {!selectedPath.toLowerCase().endsWith('.pdf') && (
@@ -756,7 +756,7 @@ export default function ObsidianVaultPage() {
 
                         {/* Right: OKA Architect (Collapsible Panel) */}
                         {showArchitect && (
-                            <div className="w-[400px] border-l border-[#E5E5E5] bg-gray-50 flex flex-col shrink-0 overflow-hidden animate-in slide-in-from-right duration-300 relative z-20 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                            <div className="w-[400px] border-l border-[#E5E5E5] bg-gray-50 flex flex-col shrink-0 overflow-hidden relative z-20 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
                                 {/* OKA Header */}
                                 <div className="p-4 border-b border-[#E5E5E5] bg-white flex items-center justify-between shrink-0">
                                     <div className="flex items-center gap-2">
@@ -859,7 +859,7 @@ export default function ObsidianVaultPage() {
                                                         </div>
 
                                                         {isAwaitingConfirmation && (
-                                                            <Button onClick={confirmDeployment} className="w-full h-10 text-[10px] font-bold uppercase bg-[#111827] text-white hover:bg-black shadow-lg shadow-black/10 tracking-widest">
+                                                            <Button onClick={() => confirmDeployment()} className="w-full h-10 text-[10px] font-bold uppercase bg-[#111827] text-white hover:bg-black shadow-lg shadow-black/10 tracking-widest">
                                                                 <ShieldCheck size={14} className="mr-2" /> Start Deployment
                                                             </Button>
                                                         )}

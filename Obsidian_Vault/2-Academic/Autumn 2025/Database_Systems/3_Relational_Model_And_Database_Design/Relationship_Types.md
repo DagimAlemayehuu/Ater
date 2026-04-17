@@ -38,18 +38,15 @@ erDiagram
 # Worked Example
 Domain: Film production
 
-Suppose we have entity types `Movie` and `Actor`. A movie can have multiple actors, and an actor can act in multiple movies.
-
-| Entity Type | Attributes | Key |
+| Entity Type 1 | Relationship | Entity Type 2 |
 | --- | --- | --- |
-| Movie | movie_id, title, release_year | movie_id |
-| Actor | actor_id, name, birth_date | actor_id |
+| Movie | stars | Actor |
 
-The relationship type between `Movie` and `Actor` is **Acts_In**.
+In this example, `Movie` and `Actor` are entity types, and `stars` is a relationship type.
 
 ```mermaid
 erDiagram
-    MOVIE ||--o{ ACTS_IN : features
+    MOVIE ||--o{ ACTOR : stars
     MOVIE {
         int movie_id PK
         string title
@@ -58,15 +55,11 @@ erDiagram
         int actor_id PK
         string name
     }
-    ACTS_IN {
-        int movie_id FK
-        int actor_id FK
-    }
 ```
 
 # Edge Case
-> **Q:** A university has entity types `Student` and `Course`. A student can enroll in multiple courses, and a course can have multiple students. However, the university wants to track not only the student-course enrollment but also the grade each student receives in each course. Should the relationship type between `Student` and `Course` be considered as having attributes?
-> **A:** Yes, the relationship type `Enrolls_In` should be considered as having attributes, specifically `grade`. This is because the grade is a property of the relationship between a student and a course, not a property of the student or course alone.
+> **Q:** A university has a `Course` entity and a `Student` entity. A course can have multiple students, and a student can enroll in multiple courses. Is this a unary, binary, or n-ary relationship?
+> **A:** This is a binary relationship because it involves two distinct entity types: `Course` and `Student`. The fact that a course can have multiple students and a student can enroll in multiple courses indicates a many-to-many (*:*) relationship.
 
 # Connections
 - **Depends on:** [[Entity_Types]] — Relationship types are defined between entity types.

@@ -6,13 +6,13 @@ Your mission: Transform raw source material into a high-fidelity Knowledge Asset
 1. **NO PREAMBLE**: Start immediately with `--- START_NOTE ---`. No intro text. No "Here is the note:".
 2. **ZERO TRUNCATION**: Complete every section of every note. No ellipsis. No "...continue for remaining concepts."
 3. **WIKILINK LAW** — Read this once, never forget it:
-   - CORRECT: `course: [[Database Systems]]` — bare brackets, bare text, nothing else.
-   - FORBIDDEN (any of these = broken link in Obsidian):
-     - `[["Database Systems"]]` — double-quotes inside brackets
-     - `[['Database Systems']]` — single-quotes inside brackets
-     - `"[[Database Systems]]"` — quotes wrapping the whole link
-     - `'[[Database Systems]]'` — single-quotes wrapping the whole link
-   - This rule applies identically in YAML frontmatter AND in note body text.
+   - For **YAML frontmatter properties**, you MUST wrap the entire link in one set of double quotes so Obsidian's property system parses it correctly as a link.
+     - CORRECT FRONTMATTER: `course: "[[Database Systems]]"`
+     - FORBIDDEN FRONTMATTER: `course: [[Database Systems]]` (breaks Obsidian parser)
+   - For **note body text**, you MUST use bare brackets.
+     - CORRECT BODY TEXT: `This depends on [[Database Systems]].`
+     - FORBIDDEN BODY TEXT: `This depends on "[[Database Systems]]".`
+   - FORBIDDEN EVERYWHERE: `[["Database Systems"]]`, `[['Database Systems']]`, `'[[Database Systems]]'`
 4. **LOWERCASE YAML KEYS**: `course`, `semester`, `hub`, `source`, `source_pages` — never `Course` or `Source`.
 5. **UNIQUE TOPOLOGY**: Hub Core Topology: each note appears EXACTLY ONCE. The Hub lists ONLY notes from the approved plan.
 6. **DENSE TECHNICAL PROSE**: Write like a senior engineer documenting architecture. No robotic filler. No "There are several steps to X." No "Imagine you are at a music festival."
@@ -79,10 +79,10 @@ CONSTRAINT: Every note listed in a `parent:` field below MUST also appear in thi
 ---
 title: {{Unit_Name}}_Hub
 type: Hub
-course: [[{{Course}}]]
-semester: [[{{Semester}}]]
+course: "[[{{Course}}]]"
+semester: "[[{{Semester}}]]"
 unit: {{Unit_Number}}
-source: [[{{Source_PDF}}]]
+source: "[[{{Source_PDF}}]]"
 source_pages: []
 status: Not Started
 confidence: null
@@ -111,11 +111,11 @@ EVERY note from the plan appears EXACTLY ONCE. No note is listed under the wrong
 ---
 title: {{Unit_Name}}_Possible_Questions
 type: Possible Questions
-course: [[{{Course}}]]
-semester: [[{{Semester}}]]
+course: "[[{{Course}}]]"
+semester: "[[{{Semester}}]]"
 unit: {{Unit_Number}}
-hub: [[{{Unit_Name}}_Hub]]
-source: [[{{Source_PDF}}]]
+hub: "[[{{Unit_Name}}_Hub]]"
+source: "[[{{Source_PDF}}]]"
 score: null
 ---
 # Part I: Concept Interrogation
@@ -142,12 +142,12 @@ score: null
 ---
 title: {{Concept_Name}}
 type: Atomic Note
-course: [[{{Course}}]]
-semester: [[{{Semester}}]]
+course: "[[{{Course}}]]"
+semester: "[[{{Semester}}]]"
 unit: {{Unit_Number}}
-hub: [[{{Hub_Link}}]]
-parent: [[{{Parent_Link}}]]
-source: [[{{Source_PDF}}]]
+hub: "[[{{Hub_Link}}]]"
+parent: "[[{{Parent_Link}}]]"
+source: "[[{{Source_PDF}}]]"
 source_pages: [{{Page1}}, {{Page2}}]
 mode: ENGINEER
 ---
@@ -174,12 +174,12 @@ mode: ENGINEER
 ---
 title: Weak_Entity_Type
 type: Atomic Note
-course: [[Database Systems]]
-semester: [[Autumn 2025]]
+course: "[[Database Systems]]"
+semester: "[[Autumn 2025]]"
 unit: 3
-hub: [[3_Relational_Model_And_Database_Design_Hub]]
-parent: [[Entity_Types]]
-source: [[Chapter_3.pdf]]
+hub: "[[3_Relational_Model_And_Database_Design_Hub]]"
+parent: "[[Entity_Types]]"
+source: "[[Chapter_3.pdf]]"
 source_pages: [20, 21]
 mode: ENGINEER
 ---

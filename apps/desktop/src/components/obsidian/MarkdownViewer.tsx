@@ -1,10 +1,43 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
 import { cn } from '@/lib/utils'
 import React, { useState, useEffect } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import ObsidianDatabaseView from '@/routes/obsidian-database-view'
 import { WikiLink, renderWikiLinks } from './WikiLink'
+import mermaid from 'mermaid'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'default',
+  securityLevel: 'loose',
+  fontFamily: 'Inter, sans-serif'
+});
+
+const MermaidWrapper = ({ chart }: { chart: string }) => {
+  const [svg, setSvg] = useState<string>('');
+  const [error, setError] = useState<boolean>(false);
+
+  useEffect(() => {
+    mermaid.render(`mermaid-${Math.random().toString(36).substring(7)}`, chart).then((result) => {
+      setSvg(result.svg);
+      setError(false);
+    }).catch((e) => {
+      console.error('Mermaid render error', e);
+      setError(true);
+    });
+  }, [chart]);
+
+  if (error) return <div className="text-red-500 font-mono text-[11px] p-4 bg-red-50 rounded bg-opacity-50">Error rendering Mermaid diagram</div>;
+  if (!svg) return <div className="text-gray-400 font-mono text-[11px] p-4 text-center">Rendering diagram...</div>;
+
+  return <div className="my-6 flex justify-center bg-gray-50 p-6 rounded-lg border border-gray-100" dangerouslySetInnerHTML={{ __html: svg }} />;
+}
 
 interface MarkdownViewerProps {
     content: string
@@ -50,7 +83,8 @@ export function MarkdownViewer({ content, onNavigate }: MarkdownViewerProps) {
     return (
         <div className="prose prose-sm prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0">
             <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
                 components={{
                     // Override text nodes to detect wikilinks
                     p: ({ children }) => {
@@ -104,15 +138,30 @@ export function MarkdownViewer({ content, onNavigate }: MarkdownViewerProps) {
                         }
                         return null;
                     },
-                    code: ({ inline, children, className }: any) => {
-                        if (inline) {
-                            return <code className="bg-gray-100 px-1.5 py-0.5 rounded text-[11px] font-mono text-gray-800">{children}</code>
+                    code: ({ node, inline, className, children, ...props }: any) => {
+                        const match = /language-(\w+)/.exec(className || '')
+                        const language = match ? match[1] : null
+
+                        if (language === 'mermaid') {
+                            return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />
                         }
-                        return (
-                            <pre className="bg-gray-50 p-4 rounded-lg overflow-x-auto my-6 border border-gray-100 custom-scrollbar">
-                                <code className="text-[12px] font-mono leading-relaxed">{children}</code>
-                            </pre>
-                        )
+
+                        if (!inline && match) {
+                            return (
+                                <SyntaxHighlighter
+                                    {...props}
+                                    style={vscDarkPlus}
+                                    language={language}
+                                    PreTag="div"
+                                    className="rounded-lg my-6 border border-gray-800 custom-scrollbar text-[12px]"
+                                >
+                                    {String(children).replace(/\n$/, '')}
+                                </SyntaxHighlighter>
+                            )
+                        }
+
+                        // Inline code block
+                        return <code className={cn("bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-[11px] font-mono text-gray-800 dark:text-gray-200", className)} {...props}>{children}</code>
                     },
                     table: ({ children }) => (
                         <div className="overflow-x-auto my-6 rounded-md border border-gray-100">
@@ -122,11 +171,78 @@ export function MarkdownViewer({ content, onNavigate }: MarkdownViewerProps) {
                     thead: ({ children }) => <thead className="bg-gray-50 border-b border-gray-100">{children}</thead>,
                     th: ({ children }) => <th className="px-4 py-2 font-black uppercase tracking-widest text-[10px] text-muted-foreground text-left">{children}</th>,
                     td: ({ children }) => <td className="px-4 py-2 border-b border-gray-200/10 opacity-80">{children}</td>,
-                    blockquote: ({ children }) => (
-                        <blockquote className="border-l-4 border-gray-200 pl-4 italic my-6 opacity-60 text-[13px] bg-gray-50 py-1">
-                            {children}
-                        </blockquote>
-                    ),
+                    blockquote: ({ children, node }: any) => {
+                        let isCallout = false;
+                        let calloutType = '';
+                        
+                        const firstPara = node?.children?.[0];
+                        if (firstPara && firstPara.type === 'element' && firstPara.tagName === 'p') {
+                            const firstTextNode = firstPara.children?.[0];
+                            if (firstTextNode && firstTextNode.type === 'text') {
+                                const match = firstTextNode.value.match(/^\[!(.*?)\]/);
+                                if (match) {
+                                    isCallout = true;
+                                    calloutType = match[1].toLowerCase();
+                                }
+                            }
+                        }
+
+                        if (isCallout) {
+                            let bgClass = "bg-gray-50";
+                            let borderClass = "border-gray-500";
+                            let textClass = "text-gray-900";
+                            let Icon = "📝";
+                            
+                            if (['note', 'info'].includes(calloutType)) { bgClass = "bg-blue-50"; borderClass = "border-blue-500"; textClass = "text-blue-900"; Icon = "ℹ️"; }
+                            else if (['warning', 'caution'].includes(calloutType)) { bgClass = "bg-orange-50"; borderClass = "border-orange-500"; textClass = "text-orange-900"; Icon = "⚠️"; }
+                            else if (['danger', 'error', 'bug'].includes(calloutType)) { bgClass = "bg-red-50"; borderClass = "border-red-500"; textClass = "text-red-900"; Icon = "🚨"; }
+                            else if (['success', 'check', 'done'].includes(calloutType)) { bgClass = "bg-green-50"; borderClass = "border-green-500"; textClass = "text-green-900"; Icon = "✅"; }
+                            else if (['question', 'help', 'faq'].includes(calloutType)) { bgClass = "bg-yellow-50"; borderClass = "border-yellow-500"; textClass = "text-yellow-900"; Icon = "❓"; }
+
+                            const processedChildren = React.Children.map(children, (child: any, index) => {
+                                if (index === 0 && child?.type === 'p') {
+                                    const pChildren = React.Children.toArray(child.props.children);
+                                    let title = calloutType.charAt(0).toUpperCase() + calloutType.slice(1);
+                                    
+                                    const newPChildren = pChildren.map((pChild: any, i) => {
+                                        if (i === 0 && typeof pChild === 'string') {
+                                            const match = pChild.match(/^\[!(.*?)\](.*)/);
+                                            if (match) {
+                                                if (match[2].trim()) title = match[2].trim();
+                                                return null;
+                                            }
+                                        }
+                                        return pChild;
+                                    });
+                                    
+                                    return (
+                                        <div className="flex flex-col gap-2">
+                                            <div className={`flex items-center gap-2 font-bold ${textClass}`}>
+                                                <span>{Icon}</span>
+                                                <span>{title}</span>
+                                            </div>
+                                            <div className="text-[13px] opacity-80 leading-relaxed font-normal">
+                                                {newPChildren}
+                                            </div>
+                                        </div>
+                                    )
+                                }
+                                return child;
+                            });
+
+                            return (
+                                <div className={`my-6 rounded-md border border-l-4 p-4 ${bgClass} ${borderClass} not-prose`}>
+                                    {processedChildren}
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <blockquote className="border-l-4 border-gray-200 pl-4 italic my-6 opacity-60 text-[13px] bg-gray-50 py-2">
+                                {children}
+                            </blockquote>
+                        );
+                    },
                     hr: () => <hr className="my-10 border-t border-gray-200/10" />,
                     a: ({ href, children }) => (
                         <a href={href} target="_blank" rel="noreferrer" className="text-[#111827] underline hover:text-gray-800 transition-colors font-medium">

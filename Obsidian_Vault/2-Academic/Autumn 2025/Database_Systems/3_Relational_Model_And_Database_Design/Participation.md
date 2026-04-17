@@ -9,49 +9,51 @@ parent: [[Structural_Constraints]]
 source: [[Chapter_3.Pdf]]
 source_pages:
 - 50
-- 52
+- 51
 mode: ENGINEER
 
 ---
 
 # Definition & Mechanics
-**Participation** determines whether all or only some entity occurrences participate in a relationship. It is a crucial aspect of **structural constraints** in ER modeling.
+**Participation** determines whether all or only some entity occurrences participate in a relationship. It is a crucial aspect of **structural constraints**.
 
 * **Total Participation**: every entity occurrence in the entity type must participate in the relationship.
 * **Partial Participation**: only some entity occurrences are required to participate in the relationship.
-* **Denoted by**: a line with a double circle (total) or a single circle (partial) at the entity type's end.
+* **Denoted as**: a line with a **double arrowhead** (total) or a **single arrowhead** (partial) in ER diagrams.
 
 # Worked Example
 Domain: Film Production
 
 Suppose we have an entity type `Actor` and a relationship `Acts_In` with entity type `Movie`. 
 
-| Actor ID | Name | Movie Title | Release Year |
-|----------|------|-------------|---------------|
-| 1        | John | Movie A     | 2020          |
-| 2        | Jane | Movie B     | 2021          |
-| 3        | Bob  | null        | null          |
+| Actor ID | Name | Acts In Movie ID |
+|----------|------|------------------|
+| 1        | John | 101              |
+| 2        | Jane | 102              |
+| 3        | Bob  |                  |
 
-To represent total participation of `Actor` in `Acts_In`, we ensure every actor acts in at least one movie.
+In this scenario, we want to model that all actors may act in movies, but it's not required for an actor to be in a movie (part-time actors). However, for a movie to be released, it must have at least one actor.
 
 ```mermaid
 erDiagram
     ACTOR ||--o{ ACTS_IN : acts_in
+    ACTOR {
+        int actor_id
+        string name
+    }
+    MOVIE {
+        int movie_id
+    }
 ```
 
-However, if an actor may or may not act in a movie, we show partial participation.
-
-```mermaid
-erDiagram
-    ACTOR }|..|{ ACTS_IN : acts_in
-```
+Here, the participation of `Actor` in `Acts_In` is **partial** because an actor may or may not act in a movie.
 
 # Edge Case
-> **Q:** A university has entity types `Student` and `Course`. A student may enroll in zero or more courses, but a course must have at least one student enrolled. What are the participation constraints?
+> **Q:** Consider a relationship `Teaches` between `Professor` and `Course`. A professor must teach at least one course, but a course can be taught by multiple professors or none at all (e.g., a course with no assigned professor). What is the participation of `Professor` and `Course` in `Teaches`?
 > **A:** 
-> - `Student` has **partial participation** in `Enrolls_In` because a student may or may not enroll in a course.
-> - `Course` has **total participation** in `Enrolls_In` because every course must have at least one student enrolled.
+> - **Professor** has **total participation** in `Teaches` because every professor must teach at least one course.
+> - **Course** has **partial participation** in `Teaches` because a course may or may not have a professor assigned.
 
 # Connections
-- **Depends on:** [[Structural_Constraints]] — Participation is a type of structural constraint.
+- **Depends on:** [[Structural_Constraints]] — Participation is a component of structural constraints.
 - **Enables:** [[Multiplicity]] — Understanding participation helps in defining the multiplicity of relationships.

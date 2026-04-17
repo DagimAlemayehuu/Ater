@@ -15,39 +15,40 @@ mode: ENGINEER
 ---
 
 # Definition & Mechanics
-An **entity type** represents a group of objects with shared properties that an enterprise identifies as having an independent existence. 
-* **Key characteristics:**
-  + **Entity occurrence**: a uniquely identifiable object of an entity type.
-  + **Represents real-world objects**: e.g., customers, products, or orders.
+An **entity type** represents a group of objects with the same properties, identified by an enterprise as having an independent existence. An **entity occurrence** is a uniquely identifiable object of an entity type.
+
+* **Key characteristics**: 
+  + **Represents a real-world object**: e.g., customer, order, product.
+  + **Has independent existence**: recognized by the enterprise as a distinct entity.
+  + **Can have multiple occurrences**: multiple customers, orders, etc.
 
 # Worked Example
 Domain: Film production
 
+Suppose a film production company wants to track information about **Movie** and **Actor**. 
+
 | Entity Type | Description | Example Occurrences |
 | --- | --- | --- |
 | Movie | Film with a unique title | The Shawshank Redemption, The Godfather |
-| Actor | Person acting in a movie | Tom Hanks, Meryl Streep |
-| Film_Script | Written script for a movie | Script for The Dark Knight, Script for Inception |
+| Actor | Person acting in a movie | Tom Hanks, Leonardo DiCaprio |
 
 ```mermaid
 erDiagram
-    MOVIE ||--o{ FILM_SCRIPT : "has script"
-    MOVIE ||--o{ ACTOR : "casts"
-    ACTOR {
-        string actor_name
-    }
     MOVIE {
-        string movie_title
+        string title
+        string genre
     }
-    FILM_SCRIPT {
-        string script_text
+    ACTOR {
+        string name
+        int age
     }
+    MOVIE ||--o{ ACTOR : "stars"
 ```
 
 # Edge Case
-> **Q:** A university models `Course` (course_id, name) and `Course_Enrollment` (course_id, student_id). Is `Course_Enrollment` an entity type or a relationship?
-> **A:** `Course_Enrollment` represents a relationship between `Course` and `Student` (not shown directly). It doesn't have independent existence without both; hence, it's a relationship. If it had attributes like enrollment_date, it could be argued as an entity but with a strong relationship to Course and Student.
+> **Q:** A university wants to model `Course` and `Student`. A course can have multiple students, and a student can enroll in multiple courses. Is `Course` an entity type?
+> **A:** Yes, `Course` is an entity type. It represents a real-world object (a course offered by the university) and has independent existence. Although it has a relationship with `Student`, this does not affect its status as an entity type.
 
 # Connections
 - **Depends on:** 
-- **Enables:** [[Relationship_Types]], [[Attributes]]
+- **Enables:** [[Relationship_Types]], [[Attributes]] — Understanding entity types is fundamental to defining relationships and attributes in the ER model.
