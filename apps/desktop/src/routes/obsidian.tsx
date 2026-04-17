@@ -4,7 +4,7 @@ import {
     Sparkles, Paperclip, FileText, Folder, ChevronRight, 
     Search, LayoutGrid, BrainCircuit, X, Zap, Activity, 
     PauseCircle, ListChecks, Archive, Terminal, Database,
-    ChevronDown, Info, PanelLeft, Layout, FolderOpen,
+    ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft, Layout, FolderOpen,
     Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Users, Settings, Network,
     Edit3, Save
 } from 'lucide-react'
@@ -20,6 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
 import { PdfViewer } from '@/components/obsidian/PdfViewer'
 import { renderWikiLinks } from '@/components/obsidian/WikiLink'
+import { useLayout } from '@/context/layout-provider'
 import React from 'react'
 
 interface InboxFile {
@@ -84,6 +85,121 @@ function NoteProperties({ metadata, onNavigate }: { metadata: Record<string, any
     )
 }
 
+// Parses hub markdown connections into a depth-aware tree for sidebar navigation
+type NavNode = { label: string; target: string | null; depth: number; children: NavNode[] }
+
+function parseHubTree(content: string): NavNode[] {
+    const lines = content.split('\n')
+    const wikilinkRe = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/
+    const listItemRe = /^(\s*)[\-\*]\s+(.*)/
+
+    const roots: NavNode[] = []
+    const stack: NavNode[] = []
+
+    for (const line of lines) {
+        const m = listItemRe.exec(line)
+        if (!m) continue
+        const indent = m[1].length
+        const text = m[2].trim()
+
+        const wm = wikilinkRe.exec(text)
+        const target = wm ? wm[1].trim() : null
+        const label = wm
+            ? (wm[2] || wm[1]).trim().split('/').pop() || wm[1]
+            : text.replace(/\*\*/g, '').trim()
+
+        const depth = Math.floor(indent / 2)
+        const node: NavNode = { label, target, depth, children: [] }
+
+        // Pop stack until parent depth < current depth
+        while (stack.length > 0 && stack[stack.length - 1].depth >= depth) {
+            stack.pop()
+        }
+
+        if (stack.length === 0) {
+            roots.push(node)
+        } else {
+            stack[stack.length - 1].children.push(node)
+        }
+        stack.push(node)
+    }
+    return roots
+}
+
+function HubConnectionsNav({ content, activePath, onNavigate }: { content: string, activePath: string | null, onNavigate: (name: string) => void }) {
+    const activeNoteName = activePath?.split('/').pop()?.replace('.md', '').replace('.pdf', '')?.toLowerCase() || ''
+    const tree = parseHubTree(content)
+
+    function isActive(node: NavNode): boolean {
+        if (!node.target) return false
+        const targetClean = node.target.split('/').pop()?.replace('.md', '')?.replace('.pdf', '')?.toLowerCase() || ''
+        return targetClean === activeNoteName || node.label.toLowerCase() === activeNoteName
+    }
+
+    function renderNode(node: NavNode, idx: number): React.ReactNode {
+        const active = isActive(node)
+        const hasChildren = node.children.length > 0
+        const indentLevel = node.depth
+        const isRoot = indentLevel === 0
+
+        return (
+            <div key={`${node.target ?? node.label}-${idx}`} className="group/nav-item">
+                <div 
+                    className={cn(
+                        "flex items-center transition-all duration-200 border-l py-1.5",
+                        active 
+                            ? "border-black bg-gray-50/80 -mr-3 pr-3" 
+                            : isRoot ? "border-transparent text-gray-400" : "border-transparent text-gray-400 group-hover/nav-item:border-gray-200"
+                    )}
+                    style={{ paddingLeft: (indentLevel * 12) + 8 }}
+                >
+                    {node.target ? (
+                        <button
+                            onClick={() => onNavigate(node.target!)}
+                            className={cn(
+                                "text-left leading-tight truncate transition-colors w-full",
+                                active 
+                                    ? "text-[11px] font-black text-black" 
+                                    : "text-[10px] font-bold group-hover/nav-item:text-gray-900"
+                            )}
+                            title={node.target}
+                        >
+                            {node.label}
+                            {active && <span className="ml-2 opacity-50 text-[8px]">📍</span>}
+                        </button>
+                    ) : (
+                        <span className={cn(
+                            "text-[9px] font-black uppercase tracking-widest leading-none px-1 py-0.5 rounded",
+                            isRoot ? "text-gray-900 bg-gray-100" : "text-gray-300"
+                        )}>
+                            {node.label}
+                        </span>
+                    )}
+                </div>
+                {hasChildren && (
+                    <div className="mt-0.5 mb-1.5">
+                        {node.children.map((child, cidx) => renderNode(child, cidx))}
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    if (tree.length === 0) {
+        return (
+            <div className="py-6 text-center text-[9px] font-bold uppercase tracking-widest text-gray-300">
+                No connections
+            </div>
+        )
+    }
+
+    return (
+        <div className="flex flex-col gap-0.5 mt-2">
+            {tree.map((node, idx) => renderNode(node, idx))}
+        </div>
+    )
+}
+
 export default function ObsidianVaultPage() {
     const { config, saveConfig } = useConfig()
     const location = useLocation()
@@ -105,6 +221,18 @@ export default function ObsidianVaultPage() {
     const [editedContent, setEditedContent] = useState('')
     const [history, setHistory] = useState<string[]>([])
     const [historyIndex, setHistoryIndex] = useState(-1)
+    
+    const { isFullscreen, setIsFullscreen } = useLayout()
+    const [showProperties, setShowProperties] = useState(false)
+
+    // --- PDF State & Ref ---
+    const pdfRef = useRef<any>(null)
+    const [pdfState, setPdfState] = useState({
+        page: 1,
+        pageCount: 1,
+        sidebarOpen: false,
+        isFullscreen: false
+    })
 
     const handleSaveNote = async () => {
         if (!selectedPath) return
@@ -138,6 +266,89 @@ export default function ObsidianVaultPage() {
     const [isCompleted, setIsCompleted] = useState(false)
     const [batchFeed, setBatchFeed] = useState<any[]>([])
     const [okaError, setOkaError] = useState<string | null>(null)
+    const [hubConnections, setHubConnections] = useState<string | null>(null)
+
+    useEffect(() => {
+        const fetchHubConnections = async () => {
+            const rawHub = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course || noteMetadata?.semester;
+            if (!rawHub) {
+                setHubConnections(null)
+                return
+            }
+            
+            try {
+                const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub];
+                const cleanHubName = String(hubItems[0] || '').replace(/\[\[/g, '').replace(/\]\]/g, '').trim();
+                
+                if (!cleanHubName) {
+                    setHubConnections(null);
+                    return;
+                }
+                
+                const res = await sidecarApi.findVaultPage(cleanHubName)
+                let topologies: string | null = null;
+                
+                const tryPath = async (p: string) => {
+                    try {
+                        const note = await sidecarApi.readObsidianNote(p)
+                        if (note.content) {
+                            const match = note.content.match(/(?:#+\s*Core Topologies.*?|#+\s*Connections)\s*\n([\s\S]*?)(?=\n#+\s|$)/i)
+                            if (match && match[1]) {
+                                return match[1].trim()
+                            }
+                        }
+                    } catch(e) {}
+                    return null;
+                }
+
+                if (res.found && res.path) {
+                    topologies = await tryPath(res.path)
+                }
+                
+                if (!topologies) {
+                    topologies = await tryPath(`3-Database/06 - Study Planner/${cleanHubName}.md`)
+                }
+                
+                if (!topologies) {
+                    topologies = await tryPath(`3-Database/06 - Study Planner/${cleanHubName}_Hub.md`)
+                }
+                
+                if (!topologies) {
+                    topologies = await tryPath(`3-Database/06 - Study Planner/3_Relational_Model_And_Database_Design_Hub.md`)
+                }
+                
+                const tryPathWithSuffix = async (p: string) => {
+                    if (res.found && res.path) return topologies;
+                    const res2 = await sidecarApi.findVaultPage(`${cleanHubName}_Hub`)
+                    if (res2.found && res2.path) {
+                        return await tryPath(res2.path)
+                    }
+                    return null;
+                }
+
+                if (!topologies) {
+                    topologies = await tryPathWithSuffix(cleanHubName)
+                }
+                
+                if (topologies) {
+                    const pageName = selectedPath?.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '';
+                    if (pageName) {
+                        // Bold and highlight the current active note
+                        const regex = new RegExp(`(\\[\\[${pageName}\\]\\])`, 'gi');
+                        topologies = topologies.replace(regex, `**$1** 📍`);
+                    }
+                    setHubConnections(topologies)
+                } else {
+                    setHubConnections(null)
+                }
+            } catch (err) {
+                console.error("Failed to fetch hub connections", err)
+                setHubConnections(null)
+            }
+        }
+        
+        fetchHubConnections()
+    }, [noteMetadata, selectedPath])
 
     // --- Sync & Polling ---
     useEffect(() => {
@@ -490,6 +701,7 @@ export default function ObsidianVaultPage() {
                 <main className="flex-1 flex flex-col min-w-0">
                     <div className="flex flex-1 overflow-hidden">
                         {/* ExplorerSidebar */}
+                        {!isFullscreen && (
                         <aside className="w-64 border-r border-[#E5E5E5] flex flex-col bg-white shrink-0">
                             {/* Explorer Toolbar */}
                             <div className="p-3 flex items-center justify-between">
@@ -534,16 +746,68 @@ export default function ObsidianVaultPage() {
                                 </div>
                             </div>
                         </aside>
+                        )}
 
                         {/* Editor Workspace */}
-                        <section className="flex-1 flex flex-col bg-white overflow-hidden relative">
+                        <section className="flex-1 flex bg-white overflow-hidden">
                             {showGraphView ? (
-                                <ObsidianGraphView onNodeClick={(path) => {
-                                    selectFile(path);
-                                    setShowGraphView(false);
-                                }} />
+                                <div className="flex-1">
+                                    <ObsidianGraphView onNodeClick={(path) => {
+                                        selectFile(path);
+                                        setShowGraphView(false);
+                                    }} />
+                                </div>
                             ) : (
-                                <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
+                                <>
+                                    {/* Sticky Connections Column */}
+                                    {selectedPath && !selectedPath.toLowerCase().endsWith('.pdf') && (
+                                        <aside className="w-52 shrink-0 border-r border-gray-100 flex flex-col bg-white overflow-hidden">
+                                            <div className="sticky top-0 flex flex-col h-full overflow-hidden">
+                                                {/* Header */}
+                                                <div className="px-4 pt-5 pb-3 flex items-center gap-2 border-b border-gray-100 shrink-0">
+                                                    <Network size={11} className="text-gray-400 shrink-0" />
+                                                    <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Connections</span>
+                                                </div>
+
+                                                {/* Hub name badge */}
+                                                {(() => {
+                                                    const hubName = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.HUB || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course
+                                                    if (!hubName) return null
+                                                    const clean = typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '').split('/').pop() : ''
+                                                    return (
+                                                        <div className="px-4 py-2 shrink-0">
+                                                            <button
+                                                                onClick={() => handleWikiLinkClick(typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '') : '')}
+                                                                className="w-full text-left text-[9px] font-bold uppercase tracking-wide text-gray-400 hover:text-black truncate transition-colors"
+                                                                title={clean || ''}
+                                                            >
+                                                                {clean}
+                                                            </button>
+                                                        </div>
+                                                    )
+                                                })()}
+
+                                                {/* Connection links */}
+                                                <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-6">
+                                                    {hubConnections ? (
+                                                        <HubConnectionsNav
+                                                            content={hubConnections}
+                                                            activePath={selectedPath}
+                                                            onNavigate={handleWikiLinkClick}
+                                                        />
+                                                    ) : (
+                                                        <div className="py-8 flex flex-col items-center gap-2 opacity-25">
+                                                            <Network size={18} strokeWidth={1.5} className="text-gray-400" />
+                                                            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400 text-center">No hub linked</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </aside>
+                                    )}
+
+                                    {/* Scrollable Content Column */}
+                                    <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
                                     {!selectedPath ? (
                                         <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-gray-300 gap-4 mt-32">
                                             <FileText size={64} strokeWidth={1} />
@@ -558,58 +822,99 @@ export default function ObsidianVaultPage() {
                                                 </div>
                                             ) : (
                                                 <>
-                                                    {/* Navigation & Breadcrumb Header */}
-                                                    <div className="flex flex-col gap-4 mb-10">
-                                                        {/* Breadcrumb Path */}
-                                                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest overflow-hidden text-ellipsis whitespace-nowrap">
-                                                            {selectedPath.split('/').map((part, idx, arr) => (
-                                                                <div key={idx} className="flex items-center gap-2 overflow-hidden shrink-0">
-                                                                    <span className={idx === arr.length - 1 ? "text-gray-600 truncate max-w-[200px]" : "truncate max-w-[150px]"}>
-                                                                        {part.replace('.md', '').replace('.pdf', '')}
-                                                                    </span>
-                                                                    {idx < arr.length - 1 && <ChevronRight className="w-3 h-3 shrink-0" />}
+                                                    {/* Top Bar: History & Actions */}
+                                                    <div className="flex items-start justify-between mb-8 opacity-100 transition-opacity gap-8">
+                                                        <div className="flex flex-col gap-4 flex-1">
+                                                            <div className="flex items-center gap-4">
+                                                                {/* History Controls */}
+                                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                                    <button 
+                                                                        onClick={handleBack}
+                                                                    disabled={historyIndex <= 0}
+                                                                    className={cn(
+                                                                        "flex items-center justify-center w-7 h-7 rounded-md border transition-all shadow-sm",
+                                                                        historyIndex > 0 
+                                                                            ? "bg-white border-gray-100 text-gray-400 hover:text-black hover:border-black" 
+                                                                            : "bg-gray-50 border-gray-50 text-gray-200 cursor-not-allowed"
+                                                                    )}
+                                                                    title="Go back"
+                                                                >
+                                                                    <ChevronLeft size={16} />
+                                                                </button>
+                                                                <button 
+                                                                    onClick={handleForward}
+                                                                    disabled={historyIndex >= history.length - 1}
+                                                                    className={cn(
+                                                                        "flex items-center justify-center w-7 h-7 rounded-md border transition-all shadow-sm",
+                                                                        historyIndex < history.length - 1 
+                                                                            ? "bg-white border-gray-100 text-gray-400 hover:text-black hover:border-black" 
+                                                                            : "bg-gray-50 border-gray-50 text-gray-200 cursor-not-allowed"
+                                                                    )}
+                                                                    title="Go forward"
+                                                                >
+                                                                    <ChevronRight size={16} />
+                                                                </button>
                                                                 </div>
-                                                            ))}
+
+                                                                {/* PDF Specific Controls */}
+                                                                {selectedPath.toLowerCase().endsWith('.pdf') && (
+                                                                    <div className="flex items-center gap-4 flex-1 justify-end">
+                                                                        {/* Navigation & Status Bundle */}
+                                                                        <div className="flex items-center gap-1.5 bg-gray-50 rounded-lg border border-gray-100 p-0.5 pr-2 shadow-sm">
+                                                                            <div className="flex items-center gap-0.5">
+                                                                                <button 
+                                                                                    onClick={() => pdfRef.current?.handlePrev()}
+                                                                                    className="p-1.5 hover:bg-white rounded-md transition-all text-gray-500 hover:text-black hover:shadow-sm"
+                                                                                    title="Previous Page"
+                                                                                >
+                                                                                    <ChevronLeft size={16} />
+                                                                                </button>
+                                                                                <button 
+                                                                                    onClick={() => pdfRef.current?.handleNext()}
+                                                                                    className="p-1.5 hover:bg-white rounded-md transition-all text-gray-500 hover:text-black hover:shadow-sm"
+                                                                                    title="Next Page"
+                                                                                >
+                                                                                    <ChevronRight size={16} />
+                                                                                </button>
+                                                                            </div>
+                                                                            <div className="w-px h-3 bg-gray-200 mx-0.5" />
+                                                                            <div className="flex items-center gap-1 min-w-[32px] justify-center">
+                                                                                <span className="text-[10px] font-black text-black tabular-nums">{pdfState.page}</span>
+                                                                                <span className="text-[9px] font-bold text-gray-300">/</span>
+                                                                                <span className="text-[10px] font-black text-gray-400 tabular-nums">{pdfState.pageCount}</span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Actions Bundle */}
+                                                                        <div className="flex items-center gap-1">
+                                                                            <button 
+                                                                                onClick={() => pdfRef.current?.toggleSidebar()}
+                                                                                className={cn(
+                                                                                    "flex items-center justify-center w-8 h-8 rounded-md border transition-all shadow-sm",
+                                                                                    pdfState.sidebarOpen 
+                                                                                        ? "bg-black border-black text-white" 
+                                                                                        : "bg-white border-gray-100 text-gray-400 hover:text-black hover:border-black"
+                                                                                )}
+                                                                                title="Toggle Assistant Sidebar"
+                                                                            >
+                                                                                <PanelLeft size={16} />
+                                                                            </button>
+                                                                            <button 
+                                                                                onClick={() => pdfRef.current?.toggleFullscreen()}
+                                                                                className="flex items-center justify-center w-8 h-8 bg-white border border-gray-100 text-gray-400 rounded-md hover:text-black hover:border-black transition-all shadow-sm"
+                                                                                title="Fullscreen"
+                                                                            >
+                                                                                <Maximize2 size={16} />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
 
-                                                        {/* History Controls */}
-                                                        <div className="flex items-center gap-3">
-                                                            <button 
-                                                                onClick={handleBack}
-                                                                disabled={historyIndex <= 0}
-                                                                className={cn(
-                                                                    "flex items-center justify-center w-8 h-8 rounded-md border transition-all shadow-sm",
-                                                                    historyIndex > 0 
-                                                                        ? "bg-white border-gray-100 text-gray-400 hover:text-black hover:border-black" 
-                                                                        : "bg-gray-50 border-gray-50 text-gray-200 cursor-not-allowed"
-                                                                )}
-                                                                title="Go back"
-                                                            >
-                                                                <ChevronLeft size={16} />
-                                                            </button>
-                                                            <button 
-                                                                onClick={handleForward}
-                                                                disabled={historyIndex >= history.length - 1}
-                                                                className={cn(
-                                                                    "flex items-center justify-center w-8 h-8 rounded-md border transition-all shadow-sm",
-                                                                    historyIndex < history.length - 1 
-                                                                        ? "bg-white border-gray-100 text-gray-400 hover:text-black hover:border-black" 
-                                                                        : "bg-gray-50 border-gray-50 text-gray-200 cursor-not-allowed"
-                                                                )}
-                                                                title="Go forward"
-                                                            >
-                                                                <ChevronRight size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Page Title & Actions */}
-                                                    <div className="flex items-start justify-between mb-12 group">
-                                                        <h1 className="text-5xl font-extrabold text-[#111827] tracking-tight leading-tight flex-1 min-w-0 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
-                                                            {selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '')}
-                                                        </h1>
+                                                        {/* Action Buttons for Markdown */}
                                                         {!selectedPath.toLowerCase().endsWith('.pdf') && (
-                                                            <div className="flex flex-col items-end gap-3 opacity-100 transition-opacity">
+                                                            <div className="flex flex-col items-end gap-3 opacity-100 transition-opacity shrink-0">
                                                                 {isEditing ? (
                                                                     <div className="flex items-center gap-2">
                                                                         <button 
@@ -634,49 +939,70 @@ export default function ObsidianVaultPage() {
                                                                         </button>
                                                                     </div>
                                                                 ) : (
-                                                                        <div className="flex flex-col items-end gap-2 shrink-0">
+                                                                        <div className="flex flex-row flex-wrap items-center justify-end gap-2 shrink-0">
+                                                                            <button 
+                                                                                onClick={() => setIsFullscreen(!isFullscreen)}
+                                                                                className="flex items-center justify-center w-7 h-7 bg-white border border-gray-100 text-gray-400 rounded-md hover:text-black hover:border-black transition-all shadow-sm"
+                                                                                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                                                                            >
+                                                                                {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />} 
+                                                                            </button>
+
+                                                                            <button 
+                                                                                onClick={() => setShowProperties(!showProperties)}
+                                                                                className="flex items-center justify-center w-7 h-7 bg-white border border-gray-100 text-gray-400 rounded-md hover:text-black hover:border-black transition-all shadow-sm"
+                                                                                title={showProperties ? "Hide Properties" : "View Properties"}
+                                                                            >
+                                                                                {showProperties ? <ChevronUp size={14} /> : <ChevronDown size={14} />} 
+                                                                            </button>
+
                                                                             <button 
                                                                                 onClick={() => setIsEditing(true)}
-                                                                                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 text-gray-400 rounded-md text-[10px] font-bold uppercase tracking-widest hover:text-black hover:border-black transition-all shadow-sm w-fit"
+                                                                                className="flex items-center justify-center w-7 h-7 bg-white border border-gray-100 text-gray-400 rounded-md hover:text-black hover:border-black transition-all shadow-sm"
+                                                                                title="Edit Note"
                                                                             >
-                                                                                <Edit3 size={12} /> Edit Note
+                                                                                <Edit3 size={14} />
                                                                             </button>
 
                                                                             <button 
                                                                                 onClick={(e) => handleDeleteItem(e as any, selectedPath!, false)}
-                                                                                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 text-gray-400 rounded-md text-[10px] font-bold uppercase tracking-widest hover:text-red-500 hover:border-red-500 transition-all shadow-sm w-fit"
+                                                                                className="flex items-center justify-center w-7 h-7 bg-white border border-gray-100 text-gray-400 rounded-md hover:text-red-500 hover:border-red-500 transition-all shadow-sm"
+                                                                                title="Delete Note"
                                                                             >
-                                                                                <Trash2 size={12} /> Delete Note
+                                                                                <Trash2 size={14} />
                                                                             </button>
                                                                             
                                                                             {(() => {
                                                                                 const metadata = noteMetadata || {};
-                                                                                const source = metadata.source || metadata.Source;
+                                                                                const rawSource = metadata.source || metadata.Source;
                                                                                 
-                                                                                // Support both source_page (scalar) and source_pages (list)
                                                                                 let pages: number[] = [];
-                                                                                if (Array.isArray(metadata.source_pages)) {
-                                                                                    pages = metadata.source_pages.map(Number);
-                                                                                } else if (metadata.source_page || metadata.Source_Page) {
-                                                                                    pages = [Number(metadata.source_page || metadata.Source_Page)];
-                                                                                } else if (typeof metadata.source_pages === 'string') {
-                                                                                    pages = metadata.source_pages.split(',').map(p => Number(p.trim())).filter(p => !isNaN(p));
+                                                                                const rawPages = metadata.source_pages || metadata.occurrence || metadata.Occurrence || metadata.source_page || metadata.Source_Page;
+                                                                                
+                                                                                if (Array.isArray(rawPages)) {
+                                                                                    pages = rawPages.map(Number).filter(p => !isNaN(p));
+                                                                                } else if (typeof rawPages === 'number') {
+                                                                                    pages = [rawPages];
+                                                                                } else if (typeof rawPages === 'string') {
+                                                                                    pages = rawPages.split(',').map(p => Number(p.trim())).filter(p => !isNaN(p));
                                                                                 }
                                                                                 
-                                                                                if (source) {
-                                                                                    const match = typeof source === 'string' ? source.match(/\[\[(.*?)\]\]/) : null;
-                                                                                    const cleanPath = match ? match[1] : (typeof source === 'string' ? source : null);
+                                                                                if (rawSource) {
+                                                                                    const sourceStr = Array.isArray(rawSource) ? String(rawSource[0]) : String(rawSource);
+                                                                                    const match = sourceStr.match(/\[\[(.*?)\]\]/);
+                                                                                    const cleanPath = match ? match[1] : sourceStr;
                                                                                     
                                                                                     if (cleanPath) {
                                                                                         return (
                                                                                             <div className="flex flex-col items-end gap-2">
                                                                                                 <button 
                                                                                                     onClick={() => handleWikiLinkClick(cleanPath, pages[0] || 1, pages)}
-                                                                                                    className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 text-gray-400 rounded-md text-[10px] font-bold uppercase tracking-widest hover:text-black hover:border-black transition-all shadow-sm group/btn w-fit"
-                                                                                                    title="Open Source PDF"
+                                                                                                    className="flex items-center justify-center h-7 px-3 bg-white border border-gray-100 text-gray-400 rounded-md hover:text-black hover:border-black transition-all shadow-sm group/btn"
                                                                                                 >
-                                                                                                    <FileText size={12} className="group-hover/btn:rotate-6 transition-transform text-indigo-500/50 group-hover/btn:text-indigo-500" /> 
-                                                                                                    Jump to PDF {pages.length === 1 && pages[0] > 1 ? `(P. ${pages[0]})` : ''}
+                                                                                                    <FileText size={14} className="group-hover/btn:rotate-6 transition-transform text-indigo-500/50 group-hover/btn:text-indigo-500 mr-1.5" /> 
+                                                                                                    <span className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
+                                                                                                        Jump to PDF {pages.length === 1 && pages[0] > 1 ? `(P. ${pages[0]})` : ''}
+                                                                                                    </span>
                                                                                                 </button>
                                                                                                 
                                                                                                 {pages.length > 1 && (
@@ -708,21 +1034,37 @@ export default function ObsidianVaultPage() {
                                                         )}
                                                     </div>
 
+                                                    {/* Page Title */}
+                                                    <div className="flex items-start justify-between mb-12 group">
+                                                        <h1 className="text-5xl font-extrabold text-[#111827] tracking-tight leading-tight flex-1">
+                                                            {selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '')}
+                                                        </h1>
+                                                    </div>
+
                                                     {selectedPath.toLowerCase().endsWith('.pdf') ? (
                                                         <div className="h-[calc(100vh-280px)] -mx-16 mb-20">
                                                             <PdfViewer 
+                                                                ref={pdfRef}
                                                                 path={selectedPath} 
                                                                 title={selectedPath.split('/').pop() || ''} 
                                                                 initialPage={selectedPage} 
                                                                 filterPages={selectedFilteredPages}
+                                                                onStateChange={(state) => setPdfState({
+                                                                    page: state.page,
+                                                                    pageCount: state.pageCount || 1,
+                                                                    sidebarOpen: state.sidebarOpen,
+                                                                    isFullscreen: state.isFullscreen
+                                                                })}
                                                             />
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <NoteProperties 
-                                                                metadata={noteMetadata} 
-                                                                onNavigate={handleWikiLinkClick} 
-                                                            />
+                                                            {showProperties && (
+                                                                <NoteProperties 
+                                                                    metadata={noteMetadata} 
+                                                                    onNavigate={handleWikiLinkClick} 
+                                                                />
+                                                            )}
 
                                                             {/* Markdown Content */}
                                                             <div className="mt-12">
@@ -741,7 +1083,7 @@ export default function ObsidianVaultPage() {
                                                                         autoFocus
                                                                     />
                                                                 ) : (
-                                                                    <MarkdownViewer content={noteContent} onNavigate={handleWikiLinkClick} />
+                                                                    <MarkdownViewer content={noteContent} onNavigate={handleWikiLinkClick} path={selectedPath || undefined} />
                                                                 )}
                                                             </div>
                                                         </>
@@ -751,6 +1093,7 @@ export default function ObsidianVaultPage() {
                                         </div>
                                     )}
                                 </div>
+                                </>
                             )}
                         </section>
 

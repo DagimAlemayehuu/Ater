@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { FileText, RefreshCw, Users, Settings } from 'lucide-react'
+import { FileText, RefreshCw, Users, Settings, GraduationCap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeSwitch } from '@/components/theme-switch'
 
@@ -28,6 +28,13 @@ export function AppSidebar() {
                 title="Agents"
             >
                 <Users className="w-6 h-6" />
+            </NavLink>
+            <NavLink 
+                to="/practice"
+                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-black" : "text-gray-400 hover:text-black")} 
+                title="Practice"
+            >
+                <GraduationCap className="w-6 h-6" />
             </NavLink>
         </div>
 

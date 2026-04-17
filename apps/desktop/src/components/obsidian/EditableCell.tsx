@@ -431,8 +431,16 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                             {cleanValue ? (
                                 <span className={cn(
                                     "px-2 py-0.5 rounded border text-[9px] font-bold tracking-tight truncate",
+                                    (onNavigate && typeStr !== 'status') && "cursor-pointer hover:opacity-80 transition-opacity",
                                     typeStr === 'status' ? getStatusColor(cleanValue) : getBadgeColor(cleanValue)
-                                )}>
+                                )}
+                                onClick={(e) => {
+                                    if (onNavigate && typeStr !== 'status') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        onNavigate(cleanValue);
+                                    }
+                                }}>
                                     {cleanValue}
                                 </span>
                             ) : (
@@ -537,7 +545,14 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                             list.map((item, i) => {
                                 const clean = String(item).replace(/^\[\[/, "").replace(/\]\]$/, "")
                                 return (
-                                    <span key={i} className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded border shadow-sm", getBadgeColor(clean))}>
+                                    <span key={i} className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded border shadow-sm", onNavigate && "cursor-pointer hover:opacity-80 transition-opacity", getBadgeColor(clean))}
+                                        onClick={(e) => {
+                                            if (onNavigate) {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onNavigate(clean);
+                                            }
+                                        }}>
                                         {clean}
                                     </span>
                                 );

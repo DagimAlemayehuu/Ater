@@ -14,6 +14,8 @@ import traceback
 import shutil
 import time
 import logging
+import re
+import json
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
@@ -35,6 +37,7 @@ from urllib.parse import unquote, quote
 import uvicorn
 from fastapi import FastAPI, Depends, Header, HTTPException, Body, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.notion.client import NotionClient
@@ -602,18 +605,153 @@ async def oka_list_inbox(
     
     return {"files": files}
 
+@app.get("/api/oka/hubs")
+async def oka_list_hubs(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Lists available study hubs."""
+    service = OkaService(secrets)
+    return {"hubs": service.list_planner_hubs()}
+
+@app.post("/api/practice/generate")
+async def generate_practice_session(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Generates a practice session (quiz) based on a Hub."""
+    if not secrets.ai_key or not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="AI Key and Vault Path are required")
+    
+    hub_id = payload.get("hub_id")
+    config = payload.get("config", {})
+    
+    if not hub_id:
+        raise HTTPException(status_code=400, detail="hub_id is required")
+        
+    service = OkaService(secrets)
+    try:
+        return await service.generate_practice(hub_id, config)
+    except Exception as e:
+        print(f"[Life OS Sidecar] Practice generation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/practice/list")
+async def list_practice_sessions(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Lists all stored practice sessions by scanning the vault directly."""
+    if not secrets.vault_path:
+        return {"practices": [], "_debug": {"error": "vault_path missing"}}
+    
+    service = OkaService(secrets)
+    try:
+        practices = service.list_practices()
+        return {"practices": practices}
+    except Exception as e:
+        print(f"[Life OS Sidecar] Error listing practices: {e}")
+        return {"practices": [], "error": str(e)}
+
+
+@app.post("/api/practice/get")
+async def get_practice_session(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Gets the raw JSON payload of a practice session by its path."""
+    path = payload.get("path")
+    if not path:
+        raise HTTPException(status_code=400, detail="path is required")
+        
+    p = Path(path)
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Practice not found")
+        
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            content = f.read()
+        import re, json
+        json_match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
+        if json_match:
+            questions = json.loads(json_match.group(1))
+            return {"questions": questions}
+        else:
+            raise HTTPException(status_code=500, detail="No valid JSON data found in practice file")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/practice/score")
+async def update_practice_score(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Updates the score of a completed practice."""
+    path = payload.get("path")
+    score = payload.get("score")
+    if not path or score is None:
+        raise HTTPException(status_code=400, detail="path and score are required")
+        
+    p = Path(path)
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Practice file not found")
+        
+    try:
+        import yaml as _yaml
+        content = p.read_text(encoding="utf-8")
+        yaml_match = re.search(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL | re.MULTILINE)
+        if yaml_match:
+            data = _yaml.safe_load(yaml_match.group(1)) or {}
+            data["score"] = f"{score}%"
+            data["completed"] = True
+            new_yaml = _yaml.dump(data, sort_keys=False)
+            # Find the end of the YAML block more reliably
+            # The regex matched the whole --- ... --- block including the final ---
+            new_content = f"---\n{new_yaml}---\n" + content[yaml_match.end():]
+            p.write_text(new_content, encoding="utf-8")
+            return {"status": "success"}
+        else:
+            raise HTTPException(status_code=500, detail="No frontmatter found in practice file")
+    except Exception as e:
+        print(f"[Practice Score] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/practice/delete")
+async def delete_practice_session(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Deletes a practice session file from the vault."""
+    path = payload.get("path")
+    if not path:
+        raise HTTPException(status_code=400, detail="path is required")
+        
+    p = Path(path)
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Practice file not found")
+        
+    try:
+        # Security check: ensure the path is within the vault
+        if not str(p).startswith(str(secrets.vault_path)):
+             raise HTTPException(status_code=403, detail="Cannot delete files outside the vault")
+             
+        p.unlink()
+        return {"status": "success"}
+    except Exception as e:
+        print(f"[Practice Delete] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/oka/explain")
 async def oka_explain_concept(
     payload: Dict[str, Any] = Body(...),
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
-    """Explains a specific concept from the PDF using AI."""
+    """Explains a specific concept from a PDF or Note using AI."""
     relative_path = payload.get("path", "")
     selection = payload.get("selection", "")
     page_num = payload.get("page", 1)
     user_question = payload.get("question", "")
+    is_pdf = relative_path.lower().endswith(".pdf")
     
-    logger.info(f"[AI Explain] Request for {relative_path} (Page {page_num})")
+    logger.info(f"[AI Explain] Request for {relative_path} (is_pdf={is_pdf})")
     
     if not secrets.ai_key:
         raise HTTPException(status_code=401, detail="AI API Key missing in Settings")
@@ -625,7 +763,7 @@ async def oka_explain_concept(
     full_path = Path(secrets.vault_path) / decoded_path
     
     if not full_path.exists():
-        # Try case-insensitive fallback for .pdf vs .PDF
+        # Case-insensitive fallback
         parent = full_path.parent
         if parent.exists():
             for f in parent.iterdir():
@@ -633,28 +771,26 @@ async def oka_explain_concept(
                     full_path = f
                     break
     
-    if not full_path.exists():
-        logger.error(f"[AI Explain] File not found: {full_path}")
-        raise HTTPException(status_code=404, detail=f"PDF file not found in vault: {decoded_path}")
+    if not full_path.exists() and relative_path:
+        raise HTTPException(status_code=404, detail=f"File not found in vault: {decoded_path}")
 
     try:
         from src.domains.ai.factory import ModelFactory
-        from langchain_community.document_loaders import PyPDFLoader
         from langchain_core.messages import HumanMessage
         
-        # 1. Load context from page
-        logger.info(f"[AI Explain] Loading PDF: {full_path.name}")
-        loader = PyPDFLoader(str(full_path))
-        pages = loader.load_and_split()
+        context_content = ""
+        if is_pdf and full_path.exists():
+            from langchain_community.document_loaders import PyPDFLoader
+            loader = PyPDFLoader(str(full_path))
+            pages = loader.load_and_split()
+            if page_num > len(pages):
+                context_content = pages[-1].page_content if pages else ""
+            else:
+                context_content = pages[page_num - 1].page_content
+        elif full_path.exists() and full_path.suffix == ".md":
+            context_content = full_path.read_text(encoding="utf-8")
         
-        if page_num > len(pages):
-            logger.warning(f"[AI Explain] Page {page_num} out of range (Total: {len(pages)})")
-            page_content = pages[-1].page_content if pages else ""
-        else:
-            page_content = pages[page_num - 1].page_content
-        
-        # 2. Build model
-        logger.info(f"[AI Explain] Invoking AI ({secrets.ai_provider}/{secrets.ai_model})")
+        # Build model
         llm = ModelFactory.get_model(
             provider=secrets.ai_provider or "google",
             model_name=secrets.ai_model or "gemini-1.5-pro",
@@ -662,30 +798,179 @@ async def oka_explain_concept(
             temperature=0.2
         )
         
-        # 3. Create Prompt
-        prompt = f"""
-        You are an expert Academic AI Assistant. 
-        Context Material (from Page {page_num}):
-        {page_content}
+        # Load SI
+        si_path = root_dir / ".system" / "prompts" / "pedagogical_assistant.md"
+        si_content = si_path.read_text(encoding="utf-8") if si_path.exists() else "You are a helpful academic assistant."
         
-        The user has selected this specific text to understand:
-        "{selection}"
+        # Build messages
+        user_prompt = f"""
+        # CONTEXT
+        Document: {relative_path}
+        Location: {"Page " + str(page_num) if is_pdf else "Line Selection"}
         
-        User's Question/Goal:
-        {user_question if user_question else "Please explain this selection in more detail based on the lecture material."}
+        # SOURCE MATERIAL Snippet
+        {context_content[:15000]}
         
-        Instructions:
-        - Be technical and precise.
-        - Relate the explanation back to the provided context.
-        - If the user's question is empty, focus on a deep breakdown of the selection.
-        - Use Markdown for formatting.
+        # USER REQUEST
+        Selection: "{selection}"
+        Goal: {user_question if user_question else "Explain this concept perfectly."}
         """
         
-        messages = [HumanMessage(content=prompt)]
+        messages = [
+            SystemMessage(content=si_content),
+            HumanMessage(content=user_prompt)
+        ]
         res = await llm.ainvoke(messages)
         return {"answer": res.content}
     except Exception as e:
         logger.error(f"[AI Explain] Error: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/oka/quick-questions")
+async def oka_quick_questions(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Generates 3 quick retrieval practice questions based on a selection."""
+    relative_path = payload.get("path", "")
+    selection = payload.get("selection", "")
+    page_num = payload.get("page", 1)
+    is_pdf = relative_path.lower().endswith(".pdf")
+    
+    if not selection:
+        raise HTTPException(status_code=400, detail="Selection is required")
+
+    try:
+        from src.domains.ai.factory import ModelFactory
+        from langchain_core.messages import HumanMessage
+        
+        # Build model
+        llm = ModelFactory.get_model(
+            provider=secrets.ai_provider or "google",
+            model_name=secrets.ai_model or "gemini-1.5-pro",
+            api_key=secrets.ai_key,
+            temperature=0.7 # Higher temperature for creative questions
+        )
+        
+        # Load SI
+        si_path = root_dir / ".system" / "prompts" / "pedagogical_assistant.md"
+        si_content = si_path.read_text(encoding="utf-8") if si_path.exists() else "You are a helpful academic assistant."
+        
+        # Refine SI for questions
+        si_content += "\n\nCRITICAL: For this request, you must output exactly 3 retrieval practice questions (L1, L2, L3) based on the selection. Do not provide answers."
+
+        user_prompt = f"Selection for Questions: \"{selection}\""
+        
+        messages = [
+            SystemMessage(content=si_content),
+            HumanMessage(content=user_prompt)
+        ]
+        res = await llm.ainvoke(messages)
+        return {"answer": res.content}
+    except Exception as e:
+        logger.error(f"[Quick Questions] Error: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/oka/chat")
+async def oka_chat(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Context-aware chat related to a selection."""
+    path = payload.get("path", "")
+    selection = payload.get("selection", "")
+    page_num = payload.get("page", 1)
+    messages_input = payload.get("messages", []) # List of {role, content}
+    
+    try:
+        # Resolve Context
+        is_pdf = path.lower().endswith('.pdf')
+        context_content = ""
+        relative_path = os.path.relpath(path, secrets.vault_path) if secrets.vault_path else path
+        
+        if is_pdf:
+            pdf_service = PdfService(secrets.vault_path)
+            context_content = pdf_service.get_page_text(path, page_num)
+        else:
+            abs_path = os.path.join(secrets.vault_path, path) if secrets.vault_path else path
+            if os.path.exists(abs_path):
+                with open(abs_path, 'r', encoding='utf-8') as f:
+                    context_content = f.read()
+
+        llm = ChatGoogleGenerativeAI(
+            model=secrets.ai_model,
+            google_api_key=secrets.ai_key,
+            temperature=0.4
+        )
+        
+        # Load SI
+        si_path = root_dir / ".system" / "prompts" / "pedagogical_assistant.md"
+        si_content = si_path.read_text(encoding="utf-8") if si_path.exists() else "You are a helpful academic assistant."
+        
+        # Build Chat Messages
+        chat_messages = [SystemMessage(content=si_content)]
+        
+        # Inject Context in the first user message if not already there or as a system reminder
+        context_reminder = f"""
+[SYSTEM CONTEXT]
+Document: {relative_path}
+Selection: "{selection}"
+Source Content: {context_content[:10000]}
+"""
+        chat_messages.append(SystemMessage(content=context_reminder))
+        
+        for msg in messages_input:
+            if msg['role'] == 'user':
+                chat_messages.append(HumanMessage(content=msg['content']))
+            elif msg['role'] == 'assistant':
+                chat_messages.append(AIMessage(content=msg['content']))
+        
+        res = await llm.ainvoke(chat_messages)
+        return {"answer": res.content}
+    except Exception as e:
+        logger.error(f"Error in oka_chat: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/oka/interactive-quiz")
+async def oka_interactive_quiz(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Generates a structured JSON quiz for the interactive sidebar."""
+    selection = payload.get("selection", "")
+    
+    try:
+        llm = ChatGoogleGenerativeAI(
+            model=secrets.ai_model,
+            google_api_key=secrets.ai_key,
+            temperature=0.7
+        )
+        
+        prompt = f"""
+        You are an academic examiner. Generate a structured JSON quiz based on the following selection.
+        
+        SELECTION: "{selection}"
+        
+        REQUIREMENTS:
+        1. Output exactly 3 questions.
+        2. Questions must be a mix of Multiple Choice and True/False.
+        3. Format MUST be a JSON array of objects with:
+           - "question": string
+           - "type": "multiple-choice" | "true-false"
+           - "options": string[] (empty for true-false)
+           - "answer": string (the exact correct option or "True"/"False")
+           - "explanation": string (why this is correct)
+        
+        Return ONLY valid JSON.
+        """
+        
+        res = await llm.ainvoke([HumanMessage(content=prompt)])
+        # Clean potential markdown block
+        clean_res = res.content.replace('```json', '').replace('```', '').strip()
+        quiz = json.loads(clean_res)
+        return {"questions": quiz}
+    except Exception as e:
+        logger.error(f"Error in interactive quiz: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.patch("/api/notion/pages/{page_id}")

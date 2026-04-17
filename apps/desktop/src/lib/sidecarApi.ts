@@ -389,6 +389,29 @@ export const sidecarApi = {
         request<{ status: string, progress: number, total: number, message: string }>('/api/notion/sync-mirror/status'),
 
     // ── Legacy / Specialists ────────────────────────────────
+    listHubs: () => request<{ hubs: any[] }>('/api/oka/hubs'),
+    generatePractice: (hubId: string, config: any) => 
+        request<{ session_id: string; questions: any[]; quiz_path: string }>('/api/practice/generate', {
+            method: 'POST',
+            body: JSON.stringify({ hub_id: hubId, config })
+        }),
+    listPractices: () => request<{ practices: any[] }>('/api/practice/list'),
+    getPractice: (path: string) => 
+        request<{ questions: any[] }>('/api/practice/get', {
+            method: 'POST',
+            body: JSON.stringify({ path })
+        }),
+    deletePractice: (path: string) => 
+        request<{ status: string }>('/api/practice/delete', {
+            method: 'POST',
+            body: JSON.stringify({ path })
+        }),
+    updatePracticeScore: (path: string, score: number) => 
+        request<{ status: string }>('/api/practice/score', {
+            method: 'POST',
+            body: JSON.stringify({ path, score })
+        }),
+
     academicsDashboard: () =>
         request<{ semesters: any[]; courses: any[]; units: any[]; exams: any[]; assignments: any[] }>('/api/academics/dashboard'),
 
@@ -398,8 +421,26 @@ export const sidecarApi = {
         }),
 
     // ── Scholar & AI ──────────────────────────────────────
-    explainPdfSelection: (payload: { path: string, selection: string, page: number }) =>
+    explainPdfSelection: (payload: { path: string, selection: string, page?: number }) =>
         request<{ answer: string; detail?: string }>('/api/oka/explain', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
+    generateQuickQuestions: (payload: { path: string, selection: string, page?: number }) =>
+        request<{ answer: string; detail?: string }>('/api/oka/quick-questions', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
+    okaChat: (payload: { path: string, selection: string, page?: number, messages: { role: string, content: string }[] }) =>
+        request<{ answer: string }>('/api/oka/chat', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
+    okaInteractiveQuiz: (payload: { selection: string }) =>
+        request<{ questions: any[] }>('/api/oka/interactive-quiz', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),

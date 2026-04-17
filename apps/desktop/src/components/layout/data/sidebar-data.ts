@@ -6,7 +6,8 @@ import {
   Target,
   ScrollText,
   UserCog,
-  BrainCircuit
+  BrainCircuit,
+  GraduationCap
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -46,6 +47,11 @@ export const sidebarData: SidebarData = {
           title: 'Agents',
           url: '/agents',
           icon: Users,
+        },
+        {
+          title: 'Practice',
+          url: '/practice',
+          icon: GraduationCap,
         },
       ],
     },

@@ -462,50 +462,61 @@ async def find_vault_page(page_name: str, secrets: AppSecrets = Depends(get_app_
             "path": str(direct_path.relative_to(vault_root))
         }
 
+    def find_case_insensitive(root: Path, pattern: str, recursive: bool = True):
+        # pattern is like "file.md"
+        # We want to match "FILE.md" or "file.MD"
+        # Use rglob if recursive, else glob
+        method = root.rglob if recursive else root.glob
+        # Use [*] to make it more case-insensitive in glob is tricky, easier to just list and filter
+        try:
+            for item in method("*"):
+                if item.is_file() and item.name.lower() == pattern.lower():
+                    return item
+        except: pass
+        return None
+
     # 1. Check for PDFs in common locations first (if it looks like a PDF)
     if page_name.lower().endswith('.pdf') or '.' not in page_name:
-        stem = page_name.replace('.pdf', '')
+        stem = page_name[:-4] if page_name.lower().endswith('.pdf') else page_name
+        target_pdf_name = f"{stem}.pdf"
         
         # Check in 5-Pdf Store first (high priority)
         pdf_store = vault_root / "5-Pdf Store"
         if pdf_store.exists():
-            # Check for exact name
-            exact_pdf = pdf_store / f"{stem}.pdf"
-            if exact_pdf.exists():
-                return {"found": True, "type": "note", "path": str(exact_pdf.relative_to(vault_root))}
-            
-            # Shallow glob (faster)
-            for p in pdf_store.glob(f"**/{stem}.pdf"):
-                return {"found": True, "type": "note", "path": str(p.relative_to(vault_root))}
+            # Try exact
+            found = find_case_insensitive(pdf_store, target_pdf_name)
+            if found:
+                return {"found": True, "type": "note", "path": str(found.relative_to(vault_root))}
 
     # 2. Search in 3-Database (prioritize database views)
     db_root = vault_root / DB_DIR_PREFIX
     if db_root.exists():
         for db_dir in db_root.iterdir():
             if db_dir.is_dir():
-                target_md = db_dir / f"{page_name}.md"
-                if target_md.exists():
-                    return {"found": True, "type": "database", "db_id": db_dir.name, "file_name": target_md.name}
-                
-                target_exact = db_dir / page_name
-                if target_exact.exists() and target_exact.is_file():
-                    return {"found": True, "type": "database", "db_id": db_dir.name, "file_name": target_exact.name}
+                target_md = f"{page_name}.md" if not page_name.endswith('.md') else page_name
+                # Check within this specific database dir
+                found = find_case_insensitive(db_dir, target_md, recursive=False)
+                if found:
+                    return {"found": True, "type": "database", "db_id": db_dir.name, "file_name": found.name}
 
     # 3. Search everywhere else (targeted extensions first)
     # Search for .md
-    md_name = f"{page_name}.md" if not page_name.endswith('.md') else page_name
-    for md_file in vault_root.rglob(md_name):
-        return {"found": True, "type": "note", "path": str(md_file.relative_to(vault_root))}
+    target_md = f"{page_name}.md" if not page_name.lower().endswith('.md') else page_name
+    found = find_case_insensitive(vault_root, target_md)
+    if found:
+        return {"found": True, "type": "note", "path": str(found.relative_to(vault_root))}
 
-    # Search for exactly as-is
-    for item in vault_root.rglob(page_name):
-        if item.is_file():
-            return {"found": True, "type": "note", "path": str(item.relative_to(vault_root))}
-            
-    # Finally check for .pdf if no extension was provided and not found yet
-    if "." not in page_name:
-        for pdf_file in vault_root.rglob(f"{page_name}.pdf"):
-            return {"found": True, "type": "note", "path": str(pdf_file.relative_to(vault_root))}
+    # Search for .pdf if not found yet
+    if not page_name.lower().endswith('.pdf'):
+        target_pdf = f"{page_name}.pdf"
+        found = find_case_insensitive(vault_root, target_pdf)
+        if found:
+            return {"found": True, "type": "note", "path": str(found.relative_to(vault_root))}
+
+    # Finally try exact name (whatever it is) case-insensitive
+    found = find_case_insensitive(vault_root, page_name)
+    if found:
+        return {"found": True, "type": "note", "path": str(found.relative_to(vault_root))}
                 
     return {"found": False}
 
@@ -808,40 +819,79 @@ async def get_pdf_viewer(
     <head>
         <meta charset="UTF-8">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css">
         <style>
             body, html {{ 
                 margin: 0; padding: 0; width: 100%; height: 100%; 
-                overflow: hidden; background: white; 
+                overflow: hidden; background: #f8f9fa; /* Sleek neutral background */
                 display: flex; align-items: center; justify-content: center;
-                font-family: -apple-system, system-ui, sans-serif;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             }}
             #viewer-container {{
                 position: relative;
                 background: white;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
                 display: none; /* Hidden until rendered */
+                margin: 20px;
             }}
             canvas {{ 
                 display: block; 
                 pointer-events: none; /* Let clicks pass through to text layer */
             }}
+            
+            /* Enhanced Text Layer Styles to prevent "naked text" artifacts and alignment drift */
             .textLayer {{
                 position: absolute;
-                left: 0; top: 0; right: 0; bottom: 0;
-                color: transparent; cursor: text;
-                overflow: hidden; opacity: 1.0; 
-                line-height: 1;
+                text-align: initial;
+                inset: 0;
+                overflow: hidden;
+                opacity: 1.0; 
+                line-height: 1.0 !important;
+                -webkit-text-size-adjust: none;
+                text-size-adjust: none;
+                forced-color-adjust: none;
+                transform-origin: 0% 0% !important;
+                z-index: 2;
+                mix-blend-mode: multiply; /* Helps selection highlights blend with text */
+                pointer-events: auto; /* Ensure wrapper doesn't intercept pointer events */
+            }}
+            
+            .textLayer span {{
+                color: transparent !important;
+                background: none !important;
+                position: absolute;
+                white-space: pre !important; /* CRITICAL: Forces spans to respect physical spaces, preventing selection gaps */
+                cursor: text;
+                transform-origin: 0% 0% !important;
                 pointer-events: auto;
+                -webkit-user-select: text;
+                user-select: text;
+                line-height: 1.0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }}
-            .textLayer > span {{
-                color: transparent; position: absolute;
-                white-space: pre; cursor: text; transform-origin: 0% 0%;
+            .textLayer br {{
+                position: absolute;
+                white-space: pre;
+                pointer-events: none;
             }}
-            ::selection {{ background: rgba(0, 122, 255, 0.2) !important; }}
+
+            /* Custom selection color to match Digital Architect aesthetic */
+            .textLayer ::selection {{
+                background: rgba(0, 120, 255, 0.3) !important; /* Standard highlight blue with opacity */
+                color: transparent !important;
+            }}
+            .textLayer span::selection {{
+                background: rgba(0, 120, 255, 0.3) !important;
+                color: transparent !important;
+            }}
+            
             #status {{
                 position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
                 font-size: 10px; font-weight: 800; text-transform: uppercase;
-                letter-spacing: 0.2em; color: #ccc;
+                letter-spacing: 0.2em; color: #999;
             }}
+            
             #filter-indicator {{
                 position: fixed; top: 12px; right: 12px;
                 background: rgba(0,0,0,0.85); color: white;
@@ -862,9 +912,9 @@ async def get_pdf_viewer(
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
             <span>Surgical View</span>
         </div>
-        <div id="viewer-container">
-            <canvas id="pdf-canvas"></canvas>
-            <div id="text-layer" class="textLayer"></div>
+        <div id="page-container" style="position: relative; margin: 0 auto; display: none;">
+            <canvas id="pdf-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
+            <div id="text-layer" class="textLayer" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;"></div>
         </div>
 
         <script>
@@ -894,33 +944,55 @@ async def get_pdf_viewer(
             async function renderPage(num) {{
                 try {{
                     const page = await pdfDoc.getPage(num);
-                    const baseViewport = page.getViewport({{ scale: 1.0 }});
+                    const baseViewportRef = page.getViewport({{ scale: 1.0 }});
                     
-                    const scaleX = window.innerWidth / baseViewport.width;
-                    const scaleY = window.innerHeight / baseViewport.height;
-                    const scale = Math.min(scaleX, scaleY);
+                    if (window.innerWidth === 0 || window.innerHeight === 0) return;
                     
-                    const viewport = page.getViewport({{ scale: scale * 2 }}); 
+                    const scaleX = window.innerWidth / baseViewportRef.width;
+                    const scaleY = window.innerHeight / baseViewportRef.height;
+                    const baseScale = Math.min(scaleX, scaleY);
+                    
+                    // High-DPI (Retina) support
+                    const retinaScale = window.devicePixelRatio || 1;
+                    
+                    // 1. Generate Base Viewport (Logical Pixels)
+                    const baseViewport = page.getViewport({{ scale: baseScale }});
 
+                    // 2. Lock the DOM Container to Logical Pixels
+                    const container = document.getElementById('page-container');
+                    container.style.width = `${{baseViewport.width}}px`;
+                    container.style.height = `${{baseViewport.height}}px`;
+
+                    // 3. Configure Canvas for Retina (Physical Pixels)
                     const canvas = document.getElementById('pdf-canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-                    canvas.style.width = (viewport.width / 2) + 'px';
-                    canvas.style.height = (viewport.height / 2) + 'px';
-                    
-                    container.style.width = canvas.style.width;
-                    container.style.height = canvas.style.height;
+                    const context = canvas.getContext('2d');
+                    // Attributes scale UP for retina sharpness
+                    canvas.width = baseViewport.width * retinaScale;
+                    canvas.height = baseViewport.height * retinaScale;
 
-                    await page.render({{ canvasContext: ctx, viewport: viewport }}).promise;
+                    // 4. Render Canvas Visuals (Using the Transform Matrix)
+                    // We use the baseViewport but scale the drawing matrix to match the retina canvas attributes
+                    const renderContext = {{
+                        canvasContext: context,
+                        viewport: baseViewport, 
+                        transform: [retinaScale, 0, 0, retinaScale, 0, 0] 
+                    }};
+                    
+                    await page.render(renderContext).promise;
 
                     const textLayer = document.getElementById('text-layer');
                     textLayer.innerHTML = '';
+                    
+                    // 5. Render Text Layer (Strictly using Base logical pixels)
+                    // Sync the text layer scale factor (critical for modern PDF.js)
+                    textLayer.style.setProperty('--scale-factor', baseScale);
+                    
                     const textContent = await page.getTextContent();
+                    
                     await pdfjsLib.renderTextLayer({{
-                        textContent,
+                        textContent: textContent,
                         container: textLayer,
-                        viewport: page.getViewport({{ scale: scale }}),
+                        viewport: baseViewport, // MUST use the baseViewport, NOT scaled
                         textDivs: []
                     }}).promise;
 
@@ -934,8 +1006,12 @@ async def get_pdf_viewer(
                 }}
             }}
 
+            let resizeTimeout;
             window.addEventListener('resize', () => {{
-                if (pdfDoc) renderPage(pageNum);
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {{
+                    if (pdfDoc) renderPage(pageNum);
+                }}, 150); // Debounce to allow layout transitions to settle
             }});
 
             pdfjsLib.getDocument(url).promise.then(pdf => {{
@@ -953,9 +1029,15 @@ async def get_pdf_viewer(
                 window.parent.postMessage({{ type: 'error', message: err.message }}, '*');
             }});
 
-            document.addEventListener('selectionchange', () => {{
+            document.addEventListener('mouseup', (e) => {{
                 const selection = window.getSelection().toString().trim();
-                window.parent.postMessage({{ type: 'selection', text: selection }}, '*');
+                // Send selection and mouse coordinates to parent for positioning
+                window.parent.postMessage({{ 
+                    type: 'selection', 
+                    text: selection,
+                    mouseX: e.clientX,
+                    mouseY: e.clientY
+                }}, '*');
             }});
 
             const handleNavigate = (direction) => {{

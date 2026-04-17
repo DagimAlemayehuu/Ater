@@ -23,6 +23,9 @@ type LayoutContextType = {
   defaultVariant: Variant
   variant: Variant
   setVariant: (variant: Variant) => void
+
+  isFullscreen: boolean
+  setIsFullscreen: (isFullscreen: boolean) => void
 }
 
 const LayoutContext = createContext<LayoutContextType | null>(null)
@@ -61,6 +64,8 @@ export function LayoutProvider({ children }: LayoutProviderProps) {
     setVariant(DEFAULT_VARIANT)
   }
 
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
   const contextValue: LayoutContextType = {
     resetLayout,
     defaultCollapsible: DEFAULT_COLLAPSIBLE,
@@ -69,6 +74,8 @@ export function LayoutProvider({ children }: LayoutProviderProps) {
     defaultVariant: DEFAULT_VARIANT,
     variant,
     setVariant,
+    isFullscreen,
+    setIsFullscreen,
   }
 
   return <LayoutContext value={contextValue}>{children}</LayoutContext>
