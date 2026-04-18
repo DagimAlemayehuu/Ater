@@ -95,7 +95,8 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                     print(f"Error reading .base file {base_file}: {e}")
 
             # 2. Augment/Deduce schema from .md files if base schema is incomplete
-            for md_file in entry.glob("*.md"):
+            for md_file in entry.rglob("*.md"):
+                if md_file.name.startswith("."): continue
                 try:
                     with open(md_file, "r", encoding="utf-8") as f:
                         content = f.read()
@@ -156,7 +157,8 @@ async def query_vault_database(db_name: str, secrets: AppSecrets = Depends(get_a
     yaml = ruamel.yaml.YAML(typ='safe', pure=True)
     rows = []
     
-    for md_file in db_path.glob("*.md"):
+    for md_file in db_path.rglob("*.md"):
+        if md_file.name.startswith("."): continue
         try:
             with open(md_file, "r", encoding="utf-8") as f:
                 content = f.read()
@@ -796,6 +798,7 @@ async def get_pdf_viewer(
     vault_path: Optional[str] = None,
     page: int = 1,
     filter_pages: Optional[str] = None,
+    theme: str = "light",
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Returns an HTML wrapper for the PDF that handles selection and scrolling locks using PDF.js."""
@@ -813,9 +816,18 @@ async def get_pdf_viewer(
         except:
             pass
 
+    # Theme-aware styles
+    bg_color = "#0a0a0a" if theme == "dark" else "#f8f9fa"
+    container_bg = "white" # Always white so it inverts correctly, or stays white in light mode
+    
+    # We apply the invert directly to the container in dark mode, NOT the body.
+    # This ensures the margins/body stay pure #0a0a0a and the PDF page becomes dark.
+    container_filter = "filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(1.1);" if theme == "dark" else ""
+    selection_bg = "rgba(0, 120, 255, 0.4)" 
+
     html_content = f"""
     <!DOCTYPE html>
-    <html>
+    <html class="{theme}">
     <head>
         <meta charset="UTF-8">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -823,23 +835,24 @@ async def get_pdf_viewer(
         <style>
             body, html {{ 
                 margin: 0; padding: 0; width: 100%; height: 100%; 
-                overflow: hidden; background: #f8f9fa; /* Sleek neutral background */
+                overflow: hidden; background: {bg_color}; 
                 display: flex; align-items: center; justify-content: center;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             }}
-            #viewer-container {{
+            #page-container {{
                 position: relative;
-                background: white;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                background: {container_bg};
+                box-shadow: none;
                 display: none; /* Hidden until rendered */
-                margin: 20px;
+                margin: 0;
+                {container_filter}
             }}
             canvas {{ 
                 display: block; 
                 pointer-events: none; /* Let clicks pass through to text layer */
             }}
             
-            /* Enhanced Text Layer Styles to prevent "naked text" artifacts and alignment drift */
+            /* Enhanced Text Layer Styles */
             .textLayer {{
                 position: absolute;
                 text-align: initial;
@@ -852,15 +865,15 @@ async def get_pdf_viewer(
                 forced-color-adjust: none;
                 transform-origin: 0% 0% !important;
                 z-index: 2;
-                mix-blend-mode: multiply; /* Helps selection highlights blend with text */
-                pointer-events: auto; /* Ensure wrapper doesn't intercept pointer events */
+                mix-blend-mode: multiply; /* Always multiply, the invert handles the dark mode */
+                pointer-events: auto;
             }}
             
             .textLayer span {{
                 color: transparent !important;
                 background: none !important;
                 position: absolute;
-                white-space: pre !important; /* CRITICAL: Forces spans to respect physical spaces, preventing selection gaps */
+                white-space: pre !important;
                 cursor: text;
                 transform-origin: 0% 0% !important;
                 pointer-events: auto;
@@ -870,19 +883,14 @@ async def get_pdf_viewer(
                 margin: 0 !important;
                 padding: 0 !important;
             }}
-            .textLayer br {{
-                position: absolute;
-                white-space: pre;
-                pointer-events: none;
-            }}
 
-            /* Custom selection color to match Digital Architect aesthetic */
+            /* Custom selection color */
             .textLayer ::selection {{
-                background: rgba(0, 120, 255, 0.3) !important; /* Standard highlight blue with opacity */
+                background: {selection_bg} !important;
                 color: transparent !important;
             }}
             .textLayer span::selection {{
-                background: rgba(0, 120, 255, 0.3) !important;
+                background: {selection_bg} !important;
                 color: transparent !important;
             }}
             

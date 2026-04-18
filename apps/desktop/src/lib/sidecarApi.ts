@@ -209,6 +209,21 @@ export const sidecarApi = {
     queryVaultDatabase: (dbName: string) =>
         request<{ results: any[] }>(`/api/vault/databases/${dbName}`),
     
+    listVaultDatabaseRows: (dbName: string) =>
+        request<{ results: any[] }>(`/api/vault/databases/${dbName}`),
+    
+    listVaultTemplates: async () => {
+        const res = await request<{ files: ObsidianFile[] }>('/api/obsidian/files');
+        // Filter for files in templates folder. Usually .obsidian/templates or similar.
+        // For LifeOS, we might have a specific templates folder. 
+        // Based on the vault structure, they might be in resources/templates or 1-Meta/Templates.
+        return { 
+            templates: res.files
+                .filter(f => !f.is_dir && (f.path.includes('Templates') || f.path.includes('templates')))
+                .map(f => ({ name: f.name.replace('.md', ''), path: f.path }))
+        };
+    },
+    
     updateVaultRow: (dbName: string, fileName: string, properties: any) =>
         request<{ success: boolean; id: string; properties: any }>(`/api/vault/databases/${dbName}/${fileName}`, {
             method: 'PATCH',

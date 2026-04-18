@@ -47,34 +47,34 @@ function CurriculumPill({
                     else if (options.length > 0) setIsMenuOpen(!isMenuOpen);
                 }}
                 className={cn(
-                    "px-2.5 py-1.5 rounded bg-white border border-gray-200 text-xs font-semibold uppercase tracking-tight flex items-center gap-2 transition-all hover:bg-gray-50 hover:border-gray-300",
+                    "px-2.5 py-1.5 rounded bg-background border border-border text-xs font-semibold uppercase tracking-tight flex items-center gap-2 transition-all hover:bg-muted hover:border-muted-foreground/30",
                     (isDropdown || options.length > 0) && "cursor-pointer"
                 )}
             >
-                <Icon size={14} className="text-gray-400 group-hover:text-gray-600 transition-colors" />
+                <Icon size={14} className="text-muted-foreground group-hover:text-foreground transition-colors" />
                 <div className="flex items-center gap-1.5">
-                    <span className="text-gray-500">{label}:</span>
+                    <span className="text-muted-foreground">{label}:</span>
                     {isEditable && options.length === 0 ? (
                         <input 
-                            className="bg-transparent border-none focus:outline-none text-[#111827] font-medium min-w-[20px] placeholder:text-gray-300 border-b border-transparent focus:border-gray-400 transition-all"
+                            className="bg-transparent border-none focus:outline-none text-foreground font-medium min-w-[20px] placeholder:text-muted-foreground/40 border-b border-transparent focus:border-border transition-all"
                             value={value}
                             onChange={(e) => onChange?.(e.target.value)}
                             placeholder="Set..."
                             onClick={(e) => e.stopPropagation()}
                         />
                     ) : (
-                        <span className="text-[#111827] font-medium">{value || 'None'}</span>
+                        <span className="text-foreground font-medium">{value || 'None'}</span>
                     )}
                 </div>
-                {(isDropdown || options.length > 0) && <ChevronDown size={14} className="text-gray-400 ml-1" />}
+                {(isDropdown || options.length > 0) && <ChevronDown size={14} className="text-muted-foreground ml-1" />}
             </div>
 
             {/* Selection Menu for Pills with Options */}
             {isMenuOpen && options.length > 0 && (
                 <>
                     <div className="fixed inset-0 z-[110]" onClick={() => setIsMenuOpen(false)} />
-                    <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 shadow-md rounded z-[120] p-1.5 animate-in fade-in slide-in-from-top-1">
-                        <div className="px-2 py-1 text-xs font-semibold uppercase text-gray-500 tracking-tight mb-1">{label} Options</div>
+                    <div className="absolute top-full left-0 mt-1 w-48 bg-popover border border-border shadow-md rounded z-[120] p-1.5 animate-in fade-in slide-in-from-top-1">
+                        <div className="px-2 py-1 text-xs font-semibold uppercase text-muted-foreground tracking-tight mb-1">{label} Options</div>
                         <div className="max-h-40 overflow-y-auto custom-scrollbar">
                             {options.map(opt => (
                                 <button 
@@ -84,8 +84,8 @@ function CurriculumPill({
                                         setIsMenuOpen(false);
                                     }}
                                     className={cn(
-                                        "w-full text-left px-2 py-1.5 rounded text-sm font-medium transition-all hover:bg-gray-50",
-                                        value === opt && "text-[#111827] bg-gray-100"
+                                        "w-full text-left px-2 py-1.5 rounded text-sm font-medium transition-all hover:bg-muted",
+                                        value === opt && "text-foreground bg-accent"
                                     )}
                                 >
                                     {opt}
@@ -106,12 +106,12 @@ function BatchTreeView({ batches, processedNotes }: { batches: any[], processedN
     return (
         <div className="space-y-3">
             {batches.map((batch: any) => (
-                <div key={batch.id} className="p-4 rounded border border-gray-100 bg-gray-50/50">
+                <div key={batch.id} className="p-4 rounded border border-border bg-muted/20">
                     <div className="flex items-center gap-2 mb-3">
-                        <div className="w-5 h-5 rounded bg-[#111827] text-[10px] font-bold text-white flex items-center justify-center">
+                        <div className="w-5 h-5 rounded bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
                             {batch.id}
                         </div>
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Batch {batch.id}</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Batch {batch.id}</h4>
                     </div>
                     <div className="space-y-1.5">
                         {batch.notes?.map((note: string, idx: number) => {
@@ -121,9 +121,9 @@ function BatchTreeView({ batches, processedNotes }: { batches: any[], processedN
                                     {isProcessed ? (
                                         <CheckCircle size={12} className="text-emerald-500" />
                                     ) : (
-                                        <FileText size={12} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+                                        <FileText size={12} className="text-muted-foreground group-hover:text-foreground transition-colors" />
                                     )}
-                                    <span className={`text-[11px] font-medium truncate ${isProcessed ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                                    <span className={`text-[11px] font-medium truncate ${isProcessed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                                         {note}
                                     </span>
                                 </div>
@@ -196,27 +196,27 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col gap-3">
                 {hubContent && (
-                    <div className="rounded border border-gray-200 bg-white p-5 hover:border-gray-300 transition-all group">
+                    <div className="rounded border border-border bg-background p-5 hover:border-muted-foreground/30 transition-all group">
                         <div className="flex items-center gap-3 mb-3">
-                            <div className="p-1.5 bg-gray-100 rounded text-[#111827]">
+                            <div className="p-1.5 bg-muted rounded text-foreground">
                                 <Brain size={16} />
                             </div>
-                            <h4 className="text-xs font-semibold uppercase tracking-tight text-gray-500">Master Unit Hub</h4>
+                            <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Master Unit Hub</h4>
                         </div>
-                        <div className="text-sm font-medium text-[#111827] underline decoration-gray-200 underline-offset-4 cursor-default">
+                        <div className="text-sm font-medium text-foreground underline decoration-muted-foreground/20 underline-offset-4 cursor-default">
                             {cleanLink(hubContent)}
                         </div>
                     </div>
                 )}
                 {pqContent && (
-                    <div className="rounded border border-gray-200 bg-white p-5 hover:border-gray-300 transition-all group">
+                    <div className="rounded border border-border bg-background p-5 hover:border-muted-foreground/30 transition-all group">
                         <div className="flex items-center gap-3 mb-3">
-                            <div className="p-1.5 bg-gray-100 rounded text-[#111827]">
+                            <div className="p-1.5 bg-muted rounded text-foreground">
                                 <ShieldCheck size={16} />
                             </div>
-                            <h4 className="text-xs font-semibold uppercase tracking-tight text-gray-500">Mastery Assessment</h4>
+                            <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Mastery Assessment</h4>
                         </div>
-                        <div className="text-sm font-medium text-[#111827] underline decoration-gray-200 underline-offset-4 cursor-default">
+                        <div className="text-sm font-medium text-foreground underline decoration-muted-foreground/20 underline-offset-4 cursor-default">
                             {cleanLink(pqContent)}
                         </div>
                     </div>
@@ -225,8 +225,8 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
 
             <div className="space-y-4">
                 <div className="flex items-center gap-2 px-1">
-                    <Layers size={16} className="text-gray-400" />
-                    <h4 className="text-xs font-semibold uppercase tracking-tight text-gray-500">Architectural Fragments</h4>
+                    <Layers size={16} className="text-muted-foreground" />
+                    <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Architectural Fragments</h4>
                 </div>
                 
                 <div className="flex flex-col gap-2">
@@ -235,41 +235,41 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
                             key={i} 
                             style={{ marginLeft: `${node.level * 24}px` }}
                             className={cn(
-                                "p-3 rounded border bg-white hover:border-gray-300 hover:bg-gray-50 transition-all relative overflow-hidden group min-w-0 w-full",
-                                node.level > 0 ? "border-dashed opacity-90 scale-[1] border-gray-200" : "border-solid border-gray-200 shadow-sm"
+                                "p-3 rounded border bg-background hover:border-muted-foreground/30 hover:bg-muted/50 transition-all relative overflow-hidden group min-w-0 w-full",
+                                node.level > 0 ? "border-dashed opacity-90 scale-[1] border-border" : "border-solid border-border shadow-sm"
                             )}
                         >
                             {node.level > 0 && (
-                                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gray-200 group-hover:bg-gray-400 transition-colors" />
+                                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-border group-hover:bg-muted-foreground/40 transition-colors" />
                             )}
                             <div className="flex items-start justify-between gap-4 min-w-0">
                                 <div className="flex items-start gap-3 min-w-0 flex-1">
                                     <div className={cn(
                                         "p-1.5 rounded shrink-0 mt-0.5",
-                                        node.level === 0 ? "bg-[#111827] text-white" : "bg-gray-100 text-gray-400"
+                                        node.level === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                                     )}>
                                         <FileText size={12} />
                                     </div>
                                     <div className="flex flex-col gap-1 min-w-0">
-                                        <div className="font-bold text-[13px] text-[#111827] truncate group-hover:text-black transition-colors">
+                                        <div className="font-bold text-[13px] text-foreground truncate group-hover:text-foreground transition-colors">
                                             {node.title}
                                             {node.mode && (
-                                                <span className="ml-2 text-[9px] font-black uppercase text-gray-400 tracking-widest border border-gray-100 px-1 rounded">
+                                                <span className="ml-2 text-[9px] font-black uppercase text-muted-foreground tracking-widest border border-border px-1 rounded">
                                                     {node.mode}
                                                 </span>
                                             )}
                                         </div>
                                         {node.description && (
-                                            <p className="text-[11px] text-gray-500 leading-relaxed max-w-lg">
+                                            <p className="text-[11px] text-muted-foreground leading-relaxed max-w-lg">
                                                 {node.description}
                                             </p>
                                         )}
                                         {node.pages.length > 0 && (
                                             <div className="flex items-center gap-1.5 mt-1.5">
-                                                <span className="text-[9px] font-bold uppercase text-gray-300 tracking-tighter">Relevant Pages:</span>
+                                                <span className="text-[9px] font-bold uppercase text-muted-foreground tracking-tighter">Relevant Pages:</span>
                                                 <div className="flex flex-wrap gap-1">
                                                     {node.pages.map(p => (
-                                                        <span key={p} className="text-[9px] font-bold px-1.5 py-0.5 bg-gray-50 text-gray-500 border border-gray-100 rounded hover:bg-white hover:border-gray-300 transition-all cursor-default">
+                                                        <span key={p} className="text-[9px] font-bold px-1.5 py-0.5 bg-muted text-muted-foreground border border-border rounded hover:bg-background hover:border-muted-foreground/30 transition-all cursor-default">
                                                             {p}
                                                         </span>
                                                     ))}
@@ -279,7 +279,7 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
                                     </div>
                                 </div>
                                 {node.parent && (
-                                    <div className="hidden sm:flex items-center gap-1 text-[9px] font-bold uppercase text-gray-300 shrink-0">
+                                    <div className="hidden sm:flex items-center gap-1 text-[9px] font-bold uppercase text-muted-foreground shrink-0">
                                         <ArrowLeft size={10} />
                                         <span className="truncate max-w-[80px]">{node.parent}</span>
                                     </div>
@@ -478,27 +478,27 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
     }
 
     return (
-        <div className="h-full flex flex-col font-sans bg-white text-[#111827] overflow-hidden p-12">
+        <div className="h-full flex flex-col font-sans bg-background text-foreground overflow-hidden p-12">
             <div className="flex items-center justify-between pb-8 shrink-0">
                 <div className="flex flex-col">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 uppercase tracking-tight mb-4">
-                        <button onClick={onBack} className="hover:text-gray-900 transition-colors">Intelligence</button>
-                        <span className="text-gray-300">/</span>
-                        <span className="text-gray-600">OKA Dashboard</span>
+                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-tight mb-4">
+                        <button onClick={onBack} className="hover:text-foreground transition-colors">Intelligence</button>
+                        <span className="text-muted-foreground/30">/</span>
+                        <span className="text-muted-foreground">OKA Dashboard</span>
                     </div>
-                    <h1 className="text-4xl font-extrabold tracking-tight text-[#111827]">Obsidian Knowledge Architect</h1>
+                    <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Obsidian Knowledge Architect</h1>
                 </div>
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded text-xs font-semibold uppercase tracking-tight text-gray-700 text-gray-500">
+                    <div className="flex items-center gap-2 bg-muted border border-border px-3 py-1.5 rounded text-xs font-semibold uppercase tracking-tight text-muted-foreground">
                         <span>Auto-Ingest</span>
                         <button 
                             onClick={toggleAutoDeploy}
-                            className={cn("relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none", config?.autoDeploy ? 'bg-[#111827]' : 'bg-gray-300')}
+                            className={cn("relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none", config?.autoDeploy ? 'bg-primary' : 'bg-muted-foreground/30')}
                         >
-                            <span className={cn("pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white  ring-0 transition duration-200 ease-in-out", config?.autoDeploy ? 'translate-x-4' : 'translate-x-0')} />
+                            <span className={cn("pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out", config?.autoDeploy ? 'translate-x-4' : 'translate-x-0')} />
                         </button>
                     </div>
-                    <button onClick={() => { fetchInbox(); fetchStatus(); }} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-gray-700 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors">
+                    <button onClick={() => { fetchInbox(); fetchStatus(); }} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-muted-foreground bg-background border border-border hover:bg-muted transition-colors">
                         <RefreshCw size={14} className="mr-2" /> Sync
                     </button>
                 </div>
@@ -506,45 +506,45 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
 
             <div className="flex-1 flex gap-6 overflow-hidden">
                 <div className="w-[320px] flex flex-col gap-6 shrink-0 overflow-hidden">
-                    <div className="rounded border border-gray-200 bg-white p-5 shrink-0">
-                        <h3 className="text-xs font-semibold uppercase tracking-tight text-gray-500 mb-4">Pipeline Status</h3>
+                    <div className="rounded border border-border bg-background p-5 shrink-0 shadow-sm">
+                        <h3 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground mb-4">Pipeline Status</h3>
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <div className={cn("w-2 h-2 rounded-full", queueStatus?.status !== 'idle' ? "bg-black animate-pulse" : "bg-gray-300")} />
+                                    <div className={cn("w-2 h-2 rounded-full", queueStatus?.status !== 'idle' ? "bg-primary animate-pulse" : "bg-muted-foreground/30")} />
                                     <span className="text-xs font-bold uppercase tracking-wider">{queueStatus?.status || 'Idle'}</span>
                                 </div>
-                                <span className="text-xs font-medium text-gray-500">{queueStatus?.pending_count || 0} Pending</span>
+                                <span className="text-xs font-medium text-muted-foreground">{queueStatus?.pending_count || 0} Pending</span>
                             </div>
                             
                             {queueStatus?.status !== 'idle' && (
-                                <div className="space-y-3 pt-2 border-t border-gray-100">
+                                <div className="space-y-3 pt-2 border-t border-border">
                                     <div className="flex flex-col gap-1">
-                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Current File</p>
-                                        <p className="text-[11px] font-semibold text-[#111827] truncate">{queueStatus?.current_file}</p>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">Current File</p>
+                                        <p className="text-[11px] font-semibold text-foreground truncate">{queueStatus?.current_file}</p>
                                     </div>
 
                                     <div className="space-y-1.5">
                                         <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-tighter">
-                                            <span className="text-gray-400">Progress</span>
-                                            <span className="text-gray-900">{queueStatus?.current_batch} / {queueStatus?.total_batches} Batches</span>
+                                            <span className="text-muted-foreground">Progress</span>
+                                            <span className="text-foreground">{queueStatus?.current_batch} / {queueStatus?.total_batches} Batches</span>
                                         </div>
-                                        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden border border-gray-50">
-                                            <div className="h-full bg-black transition-all duration-700 ease-in-out" style={{ width: `${(queueStatus?.current_batch / (queueStatus?.total_batches || 1)) * 100}%` }} />
+                                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden border border-border/50">
+                                            <div className="h-full bg-primary transition-all duration-700 ease-in-out" style={{ width: `${(queueStatus?.current_batch / (queueStatus?.total_batches || 1)) * 100}%` }} />
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col gap-1 p-2 bg-gray-50 rounded border border-gray-100">
-                                        <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Last Action</p>
-                                        <p className="text-[10px] font-medium text-gray-700 truncate">{queueStatus?.last_action || 'Initializing...'}</p>
+                                    <div className="flex flex-col gap-1 p-2 bg-muted rounded border border-border">
+                                        <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Last Action</p>
+                                        <p className="text-[10px] font-medium text-muted-foreground truncate">{queueStatus?.last_action || 'Initializing...'}</p>
                                     </div>
 
                                     {queueStatus?.processed_notes?.length > 0 && (
                                         <div className="space-y-1.5">
-                                            <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Recent Assets</p>
+                                            <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Recent Assets</p>
                                             <div className="flex flex-col gap-1">
                                                 {queueStatus?.processed_notes?.slice(-3).reverse().map((note: any, idx: number) => (
-                                                    <div key={idx} className="flex items-center gap-2 text-[10px] text-gray-500">
+                                                    <div key={idx} className="flex items-center gap-2 text-[10px] text-muted-foreground">
                                                         <div className="w-1 h-1 rounded-full bg-emerald-500 shrink-0" />
                                                         <span className="truncate font-medium">{note.title}</span>
                                                     </div>
@@ -557,21 +557,21 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
 
                             {queueStatus?.status === 'idle' && queueStatus?.pending_count === 0 && (
                                 <div className="py-4 text-center">
-                                    <p className="text-[10px] font-medium text-gray-400">All systems clear. Vault is synchronized.</p>
+                                    <p className="text-[10px] font-medium text-muted-foreground">All systems clear. Vault is synchronized.</p>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="flex-1 border border-gray-200 rounded bg-white overflow-hidden flex flex-col ">
-                        <div className="p-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
-                            <h3 className="text-xs font-semibold uppercase tracking-tight text-gray-500">Inbox</h3>
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gray-200 text-[#111827] rounded">{inboxFiles.length}</span>
+                    <div className="flex-1 border border-border rounded bg-background overflow-hidden flex flex-col shadow-sm">
+                        <div className="p-3 border-b border-border bg-muted/30 flex items-center justify-between">
+                            <h3 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Inbox</h3>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-muted text-foreground rounded">{inboxFiles.length}</span>
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
                             {loadingInbox ? (
                                 Array.from({ length: 5 }).map((_, i) => (
-                                    <div key={i} className="h-12 rounded-md bg-gray-100 animate-pulse" />
+                                    <div key={i} className="h-12 rounded-md bg-muted animate-pulse" />
                                 ))
                             ) : inboxFiles.length > 0 ? (
                                 inboxFiles.map(f => (
@@ -580,75 +580,75 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                         onClick={() => { setSelectedInboxFile(f); setOkaError(null); setActivePlan(null); setIsAwaitingConfirmation(false); setIsCurriculumReady(false); }}
                                         className={cn(
                                             "p-3 rounded-md border text-[11px] cursor-pointer transition-all", 
-                                            selectedInboxFile?.path === f.path ? "bg-[#111827] text-white border-[#111827] " : "bg-white hover:bg-gray-50 border-transparent text-gray-700"
+                                            selectedInboxFile?.path === f.path ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted border-transparent text-muted-foreground"
                                         )}
                                     >
                                         <p className="font-bold truncate">{f.name}</p>
-                                        <p className={cn("text-[9px] truncate mt-1", selectedInboxFile?.path === f.path ? "text-gray-300" : "text-gray-400")}>{f.path}</p>
+                                        <p className={cn("text-[9px] truncate mt-1", selectedInboxFile?.path === f.path ? "text-primary-foreground/70" : "text-muted-foreground/60")}>{f.path}</p>
                                     </div>
                                 ))
                             ) : (
-                                <div className="py-20 text-center text-gray-300">
+                                <div className="py-20 text-center text-muted-foreground/30">
                                     <Archive size={32} className="mx-auto mb-2" />
-                                    <p className="text-xs font-semibold uppercase tracking-tight text-gray-700">Empty Inbox</p>
+                                    <p className="text-xs font-semibold uppercase tracking-tight">Empty Inbox</p>
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
 
-                <div className="flex-1 flex flex-col rounded border border-gray-200 bg-white  overflow-hidden">
-                    <div className="p-4 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between shrink-0">
+                <div className="flex-1 flex flex-col rounded border border-border bg-background shadow-sm overflow-hidden">
+                    <div className="p-4 border-b border-border bg-muted/30 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-gray-200 rounded text-black">
+                            <div className="p-2 bg-muted rounded text-foreground">
                                 <Bot className="w-4 h-4" />
                             </div>
-                            <h3 className="text-sm font-bold truncate text-gray-900">
+                            <h3 className="text-sm font-bold truncate text-foreground">
                                 {selectedInboxFile?.name || 'Architect Workspace'}
                             </h3>
                         </div>
                         
                         <div className="flex items-center gap-2">
                             {selectedInboxFile && !isCurriculumReady && !isAwaitingConfirmation && !isAwaitingNextBatch && !isCompleted && (
-                                <button onClick={() => processSelectedFile()} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-gray-700 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                                <button onClick={() => processSelectedFile()} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-muted-foreground bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50">
                                     {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <Zap className="mr-2" size={12} />}
                                     Analyze File
                                 </button>
                             )}
                             {isCurriculumReady && !isAwaitingConfirmation && !isCompleted && (
-                                <button onClick={startPlanning} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-gray-700 text-white border border-[#111827] bg-[#111827] hover:bg-black transition-colors  disabled:opacity-50">
+                                <button onClick={startPlanning} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground border border-primary bg-primary hover:opacity-90 transition-colors  disabled:opacity-50">
                                     {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <ChevronRight className="mr-2" size={12} />}
                                     Continue to Plan
                                 </button>
                             )}
                             {isAwaitingConfirmation && (
-                                <button onClick={confirmDeployment} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-gray-700 text-white border border-[#111827] bg-[#111827] hover:bg-black transition-colors  disabled:opacity-50">
+                                <button onClick={confirmDeployment} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground border border-primary bg-primary hover:opacity-90 transition-colors  disabled:opacity-50">
                                     {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <ShieldCheck className="mr-2" size={12} />}
                                     Confirm Plan & Run Batch 1
                                 </button>
                             )}
                             {isAwaitingNextBatch && (
-                                <button onClick={confirmDeployment} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-white border border-[#111827] bg-[#111827] transition-colors disabled:opacity-50 hover:bg-black">
+                                <button onClick={confirmDeployment} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground bg-primary transition-colors disabled:opacity-50 hover:opacity-90">
                                     {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <Zap className="mr-2" size={12} />}
                                     Proceed Batch {currentBatch + 1} of {totalBatches}
                                 </button>
                             )}
                             {isCompleted && (
-                                <button onClick={resetOkaSession} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-gray-700 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors">
+                                <button onClick={resetOkaSession} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-muted-foreground bg-background border border-border hover:bg-muted transition-colors">
                                     Reset Workspace
                                 </button>
                             )}
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar bg-background/50">
                         <div className="p-8 max-w-4xl mx-auto">
                             {!selectedInboxFile && !processing && (
-                                <div className="py-32 flex flex-col items-center justify-center text-center text-gray-400">
+                                <div className="py-32 flex flex-col items-center justify-center text-center text-muted-foreground/30">
                                     <BrainCircuit size={64} strokeWidth={1} className="mb-6" />
-                                    <h4 className="text-lg font-bold mb-2 text-gray-700">Architect Standby</h4>
-                                    <p className="text-sm max-w-xs text-gray-500">Select a file from the inbox to begin autonomous knowledge architecture.</p>
-                                    <div className="mt-8 flex items-center gap-2 text-xs font-semibold uppercase tracking-tight text-gray-500 bg-gray-50 px-4 py-2 rounded border border-gray-200">
+                                    <h4 className="text-lg font-bold mb-2 text-muted-foreground">Architect Standby</h4>
+                                    <p className="text-sm max-w-xs text-muted-foreground/60">Select a file from the inbox to begin autonomous knowledge architecture.</p>
+                                    <div className="mt-8 flex items-center gap-2 text-xs font-semibold uppercase tracking-tight text-muted-foreground/60 bg-muted px-4 py-2 rounded border border-border">
                                         <Info size={12} />
                                         Deployment Base: {config?.academicFolderPath || '1-Academic'}
                                     </div>
@@ -657,21 +657,21 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
 
                             {processing && !batchFeed.length && !activePlan && (
                                 <div className="py-32 flex flex-col items-center justify-center text-center">
-                                    <RefreshCw size={48} className="animate-spin text-[#111827] mb-6" />
-                                    <h4 className="text-lg font-bold mb-4">Architecting Knowledge...</h4>
-                                    <p className="text-xs text-[#111827] font-mono bg-gray-100 px-4 py-2 rounded border border-gray-200">
+                                    <RefreshCw size={48} className="animate-spin text-primary mb-6" />
+                                    <h4 className="text-lg font-bold mb-4 text-foreground">Architecting Knowledge...</h4>
+                                    <p className="text-xs text-primary font-mono bg-muted px-4 py-2 rounded border border-border">
                                         {queueStatus?.manual_status?.[selectedInboxFile?.path] || 'The AI is analyzing the document structure...'}
                                     </p>
                                 </div>
                             )}
 
                             {processing && (activePlan || batchFeed.length > 0) && (
-                                <div className="mb-8 p-4 rounded bg-gray-100 border border-gray-300 flex items-center justify-between  animate-pulse">
+                                <div className="mb-8 p-4 rounded bg-muted border border-border flex items-center justify-between  animate-pulse">
                                     <div className="flex items-center gap-3">
-                                        <RefreshCw size={20} className="animate-spin text-[#111827]" />
-                                        <p className="text-xs font-bold uppercase tracking-widest text-[#111827]">System Working</p>
+                                        <RefreshCw size={20} className="animate-spin text-primary" />
+                                        <p className="text-xs font-bold uppercase tracking-widest text-primary">System Working</p>
                                     </div>
-                                    <p className="text-[10px] font-mono text-gray-700">
+                                    <p className="text-[10px] font-mono text-muted-foreground">
                                         {queueStatus?.manual_status?.[selectedInboxFile?.path] || 'Executing Batch...'}
                                     </p>
                                 </div>
@@ -679,12 +679,12 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
 
                             {isCurriculumReady && !activePlan && (
                                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                    <div className="mb-8 p-6 rounded bg-gray-50 border border-gray-200 space-y-6">
+                                    <div className="mb-8 p-6 rounded bg-muted/30 border border-border space-y-6">
                                         <div className="flex items-center gap-3">
-                                            <Sparkles size={24} className="text-[#111827] animate-pulse" />
+                                            <Sparkles size={24} className="text-primary animate-pulse" />
                                             <div>
-                                                <h4 className="text-sm font-semibold tracking-tight text-[#111827]">Curriculum Alignment</h4>
-                                                <p className="text-xs font-medium text-gray-500">OKA has detected a potential curriculum match. Review and edit the metadata below.</p>
+                                                <h4 className="text-sm font-semibold tracking-tight text-foreground">Curriculum Alignment</h4>
+                                                <p className="text-xs font-medium text-muted-foreground">OKA has detected a potential curriculum match. Review and edit the metadata below.</p>
                                             </div>
                                         </div>
 
@@ -697,30 +697,30 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                                     isEditable={false} 
                                                     isDropdown={true}
                                                 />
-                                                <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 shadow-xl rounded z-[100] p-1.5 hidden group-focus-within/popover:block group-hover/popover:block animate-in fade-in slide-in-from-top-1">
-                                                    <div className="px-2 py-1.5 text-[10px] font-semibold uppercase text-gray-500 tracking-tight border-b border-gray-100 mb-1 flex items-center justify-between">
+                                                <div className="absolute top-full left-0 mt-2 w-64 bg-popover border border-border shadow-xl rounded z-[100] p-1.5 hidden group-focus-within/popover:block group-hover/popover:block animate-in fade-in slide-in-from-top-1">
+                                                    <div className="px-2 py-1.5 text-[10px] font-semibold uppercase text-muted-foreground tracking-tight border-b border-border mb-1 flex items-center justify-between">
                                                         <span>Study Planner Hubs</span>
-                                                        <div className="size-1.5 rounded-full bg-black animate-pulse" />
+                                                        <div className="size-1.5 rounded-full bg-primary animate-pulse" />
                                                     </div>
                                                     <div className="max-h-48 overflow-y-auto custom-scrollbar">
                                                         <button 
                                                             onClick={() => handleHubSelect('new')}
-                                                            className="w-full flex items-center gap-2 p-2 hover:bg-gray-100 text-[#111827] rounded transition-all text-left"
+                                                            className="w-full flex items-center gap-2 p-2 hover:bg-muted text-foreground rounded transition-all text-left"
                                                         >
                                                             <Plus size={12} />
-                                                            <span className="text-xs font-semibold uppercase tracking-tight text-gray-700 tracking-tight">New Hub (Manual)...</span>
+                                                            <span className="text-xs font-semibold uppercase tracking-tight tracking-tight">New Hub (Manual)...</span>
                                                         </button>
                                                         {availableHubs.map(h => (
                                                             <button 
                                                                 key={h.id} 
                                                                 onClick={() => handleHubSelect(h)}
                                                                 className={cn(
-                                                                    "w-full flex flex-col p-2 hover:bg-gray-50 rounded transition-all text-left",
-                                                                    anchoredHub?.id === h.id && "bg-gray-100 border-l-2 border-[#111827]"
+                                                                    "w-full flex flex-col p-2 hover:bg-muted rounded transition-all text-left",
+                                                                    anchoredHub?.id === h.id && "bg-accent border-l-2 border-primary"
                                                                 )}
                                                             >
-                                                                <span className="text-[10px] font-bold truncate text-gray-900">{h.title}</span>
-                                                                <div className="flex items-center gap-2 text-gray-400 text-[8px] font-bold uppercase mt-1">
+                                                                <span className="text-[10px] font-bold truncate text-foreground">{h.title}</span>
+                                                                <div className="flex items-center gap-2 text-muted-foreground text-[8px] font-bold uppercase mt-1">
                                                                     <span>{h.course || 'No Course'}</span>
                                                                     <span>•</span>
                                                                     <span>Unit {h.unit || '?'}</span>
@@ -769,9 +769,9 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                             {/* Manual Flow View */}
                             {activePlan && (
                                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                    <div className="mb-8 p-4 rounded bg-gray-50 border border-gray-200 flex items-center gap-3">
-                                        <Sparkles size={20} className="text-[#111827]" />
-                                        <p className="text-xs font-medium text-gray-900">Plan generated. Review the integration strategy below and confirm deployment.</p>
+                                    <div className="mb-8 p-4 rounded bg-muted border border-border flex items-center gap-3">
+                                        <Sparkles size={20} className="text-primary" />
+                                        <p className="text-xs font-medium text-foreground">Plan generated. Review the integration strategy below and confirm deployment.</p>
                                     </div>
 
                                     {structuredPlan ? (
@@ -787,9 +787,9 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                             <PlanCardView planRaw={activePlan} />
                                         </div>
                                     ) : (
-                                        <div className="flex flex-col items-center justify-center py-12 text-gray-300">
+                                        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground/30">
                                             <Brain size={32} className="mb-4 animate-pulse" />
-                                            <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Compiling Architectural Plan...</p>
+                                            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Compiling Architectural Plan...</p>
                                         </div>
                                     )}
                                 </div>
@@ -798,8 +798,8 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                             {/* Autonomous Pipeline View - Tree Structure */}
                             {queueStatus && queueStatus.status !== 'idle' && (
                                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                    <div className="mb-8 p-4 rounded bg-[#111827] border border-[#111827] flex items-center justify-between">
-                                        <div className="flex items-center gap-3 text-white">
+                                    <div className="mb-8 p-4 rounded bg-primary border border-primary flex items-center justify-between shadow-lg shadow-primary/20">
+                                        <div className="flex items-center gap-3 text-primary-foreground">
                                             <Activity size={18} className="animate-pulse" />
                                             <div>
                                                 <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Autonomous Execution Active</p>
@@ -807,21 +807,21 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-[#94a3b8]">Progress</p>
-                                            <p className="text-xs font-bold text-white tracking-widest">{queueStatus?.current_batch} / {queueStatus?.total_batches}</p>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-primary-foreground/60">Progress</p>
+                                            <p className="text-xs font-bold text-primary-foreground tracking-widest">{queueStatus?.current_batch} / {queueStatus?.total_batches}</p>
                                         </div>
                                     </div>
 
                                     {/* Real-time Plan Preview (Same as Manual) */}
                                     {queueStatus.plan_raw && (
                                         <div className="mb-12">
-                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-6 px-1">Architectural Blueprint</h4>
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-6 px-1">Architectural Blueprint</h4>
                                             <PlanCardView planRaw={queueStatus.plan_raw} />
                                         </div>
                                     )}
                                     
                                     <div className="space-y-4">
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 px-1">Deployment Queue</h4>
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4 px-1">Deployment Queue</h4>
                                         <BatchTreeView 
                                             batches={queueStatus?.planned_batches || []} 
                                             processedNotes={queueStatus?.processed_notes || []} 
@@ -831,37 +831,37 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                             )}
 
                             {batchFeed.length > 0 && (
-                                <div className="space-y-6 mt-8 pt-8 border-t border-gray-200">
+                                <div className="space-y-6 mt-8 pt-8 border-t border-border">
                                     <div className="flex items-center justify-between mb-8">
-                                        <h4 className="text-sm font-bold uppercase tracking-widest text-gray-900">Deployment Progress</h4>
-                                        <span className="text-xs font-bold text-gray-500">{currentBatch} / {totalBatches} Batches</span>
+                                        <h4 className="text-sm font-bold uppercase tracking-widest text-foreground">Deployment Progress</h4>
+                                        <span className="text-xs font-bold text-muted-foreground">{currentBatch} / {totalBatches} Batches</span>
                                     </div>
                                     {batchFeed.map(b => (
-                                        <div key={b.batch} className="p-6 rounded border border-gray-200 bg-gray-50 animate-in fade-in duration-300">
+                                        <div key={b.batch} className="p-6 rounded border border-border bg-muted/20 animate-in fade-in duration-300">
                                              <div className="flex items-center gap-2 mb-4">
-                                                 <div className="w-5 h-5 rounded bg-[#111827] text-[10px] font-bold text-white flex items-center justify-center">
+                                                 <div className="w-5 h-5 rounded bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
                                                      {b.batch}
                                                  </div>
-                                                <span className={cn("text-xs font-semibold uppercase tracking-tight", b.results.length > 0 ? "text-[#111827]" : "text-red-500")}>
+                                                <span className={cn("text-xs font-semibold uppercase tracking-tight", b.results.length > 0 ? "text-foreground" : "text-destructive")}>
                                                     {b.results.length > 0 ? "Batch Execution Successful" : "Batch Parsing Failed"}
                                                 </span>
                                             </div>
                                             
                                             {b.results.length === 0 && (
-                                                <div className="mb-4 mt-2 p-3 rounded bg-red-50 border border-red-200">
-                                                    <p className="text-[11px] text-red-600 font-medium mb-3 whitespace-nowrap overflow-hidden text-ellipsis">No OKA v8.0 START_NOTE/END_NOTE regions detected. AI output failed structural validation. Review raw output below:</p>
-                                                    <pre className="text-[10px] bg-white border border-gray-200 p-2 rounded overflow-x-auto whitespace-pre-wrap max-h-40 font-mono text-gray-700">
+                                                <div className="mb-4 mt-2 p-3 rounded bg-destructive/10 border border-destructive/20">
+                                                    <p className="text-[11px] text-destructive font-medium mb-3 whitespace-nowrap overflow-hidden text-ellipsis">No OKA Regions detected. structural validation failed.</p>
+                                                    <pre className="text-[10px] bg-background border border-border p-2 rounded overflow-x-auto whitespace-pre-wrap max-h-40 font-mono text-muted-foreground">
                                                         {b.ai_output}
                                                     </pre>
                                                 </div>
                                             )}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 {b.results.map((r: any, i: number) => (
-                                                    <div key={i} className="p-3 border border-gray-200 rounded bg-white flex items-center gap-3 ">
-                                                        <div className="p-1.5 bg-gray-100 rounded text-gray-500">
+                                                    <div key={i} className="p-3 border border-border rounded bg-background flex items-center gap-3 shadow-sm">
+                                                        <div className="p-1.5 bg-muted rounded text-muted-foreground">
                                                             <FileText size={12} />
                                                         </div>
-                                                        <span className="text-[11px] font-medium truncate text-gray-900">{r.title}</span>
+                                                        <span className="text-[11px] font-medium truncate text-foreground">{r.title}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -869,12 +869,12 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                     ))}
                                     {isCompleted && (
                                         <div className="py-12 flex flex-col items-center justify-center text-center animate-in zoom-in duration-500">
-                                            <div className="w-16 h-16 rounded-full bg-gray-100 text-[#111827] flex items-center justify-center mb-6 border border-gray-200">
+                                            <div className="w-16 h-16 rounded-full bg-muted text-primary flex items-center justify-center mb-6 border border-border shadow-sm">
                                                 <ShieldCheck size={32} />
                                             </div>
-                                            <h4 className="text-xl font-bold mb-2 text-gray-900">Architecture Complete</h4>
-                                            <p className="text-sm text-gray-500 mb-8">All knowledge fragments have been successfully deployed to your vault.</p>
-                                            <button onClick={() => navigate('/obsidian')} className="flex items-center justify-center rounded px-4 py-2 text-[12px] font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors">
+                                            <h4 className="text-xl font-bold mb-2 text-foreground">Architecture Complete</h4>
+                                            <p className="text-sm text-muted-foreground mb-8">All knowledge fragments have been successfully deployed to your vault.</p>
+                                            <button onClick={() => navigate('/obsidian')} className="flex items-center justify-center rounded px-4 py-2 text-[12px] font-medium text-muted-foreground bg-background border border-border hover:bg-muted transition-colors">
                                                 Go to Vault
                                             </button>
                                         </div>
@@ -883,7 +883,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                             )}
 
                             {okaError && (
-                                <div className="p-4 rounded bg-red-50 border border-red-200 text-red-700 text-xs font-mono">
+                                <div className="p-4 rounded bg-destructive/10 border border-destructive/20 text-destructive text-xs font-mono">
                                     <div className="flex items-center gap-2 mb-2 font-bold uppercase tracking-tighter">
                                         <X size={14} />
                                         Error during architecture
@@ -910,8 +910,8 @@ export default function Agents() {
             id: 'oka',
             title: 'Obsidian Knowledge Architect',
             icon: Brain,
-            color: 'text-gray-900',
-            bg: 'bg-gray-100',
+            color: 'text-foreground',
+            bg: 'bg-muted',
             description: 'Autonomous ingestion engine. Automates the architectural mapping of documents into atomic knowledge clusters.',
             action: () => setActiveAgent('oka'),
             actionText: 'Architect'
@@ -921,31 +921,31 @@ export default function Agents() {
     if (activeAgent === 'oka') return <OkaDashboard onBack={() => setActiveAgent(null)} />
 
     return (
-        <div className="h-full flex flex-col p-16 space-y-10 animate-in fade-in duration-700 bg-white text-[#111827] overflow-y-auto custom-scrollbar">
+        <div className="h-full flex flex-col p-16 space-y-10 animate-in fade-in duration-700 bg-background text-foreground overflow-y-auto custom-scrollbar">
             <div className="flex flex-col space-y-2 mb-8 shrink-0">
-                <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 border-b border-gray-100 pb-4">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4 border-b border-border pb-4">
                     <span>System</span>
                     <span className="material-symbols-outlined text-[12px]"><ChevronRight size={12}/></span>
-                    <span className="text-gray-600">Intelligence</span>
+                    <span className="text-muted-foreground">Intelligence</span>
                 </div>
-                <h1 className="text-5xl font-extrabold tracking-tight text-[#111827] leading-tight mb-2">Automata</h1>
-                <p className="text-gray-600 text-[16px] leading-relaxed">Coordinate autonomous agents and high-fidelity synthesis protocols.</p>
+                <h1 className="text-5xl font-extrabold tracking-tight text-foreground leading-tight mb-2">Automata</h1>
+                <p className="text-muted-foreground text-[16px] leading-relaxed">Coordinate autonomous agents and high-fidelity synthesis protocols.</p>
             </div>
 
             <div className="flex-1 flex max-w-3xl mx-auto w-full pt-10">
                 {agents.map((agent) => (
-                    <div key={agent.id} className="p-8 flex flex-col gap-8 group hover:border-gray-400 transition-all duration-500 relative overflow-hidden  border border-gray-200 rounded bg-white w-full h-fit">
+                    <div key={agent.id} className="p-8 flex flex-col gap-8 group hover:border-muted-foreground/30 transition-all duration-500 relative overflow-hidden border border-border rounded bg-background shadow-sm w-full h-fit">
                         <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <agent.icon size={160} strokeWidth={1} className="text-black" />
+                            <agent.icon size={160} strokeWidth={1} className="text-foreground" />
                         </div>
                         
                         <div className="flex flex-col gap-6 relative z-10">
-                            <div className={cn("p-4 rounded w-fit border border-gray-200", agent.bg)}>
+                            <div className={cn("p-4 rounded w-fit border border-border shadow-inner", agent.bg)}>
                                 <agent.icon className={cn("w-8 h-8", agent.color)} />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-black tracking-tight text-gray-900">{agent.title}</h2>
-                                <p className="text-gray-500 text-[13px] leading-relaxed mt-3 font-medium">
+                                <h2 className="text-2xl font-black tracking-tight text-foreground">{agent.title}</h2>
+                                <p className="text-muted-foreground text-[13px] leading-relaxed mt-3 font-medium">
                                     {agent.description}
                                 </p>
                             </div>
@@ -954,7 +954,7 @@ export default function Agents() {
                         <button 
                             onClick={agent.action}
                             className={cn(
-                                "w-full h-12 flex items-center justify-center font-bold uppercase tracking-wider text-[11px] rounded relative z-10 transition-all bg-[#111827] text-white hover:bg-black",
+                                "w-full h-12 flex items-center justify-center font-bold uppercase tracking-wider text-[11px] rounded relative z-10 transition-all bg-primary text-primary-foreground hover:opacity-90 shadow-lg shadow-primary/10",
                             )}
                         >
                             <Zap size={14} className="mr-2" /> INITIALIZE {agent.actionText}

@@ -52,25 +52,25 @@ function NoteProperties({ metadata, onNavigate }: { metadata: Record<string, any
     
     return (
         <div className="flex flex-col gap-8 mb-12">
-            <div className="grid grid-cols-2 gap-y-6 gap-x-20 py-10 border-y border-gray-100" data-purpose="note-metadata">
+            <div className="grid grid-cols-2 gap-y-6 gap-x-20 py-10 border-y border-border" data-purpose="note-metadata">
                 {Object.entries(metadata).map(([key, value]) => (
                     <div key={key} className="flex items-center gap-4">
-                        <div className="w-5 flex justify-center text-gray-400">
+                        <div className="w-5 flex justify-center text-muted-foreground">
                             {getPropertyIcon(key)}
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{key.replace(/_/g, ' ')}</span>
-                            <span className="text-[14px] font-medium text-gray-800">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{key.replace(/_/g, ' ')}</span>
+                            <span className="text-[14px] font-medium text-foreground">
                                 {key.toLowerCase() === 'status' ? (
                                     <span className={cn(
                                         "px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest",
-                                        value === 'Completed' ? 'bg-black text-white' : 'bg-gray-100 text-gray-500'
+                                        value === 'Completed' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                                     )}>{String(value)}</span>
                                 ) : (
                                     String(value).startsWith('[[') ? (
                                         <button 
                                             onClick={() => onNavigate(String(value).slice(2, -2))}
-                                            className="text-black hover:underline underline-offset-4 decoration-gray-200"
+                                            className="text-foreground hover:underline underline-offset-4 decoration-border"
                                         >
                                             {String(value).slice(2, -2).split('/').pop()}
                                         </button>
@@ -148,8 +148,8 @@ function HubConnectionsNav({ content, activePath, onNavigate }: { content: strin
                     className={cn(
                         "flex items-center transition-all duration-200 border-l py-1.5",
                         active 
-                            ? "border-black bg-gray-50/80 -mr-3 pr-3" 
-                            : isRoot ? "border-transparent text-gray-400" : "border-transparent text-gray-400 group-hover/nav-item:border-gray-200"
+                            ? "border-primary bg-accent/50 -mr-3 pr-3" 
+                            : isRoot ? "border-transparent text-muted-foreground" : "border-transparent text-muted-foreground group-hover/nav-item:border-border"
                     )}
                     style={{ paddingLeft: (indentLevel * 12) + 8 }}
                 >
@@ -159,8 +159,8 @@ function HubConnectionsNav({ content, activePath, onNavigate }: { content: strin
                             className={cn(
                                 "text-left leading-tight truncate transition-colors w-full",
                                 active 
-                                    ? "text-[11px] font-black text-black" 
-                                    : "text-[10px] font-bold group-hover/nav-item:text-gray-900"
+                                    ? "text-[11px] font-black text-foreground" 
+                                    : "text-[10px] font-bold group-hover/nav-item:text-foreground"
                             )}
                             title={node.target}
                         >
@@ -170,7 +170,7 @@ function HubConnectionsNav({ content, activePath, onNavigate }: { content: strin
                     ) : (
                         <span className={cn(
                             "text-[9px] font-black uppercase tracking-widest leading-none px-1 py-0.5 rounded",
-                            isRoot ? "text-gray-900 bg-gray-100" : "text-gray-300"
+                            isRoot ? "text-foreground bg-muted" : "text-muted-foreground/50"
                         )}>
                             {node.label}
                         </span>
@@ -187,7 +187,7 @@ function HubConnectionsNav({ content, activePath, onNavigate }: { content: strin
 
     if (tree.length === 0) {
         return (
-            <div className="py-6 text-center text-[9px] font-bold uppercase tracking-widest text-gray-300">
+            <div className="py-6 text-center text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
                 No connections
             </div>
         )
@@ -657,28 +657,28 @@ export default function ObsidianVaultPage() {
                             onClick={() => node.isFolder ? toggleFolder(node.path) : selectFile(node.path)}
                             className={cn(
                                 "flex items-center gap-2 py-1.5 cursor-pointer transition-colors px-4 group",
-                                isSelected ? "bg-[#E5E7EB] text-black font-medium rounded-md mx-2 px-2" : "hover:bg-[#F3F4F6] text-gray-600"
+                                isSelected ? "bg-accent text-accent-foreground font-medium rounded-md mx-2 px-2" : "hover:bg-accent/50 text-muted-foreground"
                             )}
                         >
                             {node.isFolder ? (
-                                <ChevronRight className={cn("w-3.5 h-3.5 shrink-0 transition-transform", isExpanded ? "rotate-90 text-gray-400" : "text-gray-400")} />
+                                <ChevronRight className={cn("w-3.5 h-3.5 shrink-0 transition-transform", isExpanded ? "rotate-90 text-muted-foreground" : "text-muted-foreground")} />
                             ) : (
                                 <div className="w-3.5 h-3.5 shrink-0 text-transparent" />
                             )}
                             
                             {node.isFolder ? (
-                                <Folder className={cn("w-4 h-4 shrink-0", isSelected ? "text-black" : "text-gray-400")} />
+                                <Folder className={cn("w-4 h-4 shrink-0", isSelected ? "text-accent-foreground" : "text-muted-foreground")} />
                             ) : node.path.toLowerCase().endsWith('.pdf') ? (
-                                <FileText className={cn("w-4 h-4 shrink-0", isSelected ? "text-black" : "text-red-500/70")} />
+                                <FileText className={cn("w-4 h-4 shrink-0", isSelected ? "text-accent-foreground" : "text-red-500/70")} />
                             ) : (
-                                <FileText className={cn("w-4 h-4 shrink-0", isSelected ? "text-black" : "text-gray-400")} />
+                                <FileText className={cn("w-4 h-4 shrink-0", isSelected ? "text-accent-foreground" : "text-muted-foreground")} />
                             )}
                             
                             <span className="truncate text-[13px] flex-1">{node.name}</span>
 
                             <button
                                 onClick={(e) => handleDeleteItem(e, node.path, node.isFolder)}
-                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 hover:text-red-500 rounded transition-all"
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
                                 title={`Delete ${node.isFolder ? 'folder' : 'file'}`}
                             >
                                 <Trash2 size={12} strokeWidth={2.5} />
@@ -695,37 +695,37 @@ export default function ObsidianVaultPage() {
     }
 
     return (
-        <div className="flex flex-col h-full w-full select-none bg-white text-[#111827] overflow-hidden font-sans">
+        <div className="flex flex-col h-full w-full select-none bg-background text-foreground overflow-hidden font-sans">
             <div className="flex flex-1 overflow-hidden h-full">
                 {/* MainContentArea */}
                 <main className="flex-1 flex flex-col min-w-0">
                     <div className="flex flex-1 overflow-hidden">
                         {/* ExplorerSidebar */}
                         {!isFullscreen && (
-                        <aside className="w-64 border-r border-[#E5E5E5] flex flex-col bg-white shrink-0">
+                        <aside className="w-64 border-r border-border flex flex-col bg-background shrink-0">
                             {/* Explorer Toolbar */}
                             <div className="p-3 flex items-center justify-between">
                                 <div className="flex items-center gap-2 w-full">
-                                    <div className="text-gray-400 hover:text-black cursor-pointer flex items-center justify-center p-1 rounded hover:bg-gray-100 shrink-0" title="New file">
+                                    <div className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1 rounded hover:bg-accent shrink-0" title="New file">
                                         <Plus className="w-5 h-5" />
                                     </div>
                                     <div className="flex-1">
                                         <div className="relative flex items-center">
-                                            <Search className="absolute left-2 w-3.5 h-3.5 text-gray-400" />
+                                            <Search className="absolute left-2 w-3.5 h-3.5 text-muted-foreground" />
                                             <input
                                                 type="text"
                                                 placeholder="Search..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                                className="w-full bg-gray-50 border border-gray-200 text-[12px] px-2 py-1.5 pl-7 rounded focus:outline-none focus:ring-1 focus:ring-gray-300 placeholder:text-gray-400 transition-shadow"
+                                                className="w-full bg-muted border border-border text-[12px] px-2 py-1.5 pl-7 rounded focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground transition-shadow"
                                             />
                                         </div>
                                     </div>
-                                    <div className="text-gray-400 hover:text-black cursor-pointer flex items-center justify-center p-1 rounded hover:bg-gray-100 shrink-0" title="Collapse sidebar">
+                                    <div className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1 rounded hover:bg-accent shrink-0" title="Collapse sidebar">
                                         <ChevronLeft className="w-5 h-5" />
                                     </div>
                                     <div 
-                                        className={cn("cursor-pointer flex items-center justify-center p-1 rounded hover:bg-gray-100 shrink-0", showGraphView ? "text-black bg-gray-100" : "text-gray-400 hover:text-black")} 
+                                        className={cn("cursor-pointer flex items-center justify-center p-1 rounded hover:bg-accent shrink-0", showGraphView ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground")} 
                                         onClick={() => setShowGraphView(!showGraphView)} 
                                         title="Toggle Graph View"
                                     >
@@ -735,11 +735,11 @@ export default function ObsidianVaultPage() {
                             </div>
                             
                             {/* File Tree */}
-                            <div className="flex-1 overflow-y-auto min-h-0 text-[13px] text-gray-600 custom-scrollbar">
+                            <div className="flex-1 overflow-y-auto min-h-0 text-[13px] text-muted-foreground custom-scrollbar">
                                 <div className="py-2">
                                     {files.length > 0 ? renderTree(fileTree) : (
                                         <div className="py-10 text-center opacity-40">
-                                            <Database size={24} className="mx-auto mb-2 text-gray-400" />
+                                            <Database size={24} className="mx-auto mb-2 text-muted-foreground" />
                                             <p className="text-[10px] font-bold uppercase">Vault Empty</p>
                                         </div>
                                     )}
@@ -749,7 +749,7 @@ export default function ObsidianVaultPage() {
                         )}
 
                         {/* Editor Workspace */}
-                        <section className="flex-1 flex bg-white overflow-hidden">
+                        <section className="flex-1 flex bg-background overflow-hidden">
                             {showGraphView ? (
                                 <div className="flex-1">
                                     <ObsidianGraphView onNodeClick={(path) => {
@@ -761,12 +761,12 @@ export default function ObsidianVaultPage() {
                                 <>
                                     {/* Sticky Connections Column */}
                                     {selectedPath && !selectedPath.toLowerCase().endsWith('.pdf') && (
-                                        <aside className="w-52 shrink-0 border-r border-gray-100 flex flex-col bg-white overflow-hidden">
+                                        <aside className="w-52 shrink-0 border-r border-border flex flex-col bg-background overflow-hidden">
                                             <div className="sticky top-0 flex flex-col h-full overflow-hidden">
                                                 {/* Header */}
-                                                <div className="px-4 pt-5 pb-3 flex items-center gap-2 border-b border-gray-100 shrink-0">
-                                                    <Network size={11} className="text-gray-400 shrink-0" />
-                                                    <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Connections</span>
+                                                <div className="px-4 pt-5 pb-3 flex items-center gap-2 border-b border-border shrink-0">
+                                                    <Network size={11} className="text-muted-foreground shrink-0" />
+                                                    <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Connections</span>
                                                 </div>
 
                                                 {/* Hub name badge */}
@@ -778,7 +778,7 @@ export default function ObsidianVaultPage() {
                                                         <div className="px-4 py-2 shrink-0">
                                                             <button
                                                                 onClick={() => handleWikiLinkClick(typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '') : '')}
-                                                                className="w-full text-left text-[9px] font-bold uppercase tracking-wide text-gray-400 hover:text-black truncate transition-colors"
+                                                                className="w-full text-left text-[9px] font-bold uppercase tracking-wide text-muted-foreground hover:text-foreground truncate transition-colors"
                                                                 title={clean || ''}
                                                             >
                                                                 {clean}
@@ -797,8 +797,8 @@ export default function ObsidianVaultPage() {
                                                         />
                                                     ) : (
                                                         <div className="py-8 flex flex-col items-center gap-2 opacity-25">
-                                                            <Network size={18} strokeWidth={1.5} className="text-gray-400" />
-                                                            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400 text-center">No hub linked</span>
+                                                            <Network size={18} strokeWidth={1.5} className="text-muted-foreground" />
+                                                            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground text-center">No hub linked</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -809,16 +809,16 @@ export default function ObsidianVaultPage() {
                                     {/* Scrollable Content Column */}
                                     <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
                                     {!selectedPath ? (
-                                        <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-gray-300 gap-4 mt-32">
+                                        <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-muted-foreground/30 gap-4 mt-32">
                                             <FileText size={64} strokeWidth={1} />
-                                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Select an asset to visualize</p>
+                                            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">Select an asset to visualize</p>
                                         </div>
                                     ) : (
                                         <div className={cn("mx-auto py-12 px-16 w-full max-w-full overflow-hidden", selectedPath.toLowerCase().endsWith('.pdf') ? "max-w-none" : "max-w-5xl")}>
                                             {loadingNote ? (
-                                                <div className="h-64 flex flex-col items-center justify-center gap-4 text-gray-400">
+                                                <div className="h-64 flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                     <RefreshCw size={24} className="animate-spin" />
-                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Loading Document...</p>
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Loading Document...</p>
                                                 </div>
                                             ) : (
                                                 <>
@@ -834,8 +834,8 @@ export default function ObsidianVaultPage() {
                                                                     className={cn(
                                                                         "flex items-center justify-center w-7 h-7 rounded-md border transition-all shadow-sm",
                                                                         historyIndex > 0 
-                                                                            ? "bg-white border-gray-100 text-gray-400 hover:text-black hover:border-black" 
-                                                                            : "bg-gray-50 border-gray-50 text-gray-200 cursor-not-allowed"
+                                                                            ? "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary" 
+                                                                            : "bg-muted border-muted text-muted-foreground/30 cursor-not-allowed"
                                                                     )}
                                                                     title="Go back"
                                                                 >
@@ -847,8 +847,8 @@ export default function ObsidianVaultPage() {
                                                                     className={cn(
                                                                         "flex items-center justify-center w-7 h-7 rounded-md border transition-all shadow-sm",
                                                                         historyIndex < history.length - 1 
-                                                                            ? "bg-white border-gray-100 text-gray-400 hover:text-black hover:border-black" 
-                                                                            : "bg-gray-50 border-gray-50 text-gray-200 cursor-not-allowed"
+                                                                            ? "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary" 
+                                                                            : "bg-muted border-muted text-muted-foreground/30 cursor-not-allowed"
                                                                     )}
                                                                     title="Go forward"
                                                                 >
@@ -860,28 +860,28 @@ export default function ObsidianVaultPage() {
                                                                 {selectedPath.toLowerCase().endsWith('.pdf') && (
                                                                     <div className="flex items-center gap-4 flex-1 justify-end">
                                                                         {/* Navigation & Status Bundle */}
-                                                                        <div className="flex items-center gap-1.5 bg-gray-50 rounded-lg border border-gray-100 p-0.5 pr-2 shadow-sm">
+                                                                        <div className="flex items-center gap-1.5 bg-muted rounded-lg border border-border p-0.5 pr-2 shadow-sm">
                                                                             <div className="flex items-center gap-0.5">
                                                                                 <button 
                                                                                     onClick={() => pdfRef.current?.handlePrev()}
-                                                                                    className="p-1.5 hover:bg-white rounded-md transition-all text-gray-500 hover:text-black hover:shadow-sm"
+                                                                                    className="p-1.5 hover:bg-background rounded-md transition-all text-muted-foreground hover:text-foreground hover:shadow-sm"
                                                                                     title="Previous Page"
                                                                                 >
                                                                                     <ChevronLeft size={16} />
                                                                                 </button>
                                                                                 <button 
                                                                                     onClick={() => pdfRef.current?.handleNext()}
-                                                                                    className="p-1.5 hover:bg-white rounded-md transition-all text-gray-500 hover:text-black hover:shadow-sm"
+                                                                                    className="p-1.5 hover:bg-background rounded-md transition-all text-muted-foreground hover:text-foreground hover:shadow-sm"
                                                                                     title="Next Page"
                                                                                 >
                                                                                     <ChevronRight size={16} />
                                                                                 </button>
                                                                             </div>
-                                                                            <div className="w-px h-3 bg-gray-200 mx-0.5" />
+                                                                            <div className="w-px h-3 bg-border mx-0.5" />
                                                                             <div className="flex items-center gap-1 min-w-[32px] justify-center">
-                                                                                <span className="text-[10px] font-black text-black tabular-nums">{pdfState.page}</span>
-                                                                                <span className="text-[9px] font-bold text-gray-300">/</span>
-                                                                                <span className="text-[10px] font-black text-gray-400 tabular-nums">{pdfState.pageCount}</span>
+                                                                                <span className="text-[10px] font-black text-foreground tabular-nums">{pdfState.page}</span>
+                                                                                <span className="text-[9px] font-bold text-muted-foreground/40">/</span>
+                                                                                <span className="text-[10px] font-black text-muted-foreground tabular-nums">{pdfState.pageCount}</span>
                                                                             </div>
                                                                         </div>
 
@@ -892,19 +892,24 @@ export default function ObsidianVaultPage() {
                                                                                 className={cn(
                                                                                     "flex items-center justify-center w-8 h-8 rounded-md border transition-all shadow-sm",
                                                                                     pdfState.sidebarOpen 
-                                                                                        ? "bg-black border-black text-white" 
-                                                                                        : "bg-white border-gray-100 text-gray-400 hover:text-black hover:border-black"
+                                                                                        ? "bg-primary border-primary text-primary-foreground" 
+                                                                                        : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary"
                                                                                 )}
                                                                                 title="Toggle Assistant Sidebar"
                                                                             >
                                                                                 <PanelLeft size={16} />
                                                                             </button>
                                                                             <button 
-                                                                                onClick={() => pdfRef.current?.toggleFullscreen()}
-                                                                                className="flex items-center justify-center w-8 h-8 bg-white border border-gray-100 text-gray-400 rounded-md hover:text-black hover:border-black transition-all shadow-sm"
+                                                                                onClick={() => setIsFullscreen(!isFullscreen)}
+                                                                                className={cn(
+                                                                                    "flex items-center justify-center w-8 h-8 rounded-md border transition-all shadow-sm",
+                                                                                    isFullscreen 
+                                                                                        ? "bg-primary border-primary text-primary-foreground" 
+                                                                                        : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary"
+                                                                                )}
                                                                                 title="Fullscreen"
                                                                             >
-                                                                                <Maximize2 size={16} />
+                                                                                {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                                                                             </button>
                                                                         </div>
                                                                     </div>
@@ -919,7 +924,7 @@ export default function ObsidianVaultPage() {
                                                                     <div className="flex items-center gap-2">
                                                                         <button 
                                                                             onClick={handleSaveNote}
-                                                                            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-all shadow-sm"
+                                                                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-sm"
                                                                         >
                                                                             <Save size={14} /> Save
                                                                         </button>
@@ -933,7 +938,7 @@ export default function ObsidianVaultPage() {
                                                                                     setIsEditing(false)
                                                                                 }
                                                                             }}
-                                                                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-gray-200 transition-all shadow-sm"
+                                                                            className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-accent transition-all shadow-sm"
                                                                         >
                                                                             <X size={14} /> Cancel
                                                                         </button>
@@ -942,7 +947,7 @@ export default function ObsidianVaultPage() {
                                                                         <div className="flex flex-row flex-wrap items-center justify-end gap-2 shrink-0">
                                                                             <button 
                                                                                 onClick={() => setIsFullscreen(!isFullscreen)}
-                                                                                className="flex items-center justify-center w-7 h-7 bg-white border border-gray-100 text-gray-400 rounded-md hover:text-black hover:border-black transition-all shadow-sm"
+                                                                                className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm"
                                                                                 title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                                                                             >
                                                                                 {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />} 
@@ -950,7 +955,7 @@ export default function ObsidianVaultPage() {
 
                                                                             <button 
                                                                                 onClick={() => setShowProperties(!showProperties)}
-                                                                                className="flex items-center justify-center w-7 h-7 bg-white border border-gray-100 text-gray-400 rounded-md hover:text-black hover:border-black transition-all shadow-sm"
+                                                                                className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm"
                                                                                 title={showProperties ? "Hide Properties" : "View Properties"}
                                                                             >
                                                                                 {showProperties ? <ChevronUp size={14} /> : <ChevronDown size={14} />} 
@@ -958,7 +963,7 @@ export default function ObsidianVaultPage() {
 
                                                                             <button 
                                                                                 onClick={() => setIsEditing(true)}
-                                                                                className="flex items-center justify-center w-7 h-7 bg-white border border-gray-100 text-gray-400 rounded-md hover:text-black hover:border-black transition-all shadow-sm"
+                                                                                className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm"
                                                                                 title="Edit Note"
                                                                             >
                                                                                 <Edit3 size={14} />
@@ -966,7 +971,7 @@ export default function ObsidianVaultPage() {
 
                                                                             <button 
                                                                                 onClick={(e) => handleDeleteItem(e as any, selectedPath!, false)}
-                                                                                className="flex items-center justify-center w-7 h-7 bg-white border border-gray-100 text-gray-400 rounded-md hover:text-red-500 hover:border-red-500 transition-all shadow-sm"
+                                                                                className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-destructive hover:border-destructive transition-all shadow-sm"
                                                                                 title="Delete Note"
                                                                             >
                                                                                 <Trash2 size={14} />
@@ -997,7 +1002,7 @@ export default function ObsidianVaultPage() {
                                                                                             <div className="flex flex-col items-end gap-2">
                                                                                                 <button 
                                                                                                     onClick={() => handleWikiLinkClick(cleanPath, pages[0] || 1, pages)}
-                                                                                                    className="flex items-center justify-center h-7 px-3 bg-white border border-gray-100 text-gray-400 rounded-md hover:text-black hover:border-black transition-all shadow-sm group/btn"
+                                                                                                    className="flex items-center justify-center h-7 px-3 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm group/btn"
                                                                                                 >
                                                                                                     <FileText size={14} className="group-hover/btn:rotate-6 transition-transform text-indigo-500/50 group-hover/btn:text-indigo-500 mr-1.5" /> 
                                                                                                     <span className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
@@ -1007,18 +1012,18 @@ export default function ObsidianVaultPage() {
                                                                                                 
                                                                                                 {pages.length > 1 && (
                                                                                                     <div className="flex flex-wrap items-center justify-end gap-1.5 max-w-[200px]">
-                                                                                                        <span className="text-[9px] font-bold text-gray-300 uppercase tracking-tighter">Occurrences:</span>
+                                                                                                        <span className="text-[9px] font-bold text-muted-foreground/30 uppercase tracking-tighter">Occurrences:</span>
                                                                                                         {pages.slice(0, 5).map((p, idx) => (
                                                                                                             <button
                                                                                                                 key={idx}
                                                                                                                 onClick={() => handleWikiLinkClick(cleanPath, p, pages)}
-                                                                                                                className="px-1.5 py-0.5 bg-gray-50 border border-gray-100 text-gray-400 rounded hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 text-[9px] font-medium transition-colors"
+                                                                                                                className="px-1.5 py-0.5 bg-muted border border-border text-muted-foreground rounded hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-500/10 text-[9px] font-medium transition-colors"
                                                                                                             >
                                                                                                                 P.{p}
                                                                                                             </button>
                                                                                                         ))}
                                                                                                         {pages.length > 5 && (
-                                                                                                            <span className="text-[9px] text-gray-300 italic">+{pages.length - 5} more</span>
+                                                                                                            <span className="text-[9px] text-muted-foreground/30 italic">+{pages.length - 5} more</span>
                                                                                                         )}
                                                                                                     </div>
                                                                                                 )}
@@ -1036,7 +1041,7 @@ export default function ObsidianVaultPage() {
 
                                                     {/* Page Title */}
                                                     <div className="flex items-start justify-between mb-12 group">
-                                                        <h1 className="text-5xl font-extrabold text-[#111827] tracking-tight leading-tight flex-1">
+                                                        <h1 className="text-5xl font-extrabold text-foreground tracking-tight leading-tight flex-1">
                                                             {selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '')}
                                                         </h1>
                                                     </div>
@@ -1078,7 +1083,7 @@ export default function ObsidianVaultPage() {
                                                                                 handleSaveNote()
                                                                             }
                                                                         }}
-                                                                        className="w-full h-[600px] p-8 bg-gray-50 border border-gray-100 rounded-2xl font-mono text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-gray-300 transition-all"
+                                                                        className="w-full h-[600px] p-8 bg-muted border border-border rounded-2xl font-mono text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring transition-all"
                                                                         placeholder="Start writing..."
                                                                         autoFocus
                                                                     />
@@ -1099,41 +1104,41 @@ export default function ObsidianVaultPage() {
 
                         {/* Right: OKA Architect (Collapsible Panel) */}
                         {showArchitect && (
-                            <div className="w-[400px] border-l border-[#E5E5E5] bg-gray-50 flex flex-col shrink-0 overflow-hidden relative z-20 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                            <div className="w-[400px] border-l border-border bg-muted/30 flex flex-col shrink-0 overflow-hidden relative z-20 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
                                 {/* OKA Header */}
-                                <div className="p-4 border-b border-[#E5E5E5] bg-white flex items-center justify-between shrink-0">
+                                <div className="p-4 border-b border-border bg-background flex items-center justify-between shrink-0">
                                     <div className="flex items-center gap-2">
-                                        <BrainCircuit size={16} className="text-[#111827]" />
-                                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#111827]">Knowledge Architect</h3>
+                                        <BrainCircuit size={16} className="text-foreground" />
+                                        <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Knowledge Architect</h3>
                                     </div>
-                                    <div className="flex items-center gap-2 bg-gray-100 px-2 py-1 rounded border border-gray-200">
-                                        <span className="text-[8px] font-bold uppercase text-gray-500">Auto</span>
+                                    <div className="flex items-center gap-2 bg-muted px-2 py-1 rounded border border-border">
+                                        <span className="text-[8px] font-bold uppercase text-muted-foreground">Auto</span>
                                         <button 
                                             onClick={toggleAutoDeploy}
-                                            className={cn("relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out", config?.autoDeploy ? 'bg-[#111827]' : 'bg-gray-300')}
+                                            className={cn("relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out", config?.autoDeploy ? 'bg-primary' : 'bg-muted-foreground/30')}
                                         >
-                                            <span className={cn("pointer-events-none inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out", config?.autoDeploy ? 'translate-x-3.5' : 'translate-x-0')} />
+                                            <span className={cn("pointer-events-none inline-block h-2.5 w-2.5 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out", config?.autoDeploy ? 'translate-x-3.5' : 'translate-x-0')} />
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto bg-gray-50 min-h-0 custom-scrollbar">
+                                <div className="flex-1 overflow-y-auto bg-muted/10 min-h-0 custom-scrollbar">
                                     <div className="p-4 space-y-6">
                                         {/* Pipeline Status */}
-                                        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-3">Pipeline</h4>
+                                        <div className="rounded-lg border border-border bg-background p-4 shadow-sm">
+                                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Pipeline</h4>
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center gap-2">
-                                                    <div className={cn("w-1.5 h-1.5 rounded-full", queueStatus?.status !== 'idle' ? "bg-black animate-pulse" : "bg-gray-300")} />
-                                                    <span className="text-[10px] font-bold uppercase text-gray-900">{queueStatus?.status || 'Idle'}</span>
+                                                    <div className={cn("w-1.5 h-1.5 rounded-full", queueStatus?.status !== 'idle' ? "bg-primary animate-pulse" : "bg-muted-foreground/30")} />
+                                                    <span className="text-[10px] font-bold uppercase text-foreground">{queueStatus?.status || 'Idle'}</span>
                                                 </div>
-                                                <span className="text-[9px] font-medium text-gray-400">{queueStatus?.pending_count || 0} Pending</span>
+                                                <span className="text-[9px] font-medium text-muted-foreground">{queueStatus?.pending_count || 0} Pending</span>
                                             </div>
                                             {queueStatus?.status !== 'idle' && (
                                                 <div className="space-y-1.5">
-                                                    <p className="text-[9px] text-gray-500 truncate">{queueStatus?.current_file}</p>
-                                                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                                                        <div className="h-full bg-black transition-all duration-500" style={{ width: `${(queueStatus?.current_batch / (queueStatus?.total_batches || 1)) * 100}%` }} />
+                                                    <p className="text-[9px] text-muted-foreground truncate">{queueStatus?.current_file}</p>
+                                                    <div className="h-1 bg-muted rounded-full overflow-hidden">
+                                                        <div className="h-full bg-primary transition-all duration-500" style={{ width: `${(queueStatus?.current_batch / (queueStatus?.total_batches || 1)) * 100}%` }} />
                                                     </div>
                                                 </div>
                                             )}
@@ -1141,7 +1146,7 @@ export default function ObsidianVaultPage() {
 
                                         {/* Inbox Section */}
                                         <div className="space-y-3">
-                                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Inbox</h4>
+                                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Inbox</h4>
                                             <div className="grid gap-1.5">
                                                 {inboxFiles.length > 0 ? inboxFiles.map(f => (
                                                     <div 
@@ -1149,14 +1154,14 @@ export default function ObsidianVaultPage() {
                                                         onClick={() => { setSelectedInboxFile(f); setOkaError(null); setActivePlan(null); setIsAwaitingConfirmation(false); }}
                                                         className={cn(
                                                             "p-2.5 rounded-md border text-[10px] cursor-pointer transition-all", 
-                                                            selectedInboxFile?.path === f.path ? "bg-gray-100 border-gray-300" : "bg-white hover:bg-gray-50 border-gray-100"
+                                                            selectedInboxFile?.path === f.path ? "bg-accent border-border" : "bg-background hover:bg-accent/50 border-border"
                                                         )}
                                                     >
-                                                        <p className="font-bold text-gray-900 truncate">{f.name}</p>
-                                                        <p className="text-gray-400 truncate mt-0.5">{f.path}</p>
+                                                        <p className="font-bold text-foreground truncate">{f.name}</p>
+                                                        <p className="text-muted-foreground truncate mt-0.5">{f.path}</p>
                                                     </div>
                                                 )) : (
-                                                    <div className="py-8 text-center border border-dashed border-gray-200 rounded-lg text-gray-400">
+                                                    <div className="py-8 text-center border border-dashed border-border rounded-lg text-muted-foreground">
                                                         <Archive size={20} className="mx-auto mb-1 opacity-50" />
                                                         <p className="text-[9px] font-bold uppercase">Inbox Empty</p>
                                                     </div>
@@ -1166,35 +1171,35 @@ export default function ObsidianVaultPage() {
 
                                         {/* Workspace Area */}
                                         {selectedInboxFile && (
-                                            <div className="pt-4 border-t border-gray-200 space-y-4">
+                                            <div className="pt-4 border-t border-border space-y-4">
                                                 <div className="flex items-center justify-between">
-                                                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#111827]">Active Analysis</h4>
-                                                    <button onClick={resetOkaSession} className="text-[9px] font-bold text-gray-400 hover:text-[#111827] transition-colors">Reset</button>
+                                                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-foreground">Active Analysis</h4>
+                                                    <button onClick={resetOkaSession} className="text-[9px] font-bold text-muted-foreground hover:text-foreground transition-colors">Reset</button>
                                                 </div>
                                                 
                                                 {!activePlan && !processing && (
-                                                    <Button onClick={processSelectedFile} className="w-full h-8 text-[10px] font-bold uppercase bg-white border border-gray-200 text-[#111827] hover:bg-gray-50">
+                                                    <Button onClick={processSelectedFile} className="w-full h-8 text-[10px] font-bold uppercase bg-background border border-border text-foreground hover:bg-accent">
                                                         <Zap size={12} className="mr-2" /> Analyze Document
                                                     </Button>
                                                 )}
 
                                                 {processing && (
                                                     <div className="py-10 text-center space-y-3">
-                                                        <RefreshCw size={24} className="animate-spin mx-auto text-gray-400" />
-                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Architecting...</p>
+                                                        <RefreshCw size={24} className="animate-spin mx-auto text-muted-foreground" />
+                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Architecting...</p>
                                                     </div>
                                                 )}
 
                                                 {activePlan && (
                                                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                                                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 border border-gray-200">
-                                                            <Sparkles size={12} className="text-[#111827] animate-pulse" />
-                                                            <p className="text-[10px] font-bold text-[#111827] uppercase tracking-wider">Architectural Plan</p>
+                                                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent border border-border">
+                                                            <Sparkles size={12} className="text-foreground animate-pulse" />
+                                                            <p className="text-[10px] font-bold text-foreground uppercase tracking-wider">Architectural Plan</p>
                                                         </div>
                                                         
                                                         {/* Clean Text-based Plan Output */}
-                                                        <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm max-h-[400px] overflow-y-auto">
-                                                            <div className="prose prose-xs max-w-none prose-headings:font-bold prose-headings:text-[#111827] prose-p:text-gray-500 prose-strong:text-[#111827] prose-ul:text-gray-500">
+                                                        <div className="p-4 rounded-xl bg-background border border-border shadow-sm max-h-[400px] overflow-y-auto">
+                                                            <div className="prose prose-xs max-w-none prose-headings:font-bold prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-ul:text-muted-foreground">
                                                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                                                     {activePlan}
                                                                 </ReactMarkdown>
@@ -1202,7 +1207,7 @@ export default function ObsidianVaultPage() {
                                                         </div>
 
                                                         {isAwaitingConfirmation && (
-                                                            <Button onClick={() => confirmDeployment()} className="w-full h-10 text-[10px] font-bold uppercase bg-[#111827] text-white hover:bg-black shadow-lg shadow-black/10 tracking-widest">
+                                                            <Button onClick={() => confirmDeployment()} className="w-full h-10 text-[10px] font-bold uppercase bg-primary text-primary-foreground hover:opacity-90 shadow-lg shadow-black/10 tracking-widest">
                                                                 <ShieldCheck size={14} className="mr-2" /> Start Deployment
                                                             </Button>
                                                         )}
@@ -1210,29 +1215,29 @@ export default function ObsidianVaultPage() {
                                                 )}
 
                                                 {batchFeed.length > 0 && (
-                                                    <div className="space-y-3 pt-4 border-t border-gray-200">
+                                                    <div className="space-y-3 pt-4 border-t border-border">
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-[9px] font-bold uppercase text-gray-500">Deploy Progress</span>
-                                                            <span className="text-[9px] font-bold text-gray-500">{currentBatch} / {totalBatches} Batches</span>
+                                                            <span className="text-[9px] font-bold uppercase text-muted-foreground">Deploy Progress</span>
+                                                            <span className="text-[9px] font-bold text-muted-foreground">{currentBatch} / {totalBatches} Batches</span>
                                                         </div>
                                                         <div className="space-y-3">
                                                             {batchFeed.map(b => (
                                                                 <div key={b.batch} className="space-y-1.5">
                                                                     <div className="flex items-center gap-2 py-1">
-                                                                        <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
-                                                                            <span className="text-[8px] font-bold text-[#111827]">{b.batch}</span>
+                                                                        <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center border border-border">
+                                                                            <span className="text-[8px] font-bold text-foreground">{b.batch}</span>
                                                                         </div>
-                                                                        <span className="text-[9px] font-bold uppercase text-[#111827]">Batch {b.batch} Deployed</span>
+                                                                        <span className="text-[9px] font-bold uppercase text-foreground">Batch {b.batch} Deployed</span>
                                                                     </div>
                                                                     {b.results.map((r: any, idx: number) => (
-                                                                        <div key={`${b.batch}-${idx}`} className="p-2.5 border border-gray-100 rounded-md bg-white space-y-1 shadow-sm">
+                                                                        <div key={`${b.batch}-${idx}`} className="p-2.5 border border-border rounded-md bg-background space-y-1 shadow-sm">
                                                                             <div className="flex items-center gap-2">
-                                                                                <FileText size={10} className="text-gray-400 shrink-0" />
-                                                                                <span className="text-[10px] font-semibold truncate text-[#111827]">{r.title}</span>
-                                                                                <span className="ml-auto text-[8px] font-bold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{r.status || 'created'}</span>
+                                                                                <FileText size={10} className="text-muted-foreground shrink-0" />
+                                                                                <span className="text-[10px] font-semibold truncate text-foreground">{r.title}</span>
+                                                                                <span className="ml-auto text-[8px] font-bold uppercase px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{r.status || 'created'}</span>
                                                                             </div>
                                                                             {r.path && (
-                                                                                <p className="text-[8px] text-gray-400 font-mono truncate pl-5">{r.path}</p>
+                                                                                <p className="text-[8px] text-muted-foreground font-mono truncate pl-5">{r.path}</p>
                                                                             )}
                                                                         </div>
                                                                     ))}
@@ -1243,7 +1248,7 @@ export default function ObsidianVaultPage() {
                                                 )}
 
                                                 {okaError && (
-                                                    <div className="p-3 rounded-md bg-red-50 border border-red-100 text-[10px] font-mono text-red-600">
+                                                    <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-[10px] font-mono text-destructive">
                                                         {okaError}
                                                     </div>
                                                 )}

@@ -116,7 +116,7 @@ export default function VaultSync() {
 
     if (selectedDb) {
         return (
-            <div className="h-full flex-1 flex flex-col w-full relative bg-white font-sans text-[#111827]">
+            <div className="h-full flex-1 flex flex-col w-full relative bg-background font-sans text-foreground">
                 {globalNotePath && (
                     <ObsidianPagePanel
                         isOpen={!!globalNotePath}
@@ -141,7 +141,7 @@ export default function VaultSync() {
     }
 
     return (
-        <div className="h-full flex-1 flex flex-col w-full bg-white font-sans text-[#111827]">
+        <div className="h-full flex-1 flex flex-col w-full bg-background font-sans text-foreground">
             {globalNotePath && (
                 <ObsidianPagePanel
                     isOpen={!!globalNotePath}
@@ -154,26 +154,26 @@ export default function VaultSync() {
             <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <div className="max-w-7xl mx-auto px-16 py-12">
                     <div className="flex flex-col mb-12">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-6 border-b border-gray-100 pb-4">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-6 border-b border-border pb-4">
                             <span>System</span>
                             <span className="material-symbols-outlined text-[12px]"><ChevronRight size={12}/></span>
-                            <span className="text-gray-600">Vault Sync</span>
+                            <span className="text-muted-foreground">Vault Sync</span>
                         </div>
-                        <h1 className="text-5xl font-extrabold text-[#111827] tracking-tight mb-4 leading-tight">Vault Modules</h1>
-                        <p className="text-[16px] leading-relaxed text-gray-600">Synchronize high-fidelity knowledge clusters and manage autonomous ingestion sectors.</p>
+                        <h1 className="text-5xl font-extrabold text-foreground tracking-tight mb-4 leading-tight">Vault Modules</h1>
+                        <p className="text-[16px] leading-relaxed text-muted-foreground">Synchronize high-fidelity knowledge clusters and manage autonomous ingestion sectors.</p>
                     </div>
 
                     {/* Header with Search & Add Button */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between py-4 mb-8 border-y border-gray-100 gap-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between py-4 mb-8 border-y border-border gap-6">
                         <div className="flex items-center gap-3 w-full md:w-auto">
                             <div className="relative flex items-center w-full md:w-80">
-                                <Search className="absolute left-3 w-4 h-4 text-gray-400" />
+                                <Search className="absolute left-3 w-4 h-4 text-muted-foreground" />
                                 <input
                                     type="text"
                                     placeholder="Search databases..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 text-[13px] px-3 py-2 pl-9 rounded focus:outline-none focus:ring-1 focus:ring-gray-300 placeholder:text-gray-400 transition-shadow"
+                                    className="w-full bg-muted border border-border text-[13px] px-3 py-2 pl-9 rounded focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/60 transition-shadow"
                                 />
                             </div>
                         </div>
@@ -182,7 +182,7 @@ export default function VaultSync() {
                             <button 
                                 onClick={fetchDatabases} 
                                 className={cn(
-                                    "flex items-center justify-center p-2 rounded hover:bg-gray-100 text-gray-400 hover:text-black transition-colors border border-transparent",
+                                    "flex items-center justify-center p-2 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors border border-transparent",
                                     loading && "animate-spin"
                                 )}
                                 title="Refresh"
@@ -191,7 +191,7 @@ export default function VaultSync() {
                             </button>
                             <button 
                                 onClick={() => setIsCreating(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-[#111827] text-white text-[12px] font-medium rounded hover:bg-black transition-all"
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-[12px] font-medium rounded hover:opacity-90 transition-all shadow-sm shadow-primary/10"
                             >
                                 <Plus size={16} />
                                 New Module
@@ -201,9 +201,9 @@ export default function VaultSync() {
 
                     {/* Creation UI Bar */}
                     {isCreating && (
-                        <div className="p-6 border border-gray-200 rounded-lg bg-gray-50 mb-10 overflow-hidden relative">
+                        <div className="p-6 border border-border rounded-lg bg-muted/30 mb-10 overflow-hidden relative shadow-inner">
                             <div className="relative z-10">
-                                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-4">Initialize New Module</h3>
+                                <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-4">Initialize New Module</h3>
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <input
                                         autoFocus
@@ -212,13 +212,13 @@ export default function VaultSync() {
                                         value={newDbName}
                                         onChange={(e) => setNewDbName(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleCreateDatabase()}
-                                        className="flex-1 h-10 bg-white border border-gray-200 px-4 text-sm rounded focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                        className="flex-1 h-10 bg-background border border-border px-4 text-sm rounded focus:outline-none focus:ring-1 focus:ring-ring"
                                     />
                                     <div className="sm:w-[220px]">
                                         <select 
                                             value={selectedArea}
                                             onChange={(e) => setSelectedArea(e.target.value)}
-                                            className="w-full h-10 bg-white border border-gray-200 px-4 text-sm rounded focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                            className="w-full h-10 bg-background border border-border px-4 text-sm rounded focus:outline-none focus:ring-1 focus:ring-ring"
                                         >
                                             {areas.map(area => (
                                                 <option key={area} value={area}>{area}</option>
@@ -228,13 +228,13 @@ export default function VaultSync() {
                                     <div className="flex gap-2">
                                         <button 
                                             onClick={handleCreateDatabase}
-                                            className="px-6 bg-[#111827] text-white text-[12px] font-medium rounded hover:bg-black transition-colors"
+                                            className="px-6 bg-primary text-primary-foreground text-[12px] font-medium rounded hover:opacity-90 transition-colors"
                                         >
                                             Deploy
                                         </button>
                                         <button 
                                             onClick={() => setIsCreating(false)}
-                                            className="px-6 bg-white border border-gray-200 text-gray-700 text-[12px] font-medium rounded hover:bg-gray-50 transition-colors"
+                                            className="px-6 bg-background border border-border text-foreground text-[12px] font-medium rounded hover:bg-muted transition-colors"
                                         >
                                             Cancel
                                         </button>
@@ -246,15 +246,15 @@ export default function VaultSync() {
 
                     <div className="space-y-16">
                         {loading && databases.length === 0 ? (
-                            <div className="text-center py-20 text-gray-400">Loading modules...</div>
+                            <div className="text-center py-20 text-muted-foreground">Loading modules...</div>
                         ) : Object.entries(categorized).map(([areaName, dbs]) => {
                             if (dbs.length === 0) return null;
                             return (
                                 <div key={areaName} className="space-y-6">
                                     <div className="flex items-center gap-4">
-                                        <h2 className="text-[12px] font-bold uppercase tracking-wider text-gray-900">{areaName}</h2>
-                                        <div className="h-[1px] flex-1 bg-gray-100" />
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase">{dbs.length} MODULES</span>
+                                        <h2 className="text-[12px] font-bold uppercase tracking-wider text-foreground">{areaName}</h2>
+                                        <div className="h-[1px] flex-1 bg-border" />
+                                        <span className="text-[10px] font-bold text-muted-foreground uppercase">{dbs.length} MODULES</span>
                                     </div>
                                     
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -262,7 +262,7 @@ export default function VaultSync() {
                                             <div 
                                                 key={db.id} 
                                                 onClick={() => setSelectedDb(db)} 
-                                                className="group relative p-6 bg-white border border-gray-200 rounded-lg hover:border-gray-400 hover:shadow-sm transition-all cursor-pointer flex flex-col h-[180px]"
+                                                className="group relative p-6 bg-background border border-border rounded-lg hover:border-muted-foreground/30 hover:shadow-md transition-all cursor-pointer flex flex-col h-[180px] shadow-sm"
                                             >
                                                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button 
@@ -270,7 +270,7 @@ export default function VaultSync() {
                                                             e.stopPropagation();
                                                             handleDeleteDatabase(db.id);
                                                         }}
-                                                        className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded transition-colors"
+                                                        className="p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded transition-colors"
                                                         title="Delete Module"
                                                     >
                                                         <Trash2 size={16} />
@@ -280,16 +280,16 @@ export default function VaultSync() {
                                                 <div className="flex flex-col h-full justify-between">
                                                     <div>
                                                         <div className="flex items-center gap-2 mb-3">
-                                                            <Database className="w-4 h-4 text-gray-400" />
-                                                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{db.area || 'Module'}</span>
+                                                            <Database className="w-4 h-4 text-muted-foreground/60" />
+                                                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{db.area || 'Module'}</span>
                                                         </div>
-                                                        <h3 className="text-lg font-bold text-gray-900 tracking-tight leading-tight line-clamp-2">{db.name}</h3>
+                                                        <h3 className="text-lg font-bold text-foreground tracking-tight leading-tight line-clamp-2">{db.name}</h3>
                                                     </div>
                                                     
-                                                    <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                                                    <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
                                                         <div className="flex flex-col">
-                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Properties</span>
-                                                            <span className="text-[13px] font-medium text-gray-900">{Object.keys(db.schema).length}</span>
+                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Properties</span>
+                                                            <span className="text-[13px] font-medium text-foreground">{Object.keys(db.schema).length}</span>
                                                         </div>
                                                     </div>
                                                 </div>

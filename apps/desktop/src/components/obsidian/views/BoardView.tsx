@@ -6,8 +6,8 @@ import { EditableCell } from '@/components/obsidian/EditableCell'
 interface BoardViewProps {
     rows: any[]
     schema: Record<string, any>
-    groupBy?: string
-    onUpdate: (fileName: string, prop: string, val: any) => void
+    groupBy?: string | null
+    onUpdateRow: (fileName: string, prop: string, val: any) => void
     onSelectRow: (fileName: string) => void
     onNavigate: (pageName: string) => void
 }
@@ -16,29 +16,30 @@ export function BoardView({
     rows,
     schema,
     groupBy = 'status',
-    onUpdate,
+    onUpdateRow,
     onSelectRow,
     onNavigate
 }: BoardViewProps) {
+    const effectiveGroupBy = groupBy || 'status';
     // Determine unique groups based on the groupBy property
     // We get unique values from the rows for that property
-    const groupValues = Array.from(new Set(rows.map(r => r.properties[groupBy] || 'Untitled')))
+    const groupValues = Array.from(new Set(rows.map(r => r.properties[effectiveGroupBy] || 'Untitled')))
     if (groupValues.length === 0) groupValues.push('Other')
 
     return (
         <div className="flex gap-4 overflow-x-auto pb-6 h-full custom-scrollbar">
             {groupValues.map(group => {
-                const groupRows = rows.filter(r => (r.properties[groupBy] || 'Untitled') === group)
+                const groupRows = rows.filter(r => (r.properties[effectiveGroupBy] || 'Untitled') === group)
                 
                 return (
-                    <div key={group} className="flex-none w-72 flex flex-col gap-3">
+                    <div key={String(group)} className="flex-none w-72 flex flex-col gap-3">
                         <div className="flex items-center justify-between px-1">
                             <div className="flex items-center gap-2">
                                 <span className={cn(
                                     "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest",
-                                    "bg-gray-100 text-gray-900"
+                                    "bg-gray-100 dark:bg-muted text-gray-900 dark:text-foreground"
                                 )}>
-                                    {group}
+                                    {String(group)}
                                 </span>
                                 <span className="text-[10px] font-bold opacity-30">{groupRows.length}</span>
                             </div>
@@ -50,13 +51,13 @@ export function BoardView({
                                 <div 
                                     key={row.id} 
                                     onClick={() => onSelectRow(row.id)}
-                                    className="p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-400 transition-all cursor-pointer group shadow-sm hover:shadow-md"
+                                    className="p-3 bg-white dark:bg-background border border-gray-200 dark:border-border/10 rounded-lg hover:border-gray-400 dark:hover:border-border transition-all cursor-pointer group shadow-sm hover:shadow-md"
                                 >
                                     <h4 className="text-xs font-bold mb-3 group-hover:text-primary transition-colors">{row.title}</h4>
                                     
                                     <div className="space-y-2">
                                         {Object.entries(row.properties).map(([key, val]) => {
-                                            if (key === groupBy || !val) return null;
+                                            if (key === effectiveGroupBy || !val) return null;
                                             return (
                                                 <div key={key} className="flex flex-col gap-0.5">
                                                     <span className="text-[8px] font-black uppercase opacity-30 tracking-tighter">{key}</span>
@@ -64,7 +65,7 @@ export function BoardView({
                                                         <EditableCell 
                                                             initialValue={val} 
                                                             type={schema[key] || 'str'} 
-                                                            onSave={(nv) => onUpdate(row.id, key, nv)} 
+                                                            onSave={(nv) => onUpdateRow(row.id, key, nv)} 
                                                             onNavigate={onNavigate} 
                                                             row={row}
                                                         />
@@ -76,7 +77,7 @@ export function BoardView({
                                 </div>
                             ))}
                             
-                            <button className="flex items-center gap-2 p-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-opacity hover:bg-gray-50 rounded-lg">
+                            <button className="flex items-center gap-2 p-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-opacity hover:bg-gray-50 dark:hover:bg-muted rounded-lg">
                                 <Plus size={12} /> New Page
                             </button>
                         </div>

@@ -16,8 +16,6 @@ export function SyncDashboard() {
             ]);
             setRagStatus(rag);
             setMirrorStatus(mirror);
-            
-            // Assume watcher is active if RAG is ready/indexing. (Simplification as we don't have a dedicated status endpoint for watcher other than toggle)
         } catch (err) {
             console.error(err);
         }
@@ -33,27 +31,21 @@ export function SyncDashboard() {
         try {
             setRagStatus({ status: 'indexing', progress: 0, total: 0, message: 'Starting...' });
             await sidecarApi.ragSyncVault();
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
     };
 
     const handleNotionSync = async () => {
         try {
             setMirrorStatus({ status: 'syncing', progress: 0, total: 0, message: 'Starting...' });
             await sidecarApi.syncNotionMirror();
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
     };
 
     const handleWatcherToggle = async () => {
         try {
             const res = await sidecarApi.ragWatcherToggle();
             setWatcherActive(res.status === 'started');
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
     };
 
     const getProgressPercent = (status: any) => {
@@ -62,19 +54,24 @@ export function SyncDashboard() {
     };
 
     return (
-        <div className="flex flex-col gap-10 p-2">
+        <div className="flex flex-col gap-10 p-2 bg-background text-foreground">
             {/* Local RAG Engine Section */}
             <div className="space-y-4">
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Local RAG Engine</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Local RAG Engine</h3>
                 <div className="flex flex-col gap-1">
-                    <span className="text-3xl font-extrabold tracking-tight text-[#111827] leading-none">{ragStatus.status}</span>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{ragStatus.message || 'Ready'}</span>
-                    <span className="text-xl font-bold text-gray-300">{getProgressPercent(ragStatus)}%</span>
+                    <span className="text-3xl font-extrabold tracking-tighter text-foreground leading-none">{ragStatus.status}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{ragStatus.message || 'Ready'}</span>
+                    <div className="flex items-center gap-4 mt-1">
+                        <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-primary transition-all duration-500" style={{ width: `${getProgressPercent(ragStatus)}%` }} />
+                        </div>
+                        <span className="text-sm font-black text-muted-foreground tabular-nums">{getProgressPercent(ragStatus)}%</span>
+                    </div>
                 </div>
                 <button 
                     onClick={handleRagSync}
                     disabled={ragStatus.status === 'indexing'}
-                    className="text-[10px] font-bold uppercase tracking-wider px-4 py-2 bg-white border border-gray-200 text-[#111827] hover:bg-gray-50 rounded transition-all disabled:opacity-50 inline-block w-max"
+                    className="text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-background border border-border text-foreground hover:bg-muted rounded-md transition-all disabled:opacity-50 inline-block w-max shadow-sm"
                 >
                     {ragStatus.status === 'indexing' ? 'Indexing...' : 'Re-index Vault'}
                 </button>
@@ -82,44 +79,49 @@ export function SyncDashboard() {
 
             {/* Notion Mirror Section */}
             <div className="space-y-4">
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Notion Mirror</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Notion Mirror</h3>
                 <div className="flex flex-col gap-1">
-                    <span className="text-3xl font-extrabold tracking-tight text-[#111827] leading-none">{mirrorStatus.status}</span>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{mirrorStatus.message || 'Ready'}</span>
-                    <span className="text-xl font-bold text-gray-300">{getProgressPercent(mirrorStatus)}%</span>
+                    <span className="text-3xl font-extrabold tracking-tighter text-foreground leading-none">{mirrorStatus.status}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{mirrorStatus.message || 'Ready'}</span>
+                    <div className="flex items-center gap-4 mt-1">
+                        <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-primary transition-all duration-500" style={{ width: `${getProgressPercent(mirrorStatus)}%` }} />
+                        </div>
+                        <span className="text-sm font-black text-muted-foreground tabular-nums">{getProgressPercent(mirrorStatus)}%</span>
+                    </div>
                 </div>
                 <button 
                     onClick={handleNotionSync}
                     disabled={mirrorStatus.status === 'syncing'}
-                    className="text-[10px] font-bold uppercase tracking-wider px-4 py-2 bg-white border border-gray-200 text-[#111827] hover:bg-gray-50 rounded transition-all disabled:opacity-50 inline-block w-max"
+                    className="text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-background border border-border text-foreground hover:bg-muted rounded-md transition-all disabled:opacity-50 inline-block w-max shadow-sm"
                 >
                     {mirrorStatus.status === 'syncing' ? 'Syncing...' : 'Deep Sync'}
                 </button>
             </div>
 
             {/* Diagnostics Section */}
-            <div className="pt-8 border-t border-gray-100 space-y-8">
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Diagnostics</h3>
+            <div className="pt-8 border-t border-border space-y-8">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Diagnostics</h3>
                 
                 <div className="flex flex-col gap-5">
                     <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Watcher Daemon</span>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Watcher Daemon</span>
                         <div className="flex items-center gap-4">
-                            <span className={cn("text-xl font-extrabold tracking-tight", watcherActive ? "text-green-600" : "text-gray-300")}>
-                                {watcherActive ? 'Active' : 'Off'}
+                            <span className={cn("text-xl font-extrabold tracking-tight", watcherActive ? "text-emerald-500" : "text-muted-foreground/30")}>
+                                {watcherActive ? 'Active' : 'Offline'}
                             </span>
                             <button 
                                 onClick={handleWatcherToggle}
-                                className="p-1.5 rounded bg-gray-50 hover:bg-gray-100 border border-transparent hover:border-gray-200 transition-all"
+                                className="p-1.5 rounded-lg bg-muted hover:bg-accent border border-border transition-all group"
                             >
-                                <Power size={12} className={watcherActive ? "text-green-600" : "text-gray-400"} />
+                                <Power size={12} className={watcherActive ? "text-emerald-500" : "text-muted-foreground/50 group-hover:text-foreground"} />
                             </button>
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Permissions</span>
-                        <span className="text-xl font-extrabold tracking-tight text-green-600">OK</span>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Security Permissions</span>
+                        <span className="text-xl font-extrabold tracking-tight text-emerald-500">Authorized</span>
                     </div>
                 </div>
             </div>

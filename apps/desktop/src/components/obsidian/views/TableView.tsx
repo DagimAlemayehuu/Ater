@@ -5,31 +5,39 @@ import { EditableCell } from '@/components/obsidian/EditableCell'
 
 interface TableViewProps {
     rows: any[]
-    columns: string[]
+    columns?: string[]
     schema: Record<string, any>
-    onUpdate: (fileName: string, prop: string, val: any) => void
+    onUpdateRow: (fileName: string, prop: string, val: any) => void
     onDeleteRow: (fileName: string) => void
     onSelectRow: (fileName: string) => void
     onNavigate: (pageName: string) => void
     loading: boolean
     groupBy?: string | null
     readonly?: boolean
+    hiddenProperties?: string[]
 }
 
 export function TableView({
     rows,
     columns,
     schema,
-    onUpdate,
+    onUpdateRow,
     onDeleteRow,
     onSelectRow,
     onNavigate,
     loading,
     groupBy,
-    readonly
+    readonly,
+    hiddenProperties = []
 }: TableViewProps) {
     const [expandedRows, setExpandedRows] = React.useState<Set<string>>(new Set());
     const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+
+    // Compute effective columns if not provided
+    const effectiveColumns = React.useMemo(() => {
+        if (columns && columns.length > 0) return columns;
+        return Object.keys(schema || {}).filter(c => !hiddenProperties.includes(c));
+    }, [columns, schema, hiddenProperties]);
 
     const toggleExpand = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
@@ -68,7 +76,6 @@ export function TableView({
 
     const finalGroups = React.useMemo(() => {
         if (!groupBy) return [{ name: null, items: visibleRows }];
-        // Note: Grouping with nesting is complex, for now we flatten if grouping is active
         const map: Record<string, any[]> = {};
         rows.forEach(r => {
             const val = r.properties[groupBy] || 'Untitled';
@@ -80,9 +87,9 @@ export function TableView({
     }, [visibleRows, rows, groupBy]);
 
     return (
-        <div className="rounded-xl border border-gray-200 overflow-hidden h-full flex flex-col bg-white">
+        <div className="rounded-xl border border-border overflow-hidden h-full flex flex-col bg-background">
             {selectedIds.size > 0 && (
-                <div className="bg-[#111827] text-white px-6 py-2 flex items-center justify-between animate-in slide-in-from-top duration-300 z-40">
+                <div className="bg-primary text-primary-foreground px-6 py-2 flex items-center justify-between animate-in slide-in-from-top duration-300 z-40">
                     <div className="flex items-center gap-4">
                         <span className="text-[10px] font-black uppercase tracking-widest">{selectedIds.size} items selected</span>
                         <button 
@@ -92,7 +99,7 @@ export function TableView({
                                     setSelectedIds(new Set());
                                 }
                             }}
-                            className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-[9px] font-bold uppercase tracking-widest"
+                            className="px-3 py-1 bg-background/20 hover:bg-background/30 rounded text-[9px] font-bold uppercase tracking-widest"
                         >
                             Bulk Delete
                         </button>
@@ -102,9 +109,9 @@ export function TableView({
             )}
             <div className="overflow-auto h-full custom-scrollbar">
                 <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-gray-50/90 backdrop-blur-md sticky top-0 z-10 border-b border-gray-200">
+                    <thead className="bg-muted/80 backdrop-blur-md sticky top-0 z-10 border-b border-border/20">
                         <tr>
-                            <th className="w-10 px-3 py-2 border-r border-gray-100">
+                            <th className="w-10 px-3 py-2 border-r border-border/10">
                                 <input 
                                     type="checkbox" 
                                     onChange={(e) => {
@@ -112,13 +119,13 @@ export function TableView({
                                         else setSelectedIds(new Set());
                                     }}
                                     checked={selectedIds.size === rows.length && rows.length > 0}
-                                    className="accent-[#111827]"
+                                    className="accent-primary"
                                 />
                             </th>
                             <th className="px-3 py-2 font-black uppercase tracking-wider text-[9px] text-muted-foreground whitespace-nowrap border-r border-border/10 min-w-[150px]">
                                 Title
                             </th>
-                            {columns.slice(1).map(col => (
+                            {effectiveColumns.map(col => (
                                 <th key={col} className="px-3 py-2 font-black uppercase tracking-wider text-[9px] text-muted-foreground whitespace-nowrap border-r border-border/10 last:border-r-0 min-w-[120px]">
                                     {col}
                                 </th>
@@ -126,24 +133,24 @@ export function TableView({
                             <th className="px-3 py-2 w-10"></th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/20">
+                    <tbody className="divide-y divide-border/10">
                         {finalGroups.map(group => (
                             <React.Fragment key={group.name || 'root'}>
                                 {group.name && (
-                                    <tr className="bg-gray-50">
-                                        <td colSpan={columns.length + 2} className="px-3 py-1.5 border-b border-border/10 bg-gray-50">
+                                    <tr className="bg-muted/30">
+                                        <td colSpan={effectiveColumns.length + 3} className="px-3 py-1.5 border-b border-border/10 bg-muted/30">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[9px] font-black uppercase tracking-widest opacity-40">{groupBy}:</span>
+                                                <span className="text-[9px] font-black uppercase tracking-widest opacity-40 text-muted-foreground">{groupBy}:</span>
                                                 <span className="text-[10px] font-bold text-primary">{group.name}</span>
-                                                <span className="text-[9px] font-black opacity-20 ml-auto">{group.items.length} items</span>
+                                                <span className="text-[9px] font-black opacity-20 ml-auto text-muted-foreground">{group.items.length} items</span>
                                             </div>
                                         </td>
                                     </tr>
                                 )}
                                 {group.items.map(row => {
                                     return (
-                                        <tr key={row.id} className="hover:bg-gray-50/80 group">
-                                            <td className="px-3 py-2 border-r border-gray-100 bg-white group-hover:bg-gray-50 transition-colors">
+                                        <tr key={row.id} className="hover:bg-muted/50 group">
+                                            <td className="px-3 py-2 border-r border-border/10 bg-background group-hover:bg-muted/50 transition-colors">
                                                 <input 
                                                     type="checkbox" 
                                                     checked={selectedIds.has(row.id)}
@@ -153,13 +160,13 @@ export function TableView({
                                                         else next.add(row.id);
                                                         setSelectedIds(next);
                                                     }}
-                                                    className="accent-[#111827]"
+                                                    className="accent-primary"
                                                 />
                                             </td>
                                             <td 
                                                 className={cn(
-                                                    "px-3 py-2 whitespace-nowrap font-bold max-w-[200px] border-r border-border/5 cursor-pointer text-[#111827] hover:underline truncate group-hover:bg-gray-50 transition-colors",
-                                                    row.depth > 0 && "text-gray-500 font-medium"
+                                                    "px-3 py-2 whitespace-nowrap font-bold max-w-[200px] border-r border-border/5 cursor-pointer text-foreground hover:underline truncate group-hover:bg-muted/50 transition-colors",
+                                                    row.depth > 0 && "text-muted-foreground font-medium"
                                                 )} 
                                                 style={{ paddingLeft: `${row.depth * 20 + 12}px` }}
                                                 title={row.title}
@@ -169,28 +176,28 @@ export function TableView({
                                                     {row.hasChildren ? (
                                                         <button 
                                                             onClick={(e) => toggleExpand(e, row.id)}
-                                                            className="p-0.5 hover:bg-gray-200 rounded transition-colors mr-1"
+                                                            className="p-0.5 hover:bg-muted rounded transition-colors mr-1"
                                                         >
                                                             <div className={cn("transition-transform duration-200", expandedRows.has(row.id) ? "rotate-90" : "")}>
                                                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                                                             </div>
                                                         </button>
                                                     ) : row.depth > 0 ? (
-                                                        <span className="mr-2 opacity-30">↳</span>
+                                                        <span className="mr-2 opacity-30 text-muted-foreground">↳</span>
                                                     ) : (
                                                         <div className="w-4 mr-1" />
                                                     )}
                                                     {row.title}
                                                 </div>
                                             </td>
-                                            {columns.slice(1).map(col => {
+                                            {effectiveColumns.map(col => {
                                                 const val = row.properties[col]
                                                 return (
                                                     <td key={col} className={cn("px-3 py-1.5 whitespace-nowrap border-r border-border/5 last:border-r-0", readonly && "pointer-events-none")}>
                                                         <EditableCell 
                                                             initialValue={val} 
                                                             type={schema[col] || 'str'} 
-                                                            onSave={(newValue) => onUpdate(row.id, col, newValue)} 
+                                                            onSave={(newValue) => onUpdateRow(row.id, col, newValue)} 
                                                             onNavigate={onNavigate}
                                                             row={row}
                                                             readonly={readonly}
@@ -212,20 +219,20 @@ export function TableView({
                         ))}
                         {rows.length === 0 && !loading && (
                             <tr>
-                                <td colSpan={columns.length + 2} className="px-3 py-8 text-center text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest">
+                                <td colSpan={effectiveColumns.length + 3} className="px-3 py-8 text-center text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest">
                                     No rows found
                                 </td>
                             </tr>
                         )}
                     </tbody>
                     {!loading && rows.length > 0 && (
-                        <tfoot className="sticky bottom-0 bg-gray-50/90 backdrop-blur-md border-t border-gray-200 z-30">
+                        <tfoot className="sticky bottom-0 bg-muted/90 backdrop-blur-md border-t border-border/20 z-30">
                             <tr>
                                 <td className="px-3 py-2 border-r border-border/10"></td>
-                                <td className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-gray-400 border-r border-border/10 bg-gray-50/90">
+                                <td className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground border-r border-border/10 bg-muted/90">
                                     Count {rows.length}
                                 </td>
-                                {columns.slice(1).map(col => {
+                                {effectiveColumns.map(col => {
                                     const type = schema[col] || 'str';
                                     const values = rows.map(r => r.properties[col]).filter(v => v !== undefined && v !== null && v !== '');
                                     
@@ -252,8 +259,8 @@ export function TableView({
                                     return (
                                         <td key={col} className="px-3 py-2 border-r border-border/10 group/footer relative">
                                             <div className="flex flex-col items-end">
-                                                <span className="text-[7px] font-bold uppercase tracking-tighter text-gray-400 opacity-0 group-hover/footer:opacity-100 transition-opacity whitespace-nowrap">{label}</span>
-                                                <span className="text-[10px] font-bold text-gray-600">{result !== null ? result : ''}</span>
+                                                <span className="text-[7px] font-bold uppercase tracking-tighter text-muted-foreground/40 opacity-0 group-hover/footer:opacity-100 transition-opacity whitespace-nowrap">{label}</span>
+                                                <span className="text-[10px] font-bold text-muted-foreground">{result !== null ? result : ''}</span>
                                             </div>
                                         </td>
                                     );

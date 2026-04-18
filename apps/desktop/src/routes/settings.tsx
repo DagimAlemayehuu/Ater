@@ -62,15 +62,15 @@ const PROFILE_CARDS: ProfileCardDef[] = [
 /* ─────────────────── Components ─────────────────── */
 
 function Card({ className, children }: { className?: string, children: React.ReactNode }) {
-    return <div className={cn("rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden", className)}>{children}</div>
+    return <div className={cn("rounded-lg border border-border bg-background shadow-sm overflow-hidden", className)}>{children}</div>
 }
 
 function CardHeader({ title, description, icon }: { title: string, description?: React.ReactNode, icon?: React.ReactNode }) {
     return (
-        <div className="flex flex-row items-center justify-between p-6 pb-4 border-b border-gray-50 bg-gray-50/50">
+        <div className="flex flex-row items-center justify-between p-6 pb-4 border-b border-border/50 bg-muted/20">
             <div className="space-y-1">
-                <h3 className="tracking-tight text-lg font-bold text-gray-900">{title}</h3>
-                {description && <p className="text-[13px] text-gray-500 font-medium">{description}</p>}
+                <h3 className="tracking-tight text-lg font-bold text-foreground">{title}</h3>
+                {description && <p className="text-[13px] text-muted-foreground font-medium">{description}</p>}
             </div>
             {icon && icon}
         </div>
@@ -83,21 +83,21 @@ function CardContent({ className, children }: { className?: string, children: Re
 
 const SettingsCard = ({ title, icon, value, children, onEdit, isEditing, onSave, onCancel }: any) => (
     <Card className="flex flex-col justify-between h-full">
-        <CardHeader title={title} description={value} icon={<div className="text-gray-400">{icon}</div>} />
+        <CardHeader title={title} description={value} icon={<div className="text-muted-foreground">{icon}</div>} />
         <CardContent className="flex-1 flex flex-col justify-between">
             <div className="w-full pb-4">{children}</div>
 
-            <div className="flex justify-end pt-4 border-t border-gray-100 mt-auto">
+            <div className="flex justify-end pt-4 border-t border-border mt-auto">
                 {!isEditing ? (
-                    <button onClick={onEdit} className="inline-flex items-center justify-center rounded px-4 py-2 text-[12px] font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors">
+                    <button onClick={onEdit} className="inline-flex items-center justify-center rounded px-4 py-2 text-[12px] font-medium text-muted-foreground bg-background border border-border hover:bg-muted transition-colors">
                         <Edit2 size={14} className="mr-2" /> Edit
                     </button>
                 ) : (
                     <div className="flex gap-2">
-                        <button onClick={onCancel} className="inline-flex items-center justify-center rounded px-4 py-2 text-[12px] font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors">
+                        <button onClick={onCancel} className="inline-flex items-center justify-center rounded px-4 py-2 text-[12px] font-medium text-muted-foreground bg-background border border-border hover:bg-muted transition-colors">
                             Cancel
                         </button>
-                        <button onClick={onSave} className="inline-flex items-center justify-center rounded px-4 py-2 text-[12px] font-medium text-white bg-[#111827] hover:bg-black transition-colors">
+                        <button onClick={onSave} className="inline-flex items-center justify-center rounded px-4 py-2 text-[12px] font-medium text-primary-foreground bg-primary hover:opacity-90 transition-colors">
                             Save
                         </button>
                     </div>
@@ -144,10 +144,10 @@ export default function Settings() {
 
     if (isLoading || !config) {
         return (
-            <div className="flex h-full w-full items-center justify-center bg-white">
+            <div className="flex h-full w-full items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#111827] border-t-transparent" />
-                    <p className="text-[12px] font-medium text-gray-500">Initializing engine settings...</p>
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <p className="text-[12px] font-medium text-muted-foreground">Initializing engine settings...</p>
                 </div>
             </div>
         )
@@ -214,7 +214,7 @@ export default function Settings() {
             <div className="w-full animate-in fade-in duration-300 space-y-6 flex flex-col h-full pb-8">
                 <button
                     onClick={() => setActiveProfileId(null)}
-                    className="flex items-center gap-2 mb-2 text-[12px] font-medium hover:underline text-gray-500 hover:text-gray-900 w-max"
+                    className="flex items-center gap-2 mb-2 text-[12px] font-medium hover:underline text-muted-foreground hover:text-foreground w-max"
                 >
                     <ChevronLeft size={16} />
                     All Profiles
@@ -222,8 +222,8 @@ export default function Settings() {
 
                 <div className="flex items-center justify-between">
                     <div>
-                        <h2 className="text-3xl font-bold tracking-tight text-[#111827]">{card.title} Profile</h2>
-                        <p className="text-gray-500 mt-1">{card.description}</p>
+                        <h2 className="text-3xl font-bold tracking-tight text-foreground">{card.title} Profile</h2>
+                        <p className="text-muted-foreground mt-1">{card.description}</p>
                     </div>
                 </div>
 
@@ -249,8 +249,8 @@ export default function Settings() {
         return (
             <div className="w-full space-y-8 animate-in fade-in duration-300">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight text-[#111827] mb-2">General Settings</h2>
-                    <p className="text-gray-500 text-sm">Manage credentials and local vault integrations.</p>
+                    <h2 className="text-3xl font-bold tracking-tight text-foreground mb-2">General Settings</h2>
+                    <p className="text-muted-foreground text-sm">Manage credentials and local vault integrations.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -268,14 +268,14 @@ export default function Settings() {
                         onSave={handleSave}
                         onCancel={() => setEditingKey(null)}
                     >
-                        <div className="space-y-6 text-gray-900">
+                        <div className="space-y-6 text-foreground">
                             {/* Tabs Header */}
-                            <div className="flex border-b border-gray-100 mb-4">
+                            <div className="flex border-b border-border mb-4">
                                 <button 
                                     onClick={() => setAiTab('primary')}
                                     className={cn(
                                         "px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2",
-                                        aiTab === 'primary' ? "border-[#111827] text-black" : "border-transparent text-gray-400 hover:text-gray-900"
+                                        aiTab === 'primary' ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
                                     )}
                                 >
                                     L1: Synthesis
@@ -284,7 +284,7 @@ export default function Settings() {
                                     onClick={() => setAiTab('planner')}
                                     className={cn(
                                         "px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2",
-                                        aiTab === 'planner' ? "border-[#111827] text-black" : "border-transparent text-gray-400 hover:text-gray-900"
+                                        aiTab === 'planner' ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
                                     )}
                                 >
                                     L2: Planning
@@ -293,7 +293,7 @@ export default function Settings() {
                                     onClick={() => setAiTab('utility')}
                                     className={cn(
                                         "px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2",
-                                        aiTab === 'utility' ? "border-[#111827] text-black" : "border-transparent text-gray-400 hover:text-gray-900"
+                                        aiTab === 'utility' ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
                                     )}
                                 >
                                     L3: Utility
@@ -303,7 +303,7 @@ export default function Settings() {
                             {aiTab === 'primary' && (
                                 <div className="space-y-4 animate-in fade-in duration-200">
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">L1 Provider</label>
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L1 Provider</label>
                                         <select
                                             value={config?.aiProvider || 'google'}
                                             onChange={(e) => {
@@ -315,7 +315,7 @@ export default function Settings() {
                                                 if (provider === 'openrouter') defaultModel = 'google/gemini-2.0-flash-001';
                                                 saveConfig({ aiProvider: provider, aiModel: defaultModel });
                                             }}
-                                            className="w-full bg-white border border-gray-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-gray-400"
+                                            className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
                                         >
                                             <option value="google">Google Gemini</option>
                                             <option value="openai">OpenAI</option>
@@ -326,31 +326,31 @@ export default function Settings() {
                                     </div>
 
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">L1 API Key</label>
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L1 API Key</label>
                                         {editingKey === 'aiApiKey' ? (
                                             <input
                                                 type="password"
                                                 value={editValue}
                                                 onChange={(e) => setEditValue(e.target.value)}
-                                                className="w-full bg-white border border-gray-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-gray-400 font-mono"
+                                                className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring font-mono"
                                                 autoFocus
                                                 placeholder={`Enter ${config?.aiProvider.toUpperCase()} Key`}
                                             />
                                         ) : (
-                                            <div className="px-3 py-2 rounded bg-gray-50 text-[13px] font-mono text-gray-600 flex items-center justify-between border border-transparent">
+                                            <div className="px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent">
                                                 <span>{config?.aiApiKey ? '••••••••' + config?.aiApiKey.slice(-4) : 'Not configured'}</span>
-                                                <Key size={14} className="text-gray-400" />
+                                                <Key size={14} className="text-muted-foreground" />
                                             </div>
                                         )}
                                     </div>
 
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">L1 Model ID</label>
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L1 Model ID</label>
                                         <input
                                             type="text"
                                             value={config?.aiModel || ''}
                                             onChange={(e) => saveConfig({ aiModel: e.target.value })}
-                                            className="w-full bg-white border border-gray-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-gray-400"
+                                            className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
                                         />
                                     </div>
 
@@ -360,10 +360,10 @@ export default function Settings() {
                                             disabled={testStatus.loading || !config?.aiApiKey}
                                             className={cn(
                                                 "w-full flex items-center justify-center gap-2 px-3 py-2 rounded text-[12px] font-medium transition-all border",
-                                                testStatus.loading && testTarget === 'primary' ? "opacity-50 cursor-not-allowed bg-gray-50 text-gray-500" :
-                                                    testStatus.success === true && testTarget === 'primary' ? "bg-green-50 border-green-200 text-green-700" :
-                                                        testStatus.success === false && testTarget === 'primary' ? "bg-red-50 border-red-200 text-red-700" :
-                                                            "bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
+                                                testStatus.loading && testTarget === 'primary' ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
+                                                    testStatus.success === true && testTarget === 'primary' ? "bg-green-500/10 border-green-500/20 text-green-500" :
+                                                        testStatus.success === false && testTarget === 'primary' ? "bg-destructive/10 border-destructive/20 text-destructive" :
+                                                            "bg-background hover:bg-muted text-muted-foreground border-border"
                                             )}
                                         >
                                             {testStatus.loading && testTarget === 'primary' ? (
@@ -379,7 +379,7 @@ export default function Settings() {
                             {aiTab === 'planner' && (
                                 <div className="space-y-4 animate-in fade-in duration-200">
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">L2 Provider</label>
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L2 Provider</label>
                                         <select
                                             value={config?.plannerProvider || 'google'}
                                             onChange={(e) => {
@@ -387,7 +387,7 @@ export default function Settings() {
                                                 let defaultModel = 'gemini-2.0-flash';
                                                 saveConfig({ plannerProvider: provider, plannerModel: defaultModel });
                                             }}
-                                            className="w-full bg-white border border-gray-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-gray-400"
+                                            className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
                                         >
                                             <option value="google">Google Gemini</option>
                                             <option value="groq">Groq</option>
@@ -397,31 +397,31 @@ export default function Settings() {
                                     </div>
 
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">L2 API Key (Optional)</label>
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L2 API Key (Optional)</label>
                                         {editingKey === 'plannerApiKey' ? (
                                             <input
                                                 type="password"
                                                 value={editValue}
                                                 onChange={(e) => setEditValue(e.target.value)}
-                                                className="w-full bg-white border border-gray-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-gray-400 font-mono"
+                                                className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring font-mono"
                                                 autoFocus
                                                 placeholder="Defaults to L1 Key"
                                             />
                                         ) : (
-                                            <div className="px-3 py-2 rounded bg-gray-50 text-[13px] font-mono text-gray-600 flex items-center justify-between border border-transparent">
+                                            <div className="px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent">
                                                 <span>{config?.plannerApiKey ? '••••••••' + config?.plannerApiKey.slice(-4) : 'Using L1 Key'}</span>
-                                                <Key size={14} className="text-gray-400" />
+                                                <Key size={14} className="text-muted-foreground" />
                                             </div>
                                         )}
                                     </div>
 
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">L2 Model ID</label>
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L2 Model ID</label>
                                         <input
                                             type="text"
                                             value={config?.plannerModel || ''}
                                             onChange={(e) => saveConfig({ plannerModel: e.target.value })}
-                                            className="w-full bg-white border border-gray-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-gray-400"
+                                            className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
                                         />
                                     </div>
 
@@ -431,10 +431,10 @@ export default function Settings() {
                                             disabled={testStatus.loading || (!config?.plannerApiKey && !config?.aiApiKey)}
                                             className={cn(
                                                 "w-full flex items-center justify-center gap-2 px-3 py-2 rounded text-[12px] font-medium transition-all border",
-                                                testStatus.loading && testTarget === 'planner' ? "opacity-50 cursor-not-allowed bg-gray-50 text-gray-500" :
-                                                    testStatus.success === true && testTarget === 'planner' ? "bg-green-50 border-green-200 text-green-700" :
-                                                        testStatus.success === false && testTarget === 'planner' ? "bg-red-50 border-red-200 text-red-700" :
-                                                            "bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
+                                                testStatus.loading && testTarget === 'planner' ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
+                                                    testStatus.success === true && testTarget === 'planner' ? "bg-green-500/10 border-green-500/20 text-green-500" :
+                                                        testStatus.success === false && testTarget === 'planner' ? "bg-destructive/10 border-destructive/20 text-destructive" :
+                                                            "bg-background hover:bg-muted text-muted-foreground border-border"
                                             )}
                                         >
                                             {testStatus.loading && testTarget === 'planner' ? (
@@ -450,7 +450,7 @@ export default function Settings() {
                             {aiTab === 'utility' && (
                                 <div className="space-y-4 animate-in fade-in duration-200">
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">L3 Provider</label>
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L3 Provider</label>
                                         <select
                                             value={config?.utilityProvider || 'google'}
                                             onChange={(e) => {
@@ -458,7 +458,7 @@ export default function Settings() {
                                                 let defaultModel = 'gemini-1.5-flash-8b';
                                                 saveConfig({ utilityProvider: provider, utilityModel: defaultModel });
                                             }}
-                                            className="w-full bg-white border border-gray-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-gray-400"
+                                            className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
                                         >
                                             <option value="google">Google Gemini (Recommended)</option>
                                             <option value="groq">Groq</option>
@@ -468,31 +468,31 @@ export default function Settings() {
                                     </div>
 
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">L3 API Key (Optional)</label>
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L3 API Key (Optional)</label>
                                         {editingKey === 'utilityApiKey' ? (
                                             <input
                                                 type="password"
                                                 value={editValue}
                                                 onChange={(e) => setEditValue(e.target.value)}
-                                                className="w-full bg-white border border-gray-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-gray-400 font-mono"
+                                                className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring font-mono"
                                                 autoFocus
                                                 placeholder="Defaults to L2 Key"
                                             />
                                         ) : (
-                                            <div className="px-3 py-2 rounded bg-gray-50 text-[13px] font-mono text-gray-600 flex items-center justify-between border border-transparent">
+                                            <div className="px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent">
                                                 <span>{config?.utilityApiKey ? '••••••••' + config?.utilityApiKey.slice(-4) : 'Using L2 Key'}</span>
-                                                <Key size={14} className="text-gray-400" />
+                                                <Key size={14} className="text-muted-foreground" />
                                             </div>
                                         )}
                                     </div>
 
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">L3 Model ID</label>
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L3 Model ID</label>
                                         <input
                                             type="text"
                                             value={config?.utilityModel || ''}
                                             onChange={(e) => saveConfig({ utilityModel: e.target.value })}
-                                            className="w-full bg-white border border-gray-200 rounded px-3 py-2 text-[13px] focus:outline-none focus:border-gray-400"
+                                            className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
                                         />
                                     </div>
 
@@ -502,10 +502,10 @@ export default function Settings() {
                                             disabled={testStatus.loading || (!config?.utilityApiKey && !config?.plannerApiKey && !config?.aiApiKey)}
                                             className={cn(
                                                 "w-full flex items-center justify-center gap-2 px-3 py-2 rounded text-[12px] font-medium transition-all border",
-                                                testStatus.loading && testTarget === 'utility' ? "opacity-50 cursor-not-allowed bg-gray-50 text-gray-500" :
-                                                    testStatus.success === true && testTarget === 'utility' ? "bg-green-50 border-green-200 text-green-700" :
-                                                        testStatus.success === false && testTarget === 'utility' ? "bg-red-50 border-red-200 text-red-700" :
-                                                            "bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
+                                                testStatus.loading && testTarget === 'utility' ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
+                                                    testStatus.success === true && testTarget === 'utility' ? "bg-green-500/10 border-green-500/20 text-green-500" :
+                                                        testStatus.success === false && testTarget === 'utility' ? "bg-destructive/10 border-destructive/20 text-destructive" :
+                                                            "bg-background hover:bg-muted text-muted-foreground border-border"
                                             )}
                                         >
                                             {testStatus.loading && testTarget === 'utility' ? (
@@ -521,7 +521,7 @@ export default function Settings() {
                             {testStatus.message && (
                                 <p className={cn(
                                     "text-[11px] mt-2 px-2 py-1.5 rounded border font-medium",
-                                    testStatus.success ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"
+                                    testStatus.success ? "bg-green-500/10 border-green-500/20 text-green-500" : "bg-destructive/10 border-destructive/20 text-destructive"
                                 )}>
                                     {testStatus.message}
                                 </p>
@@ -541,7 +541,7 @@ export default function Settings() {
                             onCancel={() => setEditingKey(null)}
                         >
                             <div className="flex gap-2">
-                                <div className="flex-1 px-3 py-2 rounded bg-gray-50 text-[13px] font-mono text-gray-600 flex items-center justify-between border border-transparent overflow-hidden">
+                                <div className="flex-1 px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent overflow-hidden">
                                     <span className="truncate pr-2">{editingKey === 'obsidianVaultPath' ? editValue : (config?.obsidianVaultPath || 'Not selected')}</span>
                                 </div>
                                 {editingKey === 'obsidianVaultPath' && (
@@ -552,7 +552,7 @@ export default function Settings() {
                                                 if (selected) setEditValue(selected as string);
                                             } catch (err) { console.error(err); }
                                         }}
-                                        className="inline-flex items-center justify-center rounded bg-white text-gray-700 transition-colors hover:bg-gray-50 border border-gray-200 px-3 py-2 shrink-0"
+                                        className="inline-flex items-center justify-center rounded bg-background text-muted-foreground transition-colors hover:bg-muted border border-border px-3 py-2 shrink-0"
                                     >
                                         <FolderOpen size={16} />
                                     </button>
@@ -570,7 +570,7 @@ export default function Settings() {
                             onCancel={() => setEditingKey(null)}
                         >
                             <div className="flex gap-2">
-                                <div className="flex-1 px-3 py-2 rounded bg-gray-50 text-[13px] font-mono text-gray-600 flex items-center justify-between border border-transparent overflow-hidden">
+                                <div className="flex-1 px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent overflow-hidden">
                                     <span className="truncate pr-2">{editingKey === 'academicFolderPath' ? editValue : (config?.academicFolderPath || '1-Academic')}</span>
                                 </div>
                                 {editingKey === 'academicFolderPath' && (
@@ -586,7 +586,7 @@ export default function Settings() {
                                                 if (selected) setEditValue(selected as string);
                                             } catch (err) { console.error(err); }
                                         }}
-                                        className="inline-flex items-center justify-center rounded bg-white text-gray-700 transition-colors hover:bg-gray-50 border border-gray-200 px-3 py-2 shrink-0"
+                                        className="inline-flex items-center justify-center rounded bg-background text-muted-foreground transition-colors hover:bg-muted border border-border px-3 py-2 shrink-0"
                                     >
                                         <FolderOpen size={16} />
                                     </button>
@@ -596,7 +596,7 @@ export default function Settings() {
 
                         <SettingsCard
                             title="Inbox Watcher"
-                            icon={<Zap size={18} className="text-gray-900" />}
+                            icon={<Zap size={18} className="text-foreground" />}
                             value="Autonomous file ingestion pipeline"
                             isEditing={editingKey === 'inboxPath'}
                             onEdit={() => startEditing('inboxPath', config?.inboxPath || '')}
@@ -605,7 +605,7 @@ export default function Settings() {
                         >
                             <div className="space-y-4">
                                 <div className="flex gap-2">
-                                    <div className="flex-1 px-3 py-2 rounded bg-gray-50 text-[13px] font-mono text-gray-600 flex items-center justify-between border border-transparent overflow-hidden">
+                                    <div className="flex-1 px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent overflow-hidden">
                                         <span className="truncate pr-2">{editingKey === 'inboxPath' ? editValue : (config?.inboxPath || 'Not selected')}</span>
                                     </div>
                                     {editingKey === 'inboxPath' && (
@@ -616,17 +616,17 @@ export default function Settings() {
                                                     if (selected) setEditValue(selected as string);
                                                 } catch (err) { console.error(err); }
                                             }}
-                                            className="inline-flex items-center justify-center rounded bg-white text-gray-700 transition-colors hover:bg-gray-50 border border-gray-200 px-3 py-2 shrink-0"
+                                            className="inline-flex items-center justify-center rounded bg-background text-muted-foreground transition-colors hover:bg-muted border border-border px-3 py-2 shrink-0"
                                         >
                                             <FolderOpen size={16} />
                                         </button>
                                     )}
                                 </div>
 
-                                <div className="flex items-center justify-between p-3 rounded border border-gray-100 bg-gray-50">
+                                <div className="flex items-center justify-between p-3 rounded border border-border bg-muted/30">
                                     <div className="space-y-0.5">
-                                        <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600">Auto-Deploy</label>
-                                        <p className="text-[11px] text-gray-500">Automatically process new files</p>
+                                        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Auto-Deploy</label>
+                                        <p className="text-[11px] text-muted-foreground/60">Automatically process new files</p>
                                     </div>
                                     <button
                                         onClick={async () => {
@@ -636,11 +636,11 @@ export default function Settings() {
                                         }}
                                         className={cn(
                                             "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
-                                            config?.autoDeploy ? "bg-[#111827]" : "bg-gray-200"
+                                            config?.autoDeploy ? "bg-primary" : "bg-muted-foreground/20"
                                         )}
                                     >
                                         <span className={cn(
-                                            "pointer-events-none block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform",
+                                            "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-sm ring-0 transition-transform",
                                             config?.autoDeploy ? "translate-x-4" : "translate-x-1"
                                         )} />
                                     </button>
@@ -651,12 +651,12 @@ export default function Settings() {
                 </div>
 
                 <div className="mt-12">
-                    <Card className="border-red-200 bg-red-50/50">
+                    <Card className="border-destructive/20 bg-destructive/5">
                         <CardHeader title="Danger Zone" description="Permanent data deletion" />
                         <CardContent>
                             <button
                                 onClick={handleClear}
-                                className="inline-flex items-center justify-center rounded text-[12px] font-medium transition-colors hover:bg-red-700 bg-red-600 text-white shadow-sm h-9 px-4 py-2"
+                                className="inline-flex items-center justify-center rounded text-[12px] font-medium transition-colors hover:bg-destructive/90 bg-destructive text-destructive-foreground shadow-sm h-9 px-4 py-2"
                             >
                                 <Trash2 size={14} className="mr-2" />
                                 Reset Config
@@ -673,8 +673,8 @@ export default function Settings() {
         return (
             <div className="w-full space-y-8 animate-in fade-in duration-300">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight text-[#111827] mb-2">Identity Profiles</h2>
-                    <p className="text-gray-500 text-sm">Manage your core foundational profiles.</p>
+                    <h2 className="text-3xl font-bold tracking-tight text-foreground mb-2">Identity Profiles</h2>
+                    <p className="text-muted-foreground text-sm">Manage your core foundational profiles.</p>
                 </div>
                 {renderProfileCategory('Domains', PROFILE_CARDS)}
             </div>
@@ -684,22 +684,22 @@ export default function Settings() {
     function renderProfileCategory(title: string, cards: ProfileCardDef[]) {
         return (
             <div className="space-y-4">
-                <h3 className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">{title}</h3>
+                <h3 className="text-[12px] font-bold text-muted-foreground uppercase tracking-wider">{title}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {cards.map((card) => (
                         <button
                             key={card.id}
                             onClick={() => setActiveProfileId(card.id)}
-                            className="group flex items-start gap-4 p-5 rounded-lg border border-gray-200 bg-white shadow-sm hover:border-gray-400 transition-all text-left"
+                            className="group flex items-start gap-4 p-5 rounded-lg border border-border bg-background shadow-sm hover:border-muted-foreground/30 transition-all text-left"
                         >
-                            <div className="p-2 rounded bg-gray-50 text-gray-500 group-hover:bg-gray-100 group-hover:text-black transition-colors">
+                            <div className="p-2 rounded bg-muted text-muted-foreground group-hover:bg-accent group-hover:text-foreground transition-colors">
                                 {card.icon}
                             </div>
                             <div className="flex-1 space-y-1 min-w-0">
-                                <h4 className="font-bold text-gray-900">{card.title}</h4>
-                                <p className="text-[13px] text-gray-500 line-clamp-2 leading-relaxed">{card.description}</p>
+                                <h4 className="font-bold text-foreground">{card.title}</h4>
+                                <p className="text-[13px] text-muted-foreground line-clamp-2 leading-relaxed">{card.description}</p>
                             </div>
-                            <ArrowRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity mt-1 shrink-0 text-gray-400" />
+                            <ArrowRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity mt-1 shrink-0 text-muted-foreground" />
                         </button>
                     ))}
                 </div>
@@ -712,19 +712,19 @@ export default function Settings() {
         return (
             <div className="w-full space-y-8 animate-in fade-in duration-300">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight text-[#111827] mb-2">Intelligence Tuning</h2>
-                    <p className="text-gray-500 text-sm">Calibrate memory and persona directives.</p>
+                    <h2 className="text-3xl font-bold tracking-tight text-foreground mb-2">Intelligence Tuning</h2>
+                    <p className="text-muted-foreground text-sm">Calibrate memory and persona directives.</p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
                     <Card>
-                        <CardHeader title="Memory & Context (RAG Engine)" description="Manage the local vector database." icon={<Database size={18} className="text-gray-400" />} />
+                        <CardHeader title="Memory & Context (RAG Engine)" description="Manage the local vector database." icon={<Database size={18} className="text-muted-foreground" />} />
                         <CardContent className="space-y-4">
-                            <div className="flex flex-col gap-3 p-4 rounded bg-gray-50 border border-gray-100">
+                            <div className="flex flex-col gap-3 p-4 rounded bg-muted/30 border border-border">
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-1">
-                                        <div className="text-[13px] font-bold text-gray-900">Vault Sync</div>
-                                        <div className="text-[12px] text-gray-500">Force re-read of Obsidian Vault.</div>
+                                        <div className="text-[13px] font-bold text-foreground">Vault Sync</div>
+                                        <div className="text-[12px] text-muted-foreground">Force re-read of Obsidian Vault.</div>
                                     </div>
                                     <button
                                         onClick={async () => {
@@ -733,7 +733,7 @@ export default function Settings() {
                                             try { await sidecarApi.ragSyncVault() } catch (e: any) { alert(e.message) }
                                         }}
                                         disabled={ragStatus?.status === 'syncing'}
-                                        className="text-[12px] font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded transition-colors disabled:opacity-50"
+                                        className="text-[12px] font-medium bg-background border border-border text-muted-foreground hover:bg-muted px-4 py-2 rounded transition-colors disabled:opacity-50"
                                     >
                                         {ragStatus?.status === 'syncing' ? 'Syncing...' : 'Force Sync Vault'}
                                     </button>
@@ -749,16 +749,16 @@ export default function Settings() {
     }
 
     return (
-        <div className="h-full flex flex-col font-sans bg-white text-[#111827] overflow-hidden">
+        <div className="h-full flex flex-col font-sans bg-background text-foreground overflow-hidden">
             <div className="flex-1 flex overflow-hidden">
-                <aside className="w-64 shrink-0 border-r border-[#E5E5E5] bg-white pt-10 px-4">
+                <aside className="w-64 shrink-0 border-r border-border bg-background pt-10 px-4">
                     <div className="mb-10 px-2 space-y-2">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">
                             <span>System</span>
                             <span className="material-symbols-outlined text-[12px]"><ChevronRight size={12}/></span>
-                            <span className="text-gray-600">Settings</span>
+                            <span className="text-muted-foreground">Settings</span>
                         </div>
-                        <h1 className="text-4xl font-extrabold tracking-tight text-[#111827]">Config</h1>
+                        <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Config</h1>
                     </div>
 
                     <nav className="flex flex-col space-y-1">
@@ -769,19 +769,19 @@ export default function Settings() {
                                 className={cn(
                                     "flex items-center gap-3 px-4 py-2.5 rounded text-[13px] font-medium transition-colors",
                                     activeSection === item.section 
-                                        ? "bg-gray-100 text-black" 
-                                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                                        ? "bg-muted text-foreground" 
+                                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                                 )}
                             >
-                                <span className={cn("shrink-0", activeSection === item.section ? "text-black" : "text-gray-400")}>{item.icon}</span>
+                                <span className={cn("shrink-0", activeSection === item.section ? "text-foreground" : "text-muted-foreground")}>{item.icon}</span>
                                 {item.label}
                             </button>
                         ))}
                     </nav>
 
-                    <div className="mt-10 p-4 border-t border-[#E5E5E5]">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Immutable Rule</p>
-                        <p className="text-[12px] text-gray-500 leading-relaxed">
+                    <div className="mt-10 p-4 border-t border-border">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Immutable Rule</p>
+                        <p className="text-[12px] text-muted-foreground/60 leading-relaxed">
                             System configuration is persisted locally. Core engine parameters are immutable unless audited.
                         </p>
                     </div>

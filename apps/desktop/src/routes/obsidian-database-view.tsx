@@ -98,33 +98,37 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
     const saveCurrentView = (updates: any) => {
         setSavedViews(prev => {
             const newViews = prev.map(v => v.id === activeViewId ? { ...v, ...updates } : v);
-            localStorage.setItem(`lifeos_db_views_${database.id}`, JSON.stringify({ 
-                views: newViews, 
+            localStorage.setItem(`lifeos_db_views_${database.id}`, JSON.stringify({
+                views: newViews,
                 activeId: activeViewId,
-                isLocked: updates.isLocked !== undefined ? updates.isLocked : isLocked
+                isLocked
             }));
             return newViews;
         });
     };
 
-    const handleSelectView = (viewId: string) => {
-        const view = savedViews.find(v => v.id === viewId);
+    const handleSwitchView = (id: string) => {
+        const view = savedViews.find(v => v.id === id);
         if (!view) return;
-        setActiveViewId(view.id);
+        setActiveViewId(id);
         setActiveTab(view.activeTab || 'table');
         setHiddenProperties(view.hiddenProperties || []);
         setSortConfigs(view.sortConfigs || []);
         setFilters(view.filters || []);
         setFilterGroupId(view.filterGroupId || 'AND');
         setGroupBy(view.groupBy || null);
-        localStorage.setItem(`lifeos_db_views_${database.id}`, JSON.stringify({ views: savedViews, activeId: viewId, isLocked }));
+        
+        localStorage.setItem(`lifeos_db_views_${database.id}`, JSON.stringify({
+            views: savedViews,
+            activeId: id,
+            isLocked
+        }));
     };
 
-    const handleAddView = () => {
-        const newId = Math.random().toString(36).substr(2, 9);
+    const handleCreateView = () => {
         const newView = {
-            id: newId,
-            name: `View ${savedViews.length + 1}`,
+            id: Math.random().toString(36).slice(2, 9),
+            name: `New View ${savedViews.length + 1}`,
             activeTab: 'table',
             hiddenProperties: [],
             sortConfigs: [],
@@ -132,32 +136,30 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
             filterGroupId: 'AND',
             groupBy: null
         };
-        setSavedViews([...savedViews, newView]);
-        handleSelectView(newId);
-    };
-
-    const handleDuplicateView = (viewId: string) => {
-        const view = savedViews.find(v => v.id === viewId);
-        if (!view) return;
-        const newId = Math.random().toString(36).substr(2, 9);
-        const newView = { ...view, id: newId, name: `${view.name} (Copy)` };
-        setSavedViews([...savedViews, newView]);
-        setViewMenuOpenId(null);
-        handleSelectView(newId);
-    };
-
-    const handleDeleteView = (viewId: string) => {
-        if (savedViews.length === 1) return; // Cannot delete last view
-        const newViews = savedViews.filter(v => v.id !== viewId);
+        const newViews = [...savedViews, newView];
         setSavedViews(newViews);
-        setViewMenuOpenId(null);
-        if (activeViewId === viewId) handleSelectView(newViews[0].id);
+        handleSwitchView(newView.id);
+    };
+
+    const handleDeleteView = (id: string) => {
+        if (savedViews.length <= 1) return;
+        const newViews = savedViews.filter(v => v.id !== id);
+        setSavedViews(newViews);
+        if (activeViewId === id) {
+            handleSwitchView(newViews[0].id);
+        }
+    };
+
+    const handleRenameView = (id: string, newName: string) => {
+        const newViews = savedViews.map(v => v.id === id ? { ...v, name: newName } : v);
+        setSavedViews(newViews);
+        saveCurrentView({}); // just trigger save to storage
     };
 
     const fetchRows = async () => {
         setLoading(true)
         try {
-            const res = await sidecarApi.queryVaultDatabase(database.id)
+            const res = await sidecarApi.listVaultDatabaseRows(database.id)
             setRows(res.results || [])
         } catch (err) {
             console.error(err)
@@ -166,533 +168,306 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
         }
     }
 
-    useEffect(() => {
-        fetchRows()
-        // Load Templates
-        sidecarApi.listObsidianFiles().then(res => {
-            const templates = res.files.filter((f: any) => 
-                f.name.toLowerCase().includes('template') || 
-                f.path.toLowerCase().includes('template')
-            );
-            setAvailableTemplates(templates);
-        }).catch(err => console.error("Template load failed", err));
+    const fetchTemplates = async () => {
+        try {
+            const res = await sidecarApi.listVaultTemplates();
+            setAvailableTemplates(res.templates || []);
+        } catch (err) {}
+    }
 
-        // SSE Logic
-        const eventSource = new EventSource('http://127.0.0.1:8765/api/vault/events');
-        eventSource.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.data?.db_name === database.id) fetchRows();
-            } catch (e) {
-                console.error("SSE error", e);
-            }
-        };
-        return () => eventSource.close();
+    useEffect(() => {
+        fetchRows();
+        fetchTemplates();
     }, [database.id])
 
-    const handleUpdate = async (fileName: string, propertyName: string, value: any) => {
-        if (propertyName === 'title') {
-            try {
-                await sidecarApi.renameVaultFile(database.id, fileName, value)
-                fetchRows()
-            } catch (e) {
-                console.error("Rename failed", e)
-                fetchRows()
-            }
-            return
-        }
-
-        setRows(prev => prev.map(r => r.id === fileName ? {
-            ...r,
-            properties: { ...r.properties, [propertyName]: value }
-        } : r))
-        
-        try {
-            await sidecarApi.updateVaultRow(database.id, fileName, { [propertyName]: value })
-        } catch (e) {
-            console.error(e)
-            fetchRows()
-        }
-    }
-
-    const handleAddRow = async () => {
+    const handleCreateRow = async (templatePath?: string) => {
         if (!newRowName.trim()) return;
-        const initialProps: Record<string, any> = {};
-        Object.keys(database.schema).forEach(key => {
-            const meta = database.schema[key];
-            const typeStr = typeof meta === 'string' ? meta : (meta?.type || 'str');
-            if (typeStr === 'list') initialProps[key] = [];
-            else if (typeStr === 'bool') initialProps[key] = false;
-            else initialProps[key] = "";
-        });
-
         try {
-            await sidecarApi.createVaultRow(database.id, newRowName, initialProps)
-            setIsCreatingRow(false);
+            setLoading(true);
+            await sidecarApi.createVaultDatabaseRow(database.id, newRowName.trim(), templatePath);
             setNewRowName('');
-            fetchRows();
-        } catch (e) { console.error(e); }
+            setIsCreatingRow(false);
+            setIsTemplateMenuOpen(false);
+            await fetchRows();
+        } catch (err) {
+            console.error(err);
+            alert("Failed to create record");
+        } finally {
+            setLoading(false);
+        }
     }
 
-    const handleAddRowWithTemplate = async (templatePath: string) => {
-        const name = prompt("Enter new entry name:");
-        if (!name?.trim()) return;
+    const handleRowClick = (rowId: string) => {
+        setSelectedRowId(rowId)
+    }
 
+    const handleUpdateRow = async (rowId: string, updates: any) => {
         try {
-            // First read the template
-            const tpl = await sidecarApi.readObsidianNote(templatePath);
-            
-            // Merge Initial Schema with Template Metadata
-            const mergedProps: Record<string, any> = { ...tpl.metadata };
-            Object.keys(database.schema).forEach(key => {
-                const meta = database.schema[key];
-                const typeStr = typeof meta === 'string' ? meta : (meta?.type || 'str');
-                if (mergedProps[key] === undefined) {
-                    if (typeStr === 'list') mergedProps[key] = [];
-                    else if (typeStr === 'bool') mergedProps[key] = false;
-                    else mergedProps[key] = "";
-                }
-            });
+            await sidecarApi.updateVaultDatabaseRow(database.id, rowId, updates);
+            await fetchRows();
+        } catch (err) {
+            console.error(err);
+        }
+    }
 
-            const res = await sidecarApi.createVaultRow(database.id, name, mergedProps);
-
-            // Inject template markdown content if it had any
-            if (tpl.content && tpl.content.trim()) {
-                await sidecarApi.updateObsidianNote(`${database.id}/${res.id}`, tpl.content);
-            }
-            
-            setIsTemplateMenuOpen(false);
-            fetchRows();
-        } catch (e) {
-            console.error("Template creation failed:", e);
+    const handleDeleteRow = async (rowId: string) => {
+        if (!confirm("Are you sure? This will delete the markdown file.")) return;
+        try {
+            await sidecarApi.deleteVaultDatabaseRow(database.id, rowId);
+            await fetchRows();
+        } catch (err) {
+            console.error(err);
         }
     }
 
     const filteredRows = useMemo(() => {
-        let result = rows.filter(r => 
-            r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            Object.values(r.properties).some(v => String(v).toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (r.content && r.content.toLowerCase().includes(searchQuery.toLowerCase()))
-        );
+        let result = rows.filter(row => {
+            const content = JSON.stringify(row).toLowerCase()
+            return content.includes(searchQuery.toLowerCase())
+        });
 
-        // Apply advanced filters
+        // Apply Filters
         if (filters.length > 0) {
             result = result.filter(row => {
                 const results = filters.map(f => {
-                    const val = f.col === 'title' ? row.title : row.properties[f.col];
-                    const target = String(val || "").toLowerCase();
-                    const filterVal = String(f.val || "").toLowerCase();
-
-                    switch (f.op) {
-                        case 'eq': return target === filterVal;
-                        case 'con': return target.includes(filterVal);
-                        case 'emp': return !val || (Array.isArray(val) && val.length === 0);
-                        case 'not_emp': return !!val && (!Array.isArray(val) || val.length > 0);
-                        case 'not_con': return !target.includes(filterVal);
-                        default: return true;
-                    }
+                    const val = row[f.col];
+                    if (f.op === 'contains') return String(val || '').toLowerCase().includes(f.val.toLowerCase());
+                    if (f.op === 'equals') return String(val || '').toLowerCase() === f.val.toLowerCase();
+                    if (f.op === 'is_empty') return !val;
+                    if (f.op === 'not_empty') return !!val;
+                    return true;
                 });
-
-                return filterGroupId === 'OR' ? results.some(r => r) : results.every(r => r);
+                return filterGroupId === 'AND' ? results.every(r => r) : results.some(r => r);
             });
         }
 
-        if (sortConfigs && sortConfigs.length > 0) {
-            result = [...result].sort((a, b) => {
-                for (const sortConfig of sortConfigs) {
-                    const valA = sortConfig.col === 'title' ? a.title : a.properties[sortConfig.col];
-                    const valB = sortConfig.col === 'title' ? b.title : b.properties[sortConfig.col];
-                    
-                    const strA = String(valA || "").toLowerCase();
-                    const strB = String(valB || "").toLowerCase();
-                    
-                    if (strA < strB) return sortConfig.dir === 'asc' ? -1 : 1;
-                    if (strA > strB) return sortConfig.dir === 'asc' ? 1 : -1;
+        // Apply Sorting
+        if (sortConfigs.length > 0) {
+            result.sort((a, b) => {
+                for (const sort of sortConfigs) {
+                    const valA = a[sort.col] || '';
+                    const valB = b[sort.col] || '';
+                    if (valA < valB) return sort.dir === 'asc' ? -1 : 1;
+                    if (valA > valB) return sort.dir === 'asc' ? 1 : -1;
                 }
                 return 0;
             });
         }
-        
-        return result;
-    }, [rows, searchQuery, sortConfigs, filters])
 
-    const columns = useMemo(() => {
-        const all = ['title', ...Object.keys(database.schema).sort()];
-        return all.filter(col => col === 'title' || !hiddenProperties.includes(col));
-    }, [database.schema, hiddenProperties])
+        return result;
+    }, [rows, searchQuery, filters, filterGroupId, sortConfigs]);
 
     return (
-        <div className="flex flex-col h-full w-full select-none bg-white font-sans text-[#111827]">
-            {/* Header / Breadcrumbs */}
-            <div className="flex flex-col px-4 pt-4 pb-0 shrink-0 border-b border-[#E5E5E5]">
-                <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3 text-[12px] font-medium text-gray-400">
-                            <button onClick={onBack} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-black transition-colors" title="Back to Databases">
-                                <ArrowLeft size={16} />
-                            </button>
-                            <span>Vault Databases</span>
-                            <div className="w-px h-3 bg-gray-200" />
-                            <span className="text-gray-900 font-black tracking-tighter uppercase text-[10px]">{database.name}</span>
+        <div className="flex-1 flex flex-col h-full bg-background text-foreground overflow-hidden">
+            {/* Database Header Toolbar */}
+            <div className="flex items-center justify-between px-6 py-3 border-b border-border shrink-0 bg-background/50 backdrop-blur-sm z-10">
+                <div className="flex items-center gap-4">
+                    <button onClick={onBack} className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors">
+                        <ArrowLeft size={18} />
+                    </button>
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-[14px] font-bold tracking-tight">{database.name}</h2>
+                            {isLocked && <div className="text-[10px] font-bold text-muted-foreground uppercase border border-border px-1.5 py-0.5 rounded">Locked</div>}
                         </div>
-
-                    <div className="flex items-center gap-2">
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => {
-                                if (rows.length === 0) return;
-                                const headers = ["Title", ...columns.slice(1)];
-                                const csvContent = [
-                                    headers.join(","),
-                                    ...filteredRows.map(row => {
-                                        const vals = [row.title];
-                                        columns.slice(1).forEach(col => {
-                                            const val = row.properties[col];
-                                            const cleanVal = Array.isArray(val) ? val.join(";") : String(val || "");
-                                            vals.push(`"${String(cleanVal).replace(/"/g, '""')}"`);
-                                        });
-                                        return vals.join(",");
-                                    })
-                                ].join("\n");
-                                const blob = new Blob([csvContent], { type: 'text/csv' });
-                                const url = window.URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `${database.id}_export.csv`;
-                                a.click();
-                            }}
-                            className="text-[10px] font-black uppercase tracking-widest text-[#111827] hover:bg-gray-100"
-                        >
-                            <Download size={14} className="mr-2" /> Export
-                        </Button>
-                        {!isLocked && (
-                            <button 
-                                onClick={() => {
-                                    const input = document.createElement('input');
-                                    input.type = 'file';
-                                    input.accept = '.csv';
-                                    input.onchange = async (e: any) => {
-                                        const file = e.target.files[0];
-                                        if (!file) return;
-                                        const reader = new FileReader();
-                                        reader.onload = async (event) => {
-                                            const text = event.target?.result as string;
-                                            const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-                                            const headers = lines[0].split(',').map(h => h.trim());
-                                            const data = lines.slice(1).map(l => l.split(',').map(v => v.trim()));
-                                            
-                                            setLoading(true);
-                                            for (const row of data) {
-                                                const props: Record<string, any> = {};
-                                                headers.forEach((h, i) => { props[h] = row[i]; });
-                                                // Title is usually first column
-                                                const title = row[0] || 'Imported Note';
-                                                await sidecarApi.createVaultRow(database.id, title, props);
-                                            }
-                                            fetchRows();
-                                        };
-                                        reader.readAsText(file);
-                                    };
-                                    input.click();
-                                }}
-                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-[10px] font-black uppercase tracking-widest text-[#111827] transition-all"
-                            >
-                                <Plus size={14} /> Import
-                            </button>
-                        )}
-
-                        <div className="relative flex items-center">
-                            <Search className="absolute left-2 w-3.5 h-3.5 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 text-[12px] px-2 py-1.5 pl-7 rounded focus:outline-none focus:ring-1 focus:ring-gray-300 placeholder:text-gray-400 transition-shadow"
-                            />
-                        </div>
-                        <button onClick={fetchRows} className="p-1.5 hover:bg-gray-100 rounded text-gray-400 hover:text-black transition-colors"><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /></button>
-                        <div className="w-px h-4 bg-gray-200 mx-1" />
-                        
-                        {/* More Menu / Settings Trigger */}
-                        <button 
-                            onClick={() => setSettingsOpen(!settingsOpen)}
-                            className={cn(
-                                "flex items-center justify-center p-1.5 hover:bg-gray-100 rounded transition-colors",
-                                settingsOpen ? "text-[#111827] bg-gray-100" : "text-gray-400"
-                            )}
-                        >
-                            <MoreVertical size={14} />
-                        </button>
-
-                        {!isLocked && (
-                            <div className="relative group/new flex">
-                                <button 
-                                    onClick={() => setIsCreatingRow(true)}
-                                    className="flex items-center justify-center gap-1.5 pl-3 pr-2 py-1.5 bg-[#111827] text-white text-[12px] font-medium rounded-l hover:bg-black transition-colors ml-1 border-r border-gray-700 h-7"
-                                >
-                                    <Plus size={14} /> New
-                                </button>
-                                <button 
-                                    onClick={() => setIsTemplateMenuOpen(!isTemplateMenuOpen)}
-                                    className="flex items-center justify-center px-1.5 bg-[#111827] text-white text-[12px] font-medium rounded-r hover:bg-black transition-colors h-7"
-                                >
-                                    <ChevronDown size={14} />
-                                </button>
-
-                                {/* Template Dropdown */}
-                                {isTemplateMenuOpen && (
-                                    <>
-                                        <div className="fixed inset-0 z-40" onClick={() => setIsTemplateMenuOpen(false)} />
-                                        <div className="absolute top-9 right-0 z-50 w-56 bg-white border border-gray-200 rounded-md shadow-lg py-1 max-h-64 overflow-y-auto">
-                                            <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100">
-                                                DB Templates
-                                            </div>
-                                            {availableTemplates.length === 0 ? (
-                                                <div className="px-3 py-4 text-center text-[10px] text-gray-500">No templates found in vault.</div>
-                                            ) : (
-                                                availableTemplates.map(tpl => (
-                                                    <button 
-                                                        key={tpl.path}
-                                                        onClick={() => handleAddRowWithTemplate(tpl.path)}
-                                                        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 transition-colors group"
-                                                    >
-                                                        <FileText size={12} className="text-gray-400 group-hover:text-black" />
-                                                        <span className="text-[11px] text-[#111827] truncate font-medium">{tpl.name.replace('.md','')}</span>
-                                                    </button>
-                                                ))
-                                            )}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        )}
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1 text-[13px] font-medium text-gray-500 overflow-x-auto custom-scrollbar pb-[-1px] relative">
-                    {savedViews.map(view => {
-                        const Icon = view.activeTab === 'table' ? Table : 
-                                    view.activeTab === 'board' ? Kanban : 
-                                    view.activeTab === 'calendar' ? Calendar : 
-                                    view.activeTab === 'chart' || view.activeTab === 'timeline' ? LayoutGrid : 
-                                    view.activeTab === 'list' ? List : LayoutGrid;
-                        return (
-                            <div key={view.id} className="relative flex items-center group/tab">
-                                <button 
-                                    onClick={() => handleSelectView(view.id)}
-                                    onContextMenu={(e) => {
-                                        e.preventDefault();
-                                        setViewMenuOpenId(viewMenuOpenId === view.id ? null : view.id);
-                                    }}
-                                    className={cn(
-                                        "flex items-center gap-2 px-4 py-2 border-b-2 transition-all cursor-pointer hover:text-black shrink-0",
-                                        activeViewId === view.id ? "border-[#111827] text-black font-bold" : "border-transparent text-gray-500"
-                                    )}
-                                >
-                                    <Icon size={14} /> {view.name}
-                                </button>
-
-                                {/* Dropdown Trigger (visible on active or hover) */}
-                                {(activeViewId === view.id || viewMenuOpenId === view.id) && (
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); setViewMenuOpenId(viewMenuOpenId === view.id ? null : view.id); }}
-                                        className="absolute right-1 p-1 hover:bg-gray-100 rounded text-gray-400 opacity-0 group-hover/tab:opacity-100 transition-opacity"
-                                    >
-                                        <MoreVertical size={12} />
-                                    </button>
-                                )}
-
-                                {/* View Settings Menu */}
-                                {viewMenuOpenId === view.id && (
-                                    <>
-                                        <div className="fixed inset-0 z-40" onClick={() => setViewMenuOpenId(null)} />
-                                        <div className="absolute top-10 left-0 z-50 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1">
-                                            <button 
-                                                onClick={() => {
-                                                    const newName = prompt("Rename View:", view.name);
-                                                    if (newName) saveCurrentView({ name: newName });
-                                                    setViewMenuOpenId(null);
-                                                }}
-                                                className="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-50 text-gray-700"
-                                            >
-                                                Rename View
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDuplicateView(view.id)}
-                                                className="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-50 text-gray-700 font-bold"
-                                            >
-                                                Duplicate View
-                                            </button>
-                                            {savedViews.length > 1 && (
-                                                <>
-                                                    <div className="border-t border-gray-100 my-1"></div>
-                                                    <button 
-                                                        onClick={() => handleDeleteView(view.id)}
-                                                        className="w-full text-left px-4 py-2 text-[12px] hover:bg-red-50 text-red-600 font-medium"
-                                                    >
-                                                        Delete View
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        )
-                    })}
-                    <button 
-                        onClick={() => {
-                            const id = Math.random().toString(36).substr(2, 9);
-                            const newView = {
-                                id,
-                                name: `View ${savedViews.length + 1}`,
-                                activeTab: 'table',
-                                hiddenProperties: [],
-                                sortConfigs: [],
-                                filters: [],
-                                groupBy: null
-                            };
-                            const nv = [...savedViews, newView];
-                            setSavedViews(nv);
-                            localStorage.setItem(`lifeos_db_views_${database.id}`, JSON.stringify({ views: nv, activeId: id }));
-                            handleSelectView(id);
-                        }}
-                        className="px-3 py-2 text-gray-300 hover:text-black transition-colors"
-                        title="Add View"
-                    >
-                        <Plus size={16} />
+                <div className="flex items-center gap-2">
+                    <div className="relative flex items-center">
+                        <Search className="absolute left-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Filter..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-muted border border-border text-[12px] px-3 py-1.5 pl-8 rounded-md focus:outline-none focus:ring-1 focus:ring-ring w-48 transition-all focus:w-64 placeholder:text-muted-foreground/60"
+                        />
+                    </div>
+                    
+                    <button onClick={fetchRows} className={cn("p-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-all", loading && "animate-spin")}>
+                        <RefreshCw size={16} />
                     </button>
+                    
+                    <button onClick={() => setSettingsOpen(!settingsOpen)} className={cn("p-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-all", settingsOpen && "bg-muted text-foreground")}>
+                        <Settings size={16} />
+                    </button>
+
+                    <Button onClick={() => setIsCreatingRow(true)} size="sm" className="h-8 gap-2 px-3 text-[11px] font-bold uppercase tracking-wider bg-primary text-primary-foreground hover:opacity-90">
+                        <Plus size={14} /> New
+                    </Button>
                 </div>
             </div>
 
-            {/* Settings Overlay */}
-            <DatabaseSettingsPanel 
-                isOpen={settingsOpen} 
-                onClose={() => setSettingsOpen(false)} 
-                database={database}
-                activeTab={activeTab}
-                hiddenProperties={hiddenProperties}
-                onToggleVisibility={(name) => {
-                    setHiddenProperties(prev => {
-                        const next = prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name];
-                        saveCurrentView({ hiddenProperties: next });
-                        return next;
-                    })
-                }}
-                sortConfigs={sortConfigs}
-                onSortConfigsChange={(c) => { setSortConfigs(c); saveCurrentView({ sortConfigs: c }); }}
-                filters={filters}
-                filterGroupId={filterGroupId}
-                onFiltersChange={(f, op) => { 
-                    setFilters(f); 
-                    if (op) setFilterGroupId(op);
-                    saveCurrentView({ filters: f, filterGroupId: op || filterGroupId }); 
-                }}
-                groupBy={groupBy}
-                onGroupByChange={(g) => { setGroupBy(g); saveCurrentView({ groupBy: g }); }}
-                onUpdateSchema={() => {
-                    fetchRows();
-                    onRefresh();
-                }}
-                onLayoutChange={(lyr) => { setActiveTab(lyr); saveCurrentView({ activeTab: lyr }); }}
-                isLocked={isLocked}
-                onLockToggle={() => {
-                    const next = !isLocked;
-                    setIsLocked(next);
-                    saveCurrentView({ isLocked: next });
-                }}
-            />
-
-            {/* Dynamic View Content */}
-            <div className="flex-1 overflow-auto bg-gray-50 relative custom-scrollbar">
-                {/* Add Row Overlay */}
-                {isCreatingRow && !isLocked && (
-                    <div className="absolute inset-x-0 top-0 z-[60] bg-white border-b border-gray-200 p-6 shadow-sm">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-[12px] font-bold uppercase tracking-wider text-gray-900">Create New Entry</h3>
-                            <button onClick={() => setIsCreatingRow(false)} className="text-[12px] font-bold uppercase tracking-wider text-gray-400 hover:text-gray-900 transition-colors">Cancel</button>
+            {/* View Tabs Bar */}
+            <div className="flex items-center justify-between px-6 border-b border-border bg-muted/20 shrink-0">
+                <div className="flex items-center gap-1 -mb-[1px] overflow-x-auto no-scrollbar">
+                    {savedViews.map(view => (
+                        <div key={view.id} className="relative group flex items-center">
+                            <button
+                                onClick={() => handleSwitchView(view.id)}
+                                className={cn(
+                                    "flex items-center gap-2 px-4 py-2 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap",
+                                    activeViewId === view.id 
+                                        ? "border-primary text-foreground bg-background/50" 
+                                        : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                )}
+                            >
+                                {view.activeTab === 'table' && <Table size={12} />}
+                                {view.activeTab === 'board' && <Kanban size={12} />}
+                                {view.activeTab === 'gallery' && <LayoutGrid size={12} />}
+                                {view.activeTab === 'calendar' && <Calendar size={12} />}
+                                {view.activeTab === 'list' && <List size={12} />}
+                                {view.name}
+                            </button>
+                            {activeViewId === view.id && !isLocked && (
+                                <button 
+                                    onClick={() => setViewMenuOpenId(viewMenuOpenId === view.id ? null : view.id)}
+                                    className="p-1 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    <ChevronDown size={10} />
+                                </button>
+                            )}
                         </div>
-                        <div className="flex gap-4 items-end max-w-2xl">
-                            <div className="flex-1 space-y-2">
-                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Entry Title</label>
-                                <input 
-                                    autoFocus 
-                                    className="w-full h-10 bg-white border border-gray-200 px-4 rounded text-sm focus:ring-1 focus:ring-gray-300 focus:outline-none"
-                                    placeholder="Untitled Note"
+                    ))}
+                    {!isLocked && (
+                        <button onClick={handleCreateView} className="p-2 text-muted-foreground hover:text-foreground transition-colors" title="New View">
+                            <Plus size={14} />
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-4 py-1.5">
+                    <div className="flex items-center gap-1.5 p-1 bg-background/50 rounded-lg border border-border shadow-sm">
+                        {[
+                            { id: 'table', icon: Table, label: 'Table' },
+                            { id: 'board', icon: Kanban, label: 'Board' },
+                            { id: 'gallery', icon: LayoutGrid, label: 'Gallery' },
+                            { id: 'calendar', icon: Calendar, label: 'Calendar' },
+                            { id: 'list', icon: List, label: 'List' }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => { setActiveTab(tab.id as any); saveCurrentView({ activeTab: tab.id }); }}
+                                className={cn(
+                                    "p-1.5 rounded-md transition-all flex items-center gap-2",
+                                    activeTab === tab.id ? "bg-muted text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                                )}
+                                title={tab.label}
+                            >
+                                <tab.icon size={14} />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="flex-1 relative overflow-hidden flex flex-col">
+                {isCreatingRow && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[500px] z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+                        <div className="bg-background border border-border rounded-xl shadow-2xl p-6 flex flex-col gap-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Initialize Record</h3>
+                                <button onClick={() => { setIsCreatingRow(false); setIsTemplateMenuOpen(false); }} className="p-1 hover:bg-muted rounded text-muted-foreground">
+                                    <Plus size={14} className="rotate-45" />
+                                </button>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="Enter identifier..."
                                     value={newRowName}
                                     onChange={(e) => setNewRowName(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAddRow()}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleCreateRow()}
+                                    className="w-full bg-muted border border-border px-4 py-2 text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-ring"
                                 />
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <button 
+                                            onClick={() => setIsTemplateMenuOpen(!isTemplateMenuOpen)}
+                                            className="w-full flex items-center justify-between bg-muted border border-border px-4 py-2 text-sm rounded-lg text-muted-foreground hover:text-foreground transition-all"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <FileText size={14} />
+                                                <span>Apply Template...</span>
+                                            </div>
+                                            <ChevronDown size={14} />
+                                        </button>
+                                        {isTemplateMenuOpen && (
+                                            <div className="absolute top-full left-0 right-0 mt-2 bg-popover border border-border rounded-lg shadow-xl max-h-48 overflow-y-auto z-[60] p-1.5">
+                                                <button onClick={() => handleCreateRow()} className="w-full text-left px-3 py-2 rounded text-sm hover:bg-muted text-muted-foreground hover:text-foreground font-medium transition-all mb-1">
+                                                    Empty Page
+                                                </button>
+                                                {availableTemplates.map(t => (
+                                                    <button key={t.path} onClick={() => handleCreateRow(t.path)} className="w-full text-left px-3 py-2 rounded text-sm hover:bg-muted text-foreground transition-all">
+                                                        {t.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <Button onClick={() => handleCreateRow()} className="px-6 font-bold uppercase text-[10px] tracking-widest bg-primary text-primary-foreground hover:opacity-90">
+                                        Deploy
+                                    </Button>
+                                </div>
                             </div>
-                            <button 
-                                onClick={handleAddRow}
-                                className="h-10 px-6 bg-[#111827] text-white text-[12px] font-medium rounded hover:bg-black transition-colors shrink-0"
-                            >
-                                Confirm
-                            </button>
                         </div>
                     </div>
                 )}
 
-                <div className="h-full p-4 overflow-hidden">
+                <div className="flex-1 overflow-hidden">
                     {activeTab === 'table' && (
                         <TableView 
                             rows={filteredRows} 
-                            columns={columns} 
+                            columns={Object.keys(database.schema)}
                             schema={database.schema} 
-                            loading={loading}
-                            onUpdate={handleUpdate}
-                            onSelectRow={setSelectedRowId}
-                            onDeleteRow={(id) => sidecarApi.deleteVaultRow(database.id, id).then(fetchRows)}
+                            hiddenProperties={hiddenProperties}
+                            onRowClick={handleRowClick}
+                            onSelectRow={handleRowClick}
+                            onUpdateRow={handleUpdateRow}
+                            onDeleteRow={handleDeleteRow}
                             onNavigate={onNavigate}
+                            loading={loading}
                             groupBy={groupBy}
-                            readonly={isLocked}
                         />
                     )}
                     {activeTab === 'board' && (
                         <BoardView 
                             rows={filteredRows} 
-                            schema={database.schema} 
-                            onUpdate={handleUpdate}
-                            onSelectRow={setSelectedRowId}
+                            schema={database.schema}
+                            groupBy={groupBy}
+                            onSelectRow={handleRowClick}
+                            onUpdateRow={handleUpdateRow}
                             onNavigate={onNavigate}
-                            groupBy={groupBy || undefined}
                         />
                     )}
                     {activeTab === 'gallery' && (
                         <GalleryView 
                             rows={filteredRows} 
-                            schema={database.schema} 
-                            onSelectRow={setSelectedRowId}
+                            schema={database.schema}
+                            onSelectRow={handleRowClick}
                         />
                     )}
                     {activeTab === 'calendar' && (
                         <CalendarView 
                             rows={filteredRows} 
-                            schema={database.schema} 
-                            onSelectRow={setSelectedRowId}
+                            schema={database.schema}
+                            onSelectRow={handleRowClick}
+                            onUpdateRow={handleUpdateRow}
+                            onNavigate={onNavigate}
+                            dateProperty={groupBy} // or another logic for date property selection
                         />
                     )}
-                    {activeTab === 'chart' && (
-                    <ChartView rows={filteredRows} schema={database.schema} />
-                )}
-
-                {activeTab === 'timeline' && (
-                    <TimelineView 
-                        rows={filteredRows} 
-                        schema={database.schema} 
-                        onSelectRow={setSelectedRowId} 
-                    />
-                )}
-
-                {activeTab === 'list' && (
+                    {activeTab === 'list' && (
                         <ListView 
                             rows={filteredRows} 
-                            columns={columns}
-                            schema={database.schema} 
-                            onUpdate={handleUpdate}
-                            onSelectRow={setSelectedRowId}
+                            columns={Object.keys(database.schema)}
+                            schema={database.schema}
+                            onSelectRow={handleRowClick}
+                            onUpdateRow={handleUpdateRow}
+                            onDeleteRow={handleDeleteRow}
                             onNavigate={onNavigate}
                             loading={loading}
                         />
@@ -700,25 +475,53 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
                 </div>
             </div>
 
+            {/* Database Settings Panel */}
+            <DatabaseSettingsPanel 
+                isOpen={settingsOpen}
+                onClose={() => setSettingsOpen(false)}
+                database={database as any}
+                onUpdateSchema={onRefresh}
+                currentView={{
+                    activeTab,
+                    hiddenProperties,
+                    sortConfigs,
+                    filters,
+                    filterGroupId,
+                    groupBy,
+                    isLocked
+                }}
+                onUpdateView={(updates) => {
+                    if (updates.activeTab !== undefined) setActiveTab(updates.activeTab);
+                    if (updates.hiddenProperties !== undefined) setHiddenProperties(updates.hiddenProperties);
+                    if (updates.sortConfigs !== undefined) setSortConfigs(updates.sortConfigs);
+                    if (updates.filters !== undefined) setFilters(updates.filters);
+                    if (updates.filterGroupId !== undefined) setFilterGroupId(updates.filterGroupId);
+                    if (updates.groupBy !== undefined) setGroupBy(updates.groupBy);
+                    if (updates.isLocked !== undefined) {
+                        setIsLocked(updates.isLocked);
+                        localStorage.setItem(`lifeos_db_views_${database.id}`, JSON.stringify({
+                            views: savedViews,
+                            activeId: activeViewId,
+                            isLocked: updates.isLocked
+                        }));
+                    }
+                    saveCurrentView(updates);
+                }}
+            />
 
-
+            {/* Row Detail Side Panel */}
             {selectedRowId && (
                 <ObsidianPagePanel
                     isOpen={!!selectedRowId}
                     onClose={() => setSelectedRowId(null)}
-                    databaseId={database.id}
-                    rowId={selectedRowId}
-                    schema={database.schema}
-                    properties={rows.find(r => r.id === selectedRowId)?.properties || {}}
-                    onUpdateProperty={(prop, val) => handleUpdate(selectedRowId!, prop, val)}
+                    fullPath={`3-Database/${database.id}/${selectedRowId}`}
                     onNavigate={onNavigate}
-                    onDelete={() => sidecarApi.deleteVaultRow(database.id, selectedRowId).then(() => { setSelectedRowId(null); fetchRows(); })}
+                    onDeleted={async () => {
+                        setSelectedRowId(null);
+                        await fetchRows();
+                    }}
                 />
             )}
         </div>
     )
-}
-
-function ChevronRight({ className }: { className?: string }) {
-    return <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
 }

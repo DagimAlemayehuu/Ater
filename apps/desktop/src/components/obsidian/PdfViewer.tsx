@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } f
 import { ChevronLeft, ChevronRight, X, Sparkles, Zap, Copy, Check, Maximize2, Minimize2, Filter, RefreshCw, Quote } from 'lucide-react';
 import { AiSidecar } from './AiSidecar';
 import { useConfig } from '@/lib/ConfigContext';
+import { useTheme } from '@/context/theme-provider';
 import { sidecarApi } from '@/lib/sidecarApi';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -33,6 +34,7 @@ export interface PdfViewerRef {
 
 export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title, initialPage = 1, filterPages, onStateChange }, ref) => {
     const { config } = useConfig();
+    const { theme } = useTheme();
     const [page, setPage] = useState(initialPage);
     const [isFiltered, setIsFiltered] = useState(false);
     const [filteredList, setFilteredList] = useState<number[]>([]);
@@ -72,7 +74,8 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     // Sync fullscreen state
     useEffect(() => {
         const handleFsChange = () => {
-            setIsFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
+            const isFs = !!(document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement || (document as any).msFullscreenElement);
+            setIsFullscreen(isFs);
         };
         document.addEventListener('fullscreenchange', handleFsChange);
         document.addEventListener('webkitfullscreenchange', handleFsChange);
@@ -115,19 +118,6 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
         toggleFullscreen,
         toggleSidebar: () => setSidebarOpen(prev => !prev)
     }));
-
-    useEffect(() => {
-        const handleFsChange = () => {
-            const isFs = !!(document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement || (document as any).msFullscreenElement);
-            setIsFullscreen(isFs);
-        };
-        document.addEventListener('fullscreenchange', handleFsChange);
-        document.addEventListener('webkitfullscreenchange', handleFsChange);
-        return () => {
-            document.removeEventListener('fullscreenchange', handleFsChange);
-            document.removeEventListener('webkitfullscreenchange', handleFsChange);
-        };
-    }, []);
 
     useEffect(() => {
         setSelection("");
@@ -207,16 +197,19 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const pdfUrl = `http://127.0.0.1:8765/api/obsidian/viewer/${encodeURI(path)}?vault_path=${encodeURIComponent(config?.obsidianVaultPath || '')}&page=${initialPage}${filterPages && filterPages.length > 0 ? `&filter_pages=${filterPages.join(',')}` : ''}`;
+    const isDarkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const resolvedTheme = isDarkMode ? 'dark' : 'light';
+
+    const pdfUrl = `http://127.0.0.1:8765/api/obsidian/viewer/${encodeURI(path)}?vault_path=${encodeURIComponent(config?.obsidianVaultPath || '')}&page=${initialPage}${filterPages && filterPages.length > 0 ? `&filter_pages=${filterPages.join(',')}` : ''}&theme=${resolvedTheme}`;
 
     return (
-        <div ref={containerRef} className="flex flex-row h-full bg-white relative overflow-hidden">
-            <div className="flex-1 flex flex-col min-w-0 relative bg-gray-50/30">
+        <div ref={containerRef} className="flex flex-row h-full bg-background relative overflow-hidden">
+            <div className="flex-1 flex flex-col min-w-0 relative bg-muted/30">
 
                 {/* Fixed AI Popover (Synced with MarkdownViewer style) */}
                 {showPopover && selection && (
                     <div 
-                        className="fixed z-50 bg-white/95 backdrop-blur-md border border-gray-200 rounded-full h-10 flex items-center px-2 shadow-2xl animate-in fade-in zoom-in duration-200 stop-selection-clear"
+                        className="fixed z-50 bg-popover/95 backdrop-blur-md border border-border rounded-full h-10 flex items-center px-2 shadow-2xl animate-in fade-in zoom-in duration-200 stop-selection-clear"
                         style={{ 
                             left: `${popoverPosition.left}px`,
                             top: `${popoverPosition.top}px`,
@@ -228,33 +221,39 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                         <button 
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={handleExplain} 
-                            className="flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] hover:bg-gray-50 rounded-full transition-all active:scale-95 group text-gray-800"
+                            className="flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] hover:bg-accent rounded-full transition-all active:scale-95 group text-foreground"
                         >
                             <Sparkles size={11} className="group-hover:scale-110 transition-transform text-indigo-500" />
                             <span>Explain</span>
                         </button>
-                        <div className="w-px h-5 bg-gray-100 mx-1" />
+                        <div className="w-px h-5 bg-border mx-1" />
                         <button 
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={handleQuickQuestions} 
-                            className="flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] hover:bg-gray-50 rounded-full transition-all active:scale-95 group text-gray-800"
+                            className="flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] hover:bg-accent rounded-full transition-all active:scale-95 group text-foreground"
                         >
                             <Zap size={11} className="group-hover:scale-110 transition-transform text-amber-500" />
                             <span>Questions</span>
                         </button>
-                        <div className="w-px h-5 bg-gray-100 mx-1" />
+                        <div className="w-px h-5 bg-border mx-1" />
                         <button 
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => { navigator.clipboard.writeText(selection); setShowPopover(false); }} 
                             title="Copy Selection" 
-                            className="p-2 hover:bg-gray-50 rounded-full transition-colors group"
+                            className="p-2 hover:bg-accent rounded-full transition-colors group"
                         >
-                            <Copy size={12} className="text-gray-400 group-hover:text-black" />
+                            <Copy size={12} className="text-muted-foreground group-hover:text-foreground" />
                         </button>
                     </div>
                 )}
                 <div className="flex-1 w-full h-full overflow-hidden flex items-center justify-center">
-                    <iframe ref={iframeRef} src={pdfUrl} className="w-full h-full border-none overflow-hidden" title={title} allowFullScreen />
+                    <iframe 
+                        ref={iframeRef} 
+                        src={pdfUrl} 
+                        className="w-full h-full border-none overflow-hidden" 
+                        title={title} 
+                        allowFullScreen 
+                    />
                 </div>
             </div>
 

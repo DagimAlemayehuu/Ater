@@ -1,11 +1,14 @@
 import React, { useMemo, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, LineChart, Line } from 'recharts'
 import { cn } from '@/lib/utils'
-import { BarChart3, PieChart as PieIcon, LineChart as LineIcon, Settings2 } from 'lucide-react'
+import { BarChart3, PieChart as PieIcon, LineChart as LineIcon } from 'lucide-react'
 
 interface ChartViewProps {
     rows: any[]
     schema: Record<string, any>
+    onSelectRow?: (id: string) => void
+    onUpdateRow?: (fileName: string, prop: string, val: any) => void
+    onNavigate?: (pageName: string) => void
 }
 
 const COLORS = ['#111827', '#374151', '#4B5563', '#6B7280', '#9CA3AF', '#D1D5DB'];
@@ -36,48 +39,48 @@ export function ChartView({ rows, schema }: ChartViewProps) {
     }, [rows, xProp, yProp]);
 
     if (rows.length === 0) {
-        return <div className="h-full flex items-center justify-center text-[10px] uppercase font-bold text-gray-400">No data for chart</div>
+        return <div className="h-full flex items-center justify-center text-[10px] uppercase font-bold text-gray-400 dark:text-muted-foreground">No data for chart</div>
     }
 
     const numberProps = Object.keys(schema).filter(k => schema[k] === 'number' || schema[k] === 'int' || schema[k] === 'float');
 
     return (
-        <div className="h-full w-full bg-white rounded-xl border border-gray-100 flex flex-col overflow-hidden">
+        <div className="h-full w-full bg-white dark:bg-background rounded-xl border border-gray-100 dark:border-border/10 flex flex-col overflow-hidden">
             {/* Chart Toolbar */}
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-border/10 bg-gray-50/50 dark:bg-muted/30 flex items-center justify-between">
                 <div className="flex items-center gap-6">
-                    <div className="flex bg-white rounded-md border border-gray-200 p-0.5 shadow-sm">
-                        <button onClick={() => setChartType('bar')} className={cn("p-1.5 rounded", chartType === 'bar' ? "bg-gray-100 text-[#111827]" : "text-gray-400 hover:text-gray-600")}><BarChart3 size={14} /></button>
-                        <button onClick={() => setChartType('line')} className={cn("p-1.5 rounded", chartType === 'line' ? "bg-gray-100 text-[#111827]" : "text-gray-400 hover:text-gray-600")}><LineIcon size={14} /></button>
-                        <button onClick={() => setChartType('pie')} className={cn("p-1.5 rounded", chartType === 'pie' ? "bg-gray-100 text-[#111827]" : "text-gray-400 hover:text-gray-600")}><PieIcon size={14} /></button>
+                    <div className="flex bg-white dark:bg-muted rounded-md border border-gray-200 dark:border-border/10 p-0.5 shadow-sm">
+                        <button onClick={() => setChartType('bar')} className={cn("p-1.5 rounded", chartType === 'bar' ? "bg-gray-100 dark:bg-background text-[#111827] dark:text-foreground" : "text-gray-400 hover:text-gray-600")}><BarChart3 size={14} /></button>
+                        <button onClick={() => setChartType('line')} className={cn("p-1.5 rounded", chartType === 'line' ? "bg-gray-100 dark:bg-background text-[#111827] dark:text-foreground" : "text-gray-400 hover:text-gray-600")}><LineIcon size={14} /></button>
+                        <button onClick={() => setChartType('pie')} className={cn("p-1.5 rounded", chartType === 'pie' ? "bg-gray-100 dark:bg-background text-[#111827] dark:text-foreground" : "text-gray-400 hover:text-gray-600")}><PieIcon size={14} /></button>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-black uppercase text-gray-400">Axis</span>
+                        <span className="text-[9px] font-black uppercase text-gray-400 dark:text-muted-foreground">Axis</span>
                         <select 
                             value={xProp} 
                             onChange={(e) => setXProp(e.target.value)}
-                            className="bg-white border border-gray-200 rounded px-2 py-1 text-[10px] font-bold focus:ring-0 outline-none"
+                            className="bg-white dark:bg-muted border border-gray-200 dark:border-border/10 rounded px-2 py-1 text-[10px] font-bold focus:ring-0 outline-none text-foreground"
                         >
                             {['title', ...Object.keys(schema)].map(k => <option key={k} value={k}>{k}</option>)}
                         </select>
-                        <span className="text-[9px] font-black uppercase text-gray-400">Value</span>
+                        <span className="text-[9px] font-black uppercase text-gray-400 dark:text-muted-foreground">Value</span>
                         <select 
                             value={yProp} 
                             onChange={(e) => setYProp(e.target.value)}
-                            className="bg-white border border-gray-200 rounded px-2 py-1 text-[10px] font-bold focus:ring-0 outline-none"
+                            className="bg-white dark:bg-muted border border-gray-200 dark:border-border/10 rounded px-2 py-1 text-[10px] font-bold focus:ring-0 outline-none text-foreground"
                         >
                             <option value="count">Count (rows)</option>
                             {numberProps.map(k => <option key={k} value={k}>Sum of {k}</option>)}
                         </select>
                     </div>
                 </div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-[#111827]">
+                <div className="text-[10px] font-black uppercase tracking-widest text-[#111827] dark:text-foreground">
                     Analysis Dashboard
                 </div>
             </div>
 
-            <div className="flex-1 w-full p-8 min-h-0">
+            <div className="flex-1 w-full p-8 min-h-0 bg-white dark:bg-background/50">
                 <ResponsiveContainer width="100%" height="100%">
                     {chartType === 'bar' ? (
                         <BarChart data={data}>
