@@ -628,18 +628,18 @@ async def generate_practice_session(
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Generates a practice session (quiz) based on a Hub."""
-    if not secrets.ai_key or not secrets.vault_path:
-        raise HTTPException(status_code=400, detail="AI Key and Vault Path are required")
-    
+    planner_key = secrets.planner_key or secrets.ai_key
+    if not planner_key or not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Planner/AI Key and Vault Path are required")
+
     hub_id = payload.get("hub_id")
     config = payload.get("config", {})
-    
+
     if not hub_id:
         raise HTTPException(status_code=400, detail="hub_id is required")
-        
+
     service = OkaService(secrets)
-    try:
-        return await service.generate_practice(hub_id, config)
+    try:        return await service.generate_practice(hub_id, config)
     except Exception as e:
         print(f"[Life OS Sidecar] Practice generation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

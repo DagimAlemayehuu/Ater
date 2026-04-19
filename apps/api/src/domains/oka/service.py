@@ -47,7 +47,23 @@ class OkaService:
             request_timeout=OKA_TIMEOUT,
             max_retries=0,  # We handle retries ourselves for better status feedback
             max_tokens=4096,
-        )
+        ) if secrets.ai_key else None
+
+        # Initialize Planner LLM for complex tasks like quiz generation
+        planner_provider = secrets.planner_provider or secrets.ai_provider
+        planner_key = secrets.planner_key or secrets.ai_key
+        planner_model = secrets.planner_model or secrets.ai_model
+        
+        self.planner_llm = ModelFactory.get_model(
+            provider=planner_provider,
+            model_name=planner_model,
+            api_key=planner_key,
+            temperature=0.1,
+            timeout=OKA_TIMEOUT,
+            request_timeout=OKA_TIMEOUT,
+            max_retries=0,
+            max_tokens=4096,
+        ) if planner_key else self.llm
 
     def _ensure_session_dir(self):
         self._session_file.parent.mkdir(parents=True, exist_ok=True)
@@ -185,13 +201,18 @@ class OkaService:
         }
 
     def _clean_prop(self, val: Any) -> str:
-        """Cleans a property value (handles lists and wiki-links)."""
-        if not val: return ""
-        if isinstance(val, list):
-            val = val[0] if len(val) > 0 else ""
-        # Aggressive cleaning of Unknown and brackets
-        s = str(val).replace("[[", "").replace("]]", "").strip()
-        if s.lower() == "unknown": return ""
+        """Cleans a property value from Obsidian YAML — handles deeply nested lists and wikilinks.
+        Obsidian sometimes returns [[value]] as [[[value]]] after multiple write cycles.
+        """
+        if val is None: return ""
+        # Deep unwrap: recursively unpack nested lists
+        while isinstance(val, list):
+            if len(val) == 0: return ""
+            val = val[0]
+        # Now val is a scalar — strip all bracket/wikilink/quote artifacts
+        s = str(val).strip()
+        s = re.sub(r"[\[\]]+", "", s).strip("\"' ")
+        if s.lower() in ("unknown", "none", ""): return ""
         return s
 
     def list_planner_hubs(self) -> List[Dict[str, Any]]:
@@ -375,10 +396,22 @@ class OkaService:
                 difficulty=config_raw.get("difficulty", "L1") if config_raw.get("difficulty") != "Mixed" else "L2"
             )
 
+        # CRITICAL FIX: The explicit hub_id parameter is always the authoritative source.
+        # config.hubId can be empty string if frontend sent the default AdvancedPracticeConfig.
+        if not config.hubId or config.hubId.strip() == '':
+            config.hubId = hub_id
+
+        if not self.planner_llm:
+            raise ValueError("Planner AI is not configured. Go to Settings > AI Configuration and add your API key.")
+
         hubs = self.list_planner_hubs()
         hub = next((h for h in hubs if h["id"] == config.hubId), None)
         if not hub:
-            raise ValueError(f"Hub not found: {config.hubId}")
+            # Fallback: try matching by stem (without .md extension)
+            hub = next((h for h in hubs if h["id"].replace(".md", "") == config.hubId.replace(".md", "")), None)
+        if not hub:
+            available = [h["id"] for h in hubs]
+            raise ValueError(f"Hub not found: '{config.hubId}'. Available hubs: {available}")
         
         hub_path = Path(hub["path"])
         
@@ -484,12 +517,13 @@ class OkaService:
             # Otherwise we fallback to raw prompt + parsing
             try:
                 from .schemas import PracticeBatch
-                structured_llm = self.llm.with_structured_output(PracticeBatch)
+                structured_llm = self.planner_llm.with_structured_output(PracticeBatch)
                 batch = await structured_llm.ainvoke(prompt)
                 questions = [q.model_dump() for q in batch.questions]
             except Exception as e:
                 print(f"[OKA Service] Structured output failed, falling back to raw: {e}")
-                res = await self.llm.ainvoke([HumanMessage(content=prompt + "\n\nRETURN ONLY A JSON LIST.")])
+                from langchain_core.messages import HumanMessage
+                res = await self.planner_llm.ainvoke([HumanMessage(content=prompt + "\n\nRETURN ONLY A JSON LIST.")])
                 content = res.content.strip()
                 if "```json" in content:
                     content = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL).group(1)
@@ -589,11 +623,66 @@ class OkaService:
 
         target_hub = self.find_best_hub_match(content_text)
         
-        # If no hub match, try to detect metadata with AI to avoid "Unknown" placement errors
+        # If no hub match, use AI to detect curriculum metadata
         detected_curriculum = None
         if not target_hub:
             print(f"[OKA Service] No Hub match for {path.name}. Invoking AI detection...")
             detected_curriculum = await self._detect_metadata_with_ai(content_text[:20000])
+
+        # CRITICAL FIX: If we have AI-detected metadata but no matching hub,
+        # synthesize a virtual anchored_hub so the frontend pre-fills correctly.
+        # This tells the UI exactly what to show — but also creates a stub hub if the 
+        # hub_title detected is meaningful (i.e., not empty/unknown).
+        if not target_hub and detected_curriculum:
+            dc = detected_curriculum
+            hub_title = dc.get("hub_title", "").strip()
+            unit_num = dc.get("unit", "").strip()
+            course = dc.get("course", "").strip()
+            semester = dc.get("semester", "").strip()
+            
+            if hub_title and hub_title.lower() not in ("unknown", ""):
+                # Build the canonical hub filename
+                clean_ht = hub_title.replace(" ", "_")
+                hub_filename = f"{unit_num}_{clean_ht}_Hub.md" if unit_num else f"{clean_ht}_Hub.md"
+                planner_path = self._get_planner_path()
+                planner_path.mkdir(parents=True, exist_ok=True)
+                hub_file_path = planner_path / hub_filename
+                
+                # Create stub hub in Study Planner if it doesn't already exist
+                if not hub_file_path.exists():
+                    print(f"[OKA Service] Creating stub hub: {hub_filename}")
+                    # course and semester MUST be plain text (not wikilinks)
+                    # Obsidian text-type properties link via Dataview automatically
+                    stub_yaml = (
+                        f"---\n"
+                        f"title: {hub_filename[:-3]}\n"
+                        f"type: Hub\n"
+                        f"course: {course}\n"
+                        f"semester: {semester}\n"
+                        f"unit: {unit_num}\n"
+                        f"source: \n"
+                        f"source_pages: []\n"
+                        f"status: Not Started\n"
+                        f"confidence: null\n"
+                        f"study_date: null\n"
+                        f"generated: false\n"
+                        f"---\n\n"
+                        f"# {hub_title}\n\n"
+                        f"> Auto-created stub by OKA. Full content will be generated after plan confirmation.\n"
+                    )
+                    with open(hub_file_path, "w", encoding="utf-8") as f:
+                        f.write(stub_yaml)
+                
+                # Synthesize a virtual hub metadata dict to pre-fill the frontend
+                target_hub = {
+                    "id": hub_filename,
+                    "title": f"{unit_num} {hub_title} Hub" if unit_num else f"{hub_title} Hub",
+                    "path": str(hub_file_path.absolute()),
+                    "course": course,
+                    "unit": unit_num,
+                    "semester": semester
+                }
+                print(f"[OKA Service] Anchored to synthesized hub: {hub_filename}")
 
         return {
             "anchored_hub": target_hub,
@@ -604,27 +693,44 @@ class OkaService:
         }
 
     async def _detect_metadata_with_ai(self, text: str) -> Dict[str, str]:
-        """Uses AI to extract course, semester, unit, and a descriptive hub_title from text snippets."""
+        """Uses AI to extract course, semester, unit, and hub_title from text.
+        
+        Critically important: course and semester must match EXACT stems from the vault
+        database files (07 - Courses / 08 - Semesters). The AI is shown these exact names
+        and instructed to pick the CLOSEST match. If nothing matches, it invents a new value.
+        """
         options = self.list_available_options()
         
+        # Build numbered option lists so AI can pick by index or name
+        course_list = "\n".join(f"  {i+1}. \"{c}\"" for i, c in enumerate(options['courses']))
+        semester_list = "\n".join(f"  {i+1}. \"{s}\"" for i, s in enumerate(options['semesters']))
+        
         prompt = (
-            "Analyze the following text snippet from an academic document and extract exactly these four fields in JSON format:\n"
-            "1. course: The course name (e.g., 'Database Systems').\n"
-            "2. semester: The semester tag (e.g., 'Autumn 2025').\n"
-            "3. unit: The numerical identifier for the chapter or unit (e.g., '3').\n"
-            "4. hub_title: A concise, descriptive title for this unit based on its core subject (e.g., 'Relational Algebra'). Do NOT include the word 'Hub' or the unit number.\n\n"
-            "CONTEXT RULES:\n"
-            f"- EXISTING COURSES: {options['courses']}\n"
-            f"- EXISTING SEMESTERS: {options['semesters']}\n"
-            "- If a course/semester matches one of the existing ones, use that EXACT string.\n"
-            "- If multiple units are mentioned, pick the primary one.\n"
-            "- RETURN ONLY JSON. NO MARKDOWN. NO PREAMBLE.\n\n"
-            f"TEXT:\n{text}"
+            "You are analyzing text from an academic document to identify its course context.\n\n"
+            "Extract these four fields and return ONLY a JSON object:\n"
+            "{\n"
+            "  \"course\": \"<exact course name from the list below, or closest match>\",\n"
+            "  \"semester\": \"<exact semester name from the list below, or closest match>\",\n"
+            "  \"unit\": \"<chapter or unit NUMBER only, e.g. '5'>\",\n"
+            "  \"hub_title\": \"<concise subject title for this chapter, NO unit numbers, NO 'Hub'>\"\n"
+            "}\n\n"
+            "AVAILABLE COURSES (pick the CLOSEST match based on subject matter):\n"
+            f"{course_list}\n\n"
+            "AVAILABLE SEMESTERS (pick the most recent/likely based on context):\n"
+            f"{semester_list}\n\n"
+            "MATCHING RULES:\n"
+            "- Use the EXACT string from the list above (including spaces and capitalization).\n"
+            "- If the document covers C++, arrays, functions, OOP, memory \u2192 likely 'Computer Programming'.\n"
+            "- If the document covers SQL, ER diagrams, relational algebra, database \u2192 likely 'Database Systems'.\n"
+            "- If the document covers logic, sets, graphs, proofs \u2192 likely 'Discrete Mathematics'.\n"
+            "- If no course matches, create a reasonable new course name.\n"
+            "- If no semester matches, use the most recent one listed or infer from date references in text.\n"
+            "- RETURN ONLY JSON. NO MARKDOWN. NO EXPLANATION.\n\n"
+            f"DOCUMENT TEXT (first 15000 chars):\n{text[:15000]}"
         )
         
         try:
             res = await self.llm.ainvoke([HumanMessage(content=prompt)])
-            # Simple extractor for markdown blocks if AI ignored "No Markdown"
             clean_content = res.content.strip()
             if "```json" in clean_content:
                 clean_content = re.search(r"```json\s*(.*?)\s*```", clean_content, re.DOTALL).group(1)
@@ -632,9 +738,33 @@ class OkaService:
                 clean_content = re.search(r"```\s*(.*?)\s*```", clean_content, re.DOTALL).group(1)
             
             data = json.loads(clean_content)
+            
+            detected_course = str(data.get("course", "")).strip()
+            detected_semester = str(data.get("semester", "")).strip()
+            
+            # Post-process: snap to closest existing value if AI returned something slightly off
+            def _snap_to_existing(detected: str, existing: list) -> str:
+                if not detected: return detected
+                # Exact match first
+                if detected in existing: return detected
+                # Case-insensitive match
+                d_low = detected.lower()
+                for e in existing:
+                    if e.lower() == d_low: return e
+                # Substring match (e.g., "Computer Programming" contains "Programming")
+                for e in existing:
+                    if d_low in e.lower() or e.lower() in d_low: return e
+                # Return original if no match (it's a new value)
+                return detected
+            
+            final_course = _snap_to_existing(detected_course, options['courses'])
+            final_semester = _snap_to_existing(detected_semester, options['semesters'])
+            
+            print(f"[OKA Service] AI detected: course='{final_course}', semester='{final_semester}', unit='{data.get('unit')}', hub='{data.get('hub_title')}'")
+            
             return {
-                "course": str(data.get("course", "")),
-                "semester": str(data.get("semester", "")),
+                "course": final_course,
+                "semester": final_semester,
                 "unit": str(data.get("unit", "")),
                 "hub_title": str(data.get("hub_title", ""))
             }
@@ -668,10 +798,18 @@ class OkaService:
                 full_text = f.read()
 
         # Build strict anchor instruction
-        unit_num = str(curriculum.get("unit", "")).replace("Unknown", "").strip()
-        course = str(curriculum.get("course", "")).replace("Unknown", "").strip()
-        semester = str(curriculum.get("semester", "")).replace("Unknown", "").strip()
-        hub_title = str(curriculum.get("hub_title", "")).replace("Unknown", "").strip()
+        # CRITICAL FIX: Strip [[wikilinks]] from course/semester FIRST — these can come
+        # from the frontend filling from hub metadata that stores them as [[value]].
+        def _strip_val(v: str) -> str:
+            """Strip wikilinks, quotes, and 'Unknown' from metadata values."""
+            s = str(v).replace("[[", "").replace("]]", "").strip().strip("\"'").strip()
+            if s.lower() in ("unknown", "unknown_course", "unknown_semester", ""): return ""
+            return s
+        
+        unit_num = _strip_val(curriculum.get("unit", ""))
+        course = _strip_val(curriculum.get("course", ""))
+        semester = _strip_val(curriculum.get("semester", ""))
+        hub_title = _strip_val(curriculum.get("hub_title", ""))
 
         # Clean the hub_title of unit numbers and "Hub" suffixes to prevent 3_3_Hub_Hub
         clean_hub_title = hub_title
@@ -683,9 +821,8 @@ class OkaService:
         canonical_hub_base = self.vm.get_canonical_title(clean_hub_title)
 
         # Self-Healing: Check for existing notes to avoid duplication
-        # We must clean semester/course for pathing just like VaultManager does
-        path_semester = semester.replace("[[", "").replace("]]", "").strip() or "General"
-        path_course = self.vm.get_canonical_title(course.replace("[[", "").replace("]]", "").strip() or "General_Knowledge")
+        path_semester = semester or "General"
+        path_course = self.vm.get_canonical_title(course or "General_Knowledge")
         
         unit_prefix = f"{unit_num}_" if unit_num else ""
         unit_folder_name = f"{unit_prefix}{canonical_hub_base}"
@@ -728,7 +865,13 @@ class OkaService:
             "4. Output the **Finalized Knowledge Asset Plan** using EXACTLY these tags:\n"
             "   - Wrap the Hub link in `<hub_note>[[Link]]</hub_note>`\n"
             "   - Wrap the PQ link in `<pq_note>[[Link]]</pq_note>`\n"
-            "   - Wrap the atomic list in `<atomic_notes>[[Link1]], [[Link2]]</atomic_notes>`\n"
+            "   - Wrap the atomic notes list in `<atomic_notes>` as a NUMBERED LIST (one per line):\n"
+            "     ```\n"
+            "     <atomic_notes>\n"
+            "     1. [[Note_Title]] - Brief description of what this note covers (1 sentence)\n"
+            "     2. [[Another_Note]] - Brief description\n"
+            "     </atomic_notes>\n"
+            "     ```\n"
             f"{anchor_instruction}\n"
             f"{healing_instruction}\n\n"
             f"{full_text[:MAX_SOURCE_CHARS]}"
@@ -800,11 +943,11 @@ class OkaService:
                         
                         meta, body, err = self.vm.extract_yaml_and_content(content)
                         if not err:
-                            # Update properties (RE-WRAP in wiki-links for relations)
+                            # Update properties as PLAIN TEXT (course/semester are text-type in Obsidian)
                             if curriculum_override.get("course"):
-                                meta["course"] = f"[[{curriculum_override['course']}]]"
+                                meta["course"] = curriculum_override['course']  # plain text
                             if curriculum_override.get("semester"):
-                                meta["semester"] = f"[[{curriculum_override['semester']}]]"
+                                meta["semester"] = curriculum_override['semester']  # plain text
                             if curriculum_override.get("unit"):
                                 u = curriculum_override["unit"]
                                 meta["unit"] = int(u) if str(u).isdigit() else u

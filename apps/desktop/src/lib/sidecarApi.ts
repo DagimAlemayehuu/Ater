@@ -63,13 +63,13 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         aiModel: (await store.get<string>('aiModel')) || 'gemini-2.0-flash', 
         
         // Tiered Reasoning
-        plannerProvider: (await store.get<string>('plannerProvider')) || 'google',
-        plannerApiKey: (await store.get<string>('plannerApiKey')) || '',
-        plannerModel: (await store.get<string>('plannerModel')) || 'gemini-2.0-flash',
+        plannerProvider: await store.get<string>('plannerProvider'),
+        plannerApiKey: await store.get<string>('plannerApiKey'),
+        plannerModel: await store.get<string>('plannerModel'),
         
-        utilityProvider: (await store.get<string>('utilityProvider')) || 'google',
-        utilityApiKey: (await store.get<string>('utilityApiKey')) || '',
-        utilityModel: (await store.get<string>('utilityModel')) || 'gemini-1.5-flash-8b',
+        utilityProvider: await store.get<string>('utilityProvider'),
+        utilityApiKey: await store.get<string>('utilityApiKey'),
+        utilityModel: await store.get<string>('utilityModel'),
 
         obsidianVaultPath,
         inboxPath: (await store.get<string>('inboxPath')) || '',
@@ -83,13 +83,13 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         'X-AI-Model': config.aiModel || 'gemini-2.0-flash',
         
         // Tiered Reasoning
-        'X-Planner-Provider': config.plannerProvider || 'google',
+        'X-Planner-Provider': config.plannerProvider || config.aiProvider || 'google',
         'X-Planner-Key': config.plannerApiKey || config.aiApiKey || config.geminiApiKey || '',
-        'X-Planner-Model': config.plannerModel || 'gemini-2.0-flash',
+        'X-Planner-Model': config.plannerModel || config.aiModel || 'gemini-2.0-flash',
 
-        'X-Utility-Provider': config.utilityProvider || 'google',
-        'X-Utility-Key': config.utilityApiKey || config.plannerApiKey || config.aiApiKey || '',
-        'X-Utility-Model': config.utilityModel || 'gemini-1.5-flash-8b',
+        'X-Utility-Provider': config.utilityProvider || config.aiProvider || 'google',
+        'X-Utility-Key': config.utilityApiKey || config.plannerApiKey || config.aiApiKey || config.geminiApiKey || '',
+        'X-Utility-Model': config.utilityModel || config.aiModel || 'gemini-1.5-flash-8b',
 
         'X-Vault-Path': config.obsidianVaultPath,
         'X-Inbox-Path': config.inboxPath || '',
@@ -334,6 +334,7 @@ export const sidecarApi = {
             plan_structured: any; 
             status: string;
             anchored_hub?: any;
+            detected_curriculum?: any;
             available_hubs?: any[];
             available_options?: any;
         }>('/api/oka/process', {

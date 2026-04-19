@@ -19,7 +19,7 @@ export interface AdvancedPracticeConfig {
   };
 
   // 3. Cognitive Constraints
-  difficulty: "L0" | "L1" | "L2" | "L3" | "L4"; 
+  difficulty: "L0" | "L1" | "L2" | "L3" | "L4" | "Mixed"; 
   distractorPlausibility: "Low" | "Medium" | "High"; // For MCQs
   injectTrickAnswers: boolean; // Randomly add "None of the above"
 

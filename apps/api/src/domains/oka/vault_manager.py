@@ -27,7 +27,11 @@ class VaultManager:
         """
         if not text: return "Untitled"
         
-        # 0. Strip "Title:" prefix if AI accidentally included it in the string
+        # 0a. Strip [[wikilink]] brackets and surrounding quotes (defensive — input may carry them)
+        text = text.replace("[[", "").replace("]]", "").strip().strip("\"'").strip()
+        if not text: return "Untitled"
+        
+        # 0b. Strip "Title:" prefix if AI accidentally included it in the string
         text = re.sub(r"(?i)^title\s*:\s*", "", text)
         
         # 1. Protect C++
@@ -104,10 +108,26 @@ class VaultManager:
             return self.vault_path / "3-Database" / "06 - Study Planner" / filename
 
         # ── Deep Academic Folder Pathing ──
-        # Clean course and semester
-        clean_course = self.get_canonical_title(super_clean(raw_course))
-        clean_semester = raw_semester.replace("[[", "").replace("]]", "").strip() or "General"
-        if clean_course.lower() == "unknown_course": 
+        # Clean course and semester — strip [[wikilinks]], nested lists, quotes FIRST
+        def deep_clean_scalar(v) -> str:
+            """Recursively unwrap nested lists and strip all bracket/quote artifacts."""
+            while isinstance(v, list):
+                v = v[0] if v else ""
+            s = str(v).strip()
+            s = re.sub(r"[\[\]]+", "", s).strip("\"' ")
+            if s.lower() in ("unknown", "unknown_course", "unknown_semester", "none", ""):
+                return ""
+            return s
+
+        raw_course_clean = deep_clean_scalar(raw_course)
+        raw_semester_clean = deep_clean_scalar(raw_semester)
+
+        clean_course = self.get_canonical_title(super_clean(raw_course_clean))
+        # Semester folder uses the human-readable name directly (e.g. "Autumn 2025"),
+        # matching the actual folder structure in the Obsidian vault.
+        clean_semester = raw_semester_clean or "General"
+
+        if clean_course.lower() in ("unknown_course", "unknown", "untitled", ""):
             clean_course = "General_Knowledge"
         
         # We need the clean Hub Name for the folder
@@ -165,21 +185,43 @@ class VaultManager:
         return text
 
     def dump_obsidian_yaml(self, meta: dict) -> str:
-        """Dumps YAML with Obsidian-compatible bare [[wikilinks]] — strictly no quotes ever."""
+        """Dumps YAML with correct Obsidian property types.
+        
+        KEY DISTINCTION:
+        - 'course' and 'semester' → PLAIN TEXT properties (Obsidian links via Dataview).
+          Using [[...]] in these fields causes YAML to parse them as flow sequences,
+          producing the triple-bracket corruption [[[Database Systems]]].
+        - 'hub', 'parent', 'source' → WIKILINK properties. These legitimately use [[...]].
+          PyYAML would quote them, so we force plain scalar style.
+        """
         import yaml
 
-        # LAYER 1: Pre-clean the dict — strip all embedded/wrapping quotes from wikilink strings
-        # This prevents PyYAML from seeing [["X"]] and emitting a YAML flow sequence.
-        cleaned = {k: VaultManager._strip_wikilink_quotes(v) for k, v in meta.items()}
+        PLAIN_TEXT_FIELDS = {"course", "semester"}
+        WIKILINK_FIELDS = {"hub", "parent", "source"}
 
-        # LAYER 2: Custom Dumper — force plain scalar style for any string containing [[
-        # PyYAML would normally quote [[...]] because it looks like a YAML flow sequence.
-        # Plain style tells PyYAML to emit the value with NO surrounding quotes.
+        # LAYER 1: Deep-clean all values
+        cleaned = {}
+        for k, v in meta.items():
+            if k in PLAIN_TEXT_FIELDS:
+                # Strip ALL bracket/wikilink artifacts — must be plain text
+                while isinstance(v, list):
+                    v = v[0] if v else ""
+                v = str(v).strip()
+                v = re.sub(r"[\[\]]+", "", v).strip("\"' ")
+                cleaned[k] = v
+            elif k in WIKILINK_FIELDS:
+                # Keep as [[...]] string — will use plain scalar style
+                cleaned[k] = VaultManager._strip_wikilink_quotes(v)
+            else:
+                cleaned[k] = VaultManager._strip_wikilink_quotes(v)
+
+        # LAYER 2: Custom Dumper — force plain scalar style for [[wikilink]] strings
         class ObsidianDumper(yaml.Dumper):
             pass
 
         def _str_representer(dumper, data):
             if '[[' in data:
+                # Force YAML plain style so it never gets quoted
                 return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='')
             return dumper.represent_scalar('tag:yaml.org,2002:str', data)
 
@@ -196,9 +238,7 @@ class VaultManager:
         # LAYER 3: Final safety pass — strip any surviving YAML-level quotes around wikilinks
         raw = re.sub(r":\s*[\"'](\[\[.*?\]\])[\"']$", r": \1", raw, flags=re.MULTILINE)
         raw = re.sub(r"-\s*[\"'](\[\[.*?\]\])[\"']$", r"- \1", raw, flags=re.MULTILINE)
-        # Strip internal quotes: [["X"]] -> [[X]] (last resort)
         raw = re.sub(r'\[\[\s*["\'](.*?)["\']\s*\]\]', r'[[\1]]', raw)
-        # Strip quotes from plain text titles
         raw = re.sub(r"^title:\s*[\"'](.+?)[\"']$", r"title: \1", raw, flags=re.MULTILINE)
 
         return raw

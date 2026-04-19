@@ -35,7 +35,7 @@ export function ObsidianPagePanel({
     properties = {}, 
     onUpdateProperty, 
     onNavigate,
-    onDelete 
+    onDeleted 
 }: ObsidianPagePanelProps) {
     const [loadingContent, setLoadingContent] = useState(false);
     const [content, setContent] = useState<string>("");

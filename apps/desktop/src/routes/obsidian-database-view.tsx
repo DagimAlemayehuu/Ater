@@ -184,7 +184,7 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
         if (!newRowName.trim()) return;
         try {
             setLoading(true);
-            await sidecarApi.createVaultDatabaseRow(database.id, newRowName.trim(), templatePath);
+            await sidecarApi.createVaultRow(database.id, newRowName.trim(), { template: templatePath });
             setNewRowName('');
             setIsCreatingRow(false);
             setIsTemplateMenuOpen(false);
@@ -203,7 +203,7 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
 
     const handleUpdateRow = async (rowId: string, updates: any) => {
         try {
-            await sidecarApi.updateVaultDatabaseRow(database.id, rowId, updates);
+            await sidecarApi.updateVaultRow(database.id, rowId, updates);
             await fetchRows();
         } catch (err) {
             console.error(err);
@@ -213,7 +213,7 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
     const handleDeleteRow = async (rowId: string) => {
         if (!confirm("Are you sure? This will delete the markdown file.")) return;
         try {
-            await sidecarApi.deleteVaultDatabaseRow(database.id, rowId);
+            await sidecarApi.deleteVaultRow(database.id, rowId);
             await fetchRows();
         } catch (err) {
             console.error(err);
@@ -419,12 +419,11 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
 
                 <div className="flex-1 overflow-hidden">
                     {activeTab === 'table' && (
-                        <TableView 
-                            rows={filteredRows} 
+                        <TableView
+                            rows={filteredRows}
                             columns={Object.keys(database.schema)}
-                            schema={database.schema} 
+                            schema={database.schema}
                             hiddenProperties={hiddenProperties}
-                            onRowClick={handleRowClick}
                             onSelectRow={handleRowClick}
                             onUpdateRow={handleUpdateRow}
                             onDeleteRow={handleDeleteRow}
@@ -434,8 +433,8 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
                         />
                     )}
                     {activeTab === 'board' && (
-                        <BoardView 
-                            rows={filteredRows} 
+                        <BoardView
+                            rows={filteredRows}
                             schema={database.schema}
                             groupBy={groupBy}
                             onSelectRow={handleRowClick}
@@ -444,15 +443,15 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
                         />
                     )}
                     {activeTab === 'gallery' && (
-                        <GalleryView 
-                            rows={filteredRows} 
+                        <GalleryView
+                            rows={filteredRows}
                             schema={database.schema}
                             onSelectRow={handleRowClick}
                         />
                     )}
                     {activeTab === 'calendar' && (
-                        <CalendarView 
-                            rows={filteredRows} 
+                        <CalendarView
+                            rows={filteredRows}
                             schema={database.schema}
                             onSelectRow={handleRowClick}
                             onUpdateRow={handleUpdateRow}
@@ -461,19 +460,17 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, onR
                         />
                     )}
                     {activeTab === 'list' && (
-                        <ListView 
-                            rows={filteredRows} 
+                        <ListView
+                            rows={filteredRows}
                             columns={Object.keys(database.schema)}
                             schema={database.schema}
                             onSelectRow={handleRowClick}
                             onUpdateRow={handleUpdateRow}
-                            onDeleteRow={handleDeleteRow}
                             onNavigate={onNavigate}
                             loading={loading}
                         />
                     )}
-                </div>
-            </div>
+                </div>            </div>
 
             {/* Database Settings Panel */}
             <DatabaseSettingsPanel 

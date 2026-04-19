@@ -151,11 +151,31 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
     const cleanLink = (text: string) => text.replace(/\[\[(.*?)\]\]/g, '$1').replace(/\*\*/g, '').replace(/\*/g, '')
 
     const parseAtomicTree = (text: string) => {
-        const lines = text.split('\n').filter(l => 
+        // Strategy 1: Bulleted/numbered list lines (standard AI output)
+        const listLines = text.split('\n').filter(l => 
             l.trim().match(/^\d+\./) || l.trim().startsWith('-') || l.trim().startsWith('*')
         )
         
-        return lines.map(line => {
+        // Strategy 2: Comma-separated [[links]] inline (also common AI output)
+        const inlineLinks: string[] = []
+        if (listLines.length === 0) {
+            const allLinks = [...text.matchAll(/\[\[([^\]]+)\]\]/g)]
+            allLinks.forEach(m => inlineLinks.push(m[1]))
+        }
+
+        if (listLines.length === 0 && inlineLinks.length > 0) {
+            // Return flat card nodes from inline links
+            return inlineLinks.map(title => ({
+                level: 0,
+                title: cleanLink(`[[${title}]]`),
+                mode: null,
+                parent: null,
+                pages: [],
+                description: ''
+            }))
+        }
+        
+        return listLines.map(line => {
             // Determine level from indentation
             const indentMatch = line.match(/^(\s*)/)
             const spaces = indentMatch ? indentMatch[1].length : 0
@@ -382,11 +402,18 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
             setAvailableHubs(res.available_hubs || [])
             setAvailableOptions(res.available_options || { courses: [], semesters: [], units: [] })
             
+            // CRITICAL FIX: If anchored_hub is present use it; otherwise fall back to detected_curriculum
+            // This ensures the UI pre-fills even when the AI had to create a new hub stub.
+            const anchor = res.anchored_hub
+            const detected = res.detected_curriculum
+            
             setCurriculum({
-                course: res.anchored_hub?.course || '',
-                unit: String(res.anchored_hub?.unit || ''),
-                semester: res.anchored_hub?.semester || '',
-                hub_title: res.anchored_hub?.title || ''
+                course: anchor?.course || detected?.course || '',
+                unit: String(anchor?.unit || detected?.unit || ''),
+                semester: anchor?.semester || detected?.semester || '',
+                hub_title: anchor?.title || (detected?.hub_title ? (
+                    (detected.unit ? detected.unit + ' ' : '') + detected.hub_title + ' Hub'
+                ) : ''),
             })
             setIsCurriculumReady(true)
         } catch (err: any) {
@@ -731,14 +758,13 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                                 </div>
                                             </div>
 
-                                            {(anchoredHub?.id === 'new' || !anchoredHub) && (
-                                                <CurriculumPill 
-                                                    label="Hub Title" 
-                                                    value={curriculum.hub_title} 
-                                                    onChange={v => setCurriculum(p => ({ ...p, hub_title: v }))}
-                                                    icon={FileEdit} 
-                                                />
-                                            )}
+                                            {/* Hub Title — always editable so user can correct AI detection */}
+                                            <CurriculumPill 
+                                                label="Hub Title" 
+                                                value={curriculum.hub_title} 
+                                                onChange={v => setCurriculum(p => ({ ...p, hub_title: v }))}
+                                                icon={FileEdit} 
+                                            />
 
                                             <CurriculumPill 
                                                 label="Course" 
