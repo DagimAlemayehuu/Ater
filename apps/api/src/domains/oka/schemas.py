@@ -103,3 +103,36 @@ class PracticeSessionResponse(BaseModel):
     session_id: str
     questions: List[Question]
     quiz_path: str
+
+# --- Sovereign Architect Schemas ---
+
+class NoteSchema(BaseModel):
+    """A generic schema for a single note to be generated."""
+    title: str = Field(..., description="Sanitized Title_Case_With_Underscores filename.")
+    description: str = Field(..., description="One sentence summary.")
+    source_context: str = Field(..., description="1-3 paragraphs of raw text relevant to this topic.")
+    source_pages: List[int] = Field(default_factory=list, description="Page numbers where context was found.")
+
+class AtomicNoteSchema(NoteSchema):
+    """Defines an atomic note, including its dependencies."""
+    prerequisites: List[str] = Field(default_factory=list)
+
+class SovereignPlan(BaseModel):
+    """The master plan produced by the Architect Agent."""
+    course: str
+    semester: str
+    unit: str
+    hub_note: NoteSchema
+    atomic_notes: List[AtomicNoteSchema]
+    possible_questions: List[NoteSchema]
+
+class NoteContent(BaseModel):
+    """The pedagogical content of a single note, written in Obsidian-flavored Markdown."""
+    markdown_body: str = Field(
+        ...,
+        description="The full markdown content of the note. It MUST include a 'Visible Artifact' like a table, computation trace, or diagram."
+    )
+    search_keywords: List[str] = Field(
+        ...,
+        description="A list of 5-7 relevant keywords for Obsidian search, e.g., ['Kalman Filter', 'State Estimation', 'Recursive Algorithm']."
+    )

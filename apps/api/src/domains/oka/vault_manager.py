@@ -96,16 +96,18 @@ class VaultManager:
                 if c == prev: break
             return c
 
-        # ── 1. Master Hub (Study Planner Folder) ──
+        # ── 1. Master Hub ──
         if is_hub:
             if anchored_hub_path:
                 return Path(anchored_hub_path)
             
             clean = super_clean(raw_title)
             canonical_name = self.get_canonical_title(clean)
-            
             filename = f"{unit_num}_{canonical_name}_Hub.md" if unit_num else f"{canonical_name}_Hub.md"
-            return self.vault_path / "3-Database" / "06 - Study Planner" / filename
+            
+            # DEFAULT: Put Hub in the unit folder for cohesion
+            target_dir = self.academic_root / clean_semester / clean_course / unit_folder_name
+            return target_dir / filename
 
         # ── Deep Academic Folder Pathing ──
         # Clean course and semester — strip [[wikilinks]], nested lists, quotes FIRST
@@ -309,60 +311,48 @@ class VaultManager:
             return {}, content, str(e)
 
     def process_code_blocks(self, content: str) -> str:
-        """Repairs and converts custom code blocks to standard backticks for Obsidian."""
-        # CRITICAL FIX: Strip YAML and NOTE wrappers entirely so they don't leak into the body
+        """Standardizes and protects code blocks in content for Obsidian."""
+        # 1. Strip structural markers entirely
         content = re.sub(r"(?i)--- START_CODE:?\s*yaml ---\s*\n", "", content)
         content = re.sub(r"(?i)\n\s*--- END_CODE:?\s*yaml ---", "", content)
         content = re.sub(r"(?i)--- START_NOTE ---\s*\n", "", content)
         content = re.sub(r"(?i)\n\s*--- END_NOTE ---", "", content)
         
-        lines = content.split('\n')
-        processed_lines = []
-        in_code_block = False
-        current_code_language = None
-        current_code_buffer = []
-
-        for line in lines:
-            # AUTO-REPAIR: If a model uses standard triple backticks, handle them gracefully
-            if "```mermaid" in line.lower():
-                line = "--- START_CODE: mermaid ---"
-            elif "```text" in line.lower():
-                line = "--- START_CODE: text ---"
-            elif line.strip() == "```" and in_code_block:
-                line = f"--- END_CODE: {current_code_language or 'text'} ---"
-            elif line.strip() == "```" and not in_code_block:
-                line = "--- START_CODE: text ---"
-
-            # Flexible detection: allow spaces after colons
-            start_match = re.search(r"START_CODE:?\s*(\w+)", line, re.IGNORECASE)
-            end_match = re.search(r"END_CODE:?\s*(\w+)", line, re.IGNORECASE)
-
-            if start_match:
-                language = start_match.group(1).lower()
-                # Expand allowed languages
-                if language in ["python", "java", "cpp", "sql", "json", "text", "mermaid", "yaml", "markdown"]:
-                    if in_code_block:
-                        processed_lines.extend(current_code_buffer)
-                        current_code_buffer = []
-                        processed_lines.append("```")
-                    in_code_block = True
-                    current_code_language = language
-                    processed_lines.append(f"```{current_code_language}")
-                else:
-                    processed_lines.append(line)
-            elif end_match and in_code_block and end_match.group(1).lower() == current_code_language:
-                processed_lines.extend(current_code_buffer)
-                current_code_buffer = []
-                processed_lines.append("```")
-                in_code_block = False
-                current_code_language = None
-            elif in_code_block:
-                current_code_buffer.append(line)
-            else:
-                # Strip prohibited triple backticks from prose
-                processed_lines.append(line.replace("```", ""))
+        # 2. Convert custom markers to standard if they exist
+        content = re.sub(r"(?i)--- START_CODE:?\s*(\w+) ---", r"```\1", content)
+        content = re.sub(r"(?i)--- END_CODE:?\s*(\w+) ---", r"```", content)
         
-        return '\n'.join(processed_lines)
+        # 3. Native Backtick Protection
+        # We want to keep all ``` blocks. The only thing we "repair" is if the LLM 
+        # forgot the backticks but wrote the language name.
+        lines = content.split('\n')
+        final_lines = []
+        in_code_block = False
+        
+        FORBIDDEN_LANGUAGES = ["python", "mermaid", "sql", "c++", "cpp", "javascript", "json", "yaml", "java", "c#"]
+        
+        for line in lines:
+            stripped = line.strip().lower()
+            
+            # Start of a standard block
+            if line.strip().startswith("```"):
+                in_code_block = not in_code_block
+                final_lines.append(line)
+                continue
+            
+            # AUTO-REPAIR: If we see a language name alone on a line while NOT in a block,
+            # it is almost certainly a failed backtick start from the LLM.
+            if stripped in FORBIDDEN_LANGUAGES and not in_code_block:
+                final_lines.append(f"```{stripped}")
+                in_code_block = True
+            else:
+                final_lines.append(line)
+        
+        # If we ended still in a block (forgot to close), close it
+        if in_code_block:
+            final_lines.append("```")
+            
+        return '\n'.join(final_lines)
 
     def load_metadata(self) -> List[Dict[str, Any]]:
         """Scans the academic root and extracts YAML metadata from all notes."""

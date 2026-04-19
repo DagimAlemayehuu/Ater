@@ -7,6 +7,7 @@
 *   [x] Local RAG Engine (ChromaDB + MiniLM)
 *   [x] Hierarchical Notion Mirroring (V2)
 *   [x] **OKA Autonomous Engine (Single Sovereign Workflow)**
+*   [x] **OKA Hardening (v13.6): Fixed Relational Deployment & Code Block Normalization**
 *   [x] **Token Sniper Protocol (Rate Limit Optimization)**
 *   [x] **Monochrome High-Fidelity UI Overhaul**
 *   [x] **Vault Sync & Database Cluster Views**

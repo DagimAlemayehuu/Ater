@@ -64,6 +64,7 @@
 *   [x] **Monochrome Design System**: Implemented a strict grayscale aesthetic for minimal visual distraction and premium feel.
 *   [x] **Single-Agent Registry**: Refactored the `/agents` page to exclusively feature the OKA dashboard.
 *   [x] **Absolute Atomicity**: Enforced 1-note-per-batch generation for maximum parsing reliability.
+*   [x] **OKA Hardening (v13.6)**: Fixed code block corruption via standard backtick normalization, centralized Hub/PQ deployment into academic folders, and implemented zero-conversational prompts for model stability.
 
 
 ---
