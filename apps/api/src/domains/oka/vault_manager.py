@@ -96,21 +96,6 @@ class VaultManager:
                 if c == prev: break
             return c
 
-        # ── 1. Master Hub ──
-        if is_hub:
-            if anchored_hub_path:
-                return Path(anchored_hub_path)
-            
-            clean = super_clean(raw_title)
-            canonical_name = self.get_canonical_title(clean)
-            filename = f"{unit_num}_{canonical_name}_Hub.md" if unit_num else f"{canonical_name}_Hub.md"
-            
-            # DEFAULT: Put Hub in the unit folder for cohesion
-            target_dir = self.academic_root / clean_semester / clean_course / unit_folder_name
-            return target_dir / filename
-
-        # ── Deep Academic Folder Pathing ──
-        # Clean course and semester — strip [[wikilinks]], nested lists, quotes FIRST
         def deep_clean_scalar(v) -> str:
             """Recursively unwrap nested lists and strip all bracket/quote artifacts."""
             while isinstance(v, list):
@@ -121,6 +106,7 @@ class VaultManager:
                 return ""
             return s
 
+        # ── Compute canonical path components upfront (needed by ALL branches) ──
         raw_course_clean = deep_clean_scalar(raw_course)
         raw_semester_clean = deep_clean_scalar(raw_semester)
 
@@ -145,6 +131,16 @@ class VaultManager:
             unit_folder_name = unit_folder_name.replace("Unknown", "Uncategorized")
 
         target_dir = self.academic_root / clean_semester / clean_course / unit_folder_name
+
+        # ── 1. Master Hub ──
+        if is_hub:
+            if anchored_hub_path:
+                return Path(anchored_hub_path)
+            
+            clean = super_clean(raw_title)
+            canonical_name = self.get_canonical_title(clean)
+            filename = f"{unit_num}_{canonical_name}_Hub.md" if unit_num else f"{canonical_name}_Hub.md"
+            return target_dir / filename
 
         # ── 2. Possible Questions (Academic Root) ──
         if is_questions:
@@ -190,32 +186,50 @@ class VaultManager:
         """Dumps YAML with correct Obsidian property types.
         
         KEY DISTINCTION:
-        - 'course' and 'semester' → PLAIN TEXT properties (Obsidian links via Dataview).
-          Using [[...]] in these fields causes YAML to parse them as flow sequences,
-          producing the triple-bracket corruption [[[Database Systems]]].
-        - 'hub', 'parent', 'source' → WIKILINK properties. These legitimately use [[...]].
-          PyYAML would quote them, so we force plain scalar style.
+        - 'course' and 'semester' -> PLAIN TEXT properties.
+        - 'hub', 'parent', 'source' -> WIKILINK properties (Scalar).
+        - 'prerequisites', 'concepts' -> WIKILINK properties (List).
         """
         import yaml
 
         PLAIN_TEXT_FIELDS = {"course", "semester"}
-        WIKILINK_FIELDS = {"hub", "parent", "source"}
+        WIKILINK_SCALAR_FIELDS = {"hub", "parent", "source"}
+        WIKILINK_LIST_FIELDS = {"prerequisites", "concepts"}
 
-        # LAYER 1: Deep-clean all values
+        def deep_clean_item(v, is_wikilink: bool = False) -> str:
+            while isinstance(v, list):
+                v = v[0] if v else ""
+            s = str(v).strip()
+            # Remove brackets/quotes for cleaning
+            cleaned = re.sub(r"[\[\]]+", "", s).strip("\"' ")
+            if not cleaned or cleaned.lower() in ("unknown", "none", "null"):
+                return ""
+            if is_wikilink:
+                return f"[[{cleaned}]]"
+            return cleaned
+
         cleaned = {}
         for k, v in meta.items():
             if k in PLAIN_TEXT_FIELDS:
-                # Strip ALL bracket/wikilink artifacts — must be plain text
-                while isinstance(v, list):
-                    v = v[0] if v else ""
-                v = str(v).strip()
-                v = re.sub(r"[\[\]]+", "", v).strip("\"' ")
-                cleaned[k] = v
-            elif k in WIKILINK_FIELDS:
-                # Keep as [[...]] string — will use plain scalar style
-                cleaned[k] = VaultManager._strip_wikilink_quotes(v)
+                cleaned[k] = deep_clean_item(v, is_wikilink=False)
+            elif k in WIKILINK_SCALAR_FIELDS:
+                cleaned[k] = deep_clean_item(v, is_wikilink=True)
+            elif k in WIKILINK_LIST_FIELDS:
+                if isinstance(v, list):
+                    items = []
+                    for item in v:
+                        ci = deep_clean_item(item, is_wikilink=True)
+                        if ci: items.append(ci)
+                    cleaned[k] = items
+                else:
+                    ci = deep_clean_item(v, is_wikilink=True)
+                    cleaned[k] = [ci] if ci else []
             else:
-                cleaned[k] = VaultManager._strip_wikilink_quotes(v)
+                # Default handling
+                if isinstance(v, list):
+                    cleaned[k] = [self._strip_wikilink_quotes(i) for i in v]
+                else:
+                    cleaned[k] = self._strip_wikilink_quotes(v)
 
         # LAYER 2: Custom Dumper — force plain scalar style for [[wikilink]] strings
         class ObsidianDumper(yaml.Dumper):
@@ -237,7 +251,7 @@ class VaultManager:
             sort_keys=False,
         )
 
-        # LAYER 3: Final safety pass — strip any surviving YAML-level quotes around wikilinks
+        # LAYER 3: Final safety pass
         raw = re.sub(r":\s*[\"'](\[\[.*?\]\])[\"']$", r": \1", raw, flags=re.MULTILINE)
         raw = re.sub(r"-\s*[\"'](\[\[.*?\]\])[\"']$", r"- \1", raw, flags=re.MULTILINE)
         raw = re.sub(r'\[\[\s*["\'](.*?)["\']\s*\]\]', r'[[\1]]', raw)

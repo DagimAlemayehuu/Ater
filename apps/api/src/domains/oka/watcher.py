@@ -175,7 +175,8 @@ class OkaQueueManager:
                     "course": (anchored_hub.get("course") if anchored_hub else detected.get("course")) or "",
                     "unit": (anchored_hub.get("unit") if anchored_hub else detected.get("unit")) or "",
                     "semester": (anchored_hub.get("semester") if anchored_hub else detected.get("semester")) or "",
-                    "hub_title": (anchored_hub.get("title") if anchored_hub else detected.get("hub_title") or path.stem) or path.stem
+                    "hub_title": (anchored_hub.get("title") if anchored_hub else detected.get("hub_title") or path.stem) or path.stem,
+                    "primary_language": detected.get("primary_language", "General")
                 }
 
                 if not curriculum["course"]:

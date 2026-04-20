@@ -4,7 +4,7 @@ import yaml
 import uuid
 from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from .vault_manager import VaultManager
 
 class OkaDeployer:
@@ -84,6 +84,70 @@ class OkaDeployer:
         print(f"[OKA Deployer] Deploying {len(notes_to_deploy)} notes for: {session_metadata.get('hub_title', 'unknown')}")
         return await self.deploy_batch(notes_to_deploy, session_metadata)
 
+    def deploy_atomic_notes(self, session_id: str, titles: List[str], contents: List[str], plan: Any, session_path: str = "") -> List[Dict[str, str]]:
+        """Surgically deploys one or more atomic notes."""
+        results = []
+        session_meta = plan.dict() if hasattr(plan, "dict") else plan
+        session_meta["path"] = session_path
+        
+        # Resolve anchored path
+        anchored_path = self._resolve_anchored_path(session_meta)
+
+        for title, content in zip(titles, contents):
+            # Parse components for metadata extraction
+            cleaned_note = self.vm.process_code_blocks(content)
+            meta, body, err = self.vm.extract_yaml_and_content(cleaned_note)
+            
+            # Path resolution
+            target_path = self.vm.get_note_path(meta, session_metadata=session_meta, anchored_hub_path=anchored_path)
+            
+            # Physical Write
+            self.vm.write_note(target_path, cleaned_note)
+            
+            try:
+                display_path = str(target_path.relative_to(self.vm.vault_path))
+            except:
+                display_path = str(target_path)
+                
+            results.append({"title": title, "path": display_path, "status": "deployed"})
+            
+        return results
+
+    def deploy_hub_note(self, session_id: str, title: str, content: str, plan: Any, session_path: str = "") -> List[Dict[str, str]]:
+        """Surgically deploys the unit hub."""
+        session_meta = plan.dict() if hasattr(plan, "dict") else plan
+        session_meta["path"] = session_path
+        
+        # Resolve anchored path
+        anchored_path = self._resolve_anchored_path(session_meta)
+        
+        # Parse for metadata
+        cleaned_note = self.vm.process_code_blocks(content)
+        meta, body, err = self.vm.extract_yaml_and_content(cleaned_note)
+        
+        # Path resolution (Hubs have specific logic)
+        target_path = self.vm.get_note_path(meta, session_metadata=session_meta, anchored_hub_path=anchored_path)
+        
+        # Physical Write
+        self.vm.write_note(target_path, cleaned_note)
+        
+        try:
+            display_path = str(target_path.relative_to(self.vm.vault_path))
+        except:
+            display_path = str(target_path)
+            
+        return [{"title": meta.get("title", "Hub"), "path": display_path, "status": "deployed"}]
+
+    def _resolve_anchored_path(self, session_metadata: Dict[str, Any]) -> Optional[str]:
+        """Resolves an anchored hub ID to an absolute path."""
+        anchored_id = session_metadata.get("anchored_hub_id")
+        if anchored_id and anchored_id != "new":
+            planner_dir = Path(self.vm.vault_path) / "3-Database" / "06 - Study Planner"
+            target = planner_dir / anchored_id
+            if target.exists():
+                return str(target.absolute())
+        return None
+
     async def deploy_batch(self, notes: List[Dict[str, Any]], session_metadata: Dict[str, Any]) -> List[Dict[str, str]]:
         results = []
         
@@ -149,20 +213,8 @@ class OkaDeployer:
             meta = note.get("metadata", {})
 
             # ── DEEP CLEAN AI METADATA ──
-            # Fix any nested list artifacts from previous bad writes (e.g., [[[Database Systems]]])
-            for key in list(meta.keys()):
-                val = meta[key]
-                if isinstance(val, list):
-                    # Check if this is a wikilink list field (hub, parent, source, etc.)
-                    flat = self._deep_clean_value(val)
-                    if key in ("hub", "parent", "source") and flat:
-                        # These ARE wikilink fields — keep as [[...]]
-                        meta[key] = f"[[{flat}]]"
-                    elif key in ("course", "semester"):
-                        # These are TEXT fields — plain string only
-                        meta[key] = flat
-                    else:
-                        meta[key] = flat if flat else val
+            # Handled by VaultManager.dump_obsidian_yaml, so we just pass raw meta.
+            # We only ensure session overrides here.
 
             # ── AUTHORITATIVE CURRICULUM INJECTION ──
             # Always override with session data (user-confirmed values)

@@ -17,7 +17,7 @@ from .vault_manager import VaultManager
 from .deployer import OkaDeployer
 from src.domains.ai.factory import ModelFactory
 from .agents import ArchitectAgent, WriterAgent
-from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema
+from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
 import ruamel.yaml
 import io
 
@@ -732,12 +732,13 @@ class OkaService:
         
         prompt = (
             "You are analyzing text from an academic document to identify its course context.\n\n"
-            "Extract these four fields and return ONLY a JSON object:\n"
+            "Extract these five fields and return ONLY a JSON object:\n"
             "{\n"
             "  \"course\": \"<exact course name from the list below, or closest match>\",\n"
             "  \"semester\": \"<exact semester name from the list below, or closest match>\",\n"
             "  \"unit\": \"<chapter or unit NUMBER only, e.g. '5'>\",\n"
-            "  \"hub_title\": \"<concise subject title for this chapter, NO unit numbers, NO 'Hub'>\"\n"
+            "  \"hub_title\": \"<concise subject title for this chapter, NO unit numbers, NO 'Hub'>\",\n"
+            "  \"primary_language\": \"<primary technical language, e.g. 'C++', 'Python', 'SQL', or 'General'>\"\n"
             "}\n\n"
             "AVAILABLE COURSES (pick the CLOSEST match based on subject matter):\n"
             f"{course_list}\n\n"
@@ -788,17 +789,18 @@ class OkaService:
             final_course = _snap_to_existing(detected_course, options['courses'])
             final_semester = _snap_to_existing(detected_semester, options['semesters'])
             
-            print(f"[OKA Service] AI detected: course='{final_course}', semester='{final_semester}', unit='{data.get('unit')}', hub='{data.get('hub_title')}'")
+            print(f"[OKA Service] AI detected: course='{final_course}', semester='{final_semester}', unit='{data.get('unit')}', hub='{data.get('hub_title')}', language='{data.get('primary_language', 'General')}'")
             
             return {
                 "course": final_course,
                 "semester": final_semester,
                 "unit": str(data.get("unit", "")),
-                "hub_title": str(data.get("hub_title", ""))
+                "hub_title": str(data.get("hub_title", "")),
+                "primary_language": str(data.get("primary_language", "General"))
             }
         except Exception as e:
             print(f"[OKA Service] AI Metadata detection failed: {e}")
-            return {"course": "", "semester": "", "unit": "", "hub_title": ""}
+            return {"course": "", "semester": "", "unit": "", "hub_title": "", "primary_language": "General"}
 
     # ── Phase 2: Planning ──────────────────────────────────────
     async def generate_plan(
@@ -854,37 +856,97 @@ class OkaService:
         if existing_notes:
             context_enrichment += f"\nEXISTING NOTES (Do not re-plan): {', '.join(existing_notes)}\n"
 
-        plan: SovereignPlan = await self.architect_agent.generate_plan(
-            f"{context_enrichment}\n\nSOURCE TEXT:\n{full_text[:MAX_SOURCE_CHARS]}"
-        )
-
-        # Convert Pydantic to Dict for session persistence (JSON compatible)
-        structured_plan = plan.model_dump()
+        primary_language = curriculum.get("primary_language", "General")
+        if course == "Computer Programming" and primary_language == "General":
+            primary_language = "C++"
         
-        # Ensure metadata from curriculum phase is locked in
-        structured_plan["course"] = course
-        structured_plan["unit"] = unit_num
-        structured_plan["semester"] = semester
-        structured_plan["hub_title"] = hub_title
+        # --- CHUNKING LOGIC ---
+        chunk_size = 15000
+        text_chunks = [full_text[i:i+chunk_size] for i in range(0, min(len(full_text), MAX_SOURCE_CHARS), chunk_size)]
+        all_atomic_notes = []
+        all_pq_notes = []
+        seen_titles = set(existing_notes)
+        
+        for idx, chunk in enumerate(text_chunks):
+            OkaService._status[session_id] = f"Architecting Plan (Chunk {idx+1}/{len(text_chunks)})..."
+            print(f"[OKA Service] Processing chunk {idx+1}/{len(text_chunks)}")
+            try:
+                partial_plan = await self.architect_agent.generate_partial_plan(
+                    f"{context_enrichment}\n\nSOURCE TEXT CHUNK:\n{chunk}"
+                )
+                
+                if not partial_plan.atomic_notes:
+                    print(f"[OKA Service] Chunk {idx+1} returned zero notes. Context might be irrelevant.")
+                    continue
 
-        # Build batches (Atomic FIRST, then PQ, then Hub LAST)
+                # Merge notes, avoiding duplicates
+                for note in partial_plan.atomic_notes:
+                    if note.title not in seen_titles:
+                        print(f"[OKA Service] Adding concept: {note.title} (Mode: {note.mode})")
+                        all_atomic_notes.append(note.model_dump())
+                        seen_titles.add(note.title)
+
+                for pq in partial_plan.possible_questions:
+                    if pq.title not in seen_titles:
+                        print(f"[OKA Service] Adding PQ: {pq.title}")
+                        all_pq_notes.append(pq.model_dump())
+                        seen_titles.add(pq.title)
+                        
+                # Hard limit to avoid rate-limit death
+                if len(all_atomic_notes) >= 25:
+                    print("[OKA Service] Reached maximum atomic notes (25), stopping chunking.")
+                    break
+                    
+            except Exception as e:
+                print(f"[OKA Service] CRITICAL: Chunk {idx+1} failed validation: {e}")
+                # Don't skip silently anymore, we need to know why it's failing
+                raise e
+
+        # Synthesize the Hub Note
+        hub_base = hub_title.replace(" Hub", "").replace(" ", "_")
+        # Prevent redundant prefixing (e.g. 5_5_Modular_Programming)
+        if unit_num and (hub_base.startswith(f"{unit_num}_") or hub_base.startswith(f"{unit_num} ")):
+            canonical_hub_title = f"{hub_base}_Hub"
+        else:
+            canonical_hub_title = f"{unit_num}_{hub_base}_Hub" if unit_num else f"{hub_base}_Hub"
+        
+        hub_note = {
+            "title": canonical_hub_title,
+            "description": f"Hub note for {course} - {hub_title}",
+            "source_context": "Auto-generated Hub",
+            "source_pages": []
+        }
+        
+        structured_plan = {
+            "course": course,
+            "semester": semester,
+            "unit": str(unit_num),
+            "hub_title": hub_title,
+            "primary_language": primary_language,
+            "hub_note": hub_note,
+            "atomic_notes": all_atomic_notes,
+            "possible_questions": all_pq_notes
+        }
+
+        # Build batches (Phase 1: Atomic Generation, Phase 2: Probe Enrichment, Phase 3: Hub)
         all_atomic_titles = [n["title"] for n in structured_plan["atomic_notes"]]
-        all_pq_titles = [n["title"] for n in structured_plan["possible_questions"]]
         hub_title_final = structured_plan["hub_note"]["title"]
         
-        # Backwards compatibility with the deployment loop
-        structured_plan["notes"] = all_atomic_titles + all_pq_titles + [hub_title_final]
+        structured_plan["notes"] = all_atomic_titles + [hub_title_final]
         
         sniped_batches = []
         next_id = 1
+        
+        # NEW PASS 1: COMPLETE ATOMIC NOTES (Note + Probes)
         for note in all_atomic_titles:
             sniped_batches.append({"id": next_id, "notes": [note], "type": "atomic"})
             next_id += 1
         
-        for pq in all_pq_titles:
-            sniped_batches.append({"id": next_id, "notes": [pq], "type": "possible_questions"})
+        for note in [n["title"] for n in structured_plan["possible_questions"]]:
+            sniped_batches.append({"id": next_id, "notes": [note], "type": "pq"})
             next_id += 1
-
+            
+        # PASS 3: HUB (Source of Truth)
         sniped_batches.append({"id": next_id, "notes": [hub_title_final], "type": "hub"})
         
         structured_plan["batches"] = sniped_batches
@@ -902,9 +964,16 @@ class OkaService:
         OkaService._sessions[session_id] = session_data
         self._persist_session(session_id, session_data)
         
+        # Synthesize Legacy Raw Plan for UI visibility
+        raw_plan = f"<hub_note>[[{hub_note['title']}]]</hub_note>\n"
+        raw_plan += "<atomic_notes>\n"
+        for note in all_atomic_notes:
+            raw_plan += f"- [[{note['title']}]] (Mode {note['mode']}): {note['description']}\n"
+        raw_plan += "</atomic_notes>"
+
         return {
             "session_id": session_id,
-            "plan_raw": "See structured plan (Agent Mode)",
+            "plan_raw": raw_plan,
             "plan_structured": structured_plan,
             "status": "awaiting_confirmation"
         }
@@ -989,95 +1058,9 @@ class OkaService:
 
         try:
             # Mandatory framing for ALL notes
-            STRUCTURAL_REINFORCEMENT = (
-                "\n\nABSOLUTE STRUCTURAL LAW (violation = regeneration):\n"
-                "1. Every note MUST be wrapped in: --- START_NOTE --- and --- END_NOTE ---\n"
-                "2. METADATA RULES:\n"
-                "   - `course` and `semester` MUST be PLAIN TEXT (No brackets, no quotes).\n"
-                "   - `hub`, `parent`, and `source` MUST be double-quoted wikilinks: `hub: \"[[Link]]\"`.\n"
-                "3. NO PREAMBLES: Output raw note blocks only. No intro sentences.\n"
-                "4. VISUAL CHUNKING: Max 4 sentences per paragraph. Use bullet points and bold keywords.\n"
-                "5. source_pages: MUST be a YAML list of integers: `source_pages: [12, 15]`\n"
-            )
-
-            # STATE 2: [HUB] EXECUTION — Canonical Template from OKA.md v11.1
-            if batch_type == "hub":
-                # Collect the list of ACTUALLY planned atomic notes for strict Hub coverage
-                all_planned = session["metadata"].get("notes", [])
-                planned_atomic_list = "\n".join([f"  - [[{n}]]" for n in all_planned if "Hub" not in n and "Possible_Questions" not in n])
-                
-                reinforced_command = (
-                    "GENERATE THE HUB NOTE. Use EXACTLY this template structure. DO NOT change the headings.\n\n"
-                    "CRITICAL: The Core Topologies section MUST contain ONLY and EXACTLY these notes (no more, no less):\n"
-                    f"{planned_atomic_list}\n\n"
-                    "--- START_NOTE ---\n"
-                    "---\n"
-                    "title: {{Unit_Name}}_Hub\n"
-                    "type: Hub\n"
-                    "course: {{Course}}\n"
-                    "semester: {{Semester}}\n"
-                    "unit: {{Unit_Number}}\n"
-                    "source: \"[[{{Source_PDF}}]]\"\n"
-                    "source_pages: []\n"
-                    "status: Not Started\n"
-                    "confidence: null\n"
-                    "study_date: null\n"
-                    "generated: true\n"
-                    "---\n\n"
-                    "# Learning Objectives\n"
-                    "After mastering this unit, you can:\n"
-                    "1. (Verb + artifact: what the student can DO, e.g., 'Construct an ER diagram from requirements')\n"
-                    "2. (Another measurable skill with a concrete deliverable)\n"
-                    "3. (Another measurable skill with a concrete deliverable)\n\n"
-                    "# Core Topologies (Connections)\n"
-                    "(Strict DAG: Hierarchical indented list using ONLY the notes listed above. Indentation = dependency. EVERY NOTE APPEARS EXACTLY ONCE.)\n"
-                    "- [[Root_Concept]]\n"
-                    "  - [[Child_Concept]]\n"
-                    "    - [[Deep_Concept]]\n\n"
-                    "# Assessment Layer\n"
-                    "[[{Unit_Name}_Possible_Questions]]\n"
-                    "--- END_NOTE ---"
-                    f"{STRUCTURAL_REINFORCEMENT}"
-                )
-            elif batch_type == "pq":
-                # Collect all atomic note names for PQ coverage
-                all_planned = session["metadata"].get("notes", [])
-                atomic_concepts = [n for n in all_planned if "Hub" not in n and "Possible_Questions" not in n]
-                pq_concept_sections = "\n".join([f"## [[{n}]]\n### L1: Identify\n(Give a scenario. Ask to classify, identify, or distinguish — NOT define.)\n### L2: Construct\n(Give requirements. Ask to draw, build, write, or derive an artifact.)\n### L3: Debug\n(Give a WRONG diagram/schema/statement. Ask to find the error and fix it.)\n" for n in atomic_concepts])
-                
-                # Build the actual hub link from session metadata
-                unit_num = session["metadata"].get("unit", "")
-                hub_title = session["metadata"].get("hub_title", "")
-                clean_hub = hub_title.replace(" ", "_")
-                hub_link = f"{unit_num}_{clean_hub}_Hub" if unit_num else f"{clean_hub}_Hub"
-                
-                reinforced_command = (
-                    "GENERATE THE POSSIBLE QUESTIONS NOTE.\n"
-                    "CRITICAL: Every L1/L2/L3 question MUST contain a concrete scenario with specific entities, attributes, or a domain context. NO generic shells like 'Given an ER diagram, find the error.' — THAT IS FORBIDDEN.\n"
-                    "L1: Give a realistic scenario. Ask classify/identify/distinguish. NOT 'What is X?'\n"
-                    "L2: Give concrete requirements (e.g., real attributes). Ask to draw/build/write a specific artifact.\n"
-                    "L3: Provide the ACTUAL WRONG diagram/schema/statement inline. Ask to find the specific error and fix it.\n"
-                    "Use diverse domains: aerospace, biomedical, logistics, telecom, agriculture. DO NOT repeat domains.\n\n"
-                    "--- START_NOTE ---\n"
-                    "---\n"
-                    f"title: {unit_num}_{clean_hub}_Possible_Questions\n"
-                    "type: Possible Questions\n"
-                    f"course: {session['metadata'].get('course', '')}\n"
-                    f"semester: {session['metadata'].get('semester', '')}\n"
-                    f"unit: {unit_num}\n"
-                    f"hub: \"[[{hub_link}]]\"\n"
-                    f"source: \"[[{Path(session.get('path', '')).name}]]\"\n"
-                    "score: null\n"
-                    "---\n\n"
-                    "# Part I: Concept Interrogation\n"
-                    f"{pq_concept_sections}\n"
-                    "# Part II: Synthesis & Architecture\n"
-                    "### Integration Scenario: [Descriptive Title — unique domain NOT used in any atomic note]\n"
-                    "(Multi-step problem combining 3+ concepts. Must require producing a complete artifact from a requirements paragraph.)\n"
-                    "--- END_NOTE ---"
-                    f"{STRUCTURAL_REINFORCEMENT}"
-                )
-            elif batch_type == "atomic":
+            primary_language = session["metadata"].get("primary_language", "General")
+            
+            if batch_type == "atomic":
                 # --- NEW AGENT-BASED ATOMIC GENERATION ---
                 unit_num = session["metadata"].get("unit", "")
                 hub_title = session["metadata"].get("hub_title", "")
@@ -1098,67 +1081,114 @@ class OkaService:
                 # 1. Generate content using SURGICAL CONTEXT (with internal retry)
                 note_content = None
                 writer_retry = 0
+                all_concepts_list = ", ".join([f"[[{n['title']}]]" for n in session["metadata"].get("atomic_notes", [])])
+                
                 while writer_retry < 3:
                     try:
                         note_content = await self.writer_agent.generate_content(
                             note_schema=note_schema,
-                            source_text=note_schema.source_context or "No specific context extracted."
+                            source_text=note_schema.source_context or "No specific context extracted.",
+                            primary_language=primary_language,
+                            all_concepts=all_concepts_list
                         )
-                        if note_content: break
+                        # VALIDATION LOOP (High-Density v17.1)
+                        # VALIDATION LOOP (High-Density v17.1)
+                        if not note_content or not note_content.markdown_body:
+                            raise ValueError("Empty markdown body returned.")
+                        
+                        body = note_content.markdown_body
+                        if len(body) < 500:
+                            raise ValueError(f"Note content is too thin ({len(body)} chars). Demand more density.")
+                        
+                        if primary_language != "General" and f"```{primary_language.lower()}" not in body.lower() and "```" in body:
+                            # Strict check: if there is code, it better match the primary language if it's specified.
+                            if "```python" in body.lower() and primary_language.lower() != "python":
+                                raise ValueError(f"Hallucinated Python code instead of {primary_language}.")
+                        
+                        break # Validation passed
                     except Exception as e:
                         writer_retry += 1
-                        print(f"[OKA Service] Writer failed (Attempt {writer_retry}/3): {e}")
+                        print(f"[OKA Service] Writer validation failed (Attempt {writer_retry}/3): {e}")
                         if writer_retry >= 3: raise e
                         await asyncio.sleep(2 * writer_retry)
 
-                # 2. Compile
+                # 3. Assemble Skeleton and Deploy PHYSICAL (Status: Born)
                 plan_obj = SovereignPlan(**session["metadata"])
-                ai_output = self._compile_atomic_note(plan_obj, note_schema, note_content)
-                res = AIMessage(content=ai_output)
+                
+                OkaService._status[session_id] = f"Surgical Pass: [[{current_note_title}]] (1/2)..."
+                skeleton_output = self._compile_atomic_note(
+                    plan=plan_obj, 
+                    note_schema=note_schema, 
+                    note_content=note_content, 
+                    probes=None,
+                    session_path=session.get("path", "")
+                )
+                # Physical Write 1
+                self.deployer.deploy_atomic_notes(session_id, [current_note_title], [skeleton_output], plan_obj, session.get("path", ""))
+
+                # 4. Generate Probes (Agent 2: Socratic Inquisitor)
+                probes = None
+                try:
+                    OkaService._status[session_id] = f"Socratic Pass: [[{current_note_title}]] (2/2)..."
+                    probes = await self.writer_agent.generate_probes(
+                        note_title=note_schema.title,
+                        note_body=body,
+                        source_text=note_schema.source_context or "",
+                        primary_language=primary_language,
+                        all_concepts=all_concepts_list
+                    )
+                except Exception as e:
+                    print(f"[OKA Service] Probe generation failed for {current_note_title}: {e}")
+
+                # 5. Assemble Final and Deploy PHYSICAL (Status: Enriched)
+                ai_output = self._compile_atomic_note(
+                    plan=plan_obj, 
+                    note_schema=note_schema, 
+                    note_content=note_content, 
+                    probes=probes,
+                    session_path=session.get("path", "")
+                )
+                # Physical Write 2 (The Enrichment)
+                self.deployer.deploy_atomic_notes(session_id, [current_note_title], [ai_output], plan_obj, session.get("path", ""))
+                
+                res = AIMessage(content="SKIP_DEPLOYMENT")
             
-            elif batch_type == "possible_questions":
-                # --- NEW AGENT-BASED PQ GENERATION ---
-                current_pq_title = batch_notes[0] if batch_notes else ""
-                pq_schema_dict = next((n for n in session["metadata"].get("possible_questions", []) if n["title"] == current_pq_title), None)
+            elif batch_type == "pq":
+                current_note_title = batch_notes[0]
+                note_schema = next((n for n in plan_obj.possible_questions if n.title == current_note_title), None)
+                if not note_schema: raise ValueError(f"PQ {current_note_title} not found in plan.")
+
+                OkaService._status[session_id] = f"Synthesizing Question: [[{current_note_title}]]..."
                 
-                if not pq_schema_dict:
-                    pq_schema = NoteSchema(title=current_pq_title, description="Generated probe", source_context="", source_pages=[])
-                else:
-                    pq_schema = NoteSchema(**pq_schema_dict)
-
-                OkaService._status[session_id] = f"Formulating Question: {current_pq_title}..."
+                # Single Pass for PQs (No Probes needed)
+                note_content = await self.writer_agent.generate_content(
+                    note_schema=note_schema,
+                    source_text=source_text,
+                    primary_language=plan_obj.primary_language,
+                    all_concepts=", ".join(all_note_titles)
+                )
                 
-                # 3. The Pacer
-                if batch_number > 1:
-                    await asyncio.sleep(2.1)
-
-                # 1. Generate PQ content using SURGICAL CONTEXT (with internal retry)
-                note_content = None
-                writer_retry = 0
-                while writer_retry < 3:
-                    try:
-                        note_content = await self.writer_agent.generate_pq_content(
-                            note_schema=pq_schema,
-                            source_text=pq_schema.source_context or "No specific context extracted."
-                        )
-                        if note_content: break
-                    except Exception as e:
-                        writer_retry += 1
-                        print(f"[OKA Service] PQ Writer failed (Attempt {writer_retry}/3): {e}")
-                        if writer_retry >= 3: raise e
-                        await asyncio.sleep(2 * writer_retry)
-
-                # 2. Compile using deterministic PQ compiler
-                plan_obj = SovereignPlan(**session["metadata"])
-                ai_output = self._compile_pq_note(plan_obj, pq_schema, note_content)
-                res = AIMessage(content=ai_output)
+                pq_output = self._compile_pq_note(
+                    plan=plan_obj,
+                    note_schema=note_schema,
+                    note_content=note_content,
+                    session_path=session.get("path", "")
+                )
+                
+                self.deployer.deploy_atomic_notes(session_id, [current_note_title], [pq_output], plan_obj, session.get("path", ""))
+                res = AIMessage(content="SKIP_DEPLOYMENT")
+            
 
             elif batch_type == "hub":
-                # --- DETERMINISTIC HUB COMPILATION (NO LLM) ---
+                # --- DETERMINISTIC HUB COMPILATION ---
                 OkaService._status[session_id] = "Compiling Sovereign Hub..."
                 plan_obj = SovereignPlan(**session["metadata"])
-                ai_output = self._compile_hub_note(plan_obj)
-                res = AIMessage(content=ai_output)
+                ai_output = self._compile_hub_note(plan_obj, session_path=session.get("path", ""))
+                
+                # Surgical Hub Deployment
+                self.deployer.deploy_hub_note(session_id, ai_output, plan_obj)
+                
+                res = AIMessage(content="SKIP_DEPLOYMENT")
             
             else:
                 # Final fallback for any unhandled batch types
@@ -1167,10 +1197,11 @@ class OkaService:
                 res = await self._invoke_with_retry(pruned_messages, session_id)
 
             # ── DEPLOYMENT PHASE ──────────────────────────────────────
-            OkaService._status[session_id] = f"Deploying Batch {batch_number} to Vault..."
-            deployment_results = await self.deployer.deploy(res.content, session_metadata=session["metadata"])
-            
-            print(f"[OKA Service] Batch {batch_number} deployed: {len(deployment_results)} notes.")
+            deployment_results = ["File updated in place."]
+            if res.content != "SKIP_DEPLOYMENT":
+                OkaService._status[session_id] = f"Deploying Batch {batch_number} to Vault..."
+                deployment_results = await self.deployer.deploy(res.content, session_metadata=session["metadata"])
+                print(f"[OKA Service] Batch {batch_number} deployed: {len(deployment_results)} notes.")
 
             session["messages"].append(res)
             session["current_batch"] = batch_number
@@ -1216,66 +1247,96 @@ class OkaService:
             OkaService._status[session_id] = f"Error: {error_msg}"
             raise ValueError(error_msg)
 
-    def _compile_atomic_note(self, plan: SovereignPlan, note_schema: AtomicNoteSchema, note_content: NoteContent) -> str:
+    def _compile_atomic_note(self, plan: SovereignPlan, note_schema: AtomicNoteSchema, note_content: NoteContent, probes: Optional[ProbeEnrichment] = None, session_path: str = "") -> str:
         """
-        [DETERMINISTIC COMPILER]
-        Constructs the Sovereign v13.5 note string with forced quoted wikilinks.
+        [DETERMINISTIC COMPILER v19.3]
+        Constructs the Sovereign note with interleaved Socratic Probes.
         """
+        # Resolve the real PDF source from session path
+        source_link = f"[[{Path(session_path).name}]]" if session_path else f"[[{plan.hub_note.title}]]"
+
         metadata = {
             "title": note_schema.title,
             "type": "Atomic Note",
             "course": plan.course,
             "semester": plan.semester,
             "unit": plan.unit,
-            "hub": f"\"[[{plan.hub_note.title}]]\"",
-            "source": f"\"[[{plan.hub_note.title}_Source]]\"",
+            "hub": f"[[{plan.hub_note.title}]]",
+            "source": source_link,
             "source_pages": note_schema.source_pages,
             "mode": "ENGINEER",
             "generated": True
         }
         
-        # Add quoted wikilinks for YAML safety
+        # Add wikilinks for YAML safety
         if note_schema.prerequisites:
             metadata["prerequisites"] = [f"[[{p}]]" for p in note_schema.prerequisites]
 
         yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
 
-        return f"--- START_NOTE ---\n---\n{yaml_frontmatter}---\n\n{note_content.markdown_body}\n\n--- END_NOTE ---"
+        # Interleave Probes if present
+        probe_body = ""
+        if probes:
+            probe_body = (
+                "\n---\n\n"
+                "## 5. Socratic Discovery (Probes)\n\n"
+                f"> [!ABSTRACT] Knowledge Verification\n"
+                f"> **Scenario-Based Question**: {probes.l1_scenario}\n"
+                f"> **Implementation Challenge**: {probes.l2_implementation}\n"
+                f"> **Socratic Debugger**: {probes.l3_debug}\n"
+            )
 
-    def _compile_pq_note(self, plan: SovereignPlan, note_schema: NoteSchema, note_content: NoteContent) -> str:
+        full_body = note_content.markdown_body.strip() + probe_body
+        return f"---\n{yaml_frontmatter}---\n\n{full_body}\n"
+
+    def _compile_pq_note(self, plan: SovereignPlan, note_schema: NoteSchema, note_content: NoteContent, session_path: str = "") -> str:
         """
         [DETERMINISTIC COMPILER]
         Constructs the Socratic PQ note string.
         """
+        source_link = f"[[{Path(session_path).name}]]" if session_path else f"[[{plan.hub_note.title}]]"
+
         metadata = {
             "title": note_schema.title,
             "type": "Possible Questions",
             "course": plan.course,
             "semester": plan.semester,
             "unit": plan.unit,
-            "hub": f"\"[[{plan.hub_note.title}]]\"",
-            "source": f"\"[[{plan.hub_note.title}_Source]]\"",
+            "hub": f"[[{plan.hub_note.title}]]",
+            "source": source_link,
             "mode": "SOCRATIC",
             "generated": True
         }
         
         yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
 
-        return f"--- START_NOTE ---\n---\n{yaml_frontmatter}---\n\n{note_content.markdown_body}\n\n--- END_NOTE ---"
+        content = (
+            f"{note_content.markdown_body}\n\n"
+            "---\n\n"
+            "## Knowledge Probes (L1, L2, L3)\n"
+            "> *Probes will be generated in the second pass...*"
+        )
 
-    def _compile_hub_note(self, plan: SovereignPlan) -> str:
+        return f"--- START_NOTE ---\n---\n{yaml_frontmatter}---\n\n{content}\n\n--- END_NOTE ---"
+
+    def _compile_hub_note(self, plan: SovereignPlan, session_path: str = "") -> str:
         """
         [DETERMINISTIC COMPILER]
         Constructs the Unit Hub.
         """
+        source_link = f"[[{Path(session_path).name}]]" if session_path else f"[[{plan.hub_note.title}]]"
+
         metadata = {
             "title": plan.hub_note.title,
             "type": "Hub",
             "course": plan.course,
             "semester": plan.semester,
             "unit": plan.unit,
-            "source": f"\"[[{plan.hub_note.title}_Source]]\"",
+            "source": source_link,
             "source_pages": [],
+            "status": "Not Started",
+            "confidence": None,
+            "study_date": None,
             "mode": "ARCHITECT",
             "generated": True
         }
@@ -1284,19 +1345,21 @@ class OkaService:
 
         # Build Markdown Body
         body = f"# {plan.hub_note.title.replace('_', ' ')}\n\n"
-        body += f"{plan.hub_note.description}\n\n"
+        body += f"> [!ABSTRACT] Unit Overview\n> {plan.hub_note.description}\n\n"
         
-        body += "## Core Topology\n"
-        body += "This unit is composed of the following core concepts:\n\n"
+        body += "## 🗺️ Mastery Map\n"
+        body += "Navigate through the atomic concepts of this unit. Master each node to achieve unit fluency.\n\n"
+        
+        # Group notes by some heuristic or just list with icons
         for note in plan.atomic_notes:
-            body += f"- [[{note.title}]]\n"
+            body += f"- [ ] [[{note.title}]]\n"
             
-        body += "\n## Knowledge Probes\n"
-        body += "Test your understanding with these questions:\n\n"
-        for note in plan.possible_questions:
-            body += f"- [[{note.title}]]\n"
+        body += "\n## 🎯 Socratic Objectives\n"
+        body += "- [ ] Complete retrieval practice for all atomic nodes.\n"
+        body += "- [ ] Achieve 90%+ accuracy on Possible Questions.\n"
+        body += "- [ ] Synthesize connections between modular blocks.\n"
             
-        return f"--- START_NOTE ---\n---\n{yaml_frontmatter}---\n\n{body}\n\n--- END_NOTE ---"
+        return f"---\n{yaml_frontmatter}---\n\n{body}\n"
 
     def _audit_hub_consistency(self, hub_content: str, planned_notes: List[str], session_metadata: Dict[str, Any]) -> Tuple[bool, str]:
         """Verifies that every note in the plan is present as a [[Wikilink]] in the Hub."""
@@ -1335,6 +1398,3 @@ class OkaService:
         if missing:
             return False, f"The following notes from the plan are MISSING from the Connections tree: {', '.join(missing)}"
         return True, "Consistency verified."
-
-        metadata["batches"] = sniped_batches
-        return metadata
