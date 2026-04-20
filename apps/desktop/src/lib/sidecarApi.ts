@@ -359,6 +359,9 @@ export const sidecarApi = {
             method: 'POST'
         }),
 
+    getAiRateLimits: () =>
+        request<Record<string, any>>('/api/ai/rate-limits'),
+
     okaWatcherStatus: () =>
         request<{ is_running: boolean, inbox: string | null }>('/api/oka/watcher/status'),
 

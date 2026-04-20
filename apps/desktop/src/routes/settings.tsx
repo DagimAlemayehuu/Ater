@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import {
-    Database, Key, HardDrive, Trash2, Edit2, FolderOpen, ShieldCheck, Sun, Moon, Zap,
-    User, BookOpen, DollarSign, Activity, Brain, Bot, Sliders, ChevronLeft, ChevronRight, ArrowRight, Wand2, Info, Settings as SettingsIcon, Target, MessageSquare, RefreshCw
+    Database, Key, HardDrive, Trash2, Edit2, FolderOpen, ShieldCheck, Sun, Moon, Zap, Plus, X,
+    User, BookOpen, DollarSign, Activity, Brain, Bot, Sliders, ChevronLeft, ChevronRight, ArrowRight, Wand2, Info, Settings as SettingsIcon, Target, MessageSquare, RefreshCw, Check
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
-import { useConfig } from '@/lib/ConfigContext'
+import { useConfig, SavedApiKey } from '@/lib/ConfigContext'
 import { open } from '@tauri-apps/plugin-dialog'
 import { cn } from '@/lib/utils'
 import { sidecarApi } from '@/lib/sidecarApi'
 import ProfileEditor from '@/components/profiles/ProfileEditor'
+import RateLimitMonitor from '@/components/intelligence/RateLimitMonitor'
 import {
     PERSONAL_PROFILE_SCHEMA,
     ACADEMIC_PROFILE_SCHEMA,
@@ -110,11 +111,16 @@ const SettingsCard = ({ title, icon, value, children, onEdit, isEditing, onSave,
 /* ─────────────────── Main Component ─────────────────── */
 
 export default function Settings() {
-    const { config, saveConfig, isLoading } = useConfig()
+    const { config, saveConfig, isLoading, addApiKey, deleteApiKey } = useConfig()
     const [editingKey, setEditingKey] = useState<string | null>(null)
     const [editValue, setEditValue] = useState('')
     const [activeSection, setActiveSection] = useState<SettingsSection>('general')
     const [activeProfileId, setActiveProfileId] = useState<ProfileId | null>(null)
+
+    const [isAddingKey, setIsAddingKey] = useState(false);
+    const [newKeyName, setNewKeyName] = useState('');
+    const [newKeyValue, setNewKeyValue] = useState('');
+    const [newKeyProvider, setNewKeyProvider] = useState('google');
 
     const [ragStatus, setRagStatus] = useState<{status: string, progress: number, total: number, message: string} | null>(null)
     const [notionStatus, setNotionStatus] = useState<{status: string, progress: number, total: number, message: string} | null>(null)
@@ -246,6 +252,29 @@ export default function Settings() {
 
     /* ────── General Settings ────── */
     function renderGeneral() {
+        const handleAddNewKey = () => {
+            if (!newKeyName || !newKeyValue) return;
+            addApiKey({
+                id: crypto.randomUUID(),
+                name: newKeyName,
+                key: newKeyValue,
+                provider: newKeyProvider
+            });
+            setNewKeyName('');
+            setNewKeyValue('');
+            setIsAddingKey(false);
+        };
+
+        const selectSavedKey = (level: 'primary' | 'planner' | 'utility', keyObj: SavedApiKey) => {
+            if (level === 'primary') {
+                saveConfig({ aiProvider: keyObj.provider, aiApiKey: keyObj.key });
+            } else if (level === 'planner') {
+                saveConfig({ plannerProvider: keyObj.provider, plannerApiKey: keyObj.key });
+            } else {
+                saveConfig({ utilityProvider: keyObj.provider, utilityApiKey: keyObj.key });
+            }
+        };
+
         return (
             <div className="w-full space-y-8 animate-in fade-in duration-300">
                 <div>
@@ -254,6 +283,77 @@ export default function Settings() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* API Key Manager */}
+                    <Card className="md:col-span-2">
+                        <CardHeader 
+                            title="Local API Key Vault" 
+                            description="Securely store and name your API keys for easy switching." 
+                            icon={<ShieldCheck size={18} className="text-muted-foreground" />} 
+                        />
+                        <CardContent>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {config?.savedApiKeys?.map((k) => (
+                                    <div key={k.id} className="group relative flex flex-col p-3 rounded border border-border bg-muted/20 hover:border-primary/30 transition-all">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-[11px] font-bold uppercase tracking-wider text-foreground truncate max-w-[120px]">{k.name}</span>
+                                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-background border border-border font-bold uppercase text-muted-foreground">{k.provider}</span>
+                                        </div>
+                                        <div className="text-[12px] font-mono text-muted-foreground truncate opacity-60">••••••••{k.key.slice(-4)}</div>
+                                        
+                                        <button 
+                                            onClick={() => { if(confirm(`Delete ${k.name}?`)) deleteApiKey(k.id) }}
+                                            className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+                                    </div>
+                                ))}
+
+                                {isAddingKey ? (
+                                    <div className="flex flex-col p-3 rounded border border-primary/50 bg-primary/5 space-y-2 animate-in zoom-in-95 duration-200">
+                                        <input 
+                                            placeholder="Key Name (e.g. My Gemini Pro)"
+                                            value={newKeyName}
+                                            onChange={(e) => setNewKeyName(e.target.value)}
+                                            className="w-full bg-background border border-border rounded px-2 py-1 text-[11px] focus:outline-none"
+                                            autoFocus
+                                        />
+                                        <select
+                                            value={newKeyProvider}
+                                            onChange={(e) => setNewKeyProvider(e.target.value)}
+                                            className="w-full bg-background border border-border rounded px-2 py-1 text-[11px] focus:outline-none"
+                                        >
+                                            <option value="google">Google</option>
+                                            <option value="openai">OpenAI</option>
+                                            <option value="anthropic">Anthropic</option>
+                                            <option value="groq">Groq</option>
+                                            <option value="openrouter">OpenRouter</option>
+                                        </select>
+                                        <input 
+                                            type="password"
+                                            placeholder="Paste API Key"
+                                            value={newKeyValue}
+                                            onChange={(e) => setNewKeyValue(e.target.value)}
+                                            className="w-full bg-background border border-border rounded px-2 py-1 text-[11px] focus:outline-none font-mono"
+                                        />
+                                        <div className="flex gap-2 pt-1">
+                                            <button onClick={handleAddNewKey} className="flex-1 bg-primary text-primary-foreground rounded py-1 text-[10px] font-bold uppercase tracking-widest">Add</button>
+                                            <button onClick={() => setIsAddingKey(false)} className="px-2 bg-muted text-muted-foreground rounded py-1 text-[10px]"><X size={12}/></button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button 
+                                        onClick={() => setIsAddingKey(true)}
+                                        className="flex flex-col items-center justify-center p-3 rounded border border-dashed border-border hover:border-primary/30 hover:bg-muted/10 transition-all text-muted-foreground gap-1"
+                                    >
+                                        <Plus size={16} />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider">New Key</span>
+                                    </button>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     {/* AI Engine */}
                     <SettingsCard
                         title="AI Engine"
@@ -298,6 +398,38 @@ export default function Settings() {
                                 >
                                     L3: Utility
                                 </button>
+                            </div>
+
+                            {/* Saved Key Selection */}
+                            <div className="space-y-2 pb-4 border-b border-border/50">
+                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                    <Key size={10} /> Quick Load Saved Key
+                                </label>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {config?.savedApiKeys?.length === 0 && (
+                                        <p className="text-[11px] text-muted-foreground/40 italic">No keys saved in vault yet.</p>
+                                    )}
+                                    {config?.savedApiKeys?.map(k => {
+                                        const isSelected = (aiTab === 'primary' && config.aiApiKey === k.key) ||
+                                                           (aiTab === 'planner' && config.plannerApiKey === k.key) ||
+                                                           (aiTab === 'utility' && config.utilityApiKey === k.key);
+                                        return (
+                                            <button
+                                                key={k.id}
+                                                onClick={() => selectSavedKey(aiTab, k)}
+                                                className={cn(
+                                                    "px-2 py-1 rounded text-[10px] font-bold border transition-all flex items-center gap-1.5",
+                                                    isSelected 
+                                                        ? "bg-primary border-primary text-primary-foreground" 
+                                                        : "bg-background border-border text-muted-foreground hover:border-muted-foreground/50"
+                                                )}
+                                            >
+                                                {isSelected && <Check size={10} />}
+                                                {k.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             {aiTab === 'primary' && (
@@ -526,6 +658,11 @@ export default function Settings() {
                                     {testStatus.message}
                                 </p>
                             )}
+
+                            {/* Real-time Rate Limit Tracker */}
+                            <div className="pt-6 border-t border-border/50 mt-6">
+                                <RateLimitMonitor config={config} activeTier={aiTab} />
+                            </div>
                         </div>
                     </SettingsCard>
 

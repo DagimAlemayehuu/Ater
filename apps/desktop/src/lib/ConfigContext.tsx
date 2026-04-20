@@ -38,6 +38,13 @@ export interface CustomPersona {
     slidersValues: Record<string, number>;
 }
 
+export interface SavedApiKey {
+    id: string;
+    name: string;
+    key: string;
+    provider: string;
+}
+
 export interface AppConfig {
   [key: string]: any;
     aiProvider: string;
@@ -63,6 +70,7 @@ export interface AppConfig {
     creatorPrompt: string;
     creatorSliders: string;
     customPersonas: CustomPersona[];
+    savedApiKeys: SavedApiKey[];
 }
 
 interface ConfigContextType {
@@ -73,6 +81,9 @@ interface ConfigContextType {
     addCustomPersona: (p: CustomPersona) => void;
     updateCustomPersona: (id: string, updates: Partial<CustomPersona>) => void;
     deleteCustomPersona: (id: string) => void;
+    addApiKey: (key: SavedApiKey) => void;
+    updateApiKey: (id: string, updates: Partial<SavedApiKey>) => void;
+    deleteApiKey: (id: string) => void;
 }
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
@@ -103,6 +114,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     creatorPrompt: DEFAULT_SYSTEM_PROMPT_CREATOR,
     creatorSliders: JSON.stringify({ innovation: 8, detail: 6, collaboration: 7, polish: 5 }),
     customPersonas: [],
+    savedApiKeys: [],
 };
 
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -146,6 +158,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const creatorPrompt = (await store.get<string>('creatorPrompt')) || DEFAULT_CONFIG.creatorPrompt;
                 const creatorSliders = (await store.get<string>('creatorSliders')) || DEFAULT_CONFIG.creatorSliders;
                 const customPersonas = (await store.get<CustomPersona[]>('customPersonas')) || [];
+                const savedApiKeys = (await store.get<SavedApiKey[]>('savedApiKeys')) || [];
 
                 const loadedConfig: any = {
                     aiProvider,
@@ -171,6 +184,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     creatorPrompt,
                     creatorSliders,
                     customPersonas,
+                    savedApiKeys,
                 };
 
                 setConfig(loadedConfig);
@@ -233,6 +247,26 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         await saveConfig({ customPersonas: updatedPersonas });
     };
 
+    const addApiKey = async (key: SavedApiKey) => {
+        if (!config) return;
+        const updatedKeys = [...(config.savedApiKeys || []), key];
+        await saveConfig({ savedApiKeys: updatedKeys });
+    };
+
+    const updateApiKey = async (id: string, updates: Partial<SavedApiKey>) => {
+        if (!config) return;
+        const updatedKeys = config.savedApiKeys.map(key =>
+            key.id === id ? { ...key, ...updates } : key
+        );
+        await saveConfig({ savedApiKeys: updatedKeys });
+    };
+
+    const deleteApiKey = async (id: string) => {
+        if (!config) return;
+        const updatedKeys = config.savedApiKeys.filter(key => key.id !== id);
+        await saveConfig({ savedApiKeys: updatedKeys });
+    };
+
     return (
         <ConfigContext.Provider value={{
             config,
@@ -241,7 +275,10 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             saveConfig,
             addCustomPersona,
             updateCustomPersona,
-            deleteCustomPersona
+            deleteCustomPersona,
+            addApiKey,
+            updateApiKey,
+            deleteApiKey
         }}>
             {children}
         </ConfigContext.Provider>

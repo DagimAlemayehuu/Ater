@@ -47,6 +47,8 @@ from src.domains.oka.watcher import OkaQueueManager
 from src.domains.rag.watcher import RAGWatcherService
 from src.domains.rag.indexer import VaultIndexer
 from src.domains.rag.vector_store import ChromaManager
+from src.domains.ai.tracker import tracker
+from src.domains.ai.factory import ModelFactory
 
 from src.domains.notion.router import router as notion_router
 from src.domains.obsidian.router import router as obsidian_router
@@ -137,6 +139,11 @@ async def health_check():
     Standard health check for the sidecar.
     """
     return {"status": "ok", "version": "0.1.0"}
+
+@app.get("/api/ai/rate-limits")
+async def get_rate_limits():
+    """Returns the current captured rate limit state for all providers."""
+    return tracker.get_all()
 
 @app.get("/api/notion/pages")
 async def list_notion_pages(secrets: AppSecrets = Depends(get_app_secrets)):
@@ -906,9 +913,10 @@ async def oka_chat(
                 with open(abs_path, 'r', encoding='utf-8') as f:
                     context_content = f.read()
 
-        llm = ChatGoogleGenerativeAI(
-            model=secrets.ai_model,
-            google_api_key=secrets.ai_key,
+        llm = ModelFactory.get_model(
+            provider=secrets.ai_provider,
+            model_name=secrets.ai_model,
+            api_key=secrets.ai_key,
             temperature=0.4
         )
         
@@ -949,11 +957,13 @@ async def oka_interactive_quiz(
     selection = payload.get("selection", "")
     
     try:
-        llm = ChatGoogleGenerativeAI(
-            model=secrets.ai_model,
-            google_api_key=secrets.ai_key,
-            temperature=0.7
+        llm = ModelFactory.get_model(
+            provider=secrets.ai_provider,
+            model_name=secrets.ai_model,
+            api_key=secrets.ai_key,
+            temperature=0.2
         )
+
         
         prompt = f"""
         You are an academic examiner. Generate a structured JSON quiz based on the following selection.
