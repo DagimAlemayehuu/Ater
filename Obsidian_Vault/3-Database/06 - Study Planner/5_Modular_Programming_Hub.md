@@ -1,8 +1,8 @@
 ---
 title: 5_Modular_Programming_Hub
 type: Hub
-course: Computer Programming
-semester: Autumn 2025
+course: "[[Computer Programming]]"
+semester: "[[Autumn 2025]]"
 unit: 5
 source: ''
 source_pages: []

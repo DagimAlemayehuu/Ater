@@ -25,19 +25,23 @@ PERSONA_PROMPTS = {
 }
 
 UNIVERSAL_HEADERS = """
-CRITICAL SOVEREIGN DIRECTIVE (v18.8):
-1. "explanation": (Entry-point analogy. NO jargon. NO raw keywords like 'cpp' or 'python' as plain text.)
-2. "deep_dive": (500+ words. Maximize technical density. MUST USE ACADEMIC TERMINOLOGY. Extract every keyword. 
-   - CRITICAL: DO NOT write 'cpp' or similar language tags as plain text. ALL code must be inside ```cpp blocks.)
-3. "artifact": (MANDATORY: Practical Code Block or Complex Table. Detect and include unique syntax like '::', 'const', 'static'.)
-4. "walkthrough": (Detailed line-by-line trace of the logic. DO NOT wrap code in JSON-unfriendly quotes.)
-5. "the_trap": (Exam-grade failure mode. Describe the subtle error and provide the 'Silver Bullet' solution.)
-6. "search_keywords": (5-7 relevant keywords)
+CRITICAL SOVEREIGN DIRECTIVE (v22.0):
+1. "explanation": (Entry-point analogy. NO jargon. NO raw keywords like 'cpp' as plain text.)
+2. "deep_dive": (500+ words. Maximize technical density. MUST USE ACADEMIC TERMINOLOGY.
+   - MANDATORY: Use `inline_code` for all technical terms in prose (e.g. `int`, `static`, `void`).
+   - MANDATORY: All blocks MUST be fenced with language tags (e.g. ```cpp).
+3. "artifact": (MANDATORY: Code Block, Markdown Table, or Mermaid Diagram.
+   - TABLES: Clean structure. No side-pipes. Proper |---| separator.
+   - CODE: High-fidelity syntax.
+   - MERMAID: Use standard flowchart LR or sequenceDiagram. Ensure valid syntax.)
+4. "walkthrough": (Execution trace. DO NOT wrap code in JSON-unfriendly quotes.)
+5. "the_trap": (Subtle failure mode + solution.)
+6. "search_keywords": (5-7 keywords)
 
-MANDATORY SOURCE-ANCHOR PROTOCOL:
-- DO NOT include external concepts not present in the Source Text.
-- Identify every unique C++ operator or keyword in the text (e.g., ::, &, *, static) and dedicate the 'Deep-Dive' to their mechanics.
-- RETURN ONLY PURE JSON. NO WRAPPER TEXT.
+STRICT RENDERING LAWS:
+- GUTTERS: You MUST insert exactly ONE empty line BEFORE and AFTER every: Heading, Table, Code Block, and Mermaid Diagram.
+- NO PREAMBLE: Start directly with the JSON object.
+- SOURCE PAGES: Extract the EXACT page number(s) from the [PAGE X] markers in the source text.
 """
 
 # --- AGENTS ---
@@ -116,22 +120,27 @@ class WriterAgent:
         self.llm = llm
         self.llm_with_components = llm.with_structured_output(NoteComponents)
         self.llm_with_probes = llm.with_structured_output(ProbeEnrichment)
+        from .validator import OkaValidator
+        self.validator = OkaValidator()
 
     async def generate_content(self, note_schema: AtomicNoteSchema, source_text: str, primary_language: str, all_concepts: str) -> NoteContent:
         persona_info = PERSONA_PROMPTS.get(note_schema.mode, PERSONA_PROMPTS["CS-CODE"])
         headers = UNIVERSAL_HEADERS.replace("{all_concepts}", all_concepts)
         
-        sys = f"{persona_info}\n\n{headers}\n\nLanguage: {primary_language}\n\nRETURN ONLY PURE JSON."
+        sys = f"{persona_info}\n\n{headers}\n\nLanguage: {primary_language}\n\nMETADATA MANDATE: Look for [PAGE X] markers in the source text and extract the exact page numbers for 'source_pages'.\n\nRETURN ONLY PURE JSON."
         msg = [("system", sys), ("human", f"Concept: {note_schema.title}\nSource:\n{source_text}")]
         
         try:
             comp = await self.llm_with_components.ainvoke(msg)
             return self._assemble_markdown(comp, primary_language)
         except Exception as e:
-            print(f"[WriterAgent] Fallback: {e}")
+            print(f"[WriterAgent] Fallback to robust parsing: {e}")
             res = await self.llm.ainvoke(msg)
-            data = self._defensive_parse_components(res.content)
-            return self._assemble_markdown(data, primary_language)
+            success, data, err = self.validator.validate_json_robust(res.content)
+            if success:
+                data_obj = self._defensive_parse_components(json.dumps(data))
+                return self._assemble_markdown(data_obj, primary_language)
+            return self._assemble_markdown(self._defensive_parse_components(res.content), primary_language)
 
     def _strip_lang_prefix(self, text: str, lang: str) -> str:
         """Removes leaked naked language tags like 'cpp' or 'c++' from the start of content."""
@@ -141,36 +150,100 @@ class WriterAgent:
         regex = rf"^(?:{lang}|{lang.lower()}|{lang.upper()}|c\+\+|C\+\+|text|python|javascript|java)\s*\n+"
         return re.sub(regex, "", p, flags=re.IGNORECASE).strip()
 
+    def _normalize_tables(self, text: str) -> str:
+        """Ensures markdown tables have valid separators, alignment, and proper gutters."""
+        lines = text.split('\n')
+        final_output = []
+        in_table = False
+        
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            
+            if "|" in stripped:
+                # We are in a table row
+                if not in_table:
+                    # Starting a new table: Ensure gutter before
+                    if final_output and final_output[-1].strip() != "":
+                        final_output.append("")
+                    in_table = True
+                
+                # Normalize the row: strip outer pipes, split, clean parts, re-wrap
+                row_content = stripped.strip("|")
+                parts = [p.strip() for p in row_content.split("|")]
+                # Force clean row
+                clean_row = "| " + " | ".join(parts) + " |"
+                final_output.append(clean_row)
+                
+                # Auto-inject separator if this is the first row and next isn't a separator
+                is_separator = all(c in "-:| " for c in stripped) and "-" in stripped
+                if not is_separator:
+                    # Check if next line is a separator
+                    next_is_sep = False
+                    if i < len(lines) - 1:
+                        next_line = lines[i+1].strip()
+                        next_is_sep = "|" in next_line and all(c in "-:| " for c in next_line.strip("|")) and "-" in next_line
+                    
+                    if not next_is_sep and (i == 0 or "|" not in lines[i-1]):
+                        # This is likely the header row and missing a separator
+                        sep = "| " + " | ".join(["---"] * len(parts)) + " |"
+                        final_output.append(sep)
+            else:
+                if in_table:
+                    # Ending a table: Ensure gutter after
+                    final_output.append("")
+                    in_table = False
+                final_output.append(line)
+        
+        if in_table:
+            final_output.append("")
+            
+        return "\n".join(final_output).replace("\n\n\n", "\n\n")
+
     def _balance_code_blocks(self, text: str) -> str:
         """Physical Backtick Balancer: Ensures every block starts and ends on its own line with a gutter."""
         lines = text.split('\n')
         balanced_lines = []
         in_code_block = False
         
+        FORBIDDEN_LANGS = ["python", "mermaid", "sql", "c++", "cpp", "javascript", "json", "yaml", "java", "c#"]
+
         for line in lines:
             stripped = line.strip()
+            lower_stripped = stripped.lower()
+            
+            # 1. Handle Naked Language Tags (Auto-Start)
+            if not in_code_block and lower_stripped in FORBIDDEN_LANGS:
+                if balanced_lines and balanced_lines[-1].strip() != "":
+                    balanced_lines.append("")
+                balanced_lines.append(f"```{lower_stripped}")
+                in_code_block = True
+                continue
+
+            # 2. Handle Backtick Blocks
             if stripped.startswith("```"):
                 if not in_code_block:
                     # Starting a block: Ensure gutter before
                     if balanced_lines and balanced_lines[-1].strip() != "":
                         balanced_lines.append("")
                     in_code_block = True
-                    balanced_lines.append(stripped)
+                    # Normalize c++ to cpp for consistency if needed, but keeping user's preferred cpp
+                    tag = stripped[3:].strip().lower()
+                    if tag == "c++": tag = "cpp"
+                    balanced_lines.append(f"```{tag}" if tag else "```")
                 else:
-                    # Closing a block: Ensure gutter after
-                    balanced_lines.append(stripped)
+                    # Closing a block: 
+                    balanced_lines.append("```")
                     balanced_lines.append("")
                     in_code_block = False
                 continue
             
-            # HEURISTIC: If we are in_code_block but find a line that is clearly markdown, force-close.
+            # 3. HEURISTIC: Force-close if we hit a header or horizontal rule while in a block
             if in_code_block:
-                if stripped.startswith("##") or stripped.startswith("- ") or stripped.startswith("> "):
+                if stripped.startswith("##") or stripped.startswith("###") or (stripped.startswith("---") and len(stripped) < 10):
                     balanced_lines.append("```") 
                     balanced_lines.append("")
-                    balanced_lines.append(line)
                     in_code_block = False
-                    continue
+                    # Fall through to append the header line normally
 
             balanced_lines.append(line)
 
@@ -180,7 +253,7 @@ class WriterAgent:
         return "\n".join(balanced_lines).replace("\n\n\n", "\n\n")
 
     def _assemble_markdown(self, c: NoteComponents, lang: str = "cpp") -> NoteContent:
-        """Ironshield Assembler v18.9: Balanced Backticks & Strict Gutters."""
+        """Ironshield Assembler v20.1: Balanced Backticks, Normalized Tables & Strict Gutters."""
         lang_tag = lang.lower() if lang != "General" else "text"
         
         def flatten(v: Any, is_artifact: bool = False) -> str:
@@ -192,19 +265,27 @@ class WriterAgent:
                 return "\n".join([f"- {flatten(i)}" for i in v])
             return str(v)
 
-        # 1. Process and Balance each section
-        eli5 = self._balance_code_blocks(self._strip_lang_prefix(flatten(c.explanation), lang))
-        deep_dive = self._balance_code_blocks(self._strip_lang_prefix(flatten(c.deep_dive), lang))
-        walkthrough = self._balance_code_blocks(self._strip_lang_prefix(flatten(c.walkthrough), lang))
-        trap = self._balance_code_blocks(self._strip_lang_prefix(flatten(c.the_trap), lang))
+        # 1. Process each section with table normalization and code balancing
+        def process_section(v):
+            text = flatten(v)
+            text = self._strip_lang_prefix(text, lang)
+            text = self._normalize_tables(text)
+            text = self._balance_code_blocks(text)
+            return text
+
+        eli5 = process_section(c.explanation)
+        deep_dive = process_section(c.deep_dive)
+        walkthrough = process_section(c.walkthrough)
+        trap = process_section(c.the_trap)
         
         # 2. Artifact Processing (High-Gutter Priority)
         art = self._strip_lang_prefix(flatten(c.artifact, is_artifact=True), lang).strip()
-        if "```" not in art:
-            if "|" in art and "--" in art:
-                pass 
-            else:
-                art = f"```{lang_tag}\n{art}\n```"
+        if "```" not in art and "|" not in art:
+            art = f"```{lang_tag}\n{art}\n```"
+        
+        if "|" in art:
+            art = self._normalize_tables(art)
+        
         art_final = self._balance_code_blocks(art)
 
         body = (

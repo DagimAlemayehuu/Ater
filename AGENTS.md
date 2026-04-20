@@ -48,10 +48,14 @@ When initialized by the user, you will be told: *"Read AGENTS.md and your role i
 
 **STOP READING.** You now have full context. Do not read files outside your assigned domain unless required by an explicit import statement.
 
+---
+
 ## 3. THE ISOLATION MANDATE
 You are strictly forbidden from modifying files outside of your assigned domain as defined in your Agent Profile.
 *   If you are assigned to `apps/desktop`, do not touch `apps/api`.
 *   If you find a bug in another domain, do NOT fix it. Log it in `.system/state/ERROR_REGISTRY.md` for the Debugger Agent.
+
+---
 
 ## 4. THE PHYSICAL PRE-COMMIT GATE (HUSKY)
 You cannot push broken code. Husky will physically run `turbo run lint typecheck test`.
@@ -59,6 +63,8 @@ You cannot push broken code. Husky will physically run `turbo run lint typecheck
 2.  If the commit fails, read the terminal output carefully.
 3.  Fix the TypeScript type, syntax error, or failing test in your domain and re-run `pnpm run safe-commit`.
 4.  **CIRCUIT BREAKER:** The `safe-commit` script is hardcoded. If you fail 3 times on the same issue, you are physically blocked from retrying and forced to create a DRAFT commit. You MUST STOP and halt execution.
+
+---
 
 ## 5. STATE SYNCHRONIZATION
 When you finish your assigned task:
@@ -68,6 +74,8 @@ When you finish your assigned task:
 
 **CRITICAL SYNC GAP (Merge Agent / Inquisitor):**
 *   When a PR is successfully merged, the Merge Agent or the Inquisitor MUST cross-reference the completed `LOCAL_TASKS.md` from that PR and tick off the corresponding macro-box in `.system/state/GLOBAL_TASKS.md`. The Worker Agents cannot do this. You are responsible for keeping the global state accurate.
+
+---
 
 ## 6. THE SCHEMA IS LAW
 The files in `packages/schemas/` (Zod, OpenAPI, generated types) are **READ-ONLY** for all Builder Agents. You must build your code to fit the existing schema exactly. Only the Architect or Surgeon may modify the core schema.

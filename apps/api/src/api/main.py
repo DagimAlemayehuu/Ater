@@ -375,10 +375,10 @@ async def oka_process_manual(
     if not secrets.vault_path:
         raise HTTPException(status_code=400, detail="Vault Path is required")
     
-    service = OkaService(secrets)
     file_path = payload.get("file_path")
     
     try:
+        service = OkaService(secrets)
         return await service.detect_curriculum(file_path)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -394,15 +394,10 @@ async def oka_generate_plan(
     
     try:
         si_path = OkaService.resolve_si_path()
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-    service = OkaService(secrets)
-    file_path = payload.get("file_path")
-    curriculum = payload.get("curriculum", {})
-    target_hub_id = payload.get("target_hub_id")
-
-    try:
+        service = OkaService(secrets)
+        file_path = payload.get("file_path")
+        curriculum = payload.get("curriculum", {})
+        target_hub_id = payload.get("target_hub_id")
         return await service.generate_plan(file_path, str(si_path), curriculum, target_hub_id=target_hub_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -421,8 +416,8 @@ async def oka_confirm_plan(
     if not session_id:
         raise HTTPException(status_code=400, detail="session_id is required")
 
-    service = OkaService(secrets)
     try:
+        service = OkaService(secrets)
         results = await service.confirm_plan(
             session_id, 
             command=command, 

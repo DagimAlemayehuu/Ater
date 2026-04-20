@@ -39,12 +39,14 @@ class InboxHandler(FileSystemEventHandler):
         src_path = Path(event.dest_path) if is_move else Path(event.src_path)
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
         
+        # Absolute check to prevent re-processing generated files
+        generated_dir = self.manager.inbox_path.absolute() / "note generated"
+        if str(src_path.absolute()).startswith(str(generated_dir)):
+            return
+
         if src_path.suffix.lower() in supported and not src_path.name.startswith('.'):
-            # Check if it's not in the note generated folder
-            generated_dir = self.manager.inbox_path / "note generated"
-            if not str(src_path.absolute()).startswith(str(generated_dir.absolute())):
-                self.logger.info(f"New file detected: {src_path.name}")
-                self.manager.add_to_queue(src_path)
+            self.logger.info(f"New file detected: {src_path.name}")
+            self.manager.add_to_queue(src_path)
 
 class OkaQueueManager:
     """
@@ -68,8 +70,8 @@ class OkaQueueManager:
         self.planned_batches: List[Dict[str, Any]] = [] 
         self.worker_task: Optional[asyncio.Task] = None
         
-        # v13.5 Persistence & Rate Limiting
-        self.db_path = "oka_queue.db"
+        # v13.6 Persistence & Rate Limiting
+        self.db_path = str(self.inbox_path.absolute() / "oka_queue.db")
         self.governor_cooldown = 30.0
         self._init_db()
         self._lock = asyncio.Lock()
@@ -140,6 +142,12 @@ class OkaQueueManager:
         conn.commit()
         conn.close()
 
+    def _mark_error(self, file_path: str):
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("UPDATE queue SET status = 'error' WHERE file_path = ?", (file_path,))
+        conn.commit()
+        conn.close()
+
     async def _worker_loop(self):
         """Continuous background loop for autonomous processing."""
         while True:
@@ -154,6 +162,11 @@ class OkaQueueManager:
                     continue
 
                 path = Path(file_path_str)
+                # Check if file still exists
+                if not path.exists():
+                    self._mark_done(file_path_str)
+                    continue
+
                 self.current_file = file_path_str
                 
                 # Clear state for new file
@@ -167,7 +180,13 @@ class OkaQueueManager:
                 watcher_logger.info(f"Starting autonomous planning for: {path.name}")
                 
                 # 1. Detection Phase
-                detect_res = await self.service.detect_curriculum(str(path.absolute()))
+                try:
+                    detect_res = await self.service.detect_curriculum(str(path.absolute()))
+                except Exception as e:
+                    watcher_logger.error(f"Detection failed for {path.name}: {e}")
+                    self._mark_error(file_path_str)
+                    continue
+
                 anchored_hub = detect_res.get("anchored_hub")
                 detected = detect_res.get("detected_curriculum") or {}
                 
@@ -186,12 +205,7 @@ class OkaQueueManager:
                             potential_course = parts[i+1]
                             if potential_course != path.name and potential_course != "PDF Inbox":
                                 curriculum["course"] = potential_course
-                                watcher_logger.info(f"Course Fallback: Inferred '{potential_course}' from path.")
                                 break
-
-                for key in ["course", "unit", "semester"]:
-                    if "unknown" in str(curriculum[key]).lower():
-                        curriculum[key] = ""
 
                 # 2. Planning Phase
                 self.status = "planning"
@@ -199,7 +213,7 @@ class OkaQueueManager:
                 
                 plan_retry = 0
                 res = None
-                while plan_retry < 5:
+                while plan_retry < 3:
                     try:
                         res = await self.service.generate_plan(
                             str(path.absolute()), 
@@ -210,9 +224,13 @@ class OkaQueueManager:
                         if res: break
                     except Exception as e:
                         plan_retry += 1
-                        watcher_logger.warning(f"Planning failed (Attempt {plan_retry}/5): {e}")
-                        if plan_retry >= 5: raise e
-                        await asyncio.sleep(10 * plan_retry)
+                        watcher_logger.warning(f"Planning failed (Attempt {plan_retry}/3): {e}")
+                        if plan_retry >= 3: raise e
+                        await asyncio.sleep(5)
+
+                if not res:
+                    self._mark_error(file_path_str)
+                    continue
 
                 session_id = res["session_id"]
                 structured_plan = res["plan_structured"]
@@ -223,7 +241,10 @@ class OkaQueueManager:
 
                 watcher_logger.info(f"Plan generated for {path.name}. Total batches: {self.total_batches}")
 
-                # 3. Deployment Loop
+                # 3. Deployment Phase (Strict Continuous Loop)
+                watcher_logger.info(f"Starting strict continuous deployment for {path.name}")
+                self.last_action = "Continuous Deployment Active..."
+                
                 has_more = True
                 temp_batch = 0
                 
@@ -233,7 +254,7 @@ class OkaQueueManager:
                     
                     batch_retry = 0
                     success = False
-                    while batch_retry < 10 and not success:
+                    while batch_retry < 5 and not success:
                         try:
                             confirm_res = await self.service.confirm_plan(
                                 session_id, 
@@ -248,25 +269,26 @@ class OkaQueueManager:
                                 has_more = confirm_res.get("has_more", False)
                                 new_notes = confirm_res.get("results", [])
                                 self.processed_notes.extend(new_notes)
-                                self.last_action = f"Deployed {temp_batch}/{self.total_batches}: {new_notes[-1]['title']}" if new_notes else f"Batch {temp_batch}/{self.total_batches} complete"
+                                self.last_action = f"Deployed {temp_batch}/{self.total_batches}"
                                 success = True
                             else:
-                                raise ValueError(confirm_res.get("error", "Unknown service error"))
+                                raise ValueError(confirm_res.get("message", "Unknown service error"))
                         except Exception as e:
                             batch_retry += 1
+                            watcher_logger.error(f"Batch execution failed (Attempt {batch_retry}): {e}")
                             if "tpd" in str(e).lower() or "daily" in str(e).lower():
                                 self.status = "error"
                                 self.last_action = "Daily Limit Reached."
                                 self.auto_process = False
                                 break
-                            await asyncio.sleep(20 * batch_retry)
+                            await asyncio.sleep(20)
                     
-                    if not self.auto_process or not success:
+                    if not success:
                         break
-                
+                    
                 # 4. Finalize
                 if path.exists():
-                    generated_dir = self.inbox_path / "note generated"
+                    generated_dir = self.inbox_path.absolute() / "note generated"
                     generated_dir.mkdir(parents=True, exist_ok=True)
                     new_path = generated_dir / path.name
                     if new_path.exists():
@@ -275,10 +297,9 @@ class OkaQueueManager:
                 
                 self._mark_done(file_path_str)
                 
-                # Governor Cooldown (30s)
-                watcher_logger.info(f"File {path.name} complete. Governor cooling for 30s...")
+                # Governor Cooldown (10s)
                 self.status = "cooling"
-                for i in range(int(self.governor_cooldown), 0, -1):
+                for i in range(10, 0, -1):
                     self.last_action = f"Cooling Down ({i}s)"
                     await asyncio.sleep(1)
                 
@@ -288,6 +309,8 @@ class OkaQueueManager:
                 
             except Exception as e:
                 watcher_logger.error(f"Error processing {self.current_file}: {traceback.format_exc()}")
+                if self.current_file:
+                    self._mark_error(self.current_file)
                 self.status = "idle"
                 await asyncio.sleep(10)
 

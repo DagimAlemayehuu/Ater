@@ -574,6 +574,11 @@ export default function ObsidianVaultPage() {
             let tempBatch = 0
             while (currentHasMore) {
                 const res = await sidecarApi.okaConfirm({ session_id: targetId })
+                
+                if (res.status === 'error') {
+                    throw new Error(res.message || res.detail || "Backend generation failed.");
+                }
+                
                 tempBatch = res.current_batch || (tempBatch + 1)
                 setCurrentBatch(tempBatch)
                 setBatchFeed(prev => [...prev, { batch: tempBatch, results: res.results }])

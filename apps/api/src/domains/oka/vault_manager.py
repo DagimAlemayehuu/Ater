@@ -170,30 +170,22 @@ class VaultManager:
 
     @staticmethod
     def _nuclear_wikilink_clean(text: str) -> str:
-        """Strips every possible quote pattern around/inside [[wikilinks]] in any text.
-        Applied as final defense before bytes hit disk — covers both YAML and body."""
+        """Strips internal quote patterns from [[wikilinks]] inside the brackets: [["X"]] -> [[X]]
+        Applied as final defense before bytes hit disk."""
         # Inside brackets (any nesting of spaces+quotes): [["X"]] -> [[X]]
         text = re.sub(r'\[\[\s*["\']([^\]"\' ][^\]"\']*)["\']\s*\]\]', r'[[\1]]', text)
-        # YAML scalar: key: "[[X]]" or key: '[[X]]'
-        text = re.sub(r'(:\s*)["\']+(\[\[.*?\]\])["\' ]*$', r'\1\2', text, flags=re.MULTILINE)
-        # YAML list item: - "[[X]]" or - '[[X]]'
-        text = re.sub(r'(^\s*-\s*)["\']+(\[\[.*?\]\])["\' ]*$', r'\1\2', text, flags=re.MULTILINE)
-        # Body prose: "[[X]]" or '[[X]]' (standalone, not in a key: val context)
-        text = re.sub(r'["\']+(\[\[[^\]]+\]\])["\' ]+', r'\1', text)
         return text
 
     def dump_obsidian_yaml(self, meta: dict) -> str:
         """Dumps YAML with correct Obsidian property types.
         
         KEY DISTINCTION:
-        - 'course' and 'semester' -> PLAIN TEXT properties.
-        - 'hub', 'parent', 'source' -> WIKILINK properties (Scalar).
+        - 'course', 'semester', 'hub', 'parent', 'source' -> WIKILINK properties (Scalar).
         - 'prerequisites', 'concepts' -> WIKILINK properties (List).
         """
         import yaml
 
-        PLAIN_TEXT_FIELDS = {"course", "semester"}
-        WIKILINK_SCALAR_FIELDS = {"hub", "parent", "source"}
+        WIKILINK_SCALAR_FIELDS = {"course", "semester", "hub", "parent", "source"}
         WIKILINK_LIST_FIELDS = {"prerequisites", "concepts"}
 
         def deep_clean_item(v, is_wikilink: bool = False) -> str:
@@ -210,9 +202,7 @@ class VaultManager:
 
         cleaned = {}
         for k, v in meta.items():
-            if k in PLAIN_TEXT_FIELDS:
-                cleaned[k] = deep_clean_item(v, is_wikilink=False)
-            elif k in WIKILINK_SCALAR_FIELDS:
+            if k in WIKILINK_SCALAR_FIELDS:
                 cleaned[k] = deep_clean_item(v, is_wikilink=True)
             elif k in WIKILINK_LIST_FIELDS:
                 if isinstance(v, list):
@@ -231,14 +221,15 @@ class VaultManager:
                 else:
                     cleaned[k] = self._strip_wikilink_quotes(v)
 
-        # LAYER 2: Custom Dumper — force plain scalar style for [[wikilink]] strings
+        # LAYER 2: Custom Dumper — force double quotes for [[wikilink]] strings
         class ObsidianDumper(yaml.Dumper):
             pass
 
         def _str_representer(dumper, data):
-            if '[[' in data:
-                # Force YAML plain style so it never gets quoted
-                return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='')
+            # If the string perfectly wraps a wikilink, force double quotes.
+            # This allows Obsidian's Properties UI to parse it as an internal link natively.
+            if data.startswith('[[') and data.endswith(']]'):
+                return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='"')
             return dumper.represent_scalar('tag:yaml.org,2002:str', data)
 
         ObsidianDumper.add_representer(str, _str_representer)
@@ -250,12 +241,6 @@ class VaultManager:
             default_flow_style=False,
             sort_keys=False,
         )
-
-        # LAYER 3: Final safety pass
-        raw = re.sub(r":\s*[\"'](\[\[.*?\]\])[\"']$", r": \1", raw, flags=re.MULTILINE)
-        raw = re.sub(r"-\s*[\"'](\[\[.*?\]\])[\"']$", r"- \1", raw, flags=re.MULTILINE)
-        raw = re.sub(r'\[\[\s*["\'](.*?)["\']\s*\]\]', r'[[\1]]', raw)
-        raw = re.sub(r"^title:\s*[\"'](.+?)[\"']$", r"title: \1", raw, flags=re.MULTILINE)
 
         return raw
 
@@ -273,8 +258,7 @@ class VaultManager:
         # NUCLEAR WIKILINK SANITIZATION: applied to the entire file string before write.
         # Catches every form of quoted wikilinks regardless of where they appear.
         content = VaultManager._nuclear_wikilink_clean(content)
-        
-        # Normalize casing for all wikilinks: force Title_Case for any word split by space or underscore
+        # Normalize casing for all wikilinks
         def title_case_wikilink(match):
             inner = match.group(1)
             parts = re.split(r'([_\s]+)', inner)
@@ -285,19 +269,37 @@ class VaultManager:
                 elif p.upper() == "C++":
                     new_parts.append("C++")
                 else:
-                    # Special case for alphanumeric words that might be caught
                     new_parts.append(p.title())
             return "[[" + "".join(new_parts) + "]]"
             
         content = re.sub(r'\[\[([^\]]+)\]\]', title_case_wikilink, content)
+
+        # 3. SETEXT HEADING DEFENSE: Ensure horizontal rules (---) have a blank line above them
+        lines = content.split('\n')
+        fixed_lines = []
+        in_frontmatter = False
         
-        # Perform an atomic swap write to prevent data loss
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped == "---":
+                if i == 0:
+                    in_frontmatter = True
+                elif in_frontmatter:
+                    in_frontmatter = False
+                else:
+                    # Horizontal rule outside frontmatter: ensure gutter above
+                    if fixed_lines and fixed_lines[-1].strip() != "":
+                        fixed_lines.append("")
+            fixed_lines.append(line)
+        
+        final_content = "\n".join(fixed_lines)
+        
+        # Perform an atomic swap write
         temp_file = file_path.with_suffix(f".tmp_{uuid.uuid4().hex[:8]}")
-        # Explicit absolute path logging for verification
         print(f"[VaultManager] Persisting Note: {file_path.absolute()}")
         
         with open(temp_file, "w", encoding="utf-8") as f:
-            f.write(content.strip())
+            f.write(final_content.strip())
         
         if file_path.exists():
             os.replace(temp_file, file_path)
@@ -337,28 +339,57 @@ class VaultManager:
         content = re.sub(r"(?i)--- END_CODE:?\s*(\w+) ---", r"```", content)
         
         # 3. Native Backtick Protection
-        # We want to keep all ``` blocks. The only thing we "repair" is if the LLM 
-        # forgot the backticks but wrote the language name.
         lines = content.split('\n')
         final_lines = []
         in_code_block = False
         
-        FORBIDDEN_LANGUAGES = ["python", "mermaid", "sql", "c++", "cpp", "javascript", "json", "yaml", "java", "c#"]
+        FORBIDDEN_LANGS = ["python", "mermaid", "sql", "c++", "cpp", "javascript", "json", "yaml", "java", "c#"]
         
         for line in lines:
-            stripped = line.strip().lower()
+            stripped = line.strip()
+            lower_stripped = stripped.lower()
             
             # Start of a standard block
-            if line.strip().startswith("```"):
-                in_code_block = not in_code_block
-                final_lines.append(line)
+            if stripped.startswith("```"):
+                tag = stripped[3:].strip().lower()
+                if tag == "c++": tag = "cpp"
+                
+                if not in_code_block:
+                    in_code_block = True
+                    final_lines.append(f"```{tag}" if tag else "```")
+                else:
+                    # If we see ```cpp while already in a block, it's a re-start.
+                    if tag in FORBIDDEN_LANGS:
+                        final_lines.append("```")
+                        final_lines.append("")
+                        final_lines.append(f"```{tag}")
+                    else:
+                        # It's a normal closure
+                        final_lines.append("```")
+                        in_code_block = False
                 continue
             
-            # AUTO-REPAIR: If we see a language name alone on a line while NOT in a block,
-            # it is almost certainly a failed backtick start from the LLM.
-            if stripped in FORBIDDEN_LANGUAGES and not in_code_block:
-                final_lines.append(f"```{stripped}")
-                in_code_block = True
+            # AUTO-REPAIR: If we see a language name alone on a line
+            if lower_stripped in FORBIDDEN_LANGS:
+                if not in_code_block:
+                    final_lines.append(f"```{lower_stripped}")
+                    in_code_block = True
+                else:
+                    # Re-start inside a block
+                    final_lines.append("```")
+                    final_lines.append("")
+                    final_lines.append(f"```{lower_stripped}")
+                continue
+            
+            if in_code_block:
+                # Force close if we see a markdown header inside a code block (likely LLM failure)
+                if stripped.startswith("##") or stripped.startswith("###") or (stripped.startswith("---") and len(stripped) < 10):
+                    final_lines.append("```")
+                    final_lines.append("")
+                    final_lines.append(line)
+                    in_code_block = False
+                else:
+                    final_lines.append(line)
             else:
                 final_lines.append(line)
         

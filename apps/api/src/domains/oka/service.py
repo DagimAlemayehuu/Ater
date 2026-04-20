@@ -87,6 +87,9 @@ class OkaService:
         
         self.writer_agent = WriterAgent(llm=self.llm_creative) if self.llm_creative else None
         
+        from .validator import OkaValidator
+        self.validator = OkaValidator()
+        
         # Initialize YAML compiler
         self.yaml = ruamel.yaml.YAML()
         self.yaml.indent(mapping=2, sequence=4, offset=2)
@@ -635,87 +638,96 @@ class OkaService:
     # ── Phase 1: Detection ──────────────────────────────────────
     async def detect_curriculum(self, file_path: str) -> Dict[str, Any]:
         """Phase 1: Pure detection + AI-assisted metadata extraction if no hub match."""
-        path = Path(file_path)
-        content_text = ""
-        
-        if path.suffix.lower() == ".pdf":
-            loader = PyPDFLoader(str(path))
-            pages = loader.load_and_split()
-            content_text = "\n".join([p.page_content for p in pages[:5]]) # Scan slightly more for detection
-        else:
-            with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                content_text = f.read(10000)
-
-        target_hub = self.find_best_hub_match(content_text)
-        
-        # If no hub match, use AI to detect curriculum metadata
-        detected_curriculum = None
-        if not target_hub:
-            print(f"[OKA Service] No Hub match for {path.name}. Invoking AI detection...")
-            detected_curriculum = await self._detect_metadata_with_ai(content_text[:20000])
-
-        # CRITICAL FIX: If we have AI-detected metadata but no matching hub,
-        # synthesize a virtual anchored_hub so the frontend pre-fills correctly.
-        # This tells the UI exactly what to show — but also creates a stub hub if the 
-        # hub_title detected is meaningful (i.e., not empty/unknown).
-        if not target_hub and detected_curriculum:
-            dc = detected_curriculum
-            hub_title = dc.get("hub_title", "").strip()
-            unit_num = dc.get("unit", "").strip()
-            course = dc.get("course", "").strip()
-            semester = dc.get("semester", "").strip()
+        try:
+            path = Path(file_path)
+            content_text = ""
             
-            if hub_title and hub_title.lower() not in ("unknown", ""):
-                # Build the canonical hub filename
-                clean_ht = hub_title.replace(" ", "_")
-                hub_filename = f"{unit_num}_{clean_ht}_Hub.md" if unit_num else f"{clean_ht}_Hub.md"
-                planner_path = self._get_planner_path()
-                planner_path.mkdir(parents=True, exist_ok=True)
-                hub_file_path = planner_path / hub_filename
-                
-                # Create stub hub in Study Planner if it doesn't already exist
-                if not hub_file_path.exists():
-                    print(f"[OKA Service] Creating stub hub: {hub_filename}")
-                    # course and semester MUST be plain text (not wikilinks)
-                    # Obsidian text-type properties link via Dataview automatically
-                    stub_yaml = (
-                        f"---\n"
-                        f"title: {hub_filename[:-3]}\n"
-                        f"type: Hub\n"
-                        f"course: {course}\n"
-                        f"semester: {semester}\n"
-                        f"unit: {unit_num}\n"
-                        f"source: \n"
-                        f"source_pages: []\n"
-                        f"status: Not Started\n"
-                        f"confidence: null\n"
-                        f"study_date: null\n"
-                        f"generated: false\n"
-                        f"---\n\n"
-                        f"# {hub_title}\n\n"
-                        f"> Auto-created stub by OKA. Full content will be generated after plan confirmation.\n"
-                    )
-                    with open(hub_file_path, "w", encoding="utf-8") as f:
-                        f.write(stub_yaml)
-                
-                # Synthesize a virtual hub metadata dict to pre-fill the frontend
-                target_hub = {
-                    "id": hub_filename,
-                    "title": f"{unit_num} {hub_title} Hub" if unit_num else f"{hub_title} Hub",
-                    "path": str(hub_file_path.absolute()),
-                    "course": course,
-                    "unit": unit_num,
-                    "semester": semester
-                }
-                print(f"[OKA Service] Anchored to synthesized hub: {hub_filename}")
+            if path.suffix.lower() == ".pdf":
+                loader = PyPDFLoader(str(path))
+                pages = loader.load_and_split()
+                content_text = "\n".join([p.page_content for p in pages[:5]]) # Scan slightly more for detection
+            else:
+                with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                    content_text = f.read(10000)
 
-        return {
-            "anchored_hub": target_hub,
-            "detected_curriculum": detected_curriculum,
-            "available_hubs": self.list_planner_hubs(),
-            "available_options": self.list_available_options(),
-            "status": "detected"
-        }
+            target_hub = self.find_best_hub_match(content_text)
+            
+            # If no hub match, use AI to detect curriculum metadata
+            detected_curriculum = None
+            if not target_hub:
+                print(f"[OKA Service] No Hub match for {path.name}. Invoking AI detection...")
+                detected_curriculum = await self._detect_metadata_with_ai(content_text[:20000])
+
+            # CRITICAL FIX: If we have AI-detected metadata but no matching hub,
+            # synthesize a virtual anchored_hub so the frontend pre-fills correctly.
+            # This tells the UI exactly what to show — but also creates a stub hub if the 
+            # hub_title detected is meaningful (i.e., not empty/unknown).
+            if not target_hub and detected_curriculum:
+                dc = detected_curriculum
+                hub_title = dc.get("hub_title", "").strip()
+                unit_num = dc.get("unit", "").strip()
+                course = dc.get("course", "").strip()
+                semester = dc.get("semester", "").strip()
+                
+                if hub_title and hub_title.lower() not in ("unknown", ""):
+                    # Build the canonical hub filename
+                    clean_ht = hub_title.replace(" ", "_")
+                    hub_filename = f"{unit_num}_{clean_ht}_Hub.md" if unit_num else f"{clean_ht}_Hub.md"
+                    planner_path = self._get_planner_path()
+                    planner_path.mkdir(parents=True, exist_ok=True)
+                    hub_file_path = planner_path / hub_filename
+                    
+                    # Create stub hub in Study Planner if it doesn't already exist
+                    if not hub_file_path.exists():
+                        print(f"[OKA Service] Creating stub hub: {hub_filename}")
+                        # course and semester MUST be plain text (not wikilinks)
+                        # Obsidian text-type properties link via Dataview automatically
+                        stub_yaml = (
+                            f"---\n"
+                            f"title: {hub_filename[:-3]}\n"
+                            f"type: Hub\n"
+                            f"course: {course}\n"
+                            f"semester: {semester}\n"
+                            f"unit: {unit_num}\n"
+                            f"source: \n"
+                            f"source_pages: []\n"
+                            f"status: Not Started\n"
+                            f"confidence: null\n"
+                            f"study_date: null\n"
+                            f"generated: false\n"
+                            f"---\n\n"
+                            f"# {hub_title}\n\n"
+                            f"> Auto-created stub by OKA. Full content will be generated after plan confirmation.\n"
+                        )
+                        with open(hub_file_path, "w", encoding="utf-8") as f:
+                            f.write(stub_yaml)
+                    
+                    # Synthesize a virtual hub metadata dict to pre-fill the frontend
+                    target_hub = {
+                        "id": hub_filename,
+                        "title": f"{unit_num} {hub_title} Hub" if unit_num else f"{hub_title} Hub",
+                        "path": str(hub_file_path.absolute()),
+                        "course": course,
+                        "unit": unit_num,
+                        "semester": semester
+                    }
+                    print(f"[OKA Service] Anchored to synthesized hub: {hub_filename}")
+
+            return {
+                "anchored_hub": target_hub,
+                "detected_curriculum": detected_curriculum,
+                "available_hubs": self.list_planner_hubs(),
+                "available_options": self.list_available_options(),
+                "status": "detected"
+            }
+        except Exception as e:
+            err_trace = traceback.format_exc()
+            print(f"[OKA Service] Detection failed: {e}\n{err_trace}")
+            return {
+                "status": "error",
+                "message": f"Detection Failed: {str(e)}",
+                "trace": err_trace
+            }
 
     async def _detect_metadata_with_ai(self, text: str) -> Dict[str, str]:
         """Uses AI to extract course, semester, unit, and hub_title from text.
@@ -898,8 +910,9 @@ class OkaService:
                     break
                     
             except Exception as e:
-                print(f"[OKA Service] CRITICAL: Chunk {idx+1} failed validation: {e}")
-                # Don't skip silently anymore, we need to know why it's failing
+                err_trace = traceback.format_exc()
+                print(f"[OKA Service] CRITICAL: Chunk {idx+1} failed validation: {e}\n{err_trace}")
+                OkaService._status[session_id] = f"Load Failed during Architecting: {str(e)}"
                 raise e
 
         # Synthesize the Hub Note
@@ -1044,7 +1057,7 @@ class OkaService:
         current_batch = session.get("current_batch", 0)
         total_batches = session.get("total_batches", 1)
         batch_number = current_batch + 1
-
+        
         batch_notes = []
         batch_type = "atomic"
         if "batches" in session["metadata"]:
@@ -1056,164 +1069,120 @@ class OkaService:
         
         notes_context = ", ".join([f"[[{n}]]" for n in batch_notes])
 
+        deployment_results = []
         try:
             # Mandatory framing for ALL notes
             primary_language = session["metadata"].get("primary_language", "General")
+            all_note_titles = [n["title"] for n in session["metadata"].get("atomic_notes", [])]
+            all_concepts_list = ", ".join([f"[[{t}]]" for t in all_note_titles])
+            plan_obj = SovereignPlan(**session["metadata"])
             
-            if batch_type == "atomic":
-                # --- NEW AGENT-BASED ATOMIC GENERATION ---
-                unit_num = session["metadata"].get("unit", "")
-                hub_title = session["metadata"].get("hub_title", "")
-                
-                # Find the schema for the current note being generated in this batch
-                current_note_title = batch_notes[0] if batch_notes else ""
-                note_schema_dict = next((n for n in session["metadata"].get("atomic_notes", []) if n["title"] == current_note_title), None)
-                
-                if not note_schema_dict:
-                    note_schema = AtomicNoteSchema(title=current_note_title, description="Generated concept", source_context="")
-                else:
-                    note_schema = AtomicNoteSchema(**note_schema_dict)
+            if "all_note_probes" not in session:
+                session["all_note_probes"] = {}
 
-                # 3. The Pacer (30 RPM Limit)
-                if batch_number > 1:
-                    await asyncio.sleep(2.1)
-
-                # 1. Generate content using SURGICAL CONTEXT (with internal retry)
-                note_content = None
-                writer_retry = 0
-                all_concepts_list = ", ".join([f"[[{n['title']}]]" for n in session["metadata"].get("atomic_notes", [])])
+            async def run_single_batch(b_num, b_type, b_notes):
+                nonlocal deployment_results
+                local_results = []
                 
-                while writer_retry < 3:
-                    try:
-                        note_content = await self.writer_agent.generate_content(
-                            note_schema=note_schema,
-                            source_text=note_schema.source_context or "No specific context extracted.",
-                            primary_language=primary_language,
-                            all_concepts=all_concepts_list
-                        )
-                        # VALIDATION LOOP (High-Density v17.1)
-                        # VALIDATION LOOP (High-Density v17.1)
-                        if not note_content or not note_content.markdown_body:
-                            raise ValueError("Empty markdown body returned.")
+                if b_type == "atomic":
+                    # --- NEW AGENT-BASED ATOMIC GENERATION WITH VALIDATION LOOP ---
+                    current_note_title = b_notes[0] if b_notes else ""
+                    note_schema_dict = next((n for n in session["metadata"].get("atomic_notes", []) if n["title"] == current_note_title), None)
+                    
+                    if not note_schema_dict:
+                        note_schema = AtomicNoteSchema(title=current_note_title, description="Generated concept", source_context="")
+                    else:
+                        note_schema = AtomicNoteSchema(**note_schema_dict)
+
+                    if b_num > 1:
+                        await asyncio.sleep(2.1)
+
+                    final_output = ""
+                    generation_attempts = 0
+                    max_attempts = 3
+                    
+                    while generation_attempts < max_attempts:
+                        generation_attempts += 1
+                        phase_prefix = f"(Attempt {generation_attempts}/{max_attempts})" if generation_attempts > 1 else ""
+                        OkaService._status[session_id] = f"{phase_prefix} Surgical Pass: [[{current_note_title}]] (1/2)..."
                         
-                        body = note_content.markdown_body
-                        if len(body) < 500:
-                            raise ValueError(f"Note content is too thin ({len(body)} chars). Demand more density.")
-                        
-                        if primary_language != "General" and f"```{primary_language.lower()}" not in body.lower() and "```" in body:
-                            # Strict check: if there is code, it better match the primary language if it's specified.
-                            if "```python" in body.lower() and primary_language.lower() != "python":
-                                raise ValueError(f"Hallucinated Python code instead of {primary_language}.")
-                        
-                        break # Validation passed
-                    except Exception as e:
-                        writer_retry += 1
-                        print(f"[OKA Service] Writer validation failed (Attempt {writer_retry}/3): {e}")
-                        if writer_retry >= 3: raise e
-                        await asyncio.sleep(2 * writer_retry)
+                        try:
+                            note_content = await self.writer_agent.generate_content(
+                                note_schema=note_schema,
+                                source_text=note_schema.source_context or "No specific context extracted.",
+                                primary_language=primary_language,
+                                all_concepts=all_concepts_list
+                            )
+                            
+                            OkaService._status[session_id] = f"{phase_prefix} Socratic Pass: [[{current_note_title}]] (2/2)..."
+                            probes = None
+                            try:
+                                probes = await self.writer_agent.generate_probes(
+                                    note_title=note_schema.title,
+                                    note_body=note_content.markdown_body,
+                                    source_text=note_schema.source_context or "",
+                                    primary_language=primary_language,
+                                    all_concepts=all_concepts_list
+                                )
+                                if probes:
+                                    session["all_note_probes"][note_schema.title] = probes
+                            except Exception as e:
+                                print(f"[OKA Service] Probe generation warning: {e}")
 
-                # 3. Assemble Skeleton and Deploy PHYSICAL (Status: Born)
-                plan_obj = SovereignPlan(**session["metadata"])
-                
-                OkaService._status[session_id] = f"Surgical Pass: [[{current_note_title}]] (1/2)..."
-                skeleton_output = self._compile_atomic_note(
-                    plan=plan_obj, 
-                    note_schema=note_schema, 
-                    note_content=note_content, 
-                    probes=None,
-                    session_path=session.get("path", "")
-                )
-                # Physical Write 1
-                self.deployer.deploy_atomic_notes(session_id, [current_note_title], [skeleton_output], plan_obj, session.get("path", ""))
-
-                # 4. Generate Probes (Agent 2: Socratic Inquisitor)
-                probes = None
-                try:
-                    OkaService._status[session_id] = f"Socratic Pass: [[{current_note_title}]] (2/2)..."
-                    probes = await self.writer_agent.generate_probes(
-                        note_title=note_schema.title,
-                        note_body=body,
-                        source_text=note_schema.source_context or "",
-                        primary_language=primary_language,
-                        all_concepts=all_concepts_list
+                            final_output = self._compile_atomic_note(
+                                plan=plan_obj, 
+                                note_schema=note_schema, 
+                                note_content=note_content, 
+                                probes=probes,
+                                session_path=session.get("path", "")
+                            )
+                            
+                            is_valid, struct_errors = self.validator.validate_structure(final_output)
+                            if is_valid:
+                                local_results = self.deployer.deploy_atomic_notes(session_id, [current_note_title], [final_output], plan_obj, session.get("path", ""))
+                                break
+                            else:
+                                if generation_attempts >= max_attempts:
+                                    raise ValueError(f"Failed to generate a valid note after {max_attempts} attempts. Errors: {struct_errors}")
+                                note_schema.source_context = f"{note_schema.source_context or ''}\n\n[REGENERATION_HINT]: STRUCTURAL VALIDATION FAILED: {', '.join(struct_errors)}"
+                        except Exception as e:
+                            if generation_attempts >= max_attempts: raise e
+                            await asyncio.sleep(5)
+                    
+                elif b_type == "pq":
+                    current_note_title = b_notes[0]
+                    note_schema_raw = next((n for n in session["metadata"].get("possible_questions", []) if n["title"] == current_note_title), None)
+                    if not note_schema_raw: raise ValueError(f"PQ {current_note_title} not found in plan.")
+                    
+                    from .schemas import NoteSchema
+                    note_schema = NoteSchema(**note_schema_raw)
+                    OkaService._status[session_id] = f"Synthesizing Master Question Bank: [[{current_note_title}]]..."
+                    
+                    all_note_probes = session.get("all_note_probes", {})
+                    pq_output = self._compile_pq_note(
+                        plan=plan_obj,
+                        note_schema=note_schema,
+                        note_content=NoteContent(markdown_body="Aggregated question bank.", search_keywords=[]),
+                        all_note_probes=all_note_probes,
+                        session_path=session.get("path", "")
                     )
-                except Exception as e:
-                    print(f"[OKA Service] Probe generation failed for {current_note_title}: {e}")
+                    local_results = self.deployer.deploy_atomic_notes(session_id, [current_note_title], [pq_output], plan_obj, session.get("path", ""))
 
-                # 5. Assemble Final and Deploy PHYSICAL (Status: Enriched)
-                ai_output = self._compile_atomic_note(
-                    plan=plan_obj, 
-                    note_schema=note_schema, 
-                    note_content=note_content, 
-                    probes=probes,
-                    session_path=session.get("path", "")
-                )
-                # Physical Write 2 (The Enrichment)
-                self.deployer.deploy_atomic_notes(session_id, [current_note_title], [ai_output], plan_obj, session.get("path", ""))
-                
-                res = AIMessage(content="SKIP_DEPLOYMENT")
-            
-            elif batch_type == "pq":
-                current_note_title = batch_notes[0]
-                note_schema = next((n for n in plan_obj.possible_questions if n.title == current_note_title), None)
-                if not note_schema: raise ValueError(f"PQ {current_note_title} not found in plan.")
+                elif b_type == "hub":
+                    OkaService._status[session_id] = "Compiling Unit Mastery Hub..."
+                    ai_output = self._compile_hub_note(plan_obj, session_path=session.get("path", ""))
+                    local_results = self.deployer.deploy_hub_note(session_id, ai_output, plan_obj)
 
-                OkaService._status[session_id] = f"Synthesizing Question: [[{current_note_title}]]..."
-                
-                # Single Pass for PQs (No Probes needed)
-                note_content = await self.writer_agent.generate_content(
-                    note_schema=note_schema,
-                    source_text=source_text,
-                    primary_language=plan_obj.primary_language,
-                    all_concepts=", ".join(all_note_titles)
-                )
-                
-                pq_output = self._compile_pq_note(
-                    plan=plan_obj,
-                    note_schema=note_schema,
-                    note_content=note_content,
-                    session_path=session.get("path", "")
-                )
-                
-                self.deployer.deploy_atomic_notes(session_id, [current_note_title], [pq_output], plan_obj, session.get("path", ""))
-                res = AIMessage(content="SKIP_DEPLOYMENT")
-            
+                deployment_results.extend(local_results)
+                session["current_batch"] = b_num
+                self._persist_session(session_id, session)
+                return b_num < total_batches
 
-            elif batch_type == "hub":
-                # --- DETERMINISTIC HUB COMPILATION ---
-                OkaService._status[session_id] = "Compiling Sovereign Hub..."
-                plan_obj = SovereignPlan(**session["metadata"])
-                ai_output = self._compile_hub_note(plan_obj, session_path=session.get("path", ""))
-                
-                # Surgical Hub Deployment
-                self.deployer.deploy_hub_note(session_id, ai_output, plan_obj)
-                
-                res = AIMessage(content="SKIP_DEPLOYMENT")
-            
-            else:
-                # Final fallback for any unhandled batch types
-                reinforced_command = f"GENERATE {batch_type.upper()} context for {notes_context}"
-                pruned_messages = initial_messages + plan_response + [HumanMessage(content=reinforced_command)]
-                res = await self._invoke_with_retry(pruned_messages, session_id)
-
-            # ── DEPLOYMENT PHASE ──────────────────────────────────────
-            deployment_results = ["File updated in place."]
-            if res.content != "SKIP_DEPLOYMENT":
-                OkaService._status[session_id] = f"Deploying Batch {batch_number} to Vault..."
-                deployment_results = await self.deployer.deploy(res.content, session_metadata=session["metadata"])
-                print(f"[OKA Service] Batch {batch_number} deployed: {len(deployment_results)} notes.")
-
-            session["messages"].append(res)
-            session["current_batch"] = batch_number
-            has_more = batch_number < total_batches
-            
-            self._persist_session(session_id, session)
+            # ── EXECUTION ──
+            has_more = await run_single_batch(batch_number, batch_type, batch_notes)
 
             if not has_more:
-                OkaService._sessions.pop(session_id, None)
-                OkaService._status[session_id] = "Completed"
-                
-                # Mark Hub as Generated
+                # Mark Hub as Generated before popping
                 hub_to_update = session.get("target_hub")
                 if hub_to_update and hub_to_update.get("path"):
                     hub_path = Path(hub_to_update["path"])
@@ -1227,24 +1196,32 @@ class OkaService:
                                 yaml_content = self.vm.dump_obsidian_yaml(meta)
                                 full_content = f"---\n{yaml_content}\n---\n\n{body.strip()}\n"
                                 self.vm.write_note(hub_path, full_content)
-                                print(f"[OKA Service] Marked hub as generated: {hub_path.name}")
-                        except Exception as e:
-                            print(f"[OKA Service] Failed to mark hub as generated: {e}")
+                        except: pass
+                
+                OkaService._sessions.pop(session_id, None)
+                OkaService._status[session_id] = "Deployment Complete"
             else:
-                OkaService._status[session_id] = f"Awaiting Batch {batch_number + 1}"
+                OkaService._status[session_id] = f"Awaiting Batch {session['current_batch'] + 1}"
 
             return {
-                "ai_output": res.content,
                 "results": deployment_results,
                 "count": len(deployment_results),
                 "has_more": has_more,
-                "current_batch": batch_number,
+                "current_batch": session.get("current_batch", batch_number),
                 "total_batches": total_batches,
                 "status": "success"
             }
         except Exception as e:
+            err_trace = traceback.format_exc()
             error_msg = self._format_user_error(e)
-            OkaService._status[session_id] = f"Error: {error_msg}"
+            print(f"[OKA Service] Execution failed: {e}\n{err_trace}")
+            OkaService._status[session_id] = f"Architecture Load Failed: {error_msg}"
+            return {
+                "status": "error",
+                "detail": str(e),
+                "trace": err_trace,
+                "message": error_msg
+            }
             raise ValueError(error_msg)
 
     def _compile_atomic_note(self, plan: SovereignPlan, note_schema: AtomicNoteSchema, note_content: NoteContent, probes: Optional[ProbeEnrichment] = None, session_path: str = "") -> str:
@@ -1279,20 +1256,19 @@ class OkaService:
         if probes:
             probe_body = (
                 "\n---\n\n"
-                "## 5. Socratic Discovery (Probes)\n\n"
-                f"> [!ABSTRACT] Knowledge Verification\n"
-                f"> **Scenario-Based Question**: {probes.l1_scenario}\n"
-                f"> **Implementation Challenge**: {probes.l2_implementation}\n"
-                f"> **Socratic Debugger**: {probes.l3_debug}\n"
+                "## 5. Question\n\n"
+                f"**Scenario-Based Question**: {probes.l1_scenario}\n\n"
+                f"**Implementation Challenge**: {probes.l2_implementation}\n\n"
+                f"**Socratic Debugger**:\n\n{probes.l3_debug.strip()}\n"
             )
 
         full_body = note_content.markdown_body.strip() + probe_body
         return f"---\n{yaml_frontmatter}---\n\n{full_body}\n"
 
-    def _compile_pq_note(self, plan: SovereignPlan, note_schema: NoteSchema, note_content: NoteContent, session_path: str = "") -> str:
+    def _compile_pq_note(self, plan: SovereignPlan, note_schema: NoteSchema, note_content: NoteContent, all_note_probes: Dict[str, ProbeEnrichment], session_path: str = "") -> str:
         """
-        [DETERMINISTIC COMPILER]
-        Constructs the Socratic PQ note string.
+        [DETERMINISTIC COMPILER v21.5]
+        Constructs a comprehensive Possible Questions note with coverage for ALL atomic notes.
         """
         source_link = f"[[{Path(session_path).name}]]" if session_path else f"[[{plan.hub_note.title}]]"
 
@@ -1310,14 +1286,24 @@ class OkaService:
         
         yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
 
-        content = (
-            f"{note_content.markdown_body}\n\n"
-            "---\n\n"
-            "## Knowledge Probes (L1, L2, L3)\n"
-            "> *Probes will be generated in the second pass...*"
-        )
+        # Build comprehensive question body
+        body_parts = [
+            f"# {note_schema.title.replace('_', ' ')}\n",
+            f"> [!ABSTRACT] Exam Readiness Protocol\n> This note aggregates retrieval probes from all atomic nodes in this unit to ensure total coverage.\n",
+            "## 🎯 Master Question Bank\n"
+        ]
 
-        return f"--- START_NOTE ---\n---\n{yaml_frontmatter}---\n\n{content}\n\n--- END_NOTE ---"
+        for note_title, probes in all_note_probes.items():
+            clean_title = note_title.replace("_", " ")
+            body_parts.append(
+                f"### [[{note_title}|{clean_title}]]\n"
+                f"**L1 Scenario**: {probes.l1_scenario}\n\n"
+                f"**L2 Implementation**: {probes.l2_implementation}\n\n"
+                f"**L3 Debug Challenge**:\n\n{probes.l3_debug.strip()}\n"
+            )
+
+        full_body = "\n".join(body_parts)
+        return f"---\n{yaml_frontmatter}---\n\n{full_body}\n"
 
     def _compile_hub_note(self, plan: SovereignPlan, session_path: str = "") -> str:
         """

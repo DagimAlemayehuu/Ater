@@ -463,47 +463,69 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
         })
     }
 
-    const confirmDeployment = async () => {
+    const confirmDeployment = async (isStrict = false) => {
         if (!sessionId) return
         setProcessing(true)
         setIsAwaitingConfirmation(false)
         setIsAwaitingNextBatch(false)
+        
         try {
-            const command = currentBatch === 0 
-                ? "Confirm Final Plan & Proceed Batch 1" 
-                : `Proceed Batch ${currentBatch + 1}`;
-                
-            const res = await sidecarApi.okaConfirm({ 
-                session_id: sessionId, 
-                command,
-                curriculum_override: currentBatch === 0 ? {
-                    course: String(curriculum.course || ""),
-                    unit: String(curriculum.unit || ""),
-                    semester: String(curriculum.semester || ""),
-                    hub_title: String(curriculum.hub_title || "")
-                } : undefined,
-                anchored_hub_id: anchoredHub?.id ? String(anchoredHub.id) : undefined
-            })
-            const tempBatch = res.current_batch || (currentBatch + 1)
-            setCurrentBatch(tempBatch)
-            setBatchFeed(prev => [...prev, { 
-                batch: tempBatch, 
-                results: res.results || [],
-                ai_output: res.ai_output || ""
-            }])
+            let currentHasMore = true;
+            let currentLocalBatch = currentBatch;
             
-            if (res.has_more) {
-                setIsAwaitingNextBatch(true)
-            } else {
-                setIsCompleted(true)
+            while (currentHasMore) {
+                const command = isStrict ? "Proceed Batch (Auto)" : (currentLocalBatch === 0 
+                    ? "Confirm Final Plan & Proceed Batch 1" 
+                    : `Proceed Batch ${currentLocalBatch + 1}`);
+
+                const res = await sidecarApi.okaConfirm({ 
+                    session_id: sessionId, 
+                    command,
+                    curriculum_override: currentLocalBatch === 0 ? {
+                        course: String(curriculum.course || ""),
+                        unit: String(curriculum.unit || ""),
+                        semester: String(curriculum.semester || ""),
+                        hub_title: String(curriculum.hub_title || "")
+                    } : undefined,
+                    anchored_hub_id: anchoredHub?.id ? String(anchoredHub.id) : undefined
+                })
+                
+                if (res.status === 'error') {
+                    throw new Error(res.message || res.detail || "Backend generation failed.");
+                }
+                
+                const tempBatch = res.current_batch || (currentLocalBatch + 1)
+                currentLocalBatch = tempBatch
+                setCurrentBatch(tempBatch)
+
+                setBatchFeed(prev => [...prev, { 
+                    batch: tempBatch, 
+                    results: res.results || [],
+                    ai_output: res.ai_output || ""
+                }])
+
+                currentHasMore = res.has_more;
+                
+                if (currentHasMore) {
+                    if (isStrict) {
+                        // Small cooldown to let UI render and avoid immediately hammering the backend
+                        await new Promise(r => setTimeout(r, 500));
+                    } else {
+                        setIsAwaitingNextBatch(true)
+                        break; // Break the loop so user has to click proceed again
+                    }
+                } else {
+                    setIsCompleted(true)
+                    break;
+                }
             }
         } catch (err: any) { 
-            setOkaError(err.message) 
+            setOkaError(err.message || 'Workflow failed')
             setIsAwaitingNextBatch(true) // allow retry
+        } finally { 
+            setProcessing(false) 
         }
-        finally { setProcessing(false) }
     }
-
     return (
         <div className="h-full flex flex-col font-sans bg-background text-foreground overflow-hidden p-12">
             <div className="flex items-center justify-between pb-8 shrink-0">
@@ -649,17 +671,30 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                 </button>
                             )}
                             {isAwaitingConfirmation && (
-                                <button onClick={confirmDeployment} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground border border-primary bg-primary hover:opacity-90 transition-colors  disabled:opacity-50">
-                                    {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <ShieldCheck className="mr-2" size={12} />}
-                                    Confirm Plan & Run Batch 1
-                                </button>
+                               <div className="flex gap-2">
+                                   <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground border border-orange-500 bg-orange-600 hover:bg-orange-700 transition-colors disabled:opacity-50">
+                                       {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <Zap className="mr-2" size={12} />}
+                                       Strictly Generate All
+                                   </button>
+                                   <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground border border-primary bg-primary hover:opacity-90 transition-colors disabled:opacity-50">
+                                       {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <ShieldCheck className="mr-2" size={12} />}
+                                       Confirm Plan & Run Batch 1
+                                   </button>
+                               </div>
                             )}
                             {isAwaitingNextBatch && (
-                                <button onClick={confirmDeployment} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground bg-primary transition-colors disabled:opacity-50 hover:opacity-90">
-                                    {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <Zap className="mr-2" size={12} />}
-                                    Proceed Batch {currentBatch + 1} of {totalBatches}
-                                </button>
+                               <div className="flex gap-2">
+                                   <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground border border-orange-500 bg-orange-600 hover:bg-orange-700 transition-colors disabled:opacity-50">
+                                       {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <Zap className="mr-2" size={12} />}
+                                       Strictly Finish All
+                                   </button>
+                                   <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground bg-primary transition-colors disabled:opacity-50 hover:opacity-90">
+                                       {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <Zap className="mr-2" size={12} />}
+                                       Proceed Batch {currentBatch + 1} of {totalBatches}
+                                   </button>
+                               </div>
                             )}
+
                             {isCompleted && (
                                 <button onClick={resetOkaSession} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-muted-foreground bg-background border border-border hover:bg-muted transition-colors">
                                     Reset Workspace

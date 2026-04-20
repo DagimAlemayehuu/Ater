@@ -100,6 +100,11 @@ class AtomicNoteSchema(NoteSchema):
         "SCI-MATH", "SCI-DATA", "HIST-TIME", "HIST-TREND"
     ] = Field(default="CS-CODE")
 
+class BatchSchema(BaseModel):
+    id: int
+    notes: List[str]
+    type: Literal["atomic", "pq", "hub"]
+
 class SovereignPlan(BaseModel):
     course: str
     semester: str
@@ -109,6 +114,7 @@ class SovereignPlan(BaseModel):
     hub_note: NoteSchema
     atomic_notes: List[AtomicNoteSchema]
     possible_questions: List[NoteSchema]
+    batches: List[BatchSchema] = Field(default_factory=list)
 
 class PartialPlan(BaseModel):
     atomic_notes: List[AtomicNoteSchema]
