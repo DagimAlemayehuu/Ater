@@ -99,3 +99,15 @@
 *   [x] **Architect Panel**: Reactive UI for adding rows/columns without browser prompts.
 *   [x] **Dynamic Area Support**: Automated database categorization based on the `Areas` database.
 
+---
+
+## 7. Mobile Client (apps/mobile-client)
+### Pending Epics
+*   [ ] **PWA & Offline Mode**: Local caching of manuscripts for airplane-mode studying.
+*   [ ] **Mobile Ingestion**: Native PDF upload pipeline integration.
+
+### Completed Epics
+*   [x] **Manuscript Design System**: 100% visual parity with desktop editorial aesthetics.
+*   [x] **Global Sync Parity**: Real-time connection to sidecar for Vault, Registry, and Mastery data.
+*   [x] **Neural Registry**: Mobile status dashboard for AI Agents and system logs.
+*   [x] **Infrastructure Hardening**: Migrated to React 19 with robust Error Boundary safeguards.
