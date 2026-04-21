@@ -64,7 +64,8 @@
 *   [x] **Monochrome Design System**: Implemented a strict grayscale aesthetic for minimal visual distraction and premium feel.
 *   [x] **Single-Agent Registry**: Refactored the `/agents` page to exclusively feature the OKA dashboard.
 *   [x] **Absolute Atomicity**: Enforced 1-note-per-batch generation for maximum parsing reliability.
-*   [x] **OKA Hardening (v13.6)**: Fixed code block corruption via standard backtick normalization, centralized Hub/PQ deployment into academic folders, and implemented zero-conversational prompts for model stability.
+*   [x] **OKA Hardening (v23.0)**: Fixed critical Hub deployment failure caused by signature mismatch and schema drift. Implemented `anchored_hub_id` persistence in `SovereignPlan` and eliminated destructive stub-overwriting logic in the service layer.
+*   [x] **Project Hygiene**: Performed comprehensive monorepo cleanup, removing 50+ junk files, build artifacts, and legacy macOS metadata. Centralized development scratch scripts.
 
 
 ---

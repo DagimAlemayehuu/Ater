@@ -4,10 +4,11 @@
 *   `apps/desktop`: Tauri v2 (Rust) + React/Vite (TS, Tailwind, shadcn/ui)
 *   `apps/api`: Python FastAPI Sidecar
 
-### Core Reasoning Engine: OKA v22.0 (Ironclad)
+### Core Reasoning Engine: OKA v23.0 (Ironclad)
 1.  **Validation Loop**: Every note undergoes structural validation (YAML, backticks, tables). Invalid notes are re-prompted with `[REGENERATION_HINT]`.
 2.  **Socratic Synthesis**: Probes are aggregated from atomic notes to build a comprehensive Master Question Bank (PQ note).
-3.  **Strict Batching**: The "Strictly Generate All" mode uses a frontend-driven async loop to process batches sequentially, eliminating HTTP timeout issues.
+3.  **Relational Integrity**: Hub notes are anchored via `anchored_hub_id` to ensure metadata and content persistence between Study Planner stubs and full Mastery Maps.
+4.  **Strict Batching**: The "Strictly Generate All" mode uses a frontend-driven async loop to process batches sequentially, eliminating HTTP timeout issues.
 
 ## 2. UI/UX Strategy
 *   **Monochrome High-Fidelity**: Professional grayscale palette with professional typography.

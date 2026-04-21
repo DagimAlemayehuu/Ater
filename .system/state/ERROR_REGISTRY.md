@@ -18,4 +18,5 @@ The Inquisitor writes failed tests here. The Detective reads this file, fixes th
 ## 3. Resolved Issues Log
 > Keep a history of fixed bugs so the system learns from its mistakes.
 
-*   *(Empty)*
+*   **[2026-04-21] OKA Hub Deployment Failure**: Fixed a `TypeError` in ` OkaDeployer.deploy_hub_note` signature and a schema drift in `SovereignPlan` that caused Hub notes to be mislocated in the Academic root instead of the Study Planner. Also removed a destructive logic block in `service.py` that was overwriting full hubs with empty stubs.
+*   **[2026-04-21] Project Directory Contamination**: Removed 50+ redundant logs, build artifacts (`dist/`, `build/`), and macOS metadata (`.DS_Store`) to achieve a clean project structure.

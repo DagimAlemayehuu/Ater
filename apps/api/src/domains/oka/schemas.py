@@ -115,6 +115,7 @@ class SovereignPlan(BaseModel):
     atomic_notes: List[AtomicNoteSchema]
     possible_questions: List[NoteSchema]
     batches: List[BatchSchema] = Field(default_factory=list)
+    anchored_hub_id: Optional[str] = None
 
 class PartialPlan(BaseModel):
     atomic_notes: List[AtomicNoteSchema]

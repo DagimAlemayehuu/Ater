@@ -1171,7 +1171,7 @@ class OkaService:
                 elif b_type == "hub":
                     OkaService._status[session_id] = "Compiling Unit Mastery Hub..."
                     ai_output = self._compile_hub_note(plan_obj, session_path=session.get("path", ""))
-                    local_results = self.deployer.deploy_hub_note(session_id, ai_output, plan_obj)
+                    local_results = self.deployer.deploy_hub_note(session_id, ai_output, plan_obj, session.get("path", ""))
 
                 deployment_results.extend(local_results)
                 session["current_batch"] = b_num
@@ -1182,22 +1182,6 @@ class OkaService:
             has_more = await run_single_batch(batch_number, batch_type, batch_notes)
 
             if not has_more:
-                # Mark Hub as Generated before popping
-                hub_to_update = session.get("target_hub")
-                if hub_to_update and hub_to_update.get("path"):
-                    hub_path = Path(hub_to_update["path"])
-                    if hub_path.exists():
-                        try:
-                            with open(hub_path, "r", encoding="utf-8") as f:
-                                content = f.read()
-                            meta, body, err = self.vm.extract_yaml_and_content(content)
-                            if not err:
-                                meta["generated"] = True
-                                yaml_content = self.vm.dump_obsidian_yaml(meta)
-                                full_content = f"---\n{yaml_content}\n---\n\n{body.strip()}\n"
-                                self.vm.write_note(hub_path, full_content)
-                        except: pass
-                
                 OkaService._sessions.pop(session_id, None)
                 OkaService._status[session_id] = "Deployment Complete"
             else:

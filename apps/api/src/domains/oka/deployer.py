@@ -113,7 +113,7 @@ class OkaDeployer:
             
         return results
 
-    def deploy_hub_note(self, session_id: str, title: str, content: str, plan: Any, session_path: str = "") -> List[Dict[str, str]]:
+    def deploy_hub_note(self, session_id: str, content: str, plan: Any, session_path: str = "") -> List[Dict[str, str]]:
         """Surgically deploys the unit hub."""
         session_meta = plan.dict() if hasattr(plan, "dict") else plan
         session_meta["path"] = session_path

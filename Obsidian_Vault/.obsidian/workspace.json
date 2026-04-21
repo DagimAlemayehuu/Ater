@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Definition.md",
+                "file": "3-Database/06 - Study Planner/5_Modular_Programming_Hub.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Function_Definition"
+              "title": "5_Modular_Programming_Hub"
             }
           }
         ]
@@ -182,14 +182,9 @@
   },
   "active": "7f9e47468ad62ed5",
   "lastOpenFiles": [
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Benefits_Of_Modules.md",
     "5-Pdf Store/note generated/Chapter 5.pdf",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Call_By_Reference.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Extern_Storage_Class.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Inline_Vs_Macro.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Modules_In_C++.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Scope_Resolution_Operators.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Call_By_Reference_Example.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Call_By_Value_Example.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/5_Modular_Programming_Possible_Questions.md",
     "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Ambiguous_Overloading.md",
     "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Overloading.md",
     "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Recursive_Case.md",
@@ -197,26 +192,30 @@
     "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Recursion.md",
     "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Pass_By_Reference.md",
     "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Pass_By_Value.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Call_By_Reference.md",
     "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Reference_Parameters.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Call_By_Value.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Default_Parameters.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Static_Variables.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Modular_Programming.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Local_Variables.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Inline_Functions.md",
     "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Global_Variables.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Prototype.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Automatic_Variables.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Definition.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Local_Variables.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Identifier_Scope.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Return_Statement.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Definitions.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Prototypes.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Declaration.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Functions_In_C++.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Modular_Programming_Concept.md",
     "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming",
     "2-Academic/Autumn 2025/Computer_Programming",
+    "2-Academic/Autumn 2025",
+    "3-Database/06 - Study Planner/5_Modular_Programming_Hub.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Use_Of_Reference_Parameters.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Unary_Scope_Resolution_Operator.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Valid_Function_Overloading.md",
+    "5-Pdf Store/Chapter 5.pdf",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/5_Modular_Programming_Hub.md",
+    "5-Pdf Store/Chapter 5.pdf",
+    "5-Pdf Store/Chapter 5.pdf",
     "5-Pdf Store/oka_queue.db",
     "5-Pdf Store/Chapter 5.pdf",
-    "5-Pdf Store/Chapter 5.pdf",
-    "5-Pdf Store/Chapter 5.pdf",
-    "2-Academic/Autumn 2025",
-    "1-Academic",
-    "2-Academic/Autumn 2025/Database_Systems/3_Conceptual_Database_Design",
-    "2-Academic/Autumn 2025/Database_Systems"
+    "5-Pdf Store/Chapter 5.pdf"
   ]
 }

@@ -1,6 +1,6 @@
 # Project State
 ## 1. Status Summary
-**Current Status:** The system is operating on the **Ironclad OKA v22.0 (Sovereign Protocol)**. The ingestion engine has been hardened with a **Validation-Regeneration Loop**, **Aggressive Code Block Normalization**, and **Setext Heading Defense**. The "Strictly Generate All" mode provides a fully automated, high-fidelity deployment loop that is immune to HTTP timeouts.
+**Current Status:** The system is operating on the **Ironclad OKA v23.0 (Sovereign Protocol)**. The ingestion engine has been hardened with **Relational Hub Anchoring**, a **High-Fidelity Schema (SovereignPlan v2)**, and **Surgical Batch Deployment**. Hub notes now correctly anchor to the Study Planner with guaranteed Mastery Map population.
 
 ## 2. Global Milestones
 *   [x] Initialization & Architecture
@@ -15,6 +15,7 @@
 *   [x] **Absolute Atomicity (1-Note-per-Batch Deployment Safety)**
 *   [x] **Adaptive High-Fidelity (Auto-Repair Parser + Density Fallbacks)**
 *   [x] **Dynamic WikiLink Engine (Auto-Creation & Nav)**
+*   [x] **OKA v23.0: Relational Hub Anchoring & Schema Normalization**
 *   [ ] Global E2E Tests Pass
 *   [ ] Production Deployment
 
