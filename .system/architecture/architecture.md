@@ -2,22 +2,24 @@
 
 ## 1. System Map & Technologies
 *   `apps/desktop`: Tauri v2 (Rust) + React/Vite (TS, Tailwind, shadcn/ui)
-*   `apps/api`: Python FastAPI Sidecar
+*   `apps/mobile-client`: React/Vite (IIFE) + Scriptable Bridge
+*   `apps/api`: Python FastAPI Sidecar (Desktop Only)
 
 ### Core Reasoning Engine: OKA v23.0 (Ironclad)
 1.  **Validation Loop**: Every note undergoes structural validation (YAML, backticks, tables). Invalid notes are re-prompted with `[REGENERATION_HINT]`.
 2.  **Socratic Synthesis**: Probes are aggregated from atomic notes to build a comprehensive Master Question Bank (PQ note).
-3.  **Relational Integrity**: Hub notes are anchored via `anchored_hub_id` to ensure metadata and content persistence between Study Planner stubs and full Mastery Maps.
-4.  **Strict Batching**: The "Strictly Generate All" mode uses a frontend-driven async loop to process batches sequentially, eliminating HTTP timeout issues.
+3.  **Relational Integrity**: Hub notes are anchored via `anchored_hub_id` to ensure metadata and content persistence.
+4.  **Universal AI Bridge**: Desktop uses the Python Sidecar; Mobile uses a Native Scriptable Bridge to route requests to Gemini, OpenAI, Anthropic, Groq, and OpenRouter.
 
 ## 2. UI/UX Strategy
 *   **Monochrome High-Fidelity**: Professional grayscale palette with professional typography.
-*   **Dashboard Mission Control**: Real-time batch status, curriculum lock, and "Strict" automation triggers.
+*   **Agnostic Interaction**: Sidebar for Desktop; Bottom Navbar + Drawer sheets for Mobile.
 
 ## 3. Storage Blueprint
-*   **Local State**: Tauri secure store.
-*   **Knowledge Base**: Local Obsidian Markdown files.
-*   **Automation Queue**: SQLite-backed persistent queue in `inbox/oka_queue.db`.
+*   **Desktop State**: Tauri secure store.
+*   **Mobile State**: iOS Filesystem (`lifeos_config.json`).
+*   **Knowledge Base**: Local Obsidian Markdown files (iCloud or local).
+*   **Automation Queue**: SQLite-backed persistent queue (Desktop) or In-Memory Session (Mobile).
 
 ## 4. Key Architectural Laws
 1.  **Setext Defense**: Mandatory double-newlines before all horizontal rules (`---`) to prevent accidental heading resizing.

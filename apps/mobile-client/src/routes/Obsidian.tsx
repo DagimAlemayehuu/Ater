@@ -1,43 +1,137 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { 
+    Send, Bot, User, Trash2, ShieldCheck, RefreshCw, 
+    Sparkles, Paperclip, FileText, Folder, ChevronRight, 
+    Search, LayoutGrid, BrainCircuit, X, Zap, Activity, 
+    PauseCircle, ListChecks, Archive, Terminal, Database,
+    ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft, Layout, FolderOpen,
+    Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Users, Settings, Network,
+    Edit3, Save, MoreVertical, Menu
+} from 'lucide-react'
 import { sidecarApi, ObsidianFile } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
-import { NoteReader } from './NoteReader'
-import { useNavigate } from 'react-router-dom'
+import { useConfig } from '@/lib/ConfigContext'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
+import { NoteProperties, HubConnectionsNav } from '@/components/obsidian/NoteMetadata'
+import { 
+    Sheet, 
+    SheetContent, 
+    SheetHeader, 
+    SheetTitle, 
+    SheetTrigger 
+} from '@/components/ui/sheet'
+import React from 'react'
 
-export default function Obsidian() {
+export default function ObsidianVaultPage() {
+    const { config } = useConfig()
+    const location = useLocation()
+    const navigate = useNavigate()
+    
+    // --- Vault Explorer State ---
     const [files, setFiles] = useState<ObsidianFile[]>([])
-    const [loading, setLoading] = useState(false)
-    const [view, setView] = useState<'explorer' | 'oka'>('explorer')
+    const [loadingFiles, setLoadingFiles] = useState(false)
     const [selectedPath, setSelectedPath] = useState<string | null>(null)
+    const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
+    const [noteContent, setNoteContent] = useState('')
+    const [isEditing, setIsEditing] = useState(false)
+    const [editedContent, setEditedContent] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
-    const [queue, setQueue] = useState<any>(null)
-    const navigate = useNavigate()
+    const [loadingNote, setLoadingNote] = useState(false)
+    const [hubConnections, setHubConnections] = useState<string | null>(null)
+
+    // --- Mobile Drawers ---
+    const [isExplorerOpen, setIsExplorerOpen] = useState(false)
+    const [isConnectionsOpen, setIsConnectionsOpen] = useState(false)
+
+    useEffect(() => {
+        const fetchHubConnections = async () => {
+            const rawHub = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course || noteMetadata?.semester;
+            if (!rawHub) {
+                setHubConnections(null)
+                return
+            }
+            
+            try {
+                const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub];
+                const cleanHubName = String(hubItems[0] || '').replace(/\[\[/g, '').replace(/\]\]/g, '').trim();
+                if (!cleanHubName) return;
+                
+                const res = await sidecarApi.findVaultPage(cleanHubName)
+                if (res.found && res.path) {
+                    const note = await sidecarApi.readObsidianNote(res.path)
+                    const match = note.content.match(/(?:#+\s*Core Topologies.*?|#+\s*Connections)\s*\n([\s\S]*?)(?=\n#+\s|$)/i)
+                    if (match && match[1]) {
+                        let topologies = match[1].trim()
+                        const pageName = selectedPath?.split('/').pop()?.replace('.md', '') || '';
+                        if (pageName) {
+                            const regex = new RegExp(`(\\[\\[${pageName}\\]\\])`, 'gi');
+                            topologies = topologies.replace(regex, `**$1** 📍`);
+                        }
+                        setHubConnections(topologies)
+                        return
+                    }
+                }
+                setHubConnections(null)
+            } catch (err) {
+                console.error("Failed to fetch hub connections", err)
+                setHubConnections(null)
+            }
+        }
+        fetchHubConnections()
+    }, [noteMetadata, selectedPath])
 
     useEffect(() => {
         fetchFiles()
-        fetchQueue()
-        const it = setInterval(fetchQueue, 5000)
-        return () => clearInterval(it)
-    }, [])
+        const interval = setInterval(fetchFiles, 10000)
+        return () => clearInterval(interval)
+    }, [config?.obsidianVaultPath])
 
     const fetchFiles = async () => {
-        setLoading(true)
+        setLoadingFiles(true)
         try {
-            const res = await sidecarApi.listObsidianFiles()
+            const res = await sidecarApi.listObsidianFiles(true)
             setFiles(res.files || [])
         } catch (err) {
             console.error('Failed to fetch obsidian files:', err)
         } finally {
-            setLoading(false)
+            setLoadingFiles(false)
         }
     }
 
-    const fetchQueue = async () => {
+    const selectFile = async (path: string) => {
+        setSelectedPath(path)
+        setLoadingNote(true)
+        setIsExplorerOpen(false)
+        setIsConnectionsOpen(false)
+
         try {
-            const res = await sidecarApi.okaQueueStatus()
-            setQueue(res)
-        } catch (e) {}
+            const res = await sidecarApi.readObsidianNote(path)
+            setNoteMetadata(res.metadata || {})
+            setNoteContent(res.content || '')
+            setEditedContent(res.content || '')
+            setIsEditing(false)
+        } catch (err) {
+            console.error('Failed to read note:', err)
+            setNoteContent('# Error\nFailed to load content.')
+        } finally { setLoadingNote(false) }
+    }
+
+    const handleSaveNote = async () => {
+        if (!selectedPath) return
+        setLoadingNote(true)
+        try {
+            await sidecarApi.updateObsidianNote(selectedPath, editedContent)
+            setNoteContent(editedContent)
+            setIsEditing(false)
+        } catch (err: any) {
+            alert("Save failed")
+        } finally {
+            setLoadingNote(false)
+        }
     }
 
     const toggleFolder = (path: string) => {
@@ -47,145 +141,170 @@ export default function Obsidian() {
         setExpandedFolders(newExpanded)
     }
 
-    const selectFile = (path: string) => {
-        navigate(`/note/${encodeURIComponent(path)}`)
-    }
-
-    const renderTree = (pathPrefix = '') => {
+    const renderFileTree = (pathPrefix = '') => {
         const filtered = files.filter(f => {
-            const path = f?.path || ''
-            const relative = pathPrefix ? path.slice(pathPrefix.length + 1) : path
-            return !relative.includes('/') && (!searchQuery || path.toLowerCase().includes((searchQuery || '').toLowerCase()))
+            const parent = f.path.includes('/') ? f.path.substring(0, f.path.lastIndexOf('/')) : ''
+            return parent === pathPrefix && (!searchQuery || f.path.toLowerCase().includes(searchQuery.toLowerCase()))
         })
 
-        return filtered.map(file => {
-            const isExpanded = expandedFolders.has(file.path)
-            return (
-                <div key={file.path} className="flex flex-col">
-                    <div 
-                        onClick={() => file.is_dir ? toggleFolder(file.path) : selectFile(file.path)}
-                        className={cn(
-                            "flex items-center gap-4 py-4 px-2 border-b border-border/10 transition-colors group",
-                            file.is_dir ? "font-bold" : "font-normal"
-                        )}
-                    >
-                        <span className="material-symbols-outlined text-secondary text-[20px]">
-                            {file.is_dir ? (isExpanded ? 'folder_open' : 'folder') : 'description'}
-                        </span>
-                        <span className="truncate text-[14px] flex-1 leading-none transition-colors group-hover:text-primary">
-                            {file.path.split('/').pop()?.replace(/_/g, ' ')}
-                        </span>
-                        {file.is_dir && (
-                            <span className={cn("material-symbols-outlined text-[16px] transition-transform", isExpanded && "rotate-90")}>
-                                chevron_right
-                            </span>
-                        )}
-                    </div>
-                </div>
-            )
-        })
+        return (
+            <div className="flex flex-col">
+                {filtered.map(file => {
+                    const isExpanded = expandedFolders.has(file.path)
+                    const name = file.path.split('/').pop() || ''
+                    return (
+                        <div key={file.path} className="flex flex-col">
+                            <div 
+                                onClick={() => file.is_dir ? toggleFolder(file.path) : selectFile(file.path)}
+                                className={cn(
+                                    "flex items-center gap-3 py-3 px-4 border-b border-border/10 transition-all",
+                                    selectedPath === file.path ? "bg-primary/10 border-l-4 border-l-primary" : "hover:bg-muted/30"
+                                )}
+                            >
+                                <div className="text-muted-foreground">
+                                    {file.is_dir ? <Folder size={18} className={cn(isExpanded && "fill-current text-primary/20")} /> : <FileText size={18} />}
+                                </div>
+                                <span className={cn("truncate text-sm flex-1", selectedPath === file.path ? "font-bold text-primary" : "text-primary/80")}>
+                                    {name}
+                                </span>
+                                {file.is_dir && <ChevronRight size={14} className={cn("text-muted-foreground transition-transform", isExpanded && "rotate-90")} />}
+                            </div>
+                            {file.is_dir && isExpanded && (
+                                <div className="pl-4 border-l border-border/10">
+                                    {renderFileTree(file.path)}
+                                </div>
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
+        )
     }
 
     return (
-        <div className="flex flex-col h-full bg-background animate-in fade-in duration-700">
-            {/* View Switcher Tabs (Editorial Style) */}
-            <div className="flex bg-surface-container-low border-b border-border/10 p-1 m-4">
-                <button 
-                    onClick={() => setView('explorer')}
-                    className={cn(
-                        "flex-1 py-3 label-sm text-[9px] transition-all",
-                        view === 'explorer' ? "bg-primary text-on-primary" : "text-secondary"
+        <div className="flex flex-col h-full bg-background animate-in fade-in duration-500 overflow-hidden">
+            {/* Context Toolbar */}
+            <div className="h-14 border-b border-border/50 flex items-center justify-between px-4 bg-background/80 backdrop-blur-md sticky top-0 z-40">
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => setIsExplorerOpen(true)}>
+                        <Menu size={20} />
+                    </Button>
+                    <div className="h-4 w-px bg-border mx-1" />
+                    <span className="text-[11px] font-black uppercase tracking-widest text-primary truncate max-w-[120px]">
+                        {selectedPath ? selectedPath.split('/').pop() : 'VAULT_EXPLORER'}
+                    </span>
+                </div>
+                
+                <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => setIsConnectionsOpen(true)}>
+                        <Network size={18} />
+                    </Button>
+                    {selectedPath && (
+                        <Button variant="ghost" size="icon" onClick={() => setIsEditing(!isEditing)}>
+                            {isEditing ? <X size={18} /> : <Edit3 size={18} />}
+                        </Button>
                     )}
-                >
-                    EXPLORER
-                </button>
-                <button 
-                    onClick={() => setView('oka')}
-                    className={cn(
-                        "flex-1 py-3 label-sm text-[9px] transition-all",
-                        view === 'oka' ? "bg-primary text-on-primary" : "text-secondary"
+                    {isEditing && (
+                        <Button variant="ghost" size="icon" onClick={handleSaveNote} className="text-primary">
+                            <Save size={18} />
+                        </Button>
                     )}
-                >
-                    INGESTION_QUEUE {queue?.active_batches?.length > 0 && `(${queue.active_batches.length})`}
-                </button>
+                </div>
             </div>
 
-            {view === 'explorer' ? (
-                <div className="flex-1 flex flex-col overflow-hidden px-6">
-                    <div className="pt-4 pb-8 flex flex-col gap-6">
-                         <nav className="flex items-center gap-2">
-                            <span className="label-sm text-secondary">KNOWLEDGE</span>
-                            <span className="material-symbols-outlined text-border text-[12px]">chevron_right</span>
-                            <span className="label-sm text-primary">VAULT EXPLORER</span>
-                        </nav>
-                        <h1 className="display-md text-[2.25rem]">Obsidian Vault</h1>
-                        
+            <main className="flex-1 relative overflow-hidden flex flex-col">
+                {!selectedPath ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-10 text-center space-y-6">
+                        <div className="w-20 h-20 bg-muted/20 rounded-3xl flex items-center justify-center text-muted-foreground animate-pulse">
+                            <Archive size={40} strokeWidth={1} />
+                        </div>
+                        <div className="space-y-2">
+                            <h2 className="text-xl font-black uppercase tracking-tighter">No Manuscript Selected</h2>
+                            <p className="text-xs text-muted-foreground px-10">Initialize selection via the system registry.</p>
+                        </div>
+                        <Button onClick={() => setIsExplorerOpen(true)} className="px-10 font-bold uppercase tracking-widest text-xs py-6 shadow-xl">
+                            Open Explorer
+                        </Button>
+                    </div>
+                ) : loadingNote ? (
+                    <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                        <RefreshCw className="animate-spin text-primary" size={32} />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Syncing Knowledge...</span>
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col h-full overflow-hidden">
+                        {isEditing ? (
+                            <textarea
+                                value={editedContent}
+                                onChange={(e) => setEditedContent(e.target.value)}
+                                className="flex-1 w-full bg-muted/5 p-6 font-mono text-sm leading-relaxed focus:outline-none resize-none"
+                                spellCheck={false}
+                            />
+                        ) : (
+                            <div className="flex-1 h-full overflow-hidden flex flex-col">
+                                <ScrollArea className="flex-1">
+                                    <div className="max-w-3xl mx-auto px-6 pt-10 pb-40">
+                                        <NoteProperties metadata={noteMetadata} onNavigate={selectFile} />
+                                        <MarkdownViewer content={noteContent} onNavigate={selectFile} path={selectedPath} />
+                                    </div>
+                                </ScrollArea>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </main>
+
+            {/* Explorer Drawer */}
+            <Sheet open={isExplorerOpen} onOpenChange={setIsExplorerOpen}>
+                <SheetContent side="left" className="p-0">
+                    <SheetHeader className="p-6 border-b border-border/50">
+                        <SheetTitle className="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-3">
+                            <Archive size={16} /> Registry
+                        </SheetTitle>
+                    </SheetHeader>
+                    <div className="p-4 border-b border-border/50">
                         <div className="relative group">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-secondary text-[20px]">search</span>
-                            <input
-                                type="text"
-                                placeholder="Search all knowledge assets..."
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                            <input 
+                                placeholder="Filter Knowledge..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-muted border-none text-[13px] font-medium px-5 py-4 pl-12 rounded-none focus:ring-1 focus:ring-primary transition-all"
+                                className="w-full bg-muted/40 border border-border p-3 pl-10 text-xs font-bold rounded-lg focus:outline-none focus:ring-1 focus:ring-primary transition-all"
                             />
                         </div>
                     </div>
+                    <ScrollArea className="h-full">
+                        {loadingFiles ? (
+                             <div className="p-10 text-center animate-pulse text-[10px] font-bold uppercase tracking-widest opacity-50">Syncing Registry...</div>
+                        ) : renderFileTree()}
+                        <div className="h-40" />
+                    </ScrollArea>
+                </SheetContent>
+            </Sheet>
 
-                    <div className="flex-1 overflow-y-auto pb-24 custom-scrollbar">
-                        {loading ? (
-                             <div className="py-20 text-center opacity-40">
-                                <span className="material-symbols-outlined animate-spin text-[32px]">refresh</span>
-                             </div>
-                        ) : renderTree()}
-                    </div>
-                </div>
-            ) : (
-                <div className="flex-1 flex flex-col px-6 pt-6 overflow-y-auto custom-scrollbar">
-                    <div className="mb-10 text-center py-12 bg-surface-container-low ghost-border px-8">
-                         <div className="w-16 h-16 bg-primary mx-auto flex items-center justify-center text-white mb-6">
-                             <span className="material-symbols-outlined text-[32px]">upload</span>
-                         </div>
-                         <h2 className="headline-sm mb-2">Autonomous Ingestion</h2>
-                         <p className="body-md italic tracking-tight opacity-60">Upload PDF source material to trigger the autonomous OKA v23 synthesis pipeline.</p>
-                         <button className="mt-8 w-full py-4 bg-primary text-on-primary label-sm tracking-widest font-black">
-                             SELECT SOURCE MATERIAL
-                         </button>
-                    </div>
-
-                    {/* Active Queue */}
-                    <section className="pb-32">
-                         <h2 className="label-sm text-secondary mb-6 tracking-[0.3em]">ACTIVE PIPELINE</h2>
-                         {queue?.active_batches?.length > 0 ? (
-                             <div className="space-y-4">
-                                 {queue.active_batches.map((batch: any, i: number) => (
-                                     <div key={i} className="bg-surface-container-lowest p-6 ghost-border border-l-4 border-primary">
-                                         <div className="flex justify-between items-start mb-4">
-                                             <div className="flex items-center gap-3">
-                                                 <span className="material-symbols-outlined text-primary text-[20px] animate-pulse">refresh</span>
-                                                 <h3 className="font-bold text-sm uppercase tracking-tight">{batch.name || 'Processing Cluster'}</h3>
-                                             </div>
-                                             <span className="label-sm bg-muted px-2 py-0.5">{batch.status || 'INGESTING'}</span>
-                                         </div>
-                                         <div className="w-full h-1 bg-border/20 mb-2">
-                                             <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${batch.progress || 35}%` }} />
-                                         </div>
-                                         <div className="flex justify-between text-[8px] font-black opacity-40 uppercase tracking-widest">
-                                             <span>Step: Atomic Synthesis</span>
-                                             <span>{batch.progress || 35}%</span>
-                                         </div>
-                                     </div>
-                                 ))}
-                             </div>
-                         ) : (
-                             <div className="py-20 text-center border-2 border-dashed border-border opacity-40">
-                                 <span className="material-symbols-outlined text-[48px] mb-4">hourglass_empty</span>
-                                 <p className="label-sm">Pipeline Idle. Awaiting payload.</p>
-                             </div>
-                         )}
-                    </section>
-                </div>
-            )}
+            {/* Connections/Hub Drawer */}
+            <Sheet open={isConnectionsOpen} onOpenChange={setIsConnectionsOpen}>
+                <SheetContent side="right" className="p-0">
+                    <SheetHeader className="p-6 border-b border-border/50">
+                        <SheetTitle className="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-3">
+                            <Network size={16} /> Connections
+                        </SheetTitle>
+                    </SheetHeader>
+                    <ScrollArea className="h-full">
+                        <div className="p-4">
+                            {hubConnections ? (
+                                <HubConnectionsNav content={hubConnections} activePath={selectedPath} onNavigate={selectFile} />
+                            ) : (
+                                <div className="py-20 text-center px-10">
+                                    <Network size={32} className="mx-auto text-muted-foreground/20 mb-4" />
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 leading-relaxed">No Relational Hub Anchored to this Manuscript.</p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="h-40" />
+                    </ScrollArea>
+                </SheetContent>
+            </Sheet>
         </div>
     )
 }

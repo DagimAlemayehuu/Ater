@@ -1,0 +1,145 @@
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
+import { cn } from '@/lib/utils'
+import React, { useState, useEffect, useMemo } from 'react'
+import { WikiLink, renderWikiLinks } from './WikiLink'
+import { Sparkles, Zap, Copy, Check, RefreshCw, X, Quote } from 'lucide-react'
+import { AiSidecar } from './AiSidecar'
+
+interface MarkdownViewerProps {
+    content: string
+    onNavigate: (pageName: string) => void
+    path?: string
+}
+
+export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProps) {
+    const [selection, setSelection] = useState<string>('');
+    const [showPopover, setShowPopover] = useState(false);
+    const [showSidebar, setShowSidebar] = useState(false);
+    const [explanationSelection, setExplanationSelection] = useState('');
+    const [isQuizMode, setIsQuizMode] = useState(false);
+
+    const [popoverPosition, setPopoverPosition] = useState<{ top: number, left: number }>({ top: 0, left: 0 });
+
+    const markdownComponents = useMemo(() => ({
+        p: ({ children }: any) => {
+            return (
+                <p className="mb-4 leading-relaxed text-[15px] text-foreground/90 antialiased">
+                    {React.Children.map(children, (child) => 
+                        typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child
+                    )}
+                </p>
+            )
+        },
+        h1: ({ children }: any) => <h1 className="text-3xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-border text-foreground">
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
+        </h1>,
+        h2: ({ children }: any) => <h2 className="text-2xl font-black mt-10 mb-5 tracking-tight text-foreground">
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
+        </h2>,
+        h3: ({ children }: any) => <h3 className="text-xl font-bold mt-8 mb-4 tracking-tight text-foreground/90">
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
+        </h3>,
+        h4: ({ children }: any) => <h4 className="text-[12px] font-black mt-6 mb-3 uppercase tracking-[0.25em] text-muted-foreground">{children}</h4>,
+        ul: ({ children }: any) => <ul className="list-disc pl-5 space-y-2 mb-6 text-[15px] text-foreground/80">{children}</ul>,
+        ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-2 mb-6 text-[15px] text-foreground/80">{children}</ol>,
+        li: ({ children, ...props }: any) => {
+            const content = React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child);
+            if (props.className?.includes('task-list-item')) {
+                return <li className="flex items-start gap-3 list-none -ml-5 mb-2 text-foreground/80">{content}</li>;
+            }
+            return <li className="mb-1 text-foreground/80">{content}</li>;
+        },
+        input: ({ type, checked }: any) => {
+            if (type === 'checkbox') {
+                return (
+                    <input 
+                        type="checkbox" 
+                        checked={checked} 
+                        readOnly 
+                        className="mt-1 size-4 rounded border-border bg-muted accent-primary" 
+                    />
+                );
+            }
+            return null;
+        },
+        code: ({ node, inline, className, children, ...props }: any) => {
+            const match = /language-(\w+)/.exec(className || '')
+            const language = match ? match[1] : null
+            if (!inline && match) {
+                return (
+                    <div className="rounded-xl my-8 border border-border overflow-x-auto text-[13px] bg-muted/20 p-4 font-mono">
+                        <pre>{String(children).replace(/\n$/, '')}</pre>
+                    </div>
+                )
+            }
+            return <code className={cn("bg-muted px-2 py-0.5 rounded text-[13px] font-mono text-primary border border-border/50", className)} {...props}>{children}</code>
+        },
+        table: ({ children }: any) => (
+            <div className="overflow-x-auto my-8 rounded-xl border border-border">
+                <table className="w-full border-collapse text-[13px]">{children}</table>
+            </div>
+        ),
+        thead: ({ children }: any) => <thead className="bg-muted/50 border-b border-border">{children}</thead>,
+        th: ({ children }: any) => <th className="px-5 py-3 font-black uppercase tracking-widest text-[11px] text-muted-foreground text-left">{children}</th>,
+        td: ({ children }: any) => <td className="px-5 py-4 border-b border-border/10 text-foreground/80">{children}</td>,
+        blockquote: ({ children }: any) => (
+            <blockquote className="border-l-4 border-primary pl-6 italic my-8 text-muted-foreground text-[15px] bg-muted/10 py-5 rounded-r-2xl shadow-sm">
+                {children}
+            </blockquote>
+        ),
+        hr: () => <hr className="my-12 border-t border-border" />,
+        a: ({ href, children }: any) => (
+            <a href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-4 decoration-primary/30 hover:decoration-primary font-bold transition-all">
+                {children}
+            </a>
+        )
+    }), [onNavigate]);
+
+    const handleMouseUp = (e?: React.MouseEvent | React.KeyboardEvent) => {
+        const sel = window.getSelection();
+        const text = sel?.toString().trim();
+        if (text && text.length > 0) {
+            const range = sel?.getRangeAt(0);
+            if (range) {
+                const rect = range.getBoundingClientRect();
+                setPopoverPosition({ top: rect.top - 50, left: rect.left + rect.width / 2 });
+            }
+            setSelection(text); setShowPopover(true);
+        } else {
+            setTimeout(() => {
+                if (!window.getSelection()?.toString().trim()) setShowPopover(false);
+            }, 50);
+        }
+    };
+
+    return (
+        <div className="relative h-full flex flex-col select-text bg-background" onMouseUp={handleMouseUp} onKeyUp={handleMouseUp}>
+            <div className="flex-1 overflow-y-auto px-6 pt-2 pb-32 relative">
+                {showPopover && selection && (
+                    <div 
+                        className="fixed z-[100] bg-primary text-primary-foreground border border-primary rounded-full h-11 flex items-center px-4 shadow-2xl animate-in fade-in zoom-in duration-200"
+                        style={{ left: `${popoverPosition.left}px`, top: `${popoverPosition.top}px`, transform: 'translateX(-50%)' }}
+                    >
+                        <button onClick={() => { setExplanationSelection(selection); setIsQuizMode(false); setShowPopover(false); setShowSidebar(true); }} className="flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-primary-foreground/10 rounded-full">
+                            <Sparkles size={14} />
+                            <span>Explain</span>
+                        </button>
+                        <div className="w-px h-6 bg-primary-foreground/20 mx-2" />
+                        <button onClick={() => { setExplanationSelection(selection); setIsQuizMode(true); setShowPopover(false); setShowSidebar(true); }} className="flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-primary-foreground/10 rounded-full">
+                            <Zap size={14} />
+                            <span>Quiz</span>
+                        </button>
+                    </div>
+                )}
+                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]} components={markdownComponents}>{content}</ReactMarkdown>
+                </div>
+            </div>
+            {showSidebar && <AiSidecar selection={explanationSelection} path={path || ""} onClose={() => setShowSidebar(false)} initialMode={isQuizMode ? 'quiz' : 'explain'} />}
+        </div>
+    )
+}

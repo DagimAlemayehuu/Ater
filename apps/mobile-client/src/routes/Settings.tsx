@@ -1,83 +1,285 @@
-import React, { useState } from 'react'
-import { useConfig } from '@/lib/ConfigContext'
+import { useState, useEffect } from 'react'
+import {
+    Key, Trash2, Zap, Plus, X, User, ChevronRight, Check, Database, Settings as SettingsIcon, Shield, RefreshCw
+} from 'lucide-react'
+import { useConfig, SavedApiKey } from '@/lib/ConfigContext'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 
 export default function Settings() {
-    const { config, saveConfig } = useConfig()
+    const { config, saveConfig, isLoading, addApiKey, deleteApiKey } = useConfig()
+    const [activeSection, setActiveSection] = useState<'general' | 'ai'>('ai')
     
-    const menuItems = [
-        { id: 'identity', label: 'IDENTITY_CREDENTIALS', icon: 'fingerprint', desc: 'Secure sovereign key management' },
-        { id: 'vault', label: 'VAULT_ARCHITECTURE', icon: 'account_tree', desc: 'Obsidian root and folder mapping' },
-        { id: 'models', label: 'NEURAL_MODELS', icon: 'psychology', desc: 'AI tier and provider configuration' },
-        { id: 'security', label: 'PRIVACY_PROTOCOL', icon: 'shield_lock', desc: 'Encryption and local cache rules' },
-    ]
+    const [isAddingKey, setIsAddingKey] = useState(false);
+    const [newKeyName, setNewKeyName] = useState('');
+    const [newKeyValue, setNewKeyValue] = useState('');
+    const [newKeyProvider, setNewKeyProvider] = useState('google');
+    const [aiTab, setAiTab] = useState<'primary' | 'planner' | 'utility'>('primary')
+
+    if (isLoading || !config) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-background">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+        )
+    }
+
+    const handleAddNewKey = () => {
+        if (!newKeyName || !newKeyValue) return;
+        addApiKey({
+            id: Math.random().toString(36).substring(7),
+            name: newKeyName,
+            key: newKeyValue,
+            provider: newKeyProvider
+        });
+        setNewKeyName('');
+        setNewKeyValue('');
+        setIsAddingKey(false);
+    };
+
+    const selectSavedKey = (level: 'primary' | 'planner' | 'utility', keyObj: SavedApiKey) => {
+        if (level === 'primary') {
+            saveConfig({ aiProvider: keyObj.provider, aiApiKey: keyObj.key });
+        } else if (level === 'planner') {
+            saveConfig({ plannerProvider: keyObj.provider, plannerApiKey: keyObj.key });
+        } else {
+            saveConfig({ utilityProvider: keyObj.provider, utilityApiKey: keyObj.key });
+        }
+    };
 
     return (
-        <div className="flex flex-col h-full bg-background animate-in fade-in duration-700 overflow-y-auto custom-scrollbar">
-            {/* Header Content */}
+        <div className="flex flex-col h-full bg-background overflow-y-auto pb-32">
             <div className="px-6 pt-12 pb-8">
-                <nav className="flex items-center gap-2 mb-6">
-                    <span className="label-sm text-secondary">SYSTEM</span>
-                    <span className="material-symbols-outlined text-border text-[12px]">chevron_right</span>
-                    <span className="label-sm text-primary">CONFIGURATION</span>
+                <nav className="flex items-center gap-2 mb-4">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">SYSTEM</span>
+                    <ChevronRight size={10} className="text-border" />
+                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">NEURAL_CONFIG</span>
                 </nav>
-                
-                <h1 className="display-md mb-8">System Profile</h1>
+                <h1 className="text-4xl font-black tracking-tighter uppercase leading-none mb-10">Settings</h1>
 
-                {/* Profile Card (High Fidelity) */}
-                <div className="bg-surface-container-low p-6 mb-10 ghost-border flex items-center gap-6 relative overflow-hidden">
-                    <div className="w-16 h-16 bg-primary flex items-center justify-center text-white text-2xl font-black shrink-0 z-10">
-                        D
-                    </div>
-                    <div className="flex-1 z-10">
-                        <h2 className="headline-sm text-[1.25rem] mb-1 truncate">DABO DESTROYER</h2>
-                        <span className="label-sm text-secondary text-[8px] tracking-[0.4em]">SOVEREIGN_ACCESS_GRANTED</span>
-                    </div>
-                    <div className="absolute top-0 right-0 p-4 opacity-5">
-                         <span className="material-symbols-outlined text-[64px]">verified_user</span>
-                    </div>
+                <div className="flex bg-muted p-1 mb-10 rounded-2xl">
+                    <button
+                        onClick={() => setActiveSection('ai')}
+                        className={cn(
+                            "flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl",
+                            activeSection === 'ai' ? "bg-background text-primary shadow-sm" : "text-muted-foreground"
+                        )}
+                    >
+                        AI_STACK
+                    </button>
+                    <button
+                        onClick={() => setActiveSection('general')}
+                        className={cn(
+                            "flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl",
+                            activeSection === 'general' ? "bg-background text-primary shadow-sm" : "text-muted-foreground"
+                        )}
+                    >
+                        INFRASTRUCTURE
+                    </button>
                 </div>
 
-                {/* configuration Items */}
-                <section className="space-y-4">
-                    <h2 className="label-sm text-secondary mb-6 tracking-[0.3em]">CORE_PARAMETERS</h2>
-                    
-                    <div className="space-y-3">
-                        {menuItems.map((item) => (
-                            <button
-                                key={item.id}
-                                className="w-full bg-surface-container-lowest p-5 ghost-border flex items-center gap-5 hover:bg-accent transition-all group"
-                            >
-                                <div className="w-10 h-10 bg-surface-container-low flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shrink-0">
-                                    <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                {activeSection === 'ai' && (
+                    <div className="space-y-12 animate-in fade-in duration-500">
+                        {/* API Key Vault */}
+                        <section className="space-y-6">
+                            <div className="flex items-center justify-between px-1">
+                                <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em]">Credential_Vault</h2>
+                                <Shield size={14} className="text-muted-foreground/30" />
+                            </div>
+                            <div className="grid grid-cols-1 gap-3">
+                                {config.savedApiKeys?.map((k) => (
+                                    <div key={k.id} className="p-5 bg-muted/10 border border-border rounded-2xl flex justify-between items-center group transition-all active:scale-[0.98]">
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase text-primary mb-1 tracking-tight">{k.name}</p>
+                                            <p className="text-[12px] font-mono text-muted-foreground opacity-50">••••{k.key.slice(-4)}</p>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-[8px] font-black uppercase border border-primary/20 px-2 py-0.5 rounded-sm text-primary/60">{k.provider}</span>
+                                            <button onClick={() => deleteApiKey(k.id)} className="text-muted-foreground/40 hover:text-destructive transition-colors">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                
+                                {isAddingKey ? (
+                                    <div className="p-6 border-2 border-primary/20 bg-primary/5 rounded-[2rem] space-y-6 animate-in zoom-in-95 duration-300">
+                                        <div className="space-y-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[8px] font-black uppercase text-primary/40 tracking-widest ml-1">Key Label</label>
+                                                <input 
+                                                    placeholder="E.G. PRO_KEY"
+                                                    value={newKeyName}
+                                                    onChange={(e) => setNewKeyName(e.target.value.toUpperCase())}
+                                                    className="w-full bg-background border border-border p-4 rounded-xl text-xs font-black focus:outline-none focus:ring-1 focus:ring-primary"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[8px] font-black uppercase text-primary/40 tracking-widest ml-1">Provider Engine</label>
+                                                <select
+                                                    value={newKeyProvider}
+                                                    onChange={(e) => setNewKeyProvider(e.target.value)}
+                                                    className="w-full bg-background border border-border p-4 rounded-xl text-xs font-black focus:outline-none"
+                                                >
+                                                    <option value="google">GOOGLE_GEMINI</option>
+                                                    <option value="openai">OPENAI</option>
+                                                    <option value="anthropic">ANTHROPIC</option>
+                                                    <option value="groq">GROQ_CLOUD</option>
+                                                    <option value="openrouter">OPENROUTER</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[8px] font-black uppercase text-primary/40 tracking-widest ml-1">Secure Token</label>
+                                                <input 
+                                                    type="password"
+                                                    placeholder="PASTE_API_KEY"
+                                                    value={newKeyValue}
+                                                    onChange={(e) => setNewKeyValue(e.target.value)}
+                                                    className="w-full bg-background border border-border p-4 rounded-xl text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3 pt-2">
+                                            <Button onClick={handleAddNewKey} className="flex-1 py-6 font-black uppercase text-[10px] tracking-widest shadow-xl">Commit_Key</Button>
+                                            <Button variant="outline" onClick={() => setIsAddingKey(false)} className="py-6 border-2 font-black uppercase text-[10px] tracking-widest">Abort</Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button 
+                                        onClick={() => setIsAddingKey(true)}
+                                        className="p-10 border-2 border-dashed border-border rounded-[2rem] flex flex-col items-center justify-center gap-3 text-muted-foreground hover:border-primary hover:text-primary transition-all active:scale-[0.98]"
+                                    >
+                                        <Plus size={24} strokeWidth={3} />
+                                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Register_Credential</span>
+                                    </button>
+                                )}
+                            </div>
+                        </section>
+
+                        {/* Intelligence Tiers */}
+                        <section className="space-y-8 pt-6">
+                            <div className="flex items-center justify-between px-1">
+                                <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em]">Reasoning_Tiers</h2>
+                                <Zap size={14} className="text-muted-foreground/30" />
+                            </div>
+                            
+                            <div className="flex border-b border-border/50 gap-8 overflow-x-auto scrollbar-hide pb-px">
+                                {['primary', 'planner', 'utility'].map((tier) => (
+                                    <button
+                                        key={tier}
+                                        onClick={() => setAiTab(tier as any)}
+                                        className={cn(
+                                            "pb-3 text-[10px] font-black uppercase tracking-[0.3em] transition-all border-b-4 relative",
+                                            aiTab === tier ? "border-primary text-primary" : "border-transparent text-muted-foreground/40"
+                                        )}
+                                    >
+                                        {tier}
+                                        {aiTab === tier && <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="space-y-8 pt-4">
+                                <div className="space-y-3">
+                                    <label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Provider_Protocol</label>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {['google', 'openai', 'anthropic', 'groq', 'openrouter'].map(p => {
+                                            const current = aiTab === 'primary' ? config.aiProvider : (aiTab === 'planner' ? config.plannerProvider : config.utilityProvider);
+                                            const isSelected = current === p;
+                                            return (
+                                                <button 
+                                                    key={p}
+                                                    onClick={() => {
+                                                        if (aiTab === 'primary') saveConfig({ aiProvider: p });
+                                                        else if (aiTab === 'planner') saveConfig({ plannerProvider: p });
+                                                        else saveConfig({ utilityProvider: p });
+                                                    }}
+                                                    className={cn(
+                                                        "p-4 border rounded-xl text-left flex items-center justify-between transition-all active:scale-[0.99]",
+                                                        isSelected ? "border-primary bg-primary text-primary-foreground shadow-lg" : "border-border bg-muted/5 text-primary/60 hover:bg-muted/10"
+                                                    )}
+                                                >
+                                                    <span className="text-[11px] font-black uppercase tracking-widest">{p.replace('_', ' ')}</span>
+                                                    {isSelected && <Check size={14} strokeWidth={4} />}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
                                 </div>
-                                <div className="flex-1 text-left min-w-0">
-                                    <h3 className="font-bold text-[13px] tracking-tight text-primary uppercase">{item.label}</h3>
-                                    <p className="body-md text-[11px] opacity-60 truncate">{item.desc}</p>
+
+                                <div className="space-y-3">
+                                    <label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Model_Identifier</label>
+                                    <input
+                                        value={aiTab === 'primary' ? config.aiModel : (aiTab === 'planner' ? config.plannerModel : config.utilityModel)}
+                                        onChange={(e) => {
+                                            const m = e.target.value;
+                                            if (aiTab === 'primary') saveConfig({ aiModel: m });
+                                            else if (aiTab === 'planner') saveConfig({ plannerModel: m });
+                                            else saveConfig({ utilityModel: m });
+                                        }}
+                                        className="w-full bg-muted/10 border border-border p-5 rounded-2xl text-sm font-mono font-bold focus:outline-none focus:ring-1 focus:ring-primary"
+                                        placeholder="E.G. GPT-4O"
+                                    />
                                 </div>
-                                <span className="material-symbols-outlined text-border/40 group-hover:text-primary transition-colors">chevron_right</span>
-                            </button>
-                        ))}
+
+                                <div className="space-y-3">
+                                    <label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Authenticated_Session</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {config.savedApiKeys?.map(k => {
+                                            const isSelected = (aiTab === 'primary' && config.aiApiKey === k.key) ||
+                                                               (aiTab === 'planner' && config.plannerApiKey === k.key) ||
+                                                               (aiTab === 'utility' && config.utilityApiKey === k.key);
+                                            return (
+                                                <button
+                                                    key={k.id}
+                                                    onClick={() => selectSavedKey(aiTab, k)}
+                                                    className={cn(
+                                                        "px-5 py-3 text-[10px] font-black uppercase tracking-widest border-2 transition-all rounded-xl",
+                                                        isSelected ? "bg-primary text-white border-primary shadow-lg" : "bg-background border-border text-muted-foreground hover:border-primary/20"
+                                                    )}
+                                                >
+                                                    {k.name}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
                     </div>
-                </section>
+                )}
 
-                {/* Danger Zone */}
-                <section className="mt-12 space-y-4 pb-32">
-                     <h2 className="label-sm text-red-500 mb-6 tracking-[0.3em]">DESTRUCTIVE_ACTIONS</h2>
-                     <button className="w-full py-4 bg-red-50 text-red-600 border border-red-100 label-sm flex items-center justify-center gap-3">
-                         <span className="material-symbols-outlined text-[18px]">logout</span>
-                         REVOKE_SESSION_ACCESS
-                     </button>
-                </section>
+                {activeSection === 'general' && (
+                    <div className="space-y-12 animate-in fade-in duration-500">
+                        <section className="space-y-8">
+                            <div className="flex items-center justify-between px-1">
+                                <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em]">Vault_Orchestration</h2>
+                                <Database size={14} className="text-muted-foreground/30" />
+                            </div>
+                            <div className="space-y-6 p-8 border border-border bg-muted/10 rounded-[2rem]">
+                                <div className="space-y-3">
+                                    <label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Local_Storage_Root</label>
+                                    <textarea
+                                        value={config.obsidianVaultPath || ''}
+                                        onChange={(e) => saveConfig({ obsidianVaultPath: e.target.value })}
+                                        className="w-full bg-background border border-border p-5 rounded-2xl text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-primary min-h-[120px]"
+                                        placeholder="/private/var/mobile/..."
+                                    />
+                                    <div className="p-4 bg-primary/5 border-l-4 border-primary rounded-r-xl space-y-2 mt-4">
+                                        <p className="text-[10px] font-black text-primary uppercase tracking-widest">Protocol Tip:</p>
+                                        <p className="text-[11px] font-medium text-primary/70 leading-relaxed italic">On iOS, use the 'Get File Path' shortcut or inspect the Scriptable log to find the absolute path to your Obsidian container.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                        
+                        <div className="py-10 flex flex-col items-center justify-center text-center opacity-20 space-y-4">
+                            <SettingsIcon size={40} strokeWidth={1} className="animate-spin duration-[10s]" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.5em]">SYSTEM_STABLE</p>
+                        </div>
+                    </div>
+                )}
             </div>
-
-            {/* Bottom Versioning */}
-            <div className="mt-auto p-10 text-center opacity-20">
-                 <span className="label-sm text-[8px] tracking-[0.5em]">LIFE_OS_MOBILE_ALPHA_v0.1.0</span>
-            </div>
-
-            {/* Bottom Spacing */}
-            <div className="h-24 shrink-0" />
         </div>
     )
 }

@@ -1,17 +1,15 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from '@/context/theme-provider'
 import { ConfigProvider } from '@/lib/ConfigContext'
 import { SearchProvider } from '@/context/search-provider'
 import { LayoutProvider } from '@/context/layout-provider'
 import { AuthenticatedLayout } from '@/components/layout/AuthenticatedLayout'
 
-// Pages (Ported/Stubbed for parity)
+// Pages
 import Obsidian from '@/routes/Obsidian'
-import VaultSync from '@/routes/VaultSync'
 import Agents from '@/routes/Agents'
-import Practice from '@/routes/Practice'
 import Settings from '@/routes/Settings'
-import { NoteReader } from '@/routes/NoteReader'
+import Practice from '@/routes/Practice'
 
 import { Toaster } from 'sonner'
 import { ErrorBoundary } from 'react-error-boundary'
@@ -19,9 +17,9 @@ import { ErrorBoundary } from 'react-error-boundary'
 function ErrorFallback({error}: {error: Error}) {
   return (
     <div className="flex flex-col items-center justify-center h-screen p-10 text-center bg-background">
-      <h2 className="display-md text-destructive mb-4">CRITICAL_FAILURE</h2>
-      <p className="body-md text-secondary mb-8">{error.message}</p>
-      <button onClick={() => window.location.reload()} className="px-6 py-3 bg-foreground text-background font-black uppercase">Initialize Retry</button>
+      <h2 className="text-2xl font-black uppercase text-destructive mb-4 tracking-tighter">System Malfunction</h2>
+      <p className="text-xs text-muted-foreground font-medium mb-8 leading-relaxed px-4">{error.message}</p>
+      <button onClick={() => window.location.reload()} className="px-10 py-3 bg-primary text-primary-foreground rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-xl">Re-Initialize</button>
     </div>
   )
 }
@@ -33,20 +31,18 @@ export default function App() {
         <ConfigProvider>
           <LayoutProvider>
             <SearchProvider>
-              <BrowserRouter>
+              <HashRouter>
                 <Routes>
                   <Route element={<AuthenticatedLayout />}>
                     <Route path="/" element={<Navigate to="/obsidian" replace />} />
                     <Route path="/obsidian" element={<Obsidian />} />
-                    <Route path="/vault-sync" element={<VaultSync />} />
-                    <Route path="/agents" element={<Agents />} />
+                    <Route path="/oka" element={<Agents />} />
                     <Route path="/practice" element={<Practice />} />
                     <Route path="/settings" element={<Settings />} />
-                    <Route path="/note/:path" element={<NoteReader />} />
                   </Route>
                 </Routes>
-              </BrowserRouter>
-              <Toaster />
+              </HashRouter>
+              <Toaster position="top-center" />
             </SearchProvider>
           </LayoutProvider>
         </ConfigProvider>

@@ -9,10 +9,28 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  server: {
-    port: 3000,
-    proxy: {
-      '/api': 'http://localhost:8765',
-    }
-  }
+  build: {
+    lib: {
+      entry: path.resolve(__dirname, 'src/main.tsx'),
+      name: 'LifeOS',
+      formats: ['iife'],
+      fileName: () => 'index.js',
+    },
+    minify: 'terser',
+    cssCodeSplit: false,
+    terserOptions: {
+      compress: {
+        drop_console: false,
+        drop_debugger: true,
+      },
+    },
+    rollupOptions: {
+      output: {
+        inlineDynamicImports: true,
+      },
+    },
+  },
+  define: {
+    'process.env.NODE_ENV': '"production"',
+  },
 })

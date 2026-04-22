@@ -1,7 +1,7 @@
 /**
- * Life OS - Configuration Context (Web/Mobile Version)
+ * Life OS - Configuration Context (Mobile Native Version)
  * 
- * Manages storage of API keys and paths via localStorage.
+ * Manages storage of API keys and paths via the Scriptable Native Bridge.
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -22,6 +22,7 @@ export interface AppConfig {
     inboxPath: string;
     academicFolderPath: string;
     autoDeploy: boolean;
+    savedApiKeys: SavedApiKey[];
 }
 
 interface ConfigContextType {
@@ -29,20 +30,21 @@ interface ConfigContextType {
     isLoading: boolean;
     isConfigured: boolean;
     saveConfig: (newConfig: Partial<AppConfig>) => Promise<void>;
+    addApiKey: (key: SavedApiKey) => void;
+    deleteApiKey: (id: string) => void;
 }
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
-
-const STORAGE_KEY = 'life-os-config';
 
 export const DEFAULT_CONFIG: AppConfig = {
     aiProvider: 'google',
     aiApiKey: '',
     aiModel: 'gemini-2.0-flash',
-    obsidianVaultPath: '/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault',
+    obsidianVaultPath: '',
     inboxPath: '',
     academicFolderPath: '1-Academic',
     autoDeploy: false,
+    savedApiKeys: []
 };
 
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -50,18 +52,60 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const initConfig = () => {
+        const initConfig = async () => {
+            let configLoaded = false;
             try {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
+                // Try to get config from native bridge first
+                const requestId = Math.random().toString(36).substring(7);
+                
+                const handler = (event: any) => {
+                    if (event.detail.requestId === requestId) {
+                        window.removeEventListener('lifeos-api-response', handler);
+                        const nativeConfig = event.detail.data;
+                        console.log('[Config] Native config received');
+                        setConfig({ ...DEFAULT_CONFIG, ...nativeConfig });
+                        configLoaded = true;
+                        setIsLoading(false);
+                    }
+                };
+                
+                window.addEventListener('lifeos-api-response', (handler as any));
+                
+                // Timeout fallback to localStorage or default
+                setTimeout(() => {
+                    window.removeEventListener('lifeos-api-response', (handler as any));
+                    if (!configLoaded) {
+                        console.warn('[Config] Native bridge timed out, checking localStorage');
+                        const saved = localStorage.getItem('life-os-config');
+                        if (saved) {
+                            setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
+                        } else {
+                            setConfig(DEFAULT_CONFIG);
+                        }
+                        setIsLoading(false);
+                    }
+                }, 3000);
+
+                if ((window as any).LifeOS && (window as any).LifeOS.send) {
+                    (window as any).LifeOS.send('api_request', {
+                        path: '/api/config',
+                        method: 'GET',
+                        requestId
+                    });
                 } else {
-                    setConfig(DEFAULT_CONFIG);
+                    console.warn('[Config] LifeOS bridge not found during init');
+                    // Immediately trigger fallback if bridge doesn't exist
+                    const saved = localStorage.getItem('life-os-config');
+                    if (saved) {
+                        setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
+                    } else {
+                        setConfig(DEFAULT_CONFIG);
+                    }
+                    setIsLoading(false);
                 }
             } catch (err) {
-                console.error('[Config] Failed to load config:', err);
+                console.error('[Config] Initialization failed:', err);
                 setConfig(DEFAULT_CONFIG);
-            } finally {
                 setIsLoading(false);
             }
         };
@@ -74,13 +118,32 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         try {
             const updatedConfig = { ...config, ...newConfig };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedConfig));
             setConfig(updatedConfig);
-            console.log('[Config] Storage updated successfully.');
+            
+            // Persist to native storage
+            if ((window as any).LifeOS) {
+                (window as any).LifeOS.send('update_config', updatedConfig);
+            }
+            
+            // Fallback persistence
+            localStorage.setItem('life-os-config', JSON.stringify(updatedConfig));
+            console.log('[Config] Persistence successful.');
         } catch (err) {
-            console.error('[Config] Failed to save config:', err);
+            console.error('[Config] Save failed:', err);
             throw err;
         }
+    };
+
+    const addApiKey = (key: SavedApiKey) => {
+        if (!config) return;
+        const newKeys = [...(config.savedApiKeys || []), key];
+        saveConfig({ savedApiKeys: newKeys });
+    };
+
+    const deleteApiKey = (id: string) => {
+        if (!config) return;
+        const newKeys = (config.savedApiKeys || []).filter(k => k.id !== id);
+        saveConfig({ savedApiKeys: newKeys });
     };
 
     const isConfigured = Boolean(
@@ -94,6 +157,8 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             isLoading,
             isConfigured,
             saveConfig,
+            addApiKey,
+            deleteApiKey
         }}>
             {children}
         </ConfigContext.Provider>
