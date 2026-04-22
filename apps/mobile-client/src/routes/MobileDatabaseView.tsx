@@ -6,6 +6,7 @@ import {
     Filter, ArrowUpDown, List, MoreVertical, Database as DatabaseIcon
 } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
+import { safeStorage } from '@/lib/safeStorage'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -127,7 +128,7 @@ export default function MobileDatabaseView() {
     const saveCurrentView = (updates: any) => {
         setSavedViews(prev => {
             const newViews = prev.map(v => v.id === activeViewId ? { ...v, ...updates } : v);
-            localStorage.setItem(`lifeos_mobile_db_views_${id}`, JSON.stringify({
+            safeStorage.setItem(`lifeos_mobile_db_views_${id}`, JSON.stringify({
                 views: newViews,
                 activeId: activeViewId
             }));

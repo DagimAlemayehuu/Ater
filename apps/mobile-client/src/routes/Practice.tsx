@@ -79,6 +79,16 @@ export default function Practice() {
 
   const [keywordInput, setKeywordInput] = useState("")
 
+  const updateDistribution = (type: keyof AdvancedPracticeConfig['questionDistribution'], val: number) => {
+    setAdvancedConfig((prev: AdvancedPracticeConfig) => ({
+      ...prev,
+      questionDistribution: {
+        ...prev.questionDistribution,
+        [type]: val
+      }
+    }))
+  }
+
   const calendarData = useMemo(() => {
     if (!Array.isArray(pastPractices)) return [{ date: new Date().toISOString().split('T')[0], count: 0, level: 0 as 0 }];
     const data = Object.entries(pastPractices.reduce((acc, p) => {
@@ -629,16 +639,6 @@ export default function Practice() {
             </div>
         </div>
       )
-  }
-
-  const updateDistribution = (type: keyof AdvancedPracticeConfig['questionDistribution'], val: number) => {
-    setAdvancedConfig((prev: AdvancedPracticeConfig) => ({
-      ...prev,
-      questionDistribution: {
-        ...prev.questionDistribution,
-        [type]: val
-      }
-    }))
   }
 
   return null;

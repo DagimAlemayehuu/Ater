@@ -21,7 +21,8 @@
 *   [x] **Academic Database Explorer**: High-fidelity mobile view for OKA databases with mastery metrics and unit navigation.
 *   [x] **Binary Data Pipeline**: Hardened PDF and image rendering via native Scriptable bridge.
 
-## 4. Pending Tasks
+*   [x] **Desktop Parity (Obsidian)**: Implemented high-fidelity navigation history, compact structured properties UI, and vault graph visualization.
+*   [x] **Bridge Hardening**: Implemented automatic markdown-stripping and JSON repair logic for AI-generated practice content.
 *   [ ] **Search Optimization**: Fuzzy search across the entire vault using local index.
 *   [ ] **PWA Support**: Implement service worker for offline manuscript reading.
 *   [x] **Desktop Parity (Board Views)**: Implement high-fidelity board views for database visualization.

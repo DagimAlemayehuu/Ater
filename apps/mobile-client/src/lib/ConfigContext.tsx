@@ -5,6 +5,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { safeStorage } from './safeStorage';
 
 export interface SavedApiKey {
     id: string;
@@ -76,7 +77,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     window.removeEventListener('lifeos-api-response', (handler as any));
                     if (!configLoaded) {
                         console.warn('[Config] Native bridge timed out, checking localStorage');
-                        const saved = localStorage.getItem('life-os-config');
+                        const saved = safeStorage.getItem('life-os-config');
                         if (saved) {
                             setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
                         } else {
@@ -95,7 +96,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 } else {
                     console.warn('[Config] LifeOS bridge not found during init');
                     // Immediately trigger fallback if bridge doesn't exist
-                    const saved = localStorage.getItem('life-os-config');
+                    const saved = safeStorage.getItem('life-os-config');
                     if (saved) {
                         setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
                     } else {
@@ -118,16 +119,18 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         try {
             const updatedConfig = { ...config, ...newConfig };
+            const reqId = Math.random().toString(36).substring(7);
+            console.log('[Config] Saving updates:', newConfig, 'ReqID:', reqId);
             setConfig(updatedConfig);
-            
+
             // Persist to native storage
             if ((window as any).LifeOS) {
-                (window as any).LifeOS.send('update_config', updatedConfig);
+                (window as any).LifeOS.send('update_config', { ...updatedConfig, requestId: reqId });
             }
-            
+
             // Fallback persistence
-            localStorage.setItem('life-os-config', JSON.stringify(updatedConfig));
-            console.log('[Config] Persistence successful.');
+            safeStorage.setItem('life-os-config', JSON.stringify(updatedConfig));
+            console.log('[Config] Persistence successful for', reqId);
         } catch (err) {
             console.error('[Config] Save failed:', err);
             throw err;

@@ -113,4 +113,6 @@
 *   [x] **Socratic Lab Stabilization**: Resolved UI crashes and implemented robust metric reduction logic.
 *   [x] **Global Sync Parity**: Real-time connection to sidecar for Vault, Registry, and Mastery data.
 *   [x] **Neural Registry**: Mobile status dashboard for AI Agents and system logs.
+*   [x] **Mobile Obsidian Parity**: Implemented desktop-grade navigation history, compact properties (YAML) UI, and vault graph visualization.
+*   [x] **Bridge Resilience**: Hardened native bridge communication to gracefully handle and repair malformed AI-generated JSON responses.
 *   [x] **Infrastructure Hardening**: Migrated to React 19 with robust Error Boundary safeguards.

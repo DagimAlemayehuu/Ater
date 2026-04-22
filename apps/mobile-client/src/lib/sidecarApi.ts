@@ -4,6 +4,8 @@
  * This client routes all requests through the iOS Scriptable bridge.
  */
 
+import { safeStorage } from './safeStorage'
+
 export interface HealthResponse {
     status: string
     platform: string
@@ -32,7 +34,17 @@ export const sidecarApi = {
                     if (event.detail.error) {
                         reject(new Error(event.detail.error))
                     } else {
-                        resolve(event.detail.data)
+                        let data = event.detail.data;
+                        // Strip markdown code blocks if the response is a string that looks like one
+                        if (typeof data === 'string' && data.includes('```')) {
+                            data = data.replace(/```(?:json)?\n?([\s\S]*?)\n?```/g, '$1').trim();
+                            try {
+                                data = JSON.parse(data);
+                            } catch (e) {
+                                // If it's not valid JSON after stripping, keep it as is
+                            }
+                        }
+                        resolve(data)
                     }
                 }
             }
@@ -49,7 +61,7 @@ export const sidecarApi = {
             if (path.includes('/api/ai/') || path.includes('/api/oka/')) {
                 if (path === '/api/ai/brainstorm' || path === '/api/ai/execute') {
                     const body = options.body ? JSON.parse(options.body as string) : {}
-                    const config = JSON.parse(localStorage.getItem('life-os-config') || '{}')
+                    const config = JSON.parse(safeStorage.getItem('life-os-config') || '{}')
                     
                     ;(window as any).LifeOS.send('api_request', {
                         path: '/api/ai/universal',
@@ -212,5 +224,6 @@ export const sidecarApi = {
     getGymStatus: () => sidecarApi.request<any>('/api/ai/specialists/gym'),
     getScholarStatus: () => sidecarApi.request<any>('/api/ai/specialists/scholar'),
     getVaultBacklinks: (pageName: string) => sidecarApi.request<{ backlinks: any[] }>(`/api/vault/backlinks?pageName=${encodeURIComponent(pageName)}`),
+    getVaultGraph: () => sidecarApi.request<{ nodes: any[], links: any[] }>('/api/vault/graph'),
 }
 

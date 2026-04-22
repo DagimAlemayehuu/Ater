@@ -188,7 +188,7 @@ class NativeBackend {
         }
         databases.push({
           id: folder,
-          name: folder.replace(/^[0-9]+\s*-\s*/, ""),
+          name: folder.replace(/^[0-9]+\\\\s*-\\s*/, ""),
           path: "3-Database/" + folder,
           schema: schema,
           count: contents.length
@@ -217,7 +217,7 @@ class NativeBackend {
     const dbPath = fm.joinPath(this.vaultPath, "3-Database/" + dbId);
     if (!fm.fileExists(dbPath)) fm.createDirectory(dbPath, true);
     
-    const fileName = title.replace(/[^a-z0-9\\s]/gi, '_').replace(/\\s+/g, '_') + ".md";
+    const fileName = title.replace(/[^a-z0-9\\\\s]/gi, '_').replace(/\\\\s+/g, '_') + ".md";
     const fullPath = fm.joinPath(dbPath, fileName);
     
     let content = "---\\ntitle: " + title + "\\n---";
@@ -245,7 +245,7 @@ class NativeBackend {
     
     let content = fm.readString(fullPath);
     let frontmatter = {};
-    const yamlMatch = content.match(/^---\\n([\\s\\S]*?)\\n---/);
+    const yamlMatch = content.match(/^---\\n([\\\\s\\\\S]*?)\\n---/);
     
     if (yamlMatch) {
       const lines = yamlMatch[1].split('\\n');
@@ -256,7 +256,7 @@ class NativeBackend {
       
       frontmatter = { ...frontmatter, ...updates };
       const newYaml = Object.entries(frontmatter).map(([k, v]) => `${k}: ${v}`).join('\\n');
-      content = content.replace(/^---\\n[\\s\\S]*?\\n---/, `---\\n${newYaml}\\n---`);
+      content = content.replace(/^---\\n[\\\\s\\\\S]*?\\n---/, `---\\n${newYaml}\\n---`);
     } else {
       // No frontmatter, create one
       const newYaml = Object.entries(updates).map(([k, v]) => `${k}: ${v}`).join('\\n');
@@ -336,6 +336,8 @@ class NativeBackend {
         }
       }
       else if (path === "/api/obsidian/files") data = await this.listVaultFiles(body?.recursive);
+      else if (path === "/api/obsidian/pick-folder") data = await this.pickVaultFolder();
+      else if (path === "/api/test-ai") data = await this.testAiConnection(body);
       else if (path === "/api/vault/stats") data = await this.getVaultStats();
       else if (path === "/api/vault/databases") data = await this.listVaultDatabases();
       else if (path.startsWith("/api/vault/databases/")) {
@@ -387,8 +389,10 @@ class NativeBackend {
         // Specialized OKA handling for mobile
         if (path === "/api/oka/process") data = await this.okaProcess(body);
         else if (path === "/api/oka/explain") data = await this.okaExplain(body);
+        else if (path === "/api/oka/quick-questions") data = await this.okaExplain(body); // Use explain as fallback
         else if (path === "/api/oka/interactive-quiz") data = await this.okaQuiz(body);
         else if (path === "/api/oka/chat") data = await this.okaChat(body);
+        else if (path === "/api/academics/dashboard") data = { gpa: "N/A", credits: 0, status: "Active", units: [] };
         else if (path === "/api/oka/inbox") data = await this.okaListInbox();
         else if (path === "/api/oka/generated") data = await this.okaListGenerated();
         else if (path === "/api/oka/pick-to-inbox") data = await this.pickFileToInbox();
@@ -490,7 +494,7 @@ class NativeBackend {
 
   async practiceGet(path) {
     const note = await this.readNote(path);
-    const jsonMatch = note.content.match(/```json\\n([\\s\\S]*?)\\n```/);
+    const jsonMatch = note.content.match(/```json\\\\n([\\\\s\\\\S]*?)\\\\n```/);
     if (jsonMatch) {
       try {
         const questions = JSON.parse(jsonMatch[1]);
@@ -531,37 +535,56 @@ class NativeBackend {
     
     // 1. Gather context from hub
     const hub = await this.readNote("3-Database/06 - Study Planner/" + hubId);
-    let context = "HUB_TOPIC: " + hubId + "\\n\\nCONTENT_PREVIEW:\\n" + hub.content.substring(0, 3000);
+    let context = "HUB_TOPIC: " + hubId + "\\\\n\\\\nCONTENT_PREVIEW:\\\\n" + hub.content.substring(0, 3000);
     
     // 2. Refined Pedagogical Prompt
-    const prompt = `You are OKA, the Sovereign Pedagogical Architect. Your mission is to construct a High-Fidelity Retrieval Session.\\n\\n` +
-                   `TARGET_HUB: ${hubId}\\n` +
-                   `PEDAGOGICAL_PARAMETERS:\\n` +
-                   `- Difficulty: ${config.difficulty || 'L1'}\\n` +
-                   `- Distribution: ${JSON.stringify(config.questionDistribution)}\\n` +
-                   `- Strictness: ${config.gradingStrictness || 'Standard'}\\n\\n` +
-                   `SOURCE_CONTEXT:\\n${context}\\n\\n` +
-                   `CONSTRUCTION_RULES:\\n` +
-                   `1. Generate a "questions" array within a JSON object.\\n` +
-                   `2. Types allowed: "mcq", "true_false", "short_answer".\\n` +
-                   `3. Each MCQ must have 4 plausible distractors (options A, B, C, D).\\n` +
-                   `4. Each question MUST have a "explanation" field detailing the "Why" behind the correct answer.\\n` +
-                   `5. Ensure all questions are unique and map to core concepts in the context.\\n` +
+    const prompt = `You are OKA, the Sovereign Pedagogical Architect. Your mission is to construct a High-Fidelity Retrieval Session.\\\\n\\\\n` +
+                   `TARGET_HUB: ${hubId}\\\\n` +
+                   `PEDAGOGICAL_PARAMETERS:\\\\n` +
+                   `- Difficulty: ${config.difficulty || 'L1'}\\\\n` +
+                   `- Distribution: ${JSON.stringify(config.questionDistribution)}\\\\n` +
+                   `- Strictness: ${config.gradingStrictness || 'Standard'}\\\\n\\\\n` +
+                   `SOURCE_CONTEXT:\\\\n${context}\\\\n\\\\n` +
+                   `CONSTRUCTION_RULES:\\\\n` +
+                   `1. Generate a "questions" array within a JSON object.\\\\n` +
+                   `2. Types allowed: "mcq", "true_false", "short_answer".\\\\n` +
+                   `3. Each MCQ must have 4 plausible distractors (options A, B, C, D).\\\\n` +
+                   `4. Each question MUST have a "explanation" field detailing the "Why" behind the correct answer.\\\\n` +
+                   `5. Ensure all questions are unique and map to core concepts in the context.\\\\n` +
                    `6. RETURN ONLY THE JSON OBJECT. NO MARKDOWN TAGS.`;
     
     const aiRes = await this.universalAiRequest({ 
+      provider: this.config.plannerProvider || this.config.aiProvider || "google",
+      model: this.config.plannerModel || this.config.aiModel || "gemini-2.0-flash",
+      apiKey: this.config.plannerApiKey || this.config.aiApiKey || this.config.geminiApiKey,
       messages: [{ role: "user", content: prompt }],
       system_prompt: "You are the LifeOS Retrieval Specialist. You output ONLY structured JSON data. No conversational filler." 
     });
 
     try {
       let rawJson = aiRes.response.trim();
-      // Safety: strip markdown code blocks if AI ignored system prompt
-      rawJson = rawJson.replace(/^\`{3}json/i, "").replace(/\`{3}$/, "").trim();
+      
+      // Robust Extraction: Try to find JSON inside code blocks first
+      const codeBlockMatch = rawJson.match(/```(?:json)?\\\\n?([\\\\s\\\\S]*?)```/i);
+      if (codeBlockMatch) {
+        rawJson = codeBlockMatch[1].trim();
+      } else {
+        // Fallback: Try to find anything between the first { and the last }
+        const bracketMatch = rawJson.match(/(\\{[\\\\s\\\\S]*\\})/);
+        if (bracketMatch) {
+          rawJson = bracketMatch[1].trim();
+        }
+      }
       
       const questionsData = JSON.parse(rawJson);
-      const questions = Array.isArray(questionsData.questions) ? questionsData.questions : (Array.isArray(questionsData) ? questionsData : []);
+      let questions = Array.isArray(questionsData.questions) ? questionsData.questions : (Array.isArray(questionsData) ? questionsData : []);
       
+      // Ensure every question has an ID for React keys
+      questions = questions.map((q, idx) => ({
+        ...q,
+        id: q.id || `q-${idx}-${Date.now()}`
+      }));
+
       if (questions.length === 0) throw new Error("No questions generated by AI.");
 
       // 3. Save to vault for persistence
@@ -570,7 +593,7 @@ class NativeBackend {
       const relPath = "9-OKA/Practice/" + fileName;
       
       const mdContent = `---\\ntype: practice\\nhub_id: ${hubId}\\ndate: ${new Date().toISOString().split('T')[0]}\\ndifficulty: ${config.difficulty}\\nscore: null\\ncompleted: false\\n---\\n\\n# Practice Session: ${hubId.replace(".md", "")}\\n\\n` +
-                        "```json\\n" + JSON.stringify(questions, null, 2) + "\\n```";
+                        "```json\\n" + JSON.stringify({ questions }, null, 2) + "\\n```";
       
       await this.writeNote(relPath, mdContent);
       return { questions, quiz_path: relPath };
@@ -582,7 +605,7 @@ class NativeBackend {
 
   parseYaml(content) {
     const metadata = {};
-    const yamlMatch = content.match(/^---\\n([\\s\\S]*?)\\n---/);
+    const yamlMatch = content.match(/^---\\n([\\\\s\\\\S]*?)\\n---/);
     if (yamlMatch) {
       const yamlLines = yamlMatch[1].split('\\n');
       for (const line of yamlLines) {
@@ -623,7 +646,7 @@ class NativeBackend {
     const allFiles = await this.listVaultFiles(true);
     const backlinks = [];
     const escapedPage = pageName.replace(/[-\\/\\\\^$*+?.()|[\\]{}]/g, "\\\\$&");
-    const wikiLinkRegex = new RegExp(`\\[\\[${escapedPage}(\\|.*?)?\\]\\]`, "i");
+    const wikiLinkRegex = new RegExp(`\\\\[\\\\[${escapedPage}(\\\\|.*?)?\\\\]\\\\]`, "i");
     for (const f of allFiles.files) {
       if (!f.is_dir && f.path.endsWith(".md")) {
         try {
@@ -651,21 +674,21 @@ class NativeBackend {
     }
     const prompt = "Summarize the following technical note for a pedagogical vault. " +
                    "Focus on core concepts and relationships. Then generate 3 Socratic discovery questions. " +
-                   "Format as markdown. \\n\\nContent:\\n" + content;
+                   "Format as markdown. \\\\n\\\\nContent:\\\\n" + content;
     const res = await this.universalAiRequest({ messages: [{ role: "user", content: prompt }] });
     return { status: "success", summary: res.response, questions: ["How does this relate to previous units?", "What is the edge case here?"] };
   }
 
   async okaExplain(payload) {
     const { selection, path, page } = payload;
-    const prompt = `Explain this selection from the document "${path}" (Page ${page || 1}):\\n\\n"${selection}"\\n\\nProvide a high-fidelity, pedagogical explanation.`;
+    const prompt = `Explain this selection from the document "${path}" (Page ${page || 1}):\\\\n\\\\n"${selection}"\\\\n\\\\nProvide a high-fidelity, pedagogical explanation.`;
     const aiRes = await this.universalAiRequest({ messages: [{ role: "user", content: prompt }] });
     return { answer: aiRes.response };
   }
 
   async okaQuiz(payload) {
     const { selection } = payload;
-    const prompt = `Based on the following text, generate 3 high-quality multiple-choice questions for retrieval practice.\\n\\nTEXT:\\n"${selection}"\\n\\nFormat the output as a JSON object with a "questions" array. Each question should have:\\n- question: string\\n- options: string[]\\n- answer: string (must be one of the options)\\n- explanation: string`;
+    const prompt = `Based on the following text, generate 3 high-quality multiple-choice questions for retrieval practice.\\\\n\\\\nTEXT:\\\\n"${selection}"\\\\n\\\\nFormat the output as a JSON object with a "questions" array. Each question should have:\\\\n- question: string\\\\n- options: string[]\\\\n- answer: string (must be one of the options)\\\\n- explanation: string`;
     const aiRes = await this.universalAiRequest({ messages: [{ role: "user", content: prompt }], system_prompt: "You are the LifeOS Retrieval Specialist. Return ONLY valid JSON." });
     try {
       const cleaned = aiRes.response.replace(/```json|```/g, "").trim();
@@ -737,7 +760,7 @@ class NativeBackend {
     if (!fm.fileExists(fullPath)) throw new Error("File not found: " + notePath);
     const content = fm.readString(fullPath);
     let metadata = {};
-    const yamlMatch = content.match(/^---\\n([\\s\\S]*?)\\n---/);
+    const yamlMatch = content.match(/^---\\n([\\\\s\\\\S]*?)\\n---/);
     if (yamlMatch) {
       const yamlLines = yamlMatch[1].split('\\n');
       for (const line of yamlLines) {
@@ -782,20 +805,56 @@ class NativeBackend {
     return { results };
   }
 
+  async testAiConnection(payload) {
+    const { target } = payload;
+    let apiKey = this.config.aiApiKey || this.config.geminiApiKey;
+    let model = this.config.aiModel;
+    let provider = this.config.aiProvider || "google";
+
+    if (target === "planner") {
+      apiKey = this.config.plannerApiKey || apiKey;
+      model = this.config.plannerModel || model;
+      provider = this.config.plannerProvider || provider;
+    } else if (target === "utility") {
+      apiKey = this.config.utilityApiKey || apiKey;
+      model = this.config.utilityModel || model;
+      provider = this.config.utilityProvider || provider;
+    }
+
+    try {
+      const res = await this.universalAiRequest({
+        provider,
+        model,
+        messages: [{ role: "user", content: "Respond with exactly 'PONG'" }],
+        apiKey
+      });
+      return { success: true, message: res.response };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
+  }
+
   async universalAiRequest(payload) {
-    const { provider, model, messages, system_prompt } = payload;
-    const apiKey = this.config.aiApiKey || this.config.geminiApiKey;
+    const { provider, model, messages, system_prompt, apiKey: overrideKey } = payload;
+    let apiKey = overrideKey || this.config.aiApiKey || this.config.geminiApiKey;
+    
+    // Check planner/utility tiers if needed
+    if (!apiKey) apiKey = this.config.plannerApiKey || this.config.utilityApiKey;
     if (!apiKey) throw new Error("AI API Key missing in config");
+    
     let url = provider === "google" ? `https://generativelanguage.googleapis.com/v1beta/models/${model || "gemini-2.0-flash"}:generateContent?key=${apiKey}` : (provider === "openai" ? "https://api.openai.com/v1/chat/completions" : (provider === "groq" ? "https://api.groq.com/openai/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions"));
     let headers = { "Content-Type": "application/json" };
     if (provider !== "google") headers["Authorization"] = `Bearer ${apiKey}`;
+    
     let body = provider === "google" ? { contents: [{ role: "user", parts: [{ text: system_prompt || "" }] }, ...messages.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }))] } : { model, messages: [{ role: "system", content: system_prompt || "" }, ...messages] };
     const req = new Request(url);
     req.method = "POST";
     req.headers = headers;
     req.body = JSON.stringify(body);
     const res = await req.loadJSON();
+    
     if (res.error) throw new Error(res.error.message || JSON.stringify(res.error));
+    
     let text = provider === "google" ? (res.candidates?.[0]?.content?.parts?.[0]?.text || "No response from AI") : (res.choices?.[0]?.message?.content || "No response from AI");
     return { response: text };
   }
@@ -823,7 +882,7 @@ async function main() {
         wv.evaluateJavaScript(js);
         console.log("[Native] Response sent for: " + request.path);
       } else if (request.type === "update_config") {
-        const { type, ...configOnly } = request;
+        const { type, requestId, ...configOnly } = request;
         backend.saveConfig(configOnly);
       } else if (request.type === "log") {
         console.log("[WebView] " + request.message);
