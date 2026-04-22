@@ -24,6 +24,6 @@
 ## 4. Pending Tasks
 *   [ ] **Search Optimization**: Fuzzy search across the entire vault using local index.
 *   [ ] **PWA Support**: Implement service worker for offline manuscript reading.
-*   [ ] **Desktop Parity (Board Views)**: Implement high-fidelity board views for database visualization.
+*   [x] **Desktop Parity (Board Views)**: Implement high-fidelity board views for database visualization.
 *   [ ] **PDF Upload Flow**: Native mobile file picker for initiating OKA ingestion batches.
 *   [ ] **Biometric Lock**: Privacy layer for sovereign knowledge vaults.
