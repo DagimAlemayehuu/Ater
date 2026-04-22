@@ -10,7 +10,7 @@ export function AuthenticatedLayout() {
       <MobileHeader />
 
       {/* Main Content Area - Scrollable */}
-      <main className="flex-1 overflow-y-auto mt-16 mb-20 custom-scrollbar relative">
+      <main className="flex-1 overflow-y-auto pt-16 pt-safe mb-20 custom-scrollbar relative">
         <Outlet />
       </main>
 

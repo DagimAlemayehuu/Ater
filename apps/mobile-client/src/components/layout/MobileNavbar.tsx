@@ -1,7 +1,7 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { Settings, Archive, Zap, GraduationCap } from 'lucide-react'
+import { Settings, Archive, Zap, GraduationCap, Database } from 'lucide-react'
 
 interface NavItem {
   label: string
@@ -11,6 +11,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'VAULT', icon: Archive, path: '/obsidian' },
+  { label: 'REGISTRY', icon: Database, path: '/registry' },
   { label: 'OKA', icon: Zap, path: '/oka' },
   { label: 'PRACTICE', icon: GraduationCap, path: '/practice' },
   { label: 'SYSTEM', icon: Settings, path: '/settings' },

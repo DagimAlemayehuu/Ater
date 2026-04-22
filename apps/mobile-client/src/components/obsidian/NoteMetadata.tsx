@@ -1,7 +1,7 @@
 import React from 'react'
 import { 
     GraduationCap, Calendar, Building, Circle, 
-    Paperclip, FileText, Info, ChevronRight 
+    Paperclip, FileText, Info, ChevronRight, Network 
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -9,49 +9,60 @@ export function NoteProperties({ metadata, onNavigate }: { metadata: Record<stri
     if (!metadata || Object.keys(metadata).length === 0) return null
 
     const getPropertyIcon = (key: string) => {
-        switch (key.toLowerCase()) {
-            case 'course': return <GraduationCap size={16} />
-            case 'semester': return <Calendar size={16} />
-            case 'department': return <Building size={16} />
-            case 'status': return <Circle size={16} />
-            case 'source': return <Paperclip size={16} />
-            case 'source_page': return <FileText size={16} />
-            default: return <Info size={16} />
-        }
+        const k = key.toLowerCase();
+        if (k.includes('course')) return <GraduationCap size={14} className="text-primary/60" />
+        if (k.includes('semester')) return <Calendar size={14} className="text-primary/60" />
+        if (k.includes('dept') || k.includes('institution')) return <Building size={14} className="text-primary/60" />
+        if (k.includes('status')) return <Circle size={14} className="text-primary/60" />
+        if (k.includes('hub') || k.includes('topology')) return <Network size={14} className="text-primary/60" />
+        return <Info size={14} className="text-primary/60" />
     }
     
     return (
-        <div className="flex flex-col gap-4 mb-8">
-            <div className="grid grid-cols-1 gap-y-4 py-6 border-y border-border/50">
-                {Object.entries(metadata).slice(0, 8).map(([key, value]) => (
-                    <div key={key} className="flex items-start gap-4">
-                        <div className="w-5 flex justify-center text-muted-foreground mt-0.5">
-                            {getPropertyIcon(key)}
-                        </div>
-                        <div className="flex flex-col min-w-0">
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-0.5">{key.replace(/_/g, ' ')}</span>
-                            <div className="text-xs font-bold text-primary">
-                                {key.toLowerCase() === 'status' ? (
-                                    <span className={cn(
-                                        "px-2 py-0.5 rounded-sm text-[9px] uppercase font-black tracking-widest inline-block",
-                                        value === 'Completed' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                                    )}>{String(value)}</span>
+        <div className="flex flex-col gap-6 mb-12 animate-in slide-in-from-top-4 duration-700">
+            <div className="grid grid-cols-2 gap-4">
+                {Object.entries(metadata).map(([key, value]) => {
+                    if (['hub', 'Course', 'Status'].includes(key)) return null; // These are often handled separately or prominent
+                    return (
+                        <div key={key} className="p-4 bg-muted/5 border border-border/40 rounded-2xl flex flex-col gap-2 transition-all hover:bg-muted/10 active:scale-95">
+                            <div className="flex items-center gap-2">
+                                {getPropertyIcon(key)}
+                                <span className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em]">{key.replace(/_/g, ' ')}</span>
+                            </div>
+                            <div className="text-[11px] font-bold text-primary truncate">
+                                {String(value).startsWith('[[') ? (
+                                    <button 
+                                        onClick={() => onNavigate(String(value).slice(2, -2))}
+                                        className="text-primary hover:underline decoration-primary/30 underline-offset-2 text-left"
+                                    >
+                                        {String(value).slice(2, -2).split('/').pop()}
+                                    </button>
                                 ) : (
-                                    String(value).startsWith('[[') ? (
-                                        <button 
-                                            onClick={() => onNavigate(String(value).slice(2, -2))}
-                                            className="text-primary underline decoration-border/50 underline-offset-2 text-left"
-                                        >
-                                            {String(value).slice(2, -2).split('/').pop()}
-                                        </button>
-                                    ) : (
-                                        <span className="break-words">{String(value)}</span>
-                                    )
+                                    <span className="break-words">{String(value)}</span>
                                 )}
                             </div>
                         </div>
+                    )
+                })}
+            </div>
+
+            {/* Prominent Metadata Badges */}
+            <div className="flex flex-wrap gap-2">
+                {metadata.Status && (
+                    <div className={cn(
+                        "px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 border shadow-sm",
+                        metadata.Status === 'Completed' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-amber-500/10 border-amber-500/20 text-amber-600'
+                    )}>
+                        <div className={cn("w-1.5 h-1.5 rounded-full", metadata.Status === 'Completed' ? 'bg-emerald-500' : 'bg-amber-500')} />
+                        {metadata.Status}
                     </div>
-                ))}
+                )}
+                {metadata.Course && (
+                    <div className="px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest bg-primary/10 border border-primary/20 text-primary flex items-center gap-2">
+                        <GraduationCap size={12} />
+                        {String(metadata.Course).replace(/\[\[|\]\]/g, '')}
+                    </div>
+                )}
             </div>
         </div>
     )

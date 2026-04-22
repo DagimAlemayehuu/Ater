@@ -1,17 +1,16 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { 
-    Send, Bot, User, Trash2, ShieldCheck, RefreshCw, 
-    Sparkles, Paperclip, FileText, Folder, ChevronRight, 
-    Search, LayoutGrid, BrainCircuit, X, Zap, Activity, 
-    PauseCircle, ListChecks, Archive, Terminal, Database,
-    ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft, Layout, FolderOpen,
-    Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Users, Settings, Network,
-    Edit3, Save, MoreVertical, Menu
+    Menu, Search, FileText, ChevronRight, Folder, 
+    Save, Edit3, X, Network, Archive, RefreshCw, FolderOpen, Database,
+    Send, Bot, User, Trash2, ShieldCheck, 
+    Sparkles, Paperclip, ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft, Layout,
+    Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Users, Settings, BrainCircuit, Zap, Activity, PauseCircle, ListChecks, Terminal,
+    MoreVertical, ArrowRight
 } from 'lucide-react'
 import { sidecarApi, ObsidianFile } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 import { useConfig } from '@/lib/ConfigContext'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
@@ -25,10 +24,47 @@ import {
 } from '@/components/ui/sheet'
 import React from 'react'
 
+const PdfViewer = ({ path }: { path: string }) => {
+    const [dataUrl, setDataUrl] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPdf = async () => {
+            setLoading(true);
+            try {
+                const res = await (sidecarApi as any).readBinaryFile(path);
+                setDataUrl(`data:application/pdf;base64,${res.data}`);
+            } catch (e) {
+                console.error("PDF Fail", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchPdf();
+    }, [path]);
+
+    if (loading) return (
+        <div className="flex-1 flex items-center justify-center">
+            <RefreshCw className="animate-spin text-primary/20" size={40} />
+        </div>
+    );
+
+    return (
+        <div className="flex-1 w-full h-full bg-background overflow-hidden">
+            <embed 
+                src={dataUrl || ""} 
+                type="application/pdf" 
+                className="w-full h-full border-none" 
+            />
+        </div>
+    );
+};
+
 export default function ObsidianVaultPage() {
     const { config } = useConfig()
     const location = useLocation()
     const navigate = useNavigate()
+    const { '*': pathParam } = useParams()
     
     // --- Vault Explorer State ---
     const [files, setFiles] = useState<ObsidianFile[]>([])
@@ -46,6 +82,7 @@ export default function ObsidianVaultPage() {
     // --- Mobile Drawers ---
     const [isExplorerOpen, setIsExplorerOpen] = useState(false)
     const [isConnectionsOpen, setIsConnectionsOpen] = useState(false)
+    const [isPropertiesOpen, setIsPropertiesOpen] = useState(false)
 
     useEffect(() => {
         const fetchHubConnections = async () => {
@@ -91,6 +128,7 @@ export default function ObsidianVaultPage() {
     }, [config?.obsidianVaultPath])
 
     const fetchFiles = async () => {
+        if (loadingFiles) return
         setLoadingFiles(true)
         try {
             const res = await sidecarApi.listObsidianFiles(true)
@@ -104,10 +142,16 @@ export default function ObsidianVaultPage() {
 
     const selectFile = async (path: string) => {
         setSelectedPath(path)
-        setLoadingNote(true)
         setIsExplorerOpen(false)
         setIsConnectionsOpen(false)
 
+        if (path.toLowerCase().endsWith('.pdf')) {
+            setNoteMetadata({})
+            setNoteContent('')
+            return
+        }
+
+        setLoadingNote(true)
         try {
             const res = await sidecarApi.readObsidianNote(path)
             setNoteMetadata(res.metadata || {})
@@ -120,6 +164,13 @@ export default function ObsidianVaultPage() {
         } finally { setLoadingNote(false) }
     }
 
+    // Load from URL param if exists
+    useEffect(() => {
+        if (pathParam && pathParam !== selectedPath) {
+            selectFile(pathParam)
+        }
+    }, [pathParam, selectedPath])
+
     const handleSaveNote = async () => {
         if (!selectedPath) return
         setLoadingNote(true)
@@ -131,6 +182,18 @@ export default function ObsidianVaultPage() {
             alert("Save failed")
         } finally {
             setLoadingNote(false)
+        }
+    }
+
+    const handlePickFolder = async () => {
+        console.log("[Obsidian] Folder picker initiated");
+        try {
+            const res = await (sidecarApi as any).pickVaultFolder()
+            if (res.success) {
+                fetchFiles()
+            }
+        } catch (err) {
+            console.error('Failed to pick folder:', err)
         }
     }
 
@@ -181,55 +244,238 @@ export default function ObsidianVaultPage() {
         )
     }
 
+    const [activeTab, setActiveTab] = useState<'manuscripts' | 'databases'>('manuscripts')
+    const [databases, setDatabases] = useState<any[]>([])
+    const [selectedDb, setSelectedDb] = useState<any | null>(null)
+    const [dbUnits, setDbUnits] = useState<any[]>([])
+    const [dbStats, setDbStats] = useState<any>(null)
+    const [loadingDb, setLoadingDb] = useState(false)
+
+    useEffect(() => {
+        if (activeTab === 'databases') loadDatabases()
+    }, [activeTab])
+
+    const loadDatabases = async () => {
+        setLoadingDb(true)
+        try {
+            const res = await sidecarApi.listVaultDatabases()
+            setDatabases(res.databases)
+        } catch (err) {
+            console.error("DB Load Fail", err)
+        } finally {
+            setLoadingDb(false)
+        }
+    }
+
+    const selectDatabase = async (db: any) => {
+        setSelectedDb(db)
+        setLoadingDb(true)
+        try {
+            const [unitsRes, statsRes] = await Promise.all([
+                sidecarApi.listDatabaseUnits(db.id),
+                sidecarApi.getDatabaseStats(db.id)
+            ])
+            setDbUnits(unitsRes.results)
+            setDbStats(statsRes)
+        } catch (err) {
+            console.error("DB Detail Fail", err)
+        } finally {
+            setLoadingDb(false)
+        }
+    }
+
+    // --- Context Toolbar - Only show if note or DB detail is active ---
+    const showToolbar = selectedPath || selectedDb;
+
     return (
         <div className="flex flex-col h-full bg-background animate-in fade-in duration-500 overflow-hidden">
-            {/* Context Toolbar */}
-            <div className="h-14 border-b border-border/50 flex items-center justify-between px-4 bg-background/80 backdrop-blur-md sticky top-0 z-40">
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => setIsExplorerOpen(true)}>
-                        <Menu size={20} />
-                    </Button>
-                    <div className="h-4 w-px bg-border mx-1" />
-                    <span className="text-[11px] font-black uppercase tracking-widest text-primary truncate max-w-[120px]">
-                        {selectedPath ? selectedPath.split('/').pop() : 'VAULT_EXPLORER'}
-                    </span>
-                </div>
-                
-                <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => setIsConnectionsOpen(true)}>
-                        <Network size={18} />
-                    </Button>
-                    {selectedPath && (
-                        <Button variant="ghost" size="icon" onClick={() => setIsEditing(!isEditing)}>
-                            {isEditing ? <X size={18} /> : <Edit3 size={18} />}
+            {showToolbar && (
+                <div className="h-14 border-b border-border/50 flex items-center justify-between px-4 bg-background/80 backdrop-blur-md sticky top-0 z-40">
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => { setSelectedPath(null); setSelectedDb(null); }}>
+                            <ChevronLeft size={20} />
                         </Button>
-                    )}
-                    {isEditing && (
-                        <Button variant="ghost" size="icon" onClick={handleSaveNote} className="text-primary">
-                            <Save size={18} />
-                        </Button>
-                    )}
+                        <div className="h-4 w-px bg-border mx-1" />
+                        <span className="text-[11px] font-black uppercase tracking-widest text-primary truncate max-w-[120px]">
+                            {selectedPath ? selectedPath.split('/').pop() : selectedDb?.title}
+                        </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                        {selectedPath && (
+                            <>
+                                <Button variant="ghost" size="icon" onClick={() => setIsConnectionsOpen(true)}>
+                                    <Network size={18} />
+                                </Button>
+                                {!selectedPath.toLowerCase().endsWith('.pdf') && (
+                                    <>
+                                        <Button variant="ghost" size="icon" onClick={() => setIsPropertiesOpen(!isPropertiesOpen)}>
+                                            <Info size={18} className={cn(isPropertiesOpen && "text-primary")} />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => setIsEditing(!isEditing)}>
+                                            {isEditing ? <X size={18} /> : <Edit3 size={18} />}
+                                        </Button>
+                                    </>
+                                )}
+                                {isEditing && (
+                                    <Button variant="ghost" size="icon" onClick={handleSaveNote} className="text-primary">
+                                        <Save size={18} />
+                                    </Button>
+                                )}
+                            </>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
-            <main className="flex-1 relative overflow-hidden flex flex-col">
-                {!selectedPath ? (
-                    <div className="flex-1 flex flex-col items-center justify-center p-10 text-center space-y-6">
-                        <div className="w-20 h-20 bg-muted/20 rounded-3xl flex items-center justify-center text-muted-foreground animate-pulse">
-                            <Archive size={40} strokeWidth={1} />
+            <main className="flex-1 relative overflow-hidden flex flex-col pt-safe">
+                {!selectedPath && !selectedDb ? (
+                    config?.obsidianVaultPath ? (
+                        <div className="flex-1 flex flex-col h-full bg-background animate-in fade-in duration-700">
+                            {/* Compact Registry Header */}
+                            <div className="p-6 pb-2 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-0.5">
+                                        <h1 className="text-2xl font-black uppercase tracking-tighter">Registry</h1>
+                                        <p className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.4em] opacity-40">Knowledge_Index</p>
+                                    </div>
+                                    <Database size={16} className="text-primary/20" />
+                                </div>
+
+                                {/* Tab Switcher */}
+                                <div className="flex p-1 bg-muted/20 rounded-xl border border-border/40">
+                                    <button 
+                                        onClick={() => setActiveTab('manuscripts')}
+                                        className={cn(
+                                            "flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all",
+                                            activeTab === 'manuscripts' ? "bg-background text-primary shadow-sm" : "text-muted-foreground/60"
+                                        )}
+                                    >
+                                        Manuscripts
+                                    </button>
+                                    <button 
+                                        onClick={() => setActiveTab('databases')}
+                                        className={cn(
+                                            "flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all",
+                                            activeTab === 'databases' ? "bg-background text-primary shadow-sm" : "text-muted-foreground/60"
+                                        )}
+                                    >
+                                        Databases
+                                    </button>
+                                </div>
+
+                                <div className="relative group">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40" size={12} />
+                                    <input 
+                                        placeholder={activeTab === 'manuscripts' ? "Filter manuscripts..." : "Search databases..."}
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full bg-muted/10 border border-border/40 p-3 pl-9 text-[11px] font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/20 uppercase tracking-widest"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-hidden relative">
+                                <ScrollArea className="h-full px-4 pt-2 pb-40">
+                                    {activeTab === 'manuscripts' ? (
+                                        loadingFiles && files.length === 0 ? (
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-30">
+                                                <RefreshCw className="animate-spin mb-4" size={32} />
+                                                <span className="text-[8px] font-black uppercase tracking-[0.4em]">Mapping_Index</span>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-1 pb-40">
+                                                {renderFileTree()}
+                                            </div>
+                                        )
+                                    ) : (
+                                        <div className="space-y-3 pb-40">
+                                            {databases.map(db => (
+                                                <button 
+                                                    key={db.id}
+                                                    onClick={() => selectDatabase(db)}
+                                                    className="w-full p-6 bg-muted/5 border border-border/40 rounded-2xl flex items-center justify-between group active:scale-[0.98] transition-all"
+                                                >
+                                                    <div className="flex flex-col text-left gap-1">
+                                                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Database</span>
+                                                        <span className="text-xs font-black uppercase tracking-tight text-primary">{db.title}</span>
+                                                    </div>
+                                                    <ChevronRight size={16} className="text-muted-foreground/20 group-hover:text-primary transition-colors" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </ScrollArea>
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <h2 className="text-xl font-black uppercase tracking-tighter">No Manuscript Selected</h2>
-                            <p className="text-xs text-muted-foreground px-10">Initialize selection via the system registry.</p>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center p-10 text-center space-y-8 animate-in zoom-in-95 duration-500">
+                            <div className="w-24 h-24 bg-muted/20 rounded-[2.5rem] flex items-center justify-center text-muted-foreground/40 shadow-inner">
+                                <Archive size={48} strokeWidth={1} />
+                            </div>
+                            <div className="space-y-3">
+                                <h2 className="text-2xl font-black uppercase tracking-tighter">Nexus Disconnected</h2>
+                                <p className="text-[11px] font-bold text-muted-foreground/60 px-10 leading-relaxed uppercase tracking-wider">Initialize knowledge bridge via System_Infrastructure.</p>
+                            </div>
+                            <div className="flex flex-col w-full gap-4 px-6 pt-6">
+                                <Button onClick={() => navigate('/settings')} className="w-full font-black uppercase tracking-widest text-[10px] py-8 rounded-2xl shadow-xl">
+                                    Configure_Protocol
+                                </Button>
+                            </div>
                         </div>
-                        <Button onClick={() => setIsExplorerOpen(true)} className="px-10 font-bold uppercase tracking-widest text-xs py-6 shadow-xl">
-                            Open Explorer
-                        </Button>
+                    )
+                ) : selectedDb ? (
+                    <div className="flex-1 flex flex-col h-full bg-background overflow-hidden animate-in slide-in-from-right duration-500">
+                        {loadingDb ? (
+                            <div className="flex-1 flex items-center justify-center">
+                                <RefreshCw className="animate-spin text-primary/20" size={40} />
+                            </div>
+                        ) : (
+                            <ScrollArea className="flex-1">
+                                <div className="p-8 space-y-12 pb-40">
+                                    {/* DB Header Stats */}
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div className="p-4 bg-muted/10 border border-border rounded-2xl flex flex-col gap-1">
+                                            <span className="text-[7px] font-black uppercase text-muted-foreground tracking-widest">Active</span>
+                                            <span className="text-lg font-black text-primary">{dbStats?.activeCount}</span>
+                                        </div>
+                                        <div className="p-4 bg-muted/10 border border-border rounded-2xl flex flex-col gap-1">
+                                            <span className="text-[7px] font-black uppercase text-muted-foreground tracking-widest">Pending</span>
+                                            <span className="text-lg font-black text-amber-500">{dbStats?.pendingCount}</span>
+                                        </div>
+                                        <div className="p-4 bg-muted/10 border border-border rounded-2xl flex flex-col gap-1">
+                                            <span className="text-[7px] font-black uppercase text-muted-foreground tracking-widest">Mastery</span>
+                                            <span className="text-lg font-black text-emerald-500">{dbStats?.masteryLevel}%</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Unit List */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 px-2 flex items-center gap-2">
+                                            <div className="w-1 h-1 bg-primary rounded-full" />
+                                            Database_Units
+                                        </h3>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            {dbUnits.map(unit => (
+                                                <button 
+                                                    key={unit.id}
+                                                    onClick={() => selectFile(unit.path)}
+                                                    className="p-5 bg-muted/5 border border-border/40 rounded-2xl flex items-center justify-between text-left group active:scale-[0.99] transition-all"
+                                                >
+                                                    <span className="text-[11px] font-bold uppercase tracking-tight text-primary/80 group-hover:text-primary">{unit.title}</span>
+                                                    <ArrowRight size={12} className="text-muted-foreground/20 group-hover:text-primary" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </ScrollArea>
+                        )}
                     </div>
                 ) : loadingNote ? (
                     <div className="flex-1 flex flex-col items-center justify-center gap-4">
-                        <RefreshCw className="animate-spin text-primary" size={32} />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Syncing Knowledge...</span>
+                        <RefreshCw className="animate-spin text-primary/20" size={40} />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Syncing Knowledge...</span>
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -242,12 +488,13 @@ export default function ObsidianVaultPage() {
                             />
                         ) : (
                             <div className="flex-1 h-full overflow-hidden flex flex-col">
-                                <ScrollArea className="flex-1">
-                                    <div className="max-w-3xl mx-auto px-6 pt-10 pb-40">
-                                        <NoteProperties metadata={noteMetadata} onNavigate={selectFile} />
-                                        <MarkdownViewer content={noteContent} onNavigate={selectFile} path={selectedPath} />
+                                {selectedPath && selectedPath.toLowerCase().endsWith('.pdf') ? (
+                                    <PdfViewer path={selectedPath} />
+                                ) : (
+                                    <div className="flex-1 h-full overflow-hidden">
+                                        <MarkdownViewer content={noteContent} onNavigate={selectFile} path={selectedPath || undefined} />
                                     </div>
-                                </ScrollArea>
+                                )}
                             </div>
                         )}
                     </div>
@@ -282,25 +529,44 @@ export default function ObsidianVaultPage() {
                 </SheetContent>
             </Sheet>
 
+            {/* Properties Drawer */}
+            <Sheet open={isPropertiesOpen} onOpenChange={setIsPropertiesOpen}>
+                <SheetContent side="bottom" className="h-[75vh] rounded-t-[2.5rem] p-0 border-t-4 border-primary/20">
+                    <SheetHeader className="p-6 border-b border-border/50">
+                        <SheetTitle className="text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-3">
+                            <Info size={16} /> Manuscript_Properties
+                        </SheetTitle>
+                    </SheetHeader>
+                    <ScrollArea className="h-full p-8">
+                        <NoteProperties metadata={noteMetadata} onNavigate={(path) => {
+                            setIsPropertiesOpen(false)
+                            selectFile(path)
+                        }} />
+                        <div className="h-40" />
+                    </ScrollArea>
+                </SheetContent>
+            </Sheet>
+
             {/* Connections/Hub Drawer */}
             <Sheet open={isConnectionsOpen} onOpenChange={setIsConnectionsOpen}>
-                <SheetContent side="right" className="p-0">
+                <SheetContent side="right" className="w-[85%] p-0">
                     <SheetHeader className="p-6 border-b border-border/50">
-                        <SheetTitle className="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-3">
-                            <Network size={16} /> Connections
+                        <SheetTitle className="text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-3">
+                            <Network size={16} /> Topology_Index
                         </SheetTitle>
                     </SheetHeader>
                     <ScrollArea className="h-full">
-                        <div className="p-4">
-                            {hubConnections ? (
-                                <HubConnectionsNav content={hubConnections} activePath={selectedPath} onNavigate={selectFile} />
-                            ) : (
-                                <div className="py-20 text-center px-10">
-                                    <Network size={32} className="mx-auto text-muted-foreground/20 mb-4" />
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 leading-relaxed">No Relational Hub Anchored to this Manuscript.</p>
-                                </div>
-                            )}
-                        </div>
+                        {hubConnections ? (
+                            <HubConnectionsNav content={hubConnections} activePath={selectedPath} onNavigate={(path) => {
+                                setIsConnectionsOpen(false)
+                                selectFile(path)
+                            }} />
+                        ) : (
+                            <div className="py-40 text-center px-10 opacity-20">
+                                <Network size={48} className="mx-auto mb-6" />
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em]">No_Anchored_Topologies</p>
+                            </div>
+                        )}
                         <div className="h-40" />
                     </ScrollArea>
                 </SheetContent>

@@ -54,3 +54,12 @@ Handled by `scratch/bundle_scriptable.py`:
 Settings are managed in the **Settings > Infrastructure** tab:
 -   **Obsidian Vault Path**: Requires the absolute iOS path (e.g., `/private/var/mobile/Library/Mobile Documents/iCloud~md~obsidian/Documents/VaultName`).
 -   **AI Stack**: Multi-provider registry for primary, planner, and utility reasoning tiers.
+-   **Native Persistence**: Configuration is stored natively in iOS Documents to ensure cross-session reliability.
+
+---
+
+## 6. High-Fidelity Features
+-   **Academic Database Explorer**: Direct parity with desktop databases, showing mastery metrics and units.
+-   **Manuscript Reader**: Enhanced PDF and Markdown rendering with native binary support.
+-   **Socratic Lab**: Mobile-native retrieval practice with real-time feedback and activity tracking.
+-   **YAML Explorer**: Native frontmatter parsing for manuscript-specific metadata.

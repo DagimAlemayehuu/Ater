@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import React, { useState, useEffect, useMemo } from 'react'
 import { WikiLink, renderWikiLinks } from './WikiLink'
 import { Sparkles, Zap, Copy, Check, RefreshCw, X, Quote } from 'lucide-react'
+import { sidecarApi } from '@/lib/sidecarApi'
 import { AiSidecar } from './AiSidecar'
 
 interface MarkdownViewerProps {
@@ -96,7 +97,29 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
             <a href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-4 decoration-primary/30 hover:decoration-primary font-bold transition-all">
                 {children}
             </a>
-        )
+        ),
+        img: ({ src, alt }: any) => {
+            const [dataUrl, setDataUrl] = useState<string | null>(null);
+            
+            useEffect(() => {
+                if (src && !src.startsWith('http') && !src.startsWith('data:')) {
+                    const fetchImg = async () => {
+                        try {
+                            const res = await (sidecarApi as any).readBinaryFile(src);
+                            setDataUrl(`data:${res.mime};base64,${res.data}`);
+                        } catch (e) { console.error("Img fail", e); }
+                    };
+                    fetchImg();
+                }
+            }, [src]);
+
+            return (
+                <div className="my-8 rounded-2xl overflow-hidden shadow-2xl border border-border/50">
+                    <img src={dataUrl || src} alt={alt} className="w-full h-auto object-cover animate-in fade-in duration-700" />
+                    {alt && <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground p-4 bg-muted/20 border-t border-border/10 text-center">{alt}</p>}
+                </div>
+            )
+        }
     }), [onNavigate]);
 
     const handleMouseUp = (e?: React.MouseEvent | React.KeyboardEvent) => {
@@ -118,7 +141,7 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
 
     return (
         <div className="relative h-full flex flex-col select-text bg-background" onMouseUp={handleMouseUp} onKeyUp={handleMouseUp}>
-            <div className="flex-1 overflow-y-auto px-6 pt-2 pb-32 relative">
+            <div className="flex-1 overflow-y-auto px-6 pt-2 pb-40 relative touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {showPopover && selection && (
                     <div 
                         className="fixed z-[100] bg-primary text-primary-foreground border border-primary rounded-full h-11 flex items-center px-4 shadow-2xl animate-in fade-in zoom-in duration-200"

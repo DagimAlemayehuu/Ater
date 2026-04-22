@@ -42,7 +42,7 @@ export const sidecarApi = {
             // Timeout for bridge response
             setTimeout(() => {
                 window.removeEventListener('lifeos-api-response', (handler as any))
-                reject(new Error('Native bridge timeout'))
+                reject(new Error(`Native bridge timeout: ${path}`))
             }, 60000)
 
             // Map API calls to Universal AI Bridge if needed
@@ -78,6 +78,9 @@ export const sidecarApi = {
     health: () => sidecarApi.request<HealthResponse>('/api/health'),
 
     // ── Obsidian Local ─────────────────────────
+    pickVaultFolder: () => sidecarApi.request<{ success: boolean, path: string }>('/api/obsidian/pick-folder', {
+        method: 'POST'
+    }),
     listObsidianFiles: (recursive = false) => sidecarApi.request<{ files: ObsidianFile[] }>('/api/obsidian/files', {
         method: 'POST',
         body: JSON.stringify({ recursive })
@@ -96,6 +99,12 @@ export const sidecarApi = {
         body: JSON.stringify({ query: pageName })
     }),
 
+    readBinaryFile: (path: string) => sidecarApi.request<{ data: string, mime: string }>(`/api/obsidian/files/binary/${encodeURIComponent(path)}`),
+
+    listVaultDatabases: () => sidecarApi.request<{ databases: any[] }>('/api/vault/databases'),
+    listVaultDatabaseRows: (dbName: string) => sidecarApi.request<{ results: any[] }>(`/api/vault/databases/${dbName}`),
+    queryVaultDatabase: (dbName: string) => sidecarApi.request<{ results: any[] }>(`/api/vault/databases/${dbName}`),
+
     // ── AI & Agents (Universal) ─────────────────────────────────────────
     brainstorm: (query: string, context?: string, systemPrompt?: string, history?: any[]) => 
         sidecarApi.request<{ response: string }>('/api/ai/brainstorm', {
@@ -112,18 +121,40 @@ export const sidecarApi = {
     // ── OKA ─────────────────────────────────────────
     okaQueueStatus: () => sidecarApi.request<any>('/api/oka/queue/status').catch(() => ({ status: 'idle', pending_count: 0 })),
     okaProcess: (payload: any) => sidecarApi.request<any>('/api/oka/process', { method: 'POST', body: JSON.stringify(payload) }),
+    okaConfirm: (payload: any) => sidecarApi.request<any>('/api/oka/confirm', { method: 'POST', body: JSON.stringify(payload) }),
+    okaGeneratePlan: (payload: any) => sidecarApi.request<any>('/api/oka/plan', { method: 'POST', body: JSON.stringify(payload) }),
+    okaWatcherToggle: () => sidecarApi.request<any>('/api/oka/watcher/toggle', { method: 'POST' }),
 
     // ── Practice ─────────────────────────
     listPractices: () => sidecarApi.request<{ practices: any[] }>('/api/practice/list').catch(() => ({ practices: [] })),
-    listHubs: () => sidecarApi.request<{ hubs: any[] }>('/api/vault/hubs').catch(() => ({ hubs: [] })),
-    listHubNotes: (hubId: string) => sidecarApi.request<{ notes: any[] }>(`/api/vault/hubs/${hubId}/notes`).catch(() => ({ notes: [] })),
+    listHubs: () => sidecarApi.request<{ hubs: any[] }>('/api/oka/hubs').catch(() => ({ hubs: [] })),
+    listHubNotes: (hubId: string) => sidecarApi.request<{ notes: any[] }>(`/api/oka/hubs/${hubId}/notes`).catch(() => ({ notes: [] })),
     generatePractice: (hubId: string, config: any) => sidecarApi.request<any>('/api/practice/generate', {
         method: 'POST',
-        body: JSON.stringify({ hubId, ...config })
+        body: JSON.stringify({ hub_id: hubId, config })
     }),
-    getPractice: (path: string) => sidecarApi.request<any>(`/api/practice/session?path=${encodeURIComponent(path)}`),
+    getPractice: (path: string) => sidecarApi.request<any>('/api/practice/get', {
+        method: 'POST',
+        body: JSON.stringify({ path })
+    }),
     updatePracticeScore: (path: string, score: number) => sidecarApi.request<any>('/api/practice/score', {
         method: 'POST',
         body: JSON.stringify({ path, score })
     }),
+    deletePractice: (path: string) => sidecarApi.request<any>('/api/practice/delete', {
+        method: 'POST',
+        body: JSON.stringify({ path })
+    }),
+
+    // ── Academics / Databases ─────────────────
+    academicsDashboard: () => sidecarApi.request<any>('/api/academics/dashboard'),
+    listDatabaseUnits: (dbId: string) => sidecarApi.request<any>(`/api/vault/databases/${dbId}/units`),
+    getDatabaseStats: (dbId: string) => sidecarApi.request<any>(`/api/vault/databases/${dbId}/stats`),
+    
+    // ── Chronos / Specialists ─────────────────
+    getChronosStatus: () => sidecarApi.request<any>('/api/ai/specialists/chronos'),
+    getChronosTimeline: () => sidecarApi.request<any[]>('/api/ai/chronos/timeline'),
+    getWealthStatus: () => sidecarApi.request<any>('/api/ai/specialists/wealth'),
+    getGymStatus: () => sidecarApi.request<any>('/api/ai/specialists/gym'),
+    getScholarStatus: () => sidecarApi.request<any>('/api/ai/specialists/scholar'),
 }

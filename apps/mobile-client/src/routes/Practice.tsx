@@ -75,13 +75,14 @@ export default function Practice() {
   const [availableNotes, setAvailableNotes] = useState<any[]>([])
   const [globalTimeLeft, setGlobalTimeLeft] = useState<number | null>(null)
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const timerRef = useRef<any>(null)
 
   const [keywordInput, setKeywordInput] = useState("")
 
   const calendarData = useMemo(() => {
+    if (!Array.isArray(pastPractices)) return [{ date: new Date().toISOString().split('T')[0], count: 0, level: 0 as 0 }];
     const data = Object.entries(pastPractices.reduce((acc, p) => {
-      if (!p.date) return acc;
+      if (!p || !p.date) return acc;
       try { const d = new Date(p.date).toISOString().split('T')[0]; acc[d] = (acc[d] || 0) + 1; } catch (e) {}
       return acc;
     }, {} as Record<string, number>)).map(([date, count]) => ({ date, count: Number(count), level: Math.min(Number(count), 4) as 0 | 1 | 2 | 3 | 4 }));
@@ -90,7 +91,7 @@ export default function Practice() {
 
   useEffect(() => { loadHubs(); loadPastPractices(); }, [])
   useEffect(() => { if (selectedHub) loadHubNotes(selectedHub); }, [selectedHub])
-  const loadHubNotes = async (hubId: string) => { try { const res = await sidecarApi.listHubNotes(hubId); setAvailableNotes(res.notes); } catch (err) {} }
+  const loadHubNotes = async (hubId: string) => { try { const res = await sidecarApi.listHubNotes(hubId); setAvailableNotes(res?.notes || []); } catch (err) {} }
 
   useEffect(() => {
     if (questions.length > 0 && view === 'session') {
@@ -102,14 +103,14 @@ export default function Practice() {
     return () => { if (timerRef.current) clearInterval(timerRef.current!) }
   }, [questions, view, globalTimeLeft, questionTimeLeft])
 
-  const loadPastPractices = async () => { try { const res = await sidecarApi.listPractices(); setPastPractices(res.practices); } catch (err) {} }
-  const loadHubs = async () => { try { const res = await sidecarApi.listHubs(); setHubs(res.hubs); if (res.hubs.length > 0) setSelectedHub(res.hubs[0].id); } catch (err) {} }
+  const loadPastPractices = async () => { try { const res = await sidecarApi.listPractices(); setPastPractices(res?.practices || []); } catch (err) {} }
+  const loadHubs = async () => { try { const res = await sidecarApi.listHubs(); setHubs(res?.hubs || []); if (res?.hubs?.length > 0) setSelectedHub(res.hubs[0].id); } catch (err) {} }
 
   const handleStartSession = async () => {
     if (!selectedHub) { toast.error('Choose a topic first.'); return; }
     setIsLoading(true); setView('loading');
     try {
-      const res = await sidecarApi.generatePractice(selectedHub, { ...advancedConfig, hubId: selectedHub });
+      const res = await sidecarApi.generatePractice(selectedHub, { ...advancedConfig, hubId: selectedHub }) as any;
       if (!res.questions || res.questions.length === 0) { toast.error('Insufficient content.'); setView('configuring'); return; }
       setTimeout(() => {
         setQuestions(res.questions); setCurrentPracticePath(res.quiz_path); setCurrentQuestionIdx(0); setUserAnswers({}); setIsRevealed(false); setGradedAnswers({}); setConfidenceWagers({}); setView('session');
@@ -122,7 +123,7 @@ export default function Practice() {
   const handleResumePractice = async (path: string) => {
     setIsLoading(true); setView('loading');
     try {
-      const res = await sidecarApi.getPractice(path);
+      const res = await sidecarApi.getPractice(path) as any;
       if (!res.questions || res.questions.length === 0) { toast.error('Empty session.'); setView('history'); return; }
       setTimeout(() => {
         setQuestions(res.questions); setCurrentPracticePath(path); setCurrentQuestionIdx(0); setUserAnswers({}); setIsRevealed(false); setGradedAnswers({}); setConfidenceWagers({}); setView('session');
@@ -150,7 +151,7 @@ export default function Practice() {
 
   // --- DASHBOARD ---
   if (view === 'dashboard') {
-    const validPractices = pastPractices.filter(p => p.completed && p.score);
+    const validPractices = Array.isArray(pastPractices) ? pastPractices.filter(p => p && p.completed && p.score) : [];
     const totalPrecision = validPractices.length ? Math.round(validPractices.reduce((acc, p) => acc + parseInt(p.score), 0) / validPractices.length) : 0;
     return (
         <div className="flex flex-col h-full bg-background animate-in fade-in duration-500 overflow-y-auto pb-40">
@@ -276,7 +277,7 @@ export default function Practice() {
 
                 <div className="space-y-6">
                     <div className="flex items-center gap-3"><span className="text-[10px] font-black text-primary opacity-20">02</span><h3 className="text-[10px] font-black uppercase tracking-[0.3em]">Depth Level</h3></div>
-                    <RadioGroup value={advancedConfig.difficulty} onValueChange={(val) => setAdvancedConfig(prev => ({ ...prev, difficulty: val as any }))} className="grid grid-cols-2 gap-3">
+                    <RadioGroup value={advancedConfig.difficulty} onValueChange={(val) => setAdvancedConfig((prev: AdvancedPracticeConfig) => ({ ...prev, difficulty: val as any }))} className="grid grid-cols-2 gap-3">
                         {['L1', 'L2', 'L3', 'Mixed'].map((level) => (
                             <div key={level}>
                                 <RadioGroupItem value={level} id={level} className="peer sr-only" />
@@ -316,7 +317,7 @@ export default function Practice() {
                                 <Label className="text-[10px] font-black text-primary uppercase tracking-widest">{item.label}</Label>
                                 <Switch 
                                     checked={advancedConfig[item.key as keyof AdvancedPracticeConfig] as boolean} 
-                                    onCheckedChange={(checked) => setAdvancedConfig(prev => ({ ...prev, [item.key]: checked }))} 
+                                    onCheckedChange={(checked) => setAdvancedConfig((prev: AdvancedPracticeConfig) => ({ ...prev, [item.key]: checked }))} 
                                 />
                             </div>
                         ))}
@@ -508,9 +509,15 @@ export default function Practice() {
       )
   }
 
-  return null;
-}
+  const updateDistribution = (type: keyof AdvancedPracticeConfig['questionDistribution'], val: number) => {
+    setAdvancedConfig((prev: AdvancedPracticeConfig) => ({
+      ...prev,
+      questionDistribution: {
+        ...prev.questionDistribution,
+        [type]: val
+      }
+    }))
+  }
 
-function updateDistribution(type: string, val: number) {
-    // Logic for updating distribution state
+  return null;
 }

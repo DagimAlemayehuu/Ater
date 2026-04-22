@@ -108,6 +108,9 @@
 
 ### Completed Epics
 *   [x] **Manuscript Design System**: 100% visual parity with desktop editorial aesthetics.
+*   [x] **Academic Database Explorer**: High-fidelity mobile view for OKA databases with mastery metrics and unit navigation.
+*   [x] **Binary Data Pipeline**: Hardened PDF and image rendering via native Scriptable bridge.
+*   [x] **Socratic Lab Stabilization**: Resolved UI crashes and implemented robust metric reduction logic.
 *   [x] **Global Sync Parity**: Real-time connection to sidecar for Vault, Registry, and Mastery data.
 *   [x] **Neural Registry**: Mobile status dashboard for AI Agents and system logs.
 *   [x] **Infrastructure Hardening**: Migrated to React 19 with robust Error Boundary safeguards.

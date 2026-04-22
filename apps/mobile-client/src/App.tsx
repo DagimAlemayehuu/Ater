@@ -10,6 +10,8 @@ import Obsidian from '@/routes/Obsidian'
 import Agents from '@/routes/Agents'
 import Settings from '@/routes/Settings'
 import Practice from '@/routes/Practice'
+import VaultSync from '@/routes/VaultSync'
+import ModuleView from '@/routes/ModuleView'
 
 import { Toaster } from 'sonner'
 import { ErrorBoundary } from 'react-error-boundary'
@@ -25,8 +27,9 @@ function ErrorFallback({error}: {error: Error}) {
 }
 
 export default function App() {
+  const BoundariedApp = ErrorBoundary as any;
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
+    <BoundariedApp FallbackComponent={ErrorFallback}>
       <ThemeProvider>
         <ConfigProvider>
           <LayoutProvider>
@@ -39,6 +42,9 @@ export default function App() {
                     <Route path="/oka" element={<Agents />} />
                     <Route path="/practice" element={<Practice />} />
                     <Route path="/settings" element={<Settings />} />
+                    <Route path="/registry" element={<VaultSync />} />
+                    <Route path="/databases/:id" element={<ModuleView />} />
+                    <Route path="/note/*" element={<Obsidian />} />
                   </Route>
                 </Routes>
               </HashRouter>
@@ -47,6 +53,6 @@ export default function App() {
           </LayoutProvider>
         </ConfigProvider>
       </ThemeProvider>
-    </ErrorBoundary>
+    </BoundariedApp>
   )
 }

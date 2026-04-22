@@ -9,6 +9,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules",
+    "build:mobile": "cd apps/mobile-client && pnpm build && cd ../.. && python3 scratch/bundle_scriptable.py",
     "sidecar:dev": "cd apps/api && uv run uvicorn src.api.main:app --host localhost --port 8765 --reload",
     "dev:mobile": "cd apps/mobile-client && pnpm vite",
     "dev:all": "concurrently --kill-others --kill-others-on-fail --names 'SIDECAR,TAURI,MOBILE' --prefix-colors 'blue,green,magenta' \"pnpm run sidecar:dev\" \"pnpm run dev:mobile\" \"cd apps/desktop && pnpm tauri:dev\"",

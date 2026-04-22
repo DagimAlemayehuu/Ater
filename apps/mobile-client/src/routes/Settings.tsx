@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import {
-    Key, Trash2, Zap, Plus, X, User, ChevronRight, Check, Database, Settings as SettingsIcon, Shield, RefreshCw
+    Key, Trash2, Zap, Plus, X, User, ChevronRight, Check, Database, Settings as SettingsIcon, Shield, RefreshCw, FolderOpen, Info
 } from 'lucide-react'
+import { sidecarApi } from '@/lib/sidecarApi'
 import { useConfig, SavedApiKey } from '@/lib/ConfigContext'
 import { cn } from '@/lib/utils'
+import { ThemeSwitch } from '@/components/theme-switch'
 import { Button } from '@/components/ui/button'
 
 export default function Settings() {
@@ -250,32 +252,83 @@ export default function Settings() {
                 )}
 
                 {activeSection === 'general' && (
-                    <div className="space-y-12 animate-in fade-in duration-500">
+                    <div className="space-y-12 animate-in fade-in duration-500 pb-20">
+                        <section className="space-y-8">
+                            <div className="flex items-center justify-between px-1">
+                                <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em]">Appearance_Protocol</h2>
+                                <Zap size={14} className="text-muted-foreground/30" />
+                            </div>
+                            <div className="p-8 border-2 border-border/50 bg-muted/5 rounded-[2.5rem] flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-primary uppercase tracking-widest">Interface_Mode</p>
+                                    <p className="text-[11px] font-bold text-muted-foreground uppercase">Toggle light/dark architecture</p>
+                                </div>
+                                <ThemeSwitch />
+                            </div>
+                        </section>
+
                         <section className="space-y-8">
                             <div className="flex items-center justify-between px-1">
                                 <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em]">Vault_Orchestration</h2>
                                 <Database size={14} className="text-muted-foreground/30" />
                             </div>
-                            <div className="space-y-6 p-8 border border-border bg-muted/10 rounded-[2rem]">
-                                <div className="space-y-3">
-                                    <label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Local_Storage_Root</label>
-                                    <textarea
-                                        value={config.obsidianVaultPath || ''}
-                                        onChange={(e) => saveConfig({ obsidianVaultPath: e.target.value })}
-                                        className="w-full bg-background border border-border p-5 rounded-2xl text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-primary min-h-[120px]"
-                                        placeholder="/private/var/mobile/..."
-                                    />
-                                    <div className="p-4 bg-primary/5 border-l-4 border-primary rounded-r-xl space-y-2 mt-4">
-                                        <p className="text-[10px] font-black text-primary uppercase tracking-widest">Protocol Tip:</p>
-                                        <p className="text-[11px] font-medium text-primary/70 leading-relaxed italic">On iOS, use the 'Get File Path' shortcut or inspect the Scriptable log to find the absolute path to your Obsidian container.</p>
+                            <div className="space-y-8 p-8 border-2 border-border/50 bg-muted/5 rounded-[2.5rem]">
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-primary uppercase tracking-widest">Vault_Status</p>
+                                            <p className={cn(
+                                                "text-[11px] font-bold uppercase",
+                                                config.obsidianVaultPath ? "text-emerald-500" : "text-amber-500"
+                                            )}>
+                                                {config.obsidianVaultPath ? "Connected_Ready" : "Disconnected_Pending"}
+                                            </p>
+                                        </div>
+                                        <div className={cn(
+                                            "w-3 h-3 rounded-full animate-pulse shadow-[0_0_10px_rgba(0,0,0,0.1)]",
+                                            config.obsidianVaultPath ? "bg-emerald-500" : "bg-amber-500"
+                                        )} />
                                     </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Current_Path</label>
+                                        <div className="w-full bg-background border border-border p-5 rounded-2xl text-[10px] font-mono font-bold text-muted-foreground break-all opacity-60">
+                                            {config.obsidianVaultPath || "NO_PATH_SPECIFIED"}
+                                        </div>
+                                    </div>
+
+                                    <Button 
+                                        onClick={async () => {
+                                            try {
+                                                const res = await (sidecarApi as any).pickVaultFolder();
+                                                if (res.success) {
+                                                    saveConfig({ obsidianVaultPath: res.path });
+                                                }
+                                            } catch (err) {
+                                                console.error("Picker failed", err);
+                                            }
+                                        }}
+                                        className="w-full py-8 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-3"
+                                    >
+                                        <FolderOpen size={18} />
+                                        {config.obsidianVaultPath ? "Switch_Vault_Root" : "Connect_Obsidian_Vault"}
+                                    </Button>
+                                </div>
+
+                                <div className="p-5 bg-primary/5 border-l-4 border-primary rounded-r-2xl space-y-2">
+                                    <p className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                                        <Info size={12} /> Optimization_Note
+                                    </p>
+                                    <p className="text-[11px] font-medium text-primary/70 leading-relaxed italic">
+                                        LifeOS utilizes a direct bridge to your local Obsidian container. Ensure Scriptable has 'Always' access to your File Provider for real-time synchronization.
+                                    </p>
                                 </div>
                             </div>
                         </section>
                         
                         <div className="py-10 flex flex-col items-center justify-center text-center opacity-20 space-y-4">
                             <SettingsIcon size={40} strokeWidth={1} className="animate-spin duration-[10s]" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.5em]">SYSTEM_STABLE</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.5em]">KNOWLEDGE_PIPELINE_STABLE</p>
                         </div>
                     </div>
                 )}

@@ -9,8 +9,9 @@ Your mission: Transform raw source material into a high-fidelity Knowledge Asset
 3. **PLAIN TEXT PROPERTIES**: `course` and `semester` are PLAIN TEXT. No brackets.
    - CORRECT: `course: Computer Programming`
 4. **NO REDUNDANT PIPES**: Markdown tables must not have leading or trailing pipes at the edges of the row.
-5. **SOCRATIC PROBES**: Every atomic note MUST conclude with a **Question** section containing L1 Scenario, L2 Implementation, and L3 Socratic Debugger.
-6. **SETEXT DEFENSE**: All horizontal rules (`---`) must be preceded by `\n\n`.
+6. **SOCRATIC PROBES**: Every atomic note MUST conclude with a **Question** section containing L1 Scenario, L2 Implementation, and L3 Socratic Debugger.
+7. **MOBILE COMPATIBILITY**: All artifacts (Tables, Mermaid) must be optimized for vertical density. Avoid horizontal overflow.
+8. **SETEXT DEFENSE**: All horizontal rules (`---`) must be preceded by `\n\n`.
 </system_directive>
 
 <technical_mandates>
