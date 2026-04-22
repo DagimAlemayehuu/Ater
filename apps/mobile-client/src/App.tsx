@@ -11,7 +11,7 @@ import Agents from '@/routes/Agents'
 import Settings from '@/routes/Settings'
 import Practice from '@/routes/Practice'
 import VaultSync from '@/routes/VaultSync'
-import ModuleView from '@/routes/ModuleView'
+import MobileDatabaseView from '@/routes/MobileDatabaseView'
 
 import { Toaster } from 'sonner'
 import { ErrorBoundary } from 'react-error-boundary'
@@ -43,7 +43,7 @@ export default function App() {
                     <Route path="/practice" element={<Practice />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/registry" element={<VaultSync />} />
-                    <Route path="/databases/:id" element={<ModuleView />} />
+                    <Route path="/databases/:id" element={<MobileDatabaseView />} />
                     <Route path="/note/*" element={<Obsidian />} />
                   </Route>
                 </Routes>

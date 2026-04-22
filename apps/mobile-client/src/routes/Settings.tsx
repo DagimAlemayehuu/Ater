@@ -246,6 +246,27 @@ export default function Settings() {
                                         })}
                                     </div>
                                 </div>
+
+                                <div className="pt-4 border-t border-border/50">
+                                    <Button
+                                        onClick={async () => {
+                                            try {
+                                                const res = await (sidecarApi as any).testAiConnection(aiTab);
+                                                if (res.success) {
+                                                    alert('Connection Successful: ' + res.message);
+                                                } else {
+                                                    alert('Connection Failed: ' + res.message);
+                                                }
+                                            } catch (err: any) {
+                                                alert('Error testing connection: ' + err.message);
+                                            }
+                                        }}
+                                        className="w-full py-6 font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2"
+                                    >
+                                        <Zap size={16} />
+                                        Test {aiTab} Engine Connection
+                                    </Button>
+                                </div>
                             </div>
                         </section>
                     </div>

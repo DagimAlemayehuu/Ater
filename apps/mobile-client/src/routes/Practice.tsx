@@ -111,6 +111,7 @@ export default function Practice() {
     setIsLoading(true); setView('loading');
     try {
       const res = await sidecarApi.generatePractice(selectedHub, { ...advancedConfig, hubId: selectedHub }) as any;
+      window.dispatchEvent(new CustomEvent('vault-updated'));
       if (!res.questions || res.questions.length === 0) { toast.error('Insufficient content.'); setView('configuring'); return; }
       setTimeout(() => {
         setQuestions(res.questions); setCurrentPracticePath(res.quiz_path); setCurrentQuestionIdx(0); setUserAnswers({}); setIsRevealed(false); setGradedAnswers({}); setConfidenceWagers({}); setView('session');
@@ -134,12 +135,33 @@ export default function Practice() {
   const handleSubmitAnswer = () => {
     setIsRevealed(true);
     const q = questions[currentQuestionIdx];
-    if (q.type === 'mcq' || q.type === 'true_false') setGradedAnswers(prev => ({ ...prev, [q.id]: String(userAnswers[q.id]).toLowerCase() === String(q.answer).toLowerCase() }));
+    
+    // Grading logic
+    let isCorrect = false;
+    if (q.type === 'mcq' || q.type === 'true_false') {
+      isCorrect = String(userAnswers[q.id]).toLowerCase() === String(q.answer).toLowerCase();
+    } else if (q.type === 'short_answer' || q.type === 'scenario' || q.type === 'code') {
+      // These are manually graded by default or we can do a rough match
+      isCorrect = false; // Will be set by user buttons
+    }
+    
+    setGradedAnswers(prev => ({ ...prev, [q.id]: isCorrect }));
+    if (timerRef.current && advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(null);
   }
 
   const nextQuestion = async () => {
-    if (currentQuestionIdx < questions.length - 1) { setCurrentQuestionIdx(prev => prev + 1); setIsRevealed(false); }
-    else { setView('results'); const { score } = calculateScore(); if (currentPracticePath) await sidecarApi.updatePracticeScore(currentPracticePath, score); loadPastPractices(); }
+    if (currentQuestionIdx < questions.length - 1) { 
+      setCurrentQuestionIdx(prev => prev + 1); 
+      setIsRevealed(false); 
+      if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
+    }
+    else { 
+      setView('results'); 
+      const { score } = calculateScore(); 
+      if (currentPracticePath) await sidecarApi.updatePracticeScore(currentPracticePath, score); 
+      loadPastPractices(); 
+      window.dispatchEvent(new CustomEvent('vault-updated'));
+    }
   }
 
   const calculateScore = () => {
@@ -374,15 +396,65 @@ export default function Practice() {
                 </div>
              </div>
 
-             <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1">
                  <div className="p-8 space-y-10 pb-40">
                     <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <Badge variant="outline" className="text-[8px] font-black border-primary/20 bg-primary/5 uppercase">{currentQuestion.difficulty}</Badge>
-                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">{currentQuestion.type.replace('_', ' ')}</span>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Badge variant="outline" className="text-[8px] font-black border-primary/20 bg-primary/5 uppercase">{currentQuestion.difficulty}</Badge>
+                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">{currentQuestion.type.replace('_', ' ')}</span>
+                            </div>
+                            {advancedConfig.enableProgressiveHints && currentQuestion.explanation && (
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase tracking-widest gap-1 text-muted-foreground/50">
+                                            <ScanSearch size={10} /> Hint
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="bg-popover border-border p-4 rounded-xl shadow-2xl max-w-[250px]">
+                                        <p className="text-[10px] font-bold text-muted-foreground leading-relaxed uppercase italic">
+                                            {currentQuestion.explanation.substring(0, 100)}...
+                                        </p>
+                                    </PopoverContent>
+                                </Popover>
+                            )}
                         </div>
                         <h2 className="text-2xl font-black tracking-tight leading-tight text-primary uppercase">{currentQuestion.question}</h2>
                     </div>
+
+                    {/* Confidence Wager Section */}
+                    {advancedConfig.requireConfidenceWager && !isRevealed && (
+                        <div className="space-y-4 animate-in slide-in-from-top-2">
+                             <div className="flex justify-between items-center">
+                                <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50">Confidence Rating</span>
+                                <span className={cn(
+                                    "text-[9px] font-black px-2 py-0.5 rounded",
+                                    confidenceWagers[currentQuestion.id] === 3 ? "text-green-500 bg-green-500/10" :
+                                    confidenceWagers[currentQuestion.id] === 2 ? "text-amber-500 bg-amber-500/10" :
+                                    "text-red-500 bg-red-500/10"
+                                )}>
+                                    {confidenceWagers[currentQuestion.id] === 3 ? "HIGH" : 
+                                     confidenceWagers[currentQuestion.id] === 2 ? "MEDIUM" : "LOW"}
+                                </span>
+                             </div>
+                             <div className="flex gap-2">
+                                {[1, 2, 3].map((lvl) => (
+                                    <button 
+                                        key={lvl}
+                                        onClick={() => setConfidenceWagers(p => ({ ...p, [currentQuestion.id]: lvl }))}
+                                        className={cn(
+                                            "flex-1 h-10 rounded-xl border-2 transition-all flex items-center justify-center gap-2",
+                                            confidenceWagers[currentQuestion.id] === lvl 
+                                                ? "bg-primary border-primary text-primary-foreground" 
+                                                : "bg-muted/10 border-border/40 text-muted-foreground"
+                                        )}
+                                    >
+                                        <span className="text-[10px] font-black">{lvl === 1 ? '1' : lvl === 2 ? '2' : '3'}</span>
+                                    </button>
+                                ))}
+                             </div>
+                        </div>
+                    )}
 
                     <div className="space-y-3">
                         {currentQuestion.type === 'mcq' && (
@@ -393,13 +465,14 @@ export default function Practice() {
                                     return (
                                         <button 
                                             key={key} 
-                                            disabled={isRevealed} 
+                                            disabled={isRevealed || (advancedConfig.requireConfidenceWager && !confidenceWagers[currentQuestion.id])} 
                                             onClick={() => handleSelectAnswer(key)} 
                                             className={cn(
                                                 "flex items-center gap-5 p-5 border-2 rounded-2xl text-left transition-all active:scale-[0.98]",
                                                 isCorrect ? "border-green-500 bg-green-500/5 shadow-lg shadow-green-500/5" : isSelected && !isRevealed ? "border-primary bg-primary/5" : "border-border/60 hover:border-primary/20",
                                                 isRevealed && !isCorrect && !isSelected ? "opacity-30 grayscale" : "",
-                                                isRevealed && isSelected && !isCorrect ? "border-red-500 bg-red-500/5" : ""
+                                                isRevealed && isSelected && !isCorrect ? "border-red-500 bg-red-500/5" : "",
+                                                advancedConfig.requireConfidenceWager && !confidenceWagers[currentQuestion.id] && "opacity-50 grayscale cursor-not-allowed"
                                             )}
                                         >
                                             <div className={cn(
@@ -418,11 +491,17 @@ export default function Practice() {
                                     const isSelected = userAnswers[currentQuestion.id] === v;
                                     const isCorrect = isRevealed && v.toLowerCase() === String(currentQuestion.answer).toLowerCase();
                                     return (
-                                        <button key={v} disabled={isRevealed} onClick={() => handleSelectAnswer(v)} className={cn(
-                                            "h-32 border-2 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all",
-                                            isCorrect ? "bg-green-500 text-white border-green-500" : isSelected && !isRevealed ? "bg-primary text-white border-primary" : "border-border bg-muted/5 text-muted-foreground",
-                                            isRevealed && isSelected && !isCorrect ? "bg-red-500 text-white border-red-500" : ""
-                                        )}>
+                                        <button 
+                                            key={v} 
+                                            disabled={isRevealed || (advancedConfig.requireConfidenceWager && !confidenceWagers[currentQuestion.id])} 
+                                            onClick={() => handleSelectAnswer(v)} 
+                                            className={cn(
+                                                "h-32 border-2 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all",
+                                                isCorrect ? "bg-green-500 text-white border-green-500" : isSelected && !isRevealed ? "bg-primary text-white border-primary" : "border-border bg-muted/5 text-muted-foreground",
+                                                isRevealed && isSelected && !isCorrect ? "bg-red-500 text-white border-red-500" : "",
+                                                advancedConfig.requireConfidenceWager && !confidenceWagers[currentQuestion.id] && "opacity-50 grayscale cursor-not-allowed"
+                                            )}
+                                        >
                                             {v === 'True' ? <Check size={24} /> : <X size={24} />}
                                             <span className="text-xs font-black uppercase tracking-widest">{v}</span>
                                         </button>
@@ -434,23 +513,39 @@ export default function Practice() {
                             <div className="space-y-8">
                                 <textarea 
                                     rows={8} 
-                                    disabled={isRevealed} 
+                                    disabled={isRevealed || (advancedConfig.requireConfidenceWager && !confidenceWagers[currentQuestion.id])} 
                                     className="w-full bg-muted/5 border-2 border-border rounded-3xl p-6 text-sm font-bold uppercase tracking-widest focus:ring-primary focus:border-primary transition-all leading-relaxed placeholder:text-muted-foreground/10" 
                                     placeholder="SYNTHESIZE ANSWER..." 
                                     value={userAnswers[currentQuestion.id] || ""} 
                                     onChange={(e) => handleSelectAnswer(e.target.value)} 
                                 />
-                                {isRevealed && (
-                                    <div className="p-6 bg-primary/5 border-l-4 border-primary rounded-r-3xl space-y-3 animate-in slide-in-from-left-4">
-                                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.3em] text-primary"><Filter size={12}/> Verified Output</div>
-                                        <p className="text-sm font-bold uppercase leading-relaxed tracking-wider text-primary">{(currentQuestion as any).answer}</p>
+                            </div>
+                        )}
+
+                        {isRevealed && (
+                            <div className="p-6 bg-muted/5 border border-border rounded-3xl space-y-6 animate-in slide-in-from-bottom-4">
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground">
+                                        <School size={12}/> Systematic Resolution
+                                    </div>
+                                    <p className="text-sm font-bold uppercase leading-relaxed tracking-wider text-primary">
+                                        {(currentQuestion as any).answer || currentQuestion.explanation}
+                                    </p>
+                                </div>
+                                
+                                {currentQuestion.explanation && (
+                                    <div className="pt-4 border-t border-border/40 space-y-2">
+                                        <div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50">Analysis Context</div>
+                                        <p className="text-[11px] font-medium text-muted-foreground leading-relaxed italic">
+                                            {currentQuestion.explanation}
+                                        </p>
                                     </div>
                                 )}
                             </div>
                         )}
                     </div>
                  </div>
-             </ScrollArea>
+              </ScrollArea>
 
              {/* Action Bar */}
              <div className="p-6 border-t border-border/50 bg-background/80 backdrop-blur-xl shrink-0 fixed bottom-0 left-0 w-full z-50">
@@ -481,27 +576,54 @@ export default function Practice() {
   if (view === 'results') {
       const { score, correct, total } = calculateScore();
       return (
-        <div className="h-full flex flex-col items-center justify-center bg-background p-10 text-center space-y-12 animate-in zoom-in-95 duration-700">
-            <div className="space-y-4">
-                <div className="w-24 h-24 bg-primary text-white rounded-[2.5rem] flex items-center justify-center mx-auto shadow-2xl shadow-primary/20 mb-8">
-                    <Award size={48} />
-                </div>
-                <h1 className="text-6xl font-black tracking-tighter leading-none">{score}%</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-muted-foreground opacity-50">Precision Rating</p>
-            </div>
-            
-            <div className="w-full grid grid-cols-2 divide-x divide-border py-8 border-y border-border/50">
-                <div className="space-y-1">
-                    <p className="text-2xl font-black tracking-tighter">{correct}/{total}</p>
-                    <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Successful Probes</p>
-                </div>
-                <div className="space-y-1">
-                    <p className="text-2xl font-black tracking-tighter">SOTA</p>
-                    <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Alignment Tier</p>
-                </div>
-            </div>
+        <div className="h-full flex flex-col bg-background animate-in zoom-in-95 duration-700">
+            <ScrollArea className="flex-1">
+                <div className="p-10 text-center space-y-12">
+                    <div className="space-y-4">
+                        <div className="w-24 h-24 bg-primary text-white rounded-[2.5rem] flex items-center justify-center mx-auto shadow-2xl shadow-primary/20 mb-8">
+                            <Award size={48} />
+                        </div>
+                        <h1 className="text-6xl font-black tracking-tighter leading-none">{score}%</h1>
+                        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-muted-foreground opacity-50">Precision Rating</p>
+                    </div>
+                    
+                    <div className="w-full grid grid-cols-2 divide-x divide-border py-8 border-y border-border/50">
+                        <div className="space-y-1">
+                            <p className="text-2xl font-black tracking-tighter">{correct}/{total}</p>
+                            <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Successful Probes</p>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-2xl font-black tracking-tighter">SOTA</p>
+                            <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Alignment Tier</p>
+                        </div>
+                    </div>
 
-            <div className="w-full space-y-3">
+                    <div className="space-y-6 text-left">
+                         <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground px-2">Session Review</h3>
+                         <div className="space-y-3">
+                            {questions.map((q, idx) => {
+                                const isCorrect = gradedAnswers[q.id];
+                                return (
+                                    <div key={idx} className="p-4 border border-border/50 bg-muted/5 rounded-2xl flex items-start gap-4">
+                                        <div className={cn(
+                                            "w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-1",
+                                            isCorrect ? "bg-green-500 text-white" : "bg-red-500 text-white"
+                                        )}>
+                                            {isCorrect ? <Check size={12} /> : <X size={12} />}
+                                        </div>
+                                        <div className="space-y-1 min-w-0">
+                                            <p className="text-[11px] font-black uppercase truncate text-primary">{q.question}</p>
+                                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Confidence: {confidenceWagers[q.id] || 0}/3</p>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                         </div>
+                    </div>
+                </div>
+            </ScrollArea>
+
+            <div className="p-6 border-t border-border/50 space-y-3">
                 <Button onClick={() => setView('configuring')} className="w-full py-8 font-black uppercase tracking-[0.3em] text-xs rounded-2xl">Restart Session</Button>
                 <Button variant="outline" onClick={() => setView('dashboard')} className="w-full py-7 font-black uppercase tracking-[0.3em] text-xs rounded-2xl border-2">Return to Dashboard</Button>
             </div>

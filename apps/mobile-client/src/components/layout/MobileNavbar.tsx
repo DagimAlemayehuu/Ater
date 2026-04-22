@@ -19,7 +19,7 @@ const navItems: NavItem[] = [
 
 export function MobileNavbar() {
   return (
-    <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center h-20 pb-6 px-2 bg-background/80 backdrop-blur-xl border-t border-border/40 z-[100]">
+    <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center h-20 pb-safe px-2 bg-background/80 backdrop-blur-xl border-t border-border/40 z-[100]">
       {navItems.map((item) => (
         <NavLink
           key={item.path}

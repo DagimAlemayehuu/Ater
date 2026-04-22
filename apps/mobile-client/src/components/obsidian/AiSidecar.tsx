@@ -72,12 +72,12 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
         setIsThinking(true);
         setMessages([]);
         try {
-            // Mobile bridge call
-            const data = await sidecarApi.brainstorm(
-                `Explain this selection from the document: "${selection}"`,
-                "You are a pedagogical assistant. Provide a high-fidelity explanation with examples."
-            );
-            setMessages([{ role: 'assistant', content: data.response }]);
+            const data = await sidecarApi.explainPdfSelection({
+                path: path,
+                selection: selection,
+                page: page
+            });
+            setMessages([{ role: 'assistant', content: data.answer }]);
         } catch (e: any) {
             setMessages([{ role: 'assistant', content: `Error: ${e.message}` }]);
         } finally {
@@ -93,24 +93,14 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
         setQuizFeedback(null);
         setScore(0);
         try {
-            // Simplified quiz for mobile bridge
-            const data = await sidecarApi.brainstorm(
-                `Generate 3 multiple-choice questions based on this text: "${selection}". Output in valid JSON format.`,
-                "You are a retrieval practice generator."
-            );
-            // In a real app, the sidecarApi.okaInteractiveQuiz would handle this properly.
-            // For mobile, we'll mock it if the bridge doesn't have the specific endpoint yet.
-            setQuizQuestions([
-                {
-                    question: "Based on the selection, what is the primary focus?",
-                    type: "multiple-choice",
-                    options: ["Core Topologies", "Data Atomization", "Vault Mirroring", "RAG Pipeline"],
-                    answer: "Core Topologies",
-                    explanation: "The text emphasizes the relational structure of the vault."
-                }
-            ]);
+            const data = await sidecarApi.okaInteractiveQuiz({
+                selection: selection
+            });
+            setQuizQuestions(data.questions || []);
         } catch (e: any) {
             console.error(e);
+            setMessages([{ role: 'assistant', content: "Failed to generate quiz. Fallback to explanation." }]);
+            setMode('explain');
         } finally {
             setIsThinking(false);
         }

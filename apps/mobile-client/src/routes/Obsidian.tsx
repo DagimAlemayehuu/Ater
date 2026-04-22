@@ -14,7 +14,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
-import { NoteProperties, HubConnectionsNav } from '@/components/obsidian/NoteMetadata'
+import { NoteProperties, HubConnectionsNav, Backlinks } from '@/components/obsidian/NoteMetadata'
 import { 
     Sheet, 
     SheetContent, 
@@ -22,9 +22,10 @@ import {
     SheetTitle, 
     SheetTrigger 
 } from '@/components/ui/sheet'
+import { MobileDatabaseView } from '@/components/obsidian/MobileDatabaseView'
 import React from 'react'
 
-const PdfViewer = ({ path }: { path: string }) => {
+const PdfViewer = ({ path, isDarkMode }: { path: string, isDarkMode: boolean }) => {
     const [dataUrl, setDataUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -50,12 +51,74 @@ const PdfViewer = ({ path }: { path: string }) => {
     );
 
     return (
-        <div className="flex-1 w-full h-full bg-background overflow-hidden">
+        <div className="flex-1 w-full h-full bg-background overflow-hidden relative">
             <embed 
                 src={dataUrl || ""} 
                 type="application/pdf" 
-                className="w-full h-full border-none" 
+                className={cn(
+                    "w-full h-full border-none",
+                    isDarkMode && "invert brightness-90 contrast-125 hue-rotate-180"
+                )} 
             />
+            {isDarkMode && (
+                <div className="absolute inset-0 pointer-events-none bg-primary/5 mix-blend-multiply" />
+            )}
+        </div>
+    );
+};
+
+const VaultStatsBar = () => {
+    const [stats, setStats] = useState<any>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const fetchStats = async () => {
+        setIsRefreshing(true);
+        try {
+            const res = await sidecarApi.getVaultStats();
+            setStats(res);
+        } catch (e) {
+            console.error("Stats fetch failed", e);
+        } finally {
+            setTimeout(() => setIsRefreshing(false), 800);
+        }
+    };
+
+    useEffect(() => {
+        fetchStats();
+        
+        const handleUpdate = () => fetchStats();
+        window.addEventListener('vault-updated', handleUpdate);
+        return () => window.removeEventListener('vault-updated', handleUpdate);
+    }, []);
+
+    if (!stats) return <div className="h-10 bg-muted/5 animate-pulse rounded-xl" />;
+
+    return (
+        <div className="space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+                <div className="bg-muted/10 border border-border/20 p-4 rounded-2xl flex flex-col gap-1 transition-all active:scale-[0.98]">
+                    <span className="text-[7px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Notes</span>
+                    <span className="text-sm font-black text-primary tabular-nums">{stats.totalNotes}</span>
+                </div>
+                <div className="bg-muted/10 border border-border/20 p-4 rounded-2xl flex flex-col gap-1 transition-all active:scale-[0.98]">
+                    <span className="text-[7px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Assets</span>
+                    <span className="text-sm font-black text-primary tabular-nums">{stats.totalAssets}</span>
+                </div>
+                <button 
+                    onClick={fetchStats}
+                    disabled={isRefreshing}
+                    className="bg-muted/10 border border-border/20 p-4 rounded-2xl flex flex-col gap-1 text-left transition-all active:scale-[0.98] relative overflow-hidden"
+                >
+                    <span className="text-[7px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Sync_Time</span>
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black text-primary/80 truncate">
+                            {new Date(stats.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <RefreshCw size={8} className={cn("text-primary/40", isRefreshing && "animate-spin text-primary")} />
+                    </div>
+                    {isRefreshing && <div className="absolute bottom-0 left-0 h-0.5 bg-primary animate-progress-fast" style={{ width: '100%' }} />}
+                </button>
+            </div>
         </div>
     );
 };
@@ -79,10 +142,27 @@ export default function ObsidianVaultPage() {
     const [loadingNote, setLoadingNote] = useState(false)
     const [hubConnections, setHubConnections] = useState<string | null>(null)
 
+    // --- Navigation History ---
+    const [history, setHistory] = useState<string[]>([])
+    const [historyIndex, setHistoryIndex] = useState(-1)
+
     // --- Mobile Drawers ---
     const [isExplorerOpen, setIsExplorerOpen] = useState(false)
     const [isConnectionsOpen, setIsConnectionsOpen] = useState(false)
     const [isPropertiesOpen, setIsPropertiesOpen] = useState(false)
+    const [backlinks, setBacklinks] = useState<any[]>([])
+
+    useEffect(() => {
+        const fetchBacklinks = async () => {
+            if (!selectedPath) return
+            const cleanName = selectedPath.split('/').pop()?.replace('.md', '') || ''
+            try {
+                const res = await sidecarApi.getVaultBacklinks(cleanName)
+                setBacklinks(res.backlinks || [])
+            } catch (e) { console.error("Backlinks fail", e) }
+        }
+        fetchBacklinks()
+    }, [selectedPath])
 
     useEffect(() => {
         const fetchHubConnections = async () => {
@@ -140,10 +220,23 @@ export default function ObsidianVaultPage() {
         }
     }
 
-    const selectFile = async (path: string) => {
+    const selectFile = async (path: string, fromHistory = false) => {
+        if (!path) return
+        
         setSelectedPath(path)
         setIsExplorerOpen(false)
         setIsConnectionsOpen(false)
+        setIsPropertiesOpen(false)
+
+        // Manage History
+        if (!fromHistory) {
+            const newHistory = history.slice(0, historyIndex + 1)
+            if (newHistory[newHistory.length - 1] !== path) {
+                newHistory.push(path)
+                setHistory(newHistory)
+                setHistoryIndex(newHistory.length - 1)
+            }
+        }
 
         if (path.toLowerCase().endsWith('.pdf')) {
             setNoteMetadata({})
@@ -164,12 +257,74 @@ export default function ObsidianVaultPage() {
         } finally { setLoadingNote(false) }
     }
 
+    const handleBack = () => {
+        if (historyIndex > 0) {
+            const newIndex = historyIndex - 1
+            setHistoryIndex(newIndex)
+            selectFile(history[newIndex], true)
+        }
+    }
+
+    const handleForward = () => {
+        if (historyIndex < history.length - 1) {
+            const newIndex = historyIndex + 1
+            setHistoryIndex(newIndex)
+            selectFile(history[newIndex], true)
+        }
+    }
+
+    const handleNewFile = async () => {
+        const name = prompt("Enter file name (without extension):")
+        if (!name) return
+        
+        let parentDir = ""
+        if (selectedPath && selectedPath.includes('/')) {
+            parentDir = selectedPath.substring(0, selectedPath.lastIndexOf('/'))
+        }
+        
+        const path = parentDir ? `${parentDir}/${name}.md` : `${name}.md`
+        const content = `---\ntitle: ${name}\ncreated: ${new Date().toISOString()}\n---\n\n# ${name}\n`
+        
+        try {
+            await sidecarApi.updateObsidianNote(path, content)
+            await fetchFiles()
+            selectFile(path)
+            window.dispatchEvent(new CustomEvent('vault-updated'))
+        } catch (e) {
+            alert("Failed to create file")
+        }
+    }
+
+    const handleDeleteFile = async () => {
+        if (!selectedPath) return
+        if (!confirm(`Are you sure you want to delete ${selectedPath.split('/').pop()}?`)) return
+        
+        try {
+            await sidecarApi.deleteObsidianItem(selectedPath)
+            await fetchFiles()
+            
+            // Remove from history
+            const newHistory = history.filter(h => h !== selectedPath)
+            setHistory(newHistory)
+            setHistoryIndex(newHistory.length - 1)
+            
+            if (newHistory.length > 0) {
+                selectFile(newHistory[newHistory.length - 1], true)
+            } else {
+                setSelectedPath(null)
+            }
+            window.dispatchEvent(new CustomEvent('vault-updated'))
+        } catch (e) {
+            alert("Delete failed")
+        }
+    }
+
     // Load from URL param if exists
     useEffect(() => {
         if (pathParam && pathParam !== selectedPath) {
             selectFile(pathParam)
         }
-    }, [pathParam, selectedPath])
+    }, [pathParam])
 
     const handleSaveNote = async () => {
         if (!selectedPath) return
@@ -178,6 +333,7 @@ export default function ObsidianVaultPage() {
             await sidecarApi.updateObsidianNote(selectedPath, editedContent)
             setNoteContent(editedContent)
             setIsEditing(false)
+            window.dispatchEvent(new CustomEvent('vault-updated'))
         } catch (err: any) {
             alert("Save failed")
         } finally {
@@ -267,21 +423,8 @@ export default function ObsidianVaultPage() {
         }
     }
 
-    const selectDatabase = async (db: any) => {
-        setSelectedDb(db)
-        setLoadingDb(true)
-        try {
-            const [unitsRes, statsRes] = await Promise.all([
-                sidecarApi.listDatabaseUnits(db.id),
-                sidecarApi.getDatabaseStats(db.id)
-            ])
-            setDbUnits(unitsRes.results)
-            setDbStats(statsRes)
-        } catch (err) {
-            console.error("DB Detail Fail", err)
-        } finally {
-            setLoadingDb(false)
-        }
+    const selectDatabase = (db: any) => {
+        navigate(`/databases/${db.id}`)
     }
 
     // --- Context Toolbar - Only show if note or DB detail is active ---
@@ -291,12 +434,20 @@ export default function ObsidianVaultPage() {
         <div className="flex flex-col h-full bg-background animate-in fade-in duration-500 overflow-hidden">
             {showToolbar && (
                 <div className="h-14 border-b border-border/50 flex items-center justify-between px-4 bg-background/80 backdrop-blur-md sticky top-0 z-40">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" onClick={() => { setSelectedPath(null); setSelectedDb(null); }}>
                             <ChevronLeft size={20} />
                         </Button>
+                        <div className="flex items-center gap-0.5">
+                            <Button variant="ghost" size="icon" onClick={handleBack} disabled={historyIndex <= 0} className="w-8 h-8 opacity-50 disabled:opacity-10">
+                                <ChevronLeft size={16} />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={handleForward} disabled={historyIndex >= history.length - 1} className="w-8 h-8 opacity-50 disabled:opacity-10">
+                                <ChevronRight size={16} />
+                            </Button>
+                        </div>
                         <div className="h-4 w-px bg-border mx-1" />
-                        <span className="text-[11px] font-black uppercase tracking-widest text-primary truncate max-w-[120px]">
+                        <span className="text-[11px] font-black uppercase tracking-widest text-primary truncate max-w-[100px]">
                             {selectedPath ? selectedPath.split('/').pop() : selectedDb?.title}
                         </span>
                     </div>
@@ -317,9 +468,13 @@ export default function ObsidianVaultPage() {
                                         </Button>
                                     </>
                                 )}
-                                {isEditing && (
+                                {isEditing ? (
                                     <Button variant="ghost" size="icon" onClick={handleSaveNote} className="text-primary">
                                         <Save size={18} />
+                                    </Button>
+                                ) : (
+                                    <Button variant="ghost" size="icon" onClick={handleDeleteFile} className="text-destructive/60 hover:text-destructive">
+                                        <Trash2 size={18} />
                                     </Button>
                                 )}
                             </>
@@ -333,14 +488,21 @@ export default function ObsidianVaultPage() {
                     config?.obsidianVaultPath ? (
                         <div className="flex-1 flex flex-col h-full bg-background animate-in fade-in duration-700">
                             {/* Compact Registry Header */}
-                            <div className="p-6 pb-2 space-y-4">
+                            <div className="p-6 pb-2 space-y-6">
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-0.5">
                                         <h1 className="text-2xl font-black uppercase tracking-tighter">Registry</h1>
                                         <p className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.4em] opacity-40">Knowledge_Index</p>
                                     </div>
-                                    <Database size={16} className="text-primary/20" />
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="ghost" size="icon" onClick={handleNewFile} className="bg-primary/5 hover:bg-primary/10 text-primary rounded-xl">
+                                            <Plus size={20} />
+                                        </Button>
+                                        <Database size={16} className="text-primary/20" />
+                                    </div>
                                 </div>
+
+                                <VaultStatsBar />
 
                                 {/* Tab Switcher */}
                                 <div className="flex p-1 bg-muted/20 rounded-xl border border-border/40">
@@ -424,54 +586,6 @@ export default function ObsidianVaultPage() {
                             </div>
                         </div>
                     )
-                ) : selectedDb ? (
-                    <div className="flex-1 flex flex-col h-full bg-background overflow-hidden animate-in slide-in-from-right duration-500">
-                        {loadingDb ? (
-                            <div className="flex-1 flex items-center justify-center">
-                                <RefreshCw className="animate-spin text-primary/20" size={40} />
-                            </div>
-                        ) : (
-                            <ScrollArea className="flex-1">
-                                <div className="p-8 space-y-12 pb-40">
-                                    {/* DB Header Stats */}
-                                    <div className="grid grid-cols-3 gap-3">
-                                        <div className="p-4 bg-muted/10 border border-border rounded-2xl flex flex-col gap-1">
-                                            <span className="text-[7px] font-black uppercase text-muted-foreground tracking-widest">Active</span>
-                                            <span className="text-lg font-black text-primary">{dbStats?.activeCount}</span>
-                                        </div>
-                                        <div className="p-4 bg-muted/10 border border-border rounded-2xl flex flex-col gap-1">
-                                            <span className="text-[7px] font-black uppercase text-muted-foreground tracking-widest">Pending</span>
-                                            <span className="text-lg font-black text-amber-500">{dbStats?.pendingCount}</span>
-                                        </div>
-                                        <div className="p-4 bg-muted/10 border border-border rounded-2xl flex flex-col gap-1">
-                                            <span className="text-[7px] font-black uppercase text-muted-foreground tracking-widest">Mastery</span>
-                                            <span className="text-lg font-black text-emerald-500">{dbStats?.masteryLevel}%</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Unit List */}
-                                    <div className="space-y-4">
-                                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 px-2 flex items-center gap-2">
-                                            <div className="w-1 h-1 bg-primary rounded-full" />
-                                            Database_Units
-                                        </h3>
-                                        <div className="grid grid-cols-1 gap-2">
-                                            {dbUnits.map(unit => (
-                                                <button 
-                                                    key={unit.id}
-                                                    onClick={() => selectFile(unit.path)}
-                                                    className="p-5 bg-muted/5 border border-border/40 rounded-2xl flex items-center justify-between text-left group active:scale-[0.99] transition-all"
-                                                >
-                                                    <span className="text-[11px] font-bold uppercase tracking-tight text-primary/80 group-hover:text-primary">{unit.title}</span>
-                                                    <ArrowRight size={12} className="text-muted-foreground/20 group-hover:text-primary" />
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </ScrollArea>
-                        )}
-                    </div>
                 ) : loadingNote ? (
                     <div className="flex-1 flex flex-col items-center justify-center gap-4">
                         <RefreshCw className="animate-spin text-primary/20" size={40} />
@@ -489,7 +603,7 @@ export default function ObsidianVaultPage() {
                         ) : (
                             <div className="flex-1 h-full overflow-hidden flex flex-col">
                                 {selectedPath && selectedPath.toLowerCase().endsWith('.pdf') ? (
-                                    <PdfViewer path={selectedPath} />
+                                    <PdfViewer path={selectedPath} isDarkMode={config?.theme === 'dark'} />
                                 ) : (
                                     <div className="flex-1 h-full overflow-hidden">
                                         <MarkdownViewer content={noteContent} onNavigate={selectFile} path={selectedPath || undefined} />
@@ -539,6 +653,10 @@ export default function ObsidianVaultPage() {
                     </SheetHeader>
                     <ScrollArea className="h-full p-8">
                         <NoteProperties metadata={noteMetadata} onNavigate={(path) => {
+                            setIsPropertiesOpen(false)
+                            selectFile(path)
+                        }} />
+                        <Backlinks backlinks={backlinks} onNavigate={(path) => {
                             setIsPropertiesOpen(false)
                             selectFile(path)
                         }} />

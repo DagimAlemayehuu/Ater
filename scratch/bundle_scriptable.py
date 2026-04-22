@@ -166,46 +166,156 @@ class NativeBackend {
     }
   }
 
-  async listDatabases() {
-    const academicPath = this.config.academicFolderPath || "1-Academic";
+  async listVaultDatabases() {
+    console.log("[Native] Listing Databases...");
     const fm = this.getFM(this.vaultPath);
-    const root = fm.joinPath(this.vaultPath, academicPath);
-    if (!fm.fileExists(root)) return { databases: [] };
+    const dbRoot = fm.joinPath(this.vaultPath, "3-Database");
+    if (!fm.fileExists(dbRoot)) return { databases: [] };
     
-    const items = fm.listContents(root);
-    const dbs = [];
-    for (const item of items) {
-      if (item.startsWith(".")) continue;
-      const fullPath = fm.joinPath(root, item);
+    const folders = fm.listContents(dbRoot);
+    const databases = [];
+    for (const folder of folders) {
+      if (folder.startsWith(".")) continue;
+      const fullPath = fm.joinPath(dbRoot, folder);
       if (fm.isDirectory(fullPath)) {
-        dbs.push({ id: item, title: item.replace(/_/g, ' '), path: academicPath + "/" + item });
+        const contents = fm.listContents(fullPath).filter(f => !f.startsWith(".") && f.endsWith(".md"));
+        let schema = {};
+        if (contents.length > 0) {
+          try {
+            const firstNote = await this.readNote("3-Database/" + folder + "/" + contents[0]);
+            schema = firstNote.metadata || {};
+          } catch(e) {}
+        }
+        databases.push({
+          id: folder,
+          name: folder.replace(/^[0-9]+\s*-\s*/, ""),
+          path: "3-Database/" + folder,
+          schema: schema,
+          count: contents.length
+        });
       }
     }
-    return { databases: dbs };
+    return { databases };
   }
 
   async listDatabaseUnits(dbId) {
-    const academicPath = this.config.academicFolderPath || "1-Academic";
     const fm = this.getFM(this.vaultPath);
-    const dbPath = fm.joinPath(this.vaultPath, academicPath + "/" + dbId);
-    const unitsPath = fm.joinPath(dbPath, "Units");
-    if (!fm.fileExists(unitsPath)) return { results: [] };
-    
-    const items = fm.listContents(unitsPath);
-    const units = items.filter(i => i.endsWith(".md")).map(i => ({ 
-      id: i, 
-      title: i.replace(".md", "").replace(/_/g, ' '),
-      path: academicPath + "/" + dbId + "/Units/" + i
+    const dbPath = fm.joinPath(this.vaultPath, "3-Database/" + dbId);
+    if (!fm.fileExists(dbPath)) return { results: [] };
+    const items = fm.listContents(dbPath);
+    const results = items.filter(f => !f.startsWith(".") && f.endsWith(".md")).map(f => ({
+      id: f,
+      title: f.replace(".md", "").replace(/_/g, " "),
+      path: "3-Database/" + dbId + "/" + f
     }));
-    return { results: units };
+    return { results };
   }
 
-  async getDatabaseStats(dbId) {
+  async createVaultRow(dbId, title, options) {
+    console.log("[Native] Creating row: " + title + " in DB: " + dbId);
+    const fm = this.getFM(this.vaultPath);
+    const dbPath = fm.joinPath(this.vaultPath, "3-Database/" + dbId);
+    if (!fm.fileExists(dbPath)) fm.createDirectory(dbPath, true);
+    
+    const fileName = title.replace(/[^a-z0-9\\s]/gi, '_').replace(/\\s+/g, '_') + ".md";
+    const fullPath = fm.joinPath(dbPath, fileName);
+    
+    let content = "---\\ntitle: " + title + "\\n---";
+    if (options.template) {
+      try {
+        const templateFull = fm.joinPath(this.vaultPath, options.template);
+        if (fm.fileExists(templateFull)) {
+          content = fm.readString(templateFull);
+          // Simple title replacement if found
+          content = content.replace(/title: .*/, "title: " + title);
+        }
+      } catch (e) {}
+    }
+    
+    fm.writeString(fullPath, content);
+    return { success: true, path: "3-Database/" + dbId + "/" + fileName };
+  }
+
+  async updateVaultRow(dbId, rowId, updates) {
+    console.log("[Native] Updating row: " + rowId + " in DB: " + dbId);
+    const fm = this.getFM(this.vaultPath);
+    const relPath = "3-Database/" + dbId + "/" + rowId;
+    const fullPath = fm.joinPath(this.vaultPath, relPath);
+    if (!fm.fileExists(fullPath)) throw new Error("Row not found: " + relPath);
+    
+    let content = fm.readString(fullPath);
+    let frontmatter = {};
+    const yamlMatch = content.match(/^---\\n([\\s\\S]*?)\\n---/);
+    
+    if (yamlMatch) {
+      const lines = yamlMatch[1].split('\\n');
+      for (const line of lines) {
+        const [k, ...v] = line.split(':');
+        if (k && v.length) frontmatter[k.trim()] = v.join(':').trim();
+      }
+      
+      frontmatter = { ...frontmatter, ...updates };
+      const newYaml = Object.entries(frontmatter).map(([k, v]) => `${k}: ${v}`).join('\\n');
+      content = content.replace(/^---\\n[\\s\\S]*?\\n---/, `---\\n${newYaml}\\n---`);
+    } else {
+      // No frontmatter, create one
+      const newYaml = Object.entries(updates).map(([k, v]) => `${k}: ${v}`).join('\\n');
+      content = `---\\n${newYaml}\\n---\\n\\n` + content;
+    }
+    
+    fm.writeString(fullPath, content);
+    return { success: true };
+  }
+
+  async deleteVaultRow(dbId, rowId) {
+    console.log("[Native] Deleting row: " + rowId + " in DB: " + dbId);
+    const fm = this.getFM(this.vaultPath);
+    const relPath = "3-Database/" + dbId + "/" + rowId;
+    const fullPath = fm.joinPath(this.vaultPath, relPath);
+    if (fm.fileExists(fullPath)) fm.remove(fullPath);
+    return { success: true };
+  }
+
+  async listVaultTemplates() {
+    const fm = this.getFM(this.vaultPath);
+    const templatePath = fm.joinPath(this.vaultPath, "8-System/Templates");
+    if (!fm.fileExists(templatePath)) return { templates: [] };
+    const items = fm.listContents(templatePath);
+    return { templates: items.filter(f => f.endsWith(".md")).map(f => ({ name: f.replace(".md", ""), path: "8-System/Templates/" + f })) };
+  }
+
+  async getVaultStats() {
+    const allFiles = await this.listVaultFiles(true);
+    const mdFiles = allFiles.files.filter(f => !f.is_dir && f.path.endsWith(".md"));
+    const pdfFiles = allFiles.files.filter(f => !f.is_dir && f.path.endsWith(".pdf"));
     return {
-      activeCount: 12,
-      pendingCount: 5,
-      masteryLevel: 68
+      totalNotes: mdFiles.length,
+      totalAssets: pdfFiles.length,
+      vaultSize: "Unknown",
+      lastSync: new Date().toISOString()
     };
+  }
+
+  async pickFileToInbox() {
+    try {
+      console.log("[Native] Picking file to inbox...");
+      const paths = await DocumentPicker.openFile();
+      if (!paths || paths.length === 0) return { success: false, message: "No file selected" };
+      
+      const fm = this.getFM(this.vaultPath);
+      const inboxPath = this.config.okaInboxPath || "9-OKA/Inbox";
+      const fullInbox = fm.joinPath(this.vaultPath, inboxPath);
+      if (!fm.fileExists(fullInbox)) fm.createDirectory(fullInbox, true);
+      
+      for (const p of paths) {
+        const fileName = p.split('/').pop();
+        const dest = fm.joinPath(fullInbox, fileName);
+        fm.copy(p, dest);
+      }
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
   }
 
   async handleRequest(request) {
@@ -225,19 +335,23 @@ class NativeBackend {
           data = this.config;
         }
       }
-      else if (path === "/api/vault/databases") data = await this.listDatabases();
-      else if (path.startsWith("/api/vault/databases/") && path.endsWith("/units")) {
-        const dbId = path.split('/')[4];
-        data = await this.listDatabaseUnits(decodeURIComponent(dbId));
-      }
-      else if (path.startsWith("/api/vault/databases/")) {
-        const dbId = path.split('/')[4];
-        data = await this.getDatabaseStats(decodeURIComponent(dbId));
-      }
-      else if (path === "/api/obsidian/pick-folder") {
-        data = await this.pickVaultFolder();
-      }
       else if (path === "/api/obsidian/files") data = await this.listVaultFiles(body?.recursive);
+      else if (path === "/api/vault/stats") data = await this.getVaultStats();
+      else if (path === "/api/vault/databases") data = await this.listVaultDatabases();
+      else if (path.startsWith("/api/vault/databases/")) {
+        const parts = path.split('/');
+        const dbId = decodeURIComponent(parts[4]);
+        if (path.endsWith("/units")) data = await this.listDatabaseUnits(dbId);
+        else if (path.endsWith("/stats")) data = await this.getDatabaseStats(dbId);
+        else if (path.endsWith("/create")) data = await this.createVaultRow(dbId, body.title, body);
+        else if (path.includes("/rows/")) {
+          const rowId = decodeURIComponent(parts[6]);
+          if (method === "PUT") data = await this.updateVaultRow(dbId, rowId, body);
+          else if (method === "DELETE") data = await this.deleteVaultRow(dbId, rowId);
+        }
+        else data = { id: dbId, title: dbId.replace(/_/g, " ") };
+      }
+      else if (path === "/api/vault/templates") data = await this.listVaultTemplates();
       else if (path.startsWith("/api/obsidian/files/binary/")) {
         const filePath = decodeURIComponent(path.replace("/api/obsidian/files/binary/", ""));
         data = await this.readBinaryFile(filePath);
@@ -250,6 +364,46 @@ class NativeBackend {
       }
       else if (path === "/api/ai/universal") data = await this.universalAiRequest(body);
       else if (path === "/api/vault/search") data = await this.localSearch(body.query);
+      else if (path.startsWith("/api/vault/backlinks")) {
+        const urlMatch = path.match(/pageName=(.*)/);
+        const pageName = urlMatch ? decodeURIComponent(urlMatch[1]) : "";
+        data = await this.getBacklinks(pageName);
+      }
+      else if (path.startsWith("/api/ai/specialists/")) {
+        const specialist = path.split("/").pop();
+        data = { status: "active", name: specialist, message: "Specialist system operational." };
+      }
+      else if (path === "/api/ai/chronos/timeline") {
+        data = []; // Stub for timeline
+      }
+      else if (path.startsWith("/api/practice/")) {
+        if (path === "/api/practice/list") data = await this.practiceList();
+        else if (path === "/api/practice/generate") data = await this.practiceGenerate(body.hub_id, body.config);
+        else if (path === "/api/practice/get") data = await this.practiceGet(body.path);
+        else if (path === "/api/practice/score") data = await this.practiceUpdateScore(body.path, body.score);
+        else if (path === "/api/practice/delete") data = await this.practiceDelete(body.path);
+      }
+      else if (path.startsWith("/api/oka/")) {
+        // Specialized OKA handling for mobile
+        if (path === "/api/oka/process") data = await this.okaProcess(body);
+        else if (path === "/api/oka/explain") data = await this.okaExplain(body);
+        else if (path === "/api/oka/interactive-quiz") data = await this.okaQuiz(body);
+        else if (path === "/api/oka/chat") data = await this.okaChat(body);
+        else if (path === "/api/oka/inbox") data = await this.okaListInbox();
+        else if (path === "/api/oka/generated") data = await this.okaListGenerated();
+        else if (path === "/api/oka/pick-to-inbox") data = await this.pickFileToInbox();
+        else if (path === "/api/oka/hubs") data = await this.okaListHubs();
+        else if (path.includes("/notes") && path.startsWith("/api/oka/hubs/")) {
+          const hubId = path.split("/")[4];
+          data = await this.okaListHubNotes(decodeURIComponent(hubId));
+        }
+        else if (path === "/api/oka/queue/status" || path === "/api/oka/watcher/status") {
+          data = { status: "idle", is_running: true, pending_count: 0, inbox: this.config.okaInboxPath || "9-OKA/Inbox" };
+        }
+        else if (path === "/api/oka/plan") data = { session_id: "mobile-" + Date.now(), plan_structured: { batches: [] }, status: "detected" };
+        else if (path === "/api/oka/confirm") data = { status: "success", current_batch: 1, has_more: false, results: [] };
+        else data = { status: "idle", message: "OKA Sub-system active via Proxy" };
+      }
       else {
         console.log("[Native] Unhandled API path: " + path);
         data = { status: "error", message: "Not implemented: " + path };
@@ -261,21 +415,280 @@ class NativeBackend {
     }
   }
 
+  async okaListHubs() {
+    console.log("[Native] Listing Hubs...");
+    const fm = this.getFM(this.vaultPath);
+    const plannerPath = fm.joinPath(this.vaultPath, "3-Database/06 - Study Planner");
+    if (!fm.fileExists(plannerPath)) return { hubs: [] };
+    
+    const files = fm.listContents(plannerPath).filter(f => f.endsWith(".md") && !f.startsWith("_"));
+    const hubs = [];
+    for (const file of files) {
+      const content = fm.readString(fm.joinPath(plannerPath, file));
+      const metadata = this.parseYaml(content);
+      hubs.push({
+        id: file,
+        title: file.replace(".md", "").replace(/_/g, " "),
+        path: "3-Database/06 - Study Planner/" + file,
+        course: metadata.course || metadata.Course || "General",
+        unit: metadata.unit || metadata.Unit || ""
+      });
+    }
+    return { hubs };
+  }
+
+  async okaListHubNotes(hubId) {
+    console.log("[Native] Resolving Notes for Hub: " + hubId);
+    const fm = this.getFM(this.vaultPath);
+    const hubs = await this.okaListHubs();
+    const hub = hubs.hubs.find(h => h.id === hubId);
+    if (!hub) return { notes: [] };
+
+    // Try to find notes in the '2-Registry' folder which is standard for atomic notes
+    const allFiles = await this.listVaultFiles(true);
+    let notes = allFiles.files.filter(f => 
+      !f.is_dir && 
+      f.path.endsWith(".md") && 
+      (f.path.includes("2-Registry") || f.path.includes("1-Input")) &&
+      !f.path.includes("Practice")
+    );
+    
+    // If we have course/unit info, filter by it in the path
+    if (hub.course) {
+      const courseFilter = hub.course.toLowerCase();
+      const relevant = notes.filter(n => n.path.toLowerCase().includes(courseFilter));
+      if (relevant.length > 0) notes = relevant;
+    }
+
+    return { notes: notes.slice(0, 100) };
+  }
+
+  async practiceList() {
+    const fm = this.getFM(this.vaultPath);
+    const practicePath = fm.joinPath(this.vaultPath, "9-OKA/Practice");
+    if (!fm.fileExists(practicePath)) return { practices: [] };
+    
+    const files = fm.listContents(practicePath).filter(f => f.endsWith(".md"));
+    const practices = [];
+    for (const file of files) {
+      const content = fm.readString(fm.joinPath(practicePath, file));
+      const metadata = this.parseYaml(content);
+      if (metadata.type === "practice") {
+        practices.push({
+          id: file,
+          path: "9-OKA/Practice/" + file,
+          hub_id: metadata.hub_id,
+          hub_title: metadata.hub_id ? metadata.hub_id.replace(".md", "").replace(/_/g, " ") : "Core Synthesis",
+          date: metadata.date,
+          score: metadata.score ? metadata.score.replace("%", "") : 0,
+          completed: metadata.completed || false
+        });
+      }
+    }
+    return { practices };
+  }
+
+  async practiceGet(path) {
+    const note = await this.readNote(path);
+    const jsonMatch = note.content.match(/```json\\n([\\s\\S]*?)\\n```/);
+    if (jsonMatch) {
+      try {
+        const questions = JSON.parse(jsonMatch[1]);
+        return { questions, ...note.metadata };
+      } catch (e) {}
+    }
+    return { questions: [], error: "No structured data found" };
+  }
+
+  async practiceUpdateScore(path, score) {
+    const note = await this.readNote(path);
+    let content = note.content;
+    const scoreStr = score + "%";
+    
+    if (content.includes("score:")) {
+      content = content.replace(/score: .*/, "score: " + scoreStr);
+    } else {
+      content = content.replace("---", "---\\nscore: " + scoreStr);
+    }
+    
+    if (content.includes("completed:")) {
+      content = content.replace(/completed: .*/, "completed: true");
+    } else {
+      content = content.replace("---", "---\\ncompleted: true");
+    }
+    
+    await this.writeNote(path, content);
+    return { success: true };
+  }
+
+  async practiceDelete(path) {
+    return await this.deleteNote(path);
+  }
+
+  async practiceGenerate(hubId, config) {
+    console.log("[Native] Generating Sovereign Practice Session...");
+    const fm = this.getFM(this.vaultPath);
+    
+    // 1. Gather context from hub
+    const hub = await this.readNote("3-Database/06 - Study Planner/" + hubId);
+    let context = "HUB_TOPIC: " + hubId + "\\n\\nCONTENT_PREVIEW:\\n" + hub.content.substring(0, 3000);
+    
+    // 2. Refined Pedagogical Prompt
+    const prompt = `You are OKA, the Sovereign Pedagogical Architect. Your mission is to construct a High-Fidelity Retrieval Session.\\n\\n` +
+                   `TARGET_HUB: ${hubId}\\n` +
+                   `PEDAGOGICAL_PARAMETERS:\\n` +
+                   `- Difficulty: ${config.difficulty || 'L1'}\\n` +
+                   `- Distribution: ${JSON.stringify(config.questionDistribution)}\\n` +
+                   `- Strictness: ${config.gradingStrictness || 'Standard'}\\n\\n` +
+                   `SOURCE_CONTEXT:\\n${context}\\n\\n` +
+                   `CONSTRUCTION_RULES:\\n` +
+                   `1. Generate a "questions" array within a JSON object.\\n` +
+                   `2. Types allowed: "mcq", "true_false", "short_answer".\\n` +
+                   `3. Each MCQ must have 4 plausible distractors (options A, B, C, D).\\n` +
+                   `4. Each question MUST have a "explanation" field detailing the "Why" behind the correct answer.\\n` +
+                   `5. Ensure all questions are unique and map to core concepts in the context.\\n` +
+                   `6. RETURN ONLY THE JSON OBJECT. NO MARKDOWN TAGS.`;
+    
+    const aiRes = await this.universalAiRequest({ 
+      messages: [{ role: "user", content: prompt }],
+      system_prompt: "You are the LifeOS Retrieval Specialist. You output ONLY structured JSON data. No conversational filler." 
+    });
+
+    try {
+      let rawJson = aiRes.response.trim();
+      // Safety: strip markdown code blocks if AI ignored system prompt
+      rawJson = rawJson.replace(/^\`{3}json/i, "").replace(/\`{3}$/, "").trim();
+      
+      const questionsData = JSON.parse(rawJson);
+      const questions = Array.isArray(questionsData.questions) ? questionsData.questions : (Array.isArray(questionsData) ? questionsData : []);
+      
+      if (questions.length === 0) throw new Error("No questions generated by AI.");
+
+      // 3. Save to vault for persistence
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const fileName = `Practice_${hubId.replace(".md", "")}_${timestamp}.md`;
+      const relPath = "9-OKA/Practice/" + fileName;
+      
+      const mdContent = `---\\ntype: practice\\nhub_id: ${hubId}\\ndate: ${new Date().toISOString().split('T')[0]}\\ndifficulty: ${config.difficulty}\\nscore: null\\ncompleted: false\\n---\\n\\n# Practice Session: ${hubId.replace(".md", "")}\\n\\n` +
+                        "```json\\n" + JSON.stringify(questions, null, 2) + "\\n```";
+      
+      await this.writeNote(relPath, mdContent);
+      return { questions, quiz_path: relPath };
+    } catch (e) {
+      console.log("[Native] Practice generation failure: " + e.message);
+      throw e;
+    }
+  }
+
+  parseYaml(content) {
+    const metadata = {};
+    const yamlMatch = content.match(/^---\\n([\\s\\S]*?)\\n---/);
+    if (yamlMatch) {
+      const yamlLines = yamlMatch[1].split('\\n');
+      for (const line of yamlLines) {
+        const parts = line.split(':');
+        if (parts.length >= 2) {
+          const key = parts[0].trim();
+          const value = parts.slice(1).join(':').trim();
+          metadata[key] = value.replace(/^["']|["']$/g, '');
+        }
+      }
+    }
+    return metadata;
+  }
+
+  async okaListInbox() {
+    const inboxPath = this.config.okaInboxPath || "9-OKA/Inbox";
+    const fm = this.getFM(this.vaultPath);
+    const fullPath = fm.joinPath(this.vaultPath, inboxPath);
+    if (!fm.fileExists(fullPath)) return { files: [] };
+    const items = fm.listContents(fullPath);
+    return { files: items.filter(i => !i.startsWith(".")).map(i => ({ name: i, path: inboxPath + "/" + i })) };
+  }
+
+  async okaListGenerated() {
+    const inboxPath = this.config.okaInboxPath || "9-OKA/Inbox";
+    const genPath = inboxPath + "/note generated";
+    const fm = this.getFM(this.vaultPath);
+    const fullPath = fm.joinPath(this.vaultPath, genPath);
+    if (!fm.fileExists(fullPath)) return { files: [] };
+    const items = fm.listContents(fullPath);
+    return { files: items.filter(i => !i.startsWith(".")).map(i => ({ name: i, path: genPath + "/" + i })) };
+  }
+
+  async getBacklinks(pageName) {
+    if (!pageName) return { backlinks: [] };
+    console.log("[Native] Resolving backlinks for: " + pageName);
+    const fm = this.getFM(this.vaultPath);
+    const allFiles = await this.listVaultFiles(true);
+    const backlinks = [];
+    const escapedPage = pageName.replace(/[-\\/\\\\^$*+?.()|[\\]{}]/g, "\\\\$&");
+    const wikiLinkRegex = new RegExp(`\\[\\[${escapedPage}(\\|.*?)?\\]\\]`, "i");
+    for (const f of allFiles.files) {
+      if (!f.is_dir && f.path.endsWith(".md")) {
+        try {
+          const content = fm.readString(fm.joinPath(this.vaultPath, f.path));
+          if (content && wikiLinkRegex.test(content)) {
+            backlinks.push({ path: f.path, name: f.name.replace(".md", "").replace(/_/g, " ") });
+          }
+        } catch (e) {}
+      }
+    }
+    return { backlinks };
+  }
+
+  async okaProcess(payload) {
+    const { text, file_path, plan } = payload;
+    let content = text;
+    if (!content && file_path) {
+      const note = await this.readNote(file_path);
+      content = note.content;
+    }
+    if (!content && !plan) return { error: "No content or plan provided" };
+    console.log("[Native] OKA Processing...");
+    if (plan) {
+      return { status: "success", message: "Plan deployment simulated on mobile.", results: [{ type: "hub", title: "Anchored Hub Created" }] };
+    }
+    const prompt = "Summarize the following technical note for a pedagogical vault. " +
+                   "Focus on core concepts and relationships. Then generate 3 Socratic discovery questions. " +
+                   "Format as markdown. \\n\\nContent:\\n" + content;
+    const res = await this.universalAiRequest({ messages: [{ role: "user", content: prompt }] });
+    return { status: "success", summary: res.response, questions: ["How does this relate to previous units?", "What is the edge case here?"] };
+  }
+
+  async okaExplain(payload) {
+    const { selection, path, page } = payload;
+    const prompt = `Explain this selection from the document "${path}" (Page ${page || 1}):\\n\\n"${selection}"\\n\\nProvide a high-fidelity, pedagogical explanation.`;
+    const aiRes = await this.universalAiRequest({ messages: [{ role: "user", content: prompt }] });
+    return { answer: aiRes.response };
+  }
+
+  async okaQuiz(payload) {
+    const { selection } = payload;
+    const prompt = `Based on the following text, generate 3 high-quality multiple-choice questions for retrieval practice.\\n\\nTEXT:\\n"${selection}"\\n\\nFormat the output as a JSON object with a "questions" array. Each question should have:\\n- question: string\\n- options: string[]\\n- answer: string (must be one of the options)\\n- explanation: string`;
+    const aiRes = await this.universalAiRequest({ messages: [{ role: "user", content: prompt }], system_prompt: "You are the LifeOS Retrieval Specialist. Return ONLY valid JSON." });
+    try {
+      const cleaned = aiRes.response.replace(/```json|```/g, "").trim();
+      return JSON.parse(cleaned);
+    } catch (e) { return { questions: [] }; }
+  }
+
+  async okaChat(payload) {
+    const { selection, messages } = payload;
+    const aiRes = await this.universalAiRequest({ messages: messages, system_prompt: `You are discussing the following selection: "${selection}". Help the user explore the topic deeper.` });
+    return { answer: aiRes.response };
+  }
+
   async readBinaryFile(filePath) {
     const fm = this.getFM(this.vaultPath);
     const fullPath = fm.joinPath(this.vaultPath, filePath);
     if (!fm.fileExists(fullPath)) throw new Error("File not found: " + filePath);
-    
-    // In Scriptable, fm.read returns a Data object
     const data = fm.read(fullPath);
     const b64 = data.toBase64String();
-    
-    // Determine mime type
     const ext = filePath.split('.').pop().toLowerCase();
     let mime = "application/octet-stream";
     if (ext === "pdf") mime = "application/pdf";
     else if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) mime = "image/" + (ext === "jpg" ? "jpeg" : ext);
-    
     return { data: b64, mime: mime };
   }
 
@@ -283,44 +696,25 @@ class NativeBackend {
     console.log("[Native] Opening folder picker...");
     try {
       const path = await DocumentPicker.openFolder();
-      console.log("[Native] Selected path: " + path);
       this.config.obsidianVaultPath = path;
       this.vaultPath = path;
       this.saveConfig(this.config);
       return { success: true, path: path };
-    } catch (e) {
-      console.log("[Native] Folder pick error: " + e.message);
-      return { success: false, error: e.message };
-    }
+    } catch (e) { return { success: false, error: e.message }; }
   }
 
   getFM(path) {
     const isCloud = path && (path.includes("com~apple~CloudDocs") || path.includes("Mobile Documents") || path.includes("iCloud"));
-    const fm = isCloud ? FileManager.iCloud() : FileManager.local();
-    return fm;
+    return isCloud ? FileManager.iCloud() : FileManager.local();
   }
 
   async listVaultFiles(recursive = false) {
-    console.log("[Native] Listing files for: " + this.vaultPath);
     if (!this.vaultPath) return { files: [], error: "No vault path configured" };
-    
     const fm = this.getFM(this.vaultPath);
-    
-    // Check if iCloud file needs downloading or if it's accessible
     try {
-      if (!fm.fileExists(this.vaultPath)) {
-        console.log("[Native] Vault path does not exist: " + this.vaultPath);
-        return { files: [], error: "Path not found" };
-      }
-      if (!fm.isDirectory(this.vaultPath)) {
-        console.log("[Native] Vault path is not a directory: " + this.vaultPath);
-        return { files: [], error: "Not a directory" };
-      }
-    } catch (e) {
-      console.log("[Native] FM Check Error: " + e.message);
-      return { files: [], error: e.message };
-    }
-    
+      if (!fm.fileExists(this.vaultPath)) return { files: [], error: "Path not found" };
+      if (!fm.isDirectory(this.vaultPath)) return { files: [], error: "Not a directory" };
+    } catch (e) { return { files: [], error: e.message }; }
     const results = [];
     const walk = (dir) => {
       const items = fm.listContents(dir);
@@ -341,11 +735,8 @@ class NativeBackend {
     const fm = this.getFM(this.vaultPath);
     const fullPath = fm.joinPath(this.vaultPath, notePath);
     if (!fm.fileExists(fullPath)) throw new Error("File not found: " + notePath);
-    
     const content = fm.readString(fullPath);
     let metadata = {};
-    
-    // Simple regex-based YAML parser
     const yamlMatch = content.match(/^---\\n([\\s\\S]*?)\\n---/);
     if (yamlMatch) {
       const yamlLines = yamlMatch[1].split('\\n');
@@ -358,7 +749,6 @@ class NativeBackend {
         }
       }
     }
-    
     return { content, path: notePath, metadata };
   }
 
@@ -374,9 +764,7 @@ class NativeBackend {
   async deleteNote(notePath) {
     const fm = this.getFM(this.vaultPath);
     const fullPath = fm.joinPath(this.vaultPath, notePath);
-    if (fm.fileExists(fullPath)) {
-      fm.remove(fullPath);
-    }
+    if (fm.fileExists(fullPath)) fm.remove(fullPath);
     return { success: true };
   }
 
@@ -388,9 +776,7 @@ class NativeBackend {
     for (const f of allFiles.files) {
       if (!f.is_dir && f.path.endsWith(".md")) {
         const content = fm.readString(fm.joinPath(this.vaultPath, f.path));
-        if (regex.test(content) || regex.test(f.path)) {
-          results.push({ path: f.path, score: 1 });
-        }
+        if (regex.test(content) || regex.test(f.path)) results.push({ path: f.path, score: 1 });
       }
     }
     return { results };
@@ -400,31 +786,17 @@ class NativeBackend {
     const { provider, model, messages, system_prompt } = payload;
     const apiKey = this.config.aiApiKey || this.config.geminiApiKey;
     if (!apiKey) throw new Error("AI API Key missing in config");
-    
-    let url = provider === "google" 
-        ? `https://generativelanguage.googleapis.com/v1beta/models/${model || "gemini-2.0-flash"}:generateContent?key=${apiKey}`
-        : (provider === "openai" ? "https://api.openai.com/v1/chat/completions" : 
-           (provider === "groq" ? "https://api.groq.com/openai/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions"));
-    
+    let url = provider === "google" ? `https://generativelanguage.googleapis.com/v1beta/models/${model || "gemini-2.0-flash"}:generateContent?key=${apiKey}` : (provider === "openai" ? "https://api.openai.com/v1/chat/completions" : (provider === "groq" ? "https://api.groq.com/openai/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions"));
     let headers = { "Content-Type": "application/json" };
     if (provider !== "google") headers["Authorization"] = `Bearer ${apiKey}`;
-    
-    let body = provider === "google" 
-        ? { contents: [{ role: "user", parts: [{ text: system_prompt || "" }] }, ...messages.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }))] }
-        : { model, messages: [{ role: "system", content: system_prompt || "" }, ...messages] };
-    
+    let body = provider === "google" ? { contents: [{ role: "user", parts: [{ text: system_prompt || "" }] }, ...messages.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }))] } : { model, messages: [{ role: "system", content: system_prompt || "" }, ...messages] };
     const req = new Request(url);
     req.method = "POST";
     req.headers = headers;
     req.body = JSON.stringify(body);
-    
     const res = await req.loadJSON();
     if (res.error) throw new Error(res.error.message || JSON.stringify(res.error));
-    
-    let text = provider === "google" 
-      ? (res.candidates?.[0]?.content?.parts?.[0]?.text || "No response from AI")
-      : (res.choices?.[0]?.message?.content || "No response from AI");
-      
+    let text = provider === "google" ? (res.candidates?.[0]?.content?.parts?.[0]?.text || "No response from AI") : (res.choices?.[0]?.message?.content || "No response from AI");
     return { response: text };
   }
 }

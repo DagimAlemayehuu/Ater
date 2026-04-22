@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
+import { useNavigate } from 'react-router-dom'
 import { Plus, ChevronRight, Search, Database as DatabaseIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function Databases() {
+  const navigate = useNavigate()
   const [databases, setDatabases] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -22,7 +24,7 @@ export default function Databases() {
     load()
   }, [])
 
-  const filteredDbs = databases.filter(db => 
+  const filteredDbs = databases.filter((db: any) => 
     db.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     db.area?.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -51,10 +53,10 @@ export default function Databases() {
             <div key={i} className="h-32 bg-accent/20 animate-pulse rounded-md" />
           ))
         ) : (
-          filteredDbs.map(db => (
+          filteredDbs.map((db: any) => (
             <button 
               key={db.id}
-                                          onClick={() => window.location.href = `/databases/${db.id}`}
+              onClick={() => navigate(`/databases/${db.id}`)}
               className="flex flex-col p-6 bg-accent/20 border border-border/10 rounded-md hover:bg-accent/40 transition-all text-left group relative overflow-hidden"
             >
               <div className="flex justify-between items-start mb-4">

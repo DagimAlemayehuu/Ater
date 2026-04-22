@@ -66,7 +66,17 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
     const [selectedFile, setSelectedFile] = useState<any>(null)
     const [processing, setProcessing] = useState(false)
     const [step, setStep] = useState<'inbox' | 'analyze' | 'plan' | 'deploy'>('inbox')
+    
+    // Pipeline State
     const [activePlan, setActivePlan] = useState<string | null>(null)
+    const [sessionId, setSessionId] = useState<string | null>(null)
+    const [anchoredHub, setAnchoredHub] = useState<any>(null)
+    const [curriculum, setCurriculum] = useState({ course: '', unit: '', semester: '', hub_title: '' })
+    
+    // Batching State
+    const [currentBatch, setCurrentBatch] = useState<number>(0)
+    const [totalBatches, setTotalBatches] = useState<number>(0)
+    const [batchFeed, setBatchFeed] = useState<any[]>([])
     const [isCompleted, setIsCompleted] = useState(false)
     const [status, setStatus] = useState<any>(null)
 
@@ -78,8 +88,8 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
 
     const fetchInbox = async () => {
         try {
-            const res = await sidecarApi.listObsidianFiles(true)
-            setInboxFiles(res.files.filter(f => !f.is_dir && f.path.endsWith('.md')).slice(0, 30))
+            const res = await sidecarApi.okaListInbox()
+            setInboxFiles(res.files || [])
         } catch (e) { console.error(e) }
     }
 
@@ -93,24 +103,44 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
     const handleAnalyze = async () => {
         if (!selectedFile) return
         setProcessing(true)
-        // Simulate extraction phase
-        setTimeout(() => {
-            setProcessing(false)
+        try {
+            const res = await sidecarApi.okaProcess({ 
+                file_path: selectedFile.path
+            })
+            setAnchoredHub(res.anchored_hub)
+            const anchor = res.anchored_hub
+            const detected = res.detected_curriculum
+            setCurriculum({
+                course: anchor?.course || detected?.course || '',
+                unit: String(anchor?.unit || detected?.unit || ''),
+                semester: anchor?.semester || detected?.semester || '',
+                hub_title: anchor?.title || (detected?.hub_title ? ((detected.unit ? detected.unit + ' ' : '') + detected.hub_title + ' Hub') : ''),
+            })
             setStep('analyze')
-        }, 1500)
+        } catch (e) {
+            alert('Analysis Failed')
+        } finally {
+            setProcessing(false)
+        }
     }
 
     const handleGeneratePlan = async () => {
         setProcessing(true)
         try {
-            const res = await sidecarApi.brainstorm(
-                `Generate an OKA structural plan for "${selectedFile.path}". 
-                1. Identify the Master Hub title (wrapped in <hub_note>). 
-                2. List 5-8 Atomic Notes (wrapped in <atomic_notes> using [[links]]). 
-                3. Create 3 Socratic questions (wrapped in <pq_note>).`,
-                "You are the Obsidian Knowledge Architect (OKA) v23.0."
-            )
-            setActivePlan(res.response)
+            const res = await sidecarApi.okaGeneratePlan({ 
+                file_path: selectedFile.path,
+                curriculum: {
+                    course: String(curriculum.course || ""),
+                    unit: String(curriculum.unit || ""),
+                    semester: String(curriculum.semester || ""),
+                    hub_title: String(curriculum.hub_title || "")
+                },
+                target_hub_id: anchoredHub?.id ? String(anchoredHub.id) : undefined
+            })
+            setActivePlan(res.plan_raw)
+            setSessionId(res.session_id)
+            setTotalBatches(res.plan_structured?.batches?.length || 1)
+            setCurrentBatch(0)
             setStep('plan')
         } catch (e) {
             alert('Generation Failed')
@@ -120,18 +150,53 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
     }
 
     const handleConfirm = async () => {
+        if (!sessionId) return
         setProcessing(true)
+        setStep('deploy')
+        
         try {
-            await sidecarApi.okaProcess({
-                path: selectedFile.path,
-                plan: activePlan
-            })
-            setIsCompleted(true)
-            setStep('deploy')
-        } catch (e) {
-            alert('Deployment Error')
-        } finally {
-            setProcessing(false)
+            let currentHasMore = true;
+            let currentLocalBatch = 0;
+            
+            while (currentHasMore) {
+                const command = "Proceed Batch (Auto)";
+                const res = await sidecarApi.okaConfirm({ 
+                    session_id: sessionId, 
+                    command,
+                    curriculum_override: currentLocalBatch === 0 ? {
+                        course: String(curriculum.course || ""),
+                        unit: String(curriculum.unit || ""),
+                        semester: String(curriculum.semester || ""),
+                        hub_title: String(curriculum.hub_title || "")
+                    } : undefined,
+                    anchored_hub_id: anchoredHub?.id ? String(anchoredHub.id) : undefined
+                })
+                
+                if (res.status === 'error') {
+                    throw new Error(res.message || res.detail || "Backend generation failed.");
+                }
+                
+                const tempBatch = res.current_batch || (currentLocalBatch + 1)
+                currentLocalBatch = tempBatch
+                setCurrentBatch(tempBatch)
+
+                setBatchFeed(prev => [...prev, { 
+                    batch: tempBatch, 
+                    results: res.results || []
+                }])
+
+                currentHasMore = res.has_more;
+                if (currentHasMore) {
+                    await new Promise(r => setTimeout(r, 500));
+                } else {
+                    setIsCompleted(true)
+                    break;
+                }
+            }
+        } catch (err: any) { 
+            alert('Deployment Error: ' + err.message)
+        } finally { 
+            setProcessing(false) 
         }
     }
 
@@ -159,32 +224,39 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                 <div className="p-6 pb-40">
                     {step === 'inbox' && (
                         <div className="space-y-8 animate-in fade-in duration-500">
-                            <div className="space-y-4">
+                            <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">Pending Ingestion</h3>
-                                <div className="grid grid-cols-1 gap-3">
-                                    {inboxFiles.map((f) => (
-                                        <button 
-                                            key={f.path}
-                                            onClick={() => setSelectedFile(f)}
-                                            className={cn(
-                                                "p-4 border rounded-2xl text-left transition-all relative overflow-hidden group",
-                                                selectedFile?.path === f.path ? "border-primary bg-primary/5 shadow-lg" : "border-border bg-muted/10 hover:border-primary/20"
-                                            )}
-                                        >
-                                            {selectedFile?.path === f.path && <div className="absolute top-0 left-0 w-1 h-full bg-primary" />}
-                                            <div className="flex items-center gap-3 mb-1">
-                                                <FileText size={14} className={selectedFile?.path === f.path ? "text-primary" : "text-muted-foreground"} />
-                                                <p className="text-sm font-bold truncate text-primary uppercase tracking-tight">{f.path.split('/').pop()}</p>
-                                            </div>
-                                            <p className="text-[10px] text-muted-foreground/60 truncate pl-6">{f.path}</p>
-                                        </button>
-                                    ))}
-                                </div>
+                                <Button variant="ghost" size="sm" onClick={async () => {
+                                    const res = await sidecarApi.okaPickFileToInbox();
+                                    if (res.success) fetchInbox();
+                                }} className="h-8 text-[9px] font-black uppercase tracking-widest gap-2 bg-primary/5 text-primary rounded-xl">
+                                    <Sparkles size={12} /> Upload Fragment
+                                </Button>
+                            </div>
+                            <div className="grid grid-cols-1 gap-3">
+                                {inboxFiles.map((f) => (
+                                    <button 
+                                        key={f.path}
+                                        onClick={() => setSelectedFile(f)}
+                                        className={cn(
+                                            "p-4 border rounded-2xl text-left transition-all relative overflow-hidden group",
+                                            selectedFile?.path === f.path ? "border-primary bg-primary/5 shadow-lg" : "border-border bg-muted/10 hover:border-primary/20"
+                                        )}
+                                    >
+                                        {selectedFile?.path === f.path && <div className="absolute top-0 left-0 w-1 h-full bg-primary" />}
+                                        <div className="flex items-center gap-3 mb-1">
+                                            <FileText size={14} className={selectedFile?.path === f.path ? "text-primary" : "text-muted-foreground"} />
+                                            <p className="text-sm font-bold truncate text-primary uppercase tracking-tight">{f.name || f.path.split('/').pop()}</p>
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground/60 truncate pl-6">{f.path}</p>
+                                    </button>
+                                ))}
                             </div>
                             
                             {selectedFile && (
-                                <Button onClick={handleAnalyze} className="w-full py-8 font-black uppercase tracking-[0.3em] gap-3 shadow-2xl shadow-primary/20 text-xs">
-                                    <Zap size={16} /> Initialize Analysis
+                                <Button onClick={handleAnalyze} disabled={processing} className="w-full py-8 font-black uppercase tracking-[0.3em] gap-3 shadow-2xl shadow-primary/20 text-xs">
+                                    {processing ? <Loader2 className="animate-spin" size={16} /> : <Zap size={16} />}
+                                    Initialize Analysis
                                 </Button>
                             )}
                         </div>
@@ -200,18 +272,28 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                 <div className="space-y-2 relative z-10">
                                     <h3 className="text-xl font-black uppercase tracking-tighter">Detection Phase</h3>
                                     <p className="text-[13px] text-muted-foreground leading-relaxed font-medium">
-                                        OKA has processed the file heuristics. The document appears to contain high-density curriculum data.
+                                        OKA has processed the file heuristics. Review the detected curriculum alignment below.
                                     </p>
                                 </div>
                                 
                                 <div className="space-y-4 pt-4 border-t border-border/50 relative z-10">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CURRICULUM_MATCH</span>
-                                        <Badge variant="outline" className="text-[10px] font-black tracking-widest border-primary/20 text-primary">CS_CORE_L2</Badge>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Hub Title</label>
+                                        <input value={curriculum.hub_title} onChange={e => setCurriculum({...curriculum, hub_title: e.target.value})} className="w-full bg-background border border-border p-3 rounded-xl text-xs font-bold" />
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">ENTITY_DENSITY</span>
-                                        <span className="text-[11px] font-bold">84% High</span>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Course</label>
+                                        <input value={curriculum.course} onChange={e => setCurriculum({...curriculum, course: e.target.value})} className="w-full bg-background border border-border p-3 rounded-xl text-xs font-bold" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Unit</label>
+                                            <input value={curriculum.unit} onChange={e => setCurriculum({...curriculum, unit: e.target.value})} className="w-full bg-background border border-border p-3 rounded-xl text-xs font-bold" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Semester</label>
+                                            <input value={curriculum.semester} onChange={e => setCurriculum({...curriculum, semester: e.target.value})} className="w-full bg-background border border-border p-3 rounded-xl text-xs font-bold" />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -228,7 +310,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                             <div className="grid grid-cols-1 gap-4">
                                 <Button onClick={handleConfirm} disabled={processing} className="w-full py-8 font-black uppercase tracking-[0.3em] gap-3 shadow-2xl shadow-primary/20 text-xs">
                                     {processing ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={16} />}
-                                    Confirm & Deploy
+                                    Deploy All Batches
                                 </Button>
                                 <Button variant="outline" onClick={() => setStep('analyze')} className="w-full py-6 font-black uppercase tracking-[0.2em] border-2 text-[10px]">
                                     Re-Generate Draft
@@ -237,20 +319,60 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                         </div>
                     )}
 
-                    {isCompleted && (
-                        <div className="py-20 flex flex-col items-center justify-center text-center space-y-8 animate-in zoom-in-95 duration-700">
-                            <div className="w-24 h-24 bg-primary text-primary-foreground rounded-[2.5rem] flex items-center justify-center shadow-[0_20px_50px_rgba(0,0,0,0.15)]">
-                                <CheckCircle size={48} />
+                    {step === 'deploy' && (
+                        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                            <div className="mb-8 p-6 rounded-[2rem] bg-muted/20 border border-border flex flex-col gap-4">
+                                <div className="flex items-center gap-3">
+                                    <Activity size={24} className="text-primary animate-pulse" />
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Deployment Progress</p>
+                                        <p className="text-sm font-bold">{currentBatch} / {totalBatches} Batches</p>
+                                    </div>
+                                </div>
+                                <div className="h-2 w-full bg-muted rounded-full overflow-hidden border border-border/50">
+                                    <div className="h-full bg-primary transition-all duration-700 ease-in-out" style={{ width: `${(currentBatch / (totalBatches || 1)) * 100}%` }} />
+                                </div>
                             </div>
-                            <div className="space-y-3">
-                                <h2 className="text-3xl font-black uppercase tracking-tighter">Sync Complete</h2>
-                                <p className="text-sm text-muted-foreground px-12 leading-relaxed font-medium">
-                                    Knowledge clusters have been successfully anchored to your relational vault.
-                                </p>
+
+                            <div className="space-y-4">
+                                {batchFeed.map(b => (
+                                    <div key={b.batch} className="p-5 rounded-2xl border border-border bg-muted/10">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="w-5 h-5 rounded bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
+                                                {b.batch}
+                                            </div>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-foreground">
+                                                Batch {b.batch} Complete
+                                            </span>
+                                        </div>
+                                        <div className="space-y-2 pl-7">
+                                            {b.results.map((r: any, i: number) => (
+                                                <div key={i} className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
+                                                    <FileText size={12} />
+                                                    <span>{r.title}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                            <Button variant="outline" onClick={onBack} className="px-12 py-7 font-black uppercase tracking-[0.3em] border-2 rounded-2xl text-[10px]">
-                                Return to Registry
-                            </Button>
+
+                            {isCompleted && (
+                                <div className="py-12 flex flex-col items-center justify-center text-center space-y-6 animate-in zoom-in-95 duration-700">
+                                    <div className="w-20 h-20 bg-primary text-primary-foreground rounded-[2rem] flex items-center justify-center shadow-xl">
+                                        <CheckCircle size={40} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h2 className="text-2xl font-black uppercase tracking-tighter">Sync Complete</h2>
+                                        <p className="text-xs text-muted-foreground px-8 leading-relaxed font-medium">
+                                            Knowledge clusters anchored successfully.
+                                        </p>
+                                    </div>
+                                    <Button variant="outline" onClick={onBack} className="px-10 py-6 font-black uppercase tracking-[0.3em] border-2 rounded-xl text-[10px]">
+                                        Return to Registry
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

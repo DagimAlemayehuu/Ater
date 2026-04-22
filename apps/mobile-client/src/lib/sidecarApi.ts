@@ -94,18 +94,42 @@ export const sidecarApi = {
         method: 'DELETE'
     }),
     
-    findVaultPage: (pageName: string) => sidecarApi.request<any>(`/api/vault/search`, {
-        method: 'POST',
-        body: JSON.stringify({ query: pageName })
-    }),
+    findVaultPage: async (pageName: string) => {
+        const res = await sidecarApi.request<any>(`/api/vault/search`, {
+            method: 'POST',
+            body: JSON.stringify({ query: pageName })
+        })
+        if (res.results && res.results.length > 0) {
+            return { found: true, path: res.results[0].path }
+        }
+        return { found: false }
+    },
 
     readBinaryFile: (path: string) => sidecarApi.request<{ data: string, mime: string }>(`/api/obsidian/files/binary/${encodeURIComponent(path)}`),
 
     listVaultDatabases: () => sidecarApi.request<{ databases: any[] }>('/api/vault/databases'),
     listVaultDatabaseRows: (dbName: string) => sidecarApi.request<{ results: any[] }>(`/api/vault/databases/${dbName}`),
     queryVaultDatabase: (dbName: string) => sidecarApi.request<{ results: any[] }>(`/api/vault/databases/${dbName}`),
+    createVaultRow: (dbId: string, title: string, options: any = {}) => sidecarApi.request<any>(`/api/vault/databases/${dbId}/create`, {
+        method: 'POST',
+        body: JSON.stringify({ title, ...options })
+    }),
+    updateVaultRow: (dbId: string, rowId: string, updates: any) => sidecarApi.request<any>(`/api/vault/databases/${dbId}/rows/${rowId}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+    }),
+    deleteVaultRow: (dbId: string, rowId: string) => sidecarApi.request<any>(`/api/vault/databases/${dbId}/rows/${rowId}`, {
+        method: 'DELETE'
+    }),
+    listVaultTemplates: () => sidecarApi.request<{ templates: any[] }>('/api/vault/templates'),
 
     // ── AI & Agents (Universal) ─────────────────────────────────────────
+    testAiConnection: (target: 'primary' | 'planner' | 'utility' = 'primary') => 
+        sidecarApi.request<{ success: boolean; message: string }>('/api/test-ai', {
+            method: 'POST',
+            body: JSON.stringify({ target })
+        }),
+
     brainstorm: (query: string, context?: string, systemPrompt?: string, history?: any[]) => 
         sidecarApi.request<{ response: string }>('/api/ai/brainstorm', {
             method: 'POST',
@@ -124,6 +148,10 @@ export const sidecarApi = {
     okaConfirm: (payload: any) => sidecarApi.request<any>('/api/oka/confirm', { method: 'POST', body: JSON.stringify(payload) }),
     okaGeneratePlan: (payload: any) => sidecarApi.request<any>('/api/oka/plan', { method: 'POST', body: JSON.stringify(payload) }),
     okaWatcherToggle: () => sidecarApi.request<any>('/api/oka/watcher/toggle', { method: 'POST' }),
+    okaWatcherStatus: () => sidecarApi.request<{ is_running: boolean, inbox: string | null }>('/api/oka/watcher/status'),
+    okaListInbox: () => sidecarApi.request<{ files: any[] }>('/api/oka/inbox'),
+    okaListGenerated: () => sidecarApi.request<{ files: any[] }>('/api/oka/generated'),
+    okaPickFileToInbox: () => sidecarApi.request<{ success: boolean }>('/api/oka/pick-to-inbox', { method: 'POST' }),
 
     // ── Practice ─────────────────────────
     listPractices: () => sidecarApi.request<{ practices: any[] }>('/api/practice/list').catch(() => ({ practices: [] })),
@@ -150,11 +178,39 @@ export const sidecarApi = {
     academicsDashboard: () => sidecarApi.request<any>('/api/academics/dashboard'),
     listDatabaseUnits: (dbId: string) => sidecarApi.request<any>(`/api/vault/databases/${dbId}/units`),
     getDatabaseStats: (dbId: string) => sidecarApi.request<any>(`/api/vault/databases/${dbId}/stats`),
+    getVaultStats: () => sidecarApi.request<any>('/api/vault/stats'),
     
-    // ── Chronos / Specialists ─────────────────
+    // ── Scholar & AI Specialist Methods ────────
+    explainPdfSelection: (payload: { path: string, selection: string, page?: number }) =>
+        sidecarApi.request<{ answer: string; detail?: string }>('/api/oka/explain', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
+    generateQuickQuestions: (payload: { path: string, selection: string, page?: number }) =>
+        sidecarApi.request<{ answer: string; detail?: string }>('/api/oka/quick-questions', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
+    okaChat: (payload: { path: string, selection: string, page?: number, messages: { role: string, content: string }[] }) =>
+        sidecarApi.request<{ answer: string }>('/api/oka/chat', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
+    okaInteractiveQuiz: (payload: { selection: string }) =>
+        sidecarApi.request<{ questions: any[] }>('/api/oka/interactive-quiz', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
+    // ── Specialists ──────────────────────────
     getChronosStatus: () => sidecarApi.request<any>('/api/ai/specialists/chronos'),
     getChronosTimeline: () => sidecarApi.request<any[]>('/api/ai/chronos/timeline'),
     getWealthStatus: () => sidecarApi.request<any>('/api/ai/specialists/wealth'),
     getGymStatus: () => sidecarApi.request<any>('/api/ai/specialists/gym'),
     getScholarStatus: () => sidecarApi.request<any>('/api/ai/specialists/scholar'),
+    getVaultBacklinks: (pageName: string) => sidecarApi.request<{ backlinks: any[] }>(`/api/vault/backlinks?pageName=${encodeURIComponent(pageName)}`),
 }
+
