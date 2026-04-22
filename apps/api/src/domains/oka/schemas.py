@@ -95,7 +95,7 @@ class NoteSchema(BaseModel):
 class AtomicNoteSchema(NoteSchema):
     prerequisites: List[str] = Field(default_factory=list)
     mode: Literal[
-        "CS-CODE", "CS-SYS", "MED-STRUCT", "MED-DYN", 
+        "CS-CODE", "CS-SYS", "CS-DB", "MED-STRUCT", "MED-DYN", 
         "LAW-RULE", "LAW-PREC", "ENG-PHYS", "ENG-ELEC", 
         "SCI-MATH", "SCI-DATA", "HIST-TIME", "HIST-TREND",
         "LANG-VOCAB", "LANG-CULT", "BIZ-STRAT", "BIZ-FIN",
