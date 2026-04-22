@@ -111,6 +111,7 @@ class ArchitectAgent:
             "MODES (PERSONA ASSIGNMENT):\n"
             "- CS-CODE: Programming, Syntax, Logic, Algorithms.\n"
             "- CS-SYS: Architecture, Networking, Distributed Systems.\n"
+            "- CS-DB: Database Design, SQL, Relational Algebra.\n"
             "- MED-STRUCT: Anatomy, Physical Structure, Organs.\n"
             "- MED-DYN: Physiology, Pathways, Feedback loops.\n"
             "- LAW-RULE: Statutes, Rules, Legal Tests.\n"
@@ -127,7 +128,7 @@ class ArchitectAgent:
             "- BIZ-FIN: Finance, Accounting, Economics.\n"
             "- ART-TECH: Art Techniques, Mediums, Execution.\n"
             "- ART-HIST: Art History, Movements, Critiques.\n"
-            "Assign the optimal specialist mode for each concept.\n"
+            "CRITICAL: You MUST select the `mode` ONLY from the 19 exact codes listed above. DO NOT hallucinate new modes.\n"
             "RETURN ONLY PURE JSON."
         )
         
@@ -144,6 +145,7 @@ class ArchitectAgent:
                         "STRICT NAMING RULES (DO NOT VIOLATE):\n"
                         "- 1-3 WORD CONCEPTS ONLY.\n"
                         "- NO QUESTIONS.\n"
+                        "CRITICAL: `mode` MUST BE ONE OF THE 19 EXACT STRINGS LISTED ABOVE.\n"
                         "MANDATORY KEYS: 'atomic_notes', 'possible_questions'.\n"
                         "Each note MUST have 'title' and 'description'."
                     )
@@ -188,6 +190,7 @@ class WriterAgent:
         dynamic_map = {
             "CS-CODE": ("Syntax Mechanics", "Memory Lifecycle"),
             "CS-SYS": ("Architecture Topology", "Bottlenecks & Limits"),
+            "CS-DB": ("Schema Design", "Query Optimization"),
             "MED-STRUCT": ("Spatial Adjacency", "Clinical Landmarks"),
             "MED-DYN": ("Biochemical Pathway", "Feedback Mechanisms"),
             "LAW-RULE": ("Statutory Elements", "Jurisdictional Limits"),
@@ -243,6 +246,7 @@ DO NOT output JSON. Output EXACTLY this Markdown format:
         persona_map = {
             "Syntax Mechanics": ("C++/Rust Code Block", "Find the memory leak/bug."),
             "Architecture Topology": ("Mermaid Sequence Diagram", "What breaks under 10x load?"),
+            "Schema Design": ("ER Diagram Block", "Write an optimized SQL JOIN for this schema."),
             "Spatial Adjacency": ("Origin-Insertion Table", "What fails if this nerve is severed?"),
             "Biochemical Pathway": ("Trigger-Response Flowchart", "How does this pathology progress?"),
             "Statutory Elements": ("If-Then-Else Legal Matrix", "Does this specific edge-case violate the rule?"),
