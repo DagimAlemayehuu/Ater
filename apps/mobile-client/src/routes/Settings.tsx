@@ -314,7 +314,7 @@ export default function Settings() {
                                             }}
                                             className="w-auto px-8 py-5 h-auto font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-primary hover:text-white border-2"
                                         >
-                                            Edit
+                                            Test {aiTab === 'primary' ? 'L1' : aiTab === 'planner' ? 'L2' : 'L3'} Connection
                                         </Button>
                                         <span className="ml-4 text-[10px] text-muted-foreground/40 italic font-medium uppercase tracking-tighter">Verified session required for deployment</span>
                                     </div>

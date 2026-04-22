@@ -1,6 +1,6 @@
 # Project State
 ## 1. Status Summary
-**Current Status:** The system is operating on the **Ironclad OKA v23.0 (Sovereign Protocol)**. The ingestion engine has been hardened with **Relational Hub Anchoring**, a **High-Fidelity Schema (SovereignPlan v2)**, and **Surgical Batch Deployment**. Hub notes now correctly anchor to the Study Planner with guaranteed Mastery Map population.
+**Current Status:** The system is operating on the **Ironclad OKA v24.0 (Pedagogical Engine)**. The ingestion engine has been evolved into a multi-persona specialist system with **Mental Model Analogies**, **Worked Example Artifacts**, and **Bidirectional Progress Syncing**. Hub notes now strictly cap at 3 levels of nesting, and checkbox toggles in the Markdown viewer are physically synced to the Obsidian vault and Atomic Note read states.
 
 ## 2. Global Milestones
 *   [x] Initialization & Architecture
@@ -15,8 +15,7 @@
 *   [x] **Absolute Atomicity (1-Note-per-Batch Deployment Safety)**
 *   [x] **Adaptive High-Fidelity (Auto-Repair Parser + Density Fallbacks)**
 *   [x] **Dynamic WikiLink Engine (Auto-Creation & Nav)**
-*   [x] **OKA v23.0: Relational Hub Anchoring & Schema Normalization**
-*   [x] **Standalone Mobile OS (Full Desktop Parity via Scriptable)**
+*   [x] **OKA v24.0: Pedagogical Engine (Mental Models + Bidirectional Progress Sync)**
 *   [ ] Global E2E Tests Pass
 *   [ ] Production Deployment
 

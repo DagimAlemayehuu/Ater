@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { 
     Layers, Search, ChevronRight, RefreshCw, 
-    Database, ArrowRight, DatabaseZap, Box
+    Database, ArrowRight, Box
 } from 'lucide-react'
 
 export default function VaultSync() {

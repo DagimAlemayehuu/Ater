@@ -58,7 +58,7 @@ export const sidecarApi = {
             }, 60000)
 
             // Map API calls to Universal AI Bridge if needed
-            if (path.includes('/api/ai/') || path.includes('/api/oka/')) {
+            if (path.includes('/api/ai/')) {
                 if (path === '/api/ai/brainstorm' || path === '/api/ai/execute') {
                     const body = options.body ? JSON.parse(options.body as string) : {}
                     const config = JSON.parse(safeStorage.getItem('life-os-config') || '{}')
@@ -154,21 +154,11 @@ export const sidecarApi = {
             body: JSON.stringify({ query })
         }),
 
-    // ── OKA ─────────────────────────────────────────
-    okaQueueStatus: () => sidecarApi.request<any>('/api/oka/queue/status').catch(() => ({ status: 'idle', pending_count: 0 })),
-    okaProcess: (payload: any) => sidecarApi.request<any>('/api/oka/process', { method: 'POST', body: JSON.stringify(payload) }),
-    okaConfirm: (payload: any) => sidecarApi.request<any>('/api/oka/confirm', { method: 'POST', body: JSON.stringify(payload) }),
-    okaGeneratePlan: (payload: any) => sidecarApi.request<any>('/api/oka/plan', { method: 'POST', body: JSON.stringify(payload) }),
-    okaWatcherToggle: () => sidecarApi.request<any>('/api/oka/watcher/toggle', { method: 'POST' }),
-    okaWatcherStatus: () => sidecarApi.request<{ is_running: boolean, inbox: string | null }>('/api/oka/watcher/status'),
-    okaListInbox: () => sidecarApi.request<{ files: any[] }>('/api/oka/inbox'),
-    okaListGenerated: () => sidecarApi.request<{ files: any[] }>('/api/oka/generated'),
-    okaPickFileToInbox: () => sidecarApi.request<{ success: boolean }>('/api/oka/pick-to-inbox', { method: 'POST' }),
-
-    // ── Practice ─────────────────────────
+    // ── Practice & OKA ─────────────────────────
+    listHubs: () => sidecarApi.request<{ hubs: any[] }>('/api/oka/hubs'),
+    listHubNotes: (hubId: string) => 
+        sidecarApi.request<{ notes: any[] }>(`/api/oka/hubs/${hubId}/notes`),
     listPractices: () => sidecarApi.request<{ practices: any[] }>('/api/practice/list').catch(() => ({ practices: [] })),
-    listHubs: () => sidecarApi.request<{ hubs: any[] }>('/api/oka/hubs').catch(() => ({ hubs: [] })),
-    listHubNotes: (hubId: string) => sidecarApi.request<{ notes: any[] }>(`/api/oka/hubs/${hubId}/notes`).catch(() => ({ notes: [] })),
     generatePractice: (hubId: string, config: any) => sidecarApi.request<any>('/api/practice/generate', {
         method: 'POST',
         body: JSON.stringify({ hub_id: hubId, config })
@@ -192,31 +182,6 @@ export const sidecarApi = {
     getDatabaseStats: (dbId: string) => sidecarApi.request<any>(`/api/vault/databases/${dbId}/stats`),
     getVaultStats: () => sidecarApi.request<any>('/api/vault/stats'),
     
-    // ── Scholar & AI Specialist Methods ────────
-    explainPdfSelection: (payload: { path: string, selection: string, page?: number }) =>
-        sidecarApi.request<{ answer: string; detail?: string }>('/api/oka/explain', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        }),
-
-    generateQuickQuestions: (payload: { path: string, selection: string, page?: number }) =>
-        sidecarApi.request<{ answer: string; detail?: string }>('/api/oka/quick-questions', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        }),
-
-    okaChat: (payload: { path: string, selection: string, page?: number, messages: { role: string, content: string }[] }) =>
-        sidecarApi.request<{ answer: string }>('/api/oka/chat', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        }),
-
-    okaInteractiveQuiz: (payload: { selection: string }) =>
-        sidecarApi.request<{ questions: any[] }>('/api/oka/interactive-quiz', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        }),
-
     // ── Specialists ──────────────────────────
     getChronosStatus: () => sidecarApi.request<any>('/api/ai/specialists/chronos'),
     getChronosTimeline: () => sidecarApi.request<any[]>('/api/ai/chronos/timeline'),
@@ -226,4 +191,3 @@ export const sidecarApi = {
     getVaultBacklinks: (pageName: string) => sidecarApi.request<{ backlinks: any[] }>(`/api/vault/backlinks?pageName=${encodeURIComponent(pageName)}`),
     getVaultGraph: () => sidecarApi.request<{ nodes: any[], links: any[] }>('/api/vault/graph'),
 }
-

@@ -6,7 +6,7 @@ import 'katex/dist/katex.min.css'
 import { cn } from '@/lib/utils'
 import React, { useState, useEffect, useMemo } from 'react'
 import { WikiLink, renderWikiLinks } from './WikiLink'
-import { Sparkles, Zap, Copy, Check, RefreshCw, X, Quote, Table, ChevronRight, Info } from 'lucide-react'
+import { Sparkles, Copy, Check, RefreshCw, X, Quote, Table, ChevronRight, Info } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { AiSidecar } from './AiSidecar'
 import mermaid from 'mermaid'
@@ -304,11 +304,6 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
                         <button onClick={() => { setExplanationSelection(selection); setIsQuizMode(false); setShowPopover(false); setShowSidebar(true); }} className="flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-primary-foreground/10 rounded-full">
                             <Sparkles size={14} />
                             <span>Explain</span>
-                        </button>
-                        <div className="w-px h-6 bg-primary-foreground/20 mx-2" />
-                        <button onClick={() => { setExplanationSelection(selection); setIsQuizMode(true); setShowPopover(false); setShowSidebar(true); }} className="flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-primary-foreground/10 rounded-full">
-                            <Zap size={14} />
-                            <span>Quiz</span>
                         </button>
                     </div>
                 )}

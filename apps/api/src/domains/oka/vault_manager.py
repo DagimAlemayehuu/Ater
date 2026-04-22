@@ -185,7 +185,7 @@ class VaultManager:
         """
         import yaml
 
-        WIKILINK_SCALAR_FIELDS = {"course", "semester", "hub", "parent", "source"}
+        WIKILINK_SCALAR_FIELDS = {"hub", "parent", "source"}
         WIKILINK_LIST_FIELDS = {"prerequisites", "concepts"}
 
         def deep_clean_item(v, is_wikilink: bool = False) -> str:

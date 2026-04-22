@@ -101,7 +101,6 @@ export default function Practice() {
 
   useEffect(() => { loadHubs(); loadPastPractices(); }, [])
   useEffect(() => { if (selectedHub) loadHubNotes(selectedHub); }, [selectedHub])
-  const loadHubNotes = async (hubId: string) => { try { const res = await sidecarApi.listHubNotes(hubId); setAvailableNotes(res?.notes || []); } catch (err) {} }
 
   useEffect(() => {
     if (questions.length > 0 && view === 'session') {
@@ -114,7 +113,22 @@ export default function Practice() {
   }, [questions, view, globalTimeLeft, questionTimeLeft])
 
   const loadPastPractices = async () => { try { const res = await sidecarApi.listPractices(); setPastPractices(res?.practices || []); } catch (err) {} }
-  const loadHubs = async () => { try { const res = await sidecarApi.listHubs(); setHubs(res?.hubs || []); if (res?.hubs?.length > 0) setSelectedHub(res.hubs[0].id); } catch (err) {} }
+  const loadHubs = async () => { 
+    try { 
+      const res = await sidecarApi.listHubs(); 
+      setHubs(res.hubs || []); 
+      if (res.hubs?.length > 0) setSelectedHub(res.hubs[0].id); 
+    } catch (err) {
+      console.error('Failed to load practice topics:', err);
+    } 
+  }
+
+  const loadHubNotes = async (hubId: string) => { 
+    try { 
+        const res = await sidecarApi.listHubNotes(hubId); 
+        setAvailableNotes(res.notes || []); 
+    } catch (err) {} 
+  }
 
   const handleStartSession = async () => {
     if (!selectedHub) { toast.error('Choose a topic first.'); return; }
@@ -180,6 +194,15 @@ export default function Practice() {
   }
 
   const handleSelectAnswer = (val: any) => { if (!isRevealed) setUserAnswers(prev => ({ ...prev, [questions[currentQuestionIdx].id]: val })); }
+
+  const toggleAtomicNote = (noteId: string) => {
+    setAdvancedConfig(prev => ({
+      ...prev,
+      selectedAtomicNotes: prev.selectedAtomicNotes.includes(noteId)
+        ? prev.selectedAtomicNotes.filter(n => n !== noteId)
+        : [...prev.selectedAtomicNotes, noteId]
+    }))
+  }
 
   // --- DASHBOARD ---
   if (view === 'dashboard') {
@@ -308,7 +331,51 @@ export default function Practice() {
                 </div>
 
                 <div className="space-y-6">
-                    <div className="flex items-center gap-3"><span className="text-[10px] font-black text-primary opacity-20">02</span><h3 className="text-[10px] font-black uppercase tracking-[0.3em]">Depth Level</h3></div>
+                    <div className="flex items-center gap-3"><span className="text-[10px] font-black text-primary opacity-20">02</span><h3 className="text-[10px] font-black uppercase tracking-[0.3em]">Content Scope</h3></div>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full h-16 bg-muted/20 border-border rounded-2xl px-6 text-left justify-between">
+                                <span className="text-xs font-black uppercase tracking-widest">
+                                    {advancedConfig.selectedAtomicNotes.length === 0 ? "All Notes" : `${advancedConfig.selectedAtomicNotes.length} Selected`}
+                                </span>
+                                <Layers size={14} className="text-primary" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0 rounded-2xl border-border bg-popover shadow-2xl overflow-hidden">
+                            <Command className="bg-transparent">
+                                <CommandInput placeholder="Search notes..." className="font-black text-[10px] uppercase tracking-widest" />
+                                <CommandList className="max-h-72">
+                                    <CommandEmpty className="py-10 text-center text-[10px] font-black text-muted-foreground/30 uppercase tracking-widest">No matching notes.</CommandEmpty>
+                                    <CommandGroup>
+                                        {availableNotes.map(note => {
+                                            const id = note.id;
+                                            const label = note.title;
+                                            const isSelected = advancedConfig.selectedAtomicNotes.includes(id);
+                                            return (
+                                                <CommandItem 
+                                                    key={id} 
+                                                    onSelect={() => toggleAtomicNote(id)}
+                                                    className="flex items-center gap-4 py-4 px-6 cursor-pointer focus:bg-accent"
+                                                >
+                                                    <div className={cn(
+                                                        "w-4 h-4 border flex items-center justify-center transition-all rounded-sm",
+                                                        isSelected ? "bg-primary border-primary text-primary-foreground" : "border-border bg-background"
+                                                    )}>
+                                                        {isSelected && <Check className="w-3 h-3" />}
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest truncate">{label}</span>
+                                                </CommandItem>
+                                            );
+                                        })}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                </div>
+
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3"><span className="text-[10px] font-black text-primary opacity-20">03</span><h3 className="text-[10px] font-black uppercase tracking-[0.3em]">Depth Level</h3></div>
                     <RadioGroup value={advancedConfig.difficulty} onValueChange={(val) => setAdvancedConfig((prev: AdvancedPracticeConfig) => ({ ...prev, difficulty: val as any }))} className="grid grid-cols-2 gap-3">
                         {['L1', 'L2', 'L3', 'Mixed'].map((level) => (
                             <div key={level}>
@@ -320,7 +387,7 @@ export default function Practice() {
                 </div>
 
                 <div className="space-y-6">
-                    <div className="flex items-center gap-3"><span className="text-[10px] font-black text-primary opacity-20">03</span><h3 className="text-[10px] font-black uppercase tracking-[0.3em]">Cognitive Load</h3></div>
+                    <div className="flex items-center gap-3"><span className="text-[10px] font-black text-primary opacity-20">04</span><h3 className="text-[10px] font-black uppercase tracking-[0.3em]">Cognitive Load</h3></div>
                     <div className="grid grid-cols-1 gap-10">
                         {[{ key: 'multipleChoice', label: 'MCQ' }, { key: 'trueFalse', label: 'Binary' }, { key: 'shortAnswer', label: 'Open Response' }].map(type => (
                             <div key={type.key} className="space-y-4 px-2">

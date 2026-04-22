@@ -65,6 +65,7 @@
 *   [x] **Single-Agent Registry**: Refactored the `/agents` page to exclusively feature the OKA dashboard.
 *   [x] **Absolute Atomicity**: Enforced 1-note-per-batch generation for maximum parsing reliability.
 *   [x] **OKA Hardening (v23.0)**: Fixed critical Hub deployment failure caused by signature mismatch and schema drift. Implemented `anchored_hub_id` persistence in `SovereignPlan` and eliminated destructive stub-overwriting logic in the service layer.
+*   [x] **OKA Pedagogy & Sync (v24.0)**: Evolution of the OKA pipeline into a pedagogically-driven learning engine. Implemented 18-persona specialist agents with Mental Model analogies and Worked Example artifacts. Integrated bidirectional checkbox synchronization between the Markdown Viewer and the atomic note's read status, with a strict 3-level tree nesting cap for Hub notes.
 *   [x] **Project Hygiene**: Performed comprehensive monorepo cleanup, removing 50+ junk files, build artifacts, and legacy macOS metadata. Centralized development scratch scripts.
 
 

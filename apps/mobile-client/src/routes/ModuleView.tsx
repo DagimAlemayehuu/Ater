@@ -28,7 +28,7 @@ export default function ModuleView() {
             {/* Header Content */}
             <div className="px-6 pt-12 pb-8">
                 <nav className="flex items-center gap-2 mb-6 overflow-x-auto whitespace-nowrap">
-                    <button onClick={() => navigate('/vault-sync')} className="label-sm text-secondary hover:text-primary transition-colors">REGISTRY</button>
+                    <button onClick={() => navigate('/registry')} className="label-sm text-secondary hover:text-primary transition-colors">REGISTRY</button>
                     <span className="material-symbols-outlined text-border text-[12px]">chevron_right</span>
                     <span className="label-sm text-primary">{id?.replace(/-/g, ' ').toUpperCase()}</span>
                 </nav>

@@ -78,7 +78,7 @@ class OkaService:
             provider=secrets.ai_provider,
             model_name=secrets.ai_model,
             api_key=secrets.ai_key,
-            temperature=0.7, # 0.7 for creative pedagogical density
+            temperature=0.0, # 0.0 for strict template execution
             timeout=OKA_TIMEOUT,
             request_timeout=OKA_TIMEOUT,
             max_retries=0,
@@ -920,8 +920,10 @@ class OkaService:
         # Prevent redundant prefixing (e.g. 5_5_Modular_Programming)
         if unit_num and (hub_base.startswith(f"{unit_num}_") or hub_base.startswith(f"{unit_num} ")):
             canonical_hub_title = f"{hub_base}_Hub"
+            canonical_pq_title = f"{hub_base}_Possible_Questions"
         else:
             canonical_hub_title = f"{unit_num}_{hub_base}_Hub" if unit_num else f"{hub_base}_Hub"
+            canonical_pq_title = f"{unit_num}_{hub_base}_Possible_Questions" if unit_num else f"{hub_base}_Possible_Questions"
         
         hub_note = {
             "title": canonical_hub_title,
@@ -929,6 +931,10 @@ class OkaService:
             "source_context": "Auto-generated Hub",
             "source_pages": []
         }
+
+        # Removed Possible Questions note generation entirely per user request.
+        # Socratic probes are already appended to the atomic notes.
+        all_pq_notes = []
         
         structured_plan = {
             "course": course,
@@ -1225,7 +1231,8 @@ class OkaService:
             "hub": f"[[{plan.hub_note.title}]]",
             "source": source_link,
             "source_pages": note_schema.source_pages,
-            "mode": "ENGINEER",
+            "mode": note_schema.mode,
+            "read": False,
             "generated": True
         }
         
@@ -1240,10 +1247,16 @@ class OkaService:
         if probes:
             probe_body = (
                 "\n---\n\n"
-                "## 5. Question\n\n"
+                "## 5. Worked Example\n\n"
+                f"{probes.worked_example.strip()}\n\n"
+                "---\n\n"
+                "## 6. Socratic Probes\n\n"
                 f"**Scenario-Based Question**: {probes.l1_scenario}\n\n"
                 f"**Implementation Challenge**: {probes.l2_implementation}\n\n"
-                f"**Socratic Debugger**:\n\n{probes.l3_debug.strip()}\n"
+                f"**Debug Challenge**: {probes.l3_debug}\n\n"
+                "---\n\n"
+                "### Answer Key\n"
+                f"{probes.answer_key}\n"
             )
 
         full_body = note_content.markdown_body.strip() + probe_body
@@ -1274,7 +1287,7 @@ class OkaService:
         body_parts = [
             f"# {note_schema.title.replace('_', ' ')}\n",
             f"> [!ABSTRACT] Exam Readiness Protocol\n> This note aggregates retrieval probes from all atomic nodes in this unit to ensure total coverage.\n",
-            "## 🎯 Master Question Bank\n"
+            "## Master Question Bank\n"
         ]
 
         for note_title, probes in all_note_probes.items():
@@ -1315,19 +1328,55 @@ class OkaService:
 
         # Build Markdown Body
         body = f"# {plan.hub_note.title.replace('_', ' ')}\n\n"
-        body += f"> [!ABSTRACT] Unit Overview\n> {plan.hub_note.description}\n\n"
+        body += "## Overview\n"
+        body += f"{plan.hub_note.description}\n\n"
         
-        body += "## 🗺️ Mastery Map\n"
-        body += "Navigate through the atomic concepts of this unit. Master each node to achieve unit fluency.\n\n"
+        body += "## Unit Objectives\n"
+        body += "- [ ] Master all core technical definitions.\n"
+        body += "- [ ] Internalize the mental models for each concept.\n"
+        body += "- [ ] Trace and understand every worked example.\n"
+        body += "- [ ] Complete all Socratic Probes and verify with the Answer Key.\n\n"
         
-        # Group notes by some heuristic or just list with icons
+        body += "## Connections\n"
+        
+        # Build tree structure using prerequisites if available
+        tree = {}
         for note in plan.atomic_notes:
-            body += f"- [ ] [[{note.title}]]\n"
+            tree[note.title] = {"note": note, "children": []}
             
-        body += "\n## 🎯 Socratic Objectives\n"
-        body += "- [ ] Complete retrieval practice for all atomic nodes.\n"
-        body += "- [ ] Achieve 90%+ accuracy on Possible Questions.\n"
-        body += "- [ ] Synthesize connections between modular blocks.\n"
+        roots = []
+        for note in plan.atomic_notes:
+            parent_found = False
+            if hasattr(note, 'prerequisites') and note.prerequisites:
+                for prereq in note.prerequisites:
+                    for potential_parent in tree:
+                        # Avoid self-referencing
+                        if potential_parent == note.title: continue
+                        if prereq.lower() in potential_parent.lower() or potential_parent.lower() in prereq.lower():
+                            tree[potential_parent]["children"].append(note.title)
+                            parent_found = True
+                            break
+                    if parent_found: break
+            if not parent_found:
+                roots.append(note.title)
+                
+        def render_node(title, indent_level=0, visited=None):
+            if visited is None: visited = set()
+            if title in visited: return ""
+            visited.add(title)
+            
+            node_data = tree[title]
+            canonical = self.vm.get_canonical_title(title)
+            # Cap the depth to 3 levels (0, 1, 2)
+            actual_indent = min(indent_level, 2)
+            indent = "    " * actual_indent
+            res = f"{indent}- [ ] [[{canonical}]]\n"
+            for child in node_data["children"]:
+                res += render_node(child, indent_level + 1, visited.copy())
+            return res
+            
+        for root in roots:
+            body += render_node(root)
             
         return f"---\n{yaml_frontmatter}---\n\n{body}\n"
 

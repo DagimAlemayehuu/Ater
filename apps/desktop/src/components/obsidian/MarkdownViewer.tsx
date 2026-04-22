@@ -126,14 +126,51 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
             }
             return <li className="mb-0.5 text-foreground/80">{content}</li>;
         },
-        input: ({ type, checked }: any) => {
+        input: ({ node, type, checked, ...props }: any) => {
             if (type === 'checkbox') {
                 return (
                     <input 
                         type="checkbox" 
-                        checked={checked} 
-                        readOnly 
-                        className="mt-1 size-3.5 rounded border-border bg-muted accent-primary" 
+                        defaultChecked={checked} 
+                        onChange={async (e) => {
+                            if (!path) return;
+                            const newChecked = e.target.checked;
+                            const line = node?.position?.start?.line;
+                            if (line) {
+                                try {
+                                    const res = await sidecarApi.readObsidianNote(path);
+                                    const lines = res.content.split('\n');
+                                    // remark positions are 1-indexed, but frontmatter might shift it depending on how the parser handles it.
+                                    // Usually remark parses the whole file including frontmatter if it's not stripped.
+                                    const targetLine = lines[line - 1];
+                                    if (targetLine && targetLine.match(/\[[ xX]\]/)) {
+                                        lines[line - 1] = targetLine.replace(/\[[ xX]\]/, `[${newChecked ? 'x' : ' '}]`);
+                                        const updatedContent = lines.join('\n');
+                                        await sidecarApi.updateObsidianNote(path, updatedContent);
+                                        
+                                        // Update atomic note if it's a wikilink connection
+                                        const wikilinkMatch = targetLine.match(/\[\[(.*?)\]\]/);
+                                        if (wikilinkMatch) {
+                                            const targetNote = wikilinkMatch[1].split('|')[0];
+                                            const targetRes = await sidecarApi.findVaultPage(targetNote);
+                                            if (targetRes.path) {
+                                                const atomicRes = await sidecarApi.readObsidianNote(targetRes.path);
+                                                let newAtomicContent = atomicRes.content;
+                                                if (newAtomicContent.includes('read: ')) {
+                                                    newAtomicContent = newAtomicContent.replace(/read:\s*(true|false|True|False)/i, `read: ${newChecked}`);
+                                                } else if (newAtomicContent.startsWith('---\n')) {
+                                                    newAtomicContent = newAtomicContent.replace('---\n', `---\nread: ${newChecked}\n`);
+                                                }
+                                                await sidecarApi.updateObsidianNote(targetRes.path, newAtomicContent);
+                                            }
+                                        }
+                                    }
+                                } catch (err) {
+                                    console.error("Failed to toggle markdown checkbox", err);
+                                }
+                            }
+                        }}
+                        className="mt-1 size-3.5 rounded border-border bg-muted accent-primary cursor-pointer transition-colors" 
                     />
                 );
             }

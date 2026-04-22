@@ -296,27 +296,6 @@ class NativeBackend {
     };
   }
 
-  async pickFileToInbox() {
-    try {
-      console.log("[Native] Picking file to inbox...");
-      const paths = await DocumentPicker.openFile();
-      if (!paths || paths.length === 0) return { success: false, message: "No file selected" };
-      
-      const fm = this.getFM(this.vaultPath);
-      const inboxPath = this.config.okaInboxPath || "9-OKA/Inbox";
-      const fullInbox = fm.joinPath(this.vaultPath, inboxPath);
-      if (!fm.fileExists(fullInbox)) fm.createDirectory(fullInbox, true);
-      
-      for (const p of paths) {
-        const fileName = p.split('/').pop();
-        const dest = fm.joinPath(fullInbox, fileName);
-        fm.copy(p, dest);
-      }
-      return { success: true };
-    } catch (e) {
-      return { success: false, error: e.message };
-    }
-  }
 
   async handleRequest(request) {
     let path = request.path || "/";
@@ -385,29 +364,6 @@ class NativeBackend {
         else if (path === "/api/practice/score") data = await this.practiceUpdateScore(body.path, body.score);
         else if (path === "/api/practice/delete") data = await this.practiceDelete(body.path);
       }
-      else if (path.startsWith("/api/oka/")) {
-        // Specialized OKA handling for mobile
-        if (path === "/api/oka/process") data = await this.okaProcess(body);
-        else if (path === "/api/oka/explain") data = await this.okaExplain(body);
-        else if (path === "/api/oka/quick-questions") data = await this.okaExplain(body); // Use explain as fallback
-        else if (path === "/api/oka/interactive-quiz") data = await this.okaQuiz(body);
-        else if (path === "/api/oka/chat") data = await this.okaChat(body);
-        else if (path === "/api/academics/dashboard") data = { gpa: "N/A", credits: 0, status: "Active", units: [] };
-        else if (path === "/api/oka/inbox") data = await this.okaListInbox();
-        else if (path === "/api/oka/generated") data = await this.okaListGenerated();
-        else if (path === "/api/oka/pick-to-inbox") data = await this.pickFileToInbox();
-        else if (path === "/api/oka/hubs") data = await this.okaListHubs();
-        else if (path.includes("/notes") && path.startsWith("/api/oka/hubs/")) {
-          const hubId = path.split("/")[4];
-          data = await this.okaListHubNotes(decodeURIComponent(hubId));
-        }
-        else if (path === "/api/oka/queue/status" || path === "/api/oka/watcher/status") {
-          data = { status: "idle", is_running: true, pending_count: 0, inbox: this.config.okaInboxPath || "9-OKA/Inbox" };
-        }
-        else if (path === "/api/oka/plan") data = { session_id: "mobile-" + Date.now(), plan_structured: { batches: [] }, status: "detected" };
-        else if (path === "/api/oka/confirm") data = { status: "success", current_batch: 1, has_more: false, results: [] };
-        else data = { status: "idle", message: "OKA Sub-system active via Proxy" };
-      }
       else {
         console.log("[Native] Unhandled API path: " + path);
         data = { status: "error", message: "Not implemented: " + path };
@@ -419,53 +375,6 @@ class NativeBackend {
     }
   }
 
-  async okaListHubs() {
-    console.log("[Native] Listing Hubs...");
-    const fm = this.getFM(this.vaultPath);
-    const plannerPath = fm.joinPath(this.vaultPath, "3-Database/06 - Study Planner");
-    if (!fm.fileExists(plannerPath)) return { hubs: [] };
-    
-    const files = fm.listContents(plannerPath).filter(f => f.endsWith(".md") && !f.startsWith("_"));
-    const hubs = [];
-    for (const file of files) {
-      const content = fm.readString(fm.joinPath(plannerPath, file));
-      const metadata = this.parseYaml(content);
-      hubs.push({
-        id: file,
-        title: file.replace(".md", "").replace(/_/g, " "),
-        path: "3-Database/06 - Study Planner/" + file,
-        course: metadata.course || metadata.Course || "General",
-        unit: metadata.unit || metadata.Unit || ""
-      });
-    }
-    return { hubs };
-  }
-
-  async okaListHubNotes(hubId) {
-    console.log("[Native] Resolving Notes for Hub: " + hubId);
-    const fm = this.getFM(this.vaultPath);
-    const hubs = await this.okaListHubs();
-    const hub = hubs.hubs.find(h => h.id === hubId);
-    if (!hub) return { notes: [] };
-
-    // Try to find notes in the '2-Registry' folder which is standard for atomic notes
-    const allFiles = await this.listVaultFiles(true);
-    let notes = allFiles.files.filter(f => 
-      !f.is_dir && 
-      f.path.endsWith(".md") && 
-      (f.path.includes("2-Registry") || f.path.includes("1-Input")) &&
-      !f.path.includes("Practice")
-    );
-    
-    // If we have course/unit info, filter by it in the path
-    if (hub.course) {
-      const courseFilter = hub.course.toLowerCase();
-      const relevant = notes.filter(n => n.path.toLowerCase().includes(courseFilter));
-      if (relevant.length > 0) notes = relevant;
-    }
-
-    return { notes: notes.slice(0, 100) };
-  }
 
   async practiceList() {
     const fm = this.getFM(this.vaultPath);
@@ -620,87 +529,6 @@ class NativeBackend {
     return metadata;
   }
 
-  async okaListInbox() {
-    const inboxPath = this.config.okaInboxPath || "9-OKA/Inbox";
-    const fm = this.getFM(this.vaultPath);
-    const fullPath = fm.joinPath(this.vaultPath, inboxPath);
-    if (!fm.fileExists(fullPath)) return { files: [] };
-    const items = fm.listContents(fullPath);
-    return { files: items.filter(i => !i.startsWith(".")).map(i => ({ name: i, path: inboxPath + "/" + i })) };
-  }
-
-  async okaListGenerated() {
-    const inboxPath = this.config.okaInboxPath || "9-OKA/Inbox";
-    const genPath = inboxPath + "/note generated";
-    const fm = this.getFM(this.vaultPath);
-    const fullPath = fm.joinPath(this.vaultPath, genPath);
-    if (!fm.fileExists(fullPath)) return { files: [] };
-    const items = fm.listContents(fullPath);
-    return { files: items.filter(i => !i.startsWith(".")).map(i => ({ name: i, path: genPath + "/" + i })) };
-  }
-
-  async getBacklinks(pageName) {
-    if (!pageName) return { backlinks: [] };
-    console.log("[Native] Resolving backlinks for: " + pageName);
-    const fm = this.getFM(this.vaultPath);
-    const allFiles = await this.listVaultFiles(true);
-    const backlinks = [];
-    const escapedPage = pageName.replace(/[-\\/\\\\^$*+?.()|[\\]{}]/g, "\\\\$&");
-    const wikiLinkRegex = new RegExp(`\\\\[\\\\[${escapedPage}(\\\\|.*?)?\\\\]\\\\]`, "i");
-    for (const f of allFiles.files) {
-      if (!f.is_dir && f.path.endsWith(".md")) {
-        try {
-          const content = fm.readString(fm.joinPath(this.vaultPath, f.path));
-          if (content && wikiLinkRegex.test(content)) {
-            backlinks.push({ path: f.path, name: f.name.replace(".md", "").replace(/_/g, " ") });
-          }
-        } catch (e) {}
-      }
-    }
-    return { backlinks };
-  }
-
-  async okaProcess(payload) {
-    const { text, file_path, plan } = payload;
-    let content = text;
-    if (!content && file_path) {
-      const note = await this.readNote(file_path);
-      content = note.content;
-    }
-    if (!content && !plan) return { error: "No content or plan provided" };
-    console.log("[Native] OKA Processing...");
-    if (plan) {
-      return { status: "success", message: "Plan deployment simulated on mobile.", results: [{ type: "hub", title: "Anchored Hub Created" }] };
-    }
-    const prompt = "Summarize the following technical note for a pedagogical vault. " +
-                   "Focus on core concepts and relationships. Then generate 3 Socratic discovery questions. " +
-                   "Format as markdown. \\\\n\\\\nContent:\\\\n" + content;
-    const res = await this.universalAiRequest({ messages: [{ role: "user", content: prompt }] });
-    return { status: "success", summary: res.response, questions: ["How does this relate to previous units?", "What is the edge case here?"] };
-  }
-
-  async okaExplain(payload) {
-    const { selection, path, page } = payload;
-    const prompt = `Explain this selection from the document "${path}" (Page ${page || 1}):\\\\n\\\\n"${selection}"\\\\n\\\\nProvide a high-fidelity, pedagogical explanation.`;
-    const aiRes = await this.universalAiRequest({ messages: [{ role: "user", content: prompt }] });
-    return { answer: aiRes.response };
-  }
-
-  async okaQuiz(payload) {
-    const { selection } = payload;
-    const prompt = `Based on the following text, generate 3 high-quality multiple-choice questions for retrieval practice.\\\\n\\\\nTEXT:\\\\n"${selection}"\\\\n\\\\nFormat the output as a JSON object with a "questions" array. Each question should have:\\\\n- question: string\\\\n- options: string[]\\\\n- answer: string (must be one of the options)\\\\n- explanation: string`;
-    const aiRes = await this.universalAiRequest({ messages: [{ role: "user", content: prompt }], system_prompt: "You are the LifeOS Retrieval Specialist. Return ONLY valid JSON." });
-    try {
-      const cleaned = aiRes.response.replace(/```json|```/g, "").trim();
-      return JSON.parse(cleaned);
-    } catch (e) { return { questions: [] }; }
-  }
-
-  async okaChat(payload) {
-    const { selection, messages } = payload;
-    const aiRes = await this.universalAiRequest({ messages: messages, system_prompt: `You are discussing the following selection: "${selection}". Help the user explore the topic deeper.` });
-    return { answer: aiRes.response };
-  }
 
   async readBinaryFile(filePath) {
     const fm = this.getFM(this.vaultPath);

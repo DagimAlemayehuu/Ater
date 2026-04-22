@@ -7,7 +7,6 @@ import { AuthenticatedLayout } from '@/components/layout/AuthenticatedLayout'
 
 // Pages
 import Obsidian from '@/routes/Obsidian'
-import Agents from '@/routes/Agents'
 import Settings from '@/routes/Settings'
 import Practice from '@/routes/Practice'
 import VaultSync from '@/routes/VaultSync'
@@ -39,7 +38,6 @@ export default function App() {
                   <Route element={<AuthenticatedLayout />}>
                     <Route path="/" element={<Navigate to="/obsidian" replace />} />
                     <Route path="/obsidian" element={<Obsidian />} />
-                    <Route path="/oka" element={<Agents />} />
                     <Route path="/practice" element={<Practice />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/registry" element={<VaultSync />} />

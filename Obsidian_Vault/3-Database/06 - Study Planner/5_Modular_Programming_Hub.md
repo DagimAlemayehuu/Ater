@@ -1,8 +1,8 @@
 ---
 title: 5_Modular_Programming_Hub
 type: Hub
-course: "[[Computer Programming]]"
-semester: "[[Autumn 2025]]"
+course: Computer Programming
+semester: Autumn 2025
 unit: '5'
 source: "[[Chapter 5.Pdf]]"
 source_pages: []
@@ -15,33 +15,32 @@ generated: true
 
 # 5 Modular Programming Hub
 
-> [!ABSTRACT] Unit Overview
-> Hub note for Computer Programming - 5 Modular Programming Hub
+## Overview
+Hub note for Computer Programming - 5 Modular Programming Hub
 
-## 🗺️ Mastery Map
-Navigate through the atomic concepts of this unit. Master each node to achieve unit fluency.
+## Unit Objectives
+- [ ] Master all core technical definitions.
+- [ ] Internalize the mental models for each concept.
+- [ ] Trace and understand every worked example.
+- [ ] Complete all Socratic Probes and verify with the Answer Key.
 
-- [ ] [[Modular Programming Concept]]
-- [ ] [[Benefits Of Modules]]
-- [ ] [[Functions In C++]]
-- [ ] [[Function Declaration]]
-- [ ] [[Function Prototypes]]
-- [ ] [[Function Definitions]]
-- [ ] [[Return Statement]]
-- [ ] [[Identifier Scope]]
-- [ ] [[Local Variables]]
-- [ ] [[Global Variables]]
-- [ ] [[Reference Parameters]]
-- [ ] [[Call By Reference]]
-- [ ] [[Pass By Value]]
-- [ ] [[Pass By Reference]]
-- [ ] [[Recursion]]
-- [ ] [[Base Case]]
-- [ ] [[Recursive Case]]
-- [ ] [[Function Overloading]]
-- [ ] [[Ambiguous Overloading]]
-
-## 🎯 Socratic Objectives
-- [ ] Complete retrieval practice for all atomic nodes.
-- [ ] Achieve 90%+ accuracy on Possible Questions.
-- [ ] Synthesize connections between modular blocks.
+## Connections
+- [ ] [[Modular_Programming]]
+    - [ ] [[Modules]]
+        - [ ] [[Functions_In_C++]]
+        - [ ] [[Function_Declaration]]
+        - [ ] [[Function_Prototypes]]
+        - [ ] [[Function_Definition]]
+        - [ ] [[Return_Statement]]
+        - [ ] [[Function_Agreement]]
+        - [ ] [[Local_Variables]]
+        - [ ] [[Global_Variables]]
+        - [ ] [[Unary_Scope_Resolution_Operator]]
+        - [ ] [[Inline_Functions]]
+        - [ ] [[Storage_Class]]
+        - [ ] [[Automatic_Variables]]
+        - [ ] [[Static_Variables]]
+        - [ ] [[External_Storage_Class]]
+        - [ ] [[Default_Parameters]]
+        - [ ] [[Empty_Parameter_Lists]]
+        - [ ] [[Parameter_Passing]]

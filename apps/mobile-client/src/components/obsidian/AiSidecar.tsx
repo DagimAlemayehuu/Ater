@@ -55,11 +55,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (initialMode === 'explain') {
-            handleInitialExplain();
-        } else {
-            handleInitialQuiz();
-        }
+        handleInitialExplain();
     }, [selection, path, page]);
 
     useEffect(() => {
@@ -72,35 +68,14 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
         setIsThinking(true);
         setMessages([]);
         try {
-            const data = await sidecarApi.explainPdfSelection({
-                path: path,
-                selection: selection,
-                page: page
-            });
-            setMessages([{ role: 'assistant', content: data.answer }]);
+            const data = await sidecarApi.brainstorm(
+                `Please explain this selection from the document: "${selection}"`,
+                `Source: ${path}${page ? ` (Page ${page})` : ''}`,
+                "You are an expert academic assistant. Provide a concise, insightful explanation of the provided text selection."
+            );
+            setMessages([{ role: 'assistant', content: data.response }]);
         } catch (e: any) {
             setMessages([{ role: 'assistant', content: `Error: ${e.message}` }]);
-        } finally {
-            setIsThinking(false);
-        }
-    };
-
-    const handleInitialQuiz = async () => {
-        setIsThinking(true);
-        setQuizQuestions([]);
-        setCurrentQuestionIndex(0);
-        setIsAnswered(false);
-        setQuizFeedback(null);
-        setScore(0);
-        try {
-            const data = await sidecarApi.okaInteractiveQuiz({
-                selection: selection
-            });
-            setQuizQuestions(data.questions || []);
-        } catch (e: any) {
-            console.error(e);
-            setMessages([{ role: 'assistant', content: "Failed to generate quiz. Fallback to explanation." }]);
-            setMode('explain');
         } finally {
             setIsThinking(false);
         }
@@ -125,58 +100,20 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
         }
     };
 
-    const handleAnswerQuiz = (answer: string) => {
-        if (isAnswered) return;
-        setUserAnswer(answer);
-        setIsAnswered(true);
-        
-        const currentQ = quizQuestions[currentQuestionIndex];
-        const isCorrect = answer.toLowerCase() === currentQ.answer.toLowerCase();
-        
-        if (isCorrect) setScore(score + 1);
-        
-        setQuizFeedback({
-            correct: isCorrect,
-            message: currentQ.explanation
-        });
-    };
-
-    const nextQuestion = () => {
-        if (currentQuestionIndex < quizQuestions.length - 1) {
-            setCurrentQuestionIndex(currentQuestionIndex + 1);
-            setIsAnswered(false);
-            setUserAnswer(null);
-            setQuizFeedback(null);
-        } else {
-            setMode('explain');
-            setMessages(prev => [...prev, { 
-                role: 'assistant', 
-                content: `### Retrieval Practice Completed!\n**Score:** ${score + (quizFeedback?.correct ? 1 : 0)}/${quizQuestions.length}\n\nAll knowledge clusters have been verified.` 
-            }]);
-        }
-    };
-
     return (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
             {/* Header */}
             <div className="p-6 border-b border-border/50 flex items-center justify-between bg-background/80 backdrop-blur-md sticky top-0 z-10">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg">
-                        {mode === 'explain' ? <Sparkles size={18} className="text-primary-foreground" /> : <Zap size={18} className="text-primary-foreground" />}
+                        <Sparkles size={18} className="text-primary-foreground" />
                     </div>
                     <div>
                         <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary">
-                            {mode === 'explain' ? 'Intelligence' : 'Retrieval'}
+                            Intelligence
                         </h3>
                         <div className="flex gap-3 mt-1">
-                            <button className={cn(
-                                "text-[10px] font-bold uppercase tracking-widest",
-                                mode === 'explain' ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
-                            )} onClick={() => setMode('explain')}>Explain</button>
-                            <button className={cn(
-                                "text-[10px] font-bold uppercase tracking-widest",
-                                mode === 'quiz' ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
-                            )} onClick={() => { setMode('quiz'); if (quizQuestions.length === 0) handleInitialQuiz(); }}>Quiz</button>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Explanation</span>
                         </div>
                     </div>
                 </div>
@@ -197,88 +134,31 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                     </div>
                 </div>
 
-                {mode === 'explain' ? (
-                    <div className="space-y-8">
-                        {messages.map((msg, i) => (
-                            <div key={i} className={cn(
-                                "flex flex-col space-y-3 animate-in fade-in slide-in-from-bottom-2",
-                                msg.role === 'user' ? "items-end" : "items-start"
+                <div className="space-y-8">
+                    {messages.map((msg, i) => (
+                        <div key={i} className={cn(
+                            "flex flex-col space-y-3 animate-in fade-in slide-in-from-bottom-2",
+                            msg.role === 'user' ? "items-end" : "items-start"
+                        )}>
+                            <div className={cn(
+                                "px-5 py-4 rounded-2xl max-w-[95%] text-sm leading-relaxed",
+                                msg.role === 'user' 
+                                    ? "bg-primary text-primary-foreground rounded-tr-none shadow-xl" 
+                                    : "bg-muted/30 border border-border/50 rounded-tl-none prose prose-sm prose-zinc dark:prose-invert"
                             )}>
-                                <div className={cn(
-                                    "px-5 py-4 rounded-2xl max-w-[95%] text-sm leading-relaxed",
-                                    msg.role === 'user' 
-                                        ? "bg-primary text-primary-foreground rounded-tr-none shadow-xl" 
-                                        : "bg-muted/30 border border-border/50 rounded-tl-none prose prose-sm prose-zinc dark:prose-invert"
-                                )}>
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                                </div>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                             </div>
-                        ))}
-                        {isThinking && (
-                            <div className="flex items-center gap-3 text-muted-foreground/40 animate-pulse pl-2">
-                                <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                                <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                                <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                                <span className="text-[10px] font-bold uppercase tracking-widest ml-2">Thinking...</span>
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className="space-y-8">
-                        {!isThinking && quizQuestions.length > 0 ? (
-                            <div className="space-y-10">
-                                <div className="space-y-8">
-                                    <h4 className="text-xl font-bold text-primary leading-tight">
-                                        {quizQuestions[currentQuestionIndex].question}
-                                    </h4>
-
-                                    <div className="space-y-3">
-                                        {quizQuestions[currentQuestionIndex].options.map((opt, i) => (
-                                            <button
-                                                key={i}
-                                                onClick={() => handleAnswerQuiz(opt)}
-                                                disabled={isAnswered}
-                                                className={cn(
-                                                    "w-full px-5 py-5 rounded-2xl border-2 text-sm text-left transition-all active:scale-[0.98] flex items-center justify-between",
-                                                    isAnswered 
-                                                        ? (opt.toLowerCase() === quizQuestions[currentQuestionIndex].answer.toLowerCase() 
-                                                            ? "bg-green-500/10 border-green-500/50 text-green-700 font-bold" 
-                                                            : (userAnswer === opt ? "bg-red-500/10 border-red-500/50 text-red-700" : "bg-muted/30 border-border opacity-50"))
-                                                        : "bg-muted/10 border-border hover:border-primary text-primary font-medium"
-                                                )}
-                                            >
-                                                <span>{opt}</span>
-                                                {isAnswered && opt.toLowerCase() === quizQuestions[currentQuestionIndex].answer.toLowerCase() && <Check size={18} />}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {quizFeedback && (
-                                    <div className={cn(
-                                        "p-6 rounded-3xl border-2 animate-in slide-in-from-top-4",
-                                        quizFeedback.correct ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20"
-                                    )}>
-                                        <p className="text-sm font-medium leading-relaxed mb-6 italic text-primary">
-                                            {quizFeedback.message}
-                                        </p>
-                                        <Button onClick={nextQuestion} className="w-full py-7 font-black uppercase tracking-widest gap-3 shadow-xl">
-                                            {currentQuestionIndex < quizQuestions.length - 1 ? 'Next Challenge' : 'Finish Session'}
-                                            <ArrowRight size={18} />
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            isThinking && (
-                                <div className="space-y-6 py-20 flex flex-col items-center justify-center">
-                                    <RefreshCw size={48} className="text-primary animate-spin" />
-                                    <span className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.3em]">Architecting Quiz...</span>
-                                </div>
-                            )
-                        )}
-                    </div>
-                )}
+                        </div>
+                    ))}
+                    {isThinking && (
+                        <div className="flex items-center gap-3 text-muted-foreground/40 animate-pulse pl-2">
+                            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                            <span className="text-[10px] font-bold uppercase tracking-widest ml-2">Thinking...</span>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Chat Input */}

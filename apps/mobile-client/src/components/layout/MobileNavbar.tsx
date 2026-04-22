@@ -12,7 +12,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'VAULT', icon: Archive, path: '/obsidian' },
   { label: 'REGISTRY', icon: Database, path: '/registry' },
-  { label: 'OKA', icon: Zap, path: '/oka' },
   { label: 'PRACTICE', icon: GraduationCap, path: '/practice' },
   { label: 'SYSTEM', icon: Settings, path: '/settings' },
 ]

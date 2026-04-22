@@ -97,7 +97,9 @@ class AtomicNoteSchema(NoteSchema):
     mode: Literal[
         "CS-CODE", "CS-SYS", "MED-STRUCT", "MED-DYN", 
         "LAW-RULE", "LAW-PREC", "ENG-PHYS", "ENG-ELEC", 
-        "SCI-MATH", "SCI-DATA", "HIST-TIME", "HIST-TREND"
+        "SCI-MATH", "SCI-DATA", "HIST-TIME", "HIST-TREND",
+        "LANG-VOCAB", "LANG-CULT", "BIZ-STRAT", "BIZ-FIN",
+        "ART-TECH", "ART-HIST"
     ] = Field(default="CS-CODE")
 
 class BatchSchema(BaseModel):
@@ -135,6 +137,8 @@ class NoteContent(BaseModel):
     search_keywords: List[str]
 
 class ProbeEnrichment(BaseModel):
+    worked_example: str
     l1_scenario: str
     l2_implementation: str
     l3_debug: str
+    answer_key: str

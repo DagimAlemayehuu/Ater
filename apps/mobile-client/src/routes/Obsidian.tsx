@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { 
     Menu, Search, FileText, ChevronRight, Folder, 
     Save, Edit3, X, Network, Archive, RefreshCw, FolderOpen, Database,
-    Send, Bot, User, Trash2, ShieldCheck, 
+    Send, Bot, User, Trash2, ShieldCheck, Layers,
     Sparkles, Paperclip, ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft, Layout,
     Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Users, Settings, BrainCircuit, Zap, Activity, PauseCircle, ListChecks, Terminal,
     MoreVertical, ArrowRight, ArrowLeft, Share2
@@ -540,7 +540,7 @@ export default function ObsidianVaultPage() {
                                 onChange={(e) => setEditedContent(e.target.value)}
                                 className="flex-1 w-full bg-muted/5 p-6 font-mono text-sm leading-relaxed focus:outline-none resize-none"
                                 spellCheck={false}
-                                placeholder="Neural content stream..."
+                                placeholder="Knowledge stream..."
                                 autoFocus
                             />
                         ) : (

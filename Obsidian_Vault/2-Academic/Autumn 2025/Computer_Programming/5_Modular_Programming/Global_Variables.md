@@ -1,210 +1,83 @@
 ---
 title: Global Variables
 type: Atomic Note
-course: "[[Computer Programming]]"
-semester: "[[Autumn 2025]]"
+course: Computer Programming
+semester: Autumn 2025
 unit: '5'
 hub: "[[5_Modular_Programming_Hub]]"
 source: "[[Chapter 5.Pdf]]"
 source_pages:
 - 21
-mode: ENGINEER
+mode: CS-CODE
+read: false
 generated: true
+prerequisites:
+- "[[Local Variables]]"
 ---
 
-## 1. Simple Explanation
-Global variables are variables declared outside of any function or class. They are accessible from any part of the program.
+# 1. Technical Definition
+In programming, a **global variable** is a variable that is defined outside of any function or class and is accessible from any part of the program, with `global scope` implying that it can be accessed and modified by any function. A global variable is typically declared at the top of a source file or in a separate module, and its `scope` is not limited to a specific block or function.
 
-## 2. Technical Deep-Dive
-In C++, a global variable is defined outside of any function or class. The scope of a global variable is the entire program. This means it can be accessed from any function or class within the program. However, overuse of global variables can lead to namespace pollution and make the program harder to understand and debug. It's essential to use them sparingly and follow best practices.
+# 2. Mental Model
+Imagine a big box in the middle of a school where everyone can put and take things. This box is like a global variable, and anyone in the school (or program) can access it and change what's inside. Just like how students need to be careful what they put in or take from the box, programmers need to be careful with global variables because they can affect the whole program.
 
-## 3. Step-by-Step Visualization
-### The Artifact
+# 3. Syntax Mechanics
+* Global variables are typically declared outside of any function or class.
+* They can be accessed and modified by any function in the program.
+* In some languages, the `global` keyword is used to declare a global variable, while in others, it is implied by the variable's position in the code.
+* Global variables can be used to share data between different parts of a program.
 
-```cpp
-// Global variable
-int globalVar = 10;
+# 4. Memory Lifecycle
+* Global variables are allocated memory when the program starts and remain in memory until the program ends.
+* They can lead to memory leaks if not properly cleaned up, as they continue to occupy memory even when not in use.
+* Global variables can be changed by any function, which can lead to unexpected behavior if not properly synchronized.
+* Some programming languages have limitations on the number of global variables that can be defined or have specific rules for their usage.
 
-void myFunction() {
-    // Accessing the global variable
-    cout << globalVar << endl;
-}
-```
+---
 
-## Step 1: Understanding Global Variables
-Global variables are variables declared outside of any function or class. They are accessible from any part of the program, making them a crucial concept in programming, especially in C++.
-
-## Step 2: Defining Global Variables
-In C++, a global variable is defined outside of any function or class. Here's a simple example:
-
-```cpp
-// Global variable
-int globalVar = 10;
-
-void myFunction() {
-    // Accessing the global variable
-    cout << globalVar << endl;
-}
-```
-
-## Step 3: Scope of Global Variables
-The scope of a global variable is the entire program. This means it can be accessed from any function or class within the program.
-
-## 4: Global Variables and Local Variables
-When a local variable has the same name as a global variable, the local variable hides the global variable within its scope.
-
-```cpp
-int globalVar = 10;
-
-void myFunction() {
-    int globalVar = 20; // Local variable
-    cout << globalVar << endl; // Outputs 20
-}
-
-int main() {
-    myFunction();
-    cout << globalVar << endl; // Outputs 10
-    return 0;
-}
-```
-
-## 5: Using the `extern` Keyword
-The `extern` keyword is used to declare a global variable without defining it. The definition of the variable must be provided elsewhere in the program.
-
-```cpp
-// File1.cpp
-extern int globalVar;
-
-void myFunction() {
-    cout << globalVar << endl;
-}
-
-// File2.cpp
-int globalVar = 10;
-```
-
-## 6: Best Practices
-While global variables can be useful, they should be used sparingly. Overuse of global variables can lead to namespace pollution and make the program harder to understand and debug.
-
-## 7: Example Use Case
-Here's an example that demonstrates the use of a global variable to keep track of the number of instances of a class:
+## 5. Worked Example
 
 ```cpp
 #include <iostream>
 
-int instanceCount = 0;
+int globalVar = 10; // Global variable
 
-class MyClass {
-public:
-    MyClass() {
-        instanceCount++;
-    }
+void function1() {
+    std::cout << "Global variable in function1: " << globalVar << std::endl;
+    globalVar = 20; // Modifying the global variable
+}
 
-    ~MyClass() {
-        instanceCount--;
-    }
-
-    static int getInstanceCount() {
-        return instanceCount;
-    }
-};
+void function2() {
+    std::cout << "Global variable in function2: " << globalVar << std::endl;
+}
 
 int main() {
-    MyClass obj1;
-    MyClass obj2;
-
-    std::cout << "Instance count: " << MyClass::getInstanceCount() << std::endl;
-
+    std::cout << "Initial global variable: " << globalVar << std::endl;
+    function1();
+    function2();
     return 0;
 }
 ```
 
-## 8: Common Pitfalls
-One common pitfall with global variables is that they can be modified accidentally. This can lead to unexpected behavior in the program.
-
-## 9: Alternatives to Global Variables
-Alternatives to global variables include passing variables as arguments to functions or using classes to encapsulate data.
-
-### Logic Walkthrough / Execution Trace
-## Step 1: Understanding Global Variables
-Global variables are variables declared outside of any function or class. They are accessible from any part of the program, making them a crucial concept in programming, especially in C++.
-
-## Step 2: Defining Global Variables
-In C++, a global variable is defined outside of any function or class. Here's a simple example:
-
-```cpp
-// Global variable
-int globalVar = 10;
-
-void myFunction() {
-    // Accessing the global variable
-    cout << globalVar << endl;
-}
-```
-
-## Step 3: Scope of Global Variables
-The scope of a global variable is the entire program. This means it can be accessed from any function or class within the program.
-
-## 4: Global Variables and Local Variables
-When a local variable has the same name as a global variable, the local variable hides the global variable within its scope.
-
-```cpp
-int globalVar = 10;
-
-void myFunction() {
-    int globalVar = 20; // Local variable
-    cout << globalVar << endl; // Outputs 20
-}
-
-int main() {
-    myFunction();
-    cout << globalVar << endl; // Outputs 10
-    return 0;
-}
-```
-
-## Step 5: Using the `extern` Keyword
-The `extern` keyword is used to declare a global variable without defining it. The definition of the variable must be provided elsewhere in the program.
-
-```cpp
-// File1.cpp
-extern int globalVar;
-
-void myFunction() {
-    cout << globalVar << endl;
-}
-
-// File2.cpp
-int globalVar = 10;
-```
-
-
-## 4. The Trap (Edge Case Analysis)
-One common pitfall with global variables is that they can be modified accidentally. This can lead to unexpected behavior in the program.
+### Execution Walkthrough
+1. The program starts and the global variable `globalVar` is initialized to 10.
+2. In the `main` function, the initial value of `globalVar` is printed, which is 10.
+3. `function1` is called, which prints the current value of `globalVar` (10), modifies it to 20, and then returns.
+4. `function2` is called, which prints the current value of `globalVar` (20), as modified by `function1`.
 
 ---
 
-## 5. Question
+## 6. Socratic Probes
 
-**Scenario-Based Question**: What happens if a global variable is accessed from multiple functions in a C++ program?
+**Scenario-Based Question**: What is the initial value of the global variable `globalVar` in the provided C++ code?
 
-**Implementation Challenge**: A global variable 'x' is defined and initialized to 5. Two functions, 'func1' and 'func2', are defined. 'func1' increments 'x' by 1, and 'func2' prints the value of 'x'. If 'func1' is called followed by 'func2', what will be the output?
+**Implementation Challenge**: How can you use a global variable to share data between different functions in a C++ program, considering the example given?
 
-**Socratic Debugger**:
+**Debug Challenge**: Find the memory leak/bug: In the given code, there is no obvious memory leak because the global variable does not dynamically allocate memory. However, what could be a potential issue if the global variable were to be dynamically allocated and not properly deallocated?
 
-```cpp
-int x = 5;
-void func1() {
-    x++;
-}
-void func2() {
-    cout << x;
-}
+---
 
-int main() {
-    func1();
-    func2();
-    return 0;
-}
-```
-The code has a subtle bug. The bug is that the global variable 'x' is being modified accidentally. How can you fix this bug to ensure 'func2' prints the expected value?
+### Answer Key
+- L1_SCENARIO: The initial value of the global variable `globalVar` is 10.
+- L2_IMPLEMENTATION: You can use a global variable to share data between different functions by declaring it outside of any function, as shown in the example. Any function can access and modify it.
+- L3_DEBUG: A potential issue could arise if the global variable were dynamically allocated (e.g., using `new`) and not properly deallocated (e.g., using `delete`), leading to a memory leak. However, in the given code, `globalVar` is statically allocated, so this is not a concern.

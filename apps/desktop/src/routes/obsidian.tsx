@@ -86,7 +86,7 @@ function NoteProperties({ metadata, onNavigate }: { metadata: Record<string, any
 }
 
 // Parses hub markdown connections into a depth-aware tree for sidebar navigation
-type NavNode = { label: string; target: string | null; depth: number; children: NavNode[] }
+type NavNode = { label: string; target: string | null; depth: number; children: NavNode[]; isChecked: boolean }
 
 function parseHubTree(content: string): NavNode[] {
     const lines = content.split('\n')
@@ -106,10 +106,11 @@ function parseHubTree(content: string): NavNode[] {
         const target = wm ? wm[1].trim() : null
         const label = wm
             ? (wm[2] || wm[1]).trim().split('/').pop() || wm[1]
-            : text.replace(/\*\*/g, '').trim()
+            : text.replace(/\[x\]|\[ \]/ig, '').replace(/\*\*/g, '').trim()
 
+        const isChecked = text.toLowerCase().startsWith('[x]')
         const depth = Math.floor(indent / 2)
-        const node: NavNode = { label, target, depth, children: [] }
+        const node: NavNode = { label, target, depth, children: [], isChecked }
 
         // Pop stack until parent depth < current depth
         while (stack.length > 0 && stack[stack.length - 1].depth >= depth) {
@@ -126,7 +127,7 @@ function parseHubTree(content: string): NavNode[] {
     return roots
 }
 
-function HubConnectionsNav({ content, activePath, onNavigate }: { content: string, activePath: string | null, onNavigate: (name: string) => void }) {
+function HubConnectionsNav({ content, activePath, onNavigate, onToggleCheckbox }: { content: string, activePath: string | null, onNavigate: (name: string) => void, onToggleCheckbox: (label: string, isChecked: boolean, target: string | null) => void }) {
     const activeNoteName = activePath?.split('/').pop()?.replace('.md', '').replace('.pdf', '')?.toLowerCase() || ''
     const tree = parseHubTree(content)
 
@@ -154,19 +155,26 @@ function HubConnectionsNav({ content, activePath, onNavigate }: { content: strin
                     style={{ paddingLeft: (indentLevel * 12) + 8 }}
                 >
                     {node.target ? (
-                        <button
-                            onClick={() => onNavigate(node.target!)}
-                            className={cn(
-                                "text-left leading-tight truncate transition-colors w-full",
-                                active 
-                                    ? "text-[11px] font-black text-foreground" 
-                                    : "text-[10px] font-bold group-hover/nav-item:text-foreground"
-                            )}
-                            title={node.target}
-                        >
-                            {node.label}
-                            {active && <span className="ml-2 opacity-50 text-[8px]">📍</span>}
-                        </button>
+                        <div className="flex items-center w-full gap-2">
+                            <input 
+                                type="checkbox" 
+                                checked={node.isChecked} 
+                                onChange={(e) => onToggleCheckbox(node.label, e.target.checked, node.target)}
+                                className="h-2.5 w-2.5 shrink-0 rounded-[2px] border border-muted-foreground/30 text-primary bg-background appearance-none checked:bg-primary checked:border-primary cursor-pointer" 
+                            />
+                            <button
+                                onClick={() => onNavigate(node.target!)}
+                                className={cn(
+                                    "text-left leading-tight truncate transition-colors flex-1",
+                                    active 
+                                        ? "text-[11px] font-black text-foreground" 
+                                        : "text-[10px] font-bold group-hover/nav-item:text-foreground"
+                                )}
+                                title={node.target}
+                            >
+                                {node.label}
+                            </button>
+                        </div>
                     ) : (
                         <span className={cn(
                             "text-[9px] font-black uppercase tracking-widest leading-none px-1 py-0.5 rounded",
@@ -333,9 +341,9 @@ export default function ObsidianVaultPage() {
                 if (topologies) {
                     const pageName = selectedPath?.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '';
                     if (pageName) {
-                        // Bold and highlight the current active note
+                        // Bold the current active note
                         const regex = new RegExp(`(\\[\\[${pageName}\\]\\])`, 'gi');
-                        topologies = topologies.replace(regex, `**$1** 📍`);
+                        topologies = topologies.replace(regex, `**$1**`);
                     }
                     setHubConnections(topologies)
                 } else {
@@ -349,6 +357,60 @@ export default function ObsidianVaultPage() {
         
         fetchHubConnections()
     }, [noteMetadata, selectedPath])
+
+    const handleToggleCheckbox = async (label: string, isChecked: boolean, target: string | null) => {
+        if (hubConnections && selectedPath) {
+            try {
+                const rawHub = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course || noteMetadata?.semester;
+                let cleanHubName = '';
+                if (rawHub) {
+                    const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub];
+                    cleanHubName = String(hubItems[0] || '').replace(/\[\[/g, '').replace(/\]\]/g, '').trim();
+                }
+                if (!cleanHubName && !selectedPath.toLowerCase().endsWith('.pdf')) {
+                    cleanHubName = selectedPath.split('/').pop()?.replace('.md', '') || '';
+                }
+
+                if (cleanHubName) {
+                    const res = await sidecarApi.findVaultPage(cleanHubName);
+                    let hubPath = res.path;
+                    if (!hubPath) {
+                        const res2 = await sidecarApi.findVaultPage(`${cleanHubName}_Hub`);
+                        hubPath = res2.path;
+                    }
+                    if (hubPath) {
+                        const hubData = await sidecarApi.readObsidianNote(hubPath);
+                        if (hubData.content) {
+                            const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const regex = new RegExp(`- \\[\\[?[ xX]\\]?\\] (\\[\\[${escapedLabel}\\]\\]|\\*\\*\\[\\[${escapedLabel}\\]\\]\\*\\*|${escapedLabel})`, 'gi');
+                            const newCheck = isChecked ? 'x' : ' ';
+                            const updatedContent = hubData.content.replace(regex, `- [${newCheck}] $1`);
+                            await sidecarApi.updateObsidianNote(hubPath, updatedContent);
+                            
+                            // Re-fetch hub visually via state update
+                            setNoteMetadata({ ...noteMetadata });
+                        }
+                    }
+                }
+
+                if (target) {
+                    const resTarget = await sidecarApi.findVaultPage(target);
+                    if (resTarget.path) {
+                        const targetData = await sidecarApi.readObsidianNote(resTarget.path);
+                        let newContent = targetData.content;
+                        if (newContent.includes('read: ')) {
+                            newContent = newContent.replace(/read:\s*(true|false|True|False)/i, `read: ${isChecked}`);
+                        } else if (newContent.startsWith('---\n')) {
+                            newContent = newContent.replace('---\n', `---\nread: ${isChecked}\n`);
+                        }
+                        await sidecarApi.updateObsidianNote(resTarget.path, newContent);
+                    }
+                }
+            } catch(e) {
+                console.error("Failed to toggle checkbox", e);
+            }
+        }
+    }
 
     // --- Sync & Polling ---
     useEffect(() => {
@@ -799,6 +861,7 @@ export default function ObsidianVaultPage() {
                                                             content={hubConnections}
                                                             activePath={selectedPath}
                                                             onNavigate={handleWikiLinkClick}
+                                                            onToggleCheckbox={handleToggleCheckbox}
                                                         />
                                                     ) : (
                                                         <div className="py-8 flex flex-col items-center gap-2 opacity-25">
