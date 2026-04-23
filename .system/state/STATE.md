@@ -1,6 +1,6 @@
 # Project State
 ## 1. Status Summary
-**Current Status:** The system is operating on the **Ironclad OKA v24.0 (Pedagogical Engine)**. The ingestion engine has been evolved into a multi-persona specialist system with **Mental Model Analogies**, **Worked Example Artifacts**, and **Bidirectional Progress Syncing**. Hub notes now strictly cap at 3 levels of nesting, and checkbox toggles in the Markdown viewer are physically synced to the Obsidian vault and Atomic Note read states.
+**Current Status:** The system is operating on the **Ironclad OKA v24.0 (Pedagogical Engine)**. The Markdown rendering engine has been hardened with **High-Fidelity Code Blocks**, **Nested Connection List Repair**, and **Dynamic WikiLink Normalization**. The "Topologies" sidebar now supports **Depth-Aware Nesting**, **Auto-Expansion**, and **Indentation Guide Lines**, ensuring a seamless "Living Blueprint" experience. Progress is bidirectionally synced between Hub notes and Atomic read states.
 
 ## 2. Global Milestones
 *   [x] Initialization & Architecture

@@ -53,6 +53,12 @@ Life OS is a local-first application built as a polyglot monorepo. It operates f
 
 ## Changelog
 
+### 2026-04-23 — UI/UX & Markdown High-Fidelity Overhaul
+- **Hardened Markdown Engine**: Implemented robust AST-based code block detection with blended UI, language tags, and "ghost" copy buttons.
+- **Topologies Navigation**: Overhauled the Connections sidebar with nested collapsible tree structures, depth-aware auto-expansion, and indentation guides.
+- **Dynamic WikiLink Normalization**: Implemented global path/underscore stripping for WikiLink labels to ensure a clean, "Obsidian-native" reading experience.
+- **Connection List Repair**: Added automatic detection and nesting repair for collapsed connection lists in Hub notes.
+
 ### 2026-04-22 — Standalone Mobile Overhaul
 - **Mobile Feature Parity**: Rebuilt the mobile client to match Desktop's OKA, Notes, and Settings dashboards.
 - **Native Config Bridge**: Transitioned mobile settings from localStorage to a resilient iOS filesystem bridge.

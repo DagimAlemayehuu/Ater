@@ -81,6 +81,70 @@ const InlineDatabaseResolver = ({ dbName, onNavigate }: { dbName: string, onNavi
     )
 }
 
+const CodeBlock = ({ language, value }: { language: string | null, value: string }) => {
+    const [copied, setCopied] = useState(false);
+    const isDark = document.documentElement.classList.contains('dark');
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(value);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <div className="relative group my-8 rounded-xl border border-border/20 overflow-hidden bg-transparent transition-all hover:border-border/40">
+            {/* Header / Top Bar - Minimalist and blended */}
+            <div className={cn(
+                "flex items-center justify-between px-5 py-1.5 border-b border-border/5 bg-muted/5 transition-opacity",
+                !language && "opacity-0 group-hover:opacity-100"
+            )}>
+                <div className="flex items-center">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30 select-none">
+                        {language || 'code'}
+                    </span>
+                </div>
+                <button 
+                    onClick={handleCopy}
+                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-muted/20 rounded-md transition-all text-muted-foreground/50 hover:text-foreground group/copy"
+                    title="Copy Code"
+                >
+                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-0 group-hover/copy:opacity-100 transition-opacity">
+                        {copied ? 'Copied' : 'Copy'}
+                    </span>
+                    {copied ? <Check size={12} className="text-primary" /> : <Copy size={12} className="group-hover/copy:scale-110 transition-transform" />}
+                </button>
+            </div>
+            
+            <div className="relative overflow-hidden">
+                <SyntaxHighlighter
+                    language={language || 'text'}
+                    style={isDark ? vscDarkPlus : vs}
+                    PreTag="div"
+                    customStyle={{
+                        background: 'transparent',
+                        padding: language ? '1.25rem 1.5rem' : '1.5rem',
+                        margin: 0,
+                        fontSize: '14px',
+                        lineHeight: '1.7',
+                        fontFamily: 'JetBrains Mono, Fira Code, Menlo, monospace',
+                        overflowX: 'auto',
+                        WebkitFontSmoothing: 'antialiased'
+                    }}
+                    codeTagProps={{
+                        style: {
+                            fontFamily: 'inherit',
+                            fontSize: 'inherit',
+                            background: 'transparent'
+                        }
+                    }}
+                >
+                    {value}
+                </SyntaxHighlighter>
+            </div>
+        </div>
+    );
+};
+
 export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProps) {
     const [selection, setSelection] = useState<string>('');
     const [showPopover, setShowPopover] = useState(false);
@@ -95,17 +159,37 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
             const childrenArray = React.Children.toArray(children);
             const textContent = childrenArray.map(c => typeof c === 'string' ? c : '').join(' ');
             
-            // Detect and fix horizontal connection lists
+            // Detect and fix horizontal/collapsed connection lists
             if (textContent.includes('- [ ]') || textContent.includes('- [x]')) {
                 const parts = textContent.split(/(?=- \[[ xX]\])/).filter(p => p.trim().length > 0);
                 if (parts.length > 1) {
                     return (
-                        <div className="flex flex-col gap-1.5 my-4 pl-0 border-l-2 border-border/10 ml-1">
-                            {parts.map((part, i) => (
-                                <div key={i} className="flex items-start gap-2 text-[13px] text-foreground font-medium group/task">
-                                    {renderWikiLinks(part.replace(/_/g, ' '), onNavigate, true)}
-                                </div>
-                            ))}
+                        <div className="flex flex-col gap-1 my-6 pl-0 border-l-2 border-border/10 ml-1">
+                            {parts.map((part, i) => {
+                                const isChecked = part.toLowerCase().includes('[x]');
+                                const leadingSpaces = part.match(/^\s*/)?.[0].length || 0;
+                                const depth = Math.floor(leadingSpaces / 2);
+                                const cleanPart = part.replace(/^\s*- \[[ xX]\]/, '').trim();
+                                
+                                return (
+                                    <div key={i} className="flex items-start gap-2 py-0.5 group/task" style={{ marginLeft: depth * 16 }}>
+                                        <div className="mt-1 flex items-center justify-center shrink-0">
+                                            <div className={cn(
+                                                "size-3.5 border border-border/50 rounded-sm flex items-center justify-center transition-colors",
+                                                isChecked ? "bg-primary/20 border-primary" : "bg-transparent"
+                                            )}>
+                                                {isChecked && <Check size={10} className="text-primary" strokeWidth={4} />}
+                                            </div>
+                                        </div>
+                                        <div className={cn(
+                                            "text-[13px] leading-relaxed transition-all",
+                                            isChecked ? "opacity-30 line-through" : "text-foreground/90 font-medium"
+                                        )}>
+                                            {renderWikiLinks(cleanPart, onNavigate)}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     );
                 }
@@ -119,31 +203,60 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
                 }
             }
             return (
-                <p className="mb-3 leading-relaxed text-[13px] text-foreground/90 antialiased">
+                <p className="mb-4 leading-relaxed text-[13px] text-foreground/90 antialiased">
                     {React.Children.map(children, (child) => 
-                        typeof child === 'string' ? renderWikiLinks(child.replace(/_/g, ' '), onNavigate) : child
+                        typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child
                     )}
                 </p>
             )
         },
         h1: ({ children }: any) => <h1 className="text-2xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-border text-foreground">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child.replace(/_/g, ' '), onNavigate) : child)}
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
         </h1>,
         h2: ({ children }: any) => <h2 className="text-xl font-black mt-8 mb-4 tracking-tight text-foreground">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child.replace(/_/g, ' '), onNavigate) : child)}
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
         </h2>,
         h3: ({ children }: any) => <h3 className="text-lg font-bold mt-6 mb-3 tracking-tight text-foreground/90">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child.replace(/_/g, ' '), onNavigate) : child)}
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
         </h3>,
         h4: ({ children }: any) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] text-muted-foreground/60">{children}</h4>,
         ul: ({ children }: any) => <ul className="list-disc pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ul>,
         ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ol>,
         li: ({ children, ...props }: any) => {
-            const content = React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child);
-            if (props.className?.includes('task-list-item')) {
-                return <li className="flex items-start gap-2 list-none -ml-5 mb-1 text-foreground/80">{content}</li>;
+            const content = React.Children.map(children, (child) => {
+                if (typeof child === 'string') return renderWikiLinks(child, onNavigate);
+                return child;
+            });
+            const isTask = props.className?.includes('task-list-item');
+            return (
+                <li className={cn(
+                    "text-[13px] leading-relaxed mb-1 text-foreground/80",
+                    isTask ? "flex items-start gap-2 list-none -ml-5" : "list-item"
+                )}>
+                    {content}
+                </li>
+            );
+        },
+        pre: ({ children }: any) => <div className="not-prose">{children}</div>,
+        code: (props: any) => {
+            const { className, children, node } = props;
+            const match = /language-(\w+)/.exec(className || '')
+            const language = match ? match[1] : null
+            
+            if (language === 'mermaid') return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />
+            
+            // Robust Block Detection:
+            // 1. Has a language class (e.g., ```cpp)
+            // 2. Or is clearly a block in the AST (parent is NOT a paragraph or similar, but here we check position)
+            // 3. Or contains newlines (fenced blocks usually do)
+            const content = String(children).replace(/\n$/, '');
+            const isBlock = !!match || content.includes('\n') || (node?.position && node.position.start.line !== node.position.end.line);
+            
+            if (isBlock) {
+                return <CodeBlock language={language} value={content} />
             }
-            return <li className="mb-0.5 text-foreground/80">{content}</li>;
+            
+            return <code className={cn("bg-muted/30 px-1.5 py-0.5 rounded text-[12px] font-mono text-foreground border border-border/5 font-medium mx-0.5", className)} {...props}>{children}</code>
         },
         input: ({ node, type, checked, ...props }: any) => {
             if (type === 'checkbox') {
@@ -194,32 +307,6 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
                 );
             }
             return null;
-        },
-        code: ({ node, inline, className, children, ...props }: any) => {
-            const match = /language-(\w+)/.exec(className || '')
-            const language = match ? match[1] : null
-            if (language === 'mermaid') return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />
-            if (!inline && match) {
-                const isDark = document.documentElement.classList.contains('dark');
-                return (
-                    <SyntaxHighlighter
-                        {...props}
-                        style={isDark ? vscDarkPlus : vs}
-                        language={language}
-                        PreTag="div"
-                        customStyle={{
-                            background: 'transparent',
-                            padding: '1rem 0',
-                            margin: 0,
-                            fontSize: '13px',
-                            lineHeight: '1.6'
-                        }}
-                    >
-                        {String(children).replace(/\n$/, '')}
-                    </SyntaxHighlighter>
-                )
-            }
-            return <code className={cn("bg-muted px-1.5 py-0.5 rounded text-[11px] font-mono text-foreground border border-border/50", className)} {...props}>{children}</code>
         },
         table: ({ children }: any) => (
             <div className="overflow-x-auto my-6 rounded-md border border-border">
@@ -339,7 +426,7 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
     };
 
     return (
-        <div className="relative h-full flex flex-row select-text bg-background text-foreground" onMouseUp={handleMouseUp} onKeyUp={handleMouseUp}>
+        <div className="relative h-full flex flex-row bg-background text-foreground" onMouseUp={handleMouseUp} onKeyUp={handleMouseUp}>
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 relative">
                 {showPopover && selection && (
                     <div 

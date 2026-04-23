@@ -228,7 +228,12 @@
 }
 
 .prose pre {
-  @apply bg-transparent border-none p-0 overflow-x-auto;
+  @apply bg-transparent border-none p-0;
+  overflow: visible !important;
+}
+
+.prose pre > div {
+  @apply m-0 !important;
 }
 
 .prose ul,

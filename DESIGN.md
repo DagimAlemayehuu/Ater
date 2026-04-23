@@ -88,9 +88,11 @@ Typography is the primary engine of the LifeOS aesthetic. We use **Inter** tuned
 
 *   **Metadata (Blueprint Labels):** `text-[10px] font-black uppercase tracking-widest`. Pair this with `text-muted-foreground/50` to mimic technical engineering labels.
 
-*   **Body Content:** `text-[13px] leading-relaxed`. Optimized for reading long-form Markdown against high-contrast backgrounds.
+*   **Body Content:** `text-[13px] leading-relaxed`. Optimized for reading long-form Markdown against high-contrast backgrounds. All underscores in plain text and WikiLinks are automatically stripped for a clean UI.
 
-*   **Code/Mono:** `font-mono text-[11px] bg-muted px-1.5 py-0.5 rounded`.
+*   **Code/Mono:** 
+    *   **Inline:** `font-mono text-[12px] bg-muted/30 px-1.5 py-0.5 rounded text-foreground border border-border/5`. Natural text wrapping with no horizontal scroll.
+    *   **Blocks:** `font-mono text-[14px] leading-[1.7]`. Blended UI with transparent backgrounds, language-specific tags, and "ghost" copy buttons that appear on hover. Isolated from prose via `not-prose` containers.
 
  
 
@@ -100,11 +102,15 @@ Typography is the primary engine of the LifeOS aesthetic. We use **Inter** tuned
 
 ## 4. Elevation & Depth
 
-Elevation is communicated through **Tonal Layering** and **Backdrop Blur** rather than heavy shadows.
+Elevation is communicated through **Tonal Layering**, **Backdrop Blur**, and **Indentation Guide Lines** rather than heavy shadows.
 
  
 
 *   **The Layering Principle:** Place `bg-muted` or `bg-accent` cards on top of `bg-background`. This creates a "ghost lift" that feels physically grounded in the app frame.
+
+ 
+
+*   **Indentation Guides:** Hierarchical lists (Explorer, Topologies) use 1px vertical guides (`border-border/10`) to provide visual tracks for nested structures.
 
 *   **The "Apple Preview" PDF Aesthetic:** The PDF viewer MUST strip all box-shadows and white halos. Dark mode is achieved via a backend CSS inversion filter, making the document feel like a flat, native part of the background.
 
@@ -144,9 +150,21 @@ Strictly minimal. Use `bg-transparent` with `border-none` and `focus-visible:rin
 
  
 
-### Lists & Navigation
+### Lists & Navigation (Hierarchical Tree)
 
-Sidebar items use `px-3 py-2` spacing. The "Active" state is indicated by a shift to `bg-accent` and a shift in typography to `font-bold` or a `primary` color highlight.
+Sidebar items use `px-2 py-1` spacing.
+*   **Active State:** indicated by a shift to `bg-accent` with a `font-semibold` highlight.
+*   **Nesting:** Uses a stack-based collapsible structure with Chevron indicators.
+*   **Auto-Expansion:** The system automatically expands the path to the currently active note.
+
+ 
+
+### Markdown Rendering Engine (High-Fidelity)
+
+The renderer is optimized for technical density:
+*   **Connection Lists:** Automatically repairs "collapsed" markdown lists into multi-column, nested tree views with interactive checkmarks.
+*   **Callouts:** Standardized Obsidian callouts (`[!info]`, `[!danger]`, etc.) with semantic color mapping and iconography.
+*   **WikiLinks:** Dynamic labels that strip underscores and paths, providing a "clean-text" experience while maintaining bidirectional filesystem integrity.
 
  
 

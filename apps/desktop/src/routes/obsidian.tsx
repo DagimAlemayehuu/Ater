@@ -114,11 +114,13 @@ function parseHubTree(content: string): NavNode[] {
     const listItemRe = /^(\s*)[\-\*]\s+(.*)/
 
     const roots: NavNode[] = []
-    const stack: NavNode[] = []
+    const stack: { node: NavNode; indent: number }[] = []
 
     for (const line of lines) {
+        if (!line.trim()) continue
         const m = listItemRe.exec(line)
         if (!m) continue
+        
         const indent = m[1].length
         const text = m[2].trim()
 
@@ -129,87 +131,120 @@ function parseHubTree(content: string): NavNode[] {
             : text.replace(/\[x\]|\[ \]/ig, '').replace(/\*\*/g, '').trim()
 
         const isChecked = text.toLowerCase().startsWith('[x]')
-        const depth = Math.floor(indent / 2)
-        const node: NavNode = { label, target, depth, children: [], isChecked }
+        const node: NavNode = { label, target, depth: 0, children: [], isChecked }
 
-        // Pop stack until parent depth < current depth
-        while (stack.length > 0 && stack[stack.length - 1].depth >= depth) {
+        // Determine actual depth based on stack
+        while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
             stack.pop()
         }
 
         if (stack.length === 0) {
+            node.depth = 0
             roots.push(node)
         } else {
-            stack[stack.length - 1].children.push(node)
+            node.depth = stack[stack.length - 1].node.depth + 1
+            stack[stack.length - 1].node.children.push(node)
         }
-        stack.push(node)
+        stack.push({ node, indent })
     }
     return roots
 }
 
 function HubConnectionsNav({ content, activePath, onNavigate, onToggleCheckbox }: { content: string, activePath: string | null, onNavigate: (name: string) => void, onToggleCheckbox: (label: string, isChecked: boolean, target: string | null) => void }) {
     const activeNoteName = activePath?.split('/').pop()?.replace('.md', '').replace('.pdf', '')?.toLowerCase() || ''
-    const tree = parseHubTree(content)
+    const tree = useMemo(() => parseHubTree(content), [content]);
+    const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
-    function isActive(node: NavNode): boolean {
-        if (!node.target) return false
-        const targetClean = node.target.split('/').pop()?.replace('.md', '')?.replace('.pdf', '')?.toLowerCase() || ''
-        return targetClean === activeNoteName || node.label.toLowerCase() === activeNoteName
-    }
+    // Auto-expand active node and its parents
+    useEffect(() => {
+        const newExpanded = new Set(expandedNodes);
+        const findAndExpand = (nodes: NavNode[]) => {
+            let found = false;
+            for (const node of nodes) {
+                const isNodeActive = node.target?.split('/').pop()?.replace('.md', '')?.replace('.pdf', '')?.toLowerCase() === activeNoteName;
+                const childrenFound = findAndExpand(node.children);
+                if (isNodeActive || childrenFound) {
+                    newExpanded.add(node.label);
+                    found = true;
+                }
+            }
+            return found;
+        };
+        findAndExpand(tree);
+        setExpandedNodes(newExpanded);
+    }, [activeNoteName, tree]);
+
+    const toggleNode = (label: string) => {
+        const next = new Set(expandedNodes);
+        if (next.has(label)) next.delete(label);
+        else next.add(label);
+        setExpandedNodes(next);
+    };
 
     function renderNode(node: NavNode, idx: number): React.ReactNode {
-        const active = isActive(node)
-        const hasChildren = node.children.length > 0
-        const indentLevel = node.depth
-        const isRoot = indentLevel === 0
+        const active = node.target?.split('/').pop()?.replace('.md', '')?.replace('.pdf', '')?.toLowerCase() === activeNoteName;
+        const hasChildren = node.children.length > 0;
+        const isExpanded = expandedNodes.has(node.label);
 
         return (
-            <div key={`${node.target ?? node.label}-${idx}`} className="group/nav-item">
+            <div key={`${node.target ?? node.label}-${idx}`} className="flex flex-col">
                 <div 
                     className={cn(
-                        "flex items-center transition-all duration-200 border-l py-1.5",
-                        active 
-                            ? "border-primary bg-accent/50 -mr-3 pr-3" 
-                            : isRoot ? "border-transparent text-muted-foreground" : "border-transparent text-muted-foreground group-hover/nav-item:border-border"
+                        "group flex items-center gap-1.5 py-1 px-2 rounded-sm cursor-pointer transition-colors relative",
+                        active ? "bg-accent text-accent-foreground font-semibold" : "hover:bg-accent/50 text-muted-foreground/80"
                     )}
-                    style={{ paddingLeft: (indentLevel * 8) + 8 }}
                 >
-                    {node.target ? (
-                        <div className="flex items-center w-full gap-2">
-                            <input 
-                                type="checkbox" 
-                                checked={node.isChecked} 
-                                onChange={(e) => onToggleCheckbox(node.label, e.target.checked, node.target)}
-                                className={cn(
-                                    "h-3 w-3 shrink-0 appearance-none border border-border/50 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[3.5px] after:h-[6.5px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer transition-colors",
-                                    node.isChecked && "opacity-50"
-                                )} 
-                            />
+                    {/* Level Indentation Guide Lines */}
+                    {node.depth > 0 && (
+                        <div className="absolute left-0 top-0 bottom-0 flex" style={{ width: node.depth * 12 }}>
+                            {Array.from({ length: node.depth }).map((_, i) => (
+                                <div key={i} className="w-[12px] border-r border-border/10 h-full" />
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="flex items-center gap-1.5 w-full" style={{ marginLeft: node.depth * 12 }}>
+                        <div 
+                            className="w-4 h-4 shrink-0 flex items-center justify-center"
+                            onClick={(e) => { e.stopPropagation(); toggleNode(node.label); }}
+                        >
+                            {hasChildren ? (
+                                <ChevronRight className={cn("w-3 h-3 transition-transform text-muted-foreground/40", isExpanded ? "rotate-90" : "")} />
+                            ) : null}
+                        </div>
+
+                        <input 
+                            type="checkbox" 
+                            checked={node.isChecked} 
+                            onChange={(e) => onToggleCheckbox(node.label, e.target.checked, node.target)}
+                            className={cn(
+                                "h-3 w-3 shrink-0 appearance-none border border-border/50 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[3.5px] after:h-[6.5px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer transition-colors",
+                                node.isChecked && "opacity-30"
+                            )} 
+                        />
+                        
+                        {node.target ? (
                             <button
                                 onClick={() => onNavigate(node.target!)}
                                 className={cn(
-                                    "text-left leading-tight truncate transition-colors flex-1",
-                                    active 
-                                        ? "text-[11px] font-black text-foreground" 
-                                        : "text-[10px] font-bold text-foreground/80 group-hover/nav-item:text-foreground",
-                                    node.isChecked && "opacity-50 line-through"
+                                    "text-left text-[11px] leading-tight truncate flex-1 hover:text-foreground transition-colors",
+                                    node.isChecked && "line-through opacity-40"
                                 )}
-                                title={node.target}
                             >
                                 {node.label.replace(/_/g, ' ')}
                             </button>
-                        </div>
-                    ) : (
-                        <span className={cn(
-                            "text-[9px] font-black uppercase tracking-widest leading-none px-1 py-0.5 rounded",
-                            isRoot ? "text-foreground bg-muted" : "text-foreground/50"
-                        )}>
-                            {node.label.replace(/_/g, ' ')}
-                        </span>
-                    )}
+                        ) : (
+                            <span 
+                                onClick={() => toggleNode(node.label)}
+                                className="text-[9px] font-black uppercase tracking-widest opacity-30 flex-1 select-none"
+                            >
+                                {node.label.replace(/_/g, ' ')}
+                            </span>
+                        )}
+                    </div>
                 </div>
-                {hasChildren && (
-                    <div className="flex flex-col gap-0.5">
+                {hasChildren && isExpanded && (
+                    <div className="flex flex-col">
                         {node.children.map((child, cidx) => renderNode(child, cidx))}
                     </div>
                 )}
@@ -219,14 +254,15 @@ function HubConnectionsNav({ content, activePath, onNavigate, onToggleCheckbox }
 
     if (tree.length === 0) {
         return (
-            <div className="py-6 text-center text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                No connections
+            <div className="py-20 flex flex-col items-center gap-3 opacity-20">
+                <Network size={24} strokeWidth={1} className="text-muted-foreground" />
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">No Map Found</span>
             </div>
         )
     }
 
     return (
-        <div className="flex flex-col gap-0.5 mt-2">
+        <div className="flex flex-col space-y-0.5">
             {tree.map((node, idx) => renderNode(node, idx))}
         </div>
     )
@@ -473,7 +509,8 @@ export default function ObsidianVaultPage() {
                         if (hubData.content) {
                             const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                             // Match both standard and aliased wikilinks, and plain text
-                            const regex = new RegExp(`- \\[(?: |x|X)\\] (?:\\*\\*)?(\\[\\[${escapedLabel}(?:\\|[^\\]]*)?\\]\\]|${escapedLabel})(?:\\*\\*)?`, 'gi');
+                            // This regex matches [[target|label]] or [[label]] or plain label
+                            const regex = new RegExp(`- \\[(?: |x|X)\\] (?:\\*\\*)?(\\[\\[(?:[^\\]|]+\\|)?${escapedLabel}\\]\\]|${escapedLabel})(?:\\*\\*)?`, 'gi');
                             const newCheck = isChecked ? 'x' : ' ';
                             const updatedContent = hubData.content.replace(regex, `- [${newCheck}] $1`);
                             
@@ -1173,10 +1210,10 @@ body:has(.backdrop-blur-xl) aside {
                                 </div>
                             ) : (
                                 <>
-                                    {/* Sticky Connections Column */}
+                                    {/* Sticky Connections Column (Left-Contextual) */}
                                     {selectedPath && !selectedPath.toLowerCase().endsWith('.pdf') && (
                                         <aside 
-                                            className="relative border-r border-border flex flex-col bg-background overflow-hidden shrink-0 group/connections"
+                                            className="relative border-r border-border flex flex-col bg-background shrink-0 group/connections overflow-hidden"
                                             style={{ width: `${connectionsWidth}px` }}
                                         >
                                             {/* Resize Handle */}
@@ -1187,33 +1224,35 @@ body:has(.backdrop-blur-xl) aside {
                                                 )}
                                                 onMouseDown={startResizingConnections}
                                             />
-                                            <div className="sticky top-0 flex flex-col h-full overflow-hidden">
+                                            <div className="flex flex-col h-full overflow-hidden">
                                                 {/* Header */}
-                                                <div className="px-4 pt-5 pb-3 flex items-center gap-2 border-b border-border shrink-0">
-                                                    <Network size={11} className="text-muted-foreground shrink-0" />
-                                                    <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Connections</span>
+                                                <div className="px-4 py-3 flex items-center justify-between border-b border-border shrink-0 bg-muted/10">
+                                                    <div className="flex items-center gap-2">
+                                                        <Network size={12} className="text-muted-foreground/60" />
+                                                        <span className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/70">Topologies</span>
+                                                    </div>
                                                 </div>
 
-                                                {/* Hub name badge */}
+                                                {/* Hub Context Badge */}
                                                 {(() => {
                                                     const hubName = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.HUB || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course
                                                     if (!hubName) return null
                                                     const clean = typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '').split('/').pop() : ''
                                                     return (
-                                                        <div className="px-4 py-2 shrink-0">
+                                                        <div className="px-3 pt-3 pb-1 shrink-0">
                                                             <button
                                                                 onClick={() => handleWikiLinkClick(typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '') : '')}
-                                                                className="w-full text-left text-[9px] font-bold uppercase tracking-wide text-muted-foreground hover:text-foreground truncate transition-colors"
-                                                                title={clean || ''}
+                                                                className="w-full text-left p-2 rounded-md bg-muted/30 border border-border/50 hover:border-primary/30 transition-all group/hub-btn"
                                                             >
-                                                                {clean}
+                                                                <div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 mb-1 group-hover/hub-btn:text-primary/50 transition-colors">Active Hub</div>
+                                                                <div className="text-[11px] font-bold text-foreground/80 truncate group-hover/hub-btn:text-primary transition-colors">{clean?.replace(/_/g, ' ')}</div>
                                                             </button>
                                                         </div>
                                                     )
                                                 })()}
 
                                                 {/* Connection links */}
-                                                <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-6">
+                                                <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4">
                                                     {hubConnections ? (
                                                         <HubConnectionsNav
                                                             content={hubConnections}
@@ -1222,9 +1261,9 @@ body:has(.backdrop-blur-xl) aside {
                                                             onToggleCheckbox={handleToggleCheckbox}
                                                         />
                                                     ) : (
-                                                        <div className="py-8 flex flex-col items-center gap-2 opacity-25">
-                                                            <Network size={18} strokeWidth={1.5} className="text-muted-foreground" />
-                                                            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground text-center">No hub linked</span>
+                                                        <div className="py-20 flex flex-col items-center gap-3 opacity-20">
+                                                            <Network size={24} strokeWidth={1} className="text-muted-foreground" />
+                                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">No Map Found</span>
                                                         </div>
                                                     )}
                                                 </div>
