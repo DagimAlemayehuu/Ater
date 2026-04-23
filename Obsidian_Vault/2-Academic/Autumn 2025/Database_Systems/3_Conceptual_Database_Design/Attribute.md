@@ -13,74 +13,75 @@ read: false
 generated: true
 prerequisites:
 - "[[Entity]]"
-- "[[Relationship]]"
 ---
 
 # 1. Technical Definition
-An `attribute` is a property of an `entity` or a `relationship type` that describes a characteristic of it. It is a fundamental concept in data modeling, used to define the structure and organization of data.
+An `attribute` is a characteristic or property of an `entity` that describes it, such as a name, address, or phone number. In computing, an attribute is a data element that is used to define the properties of an object, and is often represented as a `key-value pair`.
 
 # 2. Mental Model
-Imagine you have a friend, and your friend has a name, age, and favorite color. These are all attributes of your friend, like labels that tell us more about who they are. Just like how your friend has different attributes that make them unique, in data, attributes help describe and identify things.
+Imagine you have a friend, and you want to describe them to someone else. You might say they have blue eyes, curly brown hair, and a big smile. These are all attributes that help describe your friend. Just like how attributes help describe an object or a person in the real world.
 
 # 3. Schema Design
-* Attributes are used to describe entities and relationship types in a data model.
-* They have a specific data type, such as `string`, `integer`, or `date`.
-* Attributes can have constraints, like being required or having a specific format.
-* They are essential for defining the structure of data in a database or data warehouse.
+* Attributes are used to define the properties of an `entity`.
+* Attributes can be simple, such as a `string` or `integer`, or complex, such as a `struct` or `list`.
+* Attributes are often used to store metadata about an entity.
+* Attributes can be used to enable searching, filtering, and sorting of entities.
 
 # 4. Query Optimization
-* When querying data, attributes are used to filter, sort, and group data, which can impact performance.
-* Indexing attributes can speed up query performance, but it also increases storage needs.
-* Some attributes, like those with high cardinality, may require special handling to optimize query performance.
-* Over-indexing attributes can lead to slower write performance and increased storage needs.
+* Attributes have limitations on their data type and size.
+* Attributes can have thresholds on their values, such as a maximum length for a string attribute.
+* Attributes can have constraints, such as uniqueness or mandatory requirements.
+* Attributes can impact query performance, and optimizing attribute access can improve query speed.
 
 ---
 
 ## 5. Worked Example
 
-```markdown
-+---------------+
-|     Customer  |
-+---------------+
-|  CustomerID   | (PK)
-|  Name         |
-|  Email        |
-|  PhoneNumber  |
-+---------------+
+```sql
+CREATE TABLE Customers (
+  CustomerID INT PRIMARY KEY,
+  Name VARCHAR(255),
+  Address VARCHAR(255),
+  Phone VARCHAR(20)
+);
 
-+---------------+
-|     Order     |
-+---------------+
-|  OrderID      | (PK)
-|  CustomerID   | (FK)
-|  OrderDate    |
-|  Total        |
-+---------------+
+CREATE TABLE Orders (
+  OrderID INT PRIMARY KEY,
+  CustomerID INT,
+  OrderDate DATE,
+  Total DECIMAL(10, 2),
+  FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
+);
 ```
 
 ### Execution Walkthrough
-1. Identify the entities: We have two entities, `Customer` and `Order`.
-2. Define the attributes: For `Customer`, the attributes are `CustomerID`, `Name`, `Email`, and `PhoneNumber`. For `Order`, the attributes are `OrderID`, `CustomerID`, `OrderDate`, and `Total`.
-3. Establish relationships: There is a relationship between `Customer` and `Order` where a customer can have multiple orders, indicated by the foreign key `CustomerID` in the `Order` entity.
+1. We create two tables, `Customers` and `Orders`, to store information about customers and their orders.
+2. The `Customers` table has attributes `CustomerID`, `Name`, `Address`, and `Phone`, which describe a customer.
+3. The `Orders` table has attributes `OrderID`, `CustomerID`, `OrderDate`, and `Total`, which describe an order, and a foreign key `CustomerID` that references the `CustomerID` in the `Customers` table.
 
 ---
 
 ## 6. Socratic Probes
 
-**Scenario-Based Question**: What is an attribute in the context of data modeling?
+**Scenario-Based Question**: What is the name of the attribute that stores the customer's phone number in the `Customers` table?
 
-**Implementation Challenge**: Design a simple database schema for an e-commerce platform that includes customers and their orders, using attributes to describe each entity.
+**Implementation Challenge**: Suppose we want to retrieve the names and phone numbers of all customers who have placed an order. How would we write a SQL query to achieve this?
 
-**Debug Challenge**: Write an optimized SQL JOIN query to retrieve customer information along with their order details.
+**Debug Challenge**: Optimize the SQL JOIN for the query in L2_IMPLEMENTATION to reduce the number of columns being joined.
 
 ---
 
 ### Answer Key
-- L1_SCENARIO: An attribute is a property of an entity or a relationship type that describes a characteristic of it.
-- L2_IMPLEMENTATION: A possible schema could include entities like `Customer` with attributes `CustomerID`, `Name`, `Email`, and `Order` with attributes `OrderID`, `CustomerID`, `OrderDate`, and `Total`, as shown in the ER diagram block.
-- L3_DEBUG: 
+- L1_SCENARIO: The attribute that stores the customer's phone number is `Phone`.
+- L2_IMPLEMENTATION: We can write a SQL query using a JOIN to retrieve the required information: 
 ```sql
-SELECT C.CustomerID, C.Name, C.Email, O.OrderID, O.OrderDate, O.Total
-FROM Customer C
-INNER JOIN Order O ON C.CustomerID = O.CustomerID;
+SELECT C.Name, C.Phone 
+FROM Customers C 
+JOIN Orders O ON C.CustomerID = O.CustomerID;
+```
+- L3_DEBUG: To optimize the SQL JOIN, we can specify only the required columns in the SELECT statement and use a more efficient JOIN type if possible:
+```sql
+SELECT C.Name, C.Phone 
+FROM Customers C 
+INNER JOIN Orders O ON C.CustomerID = O.CustomerID;
 ```

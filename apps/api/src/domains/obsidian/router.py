@@ -448,6 +448,82 @@ async def delete_vault_row(db_name: str, file_name: str, secrets: AppSecrets = D
         print(f"Error deleting {file_name}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+class CreateFileRequest(BaseModel):
+    path: str
+    content: Optional[str] = ""
+
+@router.post("/vault/files")
+async def create_vault_file(req: CreateFileRequest, secrets: AppSecrets = Depends(get_app_secrets)):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+    
+    full_path = Path(secrets.vault_path) / req.path
+    if full_path.exists():
+        raise HTTPException(status_code=400, detail="File already exists")
+    
+    try:
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(full_path, "w", encoding="utf-8") as f:
+            f.write(req.content or "")
+        return {"success": True, "path": req.path}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class CreateFolderRequest(BaseModel):
+    path: str
+
+@router.post("/vault/folders")
+async def create_vault_folder(req: CreateFolderRequest, secrets: AppSecrets = Depends(get_app_secrets)):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+    
+    full_path = Path(secrets.vault_path) / req.path
+    try:
+        full_path.mkdir(parents=True, exist_ok=True)
+        return {"success": True, "path": req.path}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class MoveItemRequest(BaseModel):
+    old_path: str
+    new_path: str
+
+@router.patch("/vault/items")
+async def move_vault_item(req: MoveItemRequest, secrets: AppSecrets = Depends(get_app_secrets)):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+    
+    old_full_path = Path(secrets.vault_path) / req.old_path
+    new_full_path = Path(secrets.vault_path) / req.new_path
+    
+    if not old_full_path.exists():
+        raise HTTPException(status_code=404, detail="Source item not found")
+    
+    try:
+        new_full_path.parent.mkdir(parents=True, exist_ok=True)
+        old_full_path.rename(new_full_path)
+        return {"success": True, "old_path": req.old_path, "new_path": req.new_path}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/vault/items")
+async def delete_vault_item(path: str, secrets: AppSecrets = Depends(get_app_secrets)):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+    
+    full_path = Path(secrets.vault_path) / path
+    if not full_path.exists():
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    try:
+        if full_path.is_file():
+            full_path.unlink()
+        else:
+            shutil.rmtree(full_path)
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/vault/search")
 async def find_vault_page(page_name: str, secrets: AppSecrets = Depends(get_app_secrets)):
     if not secrets.vault_path:

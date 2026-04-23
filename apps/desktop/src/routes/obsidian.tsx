@@ -6,7 +6,7 @@ import {
     PauseCircle, ListChecks, Archive, Terminal, Database,
     ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft, Layout, FolderOpen,
     Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Users, Settings, Network,
-    Edit3, Save
+    Edit3, Save, FolderPlus, Check, MoreVertical
 } from 'lucide-react'
 import { sidecarApi, ObsidianFile } from '@/lib/sidecarApi'
 import { ObsidianGraphView } from '@/components/obsidian/ObsidianGraphView'
@@ -36,47 +36,67 @@ interface FileNode {
 }
 
 function NoteProperties({ metadata, onNavigate }: { metadata: Record<string, any>, onNavigate: (link: string) => void }) {
-    if (!metadata || Object.keys(metadata).length === 0) return null
+    // Filter out common internal keys that shouldn't be displayed as "properties"
+    const displayMetadata = Object.entries(metadata).filter(([key]) => 
+        !['title', 'position', 'frontmatter'].includes(key.toLowerCase())
+    )
+
+    if (displayMetadata.length === 0) return null
 
     const getPropertyIcon = (key: string) => {
-        switch (key.toLowerCase()) {
-            case 'course': return <GraduationCap size={18} />
-            case 'semester': return <Calendar size={18} />
-            case 'department': return <Building size={18} />
-            case 'status': return <Circle size={18} />
-            case 'source': return <Paperclip size={18} />
-            case 'source_page': return <FileText size={18} />
-            default: return <Info size={18} />
-        }
+        const k = key.toLowerCase()
+        if (k.includes('course')) return <GraduationCap size={14} />
+        if (k.includes('semester')) return <Calendar size={14} />
+        if (k.includes('hub')) return <Network size={14} />
+        if (k.includes('status')) return <Circle size={14} />
+        if (k.includes('source_page')) return <FileText size={14} />
+        if (k.includes('source')) return <Paperclip size={14} />
+        if (k.includes('department') || k.includes('area')) return <Building size={14} />
+        return <Info size={14} />
     }
     
+    const formatValue = (val: any) => {
+        if (val === null || val === undefined) return 'Empty'
+        if (Array.isArray(val)) return val.map(v => formatValue(v)).join(', ')
+        return String(val)
+    }
+
     return (
-        <div className="flex flex-col gap-8 mb-12">
-            <div className="grid grid-cols-2 gap-y-6 gap-x-20 py-10 border-y border-border" data-purpose="note-metadata">
-                {Object.entries(metadata).map(([key, value]) => (
-                    <div key={key} className="flex items-center gap-4">
-                        <div className="w-5 flex justify-center text-muted-foreground">
+        <div className="flex flex-col gap-4 mb-12 animate-in fade-in slide-in-from-top-2 duration-500">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-8 p-6 rounded-2xl bg-muted/30 border border-border/50" data-purpose="note-metadata">
+                {displayMetadata.map(([key, value]) => (
+                    <div key={key} className="flex items-start gap-3 group/prop">
+                        <div className="mt-0.5 w-4 flex justify-center text-muted-foreground/50 group-hover/prop:text-primary/70 transition-colors">
                             {getPropertyIcon(key)}
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{key.replace(/_/g, ' ')}</span>
-                            <span className="text-[14px] font-medium text-foreground">
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest mb-0.5">{key.replace(/_/g, ' ')}</span>
+                            <div className="text-[12px] font-medium text-foreground truncate">
                                 {key.toLowerCase() === 'status' ? (
                                     <span className={cn(
-                                        "px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest",
-                                        value === 'Completed' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                                    )}>{String(value)}</span>
+                                        "px-1.5 py-0.5 rounded-md text-[9px] uppercase font-bold tracking-widest",
+                                        String(value).toLowerCase().includes('complete') ? 'bg-primary/20 text-primary border border-primary/20' : 'bg-muted border border-border text-muted-foreground'
+                                    )}>{formatValue(value)}</span>
                                 ) : (
-                                    String(value).startsWith('[[') ? (
-                                        <button 
-                                            onClick={() => onNavigate(String(value).slice(2, -2))}
-                                            className="text-foreground hover:underline underline-offset-4 decoration-border"
-                                        >
-                                            {String(value).slice(2, -2).split('/').pop()}
-                                        </button>
-                                    ) : String(value)
+                                    formatValue(value).includes('[[') ? (
+                                        <div className="flex flex-wrap gap-1">
+                                            {formatValue(value).match(/\[\[(.*?)\]\]/g)?.map((link, i) => {
+                                                const clean = link.slice(2, -2).split('|')[0]
+                                                const label = link.slice(2, -2).split('|')[1] || clean.split('/').pop()
+                                                return (
+                                                    <button 
+                                                        key={i}
+                                                        onClick={() => onNavigate(clean)}
+                                                        className="text-primary hover:underline underline-offset-4 decoration-primary/30 truncate text-left"
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    ) : formatValue(value)
                                 )}
-                            </span>
+                            </div>
                         </div>
                     </div>
                 ))}
@@ -152,7 +172,7 @@ function HubConnectionsNav({ content, activePath, onNavigate, onToggleCheckbox }
                             ? "border-primary bg-accent/50 -mr-3 pr-3" 
                             : isRoot ? "border-transparent text-muted-foreground" : "border-transparent text-muted-foreground group-hover/nav-item:border-border"
                     )}
-                    style={{ paddingLeft: (indentLevel * 12) + 8 }}
+                    style={{ paddingLeft: (indentLevel * 8) + 8 }}
                 >
                     {node.target ? (
                         <div className="flex items-center w-full gap-2">
@@ -160,7 +180,10 @@ function HubConnectionsNav({ content, activePath, onNavigate, onToggleCheckbox }
                                 type="checkbox" 
                                 checked={node.isChecked} 
                                 onChange={(e) => onToggleCheckbox(node.label, e.target.checked, node.target)}
-                                className="h-2.5 w-2.5 shrink-0 rounded-[2px] border border-muted-foreground/30 text-primary bg-background appearance-none checked:bg-primary checked:border-primary cursor-pointer" 
+                                className={cn(
+                                    "h-3 w-3 shrink-0 appearance-none border border-border/50 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[3.5px] after:h-[6.5px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer transition-colors",
+                                    node.isChecked && "opacity-50"
+                                )} 
                             />
                             <button
                                 onClick={() => onNavigate(node.target!)}
@@ -168,24 +191,25 @@ function HubConnectionsNav({ content, activePath, onNavigate, onToggleCheckbox }
                                     "text-left leading-tight truncate transition-colors flex-1",
                                     active 
                                         ? "text-[11px] font-black text-foreground" 
-                                        : "text-[10px] font-bold group-hover/nav-item:text-foreground"
+                                        : "text-[10px] font-bold text-foreground/80 group-hover/nav-item:text-foreground",
+                                    node.isChecked && "opacity-50 line-through"
                                 )}
                                 title={node.target}
                             >
-                                {node.label}
+                                {node.label.replace(/_/g, ' ')}
                             </button>
                         </div>
                     ) : (
                         <span className={cn(
                             "text-[9px] font-black uppercase tracking-widest leading-none px-1 py-0.5 rounded",
-                            isRoot ? "text-foreground bg-muted" : "text-muted-foreground/50"
+                            isRoot ? "text-foreground bg-muted" : "text-foreground/50"
                         )}>
-                            {node.label}
+                            {node.label.replace(/_/g, ' ')}
                         </span>
                     )}
                 </div>
                 {hasChildren && (
-                    <div className="mt-0.5 mb-1.5">
+                    <div className="flex flex-col gap-0.5">
                         {node.children.map((child, cidx) => renderNode(child, cidx))}
                     </div>
                 )}
@@ -233,6 +257,55 @@ export default function ObsidianVaultPage() {
     const { isFullscreen, setIsFullscreen } = useLayout()
     const [showProperties, setShowProperties] = useState(false)
 
+    // --- File Operations State ---
+    const [renamingPath, setRenamingPath] = useState<string | null>(null)
+    const [newItemName, setNewItemName] = useState('')
+    const [creatingInPath, setCreatingInPath] = useState<string | null>(null) // Path of parent folder
+    const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null)
+
+    // --- Sidebar Resize State ---
+    const [sidebarWidth, setSidebarWidth] = useState(260)
+    const [isResizing, setIsResizing] = useState(false)
+    const [connectionsWidth, setConnectionsWidth] = useState(220)
+    const [isResizingConnections, setIsResizingConnections] = useState(false)
+
+    const startResizing = (e: React.MouseEvent) => {
+        e.preventDefault()
+        setIsResizing(true)
+    }
+
+    const startResizingConnections = (e: React.MouseEvent) => {
+        e.preventDefault()
+        setIsResizingConnections(true)
+    }
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (isResizing) {
+                const newWidth = Math.max(160, Math.min(500, e.clientX))
+                setSidebarWidth(newWidth)
+            } else if (isResizingConnections) {
+                // Calculate based on explorer width
+                const xOffset = !isFullscreen ? sidebarWidth : 0
+                const newWidth = Math.max(160, Math.min(500, e.clientX - xOffset))
+                setConnectionsWidth(newWidth)
+            }
+        }
+        const handleMouseUp = () => {
+            setIsResizing(false)
+            setIsResizingConnections(false)
+        }
+
+        if (isResizing || isResizingConnections) {
+            window.addEventListener('mousemove', handleMouseMove)
+            window.addEventListener('mouseup', handleMouseUp)
+        }
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove)
+            window.removeEventListener('mouseup', handleMouseUp)
+        }
+    }, [isResizing, isResizingConnections, sidebarWidth, isFullscreen])
+
     // --- PDF State & Ref ---
     const pdfRef = useRef<any>(null)
     const [pdfState, setPdfState] = useState({
@@ -278,72 +351,86 @@ export default function ObsidianVaultPage() {
 
     useEffect(() => {
         const fetchHubConnections = async () => {
-            const rawHub = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course || noteMetadata?.semester;
-            if (!rawHub) {
+            if (!noteMetadata || Object.keys(noteMetadata).length === 0) {
+                setHubConnections(null)
+                return
+            }
+
+            // Expanded key list for hub detection
+            const hubKeys = ['hub', 'Hub', 'HUB', 'concept_hub', 'course', 'Course', 'course_hub', 'semester', 'area', 'project']
+            let rawHub: any = null
+            for (const key of hubKeys) {
+                if (noteMetadata[key]) {
+                    rawHub = noteMetadata[key]
+                    break
+                }
+            }
+
+            // Heuristic: If it's a Hub note itself, the hub is "self"
+            const isHubNote = selectedPath?.toLowerCase().includes('_hub.md') || noteMetadata?.type?.toLowerCase() === 'hub'
+            
+            if (!rawHub && !isHubNote) {
                 setHubConnections(null)
                 return
             }
             
             try {
-                const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub];
-                const cleanHubName = String(hubItems[0] || '').replace(/\[\[/g, '').replace(/\]\]/g, '').trim();
+                let topologies: string | null = null
                 
-                if (!cleanHubName) {
-                    setHubConnections(null);
-                    return;
+                const extractSection = (content: string) => {
+                    if (!content) return null
+                    const match = content.match(/(?:#+\s*(?:Core Topologies|Connections|Structure|Nav|Outline|Course Map|Curriculum).*?)\s*\n([\s\S]*?)(?=\n#+\s|$)/i)
+                    if (match && match[1]) return match[1].trim()
+                    const listMatch = content.match(/(?:^|\n)(\s*[\-\*]\s+[\s\S]*?)(?=\n\n|\n#|$)/)
+                    if (listMatch && listMatch[1]) return listMatch[1].trim()
+                    return content.trim()
                 }
-                
-                const res = await sidecarApi.findVaultPage(cleanHubName)
-                let topologies: string | null = null;
-                
-                const tryPath = async (p: string) => {
-                    try {
-                        const note = await sidecarApi.readObsidianNote(p)
-                        if (note.content) {
-                            const match = note.content.match(/(?:#+\s*Core Topologies.*?|#+\s*Connections)\s*\n([\s\S]*?)(?=\n#+\s|$)/i)
-                            if (match && match[1]) {
-                                return match[1].trim()
+
+                if (isHubNote && noteContent) {
+                    topologies = extractSection(noteContent)
+                }
+
+                if (!topologies && rawHub) {
+                    const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub]
+                    const hubVal = hubItems[0]
+                    const cleanHubName = String(hubVal).replace(/\[\[/g, '').replace(/\]\]/g, '').split('|')[0].trim()
+                    
+                    if (cleanHubName) {
+                        const res = await sidecarApi.findVaultPage(cleanHubName)
+                        const tryPath = async (p: string) => {
+                            try {
+                                const note = await sidecarApi.readObsidianNote(p)
+                                return extractSection(note.content)
+                            } catch(e) {}
+                            return null
+                        }
+
+                        if (res.found && res.path) {
+                            topologies = await tryPath(res.path)
+                        }
+                        
+                        if (!topologies) {
+                            const searchPaths = [
+                                `3-Database/06 - Study Planner/${cleanHubName}.md`,
+                                `3-Database/06 - Study Planner/${cleanHubName}_Hub.md`,
+                                `3-Database/01 - Areas/${cleanHubName}.md`,
+                                `3-Database/01 - Areas/${cleanHubName}_Hub.md`,
+                                `${cleanHubName}_Hub.md`
+                            ]
+                            for (const p of searchPaths) {
+                                topologies = await tryPath(p)
+                                if (topologies) break
                             }
                         }
-                    } catch(e) {}
-                    return null;
-                }
-
-                if (res.found && res.path) {
-                    topologies = await tryPath(res.path)
-                }
-                
-                if (!topologies) {
-                    topologies = await tryPath(`3-Database/06 - Study Planner/${cleanHubName}.md`)
-                }
-                
-                if (!topologies) {
-                    topologies = await tryPath(`3-Database/06 - Study Planner/${cleanHubName}_Hub.md`)
-                }
-                
-                if (!topologies) {
-                    topologies = await tryPath(`3-Database/06 - Study Planner/3_Relational_Model_And_Database_Design_Hub.md`)
-                }
-                
-                const tryPathWithSuffix = async (p: string) => {
-                    if (res.found && res.path) return topologies;
-                    const res2 = await sidecarApi.findVaultPage(`${cleanHubName}_Hub`)
-                    if (res2.found && res2.path) {
-                        return await tryPath(res2.path)
                     }
-                    return null;
-                }
-
-                if (!topologies) {
-                    topologies = await tryPathWithSuffix(cleanHubName)
                 }
                 
                 if (topologies) {
-                    const pageName = selectedPath?.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '';
+                    const pageName = selectedPath?.split('/').pop()?.replace('.md', '').replace('.pdf', '') || ''
                     if (pageName) {
-                        // Bold the current active note
-                        const regex = new RegExp(`(\\[\\[${pageName}\\]\\])`, 'gi');
-                        topologies = topologies.replace(regex, `**$1**`);
+                        const escapedPageName = pageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                        const regex = new RegExp(`(\\[\\[${escapedPageName}(?:\\|[^\\]]*)?\\]\\])`, 'gi')
+                        topologies = topologies.replace(regex, `**$1**`)
                     }
                     setHubConnections(topologies)
                 } else {
@@ -356,18 +443,21 @@ export default function ObsidianVaultPage() {
         }
         
         fetchHubConnections()
-    }, [noteMetadata, selectedPath])
+    }, [noteMetadata, selectedPath, noteContent])
 
     const handleToggleCheckbox = async (label: string, isChecked: boolean, target: string | null) => {
-        if (hubConnections && selectedPath) {
+        if (selectedPath) {
             try {
+                // 1. Update the Hub Note (where the list resides)
                 const rawHub = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course || noteMetadata?.semester;
                 let cleanHubName = '';
                 if (rawHub) {
                     const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub];
                     cleanHubName = String(hubItems[0] || '').replace(/\[\[/g, '').replace(/\]\]/g, '').trim();
                 }
-                if (!cleanHubName && !selectedPath.toLowerCase().endsWith('.pdf')) {
+                
+                const isCurrentAHub = selectedPath.toLowerCase().includes('_hub.md') || noteMetadata?.type?.toLowerCase() === 'hub'
+                if (!cleanHubName && isCurrentAHub) {
                     cleanHubName = selectedPath.split('/').pop()?.replace('.md', '') || '';
                 }
 
@@ -382,30 +472,53 @@ export default function ObsidianVaultPage() {
                         const hubData = await sidecarApi.readObsidianNote(hubPath);
                         if (hubData.content) {
                             const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                            const regex = new RegExp(`- \\[\\[?[ xX]\\]?\\] (\\[\\[${escapedLabel}\\]\\]|\\*\\*\\[\\[${escapedLabel}\\]\\]\\*\\*|${escapedLabel})`, 'gi');
+                            // Match both standard and aliased wikilinks, and plain text
+                            const regex = new RegExp(`- \\[(?: |x|X)\\] (?:\\*\\*)?(\\[\\[${escapedLabel}(?:\\|[^\\]]*)?\\]\\]|${escapedLabel})(?:\\*\\*)?`, 'gi');
                             const newCheck = isChecked ? 'x' : ' ';
                             const updatedContent = hubData.content.replace(regex, `- [${newCheck}] $1`);
-                            await sidecarApi.updateObsidianNote(hubPath, updatedContent);
                             
-                            // Re-fetch hub visually via state update
-                            setNoteMetadata({ ...noteMetadata });
+                            if (updatedContent !== hubData.content) {
+                                await sidecarApi.updateObsidianNote(hubPath, updatedContent);
+                                if (selectedPath === hubPath) {
+                                    setNoteContent(updatedContent);
+                                    setEditedContent(updatedContent);
+                                }
+                            }
                         }
                     }
                 }
 
-                if (target) {
-                    const resTarget = await sidecarApi.findVaultPage(target);
-                    if (resTarget.path) {
-                        const targetData = await sidecarApi.readObsidianNote(resTarget.path);
-                        let newContent = targetData.content;
-                        if (newContent.includes('read: ')) {
-                            newContent = newContent.replace(/read:\s*(true|false|True|False)/i, `read: ${isChecked}`);
-                        } else if (newContent.startsWith('---\n')) {
-                            newContent = newContent.replace('---\n', `---\nread: ${isChecked}\n`);
+                // 2. Update the atomic note's internal 'read' property
+                const targetName = target || label
+                const resTarget = await sidecarApi.findVaultPage(targetName);
+                if (resTarget.found && resTarget.path) {
+                    const targetData = await sidecarApi.readObsidianNote(resTarget.path);
+                    let content = targetData.content;
+                    const newCheckVal = isChecked ? 'true' : 'false';
+                    
+                    // Surgical replacement to preserve ALL other properties
+                    if (content.match(/^read:\s*(?:true|false|True|False)/im)) {
+                        content = content.replace(/^read:\s*(?:true|false|True|False)/im, `read: ${newCheckVal}`);
+                    } else if (content.match(/\nread:\s*(?:true|false|True|False)/i)) {
+                        content = content.replace(/\nread:\s*(?:true|false|True|False)/i, `\nread: ${newCheckVal}`);
+                    } else if (content.startsWith('---\n')) {
+                        // Insert after the first separator
+                        content = content.replace('---\n', `---\nread: ${newCheckVal}\n`);
+                    } else {
+                        content = `---\nread: ${newCheckVal}\n---\n\n${content}`;
+                    }
+                    
+                    if (content !== targetData.content) {
+                        await sidecarApi.updateObsidianNote(resTarget.path, content);
+                        if (selectedPath === resTarget.path) {
+                            // If we are viewing the note we just changed, refresh its state but preserve everything else
+                            setNoteMetadata(prev => ({ ...prev, read: isChecked }));
                         }
-                        await sidecarApi.updateObsidianNote(resTarget.path, newContent);
                     }
                 }
+
+                // Final sync to ensure UI stays consistent
+                setNoteMetadata(prev => ({ ...prev }));
             } catch(e) {
                 console.error("Failed to toggle checkbox", e);
             }
@@ -479,6 +592,7 @@ export default function ObsidianVaultPage() {
 
     const handleDeleteItem = async (e: React.MouseEvent, path: string, isFolder: boolean) => {
         e.stopPropagation()
+        if (!confirm(`Are you sure you want to delete this ${isFolder ? 'folder' : 'file'}?`)) return
         try {
             await sidecarApi.deleteObsidianItem(path)
             await fetchFiles()
@@ -489,6 +603,64 @@ export default function ObsidianVaultPage() {
             }
         } catch (err: any) {
             alert(`Delete failed: ${err.message}`)
+        }
+    }
+
+    const handleCreateItem = async () => {
+        if (!newItemName) {
+            setCreatingInPath(null)
+            setCreatingType(null)
+            return
+        }
+
+        const path = creatingInPath ? `${creatingInPath}/${newItemName}` : newItemName
+        const fullPath = creatingType === 'file' ? (path.endsWith('.md') ? path : `${path}.md`) : path
+
+        try {
+            if (creatingType === 'file') {
+                await sidecarApi.createObsidianFile(fullPath, `---\ntitle: ${newItemName.replace('.md', '')}\n---\n\n`)
+            } else {
+                await sidecarApi.createObsidianFolder(fullPath)
+            }
+            await fetchFiles()
+            setCreatingInPath(null)
+            setCreatingType(null)
+            setNewItemName('')
+            if (creatingType === 'file') {
+                selectFile(fullPath)
+            }
+        } catch (err: any) {
+            alert(`Creation failed: ${err.message}`)
+        }
+    }
+
+    const handleRenameItem = async () => {
+        if (!renamingPath || !newItemName) {
+            setRenamingPath(null)
+            return
+        }
+
+        const parentPath = renamingPath.includes('/') ? renamingPath.substring(0, renamingPath.lastIndexOf('/')) : ''
+        let newPath = parentPath ? `${parentPath}/${newItemName}` : newItemName
+        
+        // Preserve extension for files if not provided
+        if (!renamingPath.endsWith('/') && renamingPath.includes('.')) {
+            const ext = renamingPath.split('.').pop()
+            if (!newPath.endsWith(`.${ext}`)) {
+                newPath += `.${ext}`
+            }
+        }
+
+        try {
+            await sidecarApi.moveObsidianItem(renamingPath, newPath)
+            await fetchFiles()
+            if (selectedPath === renamingPath) {
+                setSelectedPath(newPath)
+            }
+            setRenamingPath(null)
+            setNewItemName('')
+        } catch (err: any) {
+            alert(`Rename failed: ${err.message}`)
         }
     }
 
@@ -518,10 +690,17 @@ export default function ObsidianVaultPage() {
 
         try {
             const res = await sidecarApi.readObsidianNote(path)
-            setNoteMetadata(res.metadata || {})
+            const metadata = res.metadata || {}
+            setNoteMetadata(metadata)
             setNoteContent(res.content || '')
             setEditedContent(res.content || '')
             setIsEditing(false)
+
+            // Auto-show properties if displayable metadata exists
+            const hasDisplayableMetadata = Object.keys(metadata).some(k => 
+                !['title', 'position', 'frontmatter'].includes(k.toLowerCase())
+            )
+            if (hasDisplayableMetadata) setShowProperties(true)
         } catch (err) {
             console.error('Failed to read note:', err)
             setNoteMetadata({})
@@ -661,7 +840,7 @@ export default function ObsidianVaultPage() {
         const root: FileNode[] = []
         
         files.forEach(file => {
-            const parts = file.path.split('/')
+            const parts = file.path.split('/').filter(p => p.length > 0)
             let currentLevel = root
             
             parts.forEach((part: string, index: number) => {
@@ -711,99 +890,267 @@ export default function ObsidianVaultPage() {
         return false
     }
 
+    const [draggedPath, setDraggedPath] = useState<string | null>(null)
+
+    const handleDrop = async (e: React.DragEvent, targetFolderPath: string | null) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (!draggedPath) return
+        
+        const fileName = draggedPath.split('/').pop()
+        const newPath = targetFolderPath ? `${targetFolderPath}/${fileName}` : fileName!
+        
+        if (draggedPath === newPath) return
+
+        try {
+            await sidecarApi.moveObsidianItem(draggedPath, newPath)
+            await fetchFiles()
+            if (selectedPath === draggedPath) setSelectedPath(newPath)
+        } catch (err: any) {
+            alert(`Move failed: ${err.message}`)
+        }
+        setDraggedPath(null)
+    }
+
     const renderTree = (nodes: FileNode[], level = 0) => {
-        return nodes
+        const result = nodes
             .filter(node => matchesSearch(node, searchQuery))
             .map(node => {
                 const isExpanded = expandedFolders.has(node.path) || (searchQuery !== '' && matchesSearch(node, searchQuery))
                 const isSelected = selectedPath === node.path
+                const isRenaming = renamingPath === node.path
                 
                 return (
-                    <div key={node.path} className="flex flex-col">
+                    <div 
+                        key={node.path} 
+                        className="flex flex-col"
+                        onDragOver={(e) => {
+                            if (node.isFolder) {
+                                e.preventDefault()
+                                e.dataTransfer.dropEffect = 'move'
+                            }
+                        }}
+                        onDrop={(e) => node.isFolder && handleDrop(e, node.path)}
+                    >
                         <div 
+                            draggable
+                            onDragStart={() => setDraggedPath(node.path)}
                             onClick={() => node.isFolder ? toggleFolder(node.path) : selectFile(node.path)}
                             className={cn(
-                                "flex items-center gap-2 py-1.5 cursor-pointer transition-colors px-4 group",
-                                isSelected ? "bg-accent text-accent-foreground font-medium rounded-md mx-2 px-2" : "hover:bg-accent/50 text-muted-foreground"
+                                "flex items-center gap-1.5 py-1 cursor-pointer transition-colors px-2 group relative",
+                                isSelected ? "bg-accent text-accent-foreground font-medium rounded-sm" : "hover:bg-accent/50 text-muted-foreground/90"
                             )}
                         >
-                            {node.isFolder ? (
-                                <ChevronRight className={cn("w-3.5 h-3.5 shrink-0 transition-transform", isExpanded ? "rotate-90 text-muted-foreground" : "text-muted-foreground")} />
-                            ) : (
-                                <div className="w-3.5 h-3.5 shrink-0 text-transparent" />
-                            )}
+                            <div className="w-4 h-4 shrink-0 flex items-center justify-center">
+                                {node.isFolder ? (
+                                    <ChevronRight className={cn("w-3 h-3 transition-transform", isExpanded ? "rotate-90" : "")} />
+                                ) : null}
+                            </div>
                             
                             {node.isFolder ? (
-                                <Folder className={cn("w-4 h-4 shrink-0", isSelected ? "text-accent-foreground" : "text-muted-foreground")} />
+                                <Folder className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-accent-foreground" : "text-muted-foreground/60")} />
                             ) : node.path.toLowerCase().endsWith('.pdf') ? (
-                                <FileText className={cn("w-4 h-4 shrink-0", isSelected ? "text-accent-foreground" : "text-red-500/70")} />
+                                <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-accent-foreground" : "text-red-500/50")} />
                             ) : (
-                                <FileText className={cn("w-4 h-4 shrink-0", isSelected ? "text-accent-foreground" : "text-muted-foreground")} />
+                                <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-accent-foreground" : "text-muted-foreground/40")} />
                             )}
                             
-                            <span className="truncate text-[13px] flex-1">{node.name}</span>
+                            {isRenaming ? (
+                                <input
+                                    autoFocus
+                                    className="flex-1 bg-background border border-primary rounded px-1 py-0 text-[12px] outline-none h-5"
+                                    value={newItemName}
+                                    onChange={(e) => setNewItemName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleRenameItem()
+                                        if (e.key === 'Escape') setRenamingPath(null)
+                                    }}
+                                    onBlur={handleRenameItem}
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            ) : (
+                                <span className="truncate text-[12px] flex-1">
+                                    {node.name.replace('.md', '').replace('.pdf', '')}
+                                </span>
+                            )}
 
-                            <button
-                                onClick={(e) => handleDeleteItem(e, node.path, node.isFolder)}
-                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
-                                title={`Delete ${node.isFolder ? 'folder' : 'file'}`}
-                            >
-                                <Trash2 size={12} strokeWidth={2.5} />
-                            </button>
+                            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0 transition-all">
+                                {node.isFolder && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setCreatingInPath(node.path)
+                                            setCreatingType('file')
+                                            setNewItemName('')
+                                            if (!isExpanded) toggleFolder(node.path)
+                                        }}
+                                        className="p-0.5 hover:bg-accent hover:text-foreground rounded transition-all"
+                                        title="New file"
+                                    >
+                                        <Plus size={10} />
+                                    </button>
+                                )}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        setRenamingPath(node.path)
+                                        setNewItemName(node.name)
+                                    }}
+                                    className="p-0.5 hover:bg-accent hover:text-foreground rounded transition-all"
+                                    title="Rename"
+                                >
+                                    <Edit3 size={10} />
+                                </button>
+                                <button
+                                    onClick={(e) => handleDeleteItem(e, node.path, node.isFolder)}
+                                    className="p-0.5 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
+                                    title="Delete"
+                                >
+                                    <Trash2 size={10} strokeWidth={2.5} />
+                                </button>
+                            </div>
                         </div>
-                        {node.isFolder && isExpanded && node.children && (
-                            <div className="pl-4">
-                                {renderTree(node.children, level + 1)}
+                        {node.isFolder && isExpanded && (
+                            <div className="pl-3.5 border-l border-border/10 ml-[9px]">
+                                {creatingInPath === node.path && (
+                                    <div className="flex items-center gap-1.5 py-1 px-2">
+                                        <div className="w-4 h-4 shrink-0" />
+                                        {creatingType === 'folder' ? <Folder size={12} className="text-muted-foreground/60" /> : <FileText size={12} className="text-muted-foreground/40" />}
+                                        <input
+                                            autoFocus
+                                            className="flex-1 bg-background border border-primary rounded px-1 py-0 text-[12px] outline-none h-5"
+                                            placeholder={`New ${creatingType}...`}
+                                            value={newItemName}
+                                            onChange={(e) => setNewItemName(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleCreateItem()
+                                                if (e.key === 'Escape') { setCreatingInPath(null); setCreatingType(null); }
+                                            }}
+                                            onBlur={handleCreateItem}
+                                        />
+                                    </div>
+                                )}
+                                {node.children && renderTree(node.children, level + 1)}
                             </div>
                         )}
                     </div>
                 )
             })
+
+        // Root level creation
+        if (level === 0 && creatingInPath === null && creatingType) {
+            result.unshift(
+                <div key="new-item-root" className="flex items-center gap-2 py-1.5 px-6">
+                    {creatingType === 'folder' ? <Folder size={14} className="text-muted-foreground" /> : <FileText size={14} className="text-muted-foreground" />}
+                    <input
+                        autoFocus
+                        className="flex-1 bg-background border border-primary rounded px-1 py-0.5 text-[13px] outline-none"
+                        placeholder={`New ${creatingType}...`}
+                        value={newItemName}
+                        onChange={(e) => setNewItemName(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleCreateItem()
+                            if (e.key === 'Escape') { setCreatingInPath(null); setCreatingType(null); }
+                        }}
+                        onBlur={handleCreateItem}
+                    />
+                </div>
+            )
+        }
+
+        return result
     }
 
     return (
         <div className="flex flex-col h-full w-full select-none bg-background text-foreground overflow-hidden font-sans">
+            <style>{`
+/* ─── Global Blur for Modals ─── */
+body:has(.backdrop-blur-xl) aside {
+  filter: blur(8px);
+  pointer-events: none;
+  transition: filter 0.3s ease-in-out;
+}
+
+/* ─── Checkbox Strikethrough ─── */
+.prose li:has(input[type="checkbox"]:checked),
+.prose div:has(input[type="checkbox"]:checked) {
+  @apply opacity-50;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.prose input[type="checkbox"]:checked + * {
+  @apply opacity-50;
+  text-decoration: line-through;
+}
+`}</style>
             <div className="flex flex-1 overflow-hidden h-full">
                 {/* MainContentArea */}
                 <main className="flex-1 flex flex-col min-w-0">
                     <div className="flex flex-1 overflow-hidden">
                         {/* ExplorerSidebar */}
                         {!isFullscreen && (
-                        <aside className="w-64 border-r border-border flex flex-col bg-background shrink-0">
+                        <aside 
+                            className="relative border-r border-border flex flex-col bg-background shrink-0 group/sidebar"
+                            style={{ width: `${sidebarWidth}px` }}
+                        >
+                            {/* Resize Handle */}
+                            <div 
+                                className={cn(
+                                    "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50 transition-colors hover:bg-primary/50",
+                                    isResizing ? "bg-primary w-1" : "bg-transparent"
+                                )}
+                                onMouseDown={startResizing}
+                            />
                             {/* Explorer Toolbar */}
-                            <div className="p-3 flex items-center justify-between">
-                                <div className="flex items-center gap-2 w-full">
-                                    <div className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1 rounded hover:bg-accent shrink-0" title="New file">
-                                        <Plus className="w-5 h-5" />
+                            <div className="p-3 flex items-center justify-between gap-1">
+                                <div className="flex items-center gap-1 w-full">
+                                    <div 
+                                        className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 transition-colors" 
+                                        title="New Note"
+                                        onClick={() => { setCreatingInPath(null); setCreatingType('file'); setNewItemName(''); }}
+                                    >
+                                        <Plus className="w-4 h-4" />
                                     </div>
-                                    <div className="flex-1">
+                                    <div 
+                                        className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 transition-colors" 
+                                        title="New Folder"
+                                        onClick={() => { setCreatingInPath(null); setCreatingType('folder'); setNewItemName(''); }}
+                                    >
+                                        <FolderPlus className="w-4 h-4" />
+                                    </div>
+                                    <div className="flex-1 ml-1">
                                         <div className="relative flex items-center">
-                                            <Search className="absolute left-2 w-3.5 h-3.5 text-muted-foreground" />
+                                            <Search className="absolute left-2 w-3 h-3 text-muted-foreground/50" />
                                             <input
                                                 type="text"
                                                 placeholder="Search..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                                className="w-full bg-muted border border-border text-[12px] px-2 py-1.5 pl-7 rounded focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground transition-shadow"
+                                                className="w-full bg-muted/50 border border-border text-[11px] px-2 py-1.5 pl-7 rounded-md focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 transition-all"
                                             />
                                         </div>
                                     </div>
-                                    <div className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1 rounded hover:bg-accent shrink-0" title="Collapse sidebar">
-                                        <ChevronLeft className="w-5 h-5" />
-                                    </div>
                                     <div 
-                                        className={cn("cursor-pointer flex items-center justify-center p-1 rounded hover:bg-accent shrink-0", showGraphView ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground")} 
+                                        className={cn("cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 transition-colors", showGraphView ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground")} 
                                         onClick={() => setShowGraphView(!showGraphView)} 
                                         title="Toggle Graph View"
                                     >
-                                        <Network className="w-5 h-5" />
+                                        <Network className="w-4 h-4" />
                                     </div>
                                 </div>
                             </div>
                             
                             {/* File Tree */}
-                            <div className="flex-1 overflow-y-auto min-h-0 text-[13px] text-muted-foreground custom-scrollbar">
-                                <div className="py-2">
+                            <div 
+                                className="flex-1 overflow-y-auto min-h-0 text-[13px] text-muted-foreground custom-scrollbar"
+                                onDragOver={(e) => {
+                                    e.preventDefault()
+                                    e.dataTransfer.dropEffect = 'move'
+                                }}
+                                onDrop={(e) => handleDrop(e, null)}
+                            >
+                                <div className="py-2 min-h-full">
                                     {files.length > 0 ? renderTree(fileTree) : (
                                         <div className="py-10 text-center opacity-40">
                                             <Database size={24} className="mx-auto mb-2 text-muted-foreground" />
@@ -828,7 +1175,18 @@ export default function ObsidianVaultPage() {
                                 <>
                                     {/* Sticky Connections Column */}
                                     {selectedPath && !selectedPath.toLowerCase().endsWith('.pdf') && (
-                                        <aside className="w-52 shrink-0 border-r border-border flex flex-col bg-background overflow-hidden">
+                                        <aside 
+                                            className="relative border-r border-border flex flex-col bg-background overflow-hidden shrink-0 group/connections"
+                                            style={{ width: `${connectionsWidth}px` }}
+                                        >
+                                            {/* Resize Handle */}
+                                            <div 
+                                                className={cn(
+                                                    "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50 transition-colors hover:bg-primary/50",
+                                                    isResizingConnections ? "bg-primary w-1" : "bg-transparent"
+                                                )}
+                                                onMouseDown={startResizingConnections}
+                                            />
                                             <div className="sticky top-0 flex flex-col h-full overflow-hidden">
                                                 {/* Header */}
                                                 <div className="px-4 pt-5 pb-3 flex items-center gap-2 border-b border-border shrink-0">
@@ -1110,7 +1468,7 @@ export default function ObsidianVaultPage() {
                                                     {/* Page Title */}
                                                     <div className="flex items-start justify-between mb-12 group">
                                                         <h1 className="text-5xl font-extrabold text-foreground tracking-tight leading-tight flex-1">
-                                                            {selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '')}
+                                                            {noteMetadata?.title || noteMetadata?.Title || selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '')?.replace(/_/g, ' ')}
                                                         </h1>
                                                     </div>
 
@@ -1156,7 +1514,59 @@ export default function ObsidianVaultPage() {
                                                                         autoFocus
                                                                     />
                                                                 ) : (
-                                                                    <MarkdownViewer content={noteContent} onNavigate={handleWikiLinkClick} path={selectedPath || undefined} />
+                                                                    <MarkdownViewer 
+                                                                        content={noteContent} 
+                                                                        onNavigate={handleWikiLinkClick} 
+                                                                        path={selectedPath || undefined}
+                                                                        components={{
+                                                                            input: ({ node, type, checked, ...props }: any) => {
+                                                                                if (type === 'checkbox') {
+                                                                                    return (
+                                                                                        <input 
+                                                                                            type="checkbox" 
+                                                                                            defaultChecked={checked} 
+                                                                                            onChange={async (e) => {
+                                                                                                if (!selectedPath) return;
+                                                                                                const newChecked = e.target.checked;
+                                                                                                const li = e.target.closest('li');
+                                                                                                if (li) {
+                                                                                                    if (newChecked) { li.style.textDecoration = 'line-through'; li.style.opacity = '0.5'; } 
+                                                                                                    else { li.style.textDecoration = 'none'; li.style.opacity = '1'; }
+                                                                                                }
+                                                                                                const line = node?.position?.start?.line;
+                                                                                                if (line) {
+                                                                                                    try {
+                                                                                                        const res = await sidecarApi.readObsidianNote(selectedPath);
+                                                                                                        const lines = res.content.split('\n');
+                                                                                                        const targetLine = lines[line - 1];
+                                                                                                        if (targetLine && targetLine.match(/\[[ xX]\]/)) {
+                                                                                                            lines[line - 1] = targetLine.replace(/\[[ xX]\]/, `[${newChecked ? 'x' : ' '}]`);
+                                                                                                            const updatedContent = lines.join('\n');
+                                                                                                            await sidecarApi.updateObsidianNote(selectedPath, updatedContent);
+                                                                                                            const wikilinkMatch = targetLine.match(/\[\[(.*?)\]\]/);
+                                                                                                            if (wikilinkMatch) {
+                                                                                                                const targetNote = wikilinkMatch[1].split('|')[0];
+                                                                                                                const targetRes = await sidecarApi.findVaultPage(targetNote);
+                                                                                                                if (targetRes.path) {
+                                                                                                                    const atomicRes = await sidecarApi.readObsidianNote(targetRes.path);
+                                                                                                                    let newAtomicContent = atomicRes.content;
+                                                                                                                    if (newAtomicContent.includes('read: ')) { newAtomicContent = newAtomicContent.replace(/read:\s*(true|false|True|False)/i, `read: ${newChecked}`); } 
+                                                                                                                    else if (newAtomicContent.startsWith('---\n')) { newAtomicContent = newAtomicContent.replace('---\n', `---\nread: ${newChecked}\n`); }
+                                                                                                                    await sidecarApi.updateObsidianNote(targetRes.path, newAtomicContent);
+                                                                                                                }
+                                                                                                            }
+                                                                                                        }
+                                                                                                    } catch (err) { console.error("Failed to toggle markdown checkbox", err); }
+                                                                                                }
+                                                                                            }}
+                                                                                            className="mt-1 size-3.5 appearance-none border border-border/50 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[4px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer transition-colors shrink-0" 
+                                                                                        />
+                                                                                    );
+                                                                                }
+                                                                                return null;
+                                                                            }
+                                                                        }}
+                                                                    />
                                                                 )}
                                                             </div>
                                                         </>

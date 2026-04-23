@@ -16,77 +16,68 @@ prerequisites:
 ---
 
 # 1. Technical Definition
-An `Entity` is a group of objects with the same properties that are identified by an enterprise as having an independent existence. It represents a distinct object or concept in the real world, such as a customer, product, or order, with its own set of attributes and characteristics.
+An `Entity` is a thing that has `attributes` and can be described with a set of `properties`. In a database, an entity is a table that stores data about a specific thing, such as a customer or product.
 
 # 2. Mental Model
-Imagine you have a bunch of toy cars that are all similar, like they all have four wheels and a steering wheel. An entity is like a category that says "all these toy cars are 'Cars'" - they all have similar things about them, and we can talk about them as a group.
+Imagine you have a notebook where you store information about your friends. Each friend is like an entity, and the notebook has pages (or tables) where you write down their names, ages, and favorite foods. Just like how your notebook has many pages for different friends, a database has many entities to store different types of information.
 
 # 3. Schema Design
-* An entity has a unique identifier, often called an `Entity_ID`.
-* Entities have properties or attributes, such as `Name`, `Description`, and `Type`.
-* Entities can be grouped into categories or `Entity_Types`.
-* Entities can have relationships with other entities, such as a `Customer` entity having an `Order` entity.
+* An entity is typically represented as a table in a relational database.
+* Each entity has a unique identifier, often called a primary key.
+* Entities can have various attributes, such as name, age, or address.
+* Entities can be related to each other through foreign keys.
 
 # 4. Query Optimization
-* When querying entities, it's essential to index the `Entity_ID` for fast lookup.
-* Be cautious of querying too many entity properties at once, as this can slow down performance.
-* Entity relationships can be traversed recursively, but be mindful of the maximum recursion depth to avoid stack overflows.
-* When retrieving entity data, consider using caching to reduce the load on the database.
+* When querying an entity, it's essential to index the columns used in the WHERE clause to improve performance.
+* The number of rows in an entity table can impact query performance, with larger tables requiring more resources.
+* Joining multiple entities can lead to slower query performance if not optimized properly.
+* Using efficient data types for entity attributes can reduce storage costs and improve query performance.
 
 ---
 
 ## 5. Worked Example
 
-```markdown
-+---------------+
-|     Entity    |
-+---------------+
-|  Entity_ID (PK) |
-|  Name          |
-|  Description   |
-|  Type          |
-+---------------+
+```sql
+CREATE TABLE Customers (
+  CustomerID INT PRIMARY KEY,
+  Name VARCHAR(255),
+  Age INT,
+  Address VARCHAR(255)
+);
 
-+---------------+
-|  Entity_Type  |
-+---------------+
-|  Entity_Type_ID (PK) |
-|  Entity_Type_Name  |
-+---------------+
-
-+---------------+
-|  Entity_Relationship |
-+---------------+
-|  Entity_ID_1 (FK)  |
-|  Entity_ID_2 (FK)  |
-|  Relationship_Type  |
-+---------------+
+CREATE TABLE Orders (
+  OrderID INT PRIMARY KEY,
+  CustomerID INT,
+  OrderDate DATE,
+  FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
+);
 ```
 
 ### Execution Walkthrough
-1. Identify the main entities involved: `Entity`, `Entity_Type`, and `Entity_Relationship`.
-2. Define the primary keys and foreign keys for each table.
-3. Establish the relationships between entities, such as an entity having multiple relationships with other entities.
+1. We create a `Customers` table with attributes `CustomerID`, `Name`, `Age`, and `Address`. The `CustomerID` is designated as the primary key.
+2. We create an `Orders` table with attributes `OrderID`, `CustomerID`, `OrderDate`. The `CustomerID` is a foreign key that references the `CustomerID` in the `Customers` table, establishing a relationship between the two entities.
+3. This schema design allows us to store information about customers and their orders, with the ability to query and analyze the data.
 
 ---
 
 ## 6. Socratic Probes
 
-**Scenario-Based Question**: What is the primary purpose of an Entity_ID in a database schema?
+**Scenario-Based Question**: What is the primary key of the `Customers` table?
 
-**Implementation Challenge**: Suppose we have an e-commerce platform with customers, orders, and products. How would you design an entity schema to capture these relationships?
+**Implementation Challenge**: A company wants to analyze the orders made by customers in a specific age group. How would you design a query to retrieve this information?
 
-**Debug Challenge**: Write an optimized SQL JOIN to retrieve all entities with their corresponding entity types and relationships.
+**Debug Challenge**: Optimize the SQL JOIN query to retrieve customer information and their corresponding orders.
 
 ---
 
 ### Answer Key
-- L1_SCENARIO: The primary purpose of an Entity_ID is to uniquely identify each entity in the database.
-- L2_IMPLEMENTATION: We would create separate entities for customers, orders, and products, each with their own Entity_ID, and establish relationships between them (e.g., a customer has many orders, an order is associated with one customer and many products).
+- L1_SCENARIO: CustomerID
+- L2_IMPLEMENTATION: A query can be designed using a SELECT statement with a WHERE clause to filter customers by age group and then joining the Orders table to retrieve the corresponding orders.
 - L3_DEBUG: 
 ```sql
-SELECT e.Entity_ID, e.Name, et.Entity_Type_Name, er.Relationship_Type
-FROM Entity e
-JOIN Entity_Type et ON e.Type = et.Entity_Type_ID
-LEFT JOIN Entity_Relationship er ON e.Entity_ID = er.Entity_ID_1 OR e.Entity_ID = er.Entity_ID_2;
+SELECT c.CustomerID, c.Name, o.OrderID, o.OrderDate
+FROM Customers c
+INNER JOIN Orders o ON c.CustomerID = o.CustomerID
+WHERE c.Age BETWEEN 25 AND 40;
 ```
+This optimized query uses an INNER JOIN to combine the `Customers` and `Orders` tables, and applies a filter to retrieve only customers within a specific age group.

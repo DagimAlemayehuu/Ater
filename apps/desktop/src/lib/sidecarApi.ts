@@ -311,6 +311,24 @@ export const sidecarApi = {
             method: 'DELETE'
         }),
 
+    createObsidianFile: (path: string, content: string = '') =>
+        request<{ success: boolean; path: string }>('/api/vault/files', {
+            method: 'POST',
+            body: JSON.stringify({ path, content })
+        }),
+
+    createObsidianFolder: (path: string) =>
+        request<{ success: boolean; path: string }>('/api/vault/folders', {
+            method: 'POST',
+            body: JSON.stringify({ path })
+        }),
+
+    moveObsidianItem: (oldPath: string, newPath: string) =>
+        request<{ success: boolean; old_path: string; new_path: string }>('/api/vault/items', {
+            method: 'PATCH',
+            body: JSON.stringify({ old_path: oldPath, new_path: newPath })
+        }),
+
     aiUpload: async (file: File): Promise<{ file_uri: string, name: string }> => {
         const authHeaders = await getAuthHeaders()
         const formData = new FormData()

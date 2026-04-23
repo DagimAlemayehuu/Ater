@@ -12,7 +12,7 @@ import mermaid from 'mermaid'
 import { Sparkles, Zap, Copy, Check, RefreshCw, X, Quote } from 'lucide-react'
 import { AiSidecar } from './AiSidecar'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 mermaid.initialize({
   startOnLoad: false,
@@ -92,6 +92,25 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
 
     const markdownComponents = useMemo(() => ({
         p: ({ children }: any) => {
+            const childrenArray = React.Children.toArray(children);
+            const textContent = childrenArray.map(c => typeof c === 'string' ? c : '').join(' ');
+            
+            // Detect and fix horizontal connection lists
+            if (textContent.includes('- [ ]') || textContent.includes('- [x]')) {
+                const parts = textContent.split(/(?=- \[[ xX]\])/).filter(p => p.trim().length > 0);
+                if (parts.length > 1) {
+                    return (
+                        <div className="flex flex-col gap-1.5 my-4 pl-0 border-l-2 border-border/10 ml-1">
+                            {parts.map((part, i) => (
+                                <div key={i} className="flex items-start gap-2 text-[13px] text-foreground font-medium group/task">
+                                    {renderWikiLinks(part.replace(/_/g, ' '), onNavigate, true)}
+                                </div>
+                            ))}
+                        </div>
+                    );
+                }
+            }
+
             if (React.Children.count(children) === 1 && typeof children === 'string') {
                 const str = children as string;
                 if (str.startsWith('/table ')) {
@@ -102,23 +121,23 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
             return (
                 <p className="mb-3 leading-relaxed text-[13px] text-foreground/90 antialiased">
                     {React.Children.map(children, (child) => 
-                        typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child
+                        typeof child === 'string' ? renderWikiLinks(child.replace(/_/g, ' '), onNavigate) : child
                     )}
                 </p>
             )
         },
         h1: ({ children }: any) => <h1 className="text-2xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-border text-foreground">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child.replace(/_/g, ' '), onNavigate) : child)}
         </h1>,
         h2: ({ children }: any) => <h2 className="text-xl font-black mt-8 mb-4 tracking-tight text-foreground">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child.replace(/_/g, ' '), onNavigate) : child)}
         </h2>,
         h3: ({ children }: any) => <h3 className="text-lg font-bold mt-6 mb-3 tracking-tight text-foreground/90">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child.replace(/_/g, ' '), onNavigate) : child)}
         </h3>,
         h4: ({ children }: any) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] text-muted-foreground/60">{children}</h4>,
-        ul: ({ children }: any) => <ul className="list-disc pl-5 space-y-1 mb-4 text-[13px] text-foreground/80">{children}</ul>,
-        ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground/80">{children}</ol>,
+        ul: ({ children }: any) => <ul className="list-disc pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ul>,
+        ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ol>,
         li: ({ children, ...props }: any) => {
             const content = React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child);
             if (props.className?.includes('task-list-item')) {
@@ -170,7 +189,7 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
                                 }
                             }
                         }}
-                        className="mt-1 size-3.5 rounded border-border bg-muted accent-primary cursor-pointer transition-colors" 
+                        className="mt-1 size-3.5 appearance-none border border-border/50 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[4px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer transition-colors" 
                     />
                 );
             }
@@ -181,13 +200,20 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
             const language = match ? match[1] : null
             if (language === 'mermaid') return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />
             if (!inline && match) {
+                const isDark = document.documentElement.classList.contains('dark');
                 return (
                     <SyntaxHighlighter
                         {...props}
-                        style={vscDarkPlus}
+                        style={isDark ? vscDarkPlus : vs}
                         language={language}
                         PreTag="div"
-                        className="rounded-lg my-6 border border-border custom-scrollbar text-[12px]"
+                        customStyle={{
+                            background: 'transparent',
+                            padding: '1rem 0',
+                            margin: 0,
+                            fontSize: '13px',
+                            lineHeight: '1.6'
+                        }}
                     >
                         {String(children).replace(/\n$/, '')}
                     </SyntaxHighlighter>

@@ -1,37 +1,20 @@
----
-title: Function Definition
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 5.Pdf]]"
-source_pages:
-- 6
-mode: CS-CODE
-read: false
-generated: true
-prerequisites:
-- "[[Function Prototypes]]"
----
-
 # 1. Technical Definition
-A function definition in programming is a block of code that is defined once and can be called multiple times from different parts of a program, with a specific set of inputs known as `parameters` or `arguments`. The general syntax for a function definition is `function_name (parameter1, parameter2, ...) { // function body }`, where the function body contains the code that is executed when the function is called.
+A function definition is a block of code that declares a `function` with a specific `name`, `parameters`, and a `body` that contains the code to be executed when the function is called. The general syntax for a function definition is `function functionName(parameters) { functionBody }`, where `functionName` is the name of the function, `parameters` is a list of variables that are passed to the function, and `functionBody` is the code that is executed when the function is called.
 
 # 2. Mental Model
-Imagine you have a recipe for making a sandwich. A function is like a recipe: you write it down once, and then you can follow it many times to make many sandwiches. Just like how a recipe takes ingredients (like bread and cheese) as inputs, a function takes values (like numbers or text) as inputs, and it produces a result (like a made sandwich).
+Imagine you have a recipe book where you write down instructions for making your favorite dishes. A function is like a recipe: you give it a name (like "make_pizza"), tell it what ingredients it needs (like "dough" and "cheese"), and then write down the steps to make it (like "preheat oven", "put cheese on dough", etc.). When you want to make that dish, you just follow the recipe and it gives you the result.
 
 # 3. Syntax Mechanics
-* A function definition starts with the `function` keyword followed by the function name and a list of parameters in parentheses.
-* The function body is enclosed in curly brackets `{}` and contains the code that is executed when the function is called.
-* Parameters are placeholders for values that are passed to the function when it is called.
-* A function can return a value using the `return` statement.
+* A function definition starts with the `function` keyword.
+* The function name is specified after the `function` keyword.
+* Parameters are listed in parentheses after the function name.
+* The function body is enclosed in curly brackets `{}`.
 
 # 4. Memory Lifecycle
-* A function definition is stored in memory only once, when the program is loaded.
-* Each time a function is called, a new block of memory is allocated to store the function's local variables and parameters.
-* The memory allocated for a function's local variables and parameters is released when the function returns.
-* A function can only access its own local variables and parameters, as well as global variables that are defined outside the function.
+* A function's variables and parameters are stored in memory only while the function is executing.
+* When a function finishes executing, its variables and parameters are removed from memory.
+* A function can be called multiple times, but each call has its own separate memory allocation.
+* The number of parameters and their data types must match when a function is called.
 
 ---
 
@@ -54,26 +37,39 @@ int main() {
 ```
 
 ### Execution Walkthrough
-1. The program starts executing from the `main` function.
-2. The `addNumbers` function is called with arguments `5` and `10`.
-3. A new block of memory is allocated to store the local variables `a`, `b`, and `sum` for the `addNumbers` function.
-4. The code inside the `addNumbers` function is executed, calculating the sum of `a` and `b` and storing it in `sum`.
-5. The `addNumbers` function returns the value of `sum`, which is stored in the `result` variable in the `main` function.
-6. The memory allocated for the `addNumbers` function's local variables is released.
+1. The program starts executing the `main` function.
+2. The `main` function calls the `addNumbers` function with arguments `5` and `10`.
+3. The `addNumbers` function executes, adding `5` and `10` and storing the result in the `sum` variable.
+4. The `addNumbers` function returns the `sum` value to the `main` function.
+5. The `main` function prints the result to the console.
 
 ---
 
 ## 6. Socratic Probes
 
-**Scenario-Based Question**: What is the primary purpose of a function definition in programming?
+**Scenario-Based Question**: What is the purpose of the `addNumbers` function?
 
-**Implementation Challenge**: Suppose you want to write a program that calculates the area of a rectangle. How would you use a function to achieve this?
+**Implementation Challenge**: Suppose you want to create a function that calculates the area of a rectangle. How would you define the function and what parameters would it take?
 
 **Debug Challenge**: Find the memory leak/bug in the provided code block.
 
 ---
 
 ### Answer Key
-* L1_SCENARIO: A function definition is a block of code that is defined once and can be called multiple times from different parts of a program.
-* L2_IMPLEMENTATION: You would define a function `calculateArea` that takes two parameters, `length` and `width`, and returns their product. You can then call this function with different values for `length` and `width` to calculate the area of different rectangles.
-* L3_DEBUG: There is no apparent memory leak in the provided code block. However, one potential bug is that the `addNumbers` function does not perform any error checking on its inputs. For example, if the inputs are very large, the result may overflow the range of an `int`. To fix this, you could add error checking code to handle such cases.
+- L1_SCENARIO: The `addNumbers` function takes two integers as input, adds them together, and returns the sum.
+- L2_IMPLEMENTATION: You would define a function like `int calculateArea(int length, int width) { return length * width; }`, which takes two parameters, `length` and `width`, and returns their product.
+- L3_DEBUG: There is no memory leak in the provided code block. However, it's worth noting that the `addNumbers` function could be optimized by passing the parameters by reference or using const references to avoid unnecessary copies. Additionally, error handling could be added to handle cases where the sum overflows the maximum limit of the `int` data type. 
+
+However, to follow the format and provide an actual bug: suppose the code was modified to use a pointer for the sum. In that case, a potential bug could be a dangling pointer if not handled properly. But in the given code, there isn't any such bug. 
+
+To create a bug for illustration: 
+
+```cpp
+int* addNumbers(int a, int b) {
+    int sum = a + b;
+    return &sum;  // This will cause a dangling pointer
+}
+```
+In this buggy version, the `addNumbers` function returns a pointer to a local variable `sum`, which goes out of scope when the function returns, causing undefined behavior when the caller tries to access the returned pointer. 
+
+The fix would involve dynamic memory allocation or changing the function to return by value.

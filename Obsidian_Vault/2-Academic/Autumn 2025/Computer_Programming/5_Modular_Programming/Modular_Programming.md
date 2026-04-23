@@ -1,16 +1,5 @@
 ---
-title: Modular Programming
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 5.Pdf]]"
-source_pages:
-- 2
-mode: CS-CODE
 read: false
-generated: true
 ---
 
 # 1. Technical Definition
@@ -83,11 +72,21 @@ int main() {
 
 **Implementation Challenge**: How can you apply modular programming to a complex system, such as a banking application?
 
-**Debug Challenge**: Find the memory leak/bug in the provided code block.
+**Debug Challenge**: Identify a potential issue with the provided code and propose a solution.
 
 ---
 
 ### Answer Key
 * L1_SCENARIO: The primary goal of modular programming is to separate the functionality of a program into independent, interchangeable modules, promoting encapsulation, reusability, and easier maintenance.
-* L2_IMPLEMENTATION: In a banking application, you can apply modular programming by creating separate modules for different functionalities, such as user authentication, account management, and transaction processing. Each module can be developed, tested, and maintained independently, making it easier to update or replace individual components without affecting the entire system.
-* L3_DEBUG: There is no apparent memory leak in the provided code block, as all dynamically allocated memory is properly managed through the use of stack-based objects and standard library classes. However, one potential issue is that the `Greeter` and `Logger` classes are not designed to be polymorphic or inheritable, which might limit their reusability in more complex scenarios. Additionally, the code does not handle exceptions, which could be a concern in a real-world application.
+* L2_IMPLEMENTATION: In a banking application, you can apply modular programming by creating separate modules for different functionalities, such as user authentication, account management, and transaction processing. Each module would have a well-defined interface and be developed, tested, and maintained independently.
+* L3_DEBUG: A potential issue with the provided code is that the `Greeter` and `Logger` modules are tightly coupled, as the `main` function directly instantiates and uses them. To improve modularity, you could consider using dependency injection or a factory function to create instances of these modules, allowing for greater flexibility and testability. 
+
+For example, you could modify the `main` function to accept `Greeter` and `Logger` instances as arguments:
+
+```cpp
+int main(Greeter& greeter, Logger& logger) {
+    // ...
+}
+```
+
+This would allow you to easily swap out different implementations of `Greeter` and `Logger` without modifying the `main` function.

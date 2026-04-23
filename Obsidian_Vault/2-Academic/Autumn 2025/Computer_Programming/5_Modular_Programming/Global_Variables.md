@@ -12,26 +12,26 @@ mode: CS-CODE
 read: false
 generated: true
 prerequisites:
-- "[[Local Variables]]"
+- "[[Identifier Scope]]"
 ---
 
 # 1. Technical Definition
-In programming, a **global variable** is a variable that is defined outside of any function or class and is accessible from any part of the program, with `global scope` implying that it can be accessed and modified by any function. A global variable is typically declared at the top of a source file or in a separate module, and its `scope` is not limited to a specific block or function.
+In programming, a **global variable** is a variable that is defined outside of any function or class and is accessible from anywhere in the program, with a `global scope` that encompasses all functions and modules. Global variables are often stored in a `global namespace`, which can lead to naming conflicts if not managed properly.
 
 # 2. Mental Model
-Imagine a big box in the middle of a school where everyone can put and take things. This box is like a global variable, and anyone in the school (or program) can access it and change what's inside. Just like how students need to be careful what they put in or take from the box, programmers need to be careful with global variables because they can affect the whole program.
+Imagine a big bulletin board in a school hallway where everyone can post and read notes. A global variable is like a note on this bulletin board that can be seen and used by anyone, anywhere in the school, without needing to be given to them personally.
 
 # 3. Syntax Mechanics
 * Global variables are typically declared outside of any function or class.
-* They can be accessed and modified by any function in the program.
-* In some languages, the `global` keyword is used to declare a global variable, while in others, it is implied by the variable's position in the code.
-* Global variables can be used to share data between different parts of a program.
+* They can be accessed from any part of the program.
+* In some languages, global variables are implicitly `public` and can be modified by any part of the program.
+* Global variables can be used to share data between different functions or modules.
 
 # 4. Memory Lifecycle
-* Global variables are allocated memory when the program starts and remain in memory until the program ends.
-* They can lead to memory leaks if not properly cleaned up, as they continue to occupy memory even when not in use.
-* Global variables can be changed by any function, which can lead to unexpected behavior if not properly synchronized.
-* Some programming languages have limitations on the number of global variables that can be defined or have specific rules for their usage.
+* Global variables are allocated memory when the program starts.
+* They remain in memory until the program terminates.
+* Global variables can lead to memory leaks if not properly cleaned up.
+* Changes to global variables can have unintended consequences in other parts of the program.
 
 ---
 
@@ -40,19 +40,19 @@ Imagine a big box in the middle of a school where everyone can put and take thin
 ```cpp
 #include <iostream>
 
-int globalVar = 10; // Global variable
+int globalVariable = 10; // Global variable
 
 void function1() {
-    std::cout << "Global variable in function1: " << globalVar << std::endl;
-    globalVar = 20; // Modifying the global variable
+    std::cout << "Global variable in function1: " << globalVariable << std::endl;
+    globalVariable = 20; // Modifying the global variable
 }
 
 void function2() {
-    std::cout << "Global variable in function2: " << globalVar << std::endl;
+    std::cout << "Global variable in function2: " << globalVariable << std::endl;
 }
 
 int main() {
-    std::cout << "Initial global variable: " << globalVar << std::endl;
+    std::cout << "Initial global variable: " << globalVariable << std::endl;
     function1();
     function2();
     return 0;
@@ -60,24 +60,31 @@ int main() {
 ```
 
 ### Execution Walkthrough
-1. The program starts and the global variable `globalVar` is initialized to 10.
-2. In the `main` function, the initial value of `globalVar` is printed, which is 10.
-3. `function1` is called, which prints the current value of `globalVar` (10), modifies it to 20, and then returns.
-4. `function2` is called, which prints the current value of `globalVar` (20), as modified by `function1`.
+1. The program starts and memory is allocated for the global variable `globalVariable` with an initial value of 10.
+2. In the `main` function, the initial value of `globalVariable` is printed, which is 10.
+3. `function1` is called, which prints the current value of `globalVariable` (10), modifies it to 20, and then returns.
+4. `function2` is called, which prints the modified value of `globalVariable` (20).
 
 ---
 
 ## 6. Socratic Probes
 
-**Scenario-Based Question**: What is the initial value of the global variable `globalVar` in the provided C++ code?
+**Scenario-Based Question**: What is the initial value of the global variable `globalVariable` in the provided C++ code?
 
-**Implementation Challenge**: How can you use a global variable to share data between different functions in a C++ program, considering the example given?
+**Implementation Challenge**: How can you use a global variable to share data between two functions in a C++ program, and what are the potential risks?
 
-**Debug Challenge**: Find the memory leak/bug: In the given code, there is no obvious memory leak because the global variable does not dynamically allocate memory. However, what could be a potential issue if the global variable were to be dynamically allocated and not properly deallocated?
+**Debug Challenge**: Find the memory leak/bug: Assume the global variable `globalVariable` is a pointer to an integer, and it is dynamically allocated but never deallocated. How would you identify and fix this issue?
 
 ---
 
 ### Answer Key
-- L1_SCENARIO: The initial value of the global variable `globalVar` is 10.
-- L2_IMPLEMENTATION: You can use a global variable to share data between different functions by declaring it outside of any function, as shown in the example. Any function can access and modify it.
-- L3_DEBUG: A potential issue could arise if the global variable were dynamically allocated (e.g., using `new`) and not properly deallocated (e.g., using `delete`), leading to a memory leak. However, in the given code, `globalVar` is statically allocated, so this is not a concern.
+- **L1_SCENARIO:** The initial value of the global variable `globalVariable` is 10.
+- **L2_IMPLEMENTATION:** A global variable can be used to share data between two functions by declaring it outside of any function. However, potential risks include naming conflicts, unintended modifications, and difficulties in tracking changes.
+- **L3_DEBUG:** If `globalVariable` is a pointer to an integer that is dynamically allocated but never deallocated, it would cause a memory leak. This can be identified by using memory debugging tools or by manually tracking memory allocations. To fix this, you would need to add `delete` to deallocate the memory when it is no longer needed, ideally before the program terminates. For example:
+```cpp
+int* globalVariable = new int(10); // Dynamically allocate memory
+
+// ...
+
+delete globalVariable; // Deallocate memory before program termination
+```

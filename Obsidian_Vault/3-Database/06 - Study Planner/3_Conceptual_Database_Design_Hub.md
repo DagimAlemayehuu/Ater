@@ -26,11 +26,11 @@ Hub note for Database Systems - 3 Conceptual Database Design Hub
 
 ## Connections
 - [ ] [[Database_Development_Methodology]]
-    - [ ] [[Database_System_Development_Lifecycle]]
+    - [ ] [[Database_System_Development_Life_Cycle]]
         - [ ] [[Conceptual_Database_Design]]
-        - [ ] [[Logical_Database_Design]]
-        - [ ] [[Physical_Database_Design]]
         - [ ] [[Entity]]
+        - [ ] [[Attribute]]
         - [ ] [[Relationship]]
         - [ ] [[Multiplicity]]
-        - [ ] [[Attribute]]
+        - [ ] [[Er_Model]]
+        - [ ] [[Keys]]

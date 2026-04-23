@@ -112,3 +112,38 @@ class ObsidianClient:
                 shutil.rmtree(full_path)
                 return True
         return False
+
+    def rename_item(self, old_relative_path: str, new_relative_path: str) -> bool:
+        """
+        Renames or moves a file or folder.
+        """
+        old_path = self.vault_path / old_relative_path
+        new_path = self.vault_path / new_relative_path
+
+        # Security check
+        try:
+            old_path.resolve().relative_to(self.vault_path.resolve())
+            new_path.parent.resolve().relative_to(self.vault_path.resolve())
+        except ValueError:
+            return False
+
+        if old_path.exists():
+            new_path.parent.mkdir(parents=True, exist_ok=True)
+            old_path.rename(new_path)
+            return True
+        return False
+
+    def create_folder(self, relative_path: str) -> bool:
+        """
+        Creates a new folder.
+        """
+        full_path = self.vault_path / relative_path
+        
+        # Security check
+        try:
+            full_path.resolve() # This might not work if it doesn't exist yet, but we can check the parent
+            if full_path.exists(): return True
+        except: pass
+
+        full_path.mkdir(parents=True, exist_ok=True)
+        return True

@@ -3,12 +3,12 @@ title: 5_Modular_Programming_Hub
 type: Hub
 course: Computer Programming
 semester: Autumn 2025
-unit: '5'
+unit: "5"
 source: "[[Chapter 5.Pdf]]"
 source_pages: []
 status: Not Started
-confidence: null
-study_date: null
+confidence:
+study_date:
 mode: ARCHITECT
 generated: true
 ---
@@ -25,22 +25,22 @@ Hub note for Computer Programming - 5 Modular Programming Hub
 - [ ] Complete all Socratic Probes and verify with the Answer Key.
 
 ## Connections
-- [ ] [[Modular_Programming]]
-    - [ ] [[Modules]]
-        - [ ] [[Functions_In_C++]]
+- [x] [[Modular_Programming]]
+    - [x] [[Modules]]
+        - [x] [[Functions_In_C++]]
         - [ ] [[Function_Declaration]]
         - [ ] [[Function_Prototypes]]
         - [ ] [[Function_Definition]]
         - [ ] [[Return_Statement]]
-        - [ ] [[Function_Agreement]]
-        - [ ] [[Local_Variables]]
-        - [ ] [[Global_Variables]]
-        - [ ] [[Unary_Scope_Resolution_Operator]]
-        - [ ] [[Inline_Functions]]
-        - [ ] [[Storage_Class]]
-        - [ ] [[Automatic_Variables]]
-        - [ ] [[Static_Variables]]
-        - [ ] [[External_Storage_Class]]
-        - [ ] [[Default_Parameters]]
-        - [ ] [[Empty_Parameter_Lists]]
-        - [ ] [[Parameter_Passing]]
+        - [ ] [[Recursion]]
+        - [ ] [[Base_Case]]
+        - [ ] [[Recursive_Case]]
+        - [ ] [[Function_Overloading]]
+        - [ ] [[Ambiguous_Overloading]]
+- [ ] [[Identifier_Scope]]
+    - [ ] [[Local_Variables]]
+        - [ ] [[Call_By_Reference]]
+        - [ ] [[Reference_Parameters]]
+        - [ ] [[Pass_By_Reference]]
+        - [ ] [[Pass_By_Value]]
+    - [ ] [[Global_Variables]]
