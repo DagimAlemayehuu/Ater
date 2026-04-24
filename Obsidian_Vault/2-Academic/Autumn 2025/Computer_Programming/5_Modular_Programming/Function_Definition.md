@@ -1,87 +1,87 @@
 ---
-title: Function Definition
+title: Function_Definition
 type: Atomic Note
 course: Computer Programming
 semester: Autumn 2025
 unit: '5'
 hub: "[[5_Modular_Programming_Hub]]"
 source: "[[Chapter 5.Pdf]]"
-source_pages: []
-mode: CS-CODE
+source_pages:
+- 8
+mode: CS-SOFTWARE
 read: false
 generated: true
 prerequisites:
-- "[[Function Prototype]]"
+- "[[Function_Prototype]]"
 ---
 
-# 1. Technical Definition
-A `function definition` is a block of code that declares a named `function` with a specified set of `formal parameters`, allowing it to accept input and return output through a defined interface. The `function definition` serves as a template for creating `function instances`, which can be invoked with actual arguments to produce a result.
+# 1. Mental Model
+Imagine you're ordering food at a restaurant. You tell the waiter what you want, like a burger, and they take that request to the kitchen staff. A function definition is like writing down the recipe for that burger - it tells the compiler (or the kitchen) exactly how to make it, what ingredients to use, and what to do with them.
 
-# 2. Syntax Mechanics
-* A `function definition` typically consists of a `function keyword`, followed by a `function name`, a list of `formal parameters` enclosed in parentheses, and a `function body` enclosed in curly brackets.
-* The `function body` contains a sequence of `statements` that are executed when the `function instance` is invoked.
-* `Formal parameters` are placeholders for actual arguments passed to the `function instance`, and their scope is limited to the `function body`.
-* The `function definition` may also include a `return type` specification, which defines the data type of the output produced by the `function instance`.
+# 2. Execution Logic & Data Flow
+When a function is defined, it creates a new [[Stack_Frame]] that stores the function's local variables, parameters, and return address. The function definition specifies the [[Function_Signature]], which includes the function's name, return type, and parameter list. When the function is called, the [[Call_Stack]] is used to manage the flow of execution, pushing the current state onto the stack and popping it off when the function returns. The function's body is then executed, following the rules of [[Scope_Resolution]] to determine which variables to use.
 
-# 3. Memory Lifecycle
-* A `function definition` is stored in memory as a `function object`, which contains metadata such as the `function name`, `formal parameters`, and `function body`.
-* The `function object` is created during the compilation or interpretation phase, and its lifetime is tied to the scope of the surrounding program.
-* When a `function instance` is invoked, a new `stack frame` is created to store local variables and parameters, which is discarded when the `function instance` returns.
-* The `function definition` itself remains in memory until it is no longer referenced or the program terminates.
+# 3. Edge Cases & Failure States
+When defining a function, there are several edge cases to consider. For example, if a function is defined with [[Default_Argument_Values]], but the caller doesn't provide a value for that parameter, the default value will be used. However, if the function is defined with [[Variable_Number_Of_Arguments]], the compiler needs to handle the possibility of a mismatch between the number of arguments passed and the number of parameters defined. Additionally, if a function is defined with a [[Return_Type]] that doesn't match the type of value being returned, the compiler will flag an error. Finally, if a function is defined with [[Function_Overloading]], the compiler needs to use [[Name_Lookup]] to determine which function to call based on the provided arguments.
+# 4. Implementation Mechanics
+```python
+def greet(name: str) -> str:
+    # Create a local variable
+    message = "Hello, " + name + "!"
+    # Return the message
+    return message
 
----
-
-## 4. Worked Example
-
-```cpp
-#include <iostream>
-#include <string>
-
-// Function definition with formal parameters and return type
-std::string greet(const std::string& name) {
-    // Function body containing statements
-    std::string message = "Hello, " + name + "!";
-    return message;
-}
-
-int main() {
-    // Create a function instance with actual arguments
-    std::string result = greet("World");
-    std::cout << result << std::endl;
-    return 0;
-}
+# Call the function
+result = greet("John")
+print(result)  # Output: Hello, John!
 ```
+This code snippet demonstrates a simple function definition in Python. The `greet` function takes a `name` parameter, creates a local `message` variable, and returns the greeting message.
+
+The function definition specifies the function's name, return type, and parameter list. When the function is called, the function's body is executed, and the return value is printed to the console.
+
+## 5. Walkthrough
+Here's a step-by-step walkthrough of the function definition and call:
+
+1. The `greet` function is defined with a `name` parameter of type `str` and a return type of `str`.
+2. The function is called with the argument `"John"`.
+3. A new stack frame is created for the `greet` function, storing the local variable `message` and the return address.
+4. The function's body is executed, concatenating the strings `"Hello, "`, `"John"`, and `"!"` to create the `message` variable.
+5. The `message` variable is returned, and its value is assigned to the `result` variable.
+6. The `result` variable is printed to the console, outputting `"Hello, John!"`.
 
 ---
 
-## 5. Knowledge Check
+## 6. The Proving Grounds
 
 ```interactive-quiz
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "fill_in",
     "difficulty": "L1",
-    "question": "A function definition is a block of code that declares a named function with a specified set of formal parameters.",
-    "answer": "True",
-    "explanation": "This statement is true by definition of a function definition in programming."
+    "question": "A function definition specifies the function's [[Blank1]], which includes the function's name, return type, and parameter list.",
+    "textWithBlanks": "A function definition specifies the function's [[Blank1]]",
+    "answer": [
+      "Function_Signature"
+    ],
+    "explanation": "The function signature is a critical component of a function definition, providing essential information about the function's behavior."
   },
   {
     "id": "q2",
-    "type": "debug",
+    "type": "true_false",
     "difficulty": "L2",
-    "question": "Identify the components of the following function definition: `int add(int a, int b) { return a + b; }`",
-    "content": "int add(int a, int b) { return a + b; }",
-    "answer": "The components are: function keyword (int), function name (add), formal parameters (int a, int b), and function body ({ return a + b; }).",
-    "explanation": "Breaking down the function definition into its constituent parts."
+    "question": "When a function is called, a new stack frame is created only if the function has local variables.",
+    "answer": "False",
+    "explanation": "A new stack frame is created for every function call, regardless of whether the function has local variables or not."
   },
   {
     "id": "q3",
-    "type": "scenario",
+    "type": "debug",
     "difficulty": "L3",
-    "question": "Consider a program with a function definition that takes a string as input and returns a string as output. What happens to the memory allocated for the function object and the stack frame when the function instance is invoked and returns?",
-    "answer": "The function object is created during compilation and remains in memory until the program terminates. When a function instance is invoked, a new stack frame is created to store local variables and parameters. The stack frame is discarded when the function instance returns.",
-    "explanation": "Understanding the memory lifecycle of function definitions and instances."
+    "question": "Find the bug in the following code:",
+    "content": "def add(a, b):\n  return a + c",
+    "answer": "The bug is that the variable 'c' is not defined. The correct variable name should be 'b'. The corrected code is: def add(a, b):\n  return a + b",
+    "explanation": "The code is attempting to use an undefined variable 'c', which will result in a runtime error."
   }
 ]
 ```

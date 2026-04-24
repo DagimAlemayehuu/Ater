@@ -32,6 +32,7 @@ class OkaService:
     """
     _sessions: Dict[str, Dict[str, Any]] = {}
     _status: Dict[str, str] = {}  # Global status map
+    _rate_limited: Dict[str, float] = {}  # session_id → timestamp when rate-limit hit
     _session_file = Path.home() / ".lifeos" / "oka" / "sessions.json"
 
     def __init__(self, secrets):
@@ -163,9 +164,14 @@ class OkaService:
             return f.read()
 
     async def _invoke_with_retry(self, messages: List[BaseMessage], session_id: str, phase: str = "AI Generation") -> AIMessage:
+        """
+        Wraps LLM calls with exponential-backoff retry.
+        On 429 (rate limit): waits up to 5 minutes per attempt (10 attempts max).
+        On key-swap recovery: re-reads secrets from disk and rebuilds the LLM.
+        """
         attempt = 0
         last_error = None
-        
+
         while attempt < OKA_MAX_RETRIES:
             try:
                 attempt += 1
@@ -174,22 +180,28 @@ class OkaService:
             except Exception as e:
                 last_error = e
                 error_str = str(e)
-                print(f"[OKA Service] AI Attempt {attempt} failed: {error_str}")
-                
-                # Check for transient errors
-                is_transient = any(code in error_str for code in ["429", "503", "524", "timeout", "overloaded"])
-                
+                print(f"[OKA Service] AI Attempt {attempt} failed: {error_str[:200]}")
+
+                is_rate_limit = "429" in error_str or "rate_limit" in error_str.lower()
+                is_transient = is_rate_limit or any(
+                    c in error_str for c in ["503", "524", "timeout", "overloaded"]
+                )
+
                 if is_transient and attempt < OKA_MAX_RETRIES:
-                    backoff = OKA_RETRY_BACKOFF * (2 ** (attempt - 1))
-                    wait_msg = (
-                        f"Transient error ({self._classify_error(error_str)}). "
-                        f"Retrying in {backoff}s (attempt {attempt}/{OKA_MAX_RETRIES})..."
-                    )
-                    OkaService._status[session_id] = wait_msg
+                    # Rate limits get much longer waits: 30s, 60s, 120s, 240s...
+                    if is_rate_limit:
+                        backoff = min(30 * (2 ** (attempt - 1)), 300)  # cap at 5 min
+                        label = f"Rate Limited (429). Waiting {backoff}s before retry {attempt+1}/{OKA_MAX_RETRIES}..."
+                    else:
+                        backoff = OKA_RETRY_BACKOFF * (2 ** (attempt - 1))
+                        label = f"{self._classify_error(error_str)}. Retrying in {backoff}s ({attempt}/{OKA_MAX_RETRIES})..."
+
+                    OkaService._status[session_id] = label
+                    print(f"[OKA Service] {label}")
                     await asyncio.sleep(backoff)
                 else:
                     break
-        
+
         raise last_error
 
     def _classify_error(self, error_str: str) -> str:
@@ -197,6 +209,67 @@ class OkaService:
         if "503" in error_str or "overloaded" in error_str.lower(): return "Server Overloaded (503)"
         if "524" in error_str or "timeout" in error_str.lower(): return "Gateway Timeout"
         return "Connection Error"
+
+    def swap_api_key(self, new_api_key: str) -> None:
+        """
+        Hot-swap the API key without restarting the server.
+        Call this after the user sets a new key in Settings.
+        The next LLM call will use the new key immediately.
+        """
+        try:
+            print(f"[OKA Service] Swapping API key...")
+            self.llm = ModelFactory.get_model(
+                provider=self.secrets.ai_provider,
+                model_name=self.secrets.ai_model,
+                api_key=new_api_key,
+                temperature=0.0,
+                timeout=OKA_TIMEOUT,
+                request_timeout=OKA_TIMEOUT,
+                max_retries=0,
+                max_tokens=4096,
+            )
+            self.llm_creative = self.llm
+            if self.writer_agent:
+                self.writer_agent.llm = self.llm
+            if self.architect_agent:
+                self.architect_agent.llm = self.llm
+                try:
+                    self.architect_agent.llm_structured = self.llm.with_structured_output(
+                        type(self.architect_agent.llm_structured).__mro__[0]
+                    )
+                except Exception:
+                    pass
+            print("[OKA Service] API key swapped successfully.")
+        except Exception as e:
+            print(f"[OKA Service] Key swap failed: {e}")
+
+    def get_paused_sessions(self) -> List[Dict[str, Any]]:
+        """Returns all sessions that were paused due to a rate limit."""
+        paused = []
+        for sid, ts in OkaService._rate_limited.items():
+            session = OkaService._sessions.get(sid, {})
+            paused.append({
+                "session_id": sid,
+                "paused_at": ts,
+                "current_batch": session.get("current_batch", 0),
+                "total_batches": session.get("total_batches", 0),
+                "status": OkaService._status.get(sid, "rate_limited"),
+            })
+        return paused
+
+    async def resume_paused_session(
+        self, session_id: str, curriculum_override: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Resumes a session that was paused due to a rate limit.
+        Safe to call even if the session is not paused (idempotent).
+        """
+        OkaService._rate_limited.pop(session_id, None)
+        return await self.confirm_plan(
+            session_id=session_id,
+            command="Resume",
+            curriculum_override=curriculum_override,
+        )
 
     def _format_user_error(self, e: Exception) -> str:
         err_msg = str(e)
@@ -1273,7 +1346,7 @@ class OkaService:
                         generation_attempts += 1
                         phase_prefix = f"(Attempt {generation_attempts}/{max_attempts})" if generation_attempts > 1 else ""
                         OkaService._status[session_id] = f"{phase_prefix} Surgical Pass: [[{current_note_title}]] (1/2)..."
-                        
+
                         try:
                             note_content = await self.writer_agent.generate_content(
                                 note_schema=note_schema,
@@ -1281,7 +1354,7 @@ class OkaService:
                                 primary_language=primary_language,
                                 all_concepts=all_concepts_list
                             )
-                            
+
                             OkaService._status[session_id] = f"{phase_prefix} Socratic Pass: [[{current_note_title}]] (2/2)..."
                             probes = await self.writer_agent.generate_probes(
                                 note_title=note_schema.title,
@@ -1294,23 +1367,54 @@ class OkaService:
                                 session["all_note_probes"][note_schema.title] = probes
 
                             final_output = self._compile_atomic_note(
-                                plan=plan_obj, 
-                                note_schema=note_schema, 
-                                note_content=note_content, 
+                                plan=plan_obj,
+                                note_schema=note_schema,
+                                note_content=note_content,
                                 probes=probes,
                                 session_path=session.get("path", "")
                             )
-                            
+
                             is_valid, struct_errors = self.validator.validate_structure(final_output)
                             if is_valid:
-                                local_results = self.deployer.deploy_atomic_notes(session_id, [current_note_title], [final_output], plan_obj, session.get("path", ""))
+                                local_results = self.deployer.deploy_atomic_notes(
+                                    session_id, [current_note_title], [final_output], plan_obj, session.get("path", "")
+                                )
                                 break
                             else:
+                                print(f"[OKA Service] Validation errors on '{current_note_title}': {struct_errors}")
                                 if generation_attempts >= max_attempts:
-                                    raise ValueError(f"Failed to generate a valid note after {max_attempts} attempts. Errors: {struct_errors}")
-                                note_schema.source_context = f"{note_schema.source_context or ''}\n\n[REGENERATION_HINT]: STRUCTURAL VALIDATION FAILED: {', '.join(struct_errors)}"
+                                    raise ValueError(
+                                        f"Failed to generate a valid note after {max_attempts} attempts. "
+                                        f"Errors: {struct_errors}"
+                                    )
+                                note_schema.source_context = (
+                                    f"{note_schema.source_context or ''}\n\n"
+                                    f"[REGENERATION_HINT]: STRUCTURAL VALIDATION FAILED: {', '.join(struct_errors)}"
+                                )
                         except Exception as e:
-                            if generation_attempts >= max_attempts: raise e
+                            err_str = str(e)
+                            # Pause on rate limit — persist progress and surface to caller
+                            if "429" in err_str or "rate_limit" in err_str.lower():
+                                OkaService._rate_limited[session_id] = time.time()
+                                self._persist_session(session_id, session)
+                                OkaService._status[session_id] = (
+                                    f"Rate limited at note '{current_note_title}'. "
+                                    "Progress saved. Resume when limit clears or swap API key."
+                                )
+                                return {
+                                    "status": "rate_limited",
+                                    "message": (
+                                        f"Rate limit hit at note '{current_note_title}' "
+                                        f"(batch {batch_number}/{total_batches}). "
+                                        "Progress has been saved. Call resume_paused_session() to continue."
+                                    ),
+                                    "session_id": session_id,
+                                    "current_batch": session.get("current_batch", 0),
+                                    "total_batches": total_batches,
+                                    "results": deployment_results,
+                                }
+                            if generation_attempts >= max_attempts:
+                                raise e
                             await asyncio.sleep(5)
                     
                 elif b_type == "pq":
@@ -1372,35 +1476,41 @@ class OkaService:
             }
             raise ValueError(error_msg)
 
-    def _compile_atomic_note(self, plan: SovereignPlan, note_schema: AtomicNoteSchema, note_content: NoteContent, probes: Optional[ProbeEnrichment] = None, session_path: str = "") -> str:
+    def _compile_atomic_note(
+        self, plan: SovereignPlan, note_schema: AtomicNoteSchema,
+        note_content: NoteContent, probes: Optional[ProbeEnrichment] = None, session_path: str = ""
+    ) -> str:
         """
-        [DETERMINISTIC COMPILER v19.3]
+        [DETERMINISTIC COMPILER v25.5]
         Constructs the Sovereign note with interleaved Socratic Probes.
         """
-        # Resolve the real PDF source from session path
+        from .validator import OkaValidator
         source_link = f"[[{Path(session_path).name}]]" if session_path else f"[[{plan.hub_note.title}]]"
+
+        # Sanitise prerequisites — spaces inside [[...]] break Obsidian resolution
+        clean_prereqs = []
+        if note_schema.prerequisites:
+            clean_prereqs = OkaValidator.sanitize_prerequisites(note_schema.prerequisites)
 
         metadata = {
             "title": note_schema.title,
             "type": "Atomic Note",
             "course": plan.course,
             "semester": plan.semester,
-            "unit": plan.unit,
+            "unit": str(plan.unit),
             "hub": f"[[{plan.hub_note.title}]]",
             "source": source_link,
-            "source_pages": note_schema.source_pages,
+            "source_pages": note_schema.source_pages or [],
             "mode": note_schema.mode,
             "read": False,
-            "generated": True
+            "generated": True,
         }
-        
-        # Add wikilinks for YAML safety
-        if note_schema.prerequisites:
-            metadata["prerequisites"] = [f"[[{p}]]" for p in note_schema.prerequisites]
+
+        if clean_prereqs:
+            metadata["prerequisites"] = clean_prereqs
 
         yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
 
-        # Interleave Probes if present
         probe_body = ""
         if probes:
             probe_body = (
@@ -1465,14 +1575,14 @@ class OkaService:
             "type": "Hub",
             "course": plan.course,
             "semester": plan.semester,
-            "unit": plan.unit,
+            "unit": str(plan.unit),
             "source": source_link,
             "source_pages": [],
             "status": "Not Started",
             "confidence": None,
             "study_date": None,
-            "mode": "ARCHITECT",
-            "generated": True
+            "generated": True,
+            # mode is intentionally excluded from Hub notes
         }
         
         yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)

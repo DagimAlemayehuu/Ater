@@ -441,6 +441,71 @@ async def oka_confirm_plan(
         error_details = traceback.format_exc()
         raise HTTPException(status_code=500, detail=f"OKA Confirmation failed: {str(e)}\n\nTraceback:\n{error_details}")
 
+@app.get("/api/oka/paused-sessions")
+async def oka_get_paused_sessions(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Returns all sessions that were paused due to a rate limit and have saved progress."""
+    service = OkaService(secrets)
+    return {"paused_sessions": service.get_paused_sessions()}
+
+@app.post("/api/oka/resume")
+async def oka_resume_paused_session(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """
+    Resumes a session that was paused due to a rate limit.
+    Picks up from the exact batch where generation stopped.
+    """
+    session_id = payload.get("session_id")
+    curriculum_override = payload.get("curriculum_override")
+
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+
+    try:
+        service = OkaService(secrets)
+        result = await service.resume_paused_session(
+            session_id=session_id,
+            curriculum_override=curriculum_override,
+        )
+        # Move file to archive only when fully done
+        if not result.get("has_more") and result.get("status") != "rate_limited" and not session_id.startswith("text_"):
+            path = Path(session_id)
+            if path.exists():
+                processed_dir = path.parent / "note generated"
+                processed_dir.mkdir(exist_ok=True)
+                new_path = processed_dir / path.name
+                if new_path.exists():
+                    new_path = processed_dir / f"{int(time.time())}_{path.name}"
+                path.rename(new_path)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OKA Resume failed: {str(e)}")
+
+@app.post("/api/oka/swap-key")
+async def oka_swap_api_key(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """
+    Hot-swaps the AI API key on the live OkaService instance.
+    Use this after a rate limit to switch to a backup key without restarting.
+    The new key is used immediately for all subsequent LLM calls.
+    """
+    new_key = payload.get("api_key")
+    if not new_key:
+        raise HTTPException(status_code=400, detail="api_key is required")
+    try:
+        service = OkaService(secrets)
+        service.swap_api_key(new_key)
+        return {"status": "ok", "message": "API key swapped. Resume generation now."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/oka/watcher/toggle")
 async def oka_watcher_toggle(
     secrets: AppSecrets = Depends(get_app_secrets)

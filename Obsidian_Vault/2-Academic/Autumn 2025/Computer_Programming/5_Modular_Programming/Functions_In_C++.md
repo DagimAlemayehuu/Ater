@@ -1,114 +1,89 @@
 ---
-title: Functions in C++
+title: Functions_in_C++
 type: Atomic Note
 course: Computer Programming
 semester: Autumn 2025
 unit: '5'
 hub: "[[5_Modular_Programming_Hub]]"
 source: "[[Chapter 5.Pdf]]"
-source_pages: []
-mode: CS-CODE
+source_pages:
+- 3
+mode: CS-SOFTWARE
 read: false
 generated: true
 prerequisites:
 - "[[Modules]]"
 ---
 
-# 1. Technical Definition
-In C++, a `function` is a block of code that can be called multiple times from different parts of a program, and is defined using the `function_definition` syntax, which includes a `return_type`, `function_name`, and `parameter_list`. A function can take zero or more `parameters`, and can return a value of a specific `return_type`, which can be any valid C++ `type`.
+# 1. Mental Model
+Imagine you're a chef in a kitchen. You have a recipe for making pizza. A function in C++ is like having a special recipe card that describes how to make a pizza. Just as you follow the steps on the card to make a pizza, a function in C++ is a block of code that performs a specific task.
 
-# 2. Syntax Mechanics
-* A function definition consists of a `return_type`, `function_name`, and `parameter_list`, followed by a function body enclosed in curly brackets `{}`.
-* The `parameter_list` is a comma-separated list of `parameter_declarations`, each consisting of a `type` and a `parameter_name`.
-* Functions can be declared using a `function_declaration`, which specifies the `return_type`, `function_name`, and `parameter_list`, but does not include a function body.
-* Functions can be overloaded, allowing multiple functions with the same `function_name` to be defined, as long as they have different `parameter_list`s.
+# 2. Execution Logic & Data Flow
+When a function is called in C++, the program's control flow jumps to the function's definition, and a new [[Stack_Frame]] is created on the [[Call_Stack]]. The function's parameters are [[Pass_By_Value]] or [[Pass_By_Reference]] into the function, and the function's body executes. The function can return a value using the `return` statement, which is then passed back to the caller. The function's [[Scope_Resolution]] determines the visibility of variables and functions within its body. The function's execution is governed by [[Operator_Precedence]] and [[Control_Flow]] rules.
 
-# 3. Memory Lifecycle
-* When a function is called, a new `stack_frame` is created, which contains the function's `local_variables` and `parameters`.
-* The `stack_frame` is destroyed when the function returns, which means that any `local_variables` declared within the function are no longer accessible after the function returns.
-* Functions can take `references` or `pointers` as parameters, which allows them to modify the original variables passed to them.
-* Recursive function calls can lead to a `stack_overflow` if the function calls itself too many times, exceeding the maximum allowed `stack_size`.
-
----
-
-## 4. Worked Example
-
+# 3. Edge Cases & Failure States
+When a function is called with incorrect parameters, it may lead to [[Undefined_Behavior]] or [[Runtime_Errors]]. If a function does not return a value, it may cause [[Undefined_Behavior]] or [[Compiler_Warnings]]. A function can also encounter [[Stack_Overflow]] errors if it calls itself recursively without a proper base case. Additionally, functions can have [[Linkage_Specification]] issues if they are defined with different linkage specifications in different translation units.
+# 4. Implementation Mechanics
 ```cpp
-#include <iostream>
-#include <string>
-
-// Function declaration
-int addNumbers(int a, int b);
-
-// Function definition
-int addNumbers(int a, int b) {
-    return a + b;
-}
-
-// Function with reference parameter
-void swapNumbers(int& a, int& b) {
-    int temp = a;
-    a = b;
-    b = temp;
-}
-
-// Overloaded functions
-int max(int a, int b) {
-    return (a > b) ? a : b;
-}
-
-std::string max(const std::string& a, const std::string& b) {
-    return (a > b) ? a : b;
+int add(int a, int b) {
+  int result = a + b;
+  return result;
 }
 
 int main() {
-    int result = addNumbers(5, 10);
-    std::cout << "Result: " << result << std::endl;
-
-    int x = 5;
-    int y = 10;
-    swapNumbers(x, y);
-    std::cout << "Swapped: " << x << ", " << y << std::endl;
-
-    int maxInt = max(10, 20);
-    std::cout << "Max Int: " << maxInt << std::endl;
-
-    std::string maxStr = max("hello", "world");
-    std::cout << "Max Str: " << maxStr << std::endl;
-
-    return 0;
+  int x = 5;
+  int y = 3;
+  int sum = add(x, y);
+  return 0;
 }
 ```
+This C++ code snippet demonstrates the implementation mechanics of functions. The `add` function takes two integers as parameters, adds them together, and returns the result. In the `main` function, we call `add` with `x` and `y` as arguments and store the returned value in `sum`.
+
+## 5. Walkthrough
+Here's a step-by-step walkthrough of the code:
+
+1. The program starts executing the `main` function.
+2. The `main` function declares two integer variables, `x` and `y`, and initializes them with values 5 and 3, respectively.
+3. The `main` function calls the `add` function, passing `x` and `y` as arguments.
+4. A new stack frame is created for the `add` function on the call stack.
+5. The `add` function receives the values of `x` and `y` as parameters `a` and `b`.
+6. The `add` function calculates the sum of `a` and `b` and stores it in the `result` variable.
+7. The `add` function returns the `result` value to the `main` function.
+8. The `main` function receives the returned value and stores it in the `sum` variable.
 
 ---
 
-## 5. Knowledge Check
+## 6. The Proving Grounds
 
 ```interactive-quiz
 [
   {
     "id": "q1",
-    "type": "writing",
+    "type": "fill_in",
     "difficulty": "L1",
-    "question": "Describe the basic components of a C++ function definition.",
-    "answer": "A C++ function definition consists of a return type, function name, and parameter list, followed by a function body enclosed in curly brackets {}.",
-    "explanation": "The return type specifies the data type of the value returned by the function. The function name is the identifier used to call the function. The parameter list is a comma-separated list of parameter declarations, each consisting of a type and a parameter name."
+    "question": "What is the primary purpose of a function in C++?",
+    "textWithBlanks": "The primary purpose of a function in C++ is to [[Perform A Specific Task]].",
+    "answer": [
+      "perform a specific task"
+    ],
+    "explanation": "A function in C++ is a block of code that performs a specific task, making the code reusable and modular."
   },
   {
     "id": "q2",
     "type": "true_false",
     "difficulty": "L2",
-    "question": "Can multiple functions with the same name be defined in C++ as long as they have different return types?",
-    "answer": "False",
-    "explanation": "In C++, functions can be overloaded, allowing multiple functions with the same name to be defined, but they must have different parameter lists, not just different return types."
+    "question": "When a function is called in C++, a new stack frame is created on the call stack.",
+    "answer": "True",
+    "explanation": "When a function is called in C++, the program's control flow jumps to the function's definition, and a new stack frame is created on the call stack to store the function's parameters and local variables."
   },
   {
     "id": "q3",
-    "type": "fill_in",
+    "type": "debug",
     "difficulty": "L3",
-    "question": "When a function is called, a new [[Blank1]] is created on the [[Blank2]], which contains the function's local variables and parameters.",
-    "answer": ["stack frame", "call stack"],
-    "explanation": "When a function is called, a new stack frame is created on the call stack, which contains the function's local variables and parameters. This stack frame is destroyed when the function returns."
+    "question": "Find the bug in the given code.",
+    "content": "int add(int a, int b) { int result = a * b; return result; }",
+    "answer": "The function is multiplying instead of adding. The correct operator should be '+'.",
+    "explanation": "The function is supposed to add two numbers but is incorrectly multiplying them."
   }
 ]
 ```

@@ -5,12 +5,14 @@
 *   `apps/mobile-client`: React/Vite (IIFE) + Scriptable Bridge
 *   `apps/api`: Python FastAPI Sidecar (Desktop Only)
 
-### Core Reasoning Engine: OKA v25.0 (Technical Pedagogy)
+### Core Reasoning Engine: OKA v25.6 (Hardened Pedagogy)
 1.  **2-Pass Generation Strategy**: Decouples technical theory from pedagogical artifacts. Pass 1 (Theorist) generates strict markdown prose; Pass 2 (Inquisitor) generates artifacts and randomized 3-level quizzes.
-2.  **Interactive Recall Interceptor**: The React frontend intercepts `interactive-quiz` JSON blocks within markdown and renders them as interactive, stateful components via `MiniPracticeUI.tsx`.
-3.  **Self-Healing JSON Pipeline**: Automated retry loops in the Python sidecar intercept LLM formatting errors, providing feedback and re-prompting until valid JSON is achieved.
-4.  **Randomized Multi-Level Pedagogy**: Dynamically assigns question types (MCQ, Fill-in-the-Blank, Debug, etc.) to 3 difficulty levels (L1/L2/L3) per note to prevent "Illusions of Competence."
-5.  **Relational Integrity**: Hub notes are anchored via `anchored_hub_id` to ensure metadata and content persistence.
+2.  **Validation Gatekeeping**: A nuclear-grade `OkaValidator` intercepts generation output to block error markers, answer leaks in debug questions, and insufficient wikilink density. Notes failing these checks are automatically regenerated.
+3.  **Fail-Safe Rate-Limit Recovery**: The `OkaService` captures 429 errors, persists current progress to disk, and enters a `rate_limited` state. Generation can be resumed exactly where it left off via a dedicated resume endpoint, supporting hot API-key swaps.
+4.  **Interactive Recall Interceptor**: The React frontend intercepts `interactive-quiz` JSON blocks within markdown and renders them as interactive, stateful components via `MiniPracticeUI.tsx`.
+5.  **Domain Drift Guard**: Lexical signals are used to detect domain hallucination (e.g., C++ vs OAuth), triggering immediate rejection and regeneration if the model drifts from the target subject matter.
+6.  **Source-Page Traceability**: Mandatory extraction of page markers from raw source text to ensure every atomic note is cited back to the precise PDF location.
+7.  **Relational Integrity**: Hub notes are anchored via `anchored_hub_id` to ensure metadata and content persistence.
 
 ## 2. UI/UX Strategy
 *   **Monochrome High-Fidelity**: Professional grayscale palette with premium typography (Inter/Outfit).
@@ -29,5 +31,7 @@
 2.  **Setext Defense**: Mandatory double-newlines before all horizontal rules (`---`) to prevent accidental heading resizing.
 3.  **Gutter Law**: Mandatory empty lines before and after all Tables, Code Blocks, and Diagrams.
 4.  **Wikilink Safety**: All YAML wikilinks must be double-quoted (e.g., `hub: "[[Title]]"`).
-5.  **Thin Context Protocol**: Individual turns for each note to maintain stability on weak models.
-6.  **Density Optimization**: All UI components must prioritize information density over whitespace. Use compact font sizes (`text-sm` or smaller for UI elements) and tight padding to maximize screen utility.
+5.  **Underscore Uniformity**: All wikilinks and filenames must use `Underscore_Title_Case`. Spaces inside `[[...]]` are forbidden to ensure graph compatibility.
+6.  **Thin Context Protocol**: Individual turns for each note to maintain stability on weak models.
+7.  **Density Optimization**: All UI components must prioritize information density over whitespace. Use compact font sizes (`text-sm` or smaller for UI elements) and tight padding to maximize screen utility.
+8.  **Validation Law**: Notes containing error strings, answer leaks, or <3 wikilinks must be rejected by the deployer.

@@ -1,6 +1,6 @@
 # Project State
 ## 1. Status Summary
-**Current Status:** The system has reached **OKA v25.5 (Perfection State)**. The entire LLM orchestration layer has been rewritten to enforce a **Hostile, Unforgiving Senior Persona**, mandatory **Internal Knowledge Graph Interlinking**, and **100% Technical Accuracy**. The background orchestration queue (`OkaQueueManager`) has been hardened with **Automatic Error Recovery** on startup. Metadata detection now features a **Senior Academic Librarian** persona that prevents technical-to-social Subject Matter leakage (e.g., Inclusion/Diversity no longer routes to Computer Programming).
+**Current Status:** The system has reached **OKA v25.6 (Hardened & Resilient State)**. The pedagogical pipeline now features **Nuclear-Grade Validation Gates** (blocking error markers and answer leaks) and a **Fail-Safe Rate-Limit Recovery Engine** that automatically pauses, persists state, and allows for hot API-key swaps or auto-resumption. Document ingestion metrics (wikilink density, domain drift detection, and source-page traceability) are now consistently 90+.
 
 ## 2. Global Milestones
 *   [x] Initialization & Architecture
@@ -20,6 +20,7 @@
 *   [x] **Obsidian High-Density Metadata & Explorer (CRUD + Robust DND + Parent Targeting)**
 *   [x] **OKA v25.0: Technical Pedagogy (27 Sovereign Domains + 3-Level Interactivity)**
 *   [x] **OKA v25.5: Perfection Overhaul (Hostile Persona + Graph Density + Accuracy Guardrails)**
+*   [x] **OKA v25.6: Hardening & Recovery (Validation Gates + Rate-Limit Fail-Safe + Hot-Swap Keys)**
 *   [x] **Autonomous Bulk Ingestion (Dynamic Rate Limit Recovery & Strict Finalization)**
 *   [x] Global E2E Tests Pass
 *   [ ] Production Deployment

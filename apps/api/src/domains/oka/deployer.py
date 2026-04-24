@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from .vault_manager import VaultManager
+from .validator import OkaValidator, HARD_FAILURE_MARKERS
 
 class OkaDeployer:
     """
@@ -205,6 +206,12 @@ class OkaDeployer:
         ordered_notes = atomic_notes + hub_pq_notes
 
         for note in ordered_notes:
+            # ── HARD FAILURE GATE ──────────────────────────────────────────
+            # Never write a note that contains error markers from failed generation
+            raw_content_check = note.get("content", "")
+            if any(marker in raw_content_check for marker in HARD_FAILURE_MARKERS):
+                print(f"[OKA Deployer] BLOCKED '{note.get('title', 'unknown')}': contains error marker. Will be queued for regeneration.")
+                continue
             title = note.get("title", "Untitled")
             content = note.get("content", "")
             meta = note.get("metadata", {})
@@ -263,12 +270,12 @@ class OkaDeployer:
                 meta["type"] = "Hub"
                 meta["source_pages"] = []
                 meta.pop("source_page", None)
+                meta.pop("mode", None)          # Hubs must NOT have a mode field
                 meta.setdefault("status", "Not Started")
                 meta.setdefault("confidence", None)
                 meta.setdefault("study_date", None)
                 meta.setdefault("generated", True)
-                # Hub doesn't need a 'hub' backlink to itself
-                meta.pop("hub", None)
+                meta.pop("hub", None)           # Hub doesn't backlink to itself
             elif is_pq:
                 meta["type"] = "Possible Questions"
                 if clean_hub_name:
@@ -278,7 +285,12 @@ class OkaDeployer:
                 meta["type"] = "Atomic Note"
                 if clean_hub_name:
                     meta["hub"] = f"[[{unit_str}{clean_hub_name}_Hub]]"
-                meta.setdefault("mode", "ENGINEER")
+                meta.setdefault("mode", "CS-SOFTWARE")
+                # ── Sanitise prerequisites: spaces → underscores ──
+                if meta.get("prerequisites"):
+                    meta["prerequisites"] = OkaValidator.sanitize_prerequisites(
+                        meta["prerequisites"]
+                    )
 
             # ── PATH RESOLUTION ──
             target_path = self.vm.get_note_path(
