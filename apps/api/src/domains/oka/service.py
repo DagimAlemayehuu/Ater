@@ -272,29 +272,85 @@ class OkaService:
             hubs.append(metadata)
         return hubs
 
+    def _get_unit_dir(self, hub: Dict[str, Any]) -> Path:
+        """Resolves the academic unit directory for a given hub."""
+        hub_path = Path(hub["path"])
+        semester = hub.get("semester", "General")
+        course = hub.get("course", "General_Knowledge")
+        unit_num = hub.get("unit", "")
+        
+        # We must clean the title to remove "Hub" or "Possible Questions" before canonicalizing
+        clean_hub_base = self.vm.super_clean(hub["title"])
+        canonical_hub = self.vm.get_canonical_title(clean_hub_base)
+        unit_prefix = f"{unit_num}_" if unit_num else ""
+        unit_folder_name = f"{unit_prefix}{canonical_hub}"
+        
+        academic_unit_dir = self.vm.academic_root / semester / self.vm.get_canonical_title(course) / unit_folder_name
+        return academic_unit_dir if academic_unit_dir.exists() else hub_path.parent
+
     def list_atomic_notes(self, hub_id: str) -> List[Dict[str, Any]]:
-        """Lists atomic notes linked to a specific hub."""
+        """Lists atomic notes linked to a specific hub.
+        PRIORITY: Extracts ordered links from the 'Connections' or 'Core Topologies' section.
+        FALLBACK: Scans the unit directory for all markdown files.
+        """
         hubs = self.list_planner_hubs()
         hub = next((h for h in hubs if h["id"] == hub_id), None)
         if not hub:
             return []
             
         hub_path = Path(hub["path"])
-        semester = hub.get("semester", "General")
-        course = hub.get("course", "General_Knowledge")
-        unit_num = hub.get("unit", "")
+        unit_dir = self._get_unit_dir(hub)
         
-        canonical_hub = self.vm.get_canonical_title(hub["title"])
-        unit_prefix = f"{unit_num}_" if unit_num else ""
-        unit_folder_name = f"{unit_prefix}{canonical_hub}"
-        
-        academic_unit_dir = self.vm.academic_root / semester / self.vm.get_canonical_title(course) / unit_folder_name
-        unit_dir = academic_unit_dir if academic_unit_dir.exists() else hub_path.parent
-        
+        # 1. Try to extract ordered notes from Hub content
+        if hub_path.exists():
+            try:
+                with open(hub_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                
+                # Match Connections or Core Topologies sections
+                conn_match = re.search(r"(?:#+\s*Core Topologies.*?|#+\s*Connections)\s*\n([\s\S]*?)(?=\n#+\s|$)", content, re.IGNORECASE)
+                if conn_match:
+                    section_text = conn_match.group(1)
+                    # Extract [[Note Title]]
+                    links = re.findall(r"\[\[(.*?)\]\]", section_text)
+                    if links:
+                        # Map titles to files in the unit directory for verification
+                        dir_files = {f.stem.lower().replace("_", " "): f for f in unit_dir.glob("*.md")}
+                        # Also index by canonical stem
+                        for f in unit_dir.glob("*.md"):
+                            dir_files[f.stem.lower()] = f
+
+                        ordered_notes = []
+                        for link in links:
+                            title = link.split('|')[0].split('#')[0].strip()
+                            title_key = title.lower().replace("_", " ")
+                            
+                            file = dir_files.get(title_key) or dir_files.get(title.lower())
+                            if file and file.exists():
+                                # STRICT FILTER: Only atomic notes, no hubs, no questions, no current hub
+                                if file.name.endswith("_Hub.md") or "Possible_Questions" in file.name or "Practice" in file.name or file.name.startswith("_"):
+                                    continue
+                                if file.name == hub_path.name:
+                                    continue
+                                    
+                                ordered_notes.append({
+                                    "id": file.stem,
+                                    "title": file.stem.replace("_", " "),
+                                    "path": str(file.absolute())
+                                })
+                        
+                        if ordered_notes:
+                            return ordered_notes
+            except Exception as e:
+                print(f"[OKA Service] Connection extraction failed: {e}")
+
+        # 2. Fallback: Alpha-sorted directory listing
         notes = []
         if unit_dir.exists():
             for file in unit_dir.glob("*.md"):
-                if file.name == hub_path.name or "Possible_Questions" in file.name or "Practice" in file.name or file.name.startswith("_"):
+                if file.name.endswith("_Hub.md") or "Possible_Questions" in file.name or "Practice" in file.name or file.name.startswith("_"):
+                    continue
+                if file.name == hub_path.name:
                     continue
                 notes.append({
                     "id": file.stem,
@@ -442,18 +498,7 @@ class OkaService:
         
         hub_path = Path(hub["path"])
         
-        # Resolve the Academic Unit Folder
-        semester = hub.get("semester", "General")
-        course = hub.get("course", "General_Knowledge")
-        unit_num = hub.get("unit", "")
-        hub_title_raw = hub.get("hub_title", hub["title"])
-        
-        canonical_hub = self.vm.get_canonical_title(hub_title_raw)
-        unit_prefix = f"{unit_num}_" if unit_num else ""
-        unit_folder_name = f"{unit_prefix}{canonical_hub}"
-        
-        academic_unit_dir = self.vm.academic_root / semester / self.vm.get_canonical_title(course) / unit_folder_name
-        unit_dir = academic_unit_dir if academic_unit_dir.exists() else hub_path.parent
+        unit_dir = self._get_unit_dir(hub)
         practice_dir = self.vm.academic_root / "Practice"
         practice_dir.mkdir(exist_ok=True)
         
@@ -464,8 +509,8 @@ class OkaService:
         atomic_notes = list(unit_dir.glob("*.md"))
         selected_notes = config.selectedAtomicNotes
         
-        # Read Hub content if it matches or if no specific notes selected
-        if not selected_notes or any(hub["title"] in s for s in selected_notes):
+        # Read Hub content only if NO specific notes are selected (full hub mode)
+        if not selected_notes:
             with open(hub_path, "r", encoding="utf-8") as f:
                 context_parts.append(f"## Hub Note: {hub['title']}\n{f.read()}")
 
@@ -473,9 +518,6 @@ class OkaService:
             if note_path.name == hub_path.name or "Possible_Questions" in note_path.name or "Practice" in note_path.name or note_path.name.startswith("_"):
                 continue
             
-            # Apply exclusion keywords
-            if any(kw.lower() in note_path.name.lower() for kw in config.exclusionKeywords):
-                continue
                 
             # Apply selection filter
             if selected_notes and note_path.stem not in selected_notes:
@@ -490,15 +532,28 @@ class OkaService:
             with open(note_path, "r", encoding="utf-8") as f:
                 context_parts.append(f"### Atomic Note: {note_path.stem}\n{f.read()}")
                 
-        # Find and read Possible Questions file
-        pq_file = next(unit_dir.glob("*_Possible_Questions.md"), None)
-        if pq_file:
-            with open(pq_file, "r", encoding="utf-8") as f:
-                context_parts.append(f"## Reference Questions\n{f.read()}")
+        # 2. Add Possible Questions only if no specific notes are selected (full unit mode)
+        # This prevents the AI from pulling questions from the whole unit when only 1 note is selected.
+        if not selected_notes:
+            pq_file = next(unit_dir.glob("*_Possible_Questions.md"), None)
+            if pq_file:
+                with open(pq_file, "r", encoding="utf-8") as f:
+                    context_parts.append(f"## Reference Questions\n{f.read()}")
         
+        # Randomize context order to break structural bias
+        import random
+        random.shuffle(context_parts)
         full_context = "\n\n".join(context_parts)
         
+        # PRE-VALIDATION: Prevent hallucination if no context is found
+        if len(full_context.strip()) < 50:
+            logger.error(f"[OKA Service] No sufficient context found for hub {hub_id} with selection {selected_notes}")
+            raise Exception("No source material found for the selected concepts. Please ensure the atomic notes have content.")
+        
         # 2. Build Prompt
+        # Use a generic seed to prevent topic-inference from the ID
+        session_id = f"session_{int(time.time())}"
+        
         distribution = config.questionDistribution
         total_q = sum(distribution.values())
         
@@ -513,30 +568,43 @@ class OkaService:
         if config.distractorPlausibility == "High":
             pedagogy_prompts.append("DISTRACTORS: Ensure incorrect options are highly plausible and common misconceptions.")
 
+        selected_titles = [n.stem for n in atomic_notes if n.stem in (selected_notes or [])]
+        selected_scope_str = ", ".join(selected_titles) if selected_titles else "Full Unit"
+
         prompt = (
-            "You are OKA, the Sovereign Pedagogical Architect. Your objective is to generate an elite practice session in ONE SINGLE REQUEST.\n\n"
+            "### [GROUND TRUTH SOURCE MATERIAL]\n"
+            f"{full_context[:MAX_SOURCE_CHARS]}\n"
+            "### [END OF SOURCE MATERIAL]\n\n"
+            
+            "SYSTEM PROTOCOL: You are OKA, the Sovereign Pedagogical Architect. "
+            "You are operating in a HARD AIR-GAPPED ENVIRONMENT. You have NO access to the internet or internal training data. "
+            "The material above is the ONLY reality. Everything else (including this prompt's metadata) is invisible to you.\n\n"
+            
             "TARGET PROFILE:\n"
-            f"- Question Total: {total_q}\n"
-            f"- Distribution: {dist_str}\n"
-            f"- Cognitive Level: {config.difficulty}\n"
-            f"- Grading Strictness: {config.gradingStrictness}\n"
-            f"{chr(10).join(pedagogy_prompts)}\n\n"
-            "MODALITY SPECIFICATIONS:\n"
-            "- 'mcq': 4 options (A-D).\n"
-            "- 'code': Provide a starting `codeSnippet` (Markdown) and the solution in `answer`.\n"
-            "- 'find_error': Provide `buggyCode` and the fix in `answer`.\n"
-            "- 'cloze': Use `[[blank]]` in `textWithBlanks`. Provide `answer` array (list of strings for each blank).\n"
-            "- 'matching': Provide pairs in `pairs`: [{'left': 'term', 'right': 'definition'}].\n\n"
-            "RULES:\n"
-            "1. STRICT JSON SCHEMA: Follow the provided schema exactly.\n"
-            "2. GROUNDING: Every question must correlate to the specific details in the Atomic Notes provided.\n"
-            "3. EXPLANATIONS: Include a detailed `explanation` for EVERY question, quoting the source material where possible.\n"
-            "4. CONFIDENCE WAGERS: The app will handle the UI, but ensure the difficulty permits a confidence assessment.\n\n"
-            f"MATERIAL CONTEXT:\n{full_context[:MAX_SOURCE_CHARS]}"
+            f"- Total Questions: {total_q}\n"
+            f"- Question Types: {dist_str}\n"
+            f"- Difficulty: {config.difficulty}\n"
+            f"- Entropy Seed: {session_id}\n\n"
+            
+            "STRICT OPERATIONAL RULES:\n"
+            "1. SOLE SOURCE ADHERENCE: Generate questions EXCLUSIVELY from the [GROUND TRUTH SOURCE MATERIAL]. If a concept is not in the text, it does not exist.\n"
+            "2. ANTI-SYSTEM HALLUCINATION: DO NOT ask questions about the generation process, the target profile, or any meta-information from this prompt.\n"
+            "3. ALLOWED MODALITIES (Strict JSON structures):\n"
+            "   - 'mcq': `options` (A,B,C,D) and `answer` (Key only).\n"
+            "   - 'true_false': `answer` (Boolean).\n"
+            "   - 'fill_in': `textWithBlanks` (with [[blank]] markers) and `answer` (List of strings).\n"
+            "   - 'writing': `answer` (String).\n"
+            "   - 'matching': `pairs` (List of objects with `left` and `right` keys).\n"
+            "   - 'order': `steps` (List of strings in random order) and `answer` (List of strings in CORRECT order).\n"
+            "   - 'debug': `content` (buggy code/logic) and `answer` (fix).\n"
+            "   - 'synthesis': High-order synthesis questioning.\n"
+            "4. DISTRIBUTION ADHERENCE (CRITICAL): You MUST generate exactly the count requested for each modality in the TARGET PROFILE. If the user asks for 'matching', 'order', or 'debug', you MUST provide them. DO NOT default to 'mcq'. Defaulting to MCQ when other types are requested is a PROTOCOL FAILURE.\n"
+            "5. SOURCE QUOTES: Every `explanation` MUST contain a direct 'Quote' from the source material.\n"
+            "6. NO TOPIC BLEED: Stay 100% within the scope of the selected notes.\n\n"
+            "EXECUTION: Generate the session now. Follow the distribution strictly."
         )
         
         # 3. Invoke LLM with Structured Output logic
-        session_id = f"practice_{hub_id}_{int(time.time())}"
         OkaService._status[session_id] = "Architecting Advanced Session..."
         
         try:
@@ -565,6 +633,73 @@ class OkaService:
                 else:
                     questions = []
                     logger.error(f"[OKA Service] Unexpected JSON structure for practice: {type(data)}")
+
+            # --- CRITICAL POST-PROCESSING ---
+            # Ensure every question has a valid 'type' for the frontend to render
+            processed_questions = []
+            for q in questions:
+                if not isinstance(q, dict): continue
+                # Normalizing type field
+                q_raw_type = (q.get("type") or q.get("questionType") or q.get("question_type") or "").lower().replace("_", "")
+                
+                # Canonical mapping to the 8 UI modes
+                mapping = {
+                    "mcq": "mcq",
+                    "multiplechoice": "mcq",
+                    "true_false": "true_false",
+                    "truefalse": "true_false",
+                    "fill_in": "fill_in",
+                    "fillin": "fill_in",
+                    "cloze": "fill_in",
+                    "clozedeletion": "fill_in",
+                    "writing": "writing",
+                    "short_answer": "writing",
+                    "shortanswer": "writing",
+                    "matching": "matching",
+                    "matchingmatrix": "matching",
+                    "order": "order",
+                    "sequencing": "order",
+                    "sequencingsteps": "order",
+                    "debug": "debug",
+                    "diagnostic": "debug",
+                    "diagnosticerror": "debug",
+                    "synthesis": "synthesis",
+                    "socratic": "synthesis",
+                    "socraticsynthesis": "synthesis"
+                }
+                
+                q["type"] = mapping.get(q_raw_type, "writing")
+                
+                # Structural hard-fixes
+                if q["type"] == "true_false":
+                    # Ensure answer is boolean or string representation of boolean
+                    if isinstance(q.get("answer"), str):
+                        q["answer"] = q["answer"].lower() == "true"
+                
+                if q["type"] == "fill_in" and not q.get("textWithBlanks"):
+                    q["type"] = "writing"
+                if q["type"] == "matching" and not q.get("pairs"):
+                    q["type"] = "writing"
+                if q["type"] == "order" and (not q.get("steps") or not q.get("answer")):
+                    q["type"] = "writing"
+                if q["type"] == "debug" and not q.get("content"):
+                    q["type"] = "writing"
+                
+                # MCQ Option labeling
+                if q["type"] == "mcq" and isinstance(q.get("options"), (list, dict)):
+                    options = q["options"]
+                    if isinstance(options, list):
+                        q["options"] = {chr(65+i): v for i, v in enumerate(options)}
+                    elif isinstance(options, dict):
+                        new_opts = {}
+                        for i, (k, v) in enumerate(options.items()):
+                            new_key = chr(65+i) if len(k) > 1 or k.isdigit() else k.upper()
+                            new_opts[new_key] = v
+                        q["options"] = new_opts
+
+                processed_questions.append(q)
+            
+            questions = processed_questions
             
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             quiz_title = f"{hub['title']} - {config.difficulty} Session"

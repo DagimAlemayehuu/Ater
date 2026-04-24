@@ -27,4 +27,11 @@ This file tracks the step-by-step technical implementation path.
 - [x] Linguistic Audit: Replace "Note Properties" with "Info" and "Topologies" with "Map".
 - [x] Linguistic Audit: Standardize "Direct English" across Practice and Database views.
 
+## Sprint: Pedagogical Interface Hardening
+- [x] Fix `ReferenceError: X` in Practice Session Exit dialog.
+- [x] Standardize button visibility logic for manual grading modes (Writing/Synthesis).
+- [x] Correct quantitative data rendering in Results view (Total questions).
+- [x] Implement Density Optimization: Shrink font sizes and spacing for compact UI.
+- [x] Audit all 8 retrieval modalities for runtime stability.
+
 *Next autonomous agent loop will append and check off dynamic tasks here...*

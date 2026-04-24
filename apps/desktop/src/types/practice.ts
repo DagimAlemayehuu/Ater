@@ -2,20 +2,19 @@ export interface AdvancedPracticeConfig {
   // 1. Context Mapping
   hubId: string;
   selectedAtomicNotes: string[]; // specific files, empty means all
-  exclusionKeywords: string[]; // words the AI must not test
   timeBoundDays: number | null; // e.g., only notes from last 7 days
   prioritizeWeaknesses: boolean; // boolean to inject past low-score topics
 
   // 2. Modalities (Replaces generic 'Mixed' string)
   questionDistribution: {
-    multipleChoice: number;
-    trueFalse: number;
-    shortAnswer: number;
-    scenario: number;
-    codeImplementation: number;
-    clozeDeletion: number; // Fill in the blank
-    findTheError: number; // Debugging
-    matchingMatrix: number; // Drag and drop
+    mcq: number;
+    true_false: number;
+    writing: number;
+    fill_in: number;
+    matching: number;
+    order: number;
+    debug: number;
+    synthesis: number;
   };
 
   // 3. Cognitive Constraints
@@ -37,12 +36,12 @@ export interface AdvancedPracticeConfig {
 export type QuestionType = 
   | "mcq" 
   | "true_false" 
-  | "short_answer" 
-  | "scenario" 
-  | "code" 
-  | "cloze" 
-  | "find_error" 
-  | "matching";
+  | "writing" 
+  | "fill_in"
+  | "matching"
+  | "order"
+  | "debug"
+  | "synthesis";
 
 export interface BaseQuestion {
   id: number;
@@ -65,8 +64,8 @@ export interface TrueFalseQuestion extends BaseQuestion {
   answer: string;
 }
 
-export interface ShortAnswerQuestion extends BaseQuestion {
-  type: "short_answer";
+export interface WritingQuestion extends BaseQuestion {
+  type: "writing";
   answer: string;
 }
 
@@ -82,10 +81,10 @@ export interface CodeQuestion extends BaseQuestion {
   language: string;
 }
 
-export interface ClozeQuestion extends BaseQuestion {
-  type: "cloze";
-  textWithBlanks: string; // "The [[blank]] brown fox..."
-  blanks: string[];
+export interface FillInQuestion extends BaseQuestion {
+  type: "fill_in";
+  textWithBlanks: string;
+  answer: string[];
 }
 
 export interface FindErrorQuestion extends BaseQuestion {
@@ -99,12 +98,29 @@ export interface MatchingQuestion extends BaseQuestion {
   pairs: Array<{ left: string; right: string }>;
 }
 
+export interface OrderQuestion extends BaseQuestion {
+  type: "order";
+  steps: string[];
+  answer: string[]; // The correct order of steps
+}
+
+export interface DebugQuestion extends BaseQuestion {
+  type: "debug";
+  content: string; // The buggy snippet
+  answer: string;
+}
+
+export interface SynthesisQuestion extends BaseQuestion {
+  type: "synthesis";
+  answer: string;
+}
+
 export type Question = 
   | MCQQuestion 
   | TrueFalseQuestion 
-  | ShortAnswerQuestion 
-  | ScenarioQuestion 
-  | CodeQuestion 
-  | ClozeQuestion 
-  | FindErrorQuestion 
-  | MatchingQuestion;
+  | WritingQuestion 
+  | FillInQuestion
+  | MatchingQuestion
+  | OrderQuestion
+  | DebugQuestion
+  | SynthesisQuestion;

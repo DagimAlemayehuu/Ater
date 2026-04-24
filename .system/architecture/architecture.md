@@ -5,7 +5,7 @@
 *   `apps/mobile-client`: React/Vite (IIFE) + Scriptable Bridge
 *   `apps/api`: Python FastAPI Sidecar (Desktop Only)
 
-### Core Reasoning Engine: OKA v23.0 (Ironclad)
+### Core Reasoning Engine: OKA v24.0 (Pedagogical)
 1.  **Validation Loop**: Every note undergoes structural validation (YAML, backticks, tables). Invalid notes are re-prompted with `[REGENERATION_HINT]`.
 2.  **Socratic Synthesis**: Probes are aggregated from atomic notes to build a comprehensive Master Question Bank (PQ note).
 3.  **Relational Integrity**: Hub notes are anchored via `anchored_hub_id` to ensure metadata and content persistence.
@@ -29,3 +29,4 @@
 3.  **Gutter Law**: Mandatory empty lines before and after all Tables, Code Blocks, and Diagrams.
 4.  **Wikilink Safety**: All YAML wikilinks must be double-quoted (e.g., `hub: "[[Title]]"`).
 5.  **Thin Context Protocol**: Individual turns for each note to maintain stability on weak models.
+6.  **Density Optimization**: All UI components must prioritize information density over whitespace. Use compact font sizes (`text-sm` or smaller for UI elements) and tight padding to maximize screen utility.

@@ -79,37 +79,60 @@ class VaultManager:
         is_hub = "hub" in note_type or "hub" in raw_title.lower()
         is_questions = "questions" in note_type or "possible_questions" in raw_title.lower()
 
-        def super_clean(title: str) -> str:
-            """Aggressively and recursively strips all metadata noise from a title."""
-            c = str(title)
-            c = re.sub(r"(?i)unknown", "", c)
-            c = c.lstrip(" _-")
-            while re.match(r"^\d+[\s\-_]*", c):
-                c = re.sub(r"^\d+[\s\-_]*", "", c)
-                c = c.lstrip(" _-")
-            while True:
-                prev = c
-                c = c.replace(" Hub", "").replace("_Hub", "")
-                c = c.replace(" Possible Questions", "").replace("_Possible_Questions", "")
-                c = c.strip("_ ")
-                if c == prev: break
-            return c
+    def deep_clean_scalar(self, v) -> str:
+        """Recursively unwrap nested lists and strip all bracket/quote artifacts."""
+        while isinstance(v, list):
+            v = v[0] if v else ""
+        s = str(v).strip()
+        s = re.sub(r"[\[\]]+", "", s).strip("\"' ")
+        if s.lower() in ("unknown", "unknown_course", "unknown_semester", "none", ""):
+            return ""
+        return s
 
-        def deep_clean_scalar(v) -> str:
-            """Recursively unwrap nested lists and strip all bracket/quote artifacts."""
-            while isinstance(v, list):
-                v = v[0] if v else ""
-            s = str(v).strip()
-            s = re.sub(r"[\[\]]+", "", s).strip("\"' ")
-            if s.lower() in ("unknown", "unknown_course", "unknown_semester", "none", ""):
-                return ""
-            return s
+    def super_clean(self, title: str) -> str:
+        """Aggressively and recursively strips all metadata noise from a title."""
+        c = str(title)
+        c = re.sub(r"(?i)unknown", "", c)
+        c = c.lstrip(" _-")
+        while re.match(r"^\d+[\s\-_]*", c):
+            c = re.sub(r"^\d+[\s\-_]*", "", c)
+            c = c.lstrip(" _-")
+        while True:
+            prev = c
+            c = c.replace(" Hub", "").replace("_Hub", "")
+            c = c.replace(" Possible Questions", "").replace("_Possible_Questions", "")
+            c = c.strip("_ ")
+            if c == prev: break
+        return c
+
+    def get_note_path(self, meta: dict, session_metadata: Optional[dict] = None, anchored_hub_path: Optional[str] = None) -> Path:
+        """
+        Determines the hierarchical file path for a note with strict academic naming.
+        """
+        raw_title = meta.get("title", "Untitled_Note")
+        note_type = str(meta.get("type", "")).lower()
+        session_meta = session_metadata or {}
+        
+        # Use session data first, fallback to AI meta
+        unit_num = str(session_meta.get("unit") or meta.get("unit", "")).strip()
+        raw_course = str(session_meta.get("course") or meta.get("course") or "Unknown_Course")
+        raw_semester = str(session_meta.get("semester") or meta.get("semester") or "Unknown_Semester")
+        raw_hub = str(session_meta.get("hub_title") or raw_title)
+
+        # Clean unit_num: remove brackets or "Unknown"
+        unit_num = unit_num.replace("[[", "").replace("]]", "")
+        if not unit_num or unit_num.lower() == "unknown":
+            unit_num = ""
+
+        # Identify note categories
+        is_hub = "hub" in note_type or "hub" in raw_title.lower()
+        is_questions = "questions" in note_type or "possible_questions" in raw_title.lower()
 
         # ── Compute canonical path components upfront (needed by ALL branches) ──
-        raw_course_clean = deep_clean_scalar(raw_course)
-        raw_semester_clean = deep_clean_scalar(raw_semester)
+        raw_course_clean = self.deep_clean_scalar(raw_course)
+        raw_semester_clean = self.deep_clean_scalar(raw_semester)
 
-        clean_course = self.get_canonical_title(super_clean(raw_course_clean))
+        clean_course = self.get_canonical_title(self.super_clean(raw_course_clean))
         # Semester folder uses the human-readable name directly (e.g. "Autumn 2025"),
         # matching the actual folder structure in the Obsidian vault.
         clean_semester = raw_semester_clean or "General"
@@ -118,7 +141,7 @@ class VaultManager:
             clean_course = "General_Knowledge"
         
         # We need the clean Hub Name for the folder
-        clean_hub_base = super_clean(raw_hub)
+        clean_hub_base = self.super_clean(raw_hub)
         canonical_hub_base = self.get_canonical_title(clean_hub_base)
         
         # Ensure unit folder name is clean and NOT just a number
@@ -136,20 +159,20 @@ class VaultManager:
             if anchored_hub_path:
                 return Path(anchored_hub_path)
             
-            clean = super_clean(raw_title)
+            clean = self.super_clean(raw_title)
             canonical_name = self.get_canonical_title(clean)
             filename = f"{unit_num}_{canonical_name}_Hub.md" if unit_num else f"{canonical_name}_Hub.md"
             return target_dir / filename
 
         # ── 2. Possible Questions (Academic Root) ──
         if is_questions:
-            clean = super_clean(raw_title)
+            clean = self.super_clean(raw_title)
             canonical_name = self.get_canonical_title(clean)
             filename = f"{unit_num}_{canonical_name}_Possible_Questions.md" if unit_num else f"{canonical_name}_Possible_Questions.md"
             return target_dir / filename
 
         # ── 3. Atomic Notes (Academic Root) ──
-        clean_atomic = super_clean(raw_title)
+        clean_atomic = self.super_clean(raw_title)
         canonical_title = self.get_canonical_title(clean_atomic)
         return target_dir / f"{canonical_title}.md"
 

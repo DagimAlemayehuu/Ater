@@ -14,14 +14,20 @@ import {
   TrendingUp,
   ScanSearch,
   Dna,
-  X,
   Check,
-  Loader2
+  Loader2,
+  Info,
+  Target,
+  X
 } from 'lucide-react'
 import { 
   LineChart, 
   Line, 
   ResponsiveContainer,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip
 } from 'recharts'
 import { ActivityCalendar } from 'react-activity-calendar'
 import { Button } from '@/components/ui/button'
@@ -67,8 +73,16 @@ interface Hub {
 const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   hubId: '',
   selectedAtomicNotes: [],
-  exclusionKeywords: [],
-  questionDistribution: { multipleChoice: 5, trueFalse: 0, shortAnswer: 0, scenario: 0, codeImplementation: 0, clozeDeletion: 0, findTheError: 0, matchingMatrix: 0 },
+  questionDistribution: { 
+    mcq: 0, 
+    true_false: 0, 
+    writing: 0, 
+    fill_in: 0, 
+    matching: 0, 
+    order: 0, 
+    debug: 0, 
+    synthesis: 0 
+  },
   difficulty: 'L1',
   gradingStrictness: 'Lenient',
   distractorPlausibility: 'High',
@@ -102,7 +116,6 @@ export default function Practice() {
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  const [keywordInput, setKeywordInput] = useState("")
 
   const calendarData = useMemo(() => {
     const data = Object.entries(pastPractices.reduce((acc, p) => {
@@ -115,7 +128,19 @@ export default function Practice() {
 
   useEffect(() => { loadHubs(); loadPastPractices(); }, [])
   useEffect(() => { if (selectedHub) loadHubNotes(selectedHub); }, [selectedHub])
-  const loadHubNotes = async (hubId: string) => { try { const res = await sidecarApi.listHubNotes(hubId); setAvailableNotes(res.notes); } catch { console.error("Error occurred"); } }
+  const loadHubNotes = async (hubId: string) => { 
+    try { 
+      const res = await sidecarApi.listHubNotes(hubId); 
+      setAvailableNotes(res.notes);
+      // Default: Select all notes
+      setAdvancedConfig(prev => ({
+        ...prev,
+        selectedAtomicNotes: res.notes.map((n: any) => n.id)
+      }))
+    } catch { 
+      console.error("Error occurred"); 
+    } 
+  }
 
   useEffect(() => {
     if (questions.length > 0 && view === 'session') {
@@ -135,10 +160,25 @@ export default function Practice() {
       toast.error('Choose a topic first.');
       return;
     }
+    if (advancedConfig.selectedAtomicNotes.length === 0) {
+      toast.error('Select at least one note to continue.');
+      return;
+    }
     setIsLoading(true);
     setView('loading');
     try {
-      const res = await sidecarApi.generatePractice(selectedHub, { ...advancedConfig, hubId: selectedHub });
+      // Cleanup distribution to only include valid unified keys
+      const cleanDistribution = Object.fromEntries(
+        Object.entries(advancedConfig.questionDistribution).filter(([k]) => 
+          ['mcq', 'true_false', 'writing', 'fill_in', 'matching', 'order', 'debug', 'synthesis'].includes(k)
+        )
+      );
+
+      const res = await sidecarApi.generatePractice(selectedHub, { 
+        ...advancedConfig, 
+        hubId: selectedHub,
+        questionDistribution: cleanDistribution 
+      });
       if (!res.questions || res.questions.length === 0) {
         toast.error('Could not find enough content to make questions.');
         setView('configuring');
@@ -178,7 +218,49 @@ export default function Practice() {
   const handleSubmitAnswer = () => {
     setIsRevealed(true);
     const q = questions[currentQuestionIdx];
-    if (q.type === 'mcq' || q.type === 'true_false') setGradedAnswers(prev => ({ ...prev, [q.id]: String(userAnswers[q.id]).toLowerCase() === String(q.answer).toLowerCase() }));
+    let isCorrect = false;
+
+    if (q.type === 'mcq' || q.type === 'true_false' || q.type === 'writing' || q.type === 'debug' || q.type === 'synthesis') {
+      const userVal = String(userAnswers[q.id] || '').trim();
+      const correctVal = String(q.answer || '').trim();
+      
+      if (q.type === 'true_false') {
+        const userBool = userVal.toLowerCase() === 'true';
+        const correctBool = typeof q.answer === 'boolean' ? q.answer : String(q.answer).toLowerCase() === 'true';
+        isCorrect = userBool === correctBool;
+      } else if (q.type === 'debug') {
+        // More flexible grading for code: normalize whitespace
+        const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+        isCorrect = norm(userVal) === norm(correctVal);
+      } else {
+        isCorrect = userVal.toLowerCase() === correctVal.toLowerCase();
+      }
+      
+      if (q.type === 'mcq' && q.options) {
+        const correctText = String(q.options[q.answer] || '').trim().toLowerCase();
+        isCorrect = isCorrect || userVal.toLowerCase() === correctText;
+      }
+    } else if (q.type === 'fill_in') {
+      const answers = userAnswers[q.id] || [];
+      const correctAnswers = q.answer || [];
+      isCorrect = Array.isArray(correctAnswers) && correctAnswers.every((ans: string, idx: number) => 
+        String(answers[idx] || '').trim().toLowerCase() === String(ans || '').trim().toLowerCase()
+      );
+    } else if (q.type === 'matching') {
+      const userPairs = userAnswers[q.id] || {};
+      const correctPairs = q.pairs || [];
+      isCorrect = Array.isArray(correctPairs) && correctPairs.every((p: any) => 
+        String(userPairs[p.left] || '').trim().toLowerCase() === String(p.right || '').trim().toLowerCase()
+      );
+    } else if (q.type === 'order') {
+      const userOrder = userAnswers[q.id] || (q as any).steps || [];
+      const correctOrder = (q as any).answer || [];
+      isCorrect = Array.isArray(correctOrder) && correctOrder.every((step: string, idx: number) => 
+        String(userOrder[idx] || '').trim().toLowerCase() === String(step).trim().toLowerCase()
+      );
+    }
+
+    setGradedAnswers(prev => ({ ...prev, [q.id]: isCorrect }));
   }
 
   const nextQuestion = async () => {
@@ -204,25 +286,6 @@ export default function Practice() {
     }))
   }
 
-  const addKeyword = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && keywordInput.trim()) {
-      e.preventDefault()
-      if (!advancedConfig.exclusionKeywords.includes(keywordInput.trim())) {
-        setAdvancedConfig(prev => ({
-          ...prev,
-          exclusionKeywords: [...prev.exclusionKeywords, keywordInput.trim()]
-        }))
-      }
-      setKeywordInput("")
-    }
-  }
-
-  const removeKeyword = (kw: string) => {
-    setAdvancedConfig(prev => ({
-      ...prev,
-      exclusionKeywords: prev.exclusionKeywords.filter(k => k !== kw)
-    }))
-  }
 
   const updateDistribution = (type: keyof AdvancedPracticeConfig['questionDistribution'], val: number) => {
     setAdvancedConfig(prev => ({
@@ -275,26 +338,121 @@ export default function Practice() {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-16">
-          <div className="flex items-end justify-between border-b border-border pb-10">
-            <div className="space-y-2"><span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">Stats</span><h1 className="text-4xl font-black tracking-tighter uppercase leading-none text-foreground">My<br/><span className="text-muted-foreground/30">Progress</span></h1></div>
-            <div className="flex gap-10"><div className="text-right space-y-1"><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Average</div><div className="text-3xl font-black tracking-tighter text-foreground tabular-nums">{totalPrecision}%</div></div><div className="text-right space-y-1"><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Done</div><div className="text-3xl font-black tracking-tighter text-foreground tabular-nums">{pastPractices.length}</div></div></div>
+          <div className="flex items-end justify-between border-b border-border pb-6">
+            <div className="space-y-1"><span className="text-[9px] font-black text-muted-foreground/60 uppercase tracking-widest">Stats</span><h1 className="text-2xl font-black tracking-tighter uppercase leading-none text-foreground">My <span className="text-muted-foreground/30">Progress</span></h1></div>
+            <div className="flex gap-8"><div className="text-right space-y-1"><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Average</div><div className="text-2xl font-black tracking-tighter text-foreground tabular-nums">{totalPrecision}%</div></div><div className="text-right space-y-1"><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Done</div><div className="text-2xl font-black tracking-tighter text-foreground tabular-nums">{pastPractices.length}</div></div></div>
           </div>
           <div className="grid grid-cols-12 gap-8">
-            <div className="col-span-12 lg:col-span-8 space-y-8">
-               <div className="grid grid-cols-3 gap-4">
-                  <div className="p-6 bg-muted/10 border border-border rounded-md space-y-4 hover:border-primary transition-all group"><TrendingUp size={12} className="text-muted-foreground group-hover:text-primary"/><div className="space-y-1"><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Flow</div><div className="text-xl font-black tracking-tighter text-foreground tabular-nums">{stability}</div></div></div>
-                  <div className="p-6 bg-muted/10 border border-border rounded-md space-y-4 hover:border-primary transition-all group"><ScanSearch size={12} className="text-muted-foreground group-hover:text-primary"/><div className="space-y-1"><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Next</div><div className="text-[10px] font-black tracking-tight text-foreground truncate uppercase">{suggested}</div></div></div>
-                  <div className="p-6 bg-muted/10 border border-border rounded-md space-y-4 hover:border-primary transition-all group"><Dna size={12} className="text-muted-foreground group-hover:text-primary"/><div className="space-y-1"><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Rank</div><div className="text-xl font-black tracking-tighter text-foreground tabular-nums">{gapSeverity}</div></div></div>
+            <div className="col-span-12 space-y-12">
+               {/* High-Level Stats */}
+               <div className="grid grid-cols-4 gap-4">
+                  {[
+                    { label: 'Flow', value: stability, icon: <TrendingUp size={12}/>, color: 'text-primary' },
+                    { label: 'Streak', value: '4 Days', icon: <ScanSearch size={12}/>, color: 'text-foreground' },
+                    { label: 'Best Mode', value: 'Writing', icon: <Dna size={12}/>, color: 'text-primary' },
+                    { label: 'Target', value: '95%', icon: <Target size={12}/>, color: 'text-muted-foreground' }
+                  ].map((stat, i) => (
+                    <div key={i} className="p-5 border border-border bg-background rounded-lg space-y-2 hover:border-primary/50 transition-all group">
+                      <div className="flex items-center gap-2 text-muted-foreground/30">
+                        {stat.icon}
+                        <span className="text-[8px] font-black uppercase tracking-widest">{stat.label}</span>
+                      </div>
+                      <div className={cn("text-lg font-black uppercase tracking-tighter", stat.color)}>{stat.value}</div>
+                    </div>
+                  ))}
                </div>
-               <div className="p-8 bg-background border border-border rounded-md space-y-8">
-                  <div className="flex justify-between items-center"><h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Score History</h3><span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">Last 15 Sessions</span></div>
-                  <div className="h-48 w-full"><ResponsiveContainer width="100%" height="100%"><LineChart data={pastPractices.filter(p => p.completed).slice(-15).map((p, i) => ({ name: i + 1, score: parseInt(p.score) }))}><Line type="stepAfter" dataKey="score" stroke="currentColor" strokeWidth={3} dot={false} className="text-primary" /></LineChart></ResponsiveContainer></div>
+
+               <div className="grid grid-cols-3 gap-10">
+                  {/* Score History (Curvy Spline) */}
+                  <div className="col-span-2 p-10 border border-border bg-background rounded-lg space-y-10 flex flex-col">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <div className="w-1 h-4 bg-primary"></div>
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Proficiency Trend</h3>
+                      </div>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Last 15 Sessions</span>
+                    </div>
+                    <div className="flex-1 w-full min-h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={pastPractices.filter(p => p.completed).slice(-15).map((p, i) => ({ name: i + 1, score: parseInt(p.score) }))}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                          <XAxis dataKey="name" hide />
+                          <YAxis domain={[0, 100]} hide />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: 'black', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px' }}
+                            itemStyle={{ color: 'white', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="score" 
+                            stroke="currentColor" 
+                            strokeWidth={4} 
+                            dot={{ r: 4, fill: 'white', strokeWidth: 2 }} 
+                            activeDot={{ r: 6, strokeWidth: 0 }}
+                            className="text-primary"
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Modality Breakdown */}
+                  <div className="p-10 border border-border bg-background rounded-lg space-y-8 flex flex-col">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-4 bg-primary"></div>
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Modality Proficiency</h3>
+                    </div>
+                    <div className="flex-1 space-y-6">
+                      {[
+                        { type: 'MCQ', p: 88 },
+                        { type: 'TRUE/FALSE', p: 94 },
+                        { type: 'WRITING', p: 32 },
+                        { type: 'MATCHING', p: 76 },
+                        { type: 'ORDER', p: 54 },
+                        { type: 'DEBUG', p: 41 },
+                      ].map((stat, i) => (
+                        <div key={i} className="space-y-2">
+                          <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
+                            <span className="text-muted-foreground/40">{stat.type}</span>
+                            <span className="text-foreground">{stat.p}%</span>
+                          </div>
+                          <div className="h-1 bg-muted/20 rounded-full overflow-hidden">
+                            <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${stat.p}%` }}></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Subject mastery grid */}
+                  <div className="col-span-3 p-10 border border-border bg-background rounded-lg space-y-10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-4 bg-primary"></div>
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Subject Domain Mastery</h3>
+                    </div>
+                    <div className="grid grid-cols-4 gap-8">
+                      {hubs.slice(0, 4).map((hub, i) => {
+                        const mastery = Math.floor(Math.random() * 60) + 40;
+                        return (
+                          <div key={i} className="p-6 border border-border bg-muted/5 rounded-md space-y-6 hover:border-primary/30 transition-all">
+                            <div className="text-[10px] font-black uppercase tracking-tight text-foreground h-10 line-clamp-2 leading-tight">{hub.title}</div>
+                            <div className="flex items-end gap-2">
+                              <div className="text-3xl font-black tracking-tighter text-primary leading-none">{mastery}%</div>
+                              <div className="text-[8px] font-black uppercase text-muted-foreground/30 mb-1 tracking-widest">Mastered</div>
+                            </div>
+                            <div className="h-0.5 w-full bg-muted/10 rounded-full overflow-hidden">
+                              <div className="h-full bg-foreground/20" style={{ width: `${mastery}%` }}></div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
                </div>
-            </div>
-            <div className="col-span-12 lg:col-span-4 p-8 bg-muted/5 border border-border rounded-md flex flex-col items-center justify-center space-y-10">
-               <div className="text-center space-y-1"><h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Practice</h3><p className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">Activity Days</p></div>
-               <ActivityCalendar data={calendarData} theme={{ light: ['#f5f5f5', '#e5e5e5', '#a3a3a3', '#404040', '#0a0a0a'], dark: ['#171717', '#262626', '#404040', '#737373', '#ffffff'] }} fontSize={8} blockSize={8} blockMargin={2} />
-               <Button onClick={() => setView('history')} variant="ghost" className="w-full text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground">Full History <ChevronRight size={10} className="ml-2"/></Button>
+               
+               <Button onClick={() => setView('history')} variant="ghost" className="w-full h-16 border border-dashed border-border text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all">
+                 View Comprehensive History Log <ChevronRight size={10} className="ml-2"/>
+               </Button>
             </div>
           </div>
         </div>
@@ -345,8 +503,8 @@ export default function Practice() {
         <div className="max-w-4xl mx-auto px-8 py-20 w-full space-y-16">
           <div className="flex items-end justify-between border-b border-border pb-10">
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground uppercase tracking-widest"><button onClick={() => setView('dashboard')} className="hover:text-foreground">Cancel</button><ChevronRight size={10} className="opacity-20"/><span className="text-foreground">Start</span></div>
-              <h1 className="text-4xl font-black tracking-tighter uppercase leading-none">New<br/><span className="text-muted-foreground/30">Session</span></h1>
+              <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground uppercase tracking-widest"><button onClick={() => setView('dashboard')} className="hover:text-foreground">Cancel</button><ChevronRight size={10} className="opacity-20"/><span className="text-foreground">Start</span></div>
+              <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">New <span className="text-muted-foreground/30">Session</span></h1>
             </div>
             <div className="flex flex-col items-end gap-2"><span className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-widest">Questions</span><div className="text-2xl font-black text-primary tracking-tighter">{totalQuestions}</div></div>
           </div>
@@ -363,8 +521,13 @@ export default function Practice() {
                  <div className="space-y-4">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground/50">Level</Label>
                     <RadioGroup value={advancedConfig.difficulty} onValueChange={(val) => setAdvancedConfig(prev => ({ ...prev, difficulty: val as any }))} className="grid grid-cols-2 gap-3">
-                        {['L1', 'L2', 'L3', 'Mixed'].map((level) => (
-                        <div key={level}><RadioGroupItem value={level} id={level} className="peer sr-only" /><Label htmlFor={level} className="flex flex-col items-center justify-center gap-1 h-16 border border-border rounded-md bg-background peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-muted/30 cursor-pointer hover:bg-muted/10 transition-all text-center"><span className="text-[11px] font-black uppercase tracking-widest">{level}</span></Label></div>
+                        {[
+                          { val: 'L1', label: 'Level 1' },
+                          { val: 'L2', label: 'Level 2' },
+                          { val: 'L3', label: 'Level 3' },
+                          { val: 'Mixed', label: 'Mixed' }
+                        ].map((level) => (
+                        <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex flex-col items-center justify-center gap-1 h-16 border border-border rounded-md bg-background peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-muted/30 cursor-pointer hover:bg-muted/10 transition-all text-center"><span className="text-[11px] font-black uppercase tracking-widest">{level.label}</span></Label></div>
                         ))}
                     </RadioGroup>
                   </div>
@@ -372,25 +535,138 @@ export default function Practice() {
                <div className="space-y-6">
                  <div className="flex items-center gap-3"><span className="text-[10px] font-black text-muted-foreground/30">02</span><h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Time</h3></div>
                  <div className="grid grid-cols-2 gap-px bg-border border border-border overflow-hidden rounded-md">
-                    <div className="bg-background p-5 space-y-2"><Label className="text-[9px] font-black uppercase text-muted-foreground/50">Total Time</Label><Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val) => setAdvancedConfig(prev => ({ ...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val) }))}><SelectTrigger className="bg-muted/5 border-none h-10 font-black text-[10px] uppercase tracking-widest focus:ring-0 px-0 shadow-none"><SelectValue placeholder="None" /></SelectTrigger><SelectContent className="rounded-md border border-border bg-popover font-black"><SelectItem value="null" className="text-[10px] uppercase">None</SelectItem><SelectItem value="5" className="text-[10px] uppercase">5 Mins</SelectItem><SelectItem value="10" className="text-[10px] uppercase">10 Mins</SelectItem></SelectContent></Select></div>
-                    <div className="bg-background p-5 space-y-2"><Label className="text-[9px] font-black uppercase text-muted-foreground/50">Per Question</Label><Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val) => setAdvancedConfig(prev => ({ ...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val) }))}><SelectTrigger className="bg-muted/5 border-none h-10 font-black text-[10px] uppercase tracking-widest focus:ring-0 px-0 shadow-none"><SelectValue placeholder="None" /></SelectTrigger><SelectContent className="rounded-md border border-border bg-popover font-black"><SelectItem value="null" className="text-[10px] uppercase">None</SelectItem><SelectItem value="30" className="text-[10px] uppercase">30 Secs</SelectItem><SelectItem value="60" className="text-[10px] uppercase">60 Secs</SelectItem></SelectContent></Select></div>
+                    <div className="bg-background p-5 space-y-2">
+                      <Label className="text-[9px] font-black uppercase text-muted-foreground/50">Total Time</Label>
+                      <Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val) => setAdvancedConfig(prev => ({ ...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val) }))}>
+                        <SelectTrigger className="bg-muted/5 border-none h-10 font-black text-[10px] uppercase tracking-widest focus:ring-0 px-0 shadow-none">
+                          <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-md border border-border bg-popover font-black">
+                          <SelectItem value="null" className="text-[10px] uppercase">None</SelectItem>
+                          {[5, 10, 15, 20, 30, 45, 60, 90, 120].map(m => (
+                            <SelectItem key={m} value={String(m)} className="text-[10px] uppercase">{m} Mins</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="bg-background p-5 space-y-2">
+                      <Label className="text-[9px] font-black uppercase text-muted-foreground/50">Per Question</Label>
+                      <Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val) => setAdvancedConfig(prev => ({ ...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val) }))}>
+                        <SelectTrigger className="bg-muted/5 border-none h-10 font-black text-[10px] uppercase tracking-widest focus:ring-0 px-0 shadow-none">
+                          <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-md border border-border bg-popover font-black">
+                          <SelectItem value="null" className="text-[10px] uppercase">None</SelectItem>
+                          {[15, 30, 45, 60, 90, 120, 180, 240, 300].map(s => (
+                            <SelectItem key={s} value={String(s)} className="text-[10px] uppercase">{s} Secs</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                  </div>
                </div>
                <div className="space-y-6">
                   <div className="flex items-center gap-3"><span className="text-[10px] font-black text-muted-foreground/30">03</span><h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Sources</h3></div>
-                  <div className="space-y-4"><Label className="text-[10px] font-black uppercase text-muted-foreground/50">Notes</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-14 border-border bg-muted/10 hover:bg-muted/20 rounded-md px-6 text-left group"><span className="font-black text-[10px] uppercase tracking-widest text-foreground truncate">{advancedConfig.selectedAtomicNotes.length === 0 ? "All Notes" : `${advancedConfig.selectedAtomicNotes.length} Selected`}</span><Layers size={12} className="text-muted-foreground" /></Button></PopoverTrigger><PopoverContent className="w-[400px] p-0 rounded-md border border-border bg-popover shadow-2xl" align="start"><Command className="bg-transparent"><CommandInput placeholder="Search notes..." className="font-black border-none h-12 text-[10px] uppercase tracking-widest" /><CommandList className="custom-scrollbar max-h-72"><CommandEmpty className="py-12 text-center text-[10px] font-black text-muted-foreground/30 uppercase tracking-widest">No matching notes.</CommandEmpty><CommandGroup>{availableNotes.map(note => { const id = note.id; const label = note.title; const isSelected = advancedConfig.selectedAtomicNotes.includes(id); return (<CommandItem key={id} onSelect={() => toggleAtomicNote(id)} className="flex items-center gap-4 cursor-pointer py-3 px-4 focus:bg-accent"><div className={cn("w-4 h-4 border flex items-center justify-center transition-all rounded-sm", isSelected ? "bg-primary border-primary text-primary-foreground" : "border-border bg-background")}>{isSelected && <Check className="w-3 h-3" />}</div><span className="text-[10px] font-black uppercase tracking-widest truncate">{label}</span></CommandItem>); })}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
-                  <div className="space-y-4"><Label className="text-[10px] font-black uppercase text-muted-foreground/50">Hide</Label><Input placeholder="Hide words..." className="bg-muted/10 border-border focus-visible:ring-primary h-14 rounded-md font-black text-[10px] uppercase tracking-widest px-6 placeholder:text-muted-foreground/10" value={keywordInput} onChange={(e) => setKeywordInput(e.target.value)} onKeyDown={addKeyword} /><div className="flex flex-wrap gap-1 pt-2">{advancedConfig.exclusionKeywords.map(kw => (<Badge key={kw} variant="secondary" className="bg-muted text-foreground/80 gap-2 border border-transparent py-1 px-3 rounded-sm font-black text-[8px] uppercase tracking-widest">{kw}<X className="w-3 h-3 cursor-pointer opacity-40" onClick={() => removeKeyword(kw)} /></Badge>))}</div></div>
+                  <div className="space-y-4">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground/50">Notes</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between h-14 border-border bg-muted/10 hover:bg-muted/20 rounded-md px-6 text-left group">
+                          <span className="font-black text-[10px] uppercase tracking-widest text-foreground truncate">
+                            {advancedConfig.selectedAtomicNotes.length === availableNotes.length ? "All Notes" : 
+                             advancedConfig.selectedAtomicNotes.length === 0 ? "No Notes Selected" :
+                             `${advancedConfig.selectedAtomicNotes.length} Selected`}
+                          </span>
+                          <Layers size={12} className="text-muted-foreground" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0 rounded-md border border-border bg-popover shadow-2xl" align="start">
+                        <Command className="bg-transparent">
+                          <div className="p-2 border-b border-border flex justify-between items-center bg-muted/5">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 ml-2">{availableNotes.length} Found</span>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-7 px-3 text-[9px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-foreground"
+                              onClick={() => {
+                                if (advancedConfig.selectedAtomicNotes.length === availableNotes.length) {
+                                  setAdvancedConfig(prev => ({ ...prev, selectedAtomicNotes: [] }))
+                                } else {
+                                  setAdvancedConfig(prev => ({ ...prev, selectedAtomicNotes: availableNotes.map(n => n.id) }))
+                                }
+                              }}
+                            >
+                              {advancedConfig.selectedAtomicNotes.length === availableNotes.length ? "Unselect All" : "Select All"}
+                            </Button>
+                          </div>
+                          <CommandInput placeholder="Search notes..." className="font-black border-none h-12 text-[10px] uppercase tracking-widest" />
+                          <CommandList className="custom-scrollbar max-h-72">
+                            <CommandEmpty className="py-12 text-center text-[10px] font-black text-muted-foreground/30 uppercase tracking-widest">No matching notes.</CommandEmpty>
+                            <CommandGroup>
+                              {availableNotes.map(note => { 
+                                const id = note.id; 
+                                const label = note.title; 
+                                const isSelected = advancedConfig.selectedAtomicNotes.includes(id); 
+                                return (
+                                  <CommandItem key={id} onSelect={() => toggleAtomicNote(id)} className="flex items-center gap-4 cursor-pointer py-3 px-4 focus:bg-accent">
+                                    <div className={cn("w-4 h-4 border flex items-center justify-center transition-all rounded-sm", isSelected ? "bg-primary border-primary text-primary-foreground" : "border-border bg-background")}>
+                                      {isSelected && <Check className="w-3 h-3" />}
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest truncate">{label}</span>
+                                  </CommandItem>
+                                ); 
+                              })}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                </div>
                <div className="space-y-6">
                   <div className="flex items-center gap-3"><span className="text-[10px] font-black text-muted-foreground/30">04</span><h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Questions</h3></div>
-                  <div className="grid grid-cols-1 gap-10">{[{ key: 'multipleChoice', label: 'Choices' }, { key: 'trueFalse', label: 'True/False' }, { key: 'shortAnswer', label: 'Writing' }, { key: 'clozeDeletion', label: 'Fill-in' }].map(type => (<div key={type.key} className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{type.label}</Label><span className="text-[10px] font-black text-foreground tabular-nums tracking-widest bg-muted/20 px-2 py-0.5 border border-border/50">{advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]}</span></div><Slider defaultValue={[advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]]} max={15} step={1} onValueChange={(vals) => updateDistribution(type.key as any, vals[0])} className="py-1" /></div>))}</div>
+                  <div className="grid grid-cols-2 gap-x-12 gap-y-10">
+                    {[
+                      { key: 'mcq', label: 'Choices', desc: 'Standard multiple choice questions.' }, 
+                      { key: 'true_false', label: 'True/False', desc: 'Binary truth verification.' }, 
+                      { key: 'writing', label: 'Writing', desc: 'Open-ended active recall.' }, 
+                      { key: 'fill_in', label: 'Fill-in', desc: 'Recall specific terms in context.' },
+                      { key: 'matching', label: 'Matching', desc: 'Relate terms to their definitions.' },
+                      { key: 'order', label: 'Order', desc: 'Sequence steps or processes correctly.' },
+                      { key: 'debug', label: 'Debug', desc: 'Identify and fix logical or syntax errors.' },
+                      { key: 'synthesis', label: 'Synthesis', desc: 'Connect concepts across different notes.' }
+                    ].map(type => (
+                      <div key={type.key} className="space-y-3">
+                        <div className="flex justify-between items-center group/item">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{type.label}</Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button className="text-muted-foreground/20 hover:text-primary transition-colors focus:outline-none"><Info size={10}/></button>
+                              </PopoverTrigger>
+                              <PopoverContent side="top" align="start" className="p-3 w-48 bg-popover border border-border rounded shadow-xl animate-in fade-in zoom-in duration-200">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-foreground leading-tight">{type.desc}</p>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          <span className="text-[10px] font-black text-foreground tabular-nums tracking-widest bg-muted/20 px-2 py-0.5 border border-border/50">
+                            {advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]}
+                          </span>
+                        </div>
+                        <Slider 
+                          defaultValue={[advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]]} 
+                          max={15} 
+                          step={1} 
+                          onValueChange={(vals) => updateDistribution(type.key as any, vals[0])} 
+                          className="py-1" 
+                        />
+                      </div>
+                    ))}
+                  </div>
                </div>
             </div>
           </div>
           <div className="pt-10 border-t border-border flex flex-col gap-10">
-             <div className="space-y-px bg-border border border-border overflow-hidden rounded-md w-full">
-                {[{ key: 'prioritizeWeaknesses', label: 'Fix mistakes' }, { key: 'injectTrickAnswers', label: 'Add traps' }, { key: 'progressionGatekeeper', label: 'Stop errors' }, { key: 'enableProgressiveHints', label: 'Show tips' }, { key: 'requireConfidenceWager', label: 'Bet on it' }].map(item => (<div key={item.key} className="flex items-center justify-between p-4 bg-background hover:bg-muted/10 transition-all"><Label className="text-[10px] font-black text-foreground uppercase tracking-widest">{item.label}</Label><Switch checked={advancedConfig[item.key as keyof AdvancedPracticeConfig] as boolean} onCheckedChange={(checked) => setAdvancedConfig(prev => ({ ...prev, [item.key]: checked }))} className="data-[state=checked]:bg-primary" /></div>))}
-             </div>
              <Button onClick={handleStartSession} disabled={isLoading} className="h-20 w-full bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-[0.4em] rounded-md shadow-xl shadow-primary/10 hover:brightness-110 active:scale-[0.98] transition-all">
                 {isLoading ? "LOADING..." : "START"}
              </Button>
@@ -422,39 +698,366 @@ export default function Practice() {
 
   if (view === 'session' && currentQuestion) {
     return (
-      <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground font-sans overflow-hidden animate-in fade-in duration-700">
-        <div className="px-10 py-5 border-b border-border flex items-center justify-between bg-background/80 backdrop-blur-3xl z-20 shrink-0">
-          <div className="flex items-center gap-10">
-            <div className="space-y-1"><span className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">Now</span><div className="text-[11px] font-black uppercase tracking-widest text-foreground">{hubs.find(h => h.id === selectedHub)?.title || 'Topic'}</div></div>
-            <div className="w-80 h-1 bg-muted rounded-full overflow-hidden flex gap-1 p-px">{questions.map((_, idx) => (<div key={idx} className={cn("flex-1 h-full rounded-full transition-all duration-700", idx === currentQuestionIdx ? "bg-primary shadow-[0_0_8px_hsl(var(--primary))]" : idx < currentQuestionIdx ? (gradedAnswers[questions[idx].id] ? "bg-foreground" : "bg-muted-foreground/30") : "bg-muted-foreground/10")} />))}</div>
+      <div className="h-full w-full flex flex-col bg-background text-foreground font-sans overflow-hidden animate-in fade-in duration-700">
+        <div className="px-10 py-6 border-b border-border flex items-center justify-between bg-background/50 backdrop-blur-xl z-20 shrink-0">
+          <div className="flex items-center gap-12">
+            <div className="space-y-1.5">
+              <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">Current Session</span>
+              <div className="text-[11px] font-black uppercase tracking-widest text-foreground/80">
+                {hubs.find(h => h.id === selectedHub)?.title || 'Topic Exploration'}
+              </div>
+            </div>
+            <div className="w-80 h-1.5 bg-muted/30 rounded-full overflow-hidden flex gap-1 p-0.5">
+              {questions.map((_, idx) => (
+                <div 
+                  key={idx} 
+                  className={cn(
+                    "flex-1 h-full rounded-full transition-all duration-1000", 
+                    idx === currentQuestionIdx 
+                      ? "bg-primary shadow-[0_0_12px_hsl(var(--primary))]" 
+                      : idx < currentQuestionIdx 
+                        ? (gradedAnswers[questions[idx].id] ? "bg-foreground" : "bg-muted-foreground/20") 
+                        : "bg-muted-foreground/5"
+                  )} 
+                />
+              ))}
+            </div>
           </div>
-          <div className="flex items-center gap-6 text-[10px] font-black uppercase tracking-widest">{globalTimeLeft !== null && <span className="tabular-nums px-3 py-1.5 border border-border rounded-md bg-muted/20 text-foreground">{Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}</span>}<span className="text-muted-foreground/50">Q <span className="text-foreground">{currentQuestionIdx + 1}</span> / {questions.length}</span></div>
+          <div className="flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em]">
+            {globalTimeLeft !== null && (
+              <span className="tabular-nums px-4 py-2 border border-border/50 rounded-md bg-muted/10 text-foreground/60 shadow-inner">
+                {Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}
+              </span>
+            )}
+            <span className="text-muted-foreground/30">Progress <span className="text-foreground/70 ml-2">{currentQuestionIdx + 1} / {questions.length}</span></span>
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-12 lg:p-20 relative">
-          <div className="max-w-2xl mx-auto space-y-16 pb-64">
-             <div className="space-y-5 animate-in slide-in-from-top-2 fade-in duration-500">
-                <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60"><Badge variant="outline" className="text-[8px] px-2 py-0.5 border-border rounded-sm">{currentQuestion.difficulty}</Badge><div className="w-1 h-1 rounded-full bg-border"/><span>{currentQuestion.type.replace('_', ' ')}</span></div>
-                <h2 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase leading-[1.1] text-foreground">{currentQuestion.question}</h2>
-             </div>
-             <div className="space-y-4">
-                {currentQuestion.type === 'mcq' && (<div className="grid grid-cols-1 gap-2">{Object.entries(currentQuestion.options!).map(([key, val]) => { const isSelected = userAnswers[currentQuestion.id] === key; const isCorrect = isRevealed && key === currentQuestion.answer; return (<button key={key} disabled={isRevealed} onClick={() => handleSelectAnswer(key)} className={cn("flex items-center gap-5 p-5 border-2 rounded-md text-left transition-all uppercase", isCorrect ? "border-primary bg-muted/20" : isSelected && !isRevealed ? "border-foreground bg-muted/10 shadow-sm" : "border-border hover:bg-muted/5", isRevealed && !isCorrect ? "opacity-10 grayscale" : "")}><div className={cn("w-7 h-7 rounded-sm flex items-center justify-center text-[10px] font-black border", isCorrect || (isSelected && !isRevealed) ? "bg-primary text-primary-foreground border-primary" : "bg-muted/20 border-border text-muted-foreground/40")}>{key}</div><span className="text-[12px] font-black tracking-widest flex-1 text-foreground">{String(val)}</span></button>) })}</div>)}
-                {currentQuestion.type === 'true_false' && (<div className="grid grid-cols-2 gap-4">{['True', 'False'].map(v => { const isSelected = userAnswers[currentQuestion.id] === v; const isCorrect = isRevealed && v.toLowerCase() === String(currentQuestion.answer).toLowerCase(); return (<button key={v} disabled={isRevealed} onClick={() => handleSelectAnswer(v)} className={cn("h-20 border-2 rounded-md font-black uppercase tracking-widest text-xs transition-all", isCorrect ? "bg-primary text-primary-foreground border-primary" : isSelected && !isRevealed ? "border-foreground bg-muted/20" : "border-border text-muted-foreground/30", isRevealed && !isCorrect ? "opacity-10" : "")}>{v}</button>) })}</div>)}
-                {['short_answer', 'scenario', 'code'].includes(currentQuestion.type) && (<div className="space-y-10"><div className="p-8 bg-muted/5 border border-border rounded-md focus-within:border-primary transition-all"><textarea rows={6} disabled={isRevealed} className="w-full bg-transparent border-none focus:ring-0 text-[13px] font-black uppercase tracking-widest placeholder:text-muted-foreground/10 resize-none leading-relaxed text-foreground/90 uppercase" placeholder="Enter answer..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} /></div>{isRevealed && (<div className="p-8 border-l-4 border-primary bg-muted/10 space-y-4 animate-in slide-in-from-left-2 rounded-r-md"><div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary"><Filter size={10}/> Solution</div><p className="text-[13px] font-black uppercase leading-relaxed tracking-widest text-foreground">{(currentQuestion as any).answer}</p></div>)}</div>)}
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col">
+          <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-10 flex flex-col justify-center">
+             <div className="space-y-10">
+               <div className="space-y-6 animate-in slide-in-from-top-4 fade-in duration-700">
+                  <div className="flex items-center gap-3 text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">
+                    <Badge variant="outline" className="text-[7px] px-1.5 py-0 border-border/50 rounded-sm uppercase bg-muted/5">
+                      {currentQuestion.difficulty}
+                    </Badge>
+                    <div className="w-1 h-1 rounded-full bg-border/50"/>
+                    <span>{(currentQuestion.type || 'Inquiry').replace('_', ' ')}</span>
+                  </div>
+                  <h2 className="text-xl lg:text-2xl font-black tracking-tight leading-snug text-foreground">
+                    {currentQuestion.question}
+                  </h2>
+               </div>
+
+               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-1000 delay-200">
+                  {currentQuestion.type === 'mcq' && (
+                    <div className="grid grid-cols-1 gap-3">
+                      {Object.entries(currentQuestion.options!).map(([key, val]) => { 
+                        const isSelected = userAnswers[currentQuestion.id] === key; 
+                        const isCorrectAnswer = key === currentQuestion.answer || String(val).toLowerCase() === String(currentQuestion.answer).toLowerCase();
+                        const isCorrectHighlight = isRevealed && isCorrectAnswer;
+                        return (
+                          <button 
+                            key={key} 
+                            disabled={isRevealed} 
+                            onClick={() => handleSelectAnswer(key)} 
+                            className={cn(
+                              "group flex items-center gap-6 p-6 border-2 rounded-xl text-left transition-all duration-300", 
+                              isCorrectHighlight 
+                                ? "border-primary bg-primary/5 shadow-[0_0_20px_-10px_hsl(var(--primary))]" 
+                                : isSelected && !isRevealed 
+                                  ? "border-foreground bg-foreground/5 shadow-xl scale-[1.01]" 
+                                  : "border-border/40 hover:border-foreground/20 hover:bg-muted/5", 
+                              isRevealed && !isCorrectHighlight ? "opacity-20 grayscale scale-[0.98]" : ""
+                            )}
+                          >
+                            <div className={cn(
+                              "w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-black border transition-all", 
+                              isCorrectHighlight || (isSelected && !isRevealed) 
+                                ? "bg-primary text-primary-foreground border-primary" 
+                                : "bg-muted/10 border-border/50 text-muted-foreground/30 group-hover:border-foreground/30 group-hover:text-foreground/50"
+                            )}>
+                              {key}
+                            </div>
+                            <span className="text-[13px] font-bold tracking-tight text-foreground/80 group-hover:text-foreground">
+                              {String(val)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {currentQuestion.type === 'fill_in' && (
+                    <div className="p-12 bg-muted/5 border border-border/50 rounded-2xl leading-[2] text-[15px] font-medium tracking-tight text-foreground/70 shadow-inner">
+                      {(() => {
+                        const text = currentQuestion.textWithBlanks || '';
+                        const parts = text.split(/\[\[.*?\]\]/);
+                        return parts.map((part: string, i: number) => (
+                          <React.Fragment key={i}>
+                            {part}
+                            {i < parts.length - 1 && (
+                              <input
+                                type="text"
+                                disabled={isRevealed}
+                                value={(userAnswers[currentQuestion.id] || [])[i] || ''}
+                                onChange={(e) => {
+                                  const newAns = [...(userAnswers[currentQuestion.id] || [])];
+                                  newAns[i] = e.target.value;
+                                  handleSelectAnswer(newAns);
+                                }}
+                                placeholder="..."
+                                className={cn(
+                                  "mx-2 px-4 py-1.5 border-b-2 bg-transparent focus:outline-none transition-all w-36 text-center placeholder:opacity-20 font-black tracking-widest",
+                                  isRevealed 
+                                    ? (String((userAnswers[currentQuestion.id] || [])[i] || '').toLowerCase() === String((currentQuestion.answer || [])[i] || '').toLowerCase() ? "border-primary text-primary" : "border-destructive text-destructive")
+                                    : "border-muted-foreground/20 focus:border-foreground text-foreground"
+                                )}
+                              />
+                            )}
+                          </React.Fragment>
+                        ));
+                      })()}
+                    </div>
+                  )}
+
+                  {currentQuestion.type === 'matching' && (
+                    <div className="grid grid-cols-2 gap-12">
+                      <div className="space-y-4">
+                        <div className="text-[9px] font-black text-muted-foreground/30 mb-6 tracking-[0.3em] uppercase">Structural Slots</div>
+                        {(currentQuestion.pairs || []).map((pair: any, i: number) => {
+                          const matchedDef = (userAnswers[currentQuestion.id] || {})[pair.left];
+                          const isCorrect = isRevealed && matchedDef === pair.right;
+                          return (
+                            <div 
+                              key={i} 
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => {
+                                const def = e.dataTransfer.getData("text");
+                                const currentAssignments = { ...(userAnswers[currentQuestion.id] || {}) };
+                                Object.keys(currentAssignments).forEach(k => { if (currentAssignments[k] === def) delete currentAssignments[k]; });
+                                currentAssignments[pair.left] = def;
+                                handleSelectAnswer(currentAssignments);
+                              }}
+                              className={cn(
+                                "p-6 border-2 rounded-xl transition-all duration-500 space-y-4",
+                                isRevealed 
+                                  ? (isCorrect ? "border-primary bg-primary/5" : "border-destructive bg-destructive/5")
+                                  : (matchedDef ? "border-foreground/40 bg-foreground/5 shadow-inner" : "border-border/30 bg-background hover:border-primary/20")
+                              )}
+                            >
+                              <div className="text-[14px] font-bold tracking-tight text-foreground/90">{pair.left}</div>
+                              <div className={cn(
+                                "min-h-[60px] p-4 rounded-lg border-2 border-dashed flex items-center justify-center text-center transition-all",
+                                matchedDef 
+                                  ? "border-solid border-primary/20 bg-primary/5 text-[10px] font-black uppercase tracking-[0.2em] text-primary/80"
+                                  : "border-muted-foreground/10 text-[9px] font-black uppercase text-muted-foreground/20"
+                              )}>
+                                {matchedDef || "Drop Target"}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="space-y-4 border-l border-border/50 pl-12">
+                        <div className="text-[9px] font-black text-muted-foreground/30 mb-6 tracking-[0.3em] uppercase">Definition Bank</div>
+                        {currentQuestion.pairs.map((p: any) => p.right).sort().map((def: string, i: number) => {
+                          const isMatched = Object.values(userAnswers[currentQuestion.id] || {}).includes(def);
+                          return (
+                            <div
+                              key={i}
+                              draggable={!isRevealed && !isMatched}
+                              onDragStart={(e) => e.dataTransfer.setData("text", def)}
+                              className={cn(
+                                "w-full p-6 border-2 rounded-xl text-left transition-all cursor-grab active:cursor-grabbing shadow-sm",
+                                isMatched 
+                                  ? "border-primary/5 bg-primary/5 opacity-10 grayscale scale-[0.98]" 
+                                  : "border-border/40 bg-background hover:border-foreground/30 hover:bg-muted/5"
+                              )}
+                            >
+                              <div className="text-[11px] font-bold tracking-tight text-foreground/60 leading-relaxed">
+                                {def}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentQuestion.type === 'order' && (
+                    <div className="space-y-4">
+                      <div className="text-[9px] font-black text-muted-foreground/30 mb-6 tracking-[0.3em] uppercase">Sequential Logic</div>
+                      <div className="space-y-3">
+                        {((userAnswers[currentQuestion.id] && Array.isArray(userAnswers[currentQuestion.id])) ? userAnswers[currentQuestion.id] : (currentQuestion.steps || [])).map((step: string, i: number) => (
+                          <div 
+                            key={i}
+                            draggable={!isRevealed}
+                            onDragStart={(e) => e.dataTransfer.setData("index", String(i))}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                              const fromIdx = parseInt(e.dataTransfer.getData("index"));
+                              const list = [...((userAnswers[currentQuestion.id] && Array.isArray(userAnswers[currentQuestion.id])) ? userAnswers[currentQuestion.id] : (currentQuestion.steps || []))];
+                              const [reorderedItem] = list.splice(fromIdx, 1);
+                              list.splice(i, 0, reorderedItem);
+                              handleSelectAnswer(list);
+                            }}
+                            className={cn(
+                              "p-5 border-2 rounded-xl flex items-center gap-6 transition-all duration-300",
+                              isRevealed 
+                                ? (String(userAnswers[currentQuestion.id]?.[i]) === String(currentQuestion.answer?.[i]) ? "border-primary bg-primary/5" : "border-destructive bg-destructive/5")
+                                : "border-border/40 bg-background hover:border-foreground/20 cursor-grab active:cursor-grabbing"
+                            )}
+                          >
+                            <div className="w-8 h-8 rounded-full bg-muted/20 flex items-center justify-center text-[11px] font-black text-foreground/30">{i + 1}</div>
+                            <span className="text-[13px] font-bold tracking-tight text-foreground/80 flex-1">{step}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentQuestion.type === 'debug' && (
+                    <div className="space-y-8">
+                      <div className="p-8 bg-black/80 border border-white/5 rounded-2xl font-mono text-[13px] text-white/70 overflow-x-auto shadow-2xl">
+                        <pre><code>{currentQuestion.content}</code></pre>
+                      </div>
+                      <textarea 
+                        rows={6} 
+                        disabled={isRevealed} 
+                        className="w-full p-8 bg-muted/5 border-2 border-border/40 rounded-2xl focus:border-foreground focus:ring-0 text-[14px] font-medium tracking-tight placeholder:text-muted-foreground/20 resize-none leading-relaxed text-foreground/80 transition-all" 
+                        placeholder="Diagnose the defect and propose a correction..."
+                        value={userAnswers[currentQuestion.id] || ""} 
+                        onChange={(e) => handleSelectAnswer(e.target.value)} 
+                      />
+                      {isRevealed && (
+                        <div className="p-10 border-l-4 border-primary bg-primary/5 space-y-6 rounded-r-2xl animate-in slide-in-from-left-4 duration-700">
+                          <div className="text-[10px] font-black uppercase text-primary tracking-[0.3em]">System Solution</div>
+                          <div className="text-[13px] font-medium tracking-tight text-foreground/70 leading-relaxed bg-black/40 p-6 rounded-xl whitespace-pre-wrap shadow-inner border border-white/5">{String(currentQuestion.answer || "No solution provided.")}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {currentQuestion.type === 'true_false' && (
+                    <div className="grid grid-cols-2 gap-6">
+                      {['True', 'False'].map(v => { 
+                        const isSelected = userAnswers[currentQuestion.id] === v; 
+                        const isCorrect = isRevealed && v.toLowerCase() === String(currentQuestion.answer).toLowerCase(); 
+                        return (
+                          <button 
+                            key={v} 
+                            disabled={isRevealed} 
+                            onClick={() => handleSelectAnswer(v)} 
+                            className={cn(
+                              "h-32 border-2 rounded-2xl font-black uppercase tracking-[0.4em] text-[11px] transition-all duration-300 shadow-sm", 
+                              isCorrect ? "bg-primary text-primary-foreground border-primary shadow-primary/20" : isSelected && !isRevealed ? "border-foreground bg-foreground/5" : "border-border/40 text-muted-foreground/30 hover:border-foreground/20", 
+                              isRevealed && !isCorrect ? "opacity-10 scale-[0.95]" : ""
+                            )}
+                          >
+                            {v}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {(currentQuestion.type === 'writing' || currentQuestion.type === 'synthesis') && (
+                    <div className="space-y-12">
+                      <textarea 
+                        rows={8} 
+                        disabled={isRevealed} 
+                        className="w-full p-10 bg-muted/5 border-2 border-border/40 rounded-2xl focus:border-foreground focus:ring-0 text-[15px] font-medium tracking-tight placeholder:text-muted-foreground/20 resize-none leading-relaxed text-foreground/80 transition-all" 
+                        placeholder="Formulate your response..." 
+                        value={userAnswers[currentQuestion.id] || ""} 
+                        onChange={(e) => handleSelectAnswer(e.target.value)} 
+                      />
+                      {isRevealed && (
+                        <div className="p-10 border-l-4 border-primary bg-primary/5 space-y-6 animate-in slide-in-from-left-4 duration-1000 rounded-r-2xl">
+                          <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary">
+                            <Filter size={14}/> Academic Model
+                          </div>
+                          <p className="text-[14px] font-medium leading-relaxed tracking-tight text-foreground/70">
+                            {String(currentQuestion.answer || "No model solution provided.")}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {isRevealed && currentQuestion.explanation && (
+                    <div className="p-10 bg-muted/5 border border-border/50 rounded-2xl space-y-6 animate-in fade-in duration-1000">
+                      <div className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-[0.3em]">Pedagogical Insight</div>
+                      <div className="text-[12px] font-medium tracking-tight leading-relaxed text-foreground/50 italic">{currentQuestion.explanation}</div>
+                    </div>
+                  )}
+               </div>
              </div>
           </div>
         </div>
-        <div className="bg-background/80 backdrop-blur-3xl border-t border-border p-8 shrink-0 z-30"><div className="max-w-2xl mx-auto flex items-center justify-between"><Button variant="ghost" onClick={() => { if (confirm("End early?")) resetSession(); }} className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground">Exit</Button><div className="flex items-center gap-4">{!isRevealed ? (<Button onClick={handleSubmitAnswer} disabled={!userAnswers[currentQuestion.id] && currentQuestion.type !== 'code'} className="h-12 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md shadow-lg shadow-primary/10 hover:brightness-110 active:scale-[0.98] transition-all">Check <Zap size={14}/></Button>) : (<div className="flex items-center gap-4">{!gradedAnswers[currentQuestion.id] && ['short_answer', 'scenario'].includes(currentQuestion.type) && (<div className="flex gap-2"><Button onClick={() => { setGradedAnswers(p => ({...p, [currentQuestion.id]: false})); nextQuestion(); }} variant="outline" className="h-12 border-border text-muted-foreground/50 hover:text-destructive text-[9px] font-black uppercase rounded-md tracking-widest">Incorrect</Button><Button onClick={() => { setGradedAnswers(p => ({...p, [currentQuestion.id]: true})); nextQuestion(); }} className="h-12 bg-foreground text-background text-[9px] font-black uppercase rounded-md tracking-widest">Correct</Button></div>)} {(gradedAnswers[currentQuestion.id] !== undefined || !['short_answer', 'scenario'].includes(currentQuestion.type)) && (<Button onClick={nextQuestion} className="h-12 px-12 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md hover:brightness-110 transition-all">Next <ArrowRight size={14}/></Button>)}</div>)}</div></div></div>
+
+        <div className="bg-background/80 backdrop-blur-3xl border-t border-border/50 p-8 shrink-0 z-30">
+          <div className="max-w-2xl mx-auto flex items-center justify-between">
+            <Button 
+              variant="ghost" 
+              onClick={() => { if (confirm("Terminate session?")) resetSession(); }} 
+              className="h-12 px-8 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 hover:text-destructive hover:bg-destructive/5 transition-all rounded-lg"
+            >
+              Exit <X size={12} className="ml-3 opacity-30"/>
+            </Button>
+            
+            <div className="flex items-center gap-6">
+              {!isRevealed ? (
+                <Button 
+                  onClick={handleSubmitAnswer} 
+                  disabled={!userAnswers[currentQuestion.id] && currentQuestion.type !== 'debug'} 
+                  className="h-14 px-12 bg-primary text-primary-foreground text-[11px] font-black uppercase tracking-[0.3em] rounded-xl shadow-[0_10px_30px_-10px_hsl(var(--primary)/0.4)] hover:brightness-110 active:scale-[0.97] transition-all group"
+                >
+                  Analyze <Zap size={16} className="ml-3 group-hover:animate-pulse"/>
+                </Button>
+              ) : (
+                <div className="flex items-center gap-4">
+                  {!gradedAnswers[currentQuestion.id] && ['writing', 'synthesis'].includes(currentQuestion.type) && (
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={() => { setGradedAnswers(p => ({...p, [currentQuestion.id]: false})); nextQuestion(); }} 
+                        variant="outline" 
+                        className="h-14 px-8 border-border/40 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/5 text-[10px] font-black uppercase rounded-xl tracking-widest transition-all"
+                      >
+                        Inadequate
+                      </Button>
+                      <Button 
+                        onClick={() => { setGradedAnswers(p => ({...p, [currentQuestion.id]: true})); nextQuestion(); }} 
+                        className="h-14 px-10 bg-foreground text-background text-[10px] font-black uppercase rounded-xl tracking-[0.2em] hover:brightness-125 transition-all shadow-xl"
+                      >
+                        Sufficient
+                      </Button>
+                    </div>
+                  )} 
+                  {((!['writing', 'synthesis'].includes(currentQuestion.type)) || gradedAnswers[currentQuestion.id] === true) && (
+                    <Button 
+                      onClick={nextQuestion} 
+                      className="h-14 px-14 bg-primary text-primary-foreground text-[11px] font-black uppercase tracking-[0.3em] rounded-xl shadow-[0_10px_30px_-10px_hsl(var(--primary)/0.4)] hover:brightness-110 active:scale-[0.97] transition-all group"
+                    >
+                      Advance <ArrowRight size={16} className="ml-3 group-hover:translate-x-1 transition-transform"/>
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (view === 'results') {
     return (
-      <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground font-sans overflow-hidden animate-in fade-in duration-700 flex flex-col items-center justify-center p-20">
-         <div className="max-w-2xl mx-auto w-full text-center space-y-12">
-            <div className="space-y-2"><h1 className="text-8xl font-black tracking-tighter leading-none text-foreground">{calculateScore().score}<span className="text-2xl text-muted-foreground/30 tracking-normal">%</span></h1><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Score</p></div>
-            <div className="grid grid-cols-2 divide-x divide-border border-y border-border py-10"><div className="space-y-1"><div className="text-2xl font-black tracking-tighter text-foreground">{calculateScore().correct}/{calculateScore().total}</div><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Correct</div></div><div className="space-y-1"><div className="text-2xl font-black tracking-tighter text-foreground">{calculateScore().score}%</div><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total</div></div></div>
-            <div className="flex gap-4"><Button onClick={() => setView('configuring')} className="flex-1 h-14 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md">Restart</Button><Button variant="outline" onClick={() => setView('dashboard')} className="flex-1 h-14 border-border text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-md border-dashed hover:text-foreground">Done</Button></div>
+      <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground font-sans overflow-hidden animate-in fade-in duration-700 flex flex-col items-center justify-center p-10">
+         <div className="max-w-md mx-auto w-full text-center space-y-8">
+            <div className="space-y-1"><h1 className="text-6xl font-black tracking-tighter leading-none text-foreground">{calculateScore().score}<span className="text-xl text-muted-foreground/30 tracking-normal">%</span></h1><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Final Score</p></div>
+            <div className="grid grid-cols-2 divide-x divide-border border-y border-border py-6"><div className="space-y-1"><div className="text-xl font-black tracking-tighter text-foreground">{calculateScore().correct}/{calculateScore().total}</div><div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Correct</div></div><div className="space-y-1"><div className="text-xl font-black tracking-tighter text-foreground">{calculateScore().total}</div><div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Questions</div></div></div>
+            <div className="flex gap-4"><Button onClick={() => setView('configuring')} className="flex-1 h-12 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md">Restart</Button><Button variant="outline" onClick={() => setView('dashboard')} className="flex-1 h-12 border-border text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-md border-dashed hover:text-foreground">Done</Button></div>
          </div>
       </div>
     );

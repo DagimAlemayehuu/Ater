@@ -4,12 +4,11 @@ from typing import List, Dict, Optional, Union, Literal
 class AdvancedPracticeConfig(BaseModel):
     hubId: str
     selectedAtomicNotes: List[str] = Field(default_factory=list)
-    exclusionKeywords: List[str] = Field(default_factory=list)
     timeBoundDays: Optional[int] = None
     prioritizeWeaknesses: bool = False
     questionDistribution: Dict[str, int] = Field(default_factory=lambda: {
-        "multipleChoice": 0, "trueFalse": 0, "shortAnswer": 0, "scenario": 0,
-        "codeImplementation": 0, "clozeDeletion": 0, "findTheError": 0, "matchingMatrix": 0
+        "mcq": 0, "true_false": 0, "writing": 0, "fill_in": 0,
+        "matching": 0, "order": 0, "debug": 0, "synthesis": 0
     })
     difficulty: Literal["L0", "L1", "L2", "L3", "L4", "Mixed"] = "L1"
     distractorPlausibility: Literal["Low", "Medium", "High"] = "Medium"
@@ -36,10 +35,10 @@ class MCQQuestion(BaseQuestion):
 
 class TrueFalseQuestion(BaseQuestion):
     type: Literal["true_false"]
-    answer: str
+    answer: Union[str, bool]
 
-class ShortAnswerQuestion(BaseQuestion):
-    type: Literal["short_answer"]
+class WritingQuestion(BaseQuestion):
+    type: Literal["writing"]
     answer: str
 
 class ScenarioQuestion(BaseQuestion):
@@ -52,8 +51,8 @@ class CodeQuestion(BaseQuestion):
     answer: str
     language: str
 
-class ClozeQuestion(BaseQuestion):
-    type: Literal["cloze"]
+class FillInQuestion(BaseQuestion):
+    type: Literal["fill_in"]
     textWithBlanks: str
     answer: List[str]
 
@@ -70,10 +69,23 @@ class MatchingQuestion(BaseQuestion):
     type: Literal["matching"]
     pairs: List[MatchingPair]
 
+class OrderQuestion(BaseQuestion):
+    type: Literal["order"]
+    steps: List[str]
+    answer: List[str]
+
+class DebugQuestion(BaseQuestion):
+    type: Literal["debug"]
+    content: str
+    answer: str
+
+class SynthesisQuestion(BaseQuestion):
+    type: Literal["synthesis"]
+    answer: str
+
 Question = Union[
-    MCQQuestion, TrueFalseQuestion, ShortAnswerQuestion, 
-    ScenarioQuestion, CodeQuestion, ClozeQuestion, 
-    FindErrorQuestion, MatchingQuestion
+    MCQQuestion, TrueFalseQuestion, WritingQuestion, FillInQuestion,
+    MatchingQuestion, OrderQuestion, DebugQuestion, SynthesisQuestion
 ]
 
 class PracticeBatch(BaseModel):
