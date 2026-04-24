@@ -4,13 +4,14 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
 import { cn } from '@/lib/utils'
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef, memo } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import ObsidianDatabaseView from '@/routes/obsidian-database-view'
 import { WikiLink, renderWikiLinks } from './WikiLink'
 import mermaid from 'mermaid'
 import { Sparkles, Zap, Copy, Check, RefreshCw, X, Quote } from 'lucide-react'
 import { AiSidecar } from './AiSidecar'
+import MiniPracticeUI from '../MiniPracticeUI'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
@@ -146,6 +147,32 @@ const CodeBlock = ({ language, value }: { language: string | null, value: string
     );
 };
 
+const CodeRenderer = memo((props: any) => {
+    const { className, children, node } = props;
+    const match = /language-([a-zA-Z0-9_-]+)/.exec(className || '')
+    const language = match ? match[1] : null
+    
+    if (language === 'interactive-quiz') {
+        try {
+            const quizData = JSON.parse(String(children).trim());
+            return <MiniPracticeUI question={quizData} />;
+        } catch (e) {
+            return <div className="text-destructive p-4 border border-destructive/30 bg-destructive/10 rounded-xl my-4 text-xs font-mono">Failed to load interactive quiz JSON.</div>;
+        }
+    }
+
+    if (language === 'mermaid') return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />
+    
+    const content = String(children).replace(/\n$/, '');
+    const isBlock = !!match || content.includes('\n') || (node?.position && node.position.start.line !== node.position.end.line);
+    
+    if (isBlock) {
+        return <CodeBlock language={language} value={content} />
+    }
+    
+    return <code className={cn("bg-muted/30 px-1.5 py-0.5 rounded text-[12px] font-mono text-foreground border border-border/5 font-medium mx-0.5", className)} {...props}>{children}</code>
+});
+
 export function MarkdownViewer({ content, onNavigate, path, components }: MarkdownViewerProps) {
     const [selection, setSelection] = useState<string>('');
     const [showPopover, setShowPopover] = useState(false);
@@ -155,39 +182,54 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
 
     const [popoverPosition, setPopoverPosition] = useState<{ top: number, left: number }>({ top: 0, left: 0 });
 
+    // Use refs to keep callbacks stable for the useMemo dependency array
+    const onNavigateRef = useRef(onNavigate);
+    const pathRef = useRef(path);
+    const componentsRef = useRef(components);
+    useEffect(() => {
+        onNavigateRef.current = onNavigate;
+        pathRef.current = path;
+        componentsRef.current = components;
+    }, [onNavigate, path, components]);
+
     const markdownComponents = useMemo(() => ({
-        ...components,
+        ...(componentsRef.current || {}),
         p: ({ node, children, ...props }: any) => {
             const childrenArray = React.Children.toArray(children);
             const textContent = childrenArray.map(c => typeof c === 'string' ? c : '').join(' ');
             
             // Detect and fix horizontal/collapsed connection lists
             if (textContent.includes('- [ ]') || textContent.includes('- [x]')) {
-                const parts = textContent.split(/(?=- \[[ xX]\])/).filter(p => p.trim().length > 0);
-                if (parts.length > 1) {
+                // Split by newline first, then filter for task items to preserve indentation logic correctly
+                const lines = textContent.split('\n').filter(p => p.trim().length > 0 && p.match(/^\s*- \[[ xX]\]/));
+                
+                if (lines.length > 0) {
                     return (
-                        <div className="flex flex-col gap-1 my-6 pl-0 border-l-2 border-border/10 ml-1">
-                            {parts.map((part, i) => {
-                                const isChecked = part.toLowerCase().includes('[x]');
-                                const leadingSpaces = part.match(/^\s*/)?.[0].length || 0;
-                                const depth = Math.floor(leadingSpaces / 2);
-                                const cleanPart = part.replace(/^\s*- \[[ xX]\]/, '').trim();
+                        <div className="flex flex-col gap-1.5 my-6">
+                            {lines.map((line, i) => {
+                                const isChecked = line.toLowerCase().includes('[x]');
+                                // Count leading whitespace to determine indentation depth
+                                const leadingSpaces = line.match(/^\s*/)?.[0].length || 0;
+                                // Obsidian typically uses 4 spaces or 1 tab for a level of indentation
+                                const depth = Math.floor(leadingSpaces / 4);
+                                // Clean up the task marker
+                                const cleanPart = line.replace(/^\s*- \[[ xX]\]/, '').trim();
                                 
                                 return (
-                                    <div key={i} className="flex items-start gap-2 py-0.5 group/task" style={{ marginLeft: depth * 16 }}>
-                                        <div className="mt-1 flex items-center justify-center shrink-0">
+                                    <div key={i} className="flex items-start gap-2.5 py-0.5 group/task" style={{ marginLeft: depth * 24 }}>
+                                        <div className="mt-0.5 flex items-center justify-center shrink-0">
                                             <div className={cn(
-                                                "size-3.5 border border-border/50 rounded-sm flex items-center justify-center transition-colors",
+                                                "size-[15px] border-2 border-border/50 rounded-sm flex items-center justify-center transition-colors",
                                                 isChecked ? "bg-primary/20 border-primary" : "bg-transparent"
                                             )}>
-                                                {isChecked && <Check size={10} className="text-primary" strokeWidth={4} />}
+                                                {isChecked && <Check size={11} className="text-primary" strokeWidth={3.5} />}
                                             </div>
                                         </div>
                                         <div className={cn(
                                             "text-[13px] leading-relaxed transition-all",
-                                            isChecked ? "opacity-30 line-through" : "text-foreground/90 font-medium"
+                                            isChecked ? "opacity-40 line-through decoration-foreground/30" : "text-foreground/90 font-medium"
                                         )}>
-                                            {renderWikiLinks(cleanPart, onNavigate)}
+                                            {renderWikiLinks(cleanPart, onNavigateRef.current)}
                                         </div>
                                     </div>
                                 );
@@ -201,32 +243,32 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                 const str = children as string;
                 if (str.startsWith('/table ')) {
                     const dbName = str.replace('/table ', '').trim();
-                    return <InlineDatabaseResolver dbName={dbName} onNavigate={onNavigate} />;
+                    return <InlineDatabaseResolver dbName={dbName} onNavigate={onNavigateRef.current} />;
                 }
             }
             return (
                 <p className="mb-4 leading-relaxed text-[13px] text-foreground/90 antialiased">
                     {React.Children.map(children, (child) => 
-                        typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child
+                        typeof child === 'string' ? renderWikiLinks(child, onNavigateRef.current) : child
                     )}
                 </p>
             )
         },
         h1: ({ children }: any) => <h1 className="text-2xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-border text-foreground">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigateRef.current) : child)}
         </h1>,
         h2: ({ children }: any) => <h2 className="text-xl font-black mt-8 mb-4 tracking-tight text-foreground">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigateRef.current) : child)}
         </h2>,
         h3: ({ children }: any) => <h3 className="text-lg font-bold mt-6 mb-3 tracking-tight text-foreground/90">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigate) : child)}
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigateRef.current) : child)}
         </h3>,
         h4: ({ children }: any) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] text-muted-foreground/60">{children}</h4>,
         ul: ({ children }: any) => <ul className="list-disc pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ul>,
         ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ol>,
         li: ({ children, className }: any) => {
             const content = React.Children.map(children, (child) => {
-                if (typeof child === 'string') return renderWikiLinks(child, onNavigate);
+                if (typeof child === 'string') return renderWikiLinks(child, onNavigateRef.current);
                 return child;
             });
             const isTask = className?.includes('task-list-item');
@@ -240,26 +282,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
             );
         },
         pre: ({ children }: any) => <div className="not-prose">{children}</div>,
-        code: (props: any) => {
-            const { className, children, node } = props;
-            const match = /language-(\w+)/.exec(className || '')
-            const language = match ? match[1] : null
-            
-            if (language === 'mermaid') return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />
-            
-            // Robust Block Detection:
-            // 1. Has a language class (e.g., ```cpp)
-            // 2. Or is clearly a block in the AST (parent is NOT a paragraph or similar, but here we check position)
-            // 3. Or contains newlines (fenced blocks usually do)
-            const content = String(children).replace(/\n$/, '');
-            const isBlock = !!match || content.includes('\n') || (node?.position && node.position.start.line !== node.position.end.line);
-            
-            if (isBlock) {
-                return <CodeBlock language={language} value={content} />
-            }
-            
-            return <code className={cn("bg-muted/30 px-1.5 py-0.5 rounded text-[12px] font-mono text-foreground border border-border/5 font-medium mx-0.5", className)} {...props}>{children}</code>
-        },
+        code: CodeRenderer,
         input: ({ node, type, checked, ...props }: any) => {
             if (type === 'checkbox') {
                 return (
@@ -267,12 +290,12 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                         type="checkbox" 
                         defaultChecked={checked} 
                         onChange={async (e) => {
-                            if (!path) return;
+                            if (!pathRef.current) return;
                             const newChecked = e.target.checked;
                             const line = node?.position?.start?.line;
                             if (line) {
                                 try {
-                                    const res = await sidecarApi.readObsidianNote(path);
+                                    const res = await sidecarApi.readObsidianNote(pathRef.current);
                                     const lines = res.content.split('\n');
                                     // remark positions are 1-indexed, but frontmatter might shift it depending on how the parser handles it.
                                     // Usually remark parses the whole file including frontmatter if it's not stripped.
@@ -280,7 +303,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                                     if (targetLine && targetLine.match(/\[[ xX]\]/)) {
                                         lines[line - 1] = targetLine.replace(/\[[ xX]\]/, `[${newChecked ? 'x' : ' '}]`);
                                         const updatedContent = lines.join('\n');
-                                        await sidecarApi.updateObsidianNote(path, updatedContent);
+                                        await sidecarApi.updateObsidianNote(pathRef.current, updatedContent);
                                         
                                         // Update atomic note if it's a wikilink connection
                                         const wikilinkMatch = targetLine.match(/\[\[(.*?)\]\]/);
@@ -397,7 +420,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                 {children}
             </a>
         )
-    }), [onNavigate]);
+    }), []);
 
     const handleMouseUp = (e?: React.MouseEvent | React.KeyboardEvent) => {
         if (e && (e.target as HTMLElement).closest('.stop-selection-clear')) return;

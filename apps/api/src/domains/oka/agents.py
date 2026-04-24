@@ -215,21 +215,23 @@ class WriterAgent:
         
         h1, h2 = dynamic_map.get(persona_id, ("Core Mechanics", "Constraints & Limitations"))
         
-        sys_prompt = f"""You are the {persona_id} persona.
-MANDATE: Extract the core theory. 
+        sys_prompt = f"""You are a Senior Engineer acting as the {persona_id} persona.
+MANDATE: Write dense, highly technical prose to extract the core theory.
 DO NOT output JSON. Output EXACTLY this Markdown format:
 
 # 1. Technical Definition
-(Provide a highly specific, 2-sentence formal definition directly from the source. No analogies. Use `inline_code` for technical terms.)
+(Provide a highly specific, 2-sentence formal definition directly from the source. Use `inline_code` for technical terms.)
 
-# 2. Mental Model
-(Provide an analogy and explanation that a 10-year-old can easily understand. Break down the core logic simply.)
+# 2. {h1}
+(Max 4 bullet points detailing the core mechanics based on your Persona focus. Maintain extreme technical density.)
 
-# 3. {h1}
-(Max 4 bullet points detailing the core mechanics based on your Persona focus.)
-
-# 4. {h2}
+# 3. {h2}
 (Max 4 bullet points detailing the limitations, thresholds, or constraints based on your Persona focus.)
+
+RULES:
+1. NO intro/outro filler.
+2. BAN the word "Imagine" and childish analogies (no toys, boxes, or recipes). Use structural analogies (e.g., fluid dynamics, architecture) ONLY if necessary.
+3. Use `inline_code` for all terminology.
 """
         msg = [("system", sys_prompt), ("human", f"Concept: {note_schema.title}\n\nSource Excerpt:\n{source_text[:10000]}")]
         
@@ -245,75 +247,139 @@ DO NOT output JSON. Output EXACTLY this Markdown format:
         return NoteContent(markdown_body=theory_content, search_keywords=[])
 
     async def generate_probes(self, note_title: str, note_body: str, source_text: str, primary_language: str, all_concepts: str):
+        import random
         # We try to infer persona from the headings in note_body to pick the right artifact/question
         persona_map = {
-            "Syntax Mechanics": ("C++/Rust Code Block", "Find the memory leak/bug."),
-            "Architecture Topology": ("Mermaid Sequence Diagram", "What breaks under 10x load?"),
-            "Schema Design": ("ER Diagram Block", "Write an optimized SQL JOIN for this schema."),
-            "Spatial Adjacency": ("Origin-Insertion Table", "What fails if this nerve is severed?"),
-            "Biochemical Pathway": ("Trigger-Response Flowchart", "How does this pathology progress?"),
-            "Statutory Elements": ("If-Then-Else Legal Matrix", "Does this specific edge-case violate the rule?"),
-            "Ratio Decidendi": ("IRAC Table", "How does this compare to a landmark case?"),
-            "Physical Forces": ("Force-Balance / Spec Table", "What happens if yield limit is exceeded?"),
-            "Signal Propagation": ("Truth Table / Timing Diagram", "Calculate the impedance mismatch."),
-            "Axiomatic Foundation": ("LaTeX Step-by-Step Proof", "Prove this edge case is invalid."),
-            "Statistical Rigor": ("Methodology Flowchart", "Identify the confounding variable."),
-            "Primary Catalysts": ("Annotated Timeline", "What was the immediate trigger?"),
-            "Competing Ideologies": ("Power/Interest Matrix", "Which stakeholder benefits most?"),
-            "Syntactical Structure": ("Sentence Parsing Tree", "Identify the grammatical error."),
-            "Cultural Context": ("Idiom Translation Matrix", "When would using this idiom be inappropriate?"),
-            "Value Proposition": ("SWOT Analysis Table", "How does this combat a specific competitor?"),
-            "Valuation Metrics": ("DCF Calculation Block", "What happens if the discount rate increases?"),
-            "Medium Mechanics": ("Layering Technique List", "Why did the artist use this specific medium here?"),
-            "Aesthetic Philosophy": ("Critique Comparison", "How does this piece rebel against its predecessor?")
+            "Syntax Mechanics": "C++/Rust Code Block",
+            "Architecture Topology": "Mermaid Sequence Diagram",
+            "Schema Design": "ER Diagram Block",
+            "Spatial Adjacency": "Origin-Insertion Table",
+            "Biochemical Pathway": "Trigger-Response Flowchart",
+            "Statutory Elements": "If-Then-Else Legal Matrix",
+            "Ratio Decidendi": "IRAC Table",
+            "Physical Forces": "Force-Balance / Spec Table",
+            "Signal Propagation": "Truth Table / Timing Diagram",
+            "Axiomatic Foundation": "LaTeX Step-by-Step Proof",
+            "Statistical Rigor": "Methodology Flowchart",
+            "Primary Catalysts": "Annotated Timeline",
+            "Competing Ideologies": "Power/Interest Matrix",
+            "Syntactical Structure": "Sentence Parsing Tree",
+            "Cultural Context": "Idiom Translation Matrix",
+            "Value Proposition": "SWOT Analysis Table",
+            "Valuation Metrics": "DCF Calculation Block",
+            "Medium Mechanics": "Layering Technique List",
+            "Aesthetic Philosophy": "Critique Comparison"
         }
         
         artifact_type = "Markdown Artifact"
-        question_type = "Application Challenge"
-        for key, vals in persona_map.items():
+        for key, val in persona_map.items():
             if key in note_body:
-                artifact_type, question_type = vals
+                artifact_type = val
                 break
                 
-        sys_prompt = f"""You are generating the pedagogical artifacts and probes.
-Based on the theory provided, generate a specific {artifact_type} and a Socratic challenge.
-DO NOT output JSON. Output EXACTLY this Markdown format:
+        available_types = ["mcq", "true_false", "writing", "fill_in", "debug", "scenario", "code"]
+        q_types = random.sample(available_types, 3)
 
+        sys_prompt = f"""You are an Inquisitor Agent. Read the technical note above.
+1. Generate a professional {artifact_type} illustrating the concept. Wrap it in standard markdown backticks.
+2. Generate an Active Recall Quiz based on the note. You MUST output this as a raw JSON ARRAY wrapped inside a custom markdown block named `interactive-quiz`.
+
+The quiz MUST contain exactly 3 questions of increasing difficulty (L1, L2, L3).
+You MUST use these specific question types for each level:
+- L1 (Basic Recall): Use type `{q_types[0]}`
+- L2 (Application): Use type `{q_types[1]}`
+- L3 (Deep Synthesis/Debug): Use type `{q_types[2]}`
+
+JSON FORMAT REFERENCE FOR TYPES:
+- `mcq`: {{"id": "q1", "type": "mcq", "difficulty": "L1", "question": "...", "options": {{"A": "..", "B": ".."}}, "answer": "A", "explanation": "..."}}
+- `true_false`: {{"id": "q2", "type": "true_false", "difficulty": "L1", "question": "...", "answer": "True", "explanation": "..."}} // answer must be "True" or "False"
+- `fill_in`: {{"id": "q3", "type": "fill_in", "difficulty": "L1", "question": "Fill in the blanks", "textWithBlanks": "The [[blank1]] is the [[blank2]].", "answer": ["first", "second"], "explanation": "..."}}
+- `writing`: {{"id": "q4", "type": "writing", "difficulty": "L2", "question": "Explain X...", "answer": "...", "explanation": "..."}}
+- `scenario`: {{"id": "q5", "type": "scenario", "difficulty": "L2", "question": "A user tries to...", "answer": "...", "explanation": "..."}}
+- `code`: {{"id": "q6", "type": "code", "difficulty": "L2", "question": "What is the output?", "codeSnippet": "...", "answer": "...", "explanation": "..."}}
+- `debug`: {{"id": "q7", "type": "debug", "difficulty": "L3", "question": "Find the bug.", "content": "...", "answer": "...", "explanation": "..."}}
+
+EXPECTED FORMAT:
 ### The Artifact
-(Generate the {artifact_type}. MUST use triple backticks.)
+```markdown
+...
+```
 
-### Execution Walkthrough
-1. (Step 1)
-2. (Step 2)
-3. (Step 3)
+### Knowledge Check
+```interactive-quiz
+[
+  {{
+    "id": "q1",
+    "type": "{q_types[0]}",
+    "difficulty": "L1",
+    ... (fields for this type)
+  }},
+  {{
+    "id": "q2",
+    "type": "{q_types[1]}",
+    "difficulty": "L2",
+    ... (fields for this type)
+  }},
+  {{
+    "id": "q3",
+    "type": "{q_types[2]}",
+    "difficulty": "L3",
+    ... (fields for this type)
+  }}
+]
+```
 
-### L1_SCENARIO: (Write a 1-sentence basic recall scenario)
-### L2_IMPLEMENTATION: (Write a realistic scenario applying the concept)
-### L3_DEBUG: ({question_type})
-### ANSWER_KEY: (Provide the definitive answers to the L1, L2, and L3 questions)
-"""
+FINAL INSTRUCTION: You are a Senior Computer Scientist. Do not use conversational filler. Maintain a highly technical, authoritative tone.
+CRITICAL JSON RULE: You MUST output perfectly valid JSON. Ensure it is an ARRAY `[ ... ]` of exactly 3 objects. If you include code in your JSON options or explanation, you MUST correctly escape ALL quotes (\\") and backslashes (\\\\) and newlines (\\n). Failure to do so will break the parser."""
         msg = [("system", sys_prompt), ("human", f"Theory:\n{note_body}\n\nLanguage: {primary_language}")]
         
-        try:
-            res = await self.llm.ainvoke(msg)
-            out = res.content.strip()
-            
-            import re
-            
-            l1_match = re.search(r"### L1_SCENARIO:\s*(.*?)(?=### L2_IMPLEMENTATION:|$)", out, re.DOTALL)
-            l2_match = re.search(r"### L2_IMPLEMENTATION:\s*(.*?)(?=### L3_DEBUG:|$)", out, re.DOTALL)
-            l3_match = re.search(r"### L3_DEBUG:\s*(.*?)(?=### ANSWER_KEY:|$)", out, re.DOTALL)
-            ans_match = re.search(r"### ANSWER_KEY:\s*(.*)", out, re.DOTALL)
-            
-            artifact_match = re.split(r"### L1_SCENARIO:", out)
-            artifact_text = artifact_match[0].replace("### The Artifact", "").strip() if len(artifact_match) > 0 else ""
-            
-            l1_val = l1_match.group(1).strip() if l1_match else "Recall scenario."
-            l2_val = l2_match.group(1).strip() if l2_match else "Application scenario."
-            l3_val = l3_match.group(1).strip() if l3_match else "Debug challenge."
-            ans_val = ans_match.group(1).strip() if ans_match else "No answers provided."
-            
-            return ProbeEnrichment(worked_example=artifact_text, l1_scenario=l1_val, l2_implementation=l2_val, l3_debug=l3_val, answer_key=ans_val)
-        except Exception as e:
-            print(f"[WriterAgent] Pass 2 failed: {e}")
-            return ProbeEnrichment(worked_example="Error", l1_scenario="Error", l2_implementation="Error", l3_debug="Error generating artifact.", answer_key="Error")
+        last_error = None
+        for attempt in range(3):
+            try:
+                if attempt > 0:
+                    # Provide feedback on retry
+                    retry_msg = msg + [("assistant", res.content if 'res' in locals() else ""), 
+                                       ("human", f"Your previous JSON was invalid. Error: {last_error}. Please output the full response again, ensuring STRICT JSON validity inside the `interactive-quiz` block. It MUST be an ARRAY `[ ... ]`. Escape all backslashes and quotes!")]
+                    res = await self.llm.ainvoke(retry_msg)
+                else:
+                    res = await self.llm.ainvoke(msg)
+                    
+                out = res.content.strip()
+                
+                import re
+                
+                # Extract artifact part
+                artifact_match = re.search(r"### The Artifact\s*(.*?)(?=### Knowledge Check|$)", out, re.DOTALL)
+                artifact_text = artifact_match.group(1).strip() if artifact_match else "Error extracting artifact."
+                
+                # Extract JSON quiz
+                quiz_match = re.search(r"```interactive-quiz\s*(.*?)\s*```", out, re.DOTALL)
+                if quiz_match:
+                    quiz_json_str = quiz_match.group(1).strip()
+                    # Clean up common LLM JSON mistakes (trailing commas, unescaped newlines in strings)
+                    quiz_json_str = re.sub(r',\s*}', '}', quiz_json_str)
+                    quiz_json_str = re.sub(r',\s*\]', ']', quiz_json_str)
+                    
+                    # Validate JSON
+                    json_data = json.loads(quiz_json_str, strict=False)
+                    if not isinstance(json_data, list) or len(json_data) != 3:
+                        raise ValueError("JSON must be an array of exactly 3 objects")
+                    
+                    interactive_quiz = f"```interactive-quiz\n{quiz_json_str}\n```"
+                else:
+                    raise ValueError("Could not find ```interactive-quiz block")
+                
+                return ProbeEnrichment(worked_example=artifact_text, interactive_quiz=interactive_quiz)
+            except Exception as e:
+                last_error = e
+                # Check for Groq/OpenAI Rate Limits (429)
+                if "rate_limit" in str(e).lower() or "429" in str(e):
+                    wait_time = (attempt + 1) * 30
+                    print(f"[WriterAgent] Rate limit hit in Pass 2. Throttling for {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    print(f"[WriterAgent] Pass 2 failed attempt {attempt+1}: {e}")
+                continue
+                
+        print(f"[WriterAgent] Pass 2 failed completely: {last_error}")
+        return ProbeEnrichment(worked_example="Error extracting artifact.", interactive_quiz="Error generating interactive quiz.")

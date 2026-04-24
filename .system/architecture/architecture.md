@@ -5,11 +5,12 @@
 *   `apps/mobile-client`: React/Vite (IIFE) + Scriptable Bridge
 *   `apps/api`: Python FastAPI Sidecar (Desktop Only)
 
-### Core Reasoning Engine: OKA v24.0 (Pedagogical)
-1.  **Validation Loop**: Every note undergoes structural validation (YAML, backticks, tables). Invalid notes are re-prompted with `[REGENERATION_HINT]`.
-2.  **Socratic Synthesis**: Probes are aggregated from atomic notes to build a comprehensive Master Question Bank (PQ note).
-3.  **Relational Integrity**: Hub notes are anchored via `anchored_hub_id` to ensure metadata and content persistence.
-4.  **Universal AI Bridge**: Desktop uses the Python Sidecar; Mobile uses a Native Scriptable Bridge to route requests to Gemini, OpenAI, Anthropic, Groq, and OpenRouter.
+### Core Reasoning Engine: OKA v25.0 (Technical Pedagogy)
+1.  **2-Pass Generation Strategy**: Decouples technical theory from pedagogical artifacts. Pass 1 (Theorist) generates strict markdown prose; Pass 2 (Inquisitor) generates artifacts and randomized 3-level quizzes.
+2.  **Interactive Recall Interceptor**: The React frontend intercepts `interactive-quiz` JSON blocks within markdown and renders them as interactive, stateful components via `MiniPracticeUI.tsx`.
+3.  **Self-Healing JSON Pipeline**: Automated retry loops in the Python sidecar intercept LLM formatting errors, providing feedback and re-prompting until valid JSON is achieved.
+4.  **Randomized Multi-Level Pedagogy**: Dynamically assigns question types (MCQ, Fill-in-the-Blank, Debug, etc.) to 3 difficulty levels (L1/L2/L3) per note to prevent "Illusions of Competence."
+5.  **Relational Integrity**: Hub notes are anchored via `anchored_hub_id` to ensure metadata and content persistence.
 
 ## 2. UI/UX Strategy
 *   **Monochrome High-Fidelity**: Professional grayscale palette with premium typography (Inter/Outfit).

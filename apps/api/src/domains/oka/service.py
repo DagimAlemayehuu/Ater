@@ -1395,16 +1395,11 @@ class OkaService:
         if probes:
             probe_body = (
                 "\n---\n\n"
-                "## 5. Worked Example\n\n"
+                "## 4. Worked Example\n\n"
                 f"{probes.worked_example.strip()}\n\n"
                 "---\n\n"
-                "## 6. Socratic Probes\n\n"
-                f"**Scenario-Based Question**: {probes.l1_scenario}\n\n"
-                f"**Implementation Challenge**: {probes.l2_implementation}\n\n"
-                f"**Debug Challenge**: {probes.l3_debug}\n\n"
-                "---\n\n"
-                "### Answer Key\n"
-                f"{probes.answer_key}\n"
+                "## 5. Knowledge Check\n\n"
+                f"{probes.interactive_quiz.strip()}\n"
             )
 
         full_body = note_content.markdown_body.strip() + probe_body
@@ -1442,9 +1437,8 @@ class OkaService:
             clean_title = note_title.replace("_", " ")
             body_parts.append(
                 f"### [[{note_title}|{clean_title}]]\n"
-                f"**L1 Scenario**: {probes.l1_scenario}\n\n"
-                f"**L2 Implementation**: {probes.l2_implementation}\n\n"
-                f"**L3 Debug Challenge**:\n\n{probes.l3_debug.strip()}\n"
+                f"**Worked Example**:\n\n{probes.worked_example}\n\n"
+                f"**Knowledge Check**:\n\n{probes.interactive_quiz.strip()}\n"
             )
 
         full_body = "\n".join(body_parts)

@@ -150,7 +150,4 @@ class NoteContent(BaseModel):
 
 class ProbeEnrichment(BaseModel):
     worked_example: str
-    l1_scenario: str
-    l2_implementation: str
-    l3_debug: str
-    answer_key: str
+    interactive_quiz: str
