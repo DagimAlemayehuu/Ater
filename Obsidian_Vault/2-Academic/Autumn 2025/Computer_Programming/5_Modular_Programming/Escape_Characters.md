@@ -1,15 +1,5 @@
 ---
-title: Escape Characters
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
+read: true
 ---
 
 # 1. Technical Definition

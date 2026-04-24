@@ -1,17 +1,3 @@
----
-title: Relational Operators
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
----
-
 # 1. Technical Definition
 Relational operators are used to compare two operands and return a Boolean value indicating the relationship between them, such as `==` (equal to), `!=` (not equal to), `>` (greater than), `<` (less than), `>=` (greater than or equal to), and `<=` (less than or equal to). These operators are essential in programming for making decisions and controlling the flow of a program based on conditions.
 
@@ -30,6 +16,7 @@ Imagine you have a bunch of boxes with different numbers of candies inside. Rela
 * The operands being compared must be of compatible data types; otherwise, the compiler or interpreter may raise an error or perform implicit type conversions.
 * Overusing relational operators within loops or complex conditions can impact performance, but this is usually negligible unless dealing with extremely large datasets or performance-critical code.
 
+mode: "CS-CODE"
 ---
 
 ## 5. Worked Example

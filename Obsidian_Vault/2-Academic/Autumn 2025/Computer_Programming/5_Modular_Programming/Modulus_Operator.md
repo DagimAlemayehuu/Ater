@@ -1,17 +1,3 @@
----
-title: Modulus Operator
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
----
-
 # 1. Technical Definition
 The modulus operator, denoted as `mod` or `%`, is a binary operation that returns the remainder of an integer division operation, where the remainder is the amount left over after dividing the dividend by the divisor. Specifically, given two integers `a` and `b`, `a mod b` yields the integer `r` such that `a = b * q + r`, where `q` is the quotient and `0 ≤ r < |b|`.
 
@@ -30,6 +16,7 @@ Imagine you have 17 cookies and you want to put them into boxes that hold 5 cook
 * Division by zero using the modulus operator is undefined and typically results in an error.
 * The range of values that can be represented by the result of a modulus operation depends on the data type of the operands.
 
+read: true
 ---
 
 ## 5. Worked Example

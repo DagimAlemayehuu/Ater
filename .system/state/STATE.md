@@ -17,7 +17,8 @@
 *   [x] **Dynamic WikiLink Engine (Auto-Creation & Nav)**
 *   [x] **OKA v24.0: Pedagogical Engine (Mental Models + Bidirectional Progress Sync)**
 *   [x] **Direct-Entry & Terminology Audit (Minimalist Navigation + Plain English)**
-*   [ ] Global E2E Tests Pass
+*   [x] **Obsidian High-Density Metadata & Explorer (CRUD + Robust DND + Parent Targeting)**
+*   [x] Global E2E Tests Pass
 *   [ ] Production Deployment
 
 ## 3. Active Blockers

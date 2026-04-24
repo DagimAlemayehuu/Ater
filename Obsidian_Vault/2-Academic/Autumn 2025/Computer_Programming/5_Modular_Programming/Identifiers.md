@@ -1,17 +1,3 @@
----
-title: Identifiers
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
----
-
 # 1. Technical Definition
 Identifiers are `unique symbols` or `names` that are used to identify a variable, function, or object in a programming language, and they must be distinct from one another. In programming, an identifier is a `lexical token` that is used to refer to a declared entity, such as a variable, function, or label.
 
@@ -30,6 +16,7 @@ Imagine you're in a big classroom with many students, and each student has a uni
 * Identifiers can be assigned a value, and the value can be changed during the program's execution.
 * Identifiers can be garbage collected or go out of scope, at which point they are no longer accessible.
 
+generated: false
 ---
 
 ## 5. Worked Example

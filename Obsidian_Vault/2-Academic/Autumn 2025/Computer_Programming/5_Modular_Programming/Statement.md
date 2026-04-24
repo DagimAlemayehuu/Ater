@@ -1,17 +1,3 @@
----
-title: Statement
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
----
-
 # 1. Technical Definition
 A `statement` is a syntactic construct that expresses a single unit of execution or a single unit of declaration in a programming language, typically comprising a sequence of tokens that are analyzed as a single entity. In programming languages, a statement often terminates with a `semicolon` or another statement separator.
 
@@ -30,6 +16,7 @@ Imagine you're giving instructions to a robot. Each instruction is like a single
 * The execution of statements can lead to memory allocation or deallocation (e.g., through dynamic memory allocation).
 * Statements do not have a persistent memory footprint; they are executed and then discarded.
 
+generated: false
 ---
 
 ## 5. Worked Example

@@ -7,7 +7,7 @@ import {
     Database, Search, Archive,
     ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft,
     Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Network,
-    Edit3, Save, FolderPlus
+    Edit3, Save, FolderPlus, Hash, CheckSquare, Link, List
 } from 'lucide-react'
 import { sidecarApi, ObsidianFile } from '@/lib/sidecarApi'
 import { ObsidianGraphView } from '@/components/obsidian/ObsidianGraphView'
@@ -34,23 +34,61 @@ interface FileNode {
     children?: FileNode[]
 }
 
-function NoteProperties({ metadata, onNavigate }: { metadata: Record<string, any>, onNavigate: (link: string) => void }) {
+function NoteProperties({ 
+    metadata, 
+    onNavigate,
+    onAddProperty,
+    onUpdateProperty,
+    onDeleteProperty
+}: { 
+    metadata: Record<string, any>, 
+    onNavigate: (link: string) => void,
+    onAddProperty: (name: string, type: string) => void,
+    onUpdateProperty: (name: string, value: any) => void,
+    onDeleteProperty: (name: string) => void
+}) {
+    const [isAdding, setIsAdding] = useState(false)
+    const [newName, setNewName] = useState('')
+    const [selectedType, setSelectedType] = useState('text')
+    const [editingKey, setEditingKey] = useState<string | null>(null)
+    const [editValue, setEditValue] = useState('')
+
     // Filter out common internal keys that shouldn't be displayed as "properties"
     const displayMetadata = Object.entries(metadata).filter(([key]) => 
         !['title', 'position', 'frontmatter'].includes(key.toLowerCase())
     )
 
-    if (displayMetadata.length === 0) return null
+    const typeOptions = [
+        { id: 'text', label: 'Text', icon: <FileText size={11} /> },
+        { id: 'checkbox', label: 'Checkbox', icon: <CheckSquare size={11} /> },
+        { id: 'date', label: 'Date', icon: <Calendar size={11} /> },
+        { id: 'number', label: 'Number', icon: <Hash size={11} /> },
+        { id: 'link', label: 'Link', icon: <Link size={11} /> },
+        { id: 'list', label: 'List', icon: <List size={11} /> }
+    ]
 
-    const getPropertyIcon = (key: string) => {
+    const getPropertyType = (key: string, value: any) => {
         const k = key.toLowerCase()
+        if (['course', 'semester', 'hub', 'source'].includes(k)) return 'link'
+        if (['read', 'generated'].includes(k) || typeof value === 'boolean') return 'checkbox'
+        if (k === 'type') return 'text'
+        if (typeof value === 'number' || k.includes('unit')) return 'number'
+        if (Array.isArray(value)) return 'list'
+        return 'text'
+    }
+
+    const getPropertyIcon = (key: string, value: any) => {
+        const type = getPropertyType(key, value)
+        const k = key.toLowerCase()
+        
         if (k.includes('course')) return <GraduationCap size={14} />
-        if (k.includes('semester')) return <Calendar size={14} />
         if (k.includes('hub')) return <Network size={14} />
+        if (type === 'link') return <Link size={14} />
+        if (type === 'checkbox') return <CheckSquare size={14} />
+        if (type === 'date' || k.includes('semester')) return <Calendar size={14} />
+        if (type === 'number') return <Hash size={14} />
+        if (type === 'list') return <List size={14} />
         if (k.includes('status')) return <Circle size={14} />
-        if (k.includes('source_page')) return <FileText size={14} />
-        if (k.includes('source')) return <Paperclip size={14} />
-        if (k.includes('department') || k.includes('area')) return <Building size={14} />
         return <Info size={14} />
     }
     
@@ -60,45 +98,179 @@ function NoteProperties({ metadata, onNavigate }: { metadata: Record<string, any
         return String(val)
     }
 
+    const handleValueSubmit = (key: string) => {
+        const type = getPropertyType(key, metadata[key])
+        let finalVal: any = editValue
+        
+        if (type === 'list') {
+            // Convert comma-separated string back to array, trimming items
+            finalVal = editValue.split(',').map(s => s.trim()).filter(s => s.length > 0)
+        } else if (editValue.toLowerCase() === 'true') {
+            finalVal = true
+        } else if (editValue.toLowerCase() === 'false') {
+            finalVal = false
+        } else if (!isNaN(Number(editValue)) && editValue.trim() !== '' && type === 'number') {
+            finalVal = Number(editValue)
+        }
+        
+        onUpdateProperty(key, finalVal)
+        setEditingKey(null)
+    }
+
+    const renderPropertyValue = (key: string, value: any) => {
+        const type = getPropertyType(key, value)
+        const valStr = formatValue(value)
+
+        if (type === 'checkbox') {
+            return (
+                <input 
+                    type="checkbox"
+                    checked={!!value}
+                    onChange={(e) => onUpdateProperty(key, e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-border/50 bg-transparent text-primary focus:ring-0 cursor-pointer"
+                />
+            )
+        }
+
+        if (type === 'link' || valStr.includes('[[')) {
+            // Only auto-link if it's a dedicated link type OR already has wikilink syntax
+            const isExplicitLink = valStr.includes('[[')
+            const links = isExplicitLink ? (valStr.match(/\[\[(.*?)\]\]/g) || []) : (type === 'link' ? [`[[${value}]]`] : [])
+            
+            if (links.length === 0) return <span className="w-full truncate">{valStr}</span>
+
+            return (
+                <div className="flex flex-wrap gap-1">
+                    {links.map((link, i) => {
+                        const clean = link.replace(/[\[\]]/g, '').split('|')[0].trim()
+                        if (!clean) return null
+                        const label = link.replace(/[\[\]]/g, '').split('|')[1] || clean.split('/').pop()
+                        return (
+                            <button 
+                                key={i}
+                                onClick={(e) => { e.stopPropagation(); if (clean) onNavigate(clean); }}
+                                className="text-primary hover:underline underline-offset-4 decoration-primary/30 truncate text-left font-bold"
+                            >
+                                {label}
+                            </button>
+                        )
+                    })}
+                </div>
+            )
+        }
+
+        if (key.toLowerCase() === 'status') {
+            return (
+                <span className={cn(
+                    "px-1.5 py-0.5 rounded-md text-[9px] uppercase font-bold tracking-widest",
+                    String(value).toLowerCase().includes('complete') ? 'bg-primary/20 text-primary border border-primary/20' : 'bg-muted border border-border text-muted-foreground'
+                )}>{valStr}</span>
+            )
+        }
+
+        return <span className="w-full truncate">{valStr}</span>
+    }
+
     return (
         <div className="flex flex-col gap-4 mb-12 animate-in fade-in slide-in-from-top-2 duration-500">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-8 p-6 rounded-2xl bg-muted/30 border border-border/50" data-purpose="note-metadata">
+            <div className="grid grid-cols-1 gap-y-1.5 py-6" data-purpose="note-metadata">
                 {displayMetadata.map(([key, value]) => (
-                    <div key={key} className="flex items-start gap-3 group/prop">
-                        <div className="mt-0.5 w-4 flex justify-center text-muted-foreground/50 group-hover/prop:text-primary/70 transition-colors">
-                            {getPropertyIcon(key)}
+                    <div key={key} className="flex items-center gap-3 group/prop hover:bg-muted/10 px-2 py-1 -mx-2 rounded-md transition-colors">
+                        <div className="w-4 flex justify-center text-muted-foreground/30 group-hover/prop:text-primary transition-colors">
+                            {getPropertyIcon(key, value)}
                         </div>
-                        <div className="flex flex-col min-w-0">
-                            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest mb-0.5">{key.replace(/_/g, ' ')}</span>
-                            <div className="text-[12px] font-medium text-foreground truncate">
-                                {key.toLowerCase() === 'status' ? (
-                                    <span className={cn(
-                                        "px-1.5 py-0.5 rounded-md text-[9px] uppercase font-bold tracking-widest",
-                                        String(value).toLowerCase().includes('complete') ? 'bg-primary/20 text-primary border border-primary/20' : 'bg-muted border border-border text-muted-foreground'
-                                    )}>{formatValue(value)}</span>
+                        <div className="flex flex-col min-w-0 flex-1">
+                            <span className="text-[9px] font-bold text-muted-foreground/30 uppercase tracking-widest">{key.replace(/_/g, ' ')}</span>
+                            <div className="text-[12px] font-medium text-foreground truncate min-h-[18px] flex items-center">
+                                {editingKey === key ? (
+                                    <input 
+                                        autoFocus
+                                        value={editValue}
+                                        onChange={(e) => setEditValue(e.target.value)}
+                                        onBlur={() => handleValueSubmit(key)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleValueSubmit(key)}
+                                        className="w-full bg-transparent border-none p-0 text-[12px] focus:ring-0 text-primary font-bold"
+                                    />
                                 ) : (
-                                    formatValue(value).includes('[[') ? (
-                                        <div className="flex flex-wrap gap-1">
-                                            {formatValue(value).match(/\[\[(.*?)\]\]/g)?.map((link: string, i: number) => {
-                                                const clean = link.slice(2, -2).split('|')[0]
-                                                const label = link.slice(2, -2).split('|')[1] || clean.split('/').pop()
-                                                return (
-                                                    <button 
-                                                        key={i}
-                                                        onClick={() => onNavigate(clean)}
-                                                        className="text-primary hover:underline underline-offset-4 decoration-primary/30 truncate text-left"
-                                                    >
-                                                        {label}
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
-                                    ) : formatValue(value)
+                                    <div 
+                                        className="cursor-text w-full truncate"
+                                        onClick={() => { 
+                                            // Only enter edit mode if it's NOT a link or checkbox (which have their own interactions)
+                                            const type = getPropertyType(key, value);
+                                            if (type !== 'checkbox' && !String(value).includes('[[')) {
+                                                setEditingKey(key); 
+                                                setEditValue(String(value)); 
+                                            }
+                                        }}
+                                    >
+                                        {renderPropertyValue(key, value)}
+                                    </div>
                                 )}
                             </div>
                         </div>
+                        <button 
+                            onClick={() => onDeleteProperty(key)}
+                            className="opacity-0 group-hover/prop:opacity-100 p-1 hover:text-destructive transition-all"
+                        >
+                            <X size={12} />
+                        </button>
                     </div>
                 ))}
+            </div>
+
+            {/* Simplified Add Property UI */}
+            <div className="pt-2 border-t border-border/10">
+                {!isAdding ? (
+                    <button 
+                        onClick={() => setIsAdding(true)}
+                        className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20 hover:text-primary transition-all py-2"
+                    >
+                        <Plus size={10} /> Add Property
+                    </button>
+                ) : (
+                    <div className="flex items-center gap-4 py-2 animate-in slide-in-from-left-2 duration-300">
+                        <input 
+                            autoFocus
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            placeholder="NAME"
+                            className="w-32 bg-transparent border-b border-border/50 text-[10px] font-black uppercase tracking-widest placeholder:text-muted-foreground/10 focus:border-primary focus:ring-0 transition-all"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && newName) {
+                                    onAddProperty(newName, selectedType)
+                                    setNewName('')
+                                    setIsAdding(false)
+                                }
+                                if (e.key === 'Escape') setIsAdding(false)
+                            }}
+                        />
+                        <div className="flex items-center gap-1.5">
+                            {typeOptions.map(opt => (
+                                <button
+                                    key={opt.id}
+                                    onClick={() => setSelectedType(opt.id)}
+                                    title={opt.label}
+                                    className={cn(
+                                        "p-1.5 rounded transition-all",
+                                        selectedType === opt.id ? "bg-primary/10 text-primary" : "text-muted-foreground/20 hover:text-foreground"
+                                    )}
+                                >
+                                    {opt.icon}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="flex-1" />
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setIsAdding(false)} className="text-[9px] font-bold text-muted-foreground/30 hover:text-foreground uppercase">Cancel</button>
+                            <button 
+                                onClick={() => { if(newName) { onAddProperty(newName, selectedType); setNewName(''); setIsAdding(false); }}}
+                                className="px-3 py-1 bg-primary text-primary-foreground rounded text-[9px] font-bold uppercase tracking-widest"
+                            >
+                                Add
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )
@@ -149,7 +321,7 @@ function parseHubTree(content: string): NavNode[] {
     return roots
 }
 
-function Map({ content, activePath, onNavigate, onToggleCheckbox }: { content: string, activePath: string | null, onNavigate: (name: string) => void, onToggleCheckbox: (label: string, isChecked: boolean, target: string | null) => void }) {
+function HubConnectionsNav({ content, activePath, onNavigate, onToggleCheckbox }: { content: string, activePath: string | null, onNavigate: (name: string) => void, onToggleCheckbox: (label: string, isChecked: boolean, target: string | null) => void }) {
     const activeNoteName = activePath?.split('/').pop()?.replace('.md', '').replace('.pdf', '')?.toLowerCase() || ''
     const tree = useMemo(() => parseHubTree(content), [content]);
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -226,7 +398,7 @@ function Map({ content, activePath, onNavigate, onToggleCheckbox }: { content: s
                             checked={node.isChecked} 
                             onChange={(e) => onToggleCheckbox(node.label, e.target.checked, node.target)}
                             className={cn(
-                                "h-3 w-3 shrink-0 appearance-none border border-border/50 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[3.5px] after:h-[6.5px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer transition-colors",
+                                "h-3 w-3 shrink-0 appearance-none border border-muted-foreground/40 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[3.5px] after:h-[6.5px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer transition-colors",
                                 node.isChecked && "opacity-30"
                             )} 
                         />
@@ -514,11 +686,10 @@ export default function ObsidianVaultPage() {
                         const hubData = await sidecarApi.readObsidianNote(hubPath);
                         if (hubData.content) {
                             const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                            // Match both standard and aliased wikilinks, and plain text
-                            // This regex matches [[target|label]] or [[label]] or plain label
-                            const regex = new RegExp(`- \\[(?: |x|X)\\] (?:\\*\\*)?(\\[\\[(?:[^\\]|]+\\|)?${escapedLabel}\\]\\]|${escapedLabel})(?:\\*\\*)?`, 'gi');
+                            // Support multiple markers: -, *, +
+                            const regex = new RegExp(`^(\\s*[-*+] \\[(?: |x|X)\\]) (?:\\*\\*)?(\\[\\[(?:[^\\]|]+\\|)?${escapedLabel}\\]\\]|${escapedLabel})(?:\\*\\*)?`, 'gim');
                             const newCheck = isChecked ? 'x' : ' ';
-                            const updatedContent = hubData.content.replace(regex, `- [${newCheck}] $1`);
+                            const updatedContent = hubData.content.replace(regex, `$1`.replace(/\[(?: |x|X)\]/, `[${newCheck}]`) + ` $2`);
                             
                             if (updatedContent !== hubData.content) {
                                 await sidecarApi.updateObsidianNote(hubPath, updatedContent);
@@ -526,6 +697,10 @@ export default function ObsidianVaultPage() {
                                     setNoteContent(updatedContent);
                                     setEditedContent(updatedContent);
                                 }
+                                // Force connection reload
+                                setTimeout(() => {
+                                    fetchHubConnections();
+                                }, 500);
                             }
                         }
                     }
@@ -534,18 +709,17 @@ export default function ObsidianVaultPage() {
                 // 2. Update the atomic note's internal 'read' property
                 const targetName = target || label
                 const resTarget = await sidecarApi.findVaultPage(targetName);
+                
                 if (resTarget.found && resTarget.path) {
                     const targetData = await sidecarApi.readObsidianNote(resTarget.path);
                     let content = targetData.content;
                     const newCheckVal = isChecked ? 'true' : 'false';
                     
-                    // Surgical replacement to preserve ALL other properties
                     if (content.match(/^read:\s*(?:true|false|True|False)/im)) {
                         content = content.replace(/^read:\s*(?:true|false|True|False)/im, `read: ${newCheckVal}`);
                     } else if (content.match(/\nread:\s*(?:true|false|True|False)/i)) {
                         content = content.replace(/\nread:\s*(?:true|false|True|False)/i, `\nread: ${newCheckVal}`);
                     } else if (content.startsWith('---\n')) {
-                        // Insert after the first separator
                         content = content.replace('---\n', `---\nread: ${newCheckVal}\n`);
                     } else {
                         content = `---\nread: ${newCheckVal}\n---\n\n${content}`;
@@ -554,17 +728,120 @@ export default function ObsidianVaultPage() {
                     if (content !== targetData.content) {
                         await sidecarApi.updateObsidianNote(resTarget.path, content);
                         if (selectedPath === resTarget.path) {
-                            // If we are viewing the note we just changed, refresh its state but preserve everything else
                             setNoteMetadata(prev => ({ ...prev, read: isChecked }));
                         }
                     }
+
+                    // 3. Navigate to the page if ticked - using the EXACT path we found
+                    if (isChecked) {
+                        selectFile(resTarget.path);
+                    }
+                } else if (isChecked && target) {
+                    // Only fallback to handleWikiLinkClick if we explicitly want auto-creation
+                    // but for robustness, let's just use it as it handles the creation logic correctly
+                    handleWikiLinkClick(target);
                 }
 
-                // Final sync to ensure UI stays consistent
                 setNoteMetadata(prev => ({ ...prev }));
             } catch(e) {
                 console.error("Failed to toggle checkbox", e);
             }
+        }
+    }
+
+    const handleAddProperty = async (name: string, type: string) => {
+        if (!selectedPath || !name) return
+        setLoadingNote(true)
+        try {
+            const res = await sidecarApi.readObsidianNote(selectedPath)
+            let content = res.content
+            let defaultValue: any = '""'
+            if (type === 'checkbox') defaultValue = 'false'
+            if (type === 'number') defaultValue = '0'
+            if (type === 'list') defaultValue = '[]'
+            if (type === 'link') defaultValue = '"[[]]"'
+            if (type === 'date') defaultValue = `"${new Date().toISOString().split('T')[0]}"`
+
+            const newPropLine = `${name}: ${defaultValue}\n`
+
+            if (content.startsWith('---\n')) {
+                const endMatch = content.indexOf('\n---', 4)
+                if (endMatch !== -1) {
+                    content = content.slice(0, endMatch) + '\n' + newPropLine + content.slice(endMatch)
+                } else {
+                    content = content.replace('---\n', `---\n${newPropLine}`)
+                }
+            } else {
+                content = `---\n${newPropLine}---\n\n${content}`
+            }
+
+            await sidecarApi.updateObsidianNote(selectedPath, content)
+            const refreshed = await sidecarApi.readObsidianNote(selectedPath)
+            setNoteMetadata(refreshed.metadata || {})
+            setNoteContent(refreshed.content || '')
+            setEditedContent(refreshed.content || '')
+        } catch (err) {
+            console.error("Failed to add property", err)
+        } finally {
+            setLoadingNote(false)
+        }
+    }
+
+    const handleUpdateProperty = async (name: string, value: any) => {
+        if (!selectedPath) return
+        setLoadingNote(true)
+        try {
+            const res = await sidecarApi.readObsidianNote(selectedPath)
+            let content = res.content
+            
+            // Format value for YAML
+            let formattedVal = value
+            if (typeof value === 'string' && !value.startsWith('"')) {
+                formattedVal = `"${value}"`
+            }
+
+            const regex = new RegExp(`^${name}:.*$`, 'm')
+            if (content.match(regex)) {
+                content = content.replace(regex, `${name}: ${formattedVal}`)
+            } else {
+                // If not found in frontmatter, it might be in a malformed block or missing
+                // For simplicity, we just use regex replacement within the first --- block
+                const endMatch = content.indexOf('\n---', 4)
+                if (endMatch !== -1) {
+                    content = content.slice(0, endMatch) + `\n${name}: ${formattedVal}` + content.slice(endMatch)
+                }
+            }
+
+            await sidecarApi.updateObsidianNote(selectedPath, content)
+            const refreshed = await sidecarApi.readObsidianNote(selectedPath)
+            setNoteMetadata(refreshed.metadata || {})
+            setNoteContent(refreshed.content || '')
+            setEditedContent(refreshed.content || '')
+        } catch (err) {
+            console.error("Failed to update property", err)
+        } finally {
+            setLoadingNote(false)
+        }
+    }
+
+    const handleDeleteProperty = async (name: string) => {
+        if (!selectedPath || !confirm(`Delete property '${name}'?`)) return
+        setLoadingNote(true)
+        try {
+            const res = await sidecarApi.readObsidianNote(selectedPath)
+            let content = res.content
+            const regex = new RegExp(`^${name}:.*$\\n?`, 'm')
+            content = content.replace(regex, '')
+
+            await sidecarApi.updateObsidianNote(selectedPath, content)
+            const refreshed = await sidecarApi.readObsidianNote(selectedPath)
+            setNoteMetadata(refreshed.metadata || {})
+            setNoteContent(refreshed.content || '')
+            setEditedContent(refreshed.content || '')
+        } catch (err) {
+            console.error("Failed to delete property", err)
+        } finally {
+            setLoadingNote(false)
         }
     }
 
@@ -775,16 +1052,18 @@ export default function ObsidianVaultPage() {
             } else if (res.found && res.type === 'database') {
                 selectFile(`3-Database/${res.db_id}/${res.file_name}`, pageNumber, false, filterPages);
             } else {
-                // Not found. Create a new note in the same directory as the currently selected file
-                let folder = '';
+                // Not found. Create a new note in the same directory as the currently selected file OR in a default Inbox
+                let folder = '0-Bases/Inbox'; // Default to Inbox for better organization
                 if (selectedPath && selectedPath.includes('/')) {
                     folder = selectedPath.substring(0, selectedPath.lastIndexOf('/'));
                 }
                 
                 const newPath = folder ? `${folder}/${pageName}.md` : `${pageName}.md`;
-                const initialContent = `---\ntitle: ${pageName}\n---\n\n`;
-                await sidecarApi.updateObsidianNote(newPath, initialContent);
-                fetchFiles(); // refresh file tree since we created a new note
+                const initialContent = `---\ntitle: ${pageName}\nread: false\n---\n\n# ${pageName}\n`;
+                
+                // Use create if it's truly new
+                await sidecarApi.createObsidianFile(newPath, initialContent);
+                await fetchFiles(); 
                 selectFile(newPath, 1, false, []);
             }
         } catch (e) {
@@ -934,25 +1213,48 @@ export default function ObsidianVaultPage() {
     }
 
     const [draggedPath, setDraggedPath] = useState<string | null>(null)
+    const [dragOverPath, setDragOverPath] = useState<string | null>(null)
 
-    const handleDrop = async (e: React.DragEvent, targetFolderPath: string | null) => {
+    const handleDrop = async (e: React.DragEvent, targetPath: string | null) => {
         e.preventDefault()
         e.stopPropagation()
-        if (!draggedPath) return
+        setDragOverPath(null)
         
-        const fileName = draggedPath.split('/').pop()
-        const newPath = targetFolderPath ? `${targetFolderPath}/${fileName}` : fileName!
+        const sourcePath = draggedPath || e.dataTransfer.getData('text/plain')
+        if (!sourcePath) return
         
-        if (draggedPath === newPath) return
+        // 1. Determine the target folder. If dropped on a file, use its parent folder.
+        let targetFolderPath = targetPath
+        if (targetPath) {
+            // Check if target is a file in the existing files list
+            const targetFile = files.find(f => f.path === targetPath)
+            if (targetFile && !targetFile.is_dir) {
+                targetFolderPath = targetPath.includes('/') ? targetPath.substring(0, targetPath.lastIndexOf('/')) : null
+            }
+        }
+
+        const fileName = sourcePath.split('/').pop()
+        if (!fileName) return
+        
+        const newPath = targetFolderPath ? `${targetFolderPath}/${fileName}` : fileName
+        
+        // 2. Prevent dropping into self or into a subfolder of self
+        if (sourcePath === newPath) return
+        if (targetFolderPath && (targetFolderPath === sourcePath || targetFolderPath.startsWith(sourcePath + '/'))) {
+            console.warn("Cannot move a folder into itself or its descendants")
+            return
+        }
 
         try {
-            await sidecarApi.moveObsidianItem(draggedPath, newPath)
+            await sidecarApi.moveObsidianItem(sourcePath, newPath)
             await fetchFiles()
-            if (selectedPath === draggedPath) setSelectedPath(newPath)
+            if (selectedPath === sourcePath) setSelectedPath(newPath)
         } catch (err: any) {
+            console.error("Move failed:", err)
             alert(`Move failed: ${err.message}`)
+        } finally {
+            setDraggedPath(null)
         }
-        setDraggedPath(null)
     }
 
     const renderTree = (nodes: FileNode[], level = 0) => {
@@ -968,20 +1270,28 @@ export default function ObsidianVaultPage() {
                         key={node.path} 
                         className="flex flex-col"
                         onDragOver={(e) => {
-                            if (node.isFolder) {
-                                e.preventDefault()
-                                e.dataTransfer.dropEffect = 'move'
-                            }
+                            e.preventDefault()
+                            e.stopPropagation()
+                            e.dataTransfer.dropEffect = 'move'
+                            if (dragOverPath !== node.path) setDragOverPath(node.path)
                         }}
-                        onDrop={(e) => node.isFolder && handleDrop(e, node.path)}
+                        onDragEnd={() => { setDraggedPath(null); setDragOverPath(null); }}
+                        onDrop={(e) => handleDrop(e, node.path)}
                     >
                         <div 
                             draggable
-                            onDragStart={() => setDraggedPath(node.path)}
+                            onDragStart={(e) => {
+                                setDraggedPath(node.path)
+                                e.dataTransfer.setData('text/plain', node.path)
+                                e.dataTransfer.effectAllowed = 'move'
+                                // Ensure drag preview looks good
+                                e.dataTransfer.setDragImage(e.currentTarget, 10, 10)
+                            }}
                             onClick={() => node.isFolder ? toggleFolder(node.path) : selectFile(node.path)}
                             className={cn(
                                 "flex items-center gap-1.5 py-1 cursor-pointer transition-colors px-2 group relative",
-                                isSelected ? "bg-accent text-accent-foreground font-medium rounded-sm" : "hover:bg-accent/50 text-muted-foreground/90"
+                                isSelected ? "bg-accent text-accent-foreground font-medium rounded-sm" : "hover:bg-accent/50 text-muted-foreground/90",
+                                dragOverPath === node.path && "bg-primary/20 ring-1 ring-primary/50"
                             )}
                         >
                             <div className="w-4 h-4 shrink-0 flex items-center justify-center">
@@ -1539,6 +1849,9 @@ body:has(.backdrop-blur-xl) aside {
                                                                 <NoteProperties 
                                                                     metadata={noteMetadata} 
                                                                     onNavigate={handleWikiLinkClick} 
+                                                                    onAddProperty={handleAddProperty}
+                                                                    onUpdateProperty={handleUpdateProperty}
+                                                                    onDeleteProperty={handleDeleteProperty}
                                                                 />
                                                             )}
 
@@ -1595,8 +1908,15 @@ body:has(.backdrop-blur-xl) aside {
                                                                                                                 if (targetRes.path) {
                                                                                                                     const atomicRes = await sidecarApi.readObsidianNote(targetRes.path);
                                                                                                                     let newAtomicContent = atomicRes.content;
-                                                                                                                    if (newAtomicContent.includes('read: ')) { newAtomicContent = newAtomicContent.replace(/read:\s*(true|false|True|False)/i, `read: ${newChecked}`); } 
-                                                                                                                    else if (newAtomicContent.startsWith('---\n')) { newAtomicContent = newAtomicContent.replace('---\n', `---\nread: ${newChecked}\n`); }
+                                                                                                                    const hasFrontmatter = newAtomicContent.startsWith('---\n');
+                                                                                                                    
+                                                                                                                    if (newAtomicContent.includes('read: ')) {
+                                                                                                                        newAtomicContent = newAtomicContent.replace(/read:\s*(true|false|True|False)/i, `read: ${newChecked}`);
+                                                                                                                    } else if (hasFrontmatter) {
+                                                                                                                        newAtomicContent = newAtomicContent.replace('---\n', `---\nread: ${newChecked}\n`);
+                                                                                                                    } else {
+                                                                                                                        newAtomicContent = `---\nread: ${newChecked}\n---\n\n${newAtomicContent}`;
+                                                                                                                    }
                                                                                                                     await sidecarApi.updateObsidianNote(targetRes.path, newAtomicContent);
                                                                                                                 }
                                                                                                             }

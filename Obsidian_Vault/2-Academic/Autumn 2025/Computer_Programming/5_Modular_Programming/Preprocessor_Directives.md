@@ -1,17 +1,3 @@
----
-title: Preprocessor Directives
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
----
-
 # 1. Technical Definition
 Preprocessor directives are `preprocessor_commands` that are used to provide instructions to the compiler's preprocessor, which processes the source code before compilation. These directives, often denoted by a `#` symbol, allow for conditional compilation, inclusion of external files, and macro definitions.
 

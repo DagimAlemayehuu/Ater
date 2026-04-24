@@ -1,17 +1,3 @@
----
-title: Logical Operators
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
----
-
 # 1. Technical Definition
 Logical operators are used to combine relational expressions, and they are `AND`, `OR`, and `NOT` operators. The `AND` and `OR` operators are binary operators, while the `NOT` operator is a unary operator.
 
@@ -30,6 +16,7 @@ Imagine you have two boxes, one with a red ball and one with a blue ball. A logi
 * Logical operators can be used to create conditions that limit the number of iterations in a loop.
 * Overusing logical operators can make code harder to read and understand.
 
+generated: false
 ---
 
 ## 5. Worked Example

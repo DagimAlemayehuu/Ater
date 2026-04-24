@@ -1,17 +1,3 @@
----
-title: Expression
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
----
-
 # 1. Technical Definition
 An `expression` is a sequence of `symbols` that can be evaluated to produce a value, and it is a fundamental concept in programming that allows for the representation of computations. In the context of programming languages, an expression is a syntactic construct that can be reduced to a value.
 
@@ -30,6 +16,7 @@ Imagine you have a math problem like 2 + 3. This problem is like a recipe that s
 * If an expression's value isn't stored or used, it may be garbage collected to free up memory.
 * Complex expressions can cause performance issues if they are too computationally expensive or if they are evaluated excessively.
 
+type: "Atomic Note"
 ---
 
 ## 5. Worked Example

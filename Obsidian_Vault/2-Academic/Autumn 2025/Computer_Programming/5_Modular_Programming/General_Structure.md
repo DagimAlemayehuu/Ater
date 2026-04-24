@@ -1,19 +1,3 @@
----
-title: General Structure
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
-prerequisites:
-- "[[C++ Basics]]"
----
-
 # 1. Technical Definition
 A C++ program consists of one or more `translation units`, each of which is a separately compiled file that contains `declarations` and `definitions`. The general structure of a C++ program includes a `main` function, which serves as the entry point for the program.
 
@@ -32,6 +16,7 @@ Imagine building with LEGO blocks. Each block represents a part of the program, 
 * Variables have a scope and lifetime, determining when they are created and destroyed.
 * The program's memory usage is managed through mechanisms like `stack` and `heap` allocation.
 
+mode: "CS-CODE"
 ---
 
 ## 5. Worked Example

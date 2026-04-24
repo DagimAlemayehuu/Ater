@@ -1,17 +1,3 @@
----
-title: Main Function
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
----
-
 # 1. Technical Definition
 The `main` function in C++ is the entry point of a program, where program execution begins, and it is defined with a specific signature: `int main()` or `int main(int argc, char* argv[])`. The `main` function returns an integer value indicating the program's exit status.
 
@@ -30,6 +16,7 @@ Imagine you're the manager of a restaurant. You oversee the entire operation, fr
 * The function can allocate and deallocate memory using operators like `new` and `delete`.
 * The program terminates when the `main` function returns or an exception is thrown.
 
+type: "Atomic Note"
 ---
 
 ## 5. Worked Example

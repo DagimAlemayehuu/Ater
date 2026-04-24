@@ -1,15 +1,5 @@
 ---
-title: Case Sensitivity
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
+read: true
 ---
 
 # 1. Technical Definition
@@ -30,6 +20,7 @@ Imagine you have a huge library with millions of books, and each book has a uniq
 * Changing the case of a variable or function name can lead to compilation errors if not updated consistently.
 * There is no specific threshold for the number of case-sensitive characters allowed in an identifier.
 
+type: "Atomic Note"
 ---
 
 ## 5. Worked Example

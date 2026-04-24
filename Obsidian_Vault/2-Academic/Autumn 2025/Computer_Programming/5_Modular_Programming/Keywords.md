@@ -1,17 +1,3 @@
----
-title: Keywords
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
----
-
 # 1. Technical Definition
 Keywords are `metadata` tags that provide a concise way to categorize and describe the content of a document, webpage, or digital asset, helping search engines and users quickly identify its relevance. In the context of information retrieval, keywords are a set of `index terms` assigned to a document to facilitate efficient searching and filtering.
 
@@ -30,6 +16,7 @@ Imagine you have a huge library with millions of books, and you want to find a s
 * Keywords may need to be updated or changed as the content evolves.
 * Some systems may have algorithms to prevent keyword spam or abuse.
 
+read: true
 ---
 
 ## 5. Worked Example

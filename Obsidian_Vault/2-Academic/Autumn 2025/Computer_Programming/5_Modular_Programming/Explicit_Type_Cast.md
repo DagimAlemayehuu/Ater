@@ -1,19 +1,3 @@
----
-title: Explicit Type Cast
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
-prerequisites:
-- "[[Type Conversion]]"
----
-
 # 1. Technical Definition
 An explicit type cast is a programming language construct that uses a specific syntax, typically involving a `type` and an expression, such as `type(expression)`, to intentionally convert an expression of one data type to another. This conversion is explicit because it is directly specified by the programmer, unlike implicit type conversions which occur automatically.
 
@@ -32,6 +16,7 @@ Imagine you have a toy box full of different shaped blocks, like squares, circle
 * Some type casts may involve additional runtime checks or overhead, especially when casting between complex types.
 * If the cast is to a type that requires more memory or a different structure, the language may need to perform additional operations to ensure compatibility.
 
+read: true
 ---
 
 ## 5. Worked Example

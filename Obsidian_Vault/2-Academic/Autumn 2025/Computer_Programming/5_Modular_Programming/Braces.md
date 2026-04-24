@@ -1,17 +1,3 @@
----
-title: Braces
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
----
-
 # 1. Technical Definition
 In C++, `braces` refer to the curly brackets `{}` used to define the scope of a block of code, such as a function, loop, or conditional statement. The `braces` are used to group statements together, allowing the compiler to determine the boundaries of a block of code.
 
@@ -30,6 +16,7 @@ Imagine you're building a LEGO structure, and you want to create a separate sect
 * The stack is used to manage the memory for variables declared within a block.
 * If not properly managed, blocks defined by `braces` can lead to memory leaks or dangling pointers if dynamically allocated memory is not properly released.
 
+generated: true
 ---
 
 ## 5. Worked Example

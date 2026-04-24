@@ -1,19 +1,3 @@
----
-title: Precedence Order
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
-prerequisites:
-- "[[Operator Precedence]]"
----
-
 # 1. Technical Definition
 The precedence order, also known as operator precedence, is a set of rules that dictate the order in which operators are evaluated when there are multiple operators in an expression, with `precedence` determining the order of operations. In programming, this order is typically defined by the language specification, with each operator assigned a specific `precedence level`.
 

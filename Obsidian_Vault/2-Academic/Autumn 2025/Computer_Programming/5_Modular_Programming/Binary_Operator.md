@@ -1,17 +1,3 @@
----
-title: Binary Operator
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
----
-
 # 1. Technical Definition
 A `binary operator` is a type of operator that takes two `operands` as input and produces a result. In programming, a binary operator is typically denoted by a symbol, such as `+`, `-`, `*`, or `/`, and is used to perform a specific operation on the two operands.
 
@@ -30,6 +16,7 @@ Imagine you have two boxes, one with 3 apples and the other with 5 apples. A bin
 * The result of a binary operation can be used as an operand in another operation.
 * The data type of the result is typically determined by the data types of the operands and the operator used.
 
+read: true
 ---
 
 ## 5. Worked Example

@@ -1,17 +1,3 @@
----
-title: Comments
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
----
-
 # 1. Technical Definition
 In C++, a `comment` is a section of code that is ignored by the compiler and is used to add notes or explanations to the source code. Comments are denoted by `//` for single-line comments and `/* */` for multi-line comments.
 
@@ -30,6 +16,7 @@ Imagine you're writing a story and you want to leave a note to yourself or someo
 * There is no limit to the number of comments that can be used in a program.
 * Comments can be used to temporarily disable code, but this is generally considered bad practice.
 
+generated: true
 ---
 
 ## 5. Worked Example

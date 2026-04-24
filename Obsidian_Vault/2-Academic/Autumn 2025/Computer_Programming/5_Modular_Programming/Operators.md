@@ -1,17 +1,3 @@
----
-title: Operators
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-mode: CS-CODE
-read: false
-generated: true
----
-
 # 1. Technical Definition
 In programming, an `operator` is a symbol that represents a specific operation that can be performed on one or more operands, resulting in a value. The `operator` is used to perform operations such as arithmetic, comparison, logical, and assignment operations.
 
@@ -30,6 +16,7 @@ Imagine you have a toolbox with different tools, and each tool helps you do a sp
 * Some operators, such as those that perform arithmetic operations, may cause overflow or underflow if the result exceeds the maximum or minimum value that can be stored in a variable.
 * The use of operators can also affect the performance of a program, as some operations may require more computational resources than others.
 
+unit: 5
 ---
 
 ## 5. Worked Example
