@@ -27,11 +27,19 @@ This file tracks the step-by-step technical implementation path.
 - [x] Linguistic Audit: Replace "Note Properties" with "Info" and "Topologies" with "Map".
 - [x] Linguistic Audit: Standardize "Direct English" across Practice and Database views.
 
+## Sprint: Sovereign Perfection & Graph Density (OKA v25.5)
+- [x] Implement **Hostile Senior Persona** across all generation prompts.
+- [x] Enforce **100% Technical Accuracy** (Ban Big-O hallucinations & runtime-compile conflation).
+- [x] Mandate **Internal Obsidian Knowledge Graph Interlinking** within note prose.
+- [x] Eradicate "No Bug" L3 questions; force genuine, subtle logical flaws.
+- [x] Implement **Senior Academic Librarian** for robust Metadata/Course detection.
+- [x] Implement **Automatic Error Reset** for the Queue on server restart.
+- [x] Add **EDUCATION** domain to Sovereign Matrix.
+- [x] Hardened JSON healing for probe snippets (Handling unescaped quotes/newlines).
+
 ## Sprint: Pedagogical Interface Hardening
 - [x] Fix `ReferenceError: X` in Practice Session Exit dialog.
 - [x] Standardize button visibility logic for manual grading modes (Writing/Synthesis).
 - [x] Correct quantitative data rendering in Results view (Total questions).
 - [x] Implement Density Optimization: Shrink font sizes and spacing for compact UI.
 - [x] Audit all 8 retrieval modalities for runtime stability.
-
-*Next autonomous agent loop will append and check off dynamic tasks here...*

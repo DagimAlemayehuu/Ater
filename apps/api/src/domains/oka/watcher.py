@@ -102,9 +102,16 @@ class OkaQueueManager:
         print(f"[OKA Queue] Auto process updated to: {self.auto_process}")
 
     def scan_existing_files(self):
-        """Scans the inbox for existing files and adds them to the database queue."""
+        """Scans the inbox for existing files, adds them to the database, and resets errors."""
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
         try:
+            conn = sqlite3.connect(self.db_path)
+            # 1. Reset any 'error' status to 'pending' on startup
+            conn.execute("UPDATE queue SET status = 'pending' WHERE status = 'error'")
+            conn.commit()
+            conn.close()
+            
+            # 2. Add any new files
             for item in self.inbox_path.iterdir():
                 if item.is_file() and not item.name.startswith('.') and item.suffix.lower() in supported:
                     self.add_to_queue(item)
@@ -183,7 +190,11 @@ class OkaQueueManager:
                     detect_res = await self.service.detect_curriculum(str(path.absolute()))
                 except Exception as e:
                     watcher_logger.error(f"Detection failed for {path.name}: {e}")
-                    self._mark_error(file_path_str)
+                    if "429" in str(e) or "rate_limit" in str(e).lower():
+                        watcher_logger.warning("Rate limit during detection. Cooling down for 60s...")
+                        await asyncio.sleep(60)
+                    else:
+                        self._mark_error(file_path_str)
                     continue
 
                 anchored_hub = detect_res.get("anchored_hub")
@@ -212,7 +223,7 @@ class OkaQueueManager:
                 
                 plan_retry = 0
                 res = None
-                while plan_retry < 3:
+                while plan_retry < 5:
                     try:
                         res = await self.service.generate_plan(
                             str(path.absolute()), 
@@ -223,11 +234,15 @@ class OkaQueueManager:
                         if res: break
                     except Exception as e:
                         plan_retry += 1
-                        watcher_logger.warning(f"Planning failed (Attempt {plan_retry}/3): {e}")
-                        if plan_retry >= 3: raise e
-                        await asyncio.sleep(5)
+                        err_msg = str(e).lower()
+                        watcher_logger.warning(f"Planning failed (Attempt {plan_retry}/5): {e}")
+                        if "429" in err_msg or "rate_limit" in err_msg:
+                            await asyncio.sleep(60)
+                        else:
+                            await asyncio.sleep(10)
 
                 if not res:
+                    watcher_logger.error(f"Planning exhausted all retries for {path.name}")
                     self._mark_error(file_path_str)
                     continue
 
@@ -246,6 +261,7 @@ class OkaQueueManager:
                 
                 has_more = True
                 temp_batch = 0
+                deployment_failed = False
                 
                 while has_more and self.auto_process:
                     command = "Confirm Final Plan & Proceed Batch 1" if temp_batch == 0 else f"Proceed Batch {temp_batch + 1}"
@@ -274,36 +290,44 @@ class OkaQueueManager:
                                 raise ValueError(confirm_res.get("message", "Unknown service error"))
                         except Exception as e:
                             batch_retry += 1
-                            watcher_logger.error(f"Batch execution failed (Attempt {batch_retry}): {e}")
-                            if "tpd" in str(e).lower() or "daily" in str(e).lower():
-                                self.status = "error"
-                                self.last_action = "Daily Limit Reached."
-                                self.auto_process = False
-                                break
-                            await asyncio.sleep(20)
+                            err_msg = str(e).lower()
+                            watcher_logger.error(f"Batch execution failed (Attempt {batch_retry}/5): {e}")
+                            if "tpd" in err_msg or "daily" in err_msg or "429" in err_msg or "rate_limit" in err_msg:
+                                watcher_logger.warning("Rate limit hit during deployment. Sleeping for 60s...")
+                                await asyncio.sleep(60)
+                            else:
+                                await asyncio.sleep(15)
                     
                     if not success:
+                        watcher_logger.error(f"Deployment exhausted all retries for {path.name} at batch {temp_batch}")
+                        deployment_failed = True
                         break
                     
-                # 4. Finalize
-                if path.exists():
-                    generated_dir = self.inbox_path.absolute() / "note generated"
-                    generated_dir.mkdir(parents=True, exist_ok=True)
-                    new_path = generated_dir / path.name
-                    if new_path.exists():
-                        new_path = generated_dir / f"{int(time.time())}_{path.name}"
-                    shutil.move(str(path.absolute()), str(new_path.absolute()))
-                
-                self._mark_done(file_path_str)
+                # 4. Finalize (Only if fully successful)
+                if not deployment_failed and not has_more:
+                    if path.exists():
+                        generated_dir = self.inbox_path.absolute() / "note generated"
+                        generated_dir.mkdir(parents=True, exist_ok=True)
+                        new_path = generated_dir / path.name
+                        if new_path.exists():
+                            new_path = generated_dir / f"{int(time.time())}_{path.name}"
+                        shutil.move(str(path.absolute()), str(new_path.absolute()))
+                    
+                    self._mark_done(file_path_str)
+                    watcher_logger.info(f"Successfully processed and moved {path.name}")
+                else:
+                    self._mark_error(file_path_str)
+                    self.status = "error"
                 
                 # Governor Cooldown (10s)
-                self.status = "cooling"
-                for i in range(10, 0, -1):
-                    self.last_action = f"Cooling Down ({i}s)"
-                    await asyncio.sleep(1)
+                if not deployment_failed:
+                    self.status = "cooling"
+                    for i in range(10, 0, -1):
+                        self.last_action = f"Cooling Down ({i}s)"
+                        await asyncio.sleep(1)
                 
                 self.status = "idle"
-                self.last_action = f"Finished {path.name}"
+                self.last_action = f"Finished {path.name}" if not deployment_failed else f"Failed {path.name}"
                 self.current_file = None
                 
             except Exception:

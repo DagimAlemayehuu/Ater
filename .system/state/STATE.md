@@ -1,6 +1,6 @@
 # Project State
 ## 1. Status Summary
-**Current Status:** The system has been upgraded to **OKA v25.0**. The generation pipeline now utilizes a **2-Pass Theorist/Inquisitor Strategy**, decoupling dense technical theory from pedagogical artifacts. Micro-practice has been overhauled into a **Randomized 3-Level Interactive Quiz** system (MCQ, Fill-in, Debug, etc.) embedded directly in notes. Frontend rendering has been stabilized with a memoized, ref-stable interceptor, eliminating unmounting "blinks" and state loss during interaction.
+**Current Status:** The system has reached **OKA v25.5 (Perfection State)**. The entire LLM orchestration layer has been rewritten to enforce a **Hostile, Unforgiving Senior Persona**, mandatory **Internal Knowledge Graph Interlinking**, and **100% Technical Accuracy**. The background orchestration queue (`OkaQueueManager`) has been hardened with **Automatic Error Recovery** on startup. Metadata detection now features a **Senior Academic Librarian** persona that prevents technical-to-social Subject Matter leakage (e.g., Inclusion/Diversity no longer routes to Computer Programming).
 
 ## 2. Global Milestones
 *   [x] Initialization & Architecture
@@ -18,7 +18,9 @@
 *   [x] **OKA v24.0: Pedagogical Engine (Mental Models + Bidirectional Progress Sync)**
 *   [x] **Direct-Entry & Terminology Audit (Minimalist Navigation + Plain English)**
 *   [x] **Obsidian High-Density Metadata & Explorer (CRUD + Robust DND + Parent Targeting)**
-*   [x] **OKA v25.0: Technical Pedagogy (2-Pass Strategy + Randomized 3-Level Interactive Quizzes)**
+*   [x] **OKA v25.0: Technical Pedagogy (27 Sovereign Domains + 3-Level Interactivity)**
+*   [x] **OKA v25.5: Perfection Overhaul (Hostile Persona + Graph Density + Accuracy Guardrails)**
+*   [x] **Autonomous Bulk Ingestion (Dynamic Rate Limit Recovery & Strict Finalization)**
 *   [x] Global E2E Tests Pass
 *   [ ] Production Deployment
 

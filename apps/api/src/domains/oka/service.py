@@ -752,36 +752,44 @@ class OkaService:
             raise e
 
     def find_best_hub_match(self, source_text: str) -> Optional[Dict[str, Any]]:
-        """Robustly matches source text against existing planner hubs using content-based keyword matching."""
+        """Robustly matches source text against existing planner hubs using course + keyword + unit weight."""
         hubs = self.list_planner_hubs()
         if not hubs: return None
         
-        sample = source_text[:5000].lower()
+        sample = source_text[:10000].lower()
         best_match = None
         highest_score = 0
 
         for hub in hubs:
             score = 0
-            # 1. Direct Unit Match (High Weight)
+            course_val = str(hub.get("course", "")).lower()
+            hub_title = hub["title"].lower().replace("hub", "").strip()
             unit_val = str(hub.get("unit", ""))
-            if unit_val and (f"unit {unit_val}" in sample or f"chapter {unit_val}" in sample):
-                score += 10
+
+            # 1. Course Match (MANDATORY or HIGH WEIGHT)
+            # If the course name is found in the text, give it a massive boost
+            if course_val and course_val in sample:
+                score += 15
             
-            # 2. Title Keyword Match (Medium Weight)
-            title_clean = hub["title"].lower().replace("hub", "").strip()
-            keywords = [k for k in title_clean.split() if len(k) > 3]
+            # 2. Topic/Keyword Match
+            keywords = [k for k in hub_title.split('_') if len(k) > 3]
             for k in keywords:
-                if k in sample: score += 5
+                if k.lower() in sample: score += 10
             
-            # 3. Course Match
-            course_val = str(hub.get("course", ""))
-            if course_val.lower() in sample: score += 5
+            # 3. Unit Match (Only if topic or course also partially matches)
+            # This prevents matching "Unit 2" of Programming to "Unit 2" of Sociology
+            if unit_val and (f"unit {unit_val}" in sample or f"chapter {unit_val}" in sample):
+                if score > 0: # Only count unit if we have some course/topic overlap
+                    score += 10
+                else:
+                    score += 2 # Low weight for unit-only match
 
             if score > highest_score:
                 highest_score = score
                 best_match = hub
 
-        return best_match if highest_score >= 5 else None
+        # Require a minimum threshold of 15 points to avoid weak matches
+        return best_match if highest_score >= 15 else None
 
     # ── Phase 1: Detection ──────────────────────────────────────
     async def detect_curriculum(self, file_path: str) -> Dict[str, Any]:
@@ -792,25 +800,29 @@ class OkaService:
             
             if path.suffix.lower() == ".pdf":
                 loader = PyPDFLoader(str(path))
+                # Load first 10 pages for better context coverage
                 pages = loader.load_and_split()
-                content_text = "\n".join([p.page_content for p in pages[:5]]) # Scan slightly more for detection
+                content_text = "\n".join([p.page_content for p in pages[:10]])
             else:
                 with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                    content_text = f.read(10000)
+                    content_text = f.read(20000)
 
+            # Try to match an existing hub
             target_hub = self.find_best_hub_match(content_text)
             
-            # If no hub match, use AI to detect curriculum metadata
-            detected_curriculum = None
-            if not target_hub:
-                print(f"[OKA Service] No Hub match for {path.name}. Invoking AI detection...")
-                detected_curriculum = await self._detect_metadata_with_ai(content_text[:20000])
+            # If no hub match, or if it matched but course seems wrong, use AI to detect
+            detected_curriculum = await self._detect_metadata_with_ai(content_text)
+            
+            # If target_hub exists, cross-check course
+            if target_hub:
+                hub_course = target_hub.get("course", "").lower()
+                ai_course = detected_curriculum.get("course", "").lower()
+                if hub_course and ai_course and hub_course != ai_course:
+                    print(f"[OKA Service] WARNING: Match found ({target_hub['title']}) but AI detected different course ({detected_curriculum['course']}). Preferring AI detection.")
+                    target_hub = None
 
-            # CRITICAL FIX: If we have AI-detected metadata but no matching hub,
-            # synthesize a virtual anchored_hub so the frontend pre-fills correctly.
-            # This tells the UI exactly what to show — but also creates a stub hub if the 
-            # hub_title detected is meaningful (i.e., not empty/unknown).
-            if not target_hub and detected_curriculum:
+            # If no hub match, use AI-detected metadata to synthesize a virtual hub
+            if not target_hub:
                 dc = detected_curriculum
                 hub_title = dc.get("hub_title", "").strip()
                 unit_num = dc.get("unit", "").strip()
@@ -891,7 +903,7 @@ class OkaService:
         semester_list = "\n".join(f"  {i+1}. \"{s}\"" for i, s in enumerate(options['semesters']))
         
         prompt = (
-            "You are analyzing text from an academic document to identify its course context.\n\n"
+            "You are a Senior Academic Librarian. Your task is to analyze the following document excerpt and categorize it into the most appropriate course and unit hub.\n\n"
             "Extract these five fields and return ONLY a JSON object:\n"
             "{\n"
             "  \"course\": \"<exact course name from the list below, or closest match>\",\n"
@@ -905,14 +917,16 @@ class OkaService:
             "AVAILABLE SEMESTERS (pick the most recent/likely based on context):\n"
             f"{semester_list}\n\n"
             "MATCHING RULES:\n"
-            "- Use the EXACT string from the list above (including spaces and capitalization).\n"
-            "- If the document covers C++, arrays, functions, OOP, memory \u2192 likely 'Computer Programming'.\n"
-            "- If the document covers SQL, ER diagrams, relational algebra, database \u2192 likely 'Database Systems'.\n"
-            "- If the document covers logic, sets, graphs, proofs \u2192 likely 'Discrete Mathematics'.\n"
-            "- If no course matches, create a reasonable new course name.\n"
-            "- If no semester matches, use the most recent one listed or infer from date references in text.\n"
-            "- RETURN ONLY JSON. NO MARKDOWN. NO EXPLANATION.\n\n"
-            f"DOCUMENT TEXT (first 15000 chars):\n{text[:15000]}"
+            "- Use the EXACT string from the list above if it matches the subject matter.\n"
+            "- CATEGORY: [CS/TECH] \u2192 If covers C++, arrays, OOP, memory, SQL, databases \u2192 likely 'Computer Programming' or 'Database Systems'.\n"
+            "- CATEGORY: [SOCIAL/HUMANITIES] \u2192 If covers Inclusion, Diversity, Ethics, Social Justice, Education, Rights \u2192 DO NOT use a Tech course. Use a Social Science or Humanities course name.\n"
+            "- CATEGORY: [MATH] \u2192 If covers logic, sets, graphs, proofs \u2192 likely 'Discrete Mathematics'.\n"
+            "- If no course matches well, invent a descriptive new course name.\n"
+            "- If the document text mentions 'Unit X' or 'Chapter X', extract that number for 'unit'.\n"
+            "- For 'hub_title', extract the core topic (e.g., 'Modular Programming', 'Inclusive Education').\n"
+            "CRITICAL: Be extremely careful not to put social science topics (Inclusion/Diversity) into Computer Programming.\n"
+            "RETURN ONLY JSON. NO MARKDOWN. NO EXPLANATION.\n\n"
+            f"DOCUMENT TEXT (first 20000 chars):\n{text[:20000]}"
         )
         
         try:
@@ -1269,19 +1283,15 @@ class OkaService:
                             )
                             
                             OkaService._status[session_id] = f"{phase_prefix} Socratic Pass: [[{current_note_title}]] (2/2)..."
-                            probes = None
-                            try:
-                                probes = await self.writer_agent.generate_probes(
-                                    note_title=note_schema.title,
-                                    note_body=note_content.markdown_body,
-                                    source_text=note_schema.source_context or "",
-                                    primary_language=primary_language,
-                                    all_concepts=all_concepts_list
-                                )
-                                if probes:
-                                    session["all_note_probes"][note_schema.title] = probes
-                            except Exception as e:
-                                print(f"[OKA Service] Probe generation warning: {e}")
+                            probes = await self.writer_agent.generate_probes(
+                                note_title=note_schema.title,
+                                note_body=note_content.markdown_body,
+                                source_text=note_schema.source_context or "",
+                                primary_language=primary_language,
+                                all_concepts=all_concepts_list
+                            )
+                            if probes:
+                                session["all_note_probes"][note_schema.title] = probes
 
                             final_output = self._compile_atomic_note(
                                 plan=plan_obj, 
@@ -1394,11 +1404,10 @@ class OkaService:
         probe_body = ""
         if probes:
             probe_body = (
-                "\n---\n\n"
-                "## 4. Worked Example\n\n"
+                "\n"
                 f"{probes.worked_example.strip()}\n\n"
                 "---\n\n"
-                "## 5. Knowledge Check\n\n"
+                "## 6. The Proving Grounds\n\n"
                 f"{probes.interactive_quiz.strip()}\n"
             )
 
@@ -1437,8 +1446,8 @@ class OkaService:
             clean_title = note_title.replace("_", " ")
             body_parts.append(
                 f"### [[{note_title}|{clean_title}]]\n"
-                f"**Worked Example**:\n\n{probes.worked_example}\n\n"
-                f"**Knowledge Check**:\n\n{probes.interactive_quiz.strip()}\n"
+                f"**Artifact & Walkthrough**:\n\n{probes.worked_example}\n\n"
+                f"**The Proving Grounds**:\n\n{probes.interactive_quiz.strip()}\n"
             )
 
         full_body = "\n".join(body_parts)
