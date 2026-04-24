@@ -132,7 +132,7 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, ini
                     </button>
                     <div>
                         <h1 className="text-lg font-bold tracking-tight">{database.name}</h1>
-                        <p className="text-xs text-muted-foreground uppercase tracking-widest">{rows.length} ROWS</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-widest">{rows.length} ITEMS</p>
                     </div>
                 </div>
                 
@@ -141,7 +141,7 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, ini
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={14} />
                         <input 
                             type="text"
-                            placeholder="Search records..."
+                            placeholder="Search..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="bg-muted/30 border border-border/50 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all w-64"
@@ -161,7 +161,7 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, ini
                         className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-sm font-bold tracking-tight hover:opacity-90 active:scale-95 transition-all"
                     >
                         <Plus size={16} />
-                        NEW RECORD
+                        ADD
                     </button>
                 </div>
             </div>
@@ -190,7 +190,7 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, ini
 
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Group By</span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Group</span>
                         <select 
                             value={groupBy || ''} 
                             onChange={(e) => setGroupBy(e.target.value || null)}

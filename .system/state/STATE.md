@@ -1,6 +1,6 @@
 # Project State
 ## 1. Status Summary
-**Current Status:** The system is operating on the **Ironclad OKA v24.0 (Pedagogical Engine)**. The Markdown rendering engine has been hardened with **High-Fidelity Code Blocks**, **Nested Connection List Repair**, and **Dynamic WikiLink Normalization**. The "Topologies" sidebar now supports **Depth-Aware Nesting**, **Auto-Expansion**, and **Indentation Guide Lines**, ensuring a seamless "Living Blueprint" experience. Progress is bidirectionally synced between Hub notes and Atomic read states.
+**Current Status:** The system has been upgraded to the **"Direct-Entry" UI/UX Architecture**. All technical and academic jargon has been purged in favor of **Direct-English** terminology (e.g., "True/False" vs "Binary"). The navigation depth has been flattened, allowing **Direct Access** to the OKA Dashboard from the main sidebar. Functional and visual parity across Practice, Agents, and Settings modules has been achieved.
 
 ## 2. Global Milestones
 *   [x] Initialization & Architecture
@@ -16,6 +16,7 @@
 *   [x] **Adaptive High-Fidelity (Auto-Repair Parser + Density Fallbacks)**
 *   [x] **Dynamic WikiLink Engine (Auto-Creation & Nav)**
 *   [x] **OKA v24.0: Pedagogical Engine (Mental Models + Bidirectional Progress Sync)**
+*   [x] **Direct-Entry & Terminology Audit (Minimalist Navigation + Plain English)**
 *   [ ] Global E2E Tests Pass
 *   [ ] Production Deployment
 

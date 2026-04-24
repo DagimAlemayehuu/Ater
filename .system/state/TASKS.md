@@ -18,4 +18,13 @@ This file tracks the step-by-step technical implementation path.
 - [x] Interactive Card-View & Database Gallery UI.
 - [x] Neural centrality scaling for graph nodes.
 
+## Sprint: Direct-Entry & Terminology Audit
+- [x] Flatten Settings module (remove sidebar, single-page "General").
+- [x] Implement Direct-Entry for Agents (bypass list, direct OKA Dashboard).
+- [x] Linguistic Audit: Replace "Binary" with "True/False" across app.
+- [x] Linguistic Audit: Replace "Master Unit Hub" with "Topic" (UI).
+- [x] Linguistic Audit: Replace "Architectural Fragments" with "Notes" (UI).
+- [x] Linguistic Audit: Replace "Note Properties" with "Info" and "Topologies" with "Map".
+- [x] Linguistic Audit: Standardize "Direct English" across Practice and Database views.
+
 *Next autonomous agent loop will append and check off dynamic tasks here...*

@@ -29,4 +29,13 @@ DO NOT put routing or page structures here. Put them in `app_structure.md`.
 *   **Buttons**: Strict `rounded-md` or `rounded-full`. Monochrome only. High-fidelity glass effect on hover.
 *   **Cards**: Sub-pixel borders (`border-[0.5px]`), subtle `shadow-sm`, and `bg-card` with slight transparency if glassmorphism is active.
 *   **Inputs**: Minimalist borders, focus state uses `ring-offset-background` and `ring-1 ring-ring`.
++
++## 5. Terminology & Navigation
++*   **Direct-English Rule**: UI labels must use the simplest possible English. 
++    *   `Master Unit Hub` → `Topic`
+    *   `Architectural Fragment` → `Note`
+    *   `Binary` → `True/False`
+    *   `Note Properties` → `Info`
+    *   `Hub Connections` → `Map`
+*   **Direct-Entry Rule**: No intermediary list screens for primary modules. Clicking an icon (e.g., Agents) must resolve to the primary functional dashboard (e.g., OKA Dashboard) immediately.
 

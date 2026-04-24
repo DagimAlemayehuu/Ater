@@ -12,7 +12,9 @@
 4.  **Universal AI Bridge**: Desktop uses the Python Sidecar; Mobile uses a Native Scriptable Bridge to route requests to Gemini, OpenAI, Anthropic, Groq, and OpenRouter.
 
 ## 2. UI/UX Strategy
-*   **Monochrome High-Fidelity**: Professional grayscale palette with professional typography.
+*   **Monochrome High-Fidelity**: Professional grayscale palette with premium typography (Inter/Outfit).
+*   **Direct-Entry Architecture**: Navigation depth is minimized. Major modules (Agents, Settings) use direct-access entry points, bypassing intermediary lists.
+*   **Direct-English Standard**: UI terminology must be "plain and direct." Avoid academic jargon (e.g., use "True/False" instead of "Binary", "Topic" instead of "Master Unit Hub").
 *   **Agnostic Interaction**: Sidebar for Desktop; Bottom Navbar + Drawer sheets for Mobile.
 
 ## 3. Storage Blueprint
@@ -22,7 +24,8 @@
 *   **Automation Queue**: SQLite-backed persistent queue (Desktop) or In-Memory Session (Mobile).
 
 ## 4. Key Architectural Laws
-1.  **Setext Defense**: Mandatory double-newlines before all horizontal rules (`---`) to prevent accidental heading resizing.
-2.  **Gutter Law**: Mandatory empty lines before and after all Tables, Code Blocks, and Diagrams.
-3.  **Wikilink Safety**: All YAML wikilinks must be double-quoted (e.g., `hub: "[[Title]]"`).
-4.  **Thin Context Protocol**: Individual turns for each note to maintain stability on weak models.
+1.  **Direct English Enforcement**: All new UI components must use simple, direct English labels.
+2.  **Setext Defense**: Mandatory double-newlines before all horizontal rules (`---`) to prevent accidental heading resizing.
+3.  **Gutter Law**: Mandatory empty lines before and after all Tables, Code Blocks, and Diagrams.
+4.  **Wikilink Safety**: All YAML wikilinks must be double-quoted (e.g., `hub: "[[Title]]"`).
+5.  **Thin Context Protocol**: Individual turns for each note to maintain stability on weak models.

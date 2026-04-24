@@ -149,7 +149,7 @@ function parseHubTree(content: string): NavNode[] {
     return roots
 }
 
-function HubConnectionsNav({ content, activePath, onNavigate, onToggleCheckbox }: { content: string, activePath: string | null, onNavigate: (name: string) => void, onToggleCheckbox: (label: string, isChecked: boolean, target: string | null) => void }) {
+function Map({ content, activePath, onNavigate, onToggleCheckbox }: { content: string, activePath: string | null, onNavigate: (name: string) => void, onToggleCheckbox: (label: string, isChecked: boolean, target: string | null) => void }) {
     const activeNoteName = activePath?.split('/').pop()?.replace('.md', '').replace('.pdf', '')?.toLowerCase() || ''
     const tree = useMemo(() => parseHubTree(content), [content]);
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -264,7 +264,7 @@ function HubConnectionsNav({ content, activePath, onNavigate, onToggleCheckbox }
         return (
             <div className="py-20 flex flex-col items-center gap-3 opacity-20">
                 <Network size={24} strokeWidth={1} className="text-muted-foreground" />
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">No Map Found</span>
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">Empty</span>
             </div>
         )
     }
@@ -739,7 +739,7 @@ export default function ObsidianVaultPage() {
             setEditedContent(res.content || '')
             setIsEditing(false)
 
-            // Auto-show properties if displayable metadata exists
+            // Auto-show info if displayable metadata exists
             const hasDisplayableMetadata = Object.keys(metadata).some(k => 
                 !['title', 'position', 'frontmatter'].includes(k.toLowerCase())
             )
@@ -1235,7 +1235,7 @@ body:has(.backdrop-blur-xl) aside {
                                                 <div className="px-4 py-3 flex items-center justify-between border-b border-border shrink-0 bg-muted/10">
                                                     <div className="flex items-center gap-2">
                                                         <Network size={12} className="text-muted-foreground/60" />
-                                                        <span className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/70">Topologies</span>
+                                                        <span className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/70">Map</span>
                                                     </div>
                                                 </div>
 
@@ -1250,7 +1250,7 @@ body:has(.backdrop-blur-xl) aside {
                                                                 onClick={() => handleWikiLinkClick(typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '') : '')}
                                                                 className="w-full text-left p-2 rounded-md bg-muted/30 border border-border/50 hover:border-primary/30 transition-all group/hub-btn"
                                                             >
-                                                                <div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 mb-1 group-hover/hub-btn:text-primary/50 transition-colors">Active Hub</div>
+                                                                <div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 mb-1 group-hover/hub-btn:text-primary/50 transition-colors">Topic</div>
                                                                 <div className="text-[11px] font-bold text-foreground/80 truncate group-hover/hub-btn:text-primary transition-colors">{clean?.replace(/_/g, ' ')}</div>
                                                             </button>
                                                         </div>

@@ -218,7 +218,7 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
                             <div className="p-1.5 bg-muted rounded text-foreground">
                                 <Brain size={16} />
                             </div>
-                            <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Master Unit Hub</h4>
+                            <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Topic</h4>
                         </div>
                         <div className="text-sm font-medium text-foreground underline decoration-muted-foreground/20 underline-offset-4 cursor-default">
                             {cleanLink(hubContent)}
@@ -231,7 +231,7 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
                             <div className="p-1.5 bg-muted rounded text-foreground">
                                 <ShieldCheck size={16} />
                             </div>
-                            <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Mastery Assessment</h4>
+                            <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Test</h4>
                         </div>
                         <div className="text-sm font-medium text-foreground underline decoration-muted-foreground/20 underline-offset-4 cursor-default">
                             {cleanLink(pqContent)}
@@ -243,7 +243,7 @@ function PlanCardView({ planRaw }: { planRaw: string }) {
             <div className="space-y-4">
                 <div className="flex items-center gap-2 px-1">
                     <Layers size={16} className="text-muted-foreground" />
-                    <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Architectural Fragments</h4>
+                    <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Notes</h4>
                 </div>
                 
                 <div className="flex flex-col gap-2">
@@ -528,11 +528,11 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
             <div className="flex items-center justify-between pb-8 shrink-0">
                 <div className="flex flex-col">
                     <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-tight mb-4">
-                        <button onClick={onBack} className="hover:text-foreground transition-colors">Intelligence</button>
+                        <span>Knowledge</span>
                         <span className="text-muted-foreground/30">/</span>
-                        <span className="text-muted-foreground">OKA Dashboard</span>
+                        <span className="text-muted-foreground">Dashboard</span>
                     </div>
-                    <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Obsidian Knowledge Architect</h1>
+                    <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Knowledge Architect</h1>
                 </div>
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 bg-muted border border-border px-3 py-1.5 rounded text-xs font-semibold uppercase tracking-tight text-muted-foreground">
@@ -553,7 +553,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
             <div className="flex-1 flex gap-6 overflow-hidden">
                 <div className="w-[320px] flex flex-col gap-6 shrink-0 overflow-hidden">
                     <div className="rounded border border-border bg-background p-5 shrink-0 shadow-sm">
-                        <h3 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground mb-4">Pipeline Status</h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground mb-4">Status</h3>
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
@@ -650,7 +650,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                 <Bot className="w-4 h-4" />
                             </div>
                             <h3 className="text-sm font-bold truncate text-foreground">
-                                {selectedInboxFile?.name || 'Architect Workspace'}
+                                {selectedInboxFile?.name || 'Workspace'}
                             </h3>
                         </div>
                         
@@ -658,24 +658,24 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                             {selectedInboxFile && !isCurriculumReady && !isAwaitingConfirmation && !isAwaitingNextBatch && !isCompleted && (
                                 <button onClick={() => processSelectedFile()} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-muted-foreground bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50">
                                     {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <Zap className="mr-2" size={12} />}
-                                    Analyze File
+                                    Analyze
                                 </button>
                             )}
                             {isCurriculumReady && !isAwaitingConfirmation && !isCompleted && (
                                 <button onClick={startPlanning} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground border border-primary bg-primary hover:opacity-90 transition-colors  disabled:opacity-50">
                                     {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <ChevronRight className="mr-2" size={12} />}
-                                    Continue to Plan
+                                    Plan
                                 </button>
                             )}
                             {isAwaitingConfirmation && (
                                <div className="flex gap-2">
                                    <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground border border-orange-500 bg-orange-600 hover:bg-orange-700 transition-colors disabled:opacity-50">
                                        {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <Zap className="mr-2" size={12} />}
-                                       Strictly Generate All
+                                       Do Everything
                                    </button>
                                    <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground border border-primary bg-primary hover:opacity-90 transition-colors disabled:opacity-50">
                                        {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <ShieldCheck className="mr-2" size={12} />}
-                                       Confirm Plan & Run Batch 1
+                                       Start Step 1
                                    </button>
                                </div>
                             )}
@@ -683,18 +683,18 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                <div className="flex gap-2">
                                    <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground border border-orange-500 bg-orange-600 hover:bg-orange-700 transition-colors disabled:opacity-50">
                                        {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <Zap className="mr-2" size={12} />}
-                                       Strictly Finish All
+                                       Finish All
                                    </button>
                                    <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-primary-foreground bg-primary transition-colors disabled:opacity-50 hover:opacity-90">
                                        {processing ? <RefreshCw className="animate-spin mr-2" size={12} /> : <Zap className="mr-2" size={12} />}
-                                       Proceed Batch {currentBatch + 1} of {totalBatches}
+                                       Next Step {currentBatch + 1} of {totalBatches}
                                    </button>
                                </div>
                             )}
 
                             {isCompleted && (
                                 <button onClick={resetOkaSession} className="flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-tight text-muted-foreground bg-background border border-border hover:bg-muted transition-colors">
-                                    Reset Workspace
+                                    Reset
                                 </button>
                             )}
                         </div>
@@ -705,11 +705,11 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                             {!selectedInboxFile && !processing && (
                                 <div className="py-32 flex flex-col items-center justify-center text-center text-muted-foreground/30">
                                     <BrainCircuit size={64} strokeWidth={1} className="mb-6" />
-                                    <h4 className="text-lg font-bold mb-2 text-muted-foreground">Architect Standby</h4>
-                                    <p className="text-sm max-w-xs text-muted-foreground/60">Select a file from the inbox to begin autonomous knowledge architecture.</p>
+                                    <h4 className="text-lg font-bold mb-2 text-muted-foreground">Waiting</h4>
+                                    <p className="text-sm max-w-xs text-muted-foreground/60">Select a file from the inbox to begin.</p>
                                     <div className="mt-8 flex items-center gap-2 text-xs font-semibold uppercase tracking-tight text-muted-foreground/60 bg-muted px-4 py-2 rounded border border-border">
                                         <Info size={12} />
-                                        Deployment Base: {config?.academicFolderPath || '1-Academic'}
+                                        Folder: {config?.academicFolderPath || '1-Academic'}
                                     </div>
                                 </div>
                             )}
@@ -717,9 +717,9 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                             {processing && !batchFeed.length && !activePlan && (
                                 <div className="py-32 flex flex-col items-center justify-center text-center">
                                     <RefreshCw size={48} className="animate-spin text-primary mb-6" />
-                                    <h4 className="text-lg font-bold mb-4 text-foreground">Architecting Knowledge...</h4>
+                                    <h4 className="text-lg font-bold mb-4 text-foreground">Building...</h4>
                                     <p className="text-xs text-primary font-mono bg-muted px-4 py-2 rounded border border-border">
-                                        {queueStatus?.manual_status?.[selectedInboxFile?.path] || 'The AI is analyzing the document structure...'}
+                                        {queueStatus?.manual_status?.[selectedInboxFile?.path] || 'The AI is working...'}
                                     </p>
                                 </div>
                             )}
@@ -742,8 +742,8 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                         <div className="flex items-center gap-3">
                                             <Sparkles size={24} className="text-primary animate-pulse" />
                                             <div>
-                                                <h4 className="text-sm font-semibold tracking-tight text-foreground">Curriculum Alignment</h4>
-                                                <p className="text-xs font-medium text-muted-foreground">OKA has detected a potential curriculum match. Review and edit the metadata below.</p>
+                                                <h4 className="text-sm font-semibold tracking-tight text-foreground">Structure</h4>
+                                                <p className="text-xs font-medium text-muted-foreground">Review and edit the metadata below.</p>
                                             </div>
                                         </div>
 
@@ -758,7 +758,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                                                 />
                                                 <div className="absolute top-full left-0 mt-2 w-64 bg-popover border border-border shadow-xl rounded z-[100] p-1.5 hidden group-focus-within/popover:block group-hover/popover:block animate-in fade-in slide-in-from-top-1">
                                                     <div className="px-2 py-1.5 text-[10px] font-semibold uppercase text-muted-foreground tracking-tight border-b border-border mb-1 flex items-center justify-between">
-                                                        <span>Study Planner Hubs</span>
+                                                        <span>Hubs</span>
                                                         <div className="size-1.5 rounded-full bg-primary animate-pulse" />
                                                     </div>
                                                     <div className="max-h-48 overflow-y-auto custom-scrollbar">
@@ -959,66 +959,5 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
 
 /* ─── Main Agents Hub ─── */
 export default function Agents() {
-    const { config, saveConfig } = useConfig()
-    const [activeAgent, setActiveAgent] = useState<string | null>(null)
-
-    const agents = [
-        {
-            id: 'oka',
-            title: 'Obsidian Knowledge Architect',
-            icon: Brain,
-            color: 'text-foreground',
-            bg: 'bg-muted',
-            description: 'Autonomous ingestion engine. Automates the architectural mapping of documents into atomic knowledge clusters.',
-            action: () => setActiveAgent('oka'),
-            actionText: 'Architect'
-        }
-    ]
-
-    if (activeAgent === 'oka') return <OkaDashboard onBack={() => setActiveAgent(null)} />
-
-    return (
-        <div className="h-full flex flex-col p-16 space-y-10 animate-in fade-in duration-700 bg-background text-foreground overflow-y-auto custom-scrollbar">
-            <div className="flex flex-col space-y-2 mb-8 shrink-0">
-                <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4 border-b border-border pb-4">
-                    <span>System</span>
-                    <span className="material-symbols-outlined text-[12px]"><ChevronRight size={12}/></span>
-                    <span className="text-muted-foreground">Intelligence</span>
-                </div>
-                <h1 className="text-5xl font-extrabold tracking-tight text-foreground leading-tight mb-2">Automata</h1>
-                <p className="text-muted-foreground text-[16px] leading-relaxed">Coordinate autonomous agents and high-fidelity synthesis protocols.</p>
-            </div>
-
-            <div className="flex-1 flex max-w-3xl mx-auto w-full pt-10">
-                {agents.map((agent) => (
-                    <div key={agent.id} className="p-8 flex flex-col gap-8 group hover:border-muted-foreground/30 transition-all duration-500 relative overflow-hidden border border-border rounded bg-background shadow-sm w-full h-fit">
-                        <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <agent.icon size={160} strokeWidth={1} className="text-foreground" />
-                        </div>
-                        
-                        <div className="flex flex-col gap-6 relative z-10">
-                            <div className={cn("p-4 rounded w-fit border border-border shadow-inner", agent.bg)}>
-                                <agent.icon className={cn("w-8 h-8", agent.color)} />
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-black tracking-tight text-foreground">{agent.title}</h2>
-                                <p className="text-muted-foreground text-[13px] leading-relaxed mt-3 font-medium">
-                                    {agent.description}
-                                </p>
-                            </div>
-                        </div>
-
-                        <button 
-                            onClick={agent.action}
-                            className={cn(
-                                "w-full h-12 flex items-center justify-center font-bold uppercase tracking-wider text-[11px] rounded relative z-10 transition-all bg-primary text-primary-foreground hover:opacity-90 shadow-lg shadow-primary/10",
-                            )}
-                        >
-                            <Zap size={14} className="mr-2" /> INITIALIZE {agent.actionText}
-                        </button>
-                    </div>
-                ))}
-            </div>
-        </div>
-    )
+    return <OkaDashboard onBack={() => {}} />
 }
