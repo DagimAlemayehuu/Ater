@@ -1,41 +1,26 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { 
-  CheckCircle2, 
-  XCircle, 
-  RefreshCcw, 
   BrainCircuit,
-  Target,
   Layers,
   Zap,
   ArrowRight,
   Trash2,
-  Clock,
-  Award,
-  ChevronDown,
   ChevronRight,
-  Activity,
   History,
   LayoutGrid,
-  BarChart3,
-  Calendar as CalendarIcon,
   Filter,
   TrendingUp,
-  AlertTriangle,
   ScanSearch,
   Dna,
-  Binary,
   X,
-  ListFilter,
   Check,
   Loader2
 } from 'lucide-react'
 import { 
   LineChart, 
   Line, 
-  XAxis, 
-  YAxis, 
-  Tooltip as RechartsTooltip, 
   ResponsiveContainer,
 } from 'recharts'
 import { ActivityCalendar } from 'react-activity-calendar'
@@ -110,7 +95,6 @@ export default function Practice() {
   const [userAnswers, setUserAnswers] = useState<Record<number, any>>({})
   const [isRevealed, setIsRevealed] = useState(false)
   const [gradedAnswers, setGradedAnswers] = useState<Record<number, boolean>>({})
-  const [confidenceWagers, setConfidenceWagers] = useState<Record<number, number>>({})
   const [pastPractices, setPastPractices] = useState<any[]>([])
   const [currentPracticePath, setCurrentPracticePath] = useState<string | null>(null)
   const [availableNotes, setAvailableNotes] = useState<any[]>([])
@@ -123,15 +107,15 @@ export default function Practice() {
   const calendarData = useMemo(() => {
     const data = Object.entries(pastPractices.reduce((acc, p) => {
       if (!p.date) return acc;
-      try { const d = new Date(p.date).toISOString().split('T')[0]; acc[d] = (acc[d] || 0) + 1; } catch (e) {}
+      try { const d = new Date(p.date).toISOString().split('T')[0]; acc[d] = (acc[d] || 0) + 1; } catch { /* ignore parse error */ }
       return acc;
     }, {} as Record<string, number>)).map(([date, count]) => ({ date, count: Number(count), level: Math.min(Number(count), 4) as 0 | 1 | 2 | 3 | 4 }));
-    return data.length ? data : [{ date: new Date().toISOString().split('T')[0], count: 0, level: 0 as 0 }];
+    return data.length ? data : [{ date: new Date().toISOString().split('T')[0], count: 0, level: 0 as const }];
   }, [pastPractices])
 
   useEffect(() => { loadHubs(); loadPastPractices(); }, [])
   useEffect(() => { if (selectedHub) loadHubNotes(selectedHub); }, [selectedHub])
-  const loadHubNotes = async (hubId: string) => { try { const res = await sidecarApi.listHubNotes(hubId); setAvailableNotes(res.notes); } catch (err) {} }
+  const loadHubNotes = async (hubId: string) => { try { const res = await sidecarApi.listHubNotes(hubId); setAvailableNotes(res.notes); } catch { console.error("Error occurred"); } }
 
   useEffect(() => {
     if (questions.length > 0 && view === 'session') {
@@ -143,8 +127,8 @@ export default function Practice() {
     return () => { if (timerRef.current) clearInterval(timerRef.current!) }
   }, [questions, view, globalTimeLeft, questionTimeLeft])
 
-  const loadPastPractices = async () => { try { const res = await sidecarApi.listPractices(); setPastPractices(res.practices); } catch (err) {} }
-  const loadHubs = async () => { try { const res = await sidecarApi.listHubs(); setHubs(res.hubs); if (res.hubs.length > 0) setSelectedHub(res.hubs[0].id); } catch (err) {} }
+  const loadPastPractices = async () => { try { const res = await sidecarApi.listPractices(); setPastPractices(res.practices); } catch { console.error("Error occurred"); } }
+  const loadHubs = async () => { try { const res = await sidecarApi.listHubs(); setHubs(res.hubs); if (res.hubs.length > 0) setSelectedHub(res.hubs[0].id); } catch { console.error("Error occurred"); } }
 
   const handleStartSession = async () => {
     if (!selectedHub) {
@@ -162,7 +146,7 @@ export default function Practice() {
         return;
       }
       setTimeout(() => {
-        setQuestions(res.questions); setCurrentPracticePath(res.quiz_path); setCurrentQuestionIdx(0); setUserAnswers({}); setIsRevealed(false); setGradedAnswers({}); setConfidenceWagers({}); setView('session');
+        setQuestions(res.questions); setCurrentPracticePath(res.quiz_path); setCurrentQuestionIdx(0); setUserAnswers({}); setIsRevealed(false); setGradedAnswers({}); setView('session');
         if (advancedConfig.globalTimeLimitMinutes) setGlobalTimeLeft(advancedConfig.globalTimeLimitMinutes * 60);
         if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
       }, 1500);
@@ -184,9 +168,9 @@ export default function Practice() {
         return;
       }
       setTimeout(() => {
-        setQuestions(res.questions); setCurrentPracticePath(path); setCurrentQuestionIdx(0); setUserAnswers({}); setIsRevealed(false); setGradedAnswers({}); setConfidenceWagers({}); setView('session');
+        setQuestions(res.questions); setCurrentPracticePath(path); setCurrentQuestionIdx(0); setUserAnswers({}); setIsRevealed(false); setGradedAnswers({}); setView('session');
       }, 1000);
-    } catch (err) { 
+    } catch { 
         toast.error('Could not load session.'); 
         setView('history');
     } finally { setIsLoading(false); }

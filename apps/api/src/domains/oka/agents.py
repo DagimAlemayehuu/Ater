@@ -1,11 +1,9 @@
 import json
 import re
 import asyncio
-from typing import Optional, Any, Dict, List
-from langchain_core.prompts import ChatPromptTemplate
+from typing import Any, Dict
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import HumanMessage, AIMessage
-from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, PartialPlan, ProbeEnrichment, NoteComponents
+from .schemas import NoteContent, PartialPlan, ProbeEnrichment
 
 # --- THE 12 SOVEREIGN PERSONA MANDATES (v24.0 - Archetype Perfection) ---
 
@@ -103,7 +101,7 @@ class ArchitectAgent:
         prompt = (
             "You are the OKA Master Architect. Your mission is TOTAL CURRICULUM SATURATION.\n"
             "MANDATE: Extract 20-30 atomic concepts from this text. NO CONCEPT LEFT BEHIND.\n"
-            "MANDATORY FORMAT: RETURN ONLY JSON following the schema.\n"
+            "MANDATORY FORMAT: RETURN ONLY THE JSON OBJECT. DO NOT INCLUDE MARKDOWN CODE BLOCKS OR TEXT OUTSIDE THE JSON.\n"
             "STRICT NAMING RULES:\n"
             "- Titles MUST be ABSOLUTELY ONE CONCEPT ONLY (1-3 words max, e.g. 'Multiplicity', 'Recursion').\n"
             "- NEVER use questions as titles (e.g. 'What is a Database?').\n"
@@ -129,7 +127,13 @@ class ArchitectAgent:
             "- ART-TECH: Art Techniques, Mediums, Execution.\n"
             "- ART-HIST: Art History, Movements, Critiques.\n"
             "CRITICAL: You MUST select the `mode` ONLY from the 19 exact codes listed above. DO NOT hallucinate new modes.\n"
-            "RETURN ONLY PURE JSON."
+            "JSON STRUCTURE:\n"
+            "{\n"
+            "  \"atomic_notes\": [\n"
+            "    {\"title\": \"...\", \"description\": \"...\", \"mode\": \"...\", \"prerequisites\": [], \"source_context\": \"...\"}\n"
+            "  ],\n"
+            "  \"possible_questions\": []\n"
+            "}"
         )
         
         last_error = None
@@ -238,7 +242,6 @@ DO NOT output JSON. Output EXACTLY this Markdown format:
             print(f"[WriterAgent] Pass 1 failed: {e}")
             theory_content = "# 1. Technical Definition\nError generating content."
 
-        from .schemas import NoteContent
         return NoteContent(markdown_body=theory_content, search_keywords=[])
 
     async def generate_probes(self, note_title: str, note_body: str, source_text: str, primary_language: str, all_concepts: str):
@@ -291,7 +294,6 @@ DO NOT output JSON. Output EXACTLY this Markdown format:
 """
         msg = [("system", sys_prompt), ("human", f"Theory:\n{note_body}\n\nLanguage: {primary_language}")]
         
-        from .schemas import ProbeEnrichment
         try:
             res = await self.llm.ainvoke(msg)
             out = res.content.strip()

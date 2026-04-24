@@ -54,7 +54,7 @@ export const parseMarkdownToProfileData = (markdown: string, fallbackTitle: stri
     if (!markdown) return { title: fallbackTitle, sections: [], extraContent: '' };
 
     const lines = markdown.split('\n');
-    let title = fallbackTitle;
+    const title = fallbackTitle;
     const sections: ProfileSection[] = [];
     let currentSection: ProfileSection | null = null;
     let introText = '';

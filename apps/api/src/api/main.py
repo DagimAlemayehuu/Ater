@@ -18,7 +18,7 @@ import re
 import json
 from pathlib import Path
 from contextlib import asynccontextmanager
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any, Optional
 
 # Add project root to sys.path
 root_dir = Path(__file__).parent.parent.parent.absolute()
@@ -33,9 +33,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("LifeOS")
 
-from urllib.parse import unquote, quote
+from urllib.parse import unquote
 import uvicorn
-from fastapi import FastAPI, Depends, Header, HTTPException, Body, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, Body, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
@@ -66,9 +66,7 @@ def _update_rag_status(state: Dict[str, Any]):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
-    print("[Life OS Sidecar] Starting up...")
     yield
-    print("[Life OS Sidecar] Shutting down...")
     if oka_watcher:
         logger.info("[OKA] Stopping watcher during shutdown")
         oka_watcher.stop()
@@ -323,7 +321,6 @@ async def ai_upload(file: UploadFile = File(...), secrets: AppSecrets = Depends(
         else:
             return {"file_uri": str(Path(temp_path).absolute()), "name": file.filename, "note": "Provider does not support direct file upload yet."}
     except Exception as e:
-        print(f"[Life OS Sidecar] File upload failed: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if os.path.exists(temp_path) and secrets.ai_provider == "google":
@@ -363,7 +360,6 @@ async def test_ai_connection(
         
         return {"success": True, "message": f"{target.capitalize()} Tier: {content}"}
     except Exception as e:
-        print(f"[Life OS Sidecar] AI Connection Test ({target}) failed: {traceback.format_exc()}")
         return {"success": False, "error": str(e)}
 
 # --- OKA (Autonomous Ingestion) Endpoints ---
@@ -437,15 +433,12 @@ async def oka_confirm_plan(
                 if new_path.exists():
                     new_path = processed_dir / f"{int(time.time())}_{path.name}"
                 path.rename(new_path)
-                print(f"[Life OS Sidecar] Moved {path.name} to note generated after all batches complete")
 
         return results
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        print(f"[Life OS Sidecar] OKA Confirmation failed: {e}")
         error_details = traceback.format_exc()
-        print(error_details)
         raise HTTPException(status_code=500, detail=f"OKA Confirmation failed: {str(e)}\n\nTraceback:\n{error_details}")
 
 @app.post("/api/oka/watcher/toggle")
@@ -460,7 +453,6 @@ async def oka_watcher_toggle(
     
     # If the watcher exists but the path changed, kill it.
     if oka_watcher and str(oka_watcher.inbox_path.absolute()) != str(Path(secrets.inbox_path).absolute()):
-        print("[Life OS Sidecar] Inbox path changed. Restarting OKA Watcher...")
         oka_watcher.stop()
         oka_watcher = None
 
@@ -494,7 +486,6 @@ async def oka_queue_status(
     global oka_watcher
     
     if oka_watcher and secrets.inbox_path and str(oka_watcher.inbox_path.absolute()) != str(Path(secrets.inbox_path).absolute()):
-        print("[Life OS Sidecar] Inbox path changed during status check. Restarting OKA Watcher...")
         oka_watcher.stop()
         oka_watcher = None
 
@@ -563,7 +554,7 @@ async def oka_list_generated(
         # Sort by modification time (newest first)
         files.sort(key=lambda x: x["mtime"], reverse=True)
     except Exception as e:
-        print(f"[Life OS Sidecar] Error scanning generated folder: {e}")
+        logger.error(f"Error: {e}")
     
     return {"files": files}
 
@@ -572,19 +563,14 @@ async def oka_list_inbox(
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Lists files currently in the Inbox folder."""
-    print(f"[Life OS Sidecar] Listing inbox. Path from header: '{secrets.inbox_path}'")
     if not secrets.inbox_path or secrets.inbox_path.strip() == "":
-        print("[Life OS Sidecar] Inbox path is effectively empty")
         return {"files": []}
     
     inbox = Path(secrets.inbox_path)
-    print(f"[Life OS Sidecar] Resolved inbox path: {inbox.absolute()}")
     if not inbox.exists():
-        print(f"[Life OS Sidecar] Inbox path DOES NOT EXIST on disk: {inbox.absolute()}")
         return {"files": []}
     
     if not inbox.is_dir():
-        print(f"[Life OS Sidecar] Inbox path is NOT a directory: {inbox.absolute()}")
         return {"files": []}
     
     files = []
@@ -603,9 +589,8 @@ async def oka_list_inbox(
                     "size": f.stat().st_size,
                     "suffix": f.suffix.lower()
                 })
-        print(f"[Life OS Sidecar] Found {len(files)} files in inbox")
     except Exception as e:
-        print(f"[Life OS Sidecar] Error scanning inbox: {e}")
+        logger.error(f"Error: {e}")
     
     return {"files": files}
 
@@ -645,7 +630,6 @@ async def generate_practice_session(
     service = OkaService(secrets)
     try:        return await service.generate_practice(hub_id, config)
     except Exception as e:
-        print(f"[Life OS Sidecar] Practice generation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/practice/list")
@@ -661,7 +645,6 @@ async def list_practice_sessions(
         practices = service.list_practices()
         return {"practices": practices}
     except Exception as e:
-        print(f"[Life OS Sidecar] Error listing practices: {e}")
         return {"practices": [], "error": str(e)}
 
 
@@ -682,7 +665,8 @@ async def get_practice_session(
     try:
         with open(p, "r", encoding="utf-8") as f:
             content = f.read()
-        import re, json
+        import re
+        import json
         json_match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
         if json_match:
             questions = json.loads(json_match.group(1))
@@ -724,7 +708,6 @@ async def update_practice_score(
         else:
             raise HTTPException(status_code=500, detail="No frontmatter found in practice file")
     except Exception as e:
-        print(f"[Practice Score] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/practice/delete")
@@ -749,7 +732,6 @@ async def delete_practice_session(
         p.unlink()
         return {"status": "success"}
     except Exception as e:
-        print(f"[Practice Delete] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/oka/explain")
@@ -1012,7 +994,6 @@ async def update_notion_page(
         updated_page = await client.update_page_properties(page_id, properties)
         return {"page": updated_page}
     except Exception as e:
-        print(f"[Life OS Sidecar] Notion update failed: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/notion/databases/{database_id}/pages")
@@ -1034,7 +1015,6 @@ async def create_notion_page(
         new_page = await client.create_page_in_database(database_id, properties)
         return {"page": new_page}
     except Exception as e:
-        print(f"[Life OS Sidecar] Notion create failed: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/notion/pages/{page_id}")
@@ -1050,7 +1030,6 @@ async def delete_notion_page(
         result = await client.archive_page(page_id)
         return {"success": True, "page": result}
     except Exception as e:
-        print(f"[Life OS Sidecar] Notion delete failed: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/notion/pages/{page_id}/content")
@@ -1069,7 +1048,6 @@ async def get_notion_page_content(
         blocks = await client.get_page_content(page_id)
         return {"blocks": blocks}
     except Exception as e:
-        print(f"[Life OS Sidecar] Notion list blocks failed: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/notion/pages/{page_id}/content")
@@ -1144,7 +1122,6 @@ async def update_notion_page_content(
             
         return {"success": True}
     except Exception as e:
-        print(f"[Life OS Sidecar] Notion update blocks failed: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # --- RAG Endpoints ---
@@ -1255,7 +1232,6 @@ async def sync_notion_mirror(secrets: AppSecrets = Depends(get_app_secrets)):
 
 def handle_shutdown(signum, frame):
     """Clean shutdown handler for when Tauri terminates the process."""
-    print(f"[Life OS Sidecar] Received signal {signum}. Exiting cleanly.")
     sys.exit(0)
 
 
@@ -1266,7 +1242,6 @@ if __name__ == "__main__":
     host = os.environ.get("API_HOST", "0.0.0.0")
     port = int(os.environ.get("API_PORT", "8765"))
 
-    print(f"[Life OS Sidecar] Listening on {host}:{port}")
 
     uvicorn.run(
         "src.api.main:app",

@@ -3,19 +3,16 @@ import {
     ShieldCheck, RefreshCw, 
     FileText, Activity, 
     Zap,
-    Brain, ArrowLeft, Bot, Sparkles, ChevronRight, ListChecks,
+    Brain, ArrowLeft, Bot, Sparkles, ChevronRight,
     Database, Calendar,
-    UserCheck, Search, X, Info, Shield, Check, Save, MessageSquare, Layout, Clock, Plus, ExternalLink, Battery, BrainCircuit,
-    BookOpen, Tag, Layers, ChevronDown, FileEdit, HelpCircle,
-    Archive, Terminal, CheckCircle
+    X, Info, Plus, BrainCircuit,
+    BookOpen, Tag, Layers, ChevronDown, FileEdit,
+    Archive, CheckCircle
 } from 'lucide-react'
-import * as Icons from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 import { useConfig } from '@/lib/ConfigContext'
 import { useNavigate } from 'react-router-dom'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 
 /* ─── Plan UI Components ─── */
 function CurriculumPill({ 
@@ -491,7 +488,7 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
                 })
                 
                 if (res.status === 'error') {
-                    throw new Error(res.message || res.detail || "Backend generation failed.");
+                    throw new Error((res as any).message || (res as any).detail || "Backend generation failed.");
                 }
                 
                 const tempBatch = res.current_batch || (currentLocalBatch + 1)
@@ -964,7 +961,6 @@ function OkaDashboard({ onBack }: { onBack: () => void }) {
 export default function Agents() {
     const { config, saveConfig } = useConfig()
     const [activeAgent, setActiveAgent] = useState<string | null>(null)
-    const navigate = useNavigate()
 
     const agents = [
         {

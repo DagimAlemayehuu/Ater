@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { Link2, FileText, ChevronRight, Inbox } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
-import { cn } from '@/lib/utils'
+
+interface Backlink {
+    path: string
+    type: string
+    name: string
+}
 
 interface BacklinksViewProps {
     pageName: string
@@ -9,17 +14,26 @@ interface BacklinksViewProps {
 }
 
 export function BacklinksView({ pageName, onNavigate }: BacklinksViewProps) {
-    const [backlinks, setBacklinks] = useState<any[]>([])
+    const [backlinks, setBacklinks] = useState<Backlink[]>([])
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
+        let active = true;
         if (pageName) {
-            setLoading(true)
-            sidecarApi.getVaultBacklinks(pageName)
-                .then(res => setBacklinks(res.backlinks || []))
-                .catch(err => console.error("Backlinks failed", err))
-                .finally(() => setLoading(false))
+            const fetchBacklinks = async () => {
+                setLoading(true)
+                try {
+                    const res = await sidecarApi.getVaultBacklinks(pageName)
+                    if (active) setBacklinks(res.backlinks || [])
+                } catch (err) {
+                    if (active) console.error("Backlinks failed", err)
+                } finally {
+                    if (active) setLoading(false)
+                }
+            }
+            fetchBacklinks()
         }
+        return () => { active = false }
     }, [pageName])
 
     if (!loading && backlinks.length === 0) return null

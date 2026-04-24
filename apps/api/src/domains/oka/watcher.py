@@ -1,7 +1,6 @@
 import sqlite3
 import shutil
 import time
-import os
 import asyncio
 import logging
 import traceback
@@ -307,7 +306,7 @@ class OkaQueueManager:
                 self.last_action = f"Finished {path.name}"
                 self.current_file = None
                 
-            except Exception as e:
+            except Exception:
                 watcher_logger.error(f"Error processing {self.current_file}: {traceback.format_exc()}")
                 if self.current_file:
                     self._mark_error(self.current_file)

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any
 from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.notion.client import NotionClient
 from src.domains.notion.cache_service import NotionCacheService

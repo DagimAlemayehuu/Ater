@@ -45,6 +45,7 @@ interface MarkdownViewerProps {
     content: string
     onNavigate: (pageName: string) => void
     path?: string
+    components?: any
 }
 
 const InlineDatabaseResolver = ({ dbName, onNavigate }: { dbName: string, onNavigate: (p: string) => void }) => {
@@ -145,7 +146,7 @@ const CodeBlock = ({ language, value }: { language: string | null, value: string
     );
 };
 
-export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProps) {
+export function MarkdownViewer({ content, onNavigate, path, components }: MarkdownViewerProps) {
     const [selection, setSelection] = useState<string>('');
     const [showPopover, setShowPopover] = useState(false);
     const [showSidebar, setShowSidebar] = useState(false);
@@ -155,7 +156,8 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
     const [popoverPosition, setPopoverPosition] = useState<{ top: number, left: number }>({ top: 0, left: 0 });
 
     const markdownComponents = useMemo(() => ({
-        p: ({ children }: any) => {
+        ...components,
+        p: ({ node, children, ...props }: any) => {
             const childrenArray = React.Children.toArray(children);
             const textContent = childrenArray.map(c => typeof c === 'string' ? c : '').join(' ');
             
@@ -222,12 +224,12 @@ export function MarkdownViewer({ content, onNavigate, path }: MarkdownViewerProp
         h4: ({ children }: any) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] text-muted-foreground/60">{children}</h4>,
         ul: ({ children }: any) => <ul className="list-disc pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ul>,
         ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ol>,
-        li: ({ children, ...props }: any) => {
+        li: ({ children, className }: any) => {
             const content = React.Children.map(children, (child) => {
                 if (typeof child === 'string') return renderWikiLinks(child, onNavigate);
                 return child;
             });
-            const isTask = props.className?.includes('task-list-item');
+            const isTask = className?.includes('task-list-item');
             return (
                 <li className={cn(
                     "text-[13px] leading-relaxed mb-1 text-foreground/80",

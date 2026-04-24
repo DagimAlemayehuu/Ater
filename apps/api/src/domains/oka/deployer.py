@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 import re
-import yaml
-import uuid
 from pathlib import Path
-from datetime import datetime
 from typing import List, Dict, Any, Optional
 from .vault_manager import VaultManager
 

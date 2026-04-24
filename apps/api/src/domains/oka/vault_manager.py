@@ -5,7 +5,6 @@ import uuid
 import yaml
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime
 
 ALWAYS_UPPERCASE = ["ER", "DBMS", "SQL", "IS", "DDLC", "DSDLC", "IS", "IT", "AI", "UI", "UX", "CRUD", "API", "OS"]
 

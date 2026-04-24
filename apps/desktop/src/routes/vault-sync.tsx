@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { Search, ExternalLink, RefreshCw, Trash2, Plus, Database, ChevronRight } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { Search, RefreshCw, Trash2, Plus, Database, ChevronRight } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 import { ObsidianPagePanel } from '@/components/obsidian/ObsidianPagePanel'
@@ -82,8 +82,8 @@ export default function VaultSync() {
         }
     }
 
-    const fetchDatabases = async () => {
-        setLoading(true);
+    const fetchDatabases = useCallback(async () => {
+        setLoading(true)
         try {
             const [dbRes, areaRes] = await Promise.all([
                 sidecarApi.listVaultDatabases(),
@@ -99,9 +99,9 @@ export default function VaultSync() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [selectedArea])
 
-    useEffect(() => { fetchDatabases(); }, [])
+    useEffect(() => { fetchDatabases(); }, [fetchDatabases])
 
     const filteredDatabases = databases.filter(db => db.name.toLowerCase().includes(searchQuery.toLowerCase()))
 

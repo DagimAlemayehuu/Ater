@@ -1,20 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
-from typing import List, Dict, Any, Optional
-import os
+from fastapi import APIRouter, Depends, HTTPException
+from typing import Dict, Any, Optional
 import asyncio
 import ruamel.yaml
 import uuid
 import datetime
-import traceback
 from pathlib import Path
 from pydantic import BaseModel
 import shutil
-import io
 from urllib.parse import unquote, quote
 from fastapi.responses import StreamingResponse, FileResponse, HTMLResponse
 
 from src.api.deps import AppSecrets, get_app_secrets
-from src.domains.obsidian.client import ObsidianClient
 
 router = APIRouter()
 

@@ -63,7 +63,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     if (event.detail.requestId === requestId) {
                         window.removeEventListener('lifeos-api-response', handler);
                         const nativeConfig = event.detail.data;
-                        console.log('[Config] Native config received');
                         setConfig({ ...DEFAULT_CONFIG, ...nativeConfig });
                         configLoaded = true;
                         setIsLoading(false);
@@ -120,7 +119,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         try {
             const updatedConfig = { ...config, ...newConfig };
             const reqId = Math.random().toString(36).substring(7);
-            console.log('[Config] Saving updates:', newConfig, 'ReqID:', reqId);
             setConfig(updatedConfig);
 
             // Persist to native storage
@@ -130,7 +128,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
             // Fallback persistence
             safeStorage.setItem('life-os-config', JSON.stringify(updatedConfig));
-            console.log('[Config] Persistence successful for', reqId);
         } catch (err) {
             console.error('[Config] Save failed:', err);
             throw err;

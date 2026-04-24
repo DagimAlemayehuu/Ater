@@ -2,7 +2,7 @@ import logging
 import asyncio
 import re
 from pathlib import Path
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple
 from src.domains.notion.client import NotionClient
 
 logger = logging.getLogger(__name__)

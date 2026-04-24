@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Zap, AlertTriangle, Clock, Target, BarChart3 } from 'lucide-react';
+import { Activity, Zap, Clock, BarChart3 } from 'lucide-react';
 import { sidecarApi } from '@/lib/sidecarApi';
 import { cn } from '@/lib/utils';
 import { AppConfig } from '@/lib/ConfigContext';

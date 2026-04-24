@@ -1,25 +1,24 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { 
-    Send, Bot, User, Trash2, ShieldCheck, RefreshCw, 
+    Trash2, ShieldCheck, RefreshCw, 
     Sparkles, Paperclip, FileText, Folder, ChevronRight, 
-    Search, LayoutGrid, BrainCircuit, X, Zap, Activity, 
-    PauseCircle, ListChecks, Archive, Terminal, Database,
-    ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft, Layout, FolderOpen,
-    Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Users, Settings, Network,
-    Edit3, Save, FolderPlus, Check, MoreVertical
+    BrainCircuit, X, Zap, 
+    Database, Search, Archive,
+    ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft,
+    Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Network,
+    Edit3, Save, FolderPlus
 } from 'lucide-react'
 import { sidecarApi, ObsidianFile } from '@/lib/sidecarApi'
 import { ObsidianGraphView } from '@/components/obsidian/ObsidianGraphView'
 import { cn } from '@/lib/utils'
 import { useConfig } from '@/lib/ConfigContext'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
 import { PdfViewer } from '@/components/obsidian/PdfViewer'
-import { renderWikiLinks } from '@/components/obsidian/WikiLink'
 import { useLayout } from '@/context/layout-provider'
 import React from 'react'
 
@@ -55,7 +54,7 @@ function NoteProperties({ metadata, onNavigate }: { metadata: Record<string, any
         return <Info size={14} />
     }
     
-    const formatValue = (val: any) => {
+    const formatValue = (val: unknown): string => {
         if (val === null || val === undefined) return 'Empty'
         if (Array.isArray(val)) return val.map(v => formatValue(v)).join(', ')
         return String(val)
@@ -80,7 +79,7 @@ function NoteProperties({ metadata, onNavigate }: { metadata: Record<string, any
                                 ) : (
                                     formatValue(value).includes('[[') ? (
                                         <div className="flex flex-wrap gap-1">
-                                            {formatValue(value).match(/\[\[(.*?)\]\]/g)?.map((link, i) => {
+                                            {formatValue(value).match(/\[\[(.*?)\]\]/g)?.map((link: string, i: number) => {
                                                 const clean = link.slice(2, -2).split('|')[0]
                                                 const label = link.slice(2, -2).split('|')[1] || clean.split('/').pop()
                                                 return (
@@ -111,7 +110,7 @@ type NavNode = { label: string; target: string | null; depth: number; children: 
 function parseHubTree(content: string): NavNode[] {
     const lines = content.split('\n')
     const wikilinkRe = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/
-    const listItemRe = /^(\s*)[\-\*]\s+(.*)/
+    const listItemRe = /^(\s*)[-*]\s+(.*)/
 
     const roots: NavNode[] = []
     const stack: { node: NavNode; indent: number }[] = []
@@ -157,21 +156,30 @@ function HubConnectionsNav({ content, activePath, onNavigate, onToggleCheckbox }
 
     // Auto-expand active node and its parents
     useEffect(() => {
-        const newExpanded = new Set(expandedNodes);
-        const findAndExpand = (nodes: NavNode[]) => {
-            let found = false;
-            for (const node of nodes) {
-                const isNodeActive = node.target?.split('/').pop()?.replace('.md', '')?.replace('.pdf', '')?.toLowerCase() === activeNoteName;
-                const childrenFound = findAndExpand(node.children);
-                if (isNodeActive || childrenFound) {
-                    newExpanded.add(node.label);
-                    found = true;
-                }
-            }
-            return found;
+        const updateExpanded = () => {
+            setExpandedNodes(prev => {
+                const next = new Set(prev);
+                let changed = false;
+                const findAndExpand = (nodes: NavNode[]) => {
+                    let found = false;
+                    for (const node of nodes) {
+                        const isNodeActive = node.target?.split('/').pop()?.replace('.md', '')?.replace('.pdf', '')?.toLowerCase() === activeNoteName;
+                        const childrenFound = findAndExpand(node.children);
+                        if (isNodeActive || childrenFound) {
+                            if (!next.has(node.label)) {
+                                next.add(node.label);
+                                changed = true;
+                            }
+                            found = true;
+                        }
+                    }
+                    return found;
+                };
+                findAndExpand(tree);
+                return changed ? next : prev;
+            });
         };
-        findAndExpand(tree);
-        setExpandedNodes(newExpanded);
+        Promise.resolve().then(updateExpanded);
     }, [activeNoteName, tree]);
 
     const toggleNode = (label: string) => {
@@ -271,12 +279,10 @@ function HubConnectionsNav({ content, activePath, onNavigate, onToggleCheckbox }
 export default function ObsidianVaultPage() {
     const { config, saveConfig } = useConfig()
     const location = useLocation()
-    const navigate = useNavigate()
-    
+
     // --- Layout State ---
     const [showArchitect, setShowArchitect] = useState(false)
     const [showGraphView, setShowGraphView] = useState(false)
-
     // --- Vault Explorer State ---
     const [files, setFiles] = useState<ObsidianFile[]>([])
     const [loadingFiles, setLoadingFiles] = useState(false)
@@ -417,7 +423,7 @@ export default function ObsidianVaultPage() {
                     if (!content) return null
                     const match = content.match(/(?:#+\s*(?:Core Topologies|Connections|Structure|Nav|Outline|Course Map|Curriculum).*?)\s*\n([\s\S]*?)(?=\n#+\s|$)/i)
                     if (match && match[1]) return match[1].trim()
-                    const listMatch = content.match(/(?:^|\n)(\s*[\-\*]\s+[\s\S]*?)(?=\n\n|\n#|$)/)
+                    const listMatch = content.match(/(?:^|\n)(\s*[-*]\s+[\s\S]*?)(?=\n\n|\n#|$)/)
                     if (listMatch && listMatch[1]) return listMatch[1].trim()
                     return content.trim()
                 }
@@ -437,7 +443,7 @@ export default function ObsidianVaultPage() {
                             try {
                                 const note = await sidecarApi.readObsidianNote(p)
                                 return extractSection(note.content)
-                            } catch(e) {}
+                            } catch(e) { console.error(e); }
                             return null
                         }
 
@@ -854,7 +860,7 @@ export default function ObsidianVaultPage() {
                 const res = await sidecarApi.okaConfirm({ session_id: targetId })
                 
                 if (res.status === 'error') {
-                    throw new Error(res.message || res.detail || "Backend generation failed.");
+                    throw new Error((res as any).message || (res as any).detail || "Backend generation failed.");
                 }
                 
                 tempBatch = res.current_batch || (tempBatch + 1)
@@ -1558,7 +1564,7 @@ body:has(.backdrop-blur-xl) aside {
                                                                         onNavigate={handleWikiLinkClick} 
                                                                         path={selectedPath || undefined}
                                                                         components={{
-                                                                            input: ({ node, type, checked, ...props }: any) => {
+                                                                            input: ({ node, type, checked }: any) => {
                                                                                 if (type === 'checkbox') {
                                                                                     return (
                                                                                         <input 

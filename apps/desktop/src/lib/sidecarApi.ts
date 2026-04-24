@@ -7,7 +7,7 @@
 
 import { load } from '@tauri-apps/plugin-store'
 
-const SIDECAR_BASE_URL = 'http://localhost:8765'
+const SIDECAR_BASE_URL = 'http://127.0.0.1:8765'
 const STORE_FILENAME = 'life-os-config.json'
 
 export interface HealthResponse {
@@ -51,7 +51,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     
     let obsidianVaultPath = await store.get<string>('obsidianVaultPath');
     if (!obsidianVaultPath || obsidianVaultPath.trim() === '') {
-        obsidianVaultPath = '/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault';
+        obsidianVaultPath = '';
     }
 
     // Fetch all config values into a single object

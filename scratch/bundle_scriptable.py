@@ -3,7 +3,9 @@ import json
 import base64
 
 def build_scriptable():
-    root = "/Users/dabodestroyer/code/Antigravity/LifeOs"
+    # Use relative path from script location to root
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    root = os.path.dirname(script_dir)
     mobile_client_dir = os.path.join(root, "apps/mobile-client")
     mobile_dist = os.path.join(mobile_client_dir, "dist")
     template_path = os.path.join(root, "LifeOs_Mobile.js")

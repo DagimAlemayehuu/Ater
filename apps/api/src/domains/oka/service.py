@@ -3,7 +3,6 @@ import json
 import os
 import asyncio
 import traceback
-import uuid
 import time
 import yaml
 import difflib
@@ -19,7 +18,6 @@ from src.domains.ai.factory import ModelFactory
 from .agents import ArchitectAgent, WriterAgent
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
 import ruamel.yaml
-import io
 
 # OKA-specific constants
 OKA_TIMEOUT = 600       # 10 minutes — headroom for large PDFs
@@ -550,14 +548,23 @@ class OkaService:
                 batch = await structured_llm.ainvoke(prompt)
                 questions = [q.model_dump() for q in batch.questions]
             except Exception as e:
-                print(f"[OKA Service] Structured output failed, falling back to raw: {e}")
-                res = await self.planner_llm.ainvoke([HumanMessage(content=prompt + "\n\nRETURN ONLY A JSON LIST.")])
+                res = await self.planner_llm.ainvoke([HumanMessage(content=prompt + "\n\nRETURN ONLY A JSON OBJECT with a 'questions' key containing the list of questions.")])
                 content = res.content.strip()
                 if "```json" in content:
-                    content = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL).group(1)
+                    match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
+                    content = match.group(1) if match else content
                 elif "```" in content:
-                    content = re.search(r"```\s*(.*?)\s*```", content, re.DOTALL).group(1)
-                questions = json.loads(content)
+                    match = re.search(r"```\s*(.*?)\s*```", content, re.DOTALL)
+                    content = match.group(1) if match else content
+                
+                data = json.loads(content)
+                if isinstance(data, dict) and "questions" in data:
+                    questions = data["questions"]
+                elif isinstance(data, list):
+                    questions = data
+                else:
+                    questions = []
+                    logger.error(f"[OKA Service] Unexpected JSON structure for practice: {type(data)}")
             
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             quiz_title = f"{hub['title']} - {config.difficulty} Session"
@@ -582,8 +589,14 @@ class OkaService:
             for idx, q in enumerate(questions, 1):
                 md_content += f"### Q{idx} [{q.get('type')}]: {q.get('question', '')}\n"
                 if q.get('type') == 'mcq' and q.get('options'):
-                    for k, v in q['options'].items():
-                        md_content += f"- **{k})** {v}\n"
+                    options = q.get('options')
+                    if isinstance(options, dict):
+                        for k, v in options.items():
+                            md_content += f"- **{k})** {v}\n"
+                    elif isinstance(options, list):
+                        for i, v in enumerate(options):
+                            label = chr(65 + i) # A, B, C...
+                            md_content += f"- **{label})** {v}\n"
                 elif q.get('type') == 'code':
                     md_content += f"```\n{q.get('codeSnippet', '')}\n```\n"
                 md_content += "\n***\n\n"
@@ -1286,7 +1299,7 @@ class OkaService:
         # Build comprehensive question body
         body_parts = [
             f"# {note_schema.title.replace('_', ' ')}\n",
-            f"> [!ABSTRACT] Exam Readiness Protocol\n> This note aggregates retrieval probes from all atomic nodes in this unit to ensure total coverage.\n",
+            "> [!ABSTRACT] Exam Readiness Protocol\n> This note aggregates retrieval probes from all atomic nodes in this unit to ensure total coverage.\n",
             "## Master Question Bank\n"
         ]
 

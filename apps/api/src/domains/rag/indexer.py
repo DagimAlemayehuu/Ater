@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 import os
 import json
-from typing import List, Dict, Any
+from typing import Dict
 
 # Adjusting to current LangChain imports
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter

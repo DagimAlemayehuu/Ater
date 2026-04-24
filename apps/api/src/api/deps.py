@@ -1,4 +1,4 @@
-from fastapi import Header, HTTPException
+from fastapi import Header
 from typing import Optional
 from pydantic import BaseModel
 

@@ -1,6 +1,4 @@
 import os
-import time
-import logging
 from pathlib import Path
 from pypdf import PdfReader, PdfWriter
 from loguru import logger

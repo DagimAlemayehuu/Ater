@@ -100,7 +100,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     utilityProvider: 'google',
     utilityApiKey: '',
     utilityModel: 'gemini-1.5-flash-8b',
-    obsidianVaultPath: '/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault',
+    obsidianVaultPath: '',
     inboxPath: '',
     academicFolderPath: '1-Academic',
     autoDeploy: false,

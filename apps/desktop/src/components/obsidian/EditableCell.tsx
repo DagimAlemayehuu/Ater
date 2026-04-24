@@ -171,7 +171,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                 const relationVal = row?.properties?.[relationProp];
                 if (!relationVal) return;
                 const links = Array.isArray(relationVal) ? relationVal : [relationVal];
-                let results: any[] = [];
+                const results: any[] = [];
                 for (const link of links) {
                     const cleanLink = String(link).replace(/\[\[|\]\]/g, '');
                     try {
@@ -308,7 +308,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                     if (cmd.startsWith('SET(') && cmd.endsWith(')')) {
                         const inner = cmd.slice(4, -1);
                         const [prop, ...rest] = inner.split(',').map(s => s.trim());
-                        let valStr = rest.join(',').trim();
+                        const valStr = rest.join(',').trim();
                         let val: any = valStr;
                         if (valStr === 'NOW') val = new Date().toISOString();
                         else if (valStr === 'TODAY') val = new Date().toISOString().split('T')[0];

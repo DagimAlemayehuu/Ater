@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
-    Database, Key, HardDrive, Trash2, Edit2, FolderOpen, ShieldCheck, Sun, Moon, Zap, Plus, X,
-    User, BookOpen, DollarSign, Activity, Brain, Bot, Sliders, ChevronLeft, ChevronRight, ArrowRight, Wand2, Info, Settings as SettingsIcon, Target, MessageSquare, RefreshCw, Check
+    Database, Key, HardDrive, Trash2, Edit2, FolderOpen, ShieldCheck, Zap, Plus, X,
+    User, BookOpen, DollarSign, Activity, Brain, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Check
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
 import { useConfig, SavedApiKey } from '@/lib/ConfigContext'
@@ -123,7 +123,6 @@ export default function Settings() {
     const [newKeyProvider, setNewKeyProvider] = useState('google');
 
     const [ragStatus, setRagStatus] = useState<{status: string, progress: number, total: number, message: string} | null>(null)
-    const [notionStatus, setNotionStatus] = useState<{status: string, progress: number, total: number, message: string} | null>(null)
     const [testStatus, setTestStatus] = useState<{ loading: boolean; success?: boolean; message?: string }>({ loading: false })
     const [aiTab, setAiTab] = useState<'primary' | 'planner' | 'utility'>('primary')
     const [testTarget, setTestTarget] = useState<'primary' | 'planner' | 'utility'>('primary')
@@ -131,20 +130,18 @@ export default function Settings() {
     useEffect(() => {
         if (activeSection !== 'intelligence') return;
         
-        let interval: ReturnType<typeof setInterval>;
         const poll = async () => {
             try {
                 const ragRes = await sidecarApi.ragSyncStatus();
                 setRagStatus(ragRes);
-                const notionRes = await sidecarApi.syncNotionMirrorStatus();
-                setNotionStatus(notionRes);
+                await sidecarApi.syncNotionMirrorStatus();
             } catch (e) {
-                // Handle silently
+                console.error("Poll failed", e);
             }
         };
 
         poll();
-        interval = setInterval(poll, 1000);
+        const interval = setInterval(poll, 1000);
         return () => clearInterval(interval);
     }, [activeSection]);
 
@@ -170,6 +167,7 @@ export default function Settings() {
             await saveConfig({ [editingKey]: editValue })
             setEditingKey(null)
         } catch (err) {
+            console.error(err);
             alert('Failed to save setting')
         }
     }
@@ -516,7 +514,7 @@ export default function Settings() {
                                             value={config?.plannerProvider || 'google'}
                                             onChange={(e) => {
                                                 const provider = e.target.value;
-                                                let defaultModel = 'gemini-2.0-flash';
+                                                const defaultModel = 'gemini-2.0-flash';
                                                 saveConfig({ plannerProvider: provider, plannerModel: defaultModel });
                                             }}
                                             className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
@@ -587,7 +585,7 @@ export default function Settings() {
                                             value={config?.utilityProvider || 'google'}
                                             onChange={(e) => {
                                                 const provider = e.target.value;
-                                                let defaultModel = 'gemini-1.5-flash-8b';
+                                                const defaultModel = 'gemini-1.5-flash-8b';
                                                 saveConfig({ utilityProvider: provider, utilityModel: defaultModel });
                                             }}
                                             className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
@@ -661,7 +659,7 @@ export default function Settings() {
 
                             {/* Real-time Rate Limit Tracker */}
                             <div className="pt-6 border-t border-border/50 mt-6">
-                                <RateLimitMonitor config={config} activeTier={aiTab} />
+                                <RateLimitMonitor config={config || undefined} activeTier={aiTab} />
                             </div>
                         </div>
                     </SettingsCard>
@@ -769,7 +767,7 @@ export default function Settings() {
                                         onClick={async () => {
                                             const newVal = !config?.autoDeploy;
                                             await saveConfig({ autoDeploy: newVal });
-                                            try { await sidecarApi.okaWatcherToggle(); } catch(e) {}
+                                            try { await sidecarApi.okaWatcherToggle(); } catch(e) { console.error(e); }
                                         }}
                                         className={cn(
                                             "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",

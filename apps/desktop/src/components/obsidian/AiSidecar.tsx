@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { 
     Sparkles, Zap, X, Quote, Send, 
-    RefreshCw, Check, Copy, MessageSquare, 
-    BookOpen, HelpCircle, ArrowRight, Loader2,
+    RefreshCw, Check, ArrowRight, Loader2,
     ThumbsUp, ThumbsDown
 } from 'lucide-react';
 import { sidecarApi } from '@/lib/sidecarApi';
@@ -53,34 +52,20 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (initialMode === 'explain') {
-            handleInitialExplain();
-        } else {
-            handleInitialQuiz();
-        }
-    }, [selection, path, page]);
-
-    useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [messages, quizFeedback, isThinking]);
-
-    const handleInitialExplain = async () => {
+    const handleInitialExplain = useCallback(async () => {
         setIsThinking(true);
         setMessages([]);
         try {
             const data = await sidecarApi.explainPdfSelection({ path, selection, page });
             setMessages([{ role: 'assistant', content: data.answer }]);
-        } catch (e: any) {
-            setMessages([{ role: 'assistant', content: `Error: ${e.message}` }]);
+        } catch (e: unknown) {
+            setMessages([{ role: 'assistant', content: `Error: ${(e as Error).message}` }]);
         } finally {
             setIsThinking(false);
         }
-    };
+    }, [path, selection, page]);
 
-    const handleInitialQuiz = async () => {
+    const handleInitialQuiz = useCallback(async () => {
         setIsThinking(true);
         setQuizQuestions([]);
         setCurrentQuestionIndex(0);
@@ -90,12 +75,20 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
         try {
             const data = await sidecarApi.okaInteractiveQuiz({ selection });
             setQuizQuestions(data.questions);
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error(e);
         } finally {
             setIsThinking(false);
         }
-    };
+    }, [selection]);
+
+    useEffect(() => {
+        if (initialMode === 'explain') {
+            handleInitialExplain();
+        } else {
+            handleInitialQuiz();
+        }
+    }, [selection, path, page, initialMode, handleInitialExplain, handleInitialQuiz]);
 
     const handleSendMessage = async () => {
         if (!chatInput.trim() || isThinking) return;
@@ -114,8 +107,8 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                 messages: updatedMessages 
             });
             setMessages([...updatedMessages, { role: 'assistant', content: data.answer }]);
-        } catch (e: any) {
-            setMessages([...updatedMessages, { role: 'assistant', content: `Error: ${e.message}` }]);
+        } catch (e: unknown) {
+            setMessages([...updatedMessages, { role: 'assistant', content: `Error: ${(e as Error).message}` }]);
         } finally {
             setIsThinking(false);
         }
