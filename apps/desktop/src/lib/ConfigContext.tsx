@@ -71,6 +71,7 @@ export interface AppConfig {
     creatorSliders: string;
     customPersonas: CustomPersona[];
     savedApiKeys: SavedApiKey[];
+    showProperties: boolean;
 }
 
 interface ConfigContextType {
@@ -115,6 +116,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     creatorSliders: JSON.stringify({ innovation: 8, detail: 6, collaboration: 7, polish: 5 }),
     customPersonas: [],
     savedApiKeys: [],
+    showProperties: false,
 };
 
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -159,6 +161,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const creatorSliders = (await store.get<string>('creatorSliders')) || DEFAULT_CONFIG.creatorSliders;
                 const customPersonas = (await store.get<CustomPersona[]>('customPersonas')) || [];
                 const savedApiKeys = (await store.get<SavedApiKey[]>('savedApiKeys')) || [];
+                const showProperties = (await store.get<boolean>('showProperties')) ?? false;
 
                 const loadedConfig: any = {
                     aiProvider,
@@ -185,6 +188,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     creatorSliders,
                     customPersonas,
                     savedApiKeys,
+                    showProperties,
                 };
 
                 setConfig(loadedConfig);

@@ -326,33 +326,27 @@ function HubConnectionsNav({ content, activePath, onNavigate, onToggleCheckbox }
     const tree = useMemo(() => parseHubTree(content), [content]);
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
-    // Auto-expand active node and its parents
+    // Auto-expand all nodes by default
     useEffect(() => {
-        const updateExpanded = () => {
+        const expandAll = (nodes: NavNode[]) => {
             setExpandedNodes(prev => {
                 const next = new Set(prev);
                 let changed = false;
-                const findAndExpand = (nodes: NavNode[]) => {
-                    let found = false;
-                    for (const node of nodes) {
-                        const isNodeActive = node.target?.split('/').pop()?.replace('.md', '')?.replace('.pdf', '')?.toLowerCase() === activeNoteName;
-                        const childrenFound = findAndExpand(node.children);
-                        if (isNodeActive || childrenFound) {
-                            if (!next.has(node.label)) {
-                                next.add(node.label);
-                                changed = true;
-                            }
-                            found = true;
+                const traverse = (itemList: NavNode[]) => {
+                    for (const node of itemList) {
+                        if (!next.has(node.label)) {
+                            next.add(node.label);
+                            changed = true;
                         }
+                        if (node.children.length > 0) traverse(node.children);
                     }
-                    return found;
                 };
-                findAndExpand(tree);
+                traverse(nodes);
                 return changed ? next : prev;
             });
         };
-        Promise.resolve().then(updateExpanded);
-    }, [activeNoteName, tree]);
+        expandAll(tree);
+    }, [tree]);
 
     const toggleNode = (label: string) => {
         const next = new Set(expandedNodes);
@@ -459,6 +453,7 @@ export default function ObsidianVaultPage() {
     const [files, setFiles] = useState<ObsidianFile[]>([])
     const [loadingFiles, setLoadingFiles] = useState(false)
     const [selectedPath, setSelectedPath] = useState<string | null>(null)
+    const selectRequestId = useRef(0)
     const [selectedPage, setSelectedPage] = useState(1)
     const [selectedFilteredPages, setSelectedFilteredPages] = useState<number[]>([])
     const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
@@ -469,7 +464,6 @@ export default function ObsidianVaultPage() {
     const [historyIndex, setHistoryIndex] = useState(-1)
     
     const { isFullscreen, setIsFullscreen } = useLayout()
-    const [showProperties, setShowProperties] = useState(false)
 
     // --- File Operations State ---
     const [renamingPath, setRenamingPath] = useState<string | null>(null)
@@ -478,7 +472,7 @@ export default function ObsidianVaultPage() {
     const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null)
 
     // --- Sidebar Resize State ---
-    const [sidebarWidth, setSidebarWidth] = useState(260)
+    const [sidebarWidth, setSidebarWidth] = useState(520)
     const [isResizing, setIsResizing] = useState(false)
     const [connectionsWidth, setConnectionsWidth] = useState(220)
     const [isResizingConnections, setIsResizingConnections] = useState(false)
@@ -496,7 +490,7 @@ export default function ObsidianVaultPage() {
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (isResizing) {
-                const newWidth = Math.max(160, Math.min(500, e.clientX))
+                const newWidth = Math.max(160, Math.min(800, e.clientX))
                 setSidebarWidth(newWidth)
             } else if (isResizingConnections) {
                 // Calculate based on explorer width
@@ -985,6 +979,9 @@ export default function ObsidianVaultPage() {
     }
 
     const selectFile = async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = []) => {
+        selectRequestId.current += 1
+        const currentReq = selectRequestId.current
+        
         setSelectedPath(path)
         setSelectedPage(page)
         setSelectedFilteredPages(filterPages)
@@ -1010,22 +1007,25 @@ export default function ObsidianVaultPage() {
 
         try {
             const res = await sidecarApi.readObsidianNote(path)
+            if (selectRequestId.current !== currentReq) return
+            
             const metadata = res.metadata || {}
             setNoteMetadata(metadata)
             setNoteContent(res.content || '')
             setEditedContent(res.content || '')
             setIsEditing(false)
 
-            // Auto-show info if displayable metadata exists
-            const hasDisplayableMetadata = Object.keys(metadata).some(k => 
-                !['title', 'position', 'frontmatter'].includes(k.toLowerCase())
-            )
-            if (hasDisplayableMetadata) setShowProperties(true)
+            // Auto-show logic removed for global persistence
         } catch (err) {
+            if (selectRequestId.current !== currentReq) return
             console.error('Failed to read note:', err)
             setNoteMetadata({})
             setNoteContent('# Error\nFailed to load content.')
-        } finally { setLoadingNote(false) }
+        } finally { 
+            if (selectRequestId.current === currentReq) {
+                setLoadingNote(false) 
+            }
+        }
     }
 
     const handleBack = () => {
@@ -1417,12 +1417,7 @@ export default function ObsidianVaultPage() {
     return (
         <div className="flex flex-col h-full w-full select-none bg-background text-foreground overflow-hidden font-sans">
             <style>{`
-/* ─── Global Blur for Modals ─── */
-body:has(.backdrop-blur-xl) aside {
-  filter: blur(8px);
-  pointer-events: none;
-  transition: filter 0.3s ease-in-out;
-}
+
 
 /* ─── Checkbox Strikethrough ─── */
 .prose li:has(input[type="checkbox"]:checked),
@@ -1444,7 +1439,7 @@ body:has(.backdrop-blur-xl) aside {
                         {/* ExplorerSidebar */}
                         {!isFullscreen && (
                         <aside 
-                            className="relative border-r border-border flex flex-col bg-background shrink-0 group/sidebar"
+                            className="relative border-r border-border flex flex-col bg-background shrink-0 group/sidebar z-40"
                             style={{ width: `${sidebarWidth}px` }}
                         >
                             {/* Resize Handle */}
@@ -1595,7 +1590,7 @@ body:has(.backdrop-blur-xl) aside {
                                             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">Select an asset to visualize</p>
                                         </div>
                                     ) : (
-                                        <div className={cn("mx-auto py-12 px-16 w-full max-w-full overflow-hidden", selectedPath.toLowerCase().endsWith('.pdf') ? "max-w-none" : "max-w-5xl")}>
+                                        <div className={cn("mx-auto w-full max-w-full", selectedPath.toLowerCase().endsWith('.pdf') ? "p-0 h-full overflow-hidden flex flex-col" : "py-12 px-16 max-w-5xl")}>
                                             {loadingNote ? (
                                                 <div className="h-64 flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                     <RefreshCw size={24} className="animate-spin" />
@@ -1603,8 +1598,8 @@ body:has(.backdrop-blur-xl) aside {
                                                 </div>
                                             ) : (
                                                 <>
-                                                    {/* Top Bar: History & Actions */}
-                                                    <div className="flex items-start justify-between mb-8 opacity-100 transition-opacity gap-8">
+                                                    {/* Top Bar: History & Actions - STICKY */}
+                                                    <div className={cn("sticky top-0 z-30 flex items-start justify-between mb-12 py-6 bg-background/95 backdrop-blur-xl border-b border-border/10 opacity-100 transition-all gap-8", selectedPath.toLowerCase().endsWith('.pdf') ? "px-4" : "-mx-16 px-16")}>
                                                         <div className="flex flex-col gap-4 flex-1">
                                                             <div className="flex items-center gap-4">
                                                                 {/* History Controls */}
@@ -1735,11 +1730,11 @@ body:has(.backdrop-blur-xl) aside {
                                                                             </button>
 
                                                                             <button 
-                                                                                onClick={() => setShowProperties(!showProperties)}
+                                                                                onClick={() => saveConfig({ showProperties: !config?.showProperties })}
                                                                                 className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm"
-                                                                                title={showProperties ? "Hide Properties" : "View Properties"}
+                                                                                title={config?.showProperties ? "Hide Properties" : "View Properties"}
                                                                             >
-                                                                                {showProperties ? <ChevronUp size={14} /> : <ChevronDown size={14} />} 
+                                                                                {config?.showProperties ? <ChevronUp size={14} /> : <ChevronDown size={14} />} 
                                                                             </button>
 
                                                                             <button 
@@ -1820,15 +1815,17 @@ body:has(.backdrop-blur-xl) aside {
                                                         )}
                                                     </div>
 
-                                                    {/* Page Title */}
+                                                    {/* Page Title - hidden in PDF mode */}
+                                                    {!selectedPath.toLowerCase().endsWith('.pdf') && (
                                                     <div className="flex items-start justify-between mb-12 group">
                                                         <h1 className="text-5xl font-extrabold text-foreground tracking-tight leading-tight flex-1">
                                                             {noteMetadata?.title || noteMetadata?.Title || selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '')?.replace(/_/g, ' ')}
                                                         </h1>
                                                     </div>
+                                                    )}
 
                                                     {selectedPath.toLowerCase().endsWith('.pdf') ? (
-                                                        <div className="h-[calc(100vh-280px)] -mx-16 mb-20">
+                                                        <div className="flex-1 min-h-0">
                                                             <PdfViewer 
                                                                 ref={pdfRef}
                                                                 path={selectedPath} 
@@ -1845,7 +1842,7 @@ body:has(.backdrop-blur-xl) aside {
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            {showProperties && (
+                                                            {config?.showProperties && (
                                                                 <NoteProperties 
                                                                     metadata={noteMetadata} 
                                                                     onNavigate={handleWikiLinkClick} 

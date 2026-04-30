@@ -256,10 +256,3 @@
 .prose td {
   @apply border-b border-border/50 px-3 py-2 text-sm;
 }
-
-/* ─── Global Blur for Modals ─── */
-body:has(.backdrop-blur-xl) aside {
-  filter: blur(8px);
-  pointer-events: none;
-  transition: filter 0.3s ease-in-out;
-}

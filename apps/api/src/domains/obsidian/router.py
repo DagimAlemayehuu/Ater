@@ -889,7 +889,7 @@ async def get_pdf_viewer(
             pass
 
     # Theme-aware styles
-    bg_color = "#0a0a0a" if theme == "dark" else "#f8f9fa"
+    bg_color = "#0a0a0a" if theme == "dark" else "#ffffff"
     container_bg = "white" # Always white so it inverts correctly, or stays white in light mode
     
     # We apply the invert directly to the container in dark mode, NOT the body.

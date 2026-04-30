@@ -203,8 +203,8 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     const pdfUrl = `http://127.0.0.1:8765/api/obsidian/viewer/${encodeURI(path)}?vault_path=${encodeURIComponent(config?.obsidianVaultPath || '')}&page=${initialPage}${filterPages && filterPages.length > 0 ? `&filter_pages=${filterPages.join(',')}` : ''}&theme=${resolvedTheme}`;
 
     return (
-        <div ref={containerRef} className="flex flex-row h-full bg-background relative overflow-hidden">
-            <div className="flex-1 flex flex-col min-w-0 relative bg-muted/30">
+        <div ref={containerRef} className="flex flex-row h-full bg-white dark:bg-background relative overflow-hidden">
+            <div className="flex-1 flex flex-col min-w-0 relative bg-white dark:bg-background">
 
                 {/* Fixed AI Popover (Synced with MarkdownViewer style) */}
                 {showPopover && selection && (
@@ -250,7 +250,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                     <iframe 
                         ref={iframeRef} 
                         src={pdfUrl} 
-                        className="w-full h-full border-none overflow-hidden" 
+                        className="w-full h-full border-none overflow-hidden bg-white" 
                         title={title} 
                         allowFullScreen 
                     />
