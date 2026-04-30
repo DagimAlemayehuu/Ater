@@ -1,20 +1,24 @@
 {
   "main": {
-    "id": "30a1845ffac9efc6",
+    "id": "7c2e74c7da2adb4d",
     "type": "split",
     "children": [
       {
-        "id": "2559dac680ec8cc1",
+        "id": "09f3cc087a2196b8",
         "type": "tabs",
         "children": [
           {
-            "id": "7f9e47468ad62ed5",
+            "id": "e4e52099906a74b0",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "3-Database/06 - Study Planner/2_Recurrence_Relations_Hub.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "New tab"
+              "title": "2_Recurrence_Relations_Hub"
             }
           }
         ]
@@ -23,15 +27,15 @@
     "direction": "vertical"
   },
   "left": {
-    "id": "ea6b320ec1a2d17f",
+    "id": "65a20125e22d8562",
     "type": "split",
     "children": [
       {
-        "id": "1250957646912019",
+        "id": "5768a8022b9b83cb",
         "type": "tabs",
         "children": [
           {
-            "id": "810261958577cd9b",
+            "id": "94183ec2254ed9df",
             "type": "leaf",
             "state": {
               "type": "file-explorer",
@@ -44,7 +48,7 @@
             }
           },
           {
-            "id": "0cb355cad3c79bee",
+            "id": "a91da5016e486e50",
             "type": "leaf",
             "state": {
               "type": "search",
@@ -61,7 +65,7 @@
             }
           },
           {
-            "id": "7c64be831eb1575c",
+            "id": "06170d970813032c",
             "type": "leaf",
             "state": {
               "type": "bookmarks",
@@ -74,22 +78,23 @@
       }
     ],
     "direction": "horizontal",
-    "width": 339.5
+    "width": 300
   },
   "right": {
-    "id": "6bda4f631c51fb20",
+    "id": "f50b0051ad844ae3",
     "type": "split",
     "children": [
       {
-        "id": "59b3520411cc18a5",
+        "id": "a9cd5f269a3c831e",
         "type": "tabs",
         "children": [
           {
-            "id": "e549178fa914ddff",
+            "id": "f9f3d0e09d4eff46",
             "type": "leaf",
             "state": {
               "type": "backlink",
               "state": {
+                "file": "3-Database/06 - Study Planner/2_Recurrence_Relations_Hub.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -99,24 +104,25 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks"
+              "title": "Backlinks for 2_Recurrence_Relations_Hub"
             }
           },
           {
-            "id": "d62b67f72b114148",
+            "id": "0f52913d3d54d7f8",
             "type": "leaf",
             "state": {
               "type": "outgoing-link",
               "state": {
+                "file": "3-Database/06 - Study Planner/2_Recurrence_Relations_Hub.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links"
+              "title": "Outgoing links from 2_Recurrence_Relations_Hub"
             }
           },
           {
-            "id": "0a4510e2629e9f0f",
+            "id": "7e49d1067b7bf4e4",
             "type": "leaf",
             "state": {
               "type": "tag",
@@ -131,7 +137,7 @@
             }
           },
           {
-            "id": "e9c9ef7af753f376",
+            "id": "1069939483300f9a",
             "type": "leaf",
             "state": {
               "type": "all-properties",
@@ -145,17 +151,18 @@
             }
           },
           {
-            "id": "b1aa24698d4ff011",
+            "id": "c3b95325c5a03402",
             "type": "leaf",
             "state": {
               "type": "outline",
               "state": {
+                "file": "3-Database/06 - Study Planner/2_Recurrence_Relations_Hub.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline"
+              "title": "Outline of 2_Recurrence_Relations_Hub"
             }
           }
         ]
@@ -176,43 +183,14 @@
       "bases:Create new base": false
     }
   },
-  "active": "7f9e47468ad62ed5",
+  "active": "e4e52099906a74b0",
   "lastOpenFiles": [
     "5-Pdf Store/note generated/Chapter_7.pdf",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Query_Tree.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Complete_Set_Of_Relational_Operations.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Outer_Union_Operation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Outer_Join_Operation.md",
     "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Grouping_With_Aggregation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Aggregate_Functions.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Natural_Join_Operation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Equijoin_Operation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Theta_Join.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Domain_Relational_Calculus.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Tuple_Relational_Calculus.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Relational_Calculus.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Additional_Relational_Operations.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Division_Operation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Join_Operation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Binary_Relational_Operations.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Cartesian_Product_Operation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Difference_Operation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Intersection_Operation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Union_Operation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Relational_Algebra_Operations_From_Set_Theory.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Rename_Operation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Project_Operation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Select_Operation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Unary_Relational_Operations.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus",
-    "2-Academic/Autumn 2025/Database_Systems",
-    "5-Pdf Store/note generated/Chapter 5.pdf",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming",
-    "2-Academic/Autumn 2025/Computer_Programming",
-    "2-Academic/Autumn 2025",
-    "5-Pdf Store/Chapter_7.pdf",
-    "5-Pdf Store/Chapter 5.pdf",
-    "5-Pdf Store/oka_queue.db",
-    "5-Pdf Store/note generated/2.pdf"
+    "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Concept_Of_Recursion.md",
+    "3-Database/06 - Study Planner/5_Modular_Programming_Hub.md",
+    "3-Database/06 - Study Planner/4_Promoting_Inclusive_Culture_Hub.md",
+    "3-Database/06 - Study Planner/2_Recurrence_Relations_Hub.md"
   ]
 }
