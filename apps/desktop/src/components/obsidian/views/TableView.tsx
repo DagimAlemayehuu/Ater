@@ -1,5 +1,5 @@
 import React from 'react'
-import { Trash } from 'lucide-react'
+import { Trash, ChevronRight, MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EditableCell } from '@/components/obsidian/EditableCell'
 
@@ -87,11 +87,11 @@ export function TableView({
     }, [visibleRows, rows, groupBy]);
 
     return (
-        <div className="rounded-xl border border-border overflow-hidden h-full flex flex-col bg-background">
+        <div className="rounded-xl border border-border/40 overflow-hidden h-full flex flex-col bg-background">
             {selectedIds.size > 0 && (
-                <div className="bg-primary text-primary-foreground px-6 py-2 flex items-center justify-between animate-in slide-in-from-top duration-300 z-40">
+                <div className="bg-foreground text-background px-6 py-2.5 flex items-center justify-between animate-in slide-in-from-top duration-300 z-40 border-b border-border/10">
                     <div className="flex items-center gap-4">
-                        <span className="text-[10px] font-black uppercase tracking-widest">{selectedIds.size} items selected</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">{selectedIds.size} Items Command</span>
                         <button 
                             onClick={() => {
                                 if (confirm(`Delete ${selectedIds.size} items?`)) {
@@ -99,19 +99,19 @@ export function TableView({
                                     setSelectedIds(new Set());
                                 }
                             }}
-                            className="px-3 py-1 bg-background/20 hover:bg-background/30 rounded text-[9px] font-bold uppercase tracking-widest"
+                            className="px-4 py-1 bg-background text-foreground hover:bg-background/90 rounded text-[9px] font-black uppercase tracking-widest transition-all"
                         >
-                            Bulk Delete
+                            Bulk Purge
                         </button>
                     </div>
-                    <button onClick={() => setSelectedIds(new Set())} className="text-[9px] font-bold hover:underline">Clear</button>
+                    <button onClick={() => setSelectedIds(new Set())} className="text-[9px] font-black uppercase tracking-widest hover:opacity-50 transition-opacity">Abort</button>
                 </div>
             )}
             <div className="overflow-auto h-full custom-scrollbar">
                 <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-muted/80 backdrop-blur-md sticky top-0 z-10 border-b border-border/20">
+                    <thead className="bg-muted/[0.03] backdrop-blur-md sticky top-0 z-10 border-b border-border/20">
                         <tr>
-                            <th className="w-10 px-3 py-2 border-r border-border/10">
+                            <th className="w-10 px-4 py-3 border-r border-border/5">
                                 <input 
                                     type="checkbox" 
                                     onChange={(e) => {
@@ -119,38 +119,38 @@ export function TableView({
                                         else setSelectedIds(new Set());
                                     }}
                                     checked={selectedIds.size === rows.length && rows.length > 0}
-                                    className="accent-primary"
+                                    className="accent-foreground w-3 h-3 rounded-none bg-transparent border border-border"
                                 />
                             </th>
-                            <th className="px-3 py-2 font-black uppercase tracking-wider text-[9px] text-muted-foreground whitespace-nowrap border-r border-border/10 min-w-[150px]">
-                                Title
+                            <th className="px-5 py-3 font-black uppercase tracking-[0.2em] text-[9px] text-foreground/40 whitespace-nowrap border-r border-border/5 min-w-[180px]">
+                                Label
                             </th>
                             {effectiveColumns.map(col => (
-                                <th key={col} className="px-3 py-2 font-black uppercase tracking-wider text-[9px] text-muted-foreground whitespace-nowrap border-r border-border/10 last:border-r-0 min-w-[120px]">
+                                <th key={col} className="px-5 py-3 font-black uppercase tracking-[0.2em] text-[9px] text-foreground/40 whitespace-nowrap border-r border-border/5 last:border-r-0 min-w-[140px]">
                                     {col}
                                 </th>
                             ))}
-                            <th className="px-3 py-2 w-10"></th>
+                            <th className="px-3 py-3 w-10"></th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/10">
+                    <tbody className="divide-y divide-border/5">
                         {finalGroups.map(group => (
                             <React.Fragment key={group.name || 'root'}>
                                 {group.name && (
-                                    <tr className="bg-muted/30">
-                                        <td colSpan={effectiveColumns.length + 3} className="px-3 py-1.5 border-b border-border/10 bg-muted/30">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[9px] font-black uppercase tracking-widest opacity-40 text-muted-foreground">{groupBy}:</span>
-                                                <span className="text-[10px] font-bold text-primary">{group.name}</span>
-                                                <span className="text-[9px] font-black opacity-20 ml-auto text-muted-foreground">{group.items.length} items</span>
+                                    <tr className="bg-muted/10">
+                                        <td colSpan={effectiveColumns.length + 3} className="px-5 py-2 border-b border-border/5">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-20 text-foreground">{groupBy}:</span>
+                                                <span className="text-[10px] font-black uppercase text-foreground/80 tracking-tighter">{group.name}</span>
+                                                <span className="text-[9px] font-black opacity-10 ml-auto uppercase tracking-widest tabular-nums">{group.items.length} units</span>
                                             </div>
                                         </td>
                                     </tr>
                                 )}
                                 {group.items.map(row => {
                                     return (
-                                        <tr key={row.id} className="hover:bg-muted/50 group">
-                                            <td className="px-3 py-2 border-r border-border/10 bg-background group-hover:bg-muted/50 transition-colors">
+                                        <tr key={row.id} className="hover:bg-muted/[0.02] group/row transition-colors">
+                                            <td className="px-4 py-2.5 border-r border-border/5 bg-background group-hover/row:bg-muted/[0.02] transition-colors">
                                                 <input 
                                                     type="checkbox" 
                                                     checked={selectedIds.has(row.id)}
@@ -160,40 +160,38 @@ export function TableView({
                                                         else next.add(row.id);
                                                         setSelectedIds(next);
                                                     }}
-                                                    className="accent-primary"
+                                                    className="accent-foreground w-3 h-3 rounded-none bg-transparent border border-border"
                                                 />
                                             </td>
                                             <td 
                                                 className={cn(
-                                                    "px-3 py-2 whitespace-nowrap font-bold max-w-[200px] border-r border-border/5 cursor-pointer text-foreground hover:underline truncate group-hover:bg-muted/50 transition-colors",
-                                                    row.depth > 0 && "text-muted-foreground font-medium"
+                                                    "px-5 py-2.5 whitespace-nowrap font-black tracking-tight max-w-[240px] border-r border-border/5 cursor-pointer text-foreground/70 hover:text-foreground truncate transition-colors",
+                                                    row.depth > 0 && "text-foreground/40 font-bold"
                                                 )} 
-                                                style={{ paddingLeft: `${row.depth * 20 + 12}px` }}
+                                                style={{ paddingLeft: `${row.depth * 24 + 20}px` }}
                                                 title={row.title}
                                                 onClick={() => onSelectRow(row.id)}
                                             >
-                                                <div className="flex items-center gap-1">
+                                                <div className="flex items-center gap-2">
                                                     {row.hasChildren ? (
                                                         <button 
                                                             onClick={(e) => toggleExpand(e, row.id)}
-                                                            className="p-0.5 hover:bg-muted rounded transition-colors mr-1"
+                                                            className="p-1 hover:bg-muted/50 rounded transition-colors mr-1"
                                                         >
-                                                            <div className={cn("transition-transform duration-200", expandedRows.has(row.id) ? "rotate-90" : "")}>
-                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                                            </div>
+                                                            <ChevronRight size={12} className={cn("transition-transform duration-300 text-foreground/20", expandedRows.has(row.id) ? "rotate-90 text-foreground/60" : "")} />
                                                         </button>
                                                     ) : row.depth > 0 ? (
-                                                        <span className="mr-2 opacity-30 text-muted-foreground">↳</span>
+                                                        <span className="mr-3 opacity-10 text-foreground">↳</span>
                                                     ) : (
-                                                        <div className="w-4 mr-1" />
+                                                        <div className="w-4 mr-2" />
                                                     )}
-                                                    {row.title}
+                                                    <span className="uppercase text-[11px]">{row.title}</span>
                                                 </div>
                                             </td>
                                             {effectiveColumns.map(col => {
                                                 const val = row.properties[col]
                                                 return (
-                                                    <td key={col} className={cn("px-3 py-1.5 whitespace-nowrap border-r border-border/5 last:border-r-0", readonly && "pointer-events-none")}>
+                                                    <td key={col} className={cn("px-4 py-2 border-r border-border/5 last:border-r-0", readonly && "pointer-events-none")}>
                                                         <EditableCell 
                                                             initialValue={val} 
                                                             type={schema[col] || 'str'} 
@@ -205,9 +203,9 @@ export function TableView({
                                                     </td>
                                                 )
                                             })}
-                                            <td className="px-3 py-2 text-right">
+                                            <td className="px-4 py-2 text-right">
                                                 {!readonly && (
-                                                    <button onClick={() => onDeleteRow(row.id)} className="opacity-0 group-hover:opacity-50 hover:!opacity-100 text-destructive transition-opacity">
+                                                    <button onClick={() => onDeleteRow(row.id)} className="opacity-0 group-hover/row:opacity-20 hover:!opacity-100 text-foreground transition-opacity">
                                                         <Trash size={12} />
                                                     </button>
                                                 )}
@@ -219,18 +217,18 @@ export function TableView({
                         ))}
                         {rows.length === 0 && !loading && (
                             <tr>
-                                <td colSpan={effectiveColumns.length + 3} className="px-3 py-8 text-center text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest">
-                                    No rows found
+                                <td colSpan={effectiveColumns.length + 3} className="px-5 py-20 text-center text-foreground/10 text-[10px] font-black uppercase tracking-[0.5em]">
+                                    Module Empty
                                 </td>
                             </tr>
                         )}
                     </tbody>
                     {!loading && rows.length > 0 && (
-                        <tfoot className="sticky bottom-0 bg-muted/90 backdrop-blur-md border-t border-border/20 z-30">
+                        <tfoot className="sticky bottom-0 bg-muted/[0.03] backdrop-blur-md border-t border-border/20 z-30">
                             <tr>
-                                <td className="px-3 py-2 border-r border-border/10"></td>
-                                <td className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground border-r border-border/10 bg-muted/90">
-                                    Count {rows.length}
+                                <td className="px-4 py-3 border-r border-border/5"></td>
+                                <td className="px-5 py-3 text-right text-[9px] font-black uppercase tracking-[0.2em] text-foreground/30 border-r border-border/5 bg-muted/[0.01]">
+                                    Registry Count {rows.length}
                                 </td>
                                 {effectiveColumns.map(col => {
                                     const type = schema[col] || 'str';
@@ -249,23 +247,23 @@ export function TableView({
                                     } else if (type === 'bool') {
                                         const checkedCount = values.filter(v => v === true).length;
                                         result = `${Math.round((checkedCount / rows.length) * 100)}%`;
-                                        label = 'Percent Checked';
+                                        label = 'Saturation';
                                     } else if (type === 'select' || type === 'multi-select') {
                                         const unique = new Set(values.flat()).size;
                                         result = unique;
-                                        label = 'Unique';
+                                        label = 'Density';
                                     }
 
                                     return (
-                                        <td key={col} className="px-3 py-2 border-r border-border/10 group/footer relative">
+                                        <td key={col} className="px-5 py-3 border-r border-border/5 group/footer relative">
                                             <div className="flex flex-col items-end">
-                                                <span className="text-[7px] font-bold uppercase tracking-tighter text-muted-foreground/40 opacity-0 group-hover/footer:opacity-100 transition-opacity whitespace-nowrap">{label}</span>
-                                                <span className="text-[10px] font-bold text-muted-foreground">{result !== null ? result : ''}</span>
+                                                <span className="text-[7px] font-black uppercase tracking-widest text-foreground/10 opacity-0 group-hover/footer:opacity-100 transition-opacity whitespace-nowrap">{label}</span>
+                                                <span className="text-[10px] font-black tracking-tight text-foreground/40 tabular-nums">{result !== null ? result : ''}</span>
                                             </div>
                                         </td>
                                     );
                                 })}
-                                <td className="px-3 py-2 w-10"></td>
+                                <td className="px-3 py-3 w-10"></td>
                             </tr>
                         </tfoot>
                     )}

@@ -96,7 +96,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   timeBoundDays: null
 }
 
-export default function Practice() {
+export function PracticeModule() {
   const [hubs, setHubs] = useState<Hub[]>([])
   const [selectedHub, setSelectedHub] = useState<string>('')
   const [advancedConfig, setAdvancedConfig] = useState<AdvancedPracticeConfig>(DEFAULT_CONFIG)
@@ -1077,3 +1077,5 @@ export default function Practice() {
 
   return null;
 }
+
+export default PracticeModule;
