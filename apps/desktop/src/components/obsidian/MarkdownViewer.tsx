@@ -198,46 +198,6 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
             const childrenArray = React.Children.toArray(children);
             const textContent = childrenArray.map(c => typeof c === 'string' ? c : '').join(' ');
             
-            // Detect and fix horizontal/collapsed connection lists
-            if (textContent.includes('- [ ]') || textContent.includes('- [x]')) {
-                // Split by newline first, then filter for task items to preserve indentation logic correctly
-                const lines = textContent.split('\n').filter(p => p.trim().length > 0 && p.match(/^\s*- \[[ xX]\]/));
-                
-                if (lines.length > 0) {
-                    return (
-                        <div className="flex flex-col gap-1.5 my-6">
-                            {lines.map((line, i) => {
-                                const isChecked = line.toLowerCase().includes('[x]');
-                                // Count leading whitespace to determine indentation depth
-                                const leadingSpaces = line.match(/^\s*/)?.[0].length || 0;
-                                // Obsidian typically uses 4 spaces or 1 tab for a level of indentation
-                                const depth = Math.floor(leadingSpaces / 4);
-                                // Clean up the task marker
-                                const cleanPart = line.replace(/^\s*- \[[ xX]\]/, '').trim();
-                                
-                                return (
-                                    <div key={i} className="flex items-start gap-2.5 py-0.5 group/task" style={{ marginLeft: depth * 24 }}>
-                                        <div className="mt-0.5 flex items-center justify-center shrink-0">
-                                            <div className={cn(
-                                                "size-[15px] border-2 border-border/50 rounded-sm flex items-center justify-center transition-colors",
-                                                isChecked ? "bg-primary/20 border-primary" : "bg-transparent"
-                                            )}>
-                                                {isChecked && <Check size={11} className="text-primary" strokeWidth={3.5} />}
-                                            </div>
-                                        </div>
-                                        <div className={cn(
-                                            "text-[13px] leading-relaxed transition-all",
-                                            isChecked ? "opacity-40 line-through decoration-foreground/30" : "text-foreground/90 font-medium"
-                                        )}>
-                                            {renderWikiLinks(cleanPart, onNavigateRef.current)}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    );
-                }
-            }
 
             if (React.Children.count(children) === 1 && typeof children === 'string') {
                 const str = children as string;
@@ -267,17 +227,51 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
         ul: ({ children }: any) => <ul className="list-disc pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ul>,
         ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ol>,
         li: ({ children, className }: any) => {
-            const content = React.Children.map(children, (child) => {
-                if (typeof child === 'string') return renderWikiLinks(child, onNavigateRef.current);
-                return child;
-            });
             const isTask = className?.includes('task-list-item');
+            
+            // Separate children into inline content and nested blocks (like sub-lists)
+            const childrenArray = React.Children.toArray(children);
+            const nestedBlocks: any[] = [];
+            const inlineContent: any[] = [];
+            
+            childrenArray.forEach((child: any) => {
+                // If it's a list or another block-level element, it should be below
+                // react-markdown uses custom components, so child.type is often a function. We check the AST node's tagName.
+                const tagName = child?.props?.node?.tagName || child?.type;
+                if (tagName === 'ul' || tagName === 'ol' || tagName === 'blockquote') {
+                    nestedBlocks.push(child);
+                } else {
+                    // For string children, handle wiki links
+                    if (typeof child === 'string') {
+                        inlineContent.push(renderWikiLinks(child, onNavigateRef.current));
+                    } else {
+                        inlineContent.push(child);
+                    }
+                }
+            });
+
+            if (isTask) {
+                return (
+                    <li className="list-none mb-1 group/task">
+                        <div className="flex items-start gap-2">
+                            {/* This div will contain the checkbox and the item text */}
+                            <div className="flex-1 flex items-start gap-2 text-[13px] leading-relaxed text-foreground/80">
+                                {inlineContent}
+                            </div>
+                        </div>
+                        {nestedBlocks.length > 0 && (
+                            <div className="mt-1">
+                                {nestedBlocks}
+                            </div>
+                        )}
+                    </li>
+                );
+            }
+
             return (
-                <li className={cn(
-                    "text-[13px] leading-relaxed mb-1 text-foreground/80",
-                    isTask ? "flex items-start gap-2 list-none -ml-5" : "list-item"
-                )}>
-                    {content}
+                <li className="text-[13px] leading-relaxed mb-1 text-foreground/80 list-item">
+                    {inlineContent}
+                    {nestedBlocks}
                 </li>
             );
         },

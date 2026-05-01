@@ -52,6 +52,7 @@ from src.domains.ai.factory import ModelFactory
 
 from src.domains.notion.router import router as notion_router
 from src.domains.obsidian.router import router as obsidian_router
+from src.domains.academics.router import router as academics_router
 
 # Global watcher instances
 
@@ -131,6 +132,7 @@ async def validate_vault_path(vault_path: Optional[str] = None, secrets: AppSecr
 # Mount routers
 app.include_router(notion_router, prefix="/api")
 app.include_router(obsidian_router, prefix="/api", dependencies=[Depends(validate_vault_path)])
+app.include_router(academics_router, prefix="/api", dependencies=[Depends(validate_vault_path)])
 
 
 @app.get("/api/health")

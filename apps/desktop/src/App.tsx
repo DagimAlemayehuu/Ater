@@ -9,6 +9,7 @@ import VaultSync from '@/routes/vault-sync'
 import Agents from '@/routes/agents'
 import Settings from '@/routes/settings'
 import Practice from '@/routes/practice'
+import AcademicDashboard from '@/routes/academic'
 
 /**
  * Gate to ensure sidecar is connected before proceeding.
@@ -63,6 +64,7 @@ export default function App() {
                     <Route path="/obsidian" element={<ObsidianKnowledgeArchitect />} />
                     <Route path="/vault-sync" element={<VaultSync />} />
                     <Route path="/agents" element={<Agents />} />
+                    <Route path="/academic" element={<AcademicDashboard />} />
                     <Route path="/practice" element={<Practice />} />
                     <Route path="/settings" element={<Settings />} />
                   </Routes>

@@ -127,6 +127,18 @@ export default function Practice() {
   }, [pastPractices])
 
   useEffect(() => { loadHubs(); loadPastPractices(); }, [])
+
+  // Handle hubId from query param
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const hubId = searchParams.get('hubId');
+    if (hubId && hubs.length > 0) {
+      // Find by ID or by path-like slug
+      const hub = hubs.find(h => h.id === hubId || h.path.includes(hubId));
+      if (hub) setSelectedHub(hub.id);
+    }
+  }, [hubs]);
+
   useEffect(() => { if (selectedHub) loadHubNotes(selectedHub); }, [selectedHub])
   const loadHubNotes = async (hubId: string) => { 
     try { 

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { FileText, RefreshCw, Users, Settings, GraduationCap } from 'lucide-react'
+import { FileText, RefreshCw, Users, Settings, GraduationCap, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeSwitch } from '@/components/theme-switch'
 
@@ -30,11 +30,18 @@ export function AppSidebar() {
                 <Users className="w-6 h-6" />
             </NavLink>
             <NavLink 
+                to="/academic"
+                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")} 
+                title="Academic Mastery"
+            >
+                <GraduationCap className="w-6 h-6" />
+            </NavLink>
+            <NavLink 
                 to="/practice"
                 className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")} 
                 title="Practice"
             >
-                <GraduationCap className="w-6 h-6" />
+                <Zap className="w-6 h-6" />
             </NavLink>
         </div>
 

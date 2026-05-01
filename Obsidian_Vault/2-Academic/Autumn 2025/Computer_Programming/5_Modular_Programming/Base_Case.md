@@ -1,18 +1,5 @@
 ---
-title: Base_Case
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-hub: "[[5_Modular_Programming_Hub]]"
-source: "[[Chapter 5.Pdf]]"
-source_pages:
-- 47
-mode: CS-SOFTWARE
-read: false
-generated: true
-prerequisites:
-- "[[Recursion]]"
+read: true
 ---
 
 # 1. Mental Model

@@ -13,7 +13,7 @@ import { sidecarApi, ObsidianFile } from '@/lib/sidecarApi'
 import { ObsidianGraphView } from '@/components/obsidian/ObsidianGraphView'
 import { cn } from '@/lib/utils'
 import { useConfig } from '@/lib/ConfigContext'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
@@ -321,6 +321,89 @@ function parseHubTree(content: string): NavNode[] {
     return roots
 }
 
+function KnowledgeFooter({ tree, activePath, onNavigate }: { tree: NavNode[], activePath: string | null, onNavigate: (path: string) => void }) {
+    const navigate = useNavigate();
+    
+    const flattened = useMemo(() => {
+        const list: NavNode[] = [];
+        const traverse = (nodes: NavNode[]) => {
+            for (const node of nodes) {
+                if (node.target) list.push(node);
+                if (node.children.length > 0) traverse(node.children);
+            }
+        };
+        traverse(tree);
+        return list;
+    }, [tree]);
+
+    const activeNoteName = activePath?.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '';
+    const currentIndex = flattened.findIndex(n => {
+        if (!n.target) return false;
+        const nodeName = n.target.split('/').pop()?.replace('.md', '') || n.target;
+        return nodeName === activeNoteName || n.target === activePath;
+    });
+    const prevNode = currentIndex > 0 ? flattened[currentIndex - 1] : null;
+    const nextNode = currentIndex < flattened.length - 1 && currentIndex !== -1 ? flattened[currentIndex + 1] : null;
+
+    const isHub = activePath?.toLowerCase().includes('_hub.md');
+    const hubId = activePath?.split('/').pop()?.replace('.md', '');
+
+    if (!activePath) return null;
+
+    return (
+        <div className="mt-24 pt-12 border-t border-border/40 flex items-center justify-center transition-all pb-24 px-8">
+            <div className="w-full flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    {prevNode && (
+                        <button 
+                            onClick={() => onNavigate(prevNode.target!)}
+                            className="flex items-center gap-3 px-6 py-2.5 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border/40 transition-all group"
+                        >
+                            <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                            <div className="flex flex-col items-start">
+                                <span className="text-[8px] font-black uppercase tracking-widest opacity-30">Previous Note</span>
+                                <span className="text-[10px] font-bold truncate max-w-[150px]">{prevNode.label}</span>
+                            </div>
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-6">
+                    {isHub && (
+                        <button 
+                            onClick={() => {
+                                if (flattened.length > 0 && flattened[0].target) {
+                                    onNavigate(flattened[0].target);
+                                } else {
+                                    navigate(`/practice?hubId=${hubId}`);
+                                }
+                            }}
+                            className="flex items-center gap-3 px-8 py-2.5 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border/40 transition-all text-[10px] font-bold uppercase tracking-widest"
+                        >
+                            Start Study Session
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-4">
+                    {nextNode && (
+                        <button 
+                            onClick={() => onNavigate(nextNode.target!)}
+                            className="flex items-center gap-3 px-6 py-2.5 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border/40 transition-all group text-right"
+                        >
+                            <div className="flex flex-col items-end">
+                                <span className="text-[8px] font-black uppercase tracking-widest opacity-30">Next Note</span>
+                                <span className="text-[10px] font-bold truncate max-w-[150px]">{nextNode.label}</span>
+                            </div>
+                            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function HubConnectionsNav({ content, activePath, onNavigate, onToggleCheckbox }: { content: string, activePath: string | null, onNavigate: (name: string) => void, onToggleCheckbox: (label: string, isChecked: boolean, target: string | null) => void }) {
     const activeNoteName = activePath?.split('/').pop()?.replace('.md', '').replace('.pdf', '')?.toLowerCase() || ''
     const tree = useMemo(() => parseHubTree(content), [content]);
@@ -556,6 +639,7 @@ export default function ObsidianVaultPage() {
     const [batchFeed, setBatchFeed] = useState<any[]>([])
     const [okaError, setOkaError] = useState<string | null>(null)
     const [hubConnections, setHubConnections] = useState<string | null>(null)
+    const studyTree = useMemo(() => parseHubTree(hubConnections || ''), [hubConnections])
 
     useEffect(() => {
         const fetchHubConnections = async () => {
@@ -844,6 +928,11 @@ export default function ObsidianVaultPage() {
         const searchParams = new URLSearchParams(location.search)
         const initSearch = searchParams.get('search')
         const initPath = searchParams.get('path')
+        const initFullscreen = searchParams.get('fullscreen') === 'true'
+        
+        if (initFullscreen) {
+            setIsFullscreen(true)
+        }
         
         if (initPath) {
             selectFile(initPath)
@@ -1564,6 +1653,7 @@ export default function ObsidianVaultPage() {
 
                                                 {/* Connection links */}
                                                 <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4">
+                                                    <div className="max-w-5xl mx-auto">
                                                     {hubConnections ? (
                                                         <HubConnectionsNav
                                                             content={hubConnections}
@@ -1579,7 +1669,8 @@ export default function ObsidianVaultPage() {
                                                     )}
                                                 </div>
                                             </div>
-                                        </aside>
+                                        </div>
+                                    </aside>
                                     )}
 
                                     {/* Scrollable Content Column */}
@@ -1931,6 +2022,13 @@ export default function ObsidianVaultPage() {
                                                                     />
                                                                 )}
                                                             </div>
+                                                            
+                                                            {/* Knowledge Navigation integrated at the end of content */}
+                                                            <KnowledgeFooter 
+                                                                tree={studyTree} 
+                                                                activePath={selectedPath}
+                                                                onNavigate={handleWikiLinkClick}
+                                                            />
                                                         </>
                                                     )}
                                                 </>
@@ -1938,9 +2036,9 @@ export default function ObsidianVaultPage() {
                                         </div>
                                     )}
                                 </div>
-                                </>
-                            )}
-                        </section>
+                            </>
+                        )}
+                    </section>
 
                         {/* Right: OKA Architect (Collapsible Panel) */}
                         {showArchitect && (
