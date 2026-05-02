@@ -23,7 +23,7 @@ import ruamel.yaml
 OKA_TIMEOUT = 600       # 10 minutes — headroom for large PDFs
 OKA_MAX_RETRIES = 10     # Retry on transient failures (524, timeout, rate-limit)
 OKA_RETRY_BACKOFF = 15  # Seconds between retries (doubles each attempt)
-MAX_SOURCE_CHARS = 200_000  # SI is now ~3.5K tokens, so we can afford much more source text
+ # Characters to include in prompt
 
 
 class OkaService:
@@ -346,25 +346,44 @@ class OkaService:
         return hubs
 
     def _get_unit_dir(self, hub: Dict[str, Any]) -> Path:
-        """Resolves the academic unit directory for a given hub."""
+        """Resolves the academic unit directory for a given hub.
+        If the direct path (Semester/Course/Unit) doesn't exist, it performs a search.
+        """
         hub_path = Path(hub["path"])
-        semester = hub.get("semester", "General")
-        course = hub.get("course", "General_Knowledge")
+        semester = hub.get("semester") or "General"
+        course = hub.get("course") or "General_Knowledge"
         unit_num = hub.get("unit", "")
         
-        # We must clean the title to remove "Hub" or "Possible Questions" before canonicalizing
+        # Canonical names
         clean_hub_base = self.vm.super_clean(hub["title"])
         canonical_hub = self.vm.get_canonical_title(clean_hub_base)
         unit_prefix = f"{unit_num}_" if unit_num else ""
         unit_folder_name = f"{unit_prefix}{canonical_hub}"
         
+        # 1. Try direct path
         academic_unit_dir = self.vm.academic_root / semester / self.vm.get_canonical_title(course) / unit_folder_name
-        return academic_unit_dir if academic_unit_dir.exists() else hub_path.parent
+        if academic_unit_dir.exists():
+            return academic_unit_dir
+            
+        # 2. Try without semester (search inside academic root)
+        # Search for a folder matching unit_folder_name inside 2-Academic
+        try:
+            matches = list(self.vm.academic_root.rglob(unit_folder_name))
+            if matches:
+                # Return the first directory match
+                for m in matches:
+                    if m.is_dir():
+                        return m
+        except:
+            pass
+
+        # 3. Fallback to hub directory (though unlikely to have atomic notes there)
+        return hub_path.parent
 
     def list_atomic_notes(self, hub_id: str) -> List[Dict[str, Any]]:
         """Lists atomic notes linked to a specific hub.
-        PRIORITY: Extracts ordered links from the 'Connections' or 'Core Topologies' section.
-        FALLBACK: Scans the unit directory for all markdown files.
+        STRICT: Extracts ordered links from the 'Connections' or 'Core Topologies' section.
+        If no section is found, returns an empty list to enforce project structure.
         """
         hubs = self.list_planner_hubs()
         hub = next((h for h in hubs if h["id"] == hub_id), None)
@@ -412,25 +431,12 @@ class OkaService:
                                     "path": str(file.absolute())
                                 })
                         
-                        if ordered_notes:
-                            return ordered_notes
+                        return ordered_notes
             except Exception as e:
                 print(f"[OKA Service] Connection extraction failed: {e}")
 
-        # 2. Fallback: Alpha-sorted directory listing
-        notes = []
-        if unit_dir.exists():
-            for file in unit_dir.glob("*.md"):
-                if file.name.endswith("_Hub.md") or "Possible_Questions" in file.name or "Practice" in file.name or file.name.startswith("_"):
-                    continue
-                if file.name == hub_path.name:
-                    continue
-                notes.append({
-                    "id": file.stem,
-                    "title": file.stem.replace("_", " "),
-                    "path": str(file.absolute())
-                })
-        return sorted(notes, key=lambda x: x["title"])
+        # If no connections section found or no links in it, return empty to enforce "strict Connections" rule
+        return []
 
     def list_practices(self) -> List[Dict[str, Any]]:
         """Lists all existing practices by scanning known storage locations recursively."""
@@ -576,42 +582,51 @@ class OkaService:
         practice_dir.mkdir(exist_ok=True)
         
         # 1. Gather Context
+        # Budget: 20,000 chars total for the prompt context to fit in low TPM limits
+        PRACTICE_MAX_CHARS = 20_000
         context_parts = []
         
         # Filter files based on config
         atomic_notes = list(unit_dir.glob("*.md"))
         selected_notes = config.selectedAtomicNotes
         
-        # Read Hub content only if NO specific notes are selected (full hub mode)
-        if not selected_notes:
-            with open(hub_path, "r", encoding="utf-8") as f:
-                context_parts.append(f"## Hub Note: {hub['title']}\n{f.read()}")
-
+        notes_to_process = []
         for note_path in atomic_notes:
             if note_path.name == hub_path.name or "Possible_Questions" in note_path.name or "Practice" in note_path.name or note_path.name.startswith("_"):
                 continue
-            
-                
-            # Apply selection filter
             if selected_notes and note_path.stem not in selected_notes:
                 continue
+            notes_to_process.append(note_path)
 
-            # Apply time bound
-            if config.timeBoundDays:
-                mtime = os.path.getmtime(note_path)
-                if (time.time() - mtime) > (config.timeBoundDays * 86400):
-                    continue
+        if not notes_to_process and not selected_notes:
+             # If no specific notes selected, we might want the Hub itself
+             with open(hub_path, "r", encoding="utf-8") as f:
+                context_parts.append(f"## Hub Note: {hub['title']}\n{f.read()}")
 
-            with open(note_path, "r", encoding="utf-8") as f:
-                context_parts.append(f"### Atomic Note: {note_path.stem}\n{f.read()}")
-                
+        # Distribute budget
+        if notes_to_process:
+            budget_per_note = PRACTICE_MAX_CHARS // len(notes_to_process)
+            found_selected = True
+            for note_path in notes_to_process:
+                with open(note_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    # Truncate note if it's too long for its share of the budget
+                    if len(content) > budget_per_note:
+                        content = content[:budget_per_note] + "... [Truncated for Context Limit]"
+                    context_parts.append(f"### Atomic Note: {note_path.stem}\n{content}")
+        else:
+            found_selected = False
+
         # 2. Add Possible Questions only if no specific notes are selected (full unit mode)
-        # This prevents the AI from pulling questions from the whole unit when only 1 note is selected.
         if not selected_notes:
             pq_file = next(unit_dir.glob("*_Possible_Questions.md"), None)
             if pq_file:
                 with open(pq_file, "r", encoding="utf-8") as f:
                     context_parts.append(f"## Reference Questions\n{f.read()}")
+        
+        # STRICT ERROR: If notes were selected but none were found/processed, abort.
+        if selected_notes and not found_selected:
+            raise Exception(f"Strict Error: None of the selected notes ({selected_notes}) were found in the unit directory.")
         
         # Randomize context order to break structural bias
         import random
@@ -646,7 +661,7 @@ class OkaService:
 
         prompt = (
             "### [GROUND TRUTH SOURCE MATERIAL]\n"
-            f"{full_context[:MAX_SOURCE_CHARS]}\n"
+            f"{full_context}\n"
             "### [END OF SOURCE MATERIAL]\n\n"
             
             "SYSTEM PROTOCOL: You are OKA, the Sovereign Pedagogical Architect. "
@@ -677,152 +692,196 @@ class OkaService:
             "EXECUTION: Generate the session now. Follow the distribution strictly."
         )
         
-        # 3. Invoke LLM with Structured Output logic
+        # 3. Invoke LLM in Batches
         OkaService._status[session_id] = "Architecting Advanced Session..."
         
-        try:
-            # We attempt to use the model's structured output capability if available
-            # Otherwise we fallback to raw prompt + parsing
+        all_questions = []
+        target_distribution = distribution.copy()
+        
+        # We generate in small batches to avoid output token limits and aggressive TPM limits
+        BATCH_SIZE = 5
+        
+        while sum(target_distribution.values()) > 0:
+            # Cooldown to avoid hitting TPM limits (especially on Groq/Free tiers)
+            if all_questions:
+                OkaService._status[session_id] = f"Cooling down for Rate Limits (TPM)... ({len(all_questions)}/{total_q})"
+                await asyncio.sleep(25)
+
+            # Determine batch distribution
+            current_batch_count = 0
+            batch_dist = {}
+            for q_type, count in target_distribution.items():
+                take = min(count, BATCH_SIZE - current_batch_count)
+                if take > 0:
+                    batch_dist[q_type] = take
+                    current_batch_count += take
+                if current_batch_count >= BATCH_SIZE:
+                    break
+            
+            if current_batch_count == 0:
+                break
+                
+            batch_dist_str = ", ".join([f"{count} {t}" for t, count in batch_dist.items()])
+            OkaService._status[session_id] = f"Generating Batch ({len(all_questions)}/{total_q} complete)..."
+            
+            batch_prompt = prompt.replace(f"- Total Questions: {total_q}", f"- Total Questions: {current_batch_count}")
+            batch_prompt = batch_prompt.replace(f"- Question Types: {dist_str}", f"- Question Types: {batch_dist_str}")
+            # Ensure we don't repeat the same exact questions if we had a seed (though randomize helps)
+            batch_prompt += f"\n\nBATCH SEED: {random.random()}"
+
             try:
-                from .schemas import PracticeBatch
-                structured_llm = self.planner_llm.with_structured_output(PracticeBatch)
-                batch = await structured_llm.ainvoke(prompt)
-                questions = [q.model_dump() for q in batch.questions]
+                # Attempt structured batch
+                try:
+                    from .schemas import PracticeBatch
+                    structured_llm = self.planner_llm.with_structured_output(PracticeBatch)
+                    batch_res = await structured_llm.ainvoke(batch_prompt)
+                    batch_questions = [q.model_dump() for q in batch_res.questions]
+                except Exception:
+                    res = await self.planner_llm.ainvoke([HumanMessage(content=batch_prompt + "\n\nRETURN ONLY A JSON OBJECT with a 'questions' key containing the list of questions.")])
+                    content = res.content.strip()
+                    if "```json" in content:
+                        match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
+                        content = match.group(1) if match else content
+                    elif "```" in content:
+                        match = re.search(r"```\s*(.*?)\s*```", content, re.DOTALL)
+                        content = match.group(1) if match else content
+                    
+                    data = json.loads(content)
+                    batch_questions = data["questions"] if isinstance(data, dict) and "questions" in data else (data if isinstance(data, list) else [])
+
+                # Add to total and decrement target
+                for q in batch_questions:
+                    all_questions.append(q)
+                    q_type_raw = (q.get("type") or q.get("questionType") or "writing").lower().replace("_", "")
+                    # Try to find which target bucket this fits into
+                    # This is imprecise because LLM might return 'multiple_choice' instead of 'mcq'
+                    for t_key in target_distribution.keys():
+                        if t_key.replace("_", "") in q_type_raw or q_type_raw in t_key.replace("_", ""):
+                            target_distribution[t_key] = max(0, target_distribution[t_key] - 1)
+                            break
+                
+                # Safety break if LLM is looping or failing to decrement
+                if not batch_questions:
+                    break
+                    
             except Exception as e:
-                res = await self.planner_llm.ainvoke([HumanMessage(content=prompt + "\n\nRETURN ONLY A JSON OBJECT with a 'questions' key containing the list of questions.")])
-                content = res.content.strip()
-                if "```json" in content:
-                    match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
-                    content = match.group(1) if match else content
-                elif "```" in content:
-                    match = re.search(r"```\s*(.*?)\s*```", content, re.DOTALL)
-                    content = match.group(1) if match else content
-                
-                data = json.loads(content)
-                if isinstance(data, dict) and "questions" in data:
-                    questions = data["questions"]
-                elif isinstance(data, list):
-                    questions = data
-                else:
-                    questions = []
-                    logger.error(f"[OKA Service] Unexpected JSON structure for practice: {type(data)}")
+                print(f"[Practice Generation] Batch failed: {e}")
+                break
 
-            # --- CRITICAL POST-PROCESSING ---
-            # Ensure every question has a valid 'type' for the frontend to render
-            processed_questions = []
-            for q in questions:
-                if not isinstance(q, dict): continue
-                # Normalizing type field
-                q_raw_type = (q.get("type") or q.get("questionType") or q.get("question_type") or "").lower().replace("_", "")
-                
-                # Canonical mapping to the 8 UI modes
-                mapping = {
-                    "mcq": "mcq",
-                    "multiplechoice": "mcq",
-                    "true_false": "true_false",
-                    "truefalse": "true_false",
-                    "fill_in": "fill_in",
-                    "fillin": "fill_in",
-                    "cloze": "fill_in",
-                    "clozedeletion": "fill_in",
-                    "writing": "writing",
-                    "short_answer": "writing",
-                    "shortanswer": "writing",
-                    "matching": "matching",
-                    "matchingmatrix": "matching",
-                    "order": "order",
-                    "sequencing": "order",
-                    "sequencingsteps": "order",
-                    "debug": "debug",
-                    "diagnostic": "debug",
-                    "diagnosticerror": "debug",
-                    "synthesis": "synthesis",
-                    "socratic": "synthesis",
-                    "socraticsynthesis": "synthesis"
-                }
-                
-                q["type"] = mapping.get(q_raw_type, "writing")
-                
-                # Structural hard-fixes
-                if q["type"] == "true_false":
-                    # Ensure answer is boolean or string representation of boolean
-                    if isinstance(q.get("answer"), str):
-                        q["answer"] = q["answer"].lower() == "true"
-                
-                if q["type"] == "fill_in" and not q.get("textWithBlanks"):
-                    q["type"] = "writing"
-                if q["type"] == "matching" and not q.get("pairs"):
-                    q["type"] = "writing"
-                if q["type"] == "order" and (not q.get("steps") or not q.get("answer")):
-                    q["type"] = "writing"
-                if q["type"] == "debug" and not q.get("content"):
-                    q["type"] = "writing"
-                
-                # MCQ Option labeling
-                if q["type"] == "mcq" and isinstance(q.get("options"), (list, dict)):
-                    options = q["options"]
-                    if isinstance(options, list):
-                        q["options"] = {chr(65+i): v for i, v in enumerate(options)}
-                    elif isinstance(options, dict):
-                        new_opts = {}
-                        for i, (k, v) in enumerate(options.items()):
-                            new_key = chr(65+i) if len(k) > 1 or k.isdigit() else k.upper()
-                            new_opts[new_key] = v
-                        q["options"] = new_opts
-
-                processed_questions.append(q)
+        questions = all_questions
+        
+        # --- CRITICAL POST-PROCESSING ---
+        # Ensure every question has a valid 'type' for the frontend to render
+        processed_questions = []
+        for q in questions:
+            if not isinstance(q, dict): continue
+            # Normalizing type field
+            q_raw_type = (q.get("type") or q.get("questionType") or q.get("question_type") or "").lower().replace("_", "")
             
-            questions = processed_questions
-            
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            quiz_title = f"{hub['title']} - {config.difficulty} Session"
-            quiz_filename = f"Practice_{timestamp}.md"
-            quiz_path = practice_dir / quiz_filename
-            
-            # Create YAML frontmatter
-            yaml_data = {
-                "type": "practice",
-                "hub_id": hub_id,
-                "date": datetime.now().strftime('%Y-%m-%d'),
-                "difficulty": config.difficulty,
-                "question_types": list(distribution.keys()),
-                "config": config.model_dump(),
-                "score": None,
-                "completed": False
+            # Canonical mapping to the 8 UI modes
+            mapping = {
+                "mcq": "mcq",
+                "multiplechoice": "mcq",
+                "true_false": "true_false",
+                "truefalse": "true_false",
+                "fill_in": "fill_in",
+                "fillin": "fill_in",
+                "cloze": "fill_in",
+                "clozedeletion": "fill_in",
+                "writing": "writing",
+                "short_answer": "writing",
+                "shortanswer": "writing",
+                "matching": "matching",
+                "matchingmatrix": "matching",
+                "order": "order",
+                "sequencing": "order",
+                "sequencingsteps": "order",
+                "debug": "debug",
+                "diagnostic": "debug",
+                "diagnosticerror": "debug",
+                "synthesis": "synthesis",
+                "socratic": "synthesis",
+                "socraticsynthesis": "synthesis"
             }
-            yaml_frontmatter = f"---\n{yaml.dump(yaml_data, sort_keys=False)}---\n"
             
-            # Create Readable Markdown
-            md_content = f"# {quiz_title}\n\n"
-            for idx, q in enumerate(questions, 1):
-                md_content += f"### Q{idx} [{q.get('type')}]: {q.get('question', '')}\n"
-                if q.get('type') == 'mcq' and q.get('options'):
-                    options = q.get('options')
-                    if isinstance(options, dict):
-                        for k, v in options.items():
-                            md_content += f"- **{k})** {v}\n"
-                    elif isinstance(options, list):
-                        for i, v in enumerate(options):
-                            label = chr(65 + i) # A, B, C...
-                            md_content += f"- **{label})** {v}\n"
-                elif q.get('type') == 'code':
-                    md_content += f"```\n{q.get('codeSnippet', '')}\n```\n"
-                md_content += "\n***\n\n"
+            q["type"] = mapping.get(q_raw_type, "writing")
             
-            md_content += "## Session Data\n"
-            md_content += "```json\n"
-            md_content += json.dumps(questions, indent=2)
-            md_content += "\n```\n"
+            # Structural hard-fixes
+            if q["type"] == "true_false":
+                # Ensure answer is boolean or string representation of boolean
+                if isinstance(q.get("answer"), str):
+                    q["answer"] = q["answer"].lower() == "true"
+            
+            if q["type"] == "fill_in" and not q.get("textWithBlanks"):
+                q["type"] = "writing"
+            if q["type"] == "matching" and not q.get("pairs"):
+                q["type"] = "writing"
+            if q["type"] == "order" and (not q.get("steps") or not q.get("answer")):
+                q["type"] = "writing"
+            if q["type"] == "debug" and not q.get("content"):
+                q["type"] = "writing"
+            
+            # MCQ Option labeling
+            if q["type"] == "mcq" and isinstance(q.get("options"), (list, dict)):
+                options = q["options"]
+                if isinstance(options, list):
+                    q["options"] = {chr(65+i): v for i, v in enumerate(options)}
+                elif isinstance(options, dict):
+                    new_opts = {}
+                    for i, (k, v) in enumerate(options.items()):
+                        new_key = chr(65+i) if len(k) > 1 or k.isdigit() else k.upper()
+                        new_opts[new_key] = v
+                    q["options"] = new_opts
 
-            with open(quiz_path, "w", encoding="utf-8") as f:
-                f.write(yaml_frontmatter + md_content)
+            processed_questions.append(q)
+        
+        questions = processed_questions
+            
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        quiz_title = f"{hub['title']} - {config.difficulty} Session"
+        quiz_filename = f"Practice_{timestamp}.md"
+        quiz_path = practice_dir / quiz_filename
+        
+        # Create YAML frontmatter
+        yaml_data = {
+            "type": "practice",
+            "hub_id": hub_id,
+            "date": datetime.now().strftime('%Y-%m-%d'),
+            "difficulty": config.difficulty,
+            "question_types": list(distribution.keys()),
+            "config": config.model_dump(),
+            "score": None,
+            "completed": False
+        }
+        yaml_frontmatter = f"---\n{yaml.dump(yaml_data, sort_keys=False)}---\n"
+        
+        # Create Readable Markdown
+        md_content = f"# {quiz_title}\n\n"
+        for idx, q in enumerate(questions, 1):
+            md_content += f"### Q{idx} [{q.get('type')}]: {q.get('question', '')}\n"
+            if q.get('type') == 'mcq' and q.get('options'):
+                options = q.get('options')
+                if isinstance(options, dict):
+                    for k, v in options.items():
+                        md_content += f"- **{k})** {v}\n"
+                elif isinstance(options, list):
+                    for i, v in enumerate(options):
+                        label = chr(65 + i) # A, B, C...
+                        md_content += f"- **{label})** {v}\n"
+            elif q.get('type') == 'code':
+                md_content += f"```\n{q.get('codeSnippet', '')}\n```\n"
+            md_content += "\n***\n\n"
+        
+        md_content += "## Session Data\n"
+        md_content += "```json\n"
+        md_content += json.dumps(questions, indent=2)
+        md_content += "\n```\n"
 
-            OkaService._status[session_id] = "Completed"
-            return {"session_id": session_id, "questions": questions, "quiz_path": str(quiz_path)}
-        except Exception as e:
-            OkaService._status[session_id] = f"Error: {str(e)}"
-            traceback.print_exc()
-            raise e
+        with open(quiz_path, "w", encoding="utf-8") as f:
+            f.write(yaml_frontmatter + md_content)
+
+        OkaService._status[session_id] = "Completed"
+        return {"session_id": session_id, "questions": questions, "quiz_path": str(quiz_path)}
 
     def find_best_hub_match(self, source_text: str) -> Optional[Dict[str, Any]]:
         """Robustly matches source text against existing planner hubs using course + keyword + unit weight."""

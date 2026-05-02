@@ -71,11 +71,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     mcq: 5, 
     true_false: 3, 
     writing: 2, 
-    fill_in: 0, 
-    matching: 0, 
-    order: 0, 
-    debug: 0, 
-    synthesis: 0 
+    fill_in: 0
   },
   difficulty: 'L1',
   gradingStrictness: 'Lenient',
@@ -105,6 +101,7 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
   const [gradedAnswers, setGradedAnswers] = useState<Record<number, boolean>>({})
   const [pastPractices, setPastPractices] = useState<any[]>([])
   const [currentPracticePath, setCurrentPracticePath] = useState<string | null>(null)
+  const [genStatus, setGenStatus] = useState<string>('Initializing...')
   const [availableNotes, setAvailableNotes] = useState<any[]>([])
   const [globalTimeLeft, setGlobalTimeLeft] = useState<number | null>(null)
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null)
@@ -140,14 +137,60 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
   }
 
   useEffect(() => {
+    let interval: any;
+    if (view === 'loading') {
+      interval = setInterval(async () => {
+        try {
+          const res = await sidecarApi.getPracticeStatus();
+          // Find the latest status. Since we don't have the session_id yet, we just take the most recent one.
+          const statuses = Object.values(res.status);
+          if (statuses.length > 0) {
+            setGenStatus(statuses[statuses.length - 1]);
+          }
+        } catch (e) {
+          console.error("Status polling failed", e);
+        }
+      }, 2000);
+    }
+    return () => clearInterval(interval);
+  }, [view]);
+
+  useEffect(() => {
     if (questions.length > 0 && view === 'session') {
       timerRef.current = setInterval(() => {
-        if (globalTimeLeft !== null) setGlobalTimeLeft(prev => (prev! > 0 ? prev! - 1 : 0))
-        if (questionTimeLeft !== null) setQuestionTimeLeft(prev => (prev! > 0 ? prev! - 1 : 0))
-      }, 1000)
+        // Handle Global Timer
+        if (globalTimeLeft !== null) {
+          if (globalTimeLeft <= 1) {
+             clearInterval(timerRef.current!);
+             setGlobalTimeLeft(0);
+             toast.error("Total session time expired!");
+             setView('results');
+             return;
+          }
+          setGlobalTimeLeft(prev => (prev! > 0 ? prev! - 1 : 0));
+        }
+
+        // Handle Per-Question Timer
+        if (questionTimeLeft !== null) {
+          if (questionTimeLeft <= 1) {
+            setQuestionTimeLeft(0);
+            // Automatic "Wrong" mark and next question
+            if (!isRevealed) {
+              handleSubmitAnswer(); // Reveal the answer first
+              toast.warning("Question time expired! Marked as incorrect.");
+              // Add a small delay before moving to next so the user sees it's wrong
+              setTimeout(() => {
+                nextQuestion();
+              }, 1500);
+            }
+          } else {
+            setQuestionTimeLeft(prev => (prev! > 0 ? prev! - 1 : 0));
+          }
+        }
+      }, 1000);
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current!) }
-  }, [questions, view, globalTimeLeft, questionTimeLeft])
+  }, [questions, view, globalTimeLeft, questionTimeLeft, isRevealed])
 
   const loadPastPractices = async () => { try { const res = await sidecarApi.listPractices(); setPastPractices(res.practices); } catch { console.error("Error"); } }
   const loadHubs = async () => { try { const res = await sidecarApi.listHubs(); setHubs(res.hubs); if (res.hubs.length > 0) setSelectedHub(res.hubs[0].id); } catch { console.error("Error"); } }
@@ -513,8 +556,10 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
                 <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 border-b border-border/5 pb-4">Types</h3>
                 <div className="flex-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar">
                     {[
-                        { key: 'mcq', label: 'Choice' }, { key: 'true_false', label: 'T/F' }, { key: 'writing', label: 'Write' }, { key: 'fill_in', label: 'Fill' },
-                        { key: 'matching', label: 'Match' }, { key: 'order', label: 'Order' }, { key: 'debug', label: 'Fix' }, { key: 'synthesis', label: 'Solve' }
+                        { key: 'mcq', label: 'Choice' }, 
+                        { key: 'true_false', label: 'T/F' }, 
+                        { key: 'writing', label: 'Write' }, 
+                        { key: 'fill_in', label: 'Fill' }
                     ].map(type => (
                         <div key={type.key} className="space-y-3">
                             <div className="flex justify-between items-center">
@@ -540,7 +585,10 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
         <div className="h-full flex-1 flex flex-col items-center justify-center bg-background text-foreground">
             <div className="flex flex-col items-center gap-6 animate-pulse">
                 <Loader2 size={32} className="text-primary animate-spin" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Loading...</span>
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary">{genStatus}</span>
+                  <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Rate-Limit Protection Active</span>
+                </div>
             </div>
         </div>
     )
@@ -563,9 +611,27 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
               <div className="h-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
             </div>
           </div>
-          <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-6 text-[9px] font-black uppercase tracking-widest">
-            {globalTimeLeft !== null && <div className="text-muted-foreground/40">{Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}</div>}
-            <span>{currentQuestionIdx + 1} / {questions.length}</span>
+          <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-10 text-[9px] font-black uppercase tracking-widest">
+            {globalTimeLeft !== null && (
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-muted-foreground/20 text-[7px]">Total</span>
+                <div className={cn("px-3 py-1 rounded border", globalTimeLeft < 60 ? "border-destructive text-destructive animate-pulse" : "border-border/10 text-muted-foreground/60")}>
+                  {Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}
+                </div>
+              </div>
+            )}
+            {questionTimeLeft !== null && (
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-muted-foreground/20 text-[7px]">Q-Time</span>
+                <div className={cn("px-3 py-1 rounded border", questionTimeLeft < 10 ? "border-destructive text-destructive animate-pulse" : "border-border/10 text-primary")}>
+                  {Math.floor(questionTimeLeft / 60)}:{String(questionTimeLeft % 60).padStart(2, '0')}
+                </div>
+              </div>
+            )}
+            <div className="flex flex-col items-end gap-1">
+                <span className="text-muted-foreground/20 text-[7px]">Progress</span>
+                <div className="px-3 py-1 rounded border border-border/10">{currentQuestionIdx + 1} / {questions.length}</div>
+            </div>
           </div>
         </div>
 

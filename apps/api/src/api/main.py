@@ -699,6 +699,11 @@ async def generate_practice_session(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/practice/status")
+async def get_practice_status():
+    """Returns the current generation status for all active sessions."""
+    return {"status": dict(OkaService._status)}
+
 @app.get("/api/practice/list")
 async def list_practice_sessions(
     secrets: AppSecrets = Depends(get_app_secrets)

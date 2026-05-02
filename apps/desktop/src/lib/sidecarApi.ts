@@ -446,6 +446,7 @@ export const sidecarApi = {
             body: JSON.stringify({ hub_id: hubId, config })
         }),
     listPractices: () => request<{ practices: any[] }>('/api/practice/list'),
+    getPracticeStatus: () => request<{ status: Record<string, string> }>('/api/practice/status'),
     getPractice: (path: string) => 
         request<{ questions: any[] }>('/api/practice/get', {
             method: 'POST',
