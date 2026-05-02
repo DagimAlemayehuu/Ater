@@ -1,8 +1,8 @@
 ---
 Program: "[[BSc Computer Science]]"
 Academic Level: "[[Undergraduate]]"
-Status: "[[Active]]"
-Current Year: true
+Status: "[[Completed]]"
+Current Year: false
 Target Years: 4
 Earned Credits: 0
 Target Credits: 0

@@ -152,7 +152,13 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                                                 "professor": {"type": "select", "source": f"{DB_DIR_PREFIX}/07 - Courses/Professor"},
                                                 "generated": {"type": "bool"},
                                                 "source": {"type": "relation", "source": "5-Pdf Store"},
-                                                "source pages": {"type": "str"}
+                                                "source pages": {"type": "str"},
+                                                "academic level": {"type": "select", "source": f"{DB_DIR_PREFIX}/09 - Years/Academic Level"},
+                                                "program": {"type": "select", "source": f"{DB_DIR_PREFIX}/09 - Years/Program"},
+                                                "target years": {"type": "number"},
+                                                "target credits": {"type": "number"},
+                                                "earned credits": {"type": "number"},
+                                                "cumulative gpa": {"type": "number"}
                                             }
                                             
                                             if k_low in known_types:

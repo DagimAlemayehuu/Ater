@@ -256,3 +256,98 @@
 .prose td {
   @apply border-b border-border/50 px-3 py-2 text-sm;
 }
+
+/* ─── Academic Roadmap UI ─── */
+.roadmap-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+}
+
+.roadmap-line {
+  position: absolute;
+  left: 12px;
+  top: 24px;
+  bottom: 24px;
+  width: 1px;
+  background: repeating-linear-gradient(
+    to bottom,
+    hsl(var(--border) / 0.5) 0px,
+    hsl(var(--border) / 0.5) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  z-index: 0;
+}
+
+.roadmap-line-solid {
+  background: hsl(var(--foreground));
+}
+
+.roadmap-node {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 0.5rem 0;
+}
+
+.roadmap-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.roadmap-dot-completed {
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
+}
+
+.roadmap-dot-active {
+  background: hsl(var(--background));
+  border: 2px solid hsl(var(--foreground));
+  box-shadow: 0 0 15px hsl(var(--foreground) / 0.1);
+}
+
+.roadmap-dot-planned {
+  background: hsl(var(--background));
+  border: 1.5px dashed hsl(var(--border));
+}
+
+.pulse-node {
+  animation: node-pulse 2s infinite ease-in-out;
+}
+
+@keyframes node-pulse {
+  0% { box-shadow: 0 0 0 0px hsl(var(--foreground) / 0.2); }
+  70% { box-shadow: 0 0 0 10px hsl(var(--foreground) / 0); }
+  100% { box-shadow: 0 0 0 0px hsl(var(--foreground) / 0); }
+}
+
+.roadmap-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.roadmap-label {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+}
+
+.roadmap-sublabel {
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  opacity: 0.4;
+}
