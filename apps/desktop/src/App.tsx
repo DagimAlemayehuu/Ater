@@ -5,7 +5,6 @@ import { ConfigProvider } from '@/lib/ConfigContext'
 import { ThemeProvider } from '@/context/theme-provider'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import ObsidianKnowledgeArchitect from '@/routes/obsidian'
-import VaultSync from '@/routes/vault-sync'
 import Agents from '@/routes/agents'
 import Settings from '@/routes/settings'
 import Practice from '@/routes/practice'
@@ -62,7 +61,6 @@ export default function App() {
                   <Routes>
                     <Route path="/" element={<Navigate to="/obsidian" replace />} />
                     <Route path="/obsidian" element={<ObsidianKnowledgeArchitect />} />
-                    <Route path="/vault-sync" element={<VaultSync />} />
                     <Route path="/agents" element={<Agents />} />
                     <Route path="/academic" element={<AcademicDashboard />} />
                     <Route path="/practice" element={<Practice />} />

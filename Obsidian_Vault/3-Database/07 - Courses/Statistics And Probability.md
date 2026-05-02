@@ -1,7 +1,10 @@
 ---
-type: Course
-code: MATH202
-credits: 3
+Semester: ''
+Professor: ''
+Credits: 3
+Status: ''
+Grade: ''
+Difficulty: ''
 ---
 
 # Statistics And Probability

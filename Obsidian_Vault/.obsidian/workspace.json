@@ -11,12 +11,14 @@
             "id": "e4e52099906a74b0",
             "type": "leaf",
             "state": {
-              "type": "pdf",
+              "type": "markdown",
               "state": {
-                "file": "5-Pdf Store/note generated/Chapter_7.pdf"
+                "file": "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "lucide-file-text",
-              "title": "Chapter_7"
+              "icon": "lucide-file",
+              "title": "7_Relational_Algebra_and_Calculus_Hub"
             }
           }
         ]
@@ -92,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "5-Pdf Store/note generated/Chapter_7.pdf",
+                "file": "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -102,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for Chapter_7"
+              "title": "Backlinks for 7_Relational_Algebra_and_Calculus_Hub"
             }
           },
           {
@@ -111,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "5-Pdf Store/note generated/Chapter_7.pdf",
+                "file": "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from Chapter_7"
+              "title": "Outgoing links from 7_Relational_Algebra_and_Calculus_Hub"
             }
           },
           {
@@ -154,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "5-Pdf Store/note generated/Chapter_7.pdf",
+                "file": "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Chapter_7"
+              "title": "Outline of 7_Relational_Algebra_and_Calculus_Hub"
             }
           }
         ]
@@ -181,26 +183,43 @@
       "bases:Create new base": false
     }
   },
-  "active": "94183ec2254ed9df",
+  "active": "e4e52099906a74b0",
   "lastOpenFiles": [
-    "3-Database/03 - Assignments/Zc.md",
-    "3-Database/07 - Courses/dagim.md",
-    "3-Database/07 - Courses/New Record 1777702779695.md",
-    "3-Database/12 - Archive/01 - Areas_7f87/Wealth.md",
-    "3-Database/12 - Archive/01 - Areas_7f87/Social.md",
-    "3-Database/12 - Archive/01 - Areas_7f87/Personal.md",
-    "3-Database/12 - Archive/01 - Areas_7f87/Health.md",
-    "3-Database/12 - Archive/01 - Areas_7f87/Academics.md",
-    "3-Database/12 - Archive/01 - Areas_7f87",
-    "3-Database/12 - Archive",
-    "3-Database/06 - Study Planner/2_Recurrence_Relations_Hub.md",
-    "graphify-out",
-    "3-Database/03 - Assignments",
-    "5-Pdf Store/note generated/Chapter_7.pdf",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Grouping_With_Aggregation.md",
-    "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Concept_Of_Recursion.md",
     "3-Database/06 - Study Planner/5_Modular_Programming_Hub.md",
-    "3-Database/06 - Study Planner/4_Promoting_Inclusive_Culture_Hub.md"
+    "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
+    "3-Database/06 - Study Planner/4_Promoting_Inclusive_Culture_Hub.md",
+    "3-Database/06 - Study Planner/Type/3 - High.md",
+    "3-Database/06 - Study Planner/Type/2 - Medium.md",
+    "3-Database/06 - Study Planner/Type/1 - Low.md",
+    "3-Database/06 - Study Planner/Type",
+    "3-Database/04 - Exams/Discrete Mathematics Final.md",
+    "3-Database/08 - Semesters/Autumn 2025.md",
+    "3-Database/04 - Exams/Computer Programming Final.md",
+    "3-Database/09 - Years/Year II.md",
+    "3-Database/06 - Study Planner/Unit/9.md",
+    "3-Database/06 - Study Planner/Unit/8.md",
+    "3-Database/06 - Study Planner/Unit/7.md",
+    "3-Database/06 - Study Planner/Unit/6.md",
+    "3-Database/06 - Study Planner/Unit/5.md",
+    "3-Database/06 - Study Planner/Unit/4.md",
+    "3-Database/06 - Study Planner/Unit/3.md",
+    "3-Database/06 - Study Planner/Unit/2.md",
+    "3-Database/06 - Study Planner/Unit/10.md",
+    "3-Database/06 - Study Planner/Unit/1.md",
+    "3-Database/06 - Study Planner/Unit",
+    "3-Database/03 - Assignments/Assignment 1.md",
+    "3-Database/07 - Courses/Professor/TBD.md",
+    "3-Database/07 - Courses/Professor",
+    "3-Database/07 - Courses/Grade/Incomplete.md",
+    "3-Database/07 - Courses/Grade/F.md",
+    "3-Database/07 - Courses/Grade/D.md",
+    "3-Database/07 - Courses/Grade/C.md",
+    "3-Database/07 - Courses/Grade",
+    "5-Pdf Store/note generated/Chapter_7.pdf",
+    "3-Database/04 - Exams/Type",
+    "3-Database/03 - Assignments/Priority",
+    "3-Database/03 - Assignments/Status",
+    "3-Database/06 - Study Planner/Confidence",
+    "3-Database/06 - Study Planner/Status"
   ]
 }

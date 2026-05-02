@@ -1,15 +1,9 @@
 ---
-title: 5_Modular_Programming_Hub
-type: Hub
-course: Computer Programming
-semester: Autumn 2025
-unit: '5'
-source: "[[Chapter 5.Pdf]]"
-source_pages: []
-status: Not Started
-confidence: null
-study_date: null
-generated: true
+Course: "[[Computer Programming]]"
+Unit: "[[5]]"
+Status: "[[Not Started]]"
+Confidence: ''
+Study Date: ''
 ---
 
 # 5 Modular Programming Hub

@@ -1,7 +1,10 @@
 ---
-type: Course
-code: CS301
-credits: 3
+Semester: "[[Autumn 2025]]"
+Professor: "[[TBD]]"
+Credits: 3
+Status: "[[Active]]"
+Grade: ''
+Difficulty: "[[2 - Medium]]"
 ---
 
 # Database Systems

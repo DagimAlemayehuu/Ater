@@ -1,7 +1,10 @@
 ---
-type: Course
-code: GEN101
-credits: 2
+Semester: ''
+Professor: ''
+Credits: 2
+Status: ''
+Grade: ''
+Difficulty: ''
 ---
 
 # Inclusiveness

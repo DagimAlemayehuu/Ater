@@ -256,6 +256,17 @@ export const sidecarApi = {
             body: JSON.stringify({ source, name })
         }),
 
+    updateVaultOption: (source: string, oldName: string, newName: string) =>
+        request<{ success: boolean; name: string }>(`/api/vault/options?old_name=${encodeURIComponent(oldName)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ source, name: newName })
+        }),
+
+    deleteVaultOption: (source: string, name: string) =>
+        request<{ success: boolean }>(`/api/vault/options?source=${encodeURIComponent(source)}&name=${encodeURIComponent(name)}`, {
+            method: 'DELETE'
+        }),
+
     findVaultPage: (pageName: string) =>
         request<{ found: boolean; type?: 'database' | 'note'; db_id?: string; file_name?: string; path?: string }>(`/api/vault/search?page_name=${encodeURIComponent(pageName)}`),
 

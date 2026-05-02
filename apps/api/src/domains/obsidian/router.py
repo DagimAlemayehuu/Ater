@@ -16,6 +16,21 @@ router = APIRouter()
 
 DB_DIR_PREFIX = "3-Database"
 
+import yaml
+
+# Obsidian-specific YAML dumper to ensure wiki links are valid properties
+class ObsidianDumper(yaml.Dumper):
+    pass
+
+def _str_representer(dumper, data):
+    # If the string perfectly wraps a wikilink, force double quotes.
+    # This allows Obsidian's Properties UI to parse it as an internal link natively.
+    if data.startswith('[[') and data.endswith(']]'):
+        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='"')
+    return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+
+ObsidianDumper.add_representer(str, _str_representer)
+
 class UpdateRowRequest(BaseModel):
     properties: Dict[str, Any]
 
@@ -68,30 +83,39 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
     
     for entry in db_path.iterdir():
         if entry.is_dir() and not entry.name.startswith("."):
-            # 1. Try to load schema from .base file first for rich metadata
             schema = {}
-            area = "Other"
-            views = []
-            base_file = vault_root / "0-Bases" / f"{entry.name}.base"
-            if base_file.exists():
-                try:
-                    with open(base_file, "r", encoding="utf-8") as bf:
-                        base_data = yaml.load(bf)
-                        area = base_data.get("area", "Other")
-                        views = base_data.get("views", [])
-                        # Extract schema from columns definition of the active/first table view
-                        for view in views:
-                            if view.get("type") == "table":
-                                for col in view.get("columns", []):
-                                    if isinstance(col, dict):
-                                        for k, v in col.items():
-                                            if k not in schema:
-                                                schema[k] = v
-                except Exception as e:
-                    print(f"Error reading .base file {base_file}: {e}")
+            # Defaults
+            area = "Academic" if any(x in entry.name for x in ["03", "04", "06", "07", "08", "09"]) else "Other"
+            
+            # 1. Identify "Select" properties by checking for subdirectories
+            # If a subdirectory contains .md files, we treat it as a Select source
+            for sub in entry.iterdir():
+                if sub.is_dir() and not sub.name.startswith("."):
+                    md_count = len(list(sub.glob("*.md")))
+                    if md_count > 0:
+                        schema[sub.name] = {
+                            "type": "select",
+                            "source": str(sub.relative_to(vault_root))
+                        }
 
-            # 2. Augment/Deduce schema from .md files if base schema is incomplete
-            for md_file in entry.rglob("*.md"):
+            # Pre-seed schema for Study Planner to guarantee OKA properties always exist
+            if "06 - Study Planner" in entry.name:
+                schema.update({
+                    "course": {"type": "relation", "source": f"{DB_DIR_PREFIX}/07 - Courses"},
+                    "unit": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Unit"},
+                    "status": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Status"},
+                    "confidence": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Confidence"},
+                    "study date": {"type": "date"},
+                    "type": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Type"},
+                    "generated": {"type": "bool"},
+                    "source": {"type": "relation", "source": "5-Pdf Store"},
+                    "source pages": {"type": "str"}
+                })
+
+            # 2. Infer property types from .md files in the main folder
+            # We only look at the first few files for performance
+            sample_files = list(entry.glob("*.md"))[:10]
+            for md_file in sample_files:
                 if md_file.name.startswith("."): continue
                 try:
                     with open(md_file, "r", encoding="utf-8") as f:
@@ -102,23 +126,66 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                                 frontmatter = yaml.load(content[3:end_idx])
                                 if isinstance(frontmatter, dict):
                                     for k, v in frontmatter.items():
-                                        if k in ["last_synced", "links", "title"]: continue
+                                        # STRICT FILTER: ignore internal or redundant properties
+                                        k_low = k.lower()
+                                        if k_low in ["last_synced", "links", "title", "last_edited_time", "last_edited_by", "created_time", "created_by", "file.name", "academic year", "completed"]: 
+                                            continue
                                         if k not in schema:
-                                            # Map python types to frontend-friendly type names
-                                            new_type = 'list' if isinstance(v, list) else \
-                                                     'bool' if isinstance(v, bool) else \
-                                                     'int' if isinstance(v, int) else \
-                                                     'float' if isinstance(v, float) else 'str'
-                                            schema[k] = new_type
+                                            # Known Academic Types Hardcoding
+                                            known_types = {
+                                                "current year": {"type": "bool"},
+                                                "year": {"type": "relation", "source": f"{DB_DIR_PREFIX}/09 - Years"},
+                                                "semester": {"type": "relation", "source": f"{DB_DIR_PREFIX}/08 - Semesters"},
+                                                "course": {"type": "relation", "source": f"{DB_DIR_PREFIX}/07 - Courses"},
+                                                "start date": {"type": "date"},
+                                                "end date": {"type": "date"},
+                                                "due date": {"type": "date"},
+                                                "study date": {"type": "date"},
+                                                "exam date": {"type": "date"},
+                                                "credits": {"type": "number"},
+                                                "score": {"type": "number"},
+                                                "total score": {"type": "number"},
+                                                "unit": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Unit"},
+                                                "status": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Status"},
+                                                "confidence": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Confidence"},
+                                                "grade": {"type": "select", "source": f"{DB_DIR_PREFIX}/07 - Courses/Grade"},
+                                                "professor": {"type": "select", "source": f"{DB_DIR_PREFIX}/07 - Courses/Professor"},
+                                                "generated": {"type": "bool"},
+                                                "source": {"type": "relation", "source": "5-Pdf Store"},
+                                                "source pages": {"type": "str"}
+                                            }
+                                            
+                                            if k_low in known_types:
+                                                schema[k] = known_types[k_low]
+                                            else:
+                                                # Relation detection: if value is [[...]] and not already a select
+                                                if isinstance(v, str) and v.startswith("[[") and v.endswith("]]"):
+                                                    source = ""
+                                                    if k_low == "course": source = f"{DB_DIR_PREFIX}/07 - Courses"
+                                                    elif k_low == "semester": source = f"{DB_DIR_PREFIX}/08 - Semesters"
+                                                    elif k_low == "year": source = f"{DB_DIR_PREFIX}/09 - Years"
+                                                    schema[k] = {"type": "relation", "source": source}
+                                                else:
+                                                    new_type = 'bool' if isinstance(v, bool) else \
+                                                             'number' if isinstance(v, (int, float)) else 'str'
+                                                    schema[k] = {"type": new_type}
                 except Exception:
                     pass
             
+            # Add title column
+            schema_with_title = {"title": {"type": "title"}}
+            schema_with_title.update(schema)
+
             databases.append({
                 "id": entry.name,
                 "name": entry.name.split(" - ")[-1] if " - " in entry.name else entry.name,
-                "schema": schema,
+                "schema": schema_with_title,
                 "area": area,
-                "views": views,
+                "views": [{
+                    "type": "table",
+                    "name": "Table",
+                    "columns": [{"title": {"type": "title"}}] + [{k: v} for k, v in schema.items()]
+                }],
                 "type": "obsidian"
             })
             
@@ -166,6 +233,13 @@ async def query_vault_database(db_name: str, secrets: AppSecrets = Depends(get_a
                         
                 # Ensure the title is always part of the properties
                 if isinstance(props, dict):
+                    # STRICT FILTER properties for the frontend
+                    cleaned_props = {}
+                    internal_keys = ["last_synced", "links", "last_edited_time", "last_edited_by", "created_time", "created_by", "file.name", "academic year", "completed"]
+                    for k, v in props.items():
+                        if k.lower() not in internal_keys:
+                            cleaned_props[k] = v
+
                     # Extract body content for deep search
                     body = ""
                     if content.startswith("---"):
@@ -174,16 +248,11 @@ async def query_vault_database(db_name: str, secrets: AppSecrets = Depends(get_a
                             body = content[end_idx+3:].strip()
                     else:
                         body = content.strip()
-
-                    # Inject file metadata if missing or as shadow props
-                    stats = md_file.stat()
-                    props["created_time"] = datetime.datetime.fromtimestamp(stats.st_ctime).isoformat()
-                    props["last_edited_time"] = datetime.datetime.fromtimestamp(stats.st_mtime).isoformat()
                     
                     rows.append({
                         "id": md_file.stem,
                         "title": md_file.stem,
-                        "properties": props,
+                        "properties": cleaned_props,
                         "content": body # Include body for deep search
                     })
         except Exception as e:
@@ -197,53 +266,23 @@ async def update_database_schema(db_name: str, req: UpdateSchemaRequest, secrets
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
         
     vault_root = Path(secrets.vault_path)
-    base_file = vault_root / "0-Bases" / f"{db_name}.base"
     db_path = vault_root / DB_DIR_PREFIX / db_name
     
-    if not base_file.exists():
-        raise HTTPException(status_code=404, detail="Database configuration not found")
+    if not db_path.exists():
+        db_path.mkdir(parents=True, exist_ok=True)
         
     try:
-        yaml_in = ruamel.yaml.YAML(typ='safe')
-        with open(base_file, "r", encoding="utf-8") as f:
-            base_data = yaml_in.load(f)
-            
-        if not base_data:
-            base_data = {"views": [{"type": "table", "name": "Table", "columns": []}]}
-            
-        # Construct new column list
-        new_columns = [{"title": {"type": "title"}}]
-        for prop_name, prop_meta in req.properties.items():
-            # Normalize to dict if it is just a string (legacy format)
-            normalized_meta = prop_meta if isinstance(prop_meta, dict) else {"type": prop_meta}
-            if prop_name not in ["file.name", "title"]:
-                new_columns.append({prop_name: normalized_meta})
-            
-            # If it's a new selective property, ensure its directory exists
-            if normalized_meta.get("type") in ["select", "relation"] and normalized_meta.get("source"):
-                source_path = vault_root / normalized_meta["source"]
-                source_path.mkdir(parents=True, exist_ok=True)
-
-        # Update base data
-        found_table = False
-        for view in base_data.get("views", []):
-            if view.get("type") == "table":
-                view["columns"] = new_columns
-                found_table = True
+        yaml = ruamel.yaml.YAML(typ='safe')
         
-        if not found_table:
-             base_data["views"].append({
-                "type": "table",
-                "name": "Table",
-                "columns": new_columns,
-                "filters": {"and": [{"file.inFolder": f"{DB_DIR_PREFIX}/{db_name}"}]}
-            })
+        # 1. Manage select property directories
+        for prop_name, prop_meta in req.properties.items():
+            meta = prop_meta if isinstance(prop_meta, dict) else {"type": prop_meta}
+            if meta.get("type") == "select":
+                # Ensure the subfolder exists in the DB folder
+                source_path = db_path / prop_name
+                source_path.mkdir(exist_ok=True)
                 
-        yaml_out = ruamel.yaml.YAML(typ='safe')
-        with open(base_file, "w", encoding="utf-8") as f:
-            yaml_out.dump(base_data, f)
-            
-        # 4. Perform bulk migration if renaming
+        # 2. Perform bulk migration if renaming in all MD files
         if req.rename_from and req.rename_to:
             print(f"Renaming property '{req.rename_from}' to '{req.rename_to}' in {db_name}")
             for md_file in db_path.glob("*.md"):
@@ -255,13 +294,13 @@ async def update_database_schema(db_name: str, req: UpdateSchemaRequest, secrets
                         end_idx = content.find("---", 3)
                         if end_idx != -1:
                             fm_str = content[3:end_idx]
-                            fm_data = yaml_in.load(fm_str)
+                            fm_data = yaml.load(fm_str)
                             if isinstance(fm_data, dict) and req.rename_from in fm_data:
                                 fm_data[req.rename_to] = fm_data.pop(req.rename_from)
                                 
                                 import io
                                 buf = io.StringIO()
-                                yaml_out.dump(fm_data, buf)
+                                yaml.dump(fm_data, buf)
                                 new_content = f"---\n{buf.getvalue()}---{content[end_idx+3:]}"
                                 with open(md_file, "w", encoding="utf-8") as f:
                                     f.write(new_content)
@@ -288,9 +327,6 @@ async def update_vault_row(db_name: str, file_name: str, req: UpdateRowRequest, 
         raise HTTPException(status_code=404, detail="File not found")
         
     try:
-        yaml = ruamel.yaml.YAML()
-        yaml.preserve_quotes = True
-        
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
             
@@ -300,19 +336,19 @@ async def update_vault_row(db_name: str, file_name: str, req: UpdateRowRequest, 
                 frontmatter_str = content[3:end_idx]
                 body_str = content[end_idx+3:]
                 
-                data = yaml.load(frontmatter_str) or {}
+                data = yaml.load(frontmatter_str, Loader=yaml.SafeLoader) or {}
                 
                 # Apply updates
                 for k, v in req.properties.items():
                     data[k] = v
 
-                data["last_synced"] = datetime.datetime.now().isoformat()
-                data["last_edited_time"] = datetime.datetime.now().isoformat()
-                data["last_edited_by"] = "LifeOs User"
+                # CLEANUP: Remove any system properties that might have sneaked in
+                for k in ["last_synced", "last_edited_time", "last_edited_by", "created_time", "created_by", "file.name", "academic year", "completed"]:
+                    if k in data: del data[k]
 
                 import io
                 buf = io.StringIO()
-                yaml.dump(data, buf)
+                yaml.dump(data, buf, Dumper=ObsidianDumper, allow_unicode=True, default_flow_style=False, sort_keys=False)
                 new_frontmatter = buf.getvalue()
 
                 with open(file_path, "w", encoding="utf-8") as f:
@@ -350,59 +386,17 @@ async def create_vault_row(db_name: str, req: CreateRowRequest, secrets: AppSecr
         counter += 1
 
     try:
-        yaml = ruamel.yaml.YAML()
-        yaml.preserve_quotes = True
 
-        # Load schema to check for 'id' properties
-        vault_root = Path(secrets.vault_path)
-        base_file = vault_root / "0-Bases" / f"{db_name}.base"
         schema_props = {}
-        if base_file.exists():
-            with open(base_file, "r", encoding="utf-8") as bf:
-                base_data = yaml.load(bf)
-                # base_data["views"][0]["columns"] is a list of {name: meta}
-                for col in base_data.get("views", [{}])[0].get("columns", []):
-                    for k, v in col.items():
-                        schema_props[k] = v
+        # In folder-driven mode, we don't look at bases for ID generation.
+        # Future: infer ID generation from existing file patterns if needed.
 
         data = req.properties
         
-        # Handle ID Generation
-        for prop_name, prop_meta in schema_props.items():
-            if isinstance(prop_meta, dict) and prop_meta.get("type") == "id":
-                if prop_name not in data or not data[prop_name]:
-                    # Find max ID in existing files
-                    max_id = 0
-                    for md_file in db_path.glob("*.md"):
-                        try:
-                            with open(md_file, "r", encoding="utf-8") as f:
-                                c = f.read()
-                                if c.startswith("---"):
-                                    idx = c.find("---", 3)
-                                    if idx != -1:
-                                        fm = yaml.load(c[3:idx])
-                                        if fm and prop_name in fm:
-                                            val = fm[prop_name]
-                                            # handle TASK-123 or just 123
-                                            if isinstance(val, (int, float)):
-                                                max_id = max(max_id, int(val))
-                                            elif isinstance(val, str):
-                                                import re
-                                                match = re.search(r'(\d+)', val)
-                                                if match:
-                                                    max_id = max(max_id, int(match.group(1)))
-                        except: pass
-                    
-                    prefix = prop_meta.get("source", "").strip()
-                    data[prop_name] = f"{prefix}{max_id + 1}" if prefix else max_id + 1
+        # CLEANUP: Remove any system properties
+        for k in ["last_synced", "last_edited_time", "last_edited_by", "created_time", "created_by", "file.name", "links", "academic year", "completed"]:
+            if k in data: del data[k]
 
-        now_iso = datetime.datetime.now().isoformat()
-        data["last_synced"] = now_iso
-        data["created_time"] = now_iso
-        data["created_by"] = "LifeOs User"
-        data["last_edited_time"] = now_iso
-        data["last_edited_by"] = "LifeOs User"
-        data["links"] = []
         # Check for template content
         template_path = db_path / "_template.md"
         body_content = "\n\n"
@@ -421,7 +415,7 @@ async def create_vault_row(db_name: str, req: CreateRowRequest, secrets: AppSecr
 
         import io
         buf = io.StringIO()
-        yaml.dump(data, buf)
+        yaml.dump(data, buf, Dumper=ObsidianDumper, allow_unicode=True, default_flow_style=False, sort_keys=False)
         new_frontmatter = buf.getvalue()
         
         with open(file_path, "w", encoding="utf-8") as f:
@@ -639,13 +633,44 @@ async def create_property_option(req: CreateOptionRequest, secrets: AppSecrets =
     if not safe_name:
         raise HTTPException(status_code=400, detail="Invalid name")
         
-    file_path = source_path / f"{safe_name}.md"
-    if not file_path.exists():
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(f"---\ntitle: {safe_name}\n---\n\n")
-            
-            
-    return {"success": True, "name": safe_name}
+    md_file = source_path / f"{req.name}.md"
+    if not md_file.exists():
+        with open(md_file, "w") as f:
+            f.write(f"---\ntitle: {req.name}\n---")
+    return {"success": True, "name": req.name}
+
+@router.patch("/vault/options")
+async def update_property_option(req: CreateOptionRequest, old_name: str, secrets: AppSecrets = Depends(get_app_secrets)):
+    """
+    Renames an option (markdown file) in the source folder.
+    """
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+    
+    source_path = Path(secrets.vault_path) / req.source
+    old_file = source_path / f"{old_name}.md"
+    new_file = source_path / f"{req.name}.md"
+    
+    if old_file.exists():
+        old_file.rename(new_file)
+        return {"success": True, "name": req.name}
+    raise HTTPException(status_code=404, detail="Option not found")
+
+@router.delete("/vault/options")
+async def delete_property_option(source: str, name: str, secrets: AppSecrets = Depends(get_app_secrets)):
+    """
+    Deletes an option (markdown file) from the source folder.
+    """
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+    
+    source_path = Path(secrets.vault_path) / source
+    md_file = source_path / f"{name}.md"
+    
+    if md_file.exists():
+        md_file.unlink()
+        return {"success": True}
+    raise HTTPException(status_code=404, detail="Option not found")
 
 @router.post("/vault/databases")
 async def create_vault_database(req: CreateDatabaseRequest, secrets: AppSecrets = Depends(get_app_secrets)):
@@ -655,36 +680,9 @@ async def create_vault_database(req: CreateDatabaseRequest, secrets: AppSecrets 
     db_name = req.name
     vault_root = Path(secrets.vault_path)
     db_path = vault_root / DB_DIR_PREFIX / db_name
-    base_file = vault_root / "0-Bases" / f"{db_name}.base"
-    
-    if db_path.exists():
-        raise HTTPException(status_code=400, detail="Database folder already exists")
-        
     try:
         # 1. Create directory structure
         db_path.mkdir(parents=True, exist_ok=True)
-        (db_path / "_properties").mkdir(exist_ok=True)
-        
-        # 2. Create initial .base file
-        yaml_out = ruamel.yaml.YAML(typ='safe')
-        base_data = {
-            "area": req.area or "Other",
-            "views": [
-                {
-                    "type": "table",
-                    "name": "Table",
-                    "filters": {"and": [{"file.inFolder": f"{DB_DIR_PREFIX}/{db_name}"}]},
-                    "columns": [
-                        {"title": {"type": "title"}}
-                    ]
-                }
-            ]
-        }
-        
-        # Ensure 0-Bases exists
-        base_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(base_file, "w", encoding="utf-8") as f:
-            yaml_out.dump(base_data, f)
             
         return {"success": True, "id": db_name}
     except Exception as e:
@@ -697,18 +695,12 @@ async def delete_vault_database(db_name: str, secrets: AppSecrets = Depends(get_
         
     vault_root = Path(secrets.vault_path)
     db_path = vault_root / DB_DIR_PREFIX / db_name
-    base_file = vault_root / "0-Bases" / f"{db_name}.base"
-    
     try:
-        # Move to archive or delete? For now, let us just remove the .base reference 
-        # but keep the folder or move to 12-Archive.
+        # Move to archive or delete?
         archive_path = vault_root / "3-Database" / "12 - Archive" / f"{db_name}_{uuid.uuid4().hex[:4]}"
         if db_path.exists():
             archive_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(db_path), str(archive_path))
-            
-        if base_file.exists():
-            base_file.unlink()
             
         return {"success": True}
     except Exception as e:

@@ -1,15 +1,10 @@
 ---
-title: 4_Promoting_Inclusive_Culture_Hub
-type: Hub
-course: Inclusiveness
-semester: Autumn 2025
-unit: '4'
-source: "[[4.Pdf]]"
-source_pages: []
-status: Not Started
-confidence: null
-study_date: null
-generated: true
+Course: "[[Inclusiveness]]"
+Unit: "[[4]]"
+Status: "[[In Progress]]"
+Confidence: "[[1 - Low]]"
+Study Date: ''
+source pages: ''
 ---
 
 # 4 Promoting Inclusive Culture Hub

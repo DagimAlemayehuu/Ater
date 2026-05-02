@@ -1,15 +1,9 @@
 ---
-title: 7_Relational_Algebra_and_Calculus_Hub
-type: Hub
-course: Database Systems
-semester: Autumn 2025
-unit: '7'
-source: "[[Chapter_7.Pdf]]"
-source_pages: []
-status: Not Started
-confidence: null
-study_date: null
-generated: true
+Course: "[[Database Systems]]"
+Unit: "[[7]]"
+Status: "[[Not Started]]"
+Confidence: ''
+Study Date: ''
 ---
 
 # 7 Relational Algebra and Calculus Hub

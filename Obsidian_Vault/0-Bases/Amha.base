@@ -1,9 +1,0 @@
-area: Other
-views:
-- columns:
-  - title: {type: title}
-  filters:
-    and:
-    - {file.inFolder: 3-Database/Amha}
-  name: Table
-  type: table

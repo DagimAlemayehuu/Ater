@@ -1,9 +1,0 @@
-views:
-  - type: table
-    name: Table
-    filters:
-      and:
-        - file.inFolder("3-Database/09 - Years")
-    columns:
-      - file.name: { type: "title" }
-      - Current Year: { type: "bool" }

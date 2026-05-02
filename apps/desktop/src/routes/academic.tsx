@@ -39,7 +39,6 @@ import { toast } from 'sonner'
 import ObsidianDatabaseView from './obsidian-database-view'
 import { ObsidianPagePanel } from '@/components/obsidian/ObsidianPagePanel'
 import { PracticeModule } from './practice'
-import { VaultSyncModule } from './vault-sync'
 
 interface AcademicData {
     semesters: any[]
@@ -60,7 +59,7 @@ interface VaultDatabase {
     views?: any[]
 }
 
-type AcademicTab = 'courses' | 'assignments' | 'exams' | 'planner' | 'semesters' | 'years' | 'practice' | 'sync'
+type AcademicTab = 'years' | 'semesters' | 'courses' | 'planner' | 'assignments' | 'exams' | 'practice' | 'sync'
 
 /* ─── Master Calendar Component ─── */
 function MasterCalendar({ data, selectedCourseId, onSelectEvent }: { data: AcademicData | null, selectedCourseId: string | null, onSelectEvent: (path: string) => void }) {
@@ -401,11 +400,10 @@ export default function AcademicDashboard() {
                         <div className="flex flex-col gap-8">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                    {(selectedCourseId || (activeTab === 'sync' && selectedDb)) && (
+                                    {(selectedCourseId) && (
                                         <button 
                                             onClick={() => {
-                                                if (activeTab === 'sync' && selectedDb) setSelectedDb(null)
-                                                else setSelectedCourseId(null)
+                                                setSelectedCourseId(null)
                                             }}
                                             className="p-2 hover:bg-muted rounded-md transition-colors border border-border/40 text-muted-foreground/60 hover:text-foreground"
                                         >
@@ -414,7 +412,7 @@ export default function AcademicDashboard() {
                                     )}
                                     <div className="flex flex-col gap-0.5">
                                         <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">
-                                            {selectedCourseId ? "Subject" : (activeTab === 'sync' && selectedDb) ? "Database" : activeTab.toUpperCase()}
+                                            {selectedCourseId ? "Subject" : activeTab.toUpperCase()}
                                         </span>
                                         <h1 className="text-xl font-black tracking-tight uppercase text-foreground truncate max-w-[240px]">
                                             {selectedCourseId ? (
@@ -424,20 +422,11 @@ export default function AcademicDashboard() {
                                                 activeTab === 'planner' ? data?.study_sessions?.find(s => s.id === selectedCourseId)?.title :
                                                 activeTab === 'semesters' ? data?.semesters?.find(s => s.id === selectedCourseId)?.title :
                                                 data?.courses?.find(c => c.id === selectedCourseId)?.title // Fallback
-                                            ) : (activeTab === 'sync' && selectedDb) ? selectedDb.name : "Academic Hub"}
+                                            ) : "Academic Hub"}
                                         </h1>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    {activeTab === 'sync' && (
-                                        <button 
-                                            onClick={handleSync}
-                                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-foreground text-foreground hover:bg-foreground hover:text-background text-[9px] font-black uppercase tracking-widest transition-all"
-                                        >
-                                            <RefreshCw size={14} />
-                                            <span className="hidden sm:inline">Sync Academic Profile</span>
-                                        </button>
-                                    )}
                                     <button 
                                         onClick={() => setShowCalendar(!showCalendar)}
                                         className={cn(
@@ -454,14 +443,13 @@ export default function AcademicDashboard() {
                             </div>
 
                             <div className="flex items-center gap-1 bg-muted/10 p-1 rounded-xl border border-border/10 overflow-x-auto custom-scrollbar">
-                                <TabButton active={activeTab === 'courses'} onClick={() => {setActiveTab('courses'); setSelectedCourseId(null); setCreateContext(null)}} icon={<LayoutGrid size={14} />} label="Courses" />
-                                <TabButton active={activeTab === 'assignments'} onClick={() => {setActiveTab('assignments'); setSelectedCourseId(null); setCreateContext(null)}} icon={<Layers size={14} />} label="Assignments" />
-                                <TabButton active={activeTab === 'exams'} onClick={() => {setActiveTab('exams'); setSelectedCourseId(null); setCreateContext(null)}} icon={<Database size={14} />} label="Exams" />
-                                <TabButton active={activeTab === 'planner'} onClick={() => {setActiveTab('planner'); setSelectedCourseId(null); setCreateContext(null)}} icon={<RefreshCw size={14} />} label="Planner" />
-                                <TabButton active={activeTab === 'semesters'} onClick={() => {setActiveTab('semesters'); setSelectedCourseId(null); setCreateContext(null)}} icon={<LayoutGrid size={14} />} label="Semesters" />
                                 <TabButton active={activeTab === 'years'} onClick={() => {setActiveTab('years'); setSelectedCourseId(null); setCreateContext(null)}} icon={<Layers size={14} />} label="Years" />
+                                <TabButton active={activeTab === 'semesters'} onClick={() => {setActiveTab('semesters'); setSelectedCourseId(null); setCreateContext(null)}} icon={<LayoutGrid size={14} />} label="Semesters" />
+                                <TabButton active={activeTab === 'courses'} onClick={() => {setActiveTab('courses'); setSelectedCourseId(null); setCreateContext(null)}} icon={<Database size={14} />} label="Courses" />
+                                <TabButton active={activeTab === 'planner'} onClick={() => {setActiveTab('planner'); setSelectedCourseId(null); setCreateContext(null)}} icon={<RefreshCw size={14} />} label="Study Planner" />
+                                <TabButton active={activeTab === 'assignments'} onClick={() => {setActiveTab('assignments'); setSelectedCourseId(null); setCreateContext(null)}} icon={<Edit3 size={14} />} label="Assignments" />
+                                <TabButton active={activeTab === 'exams'} onClick={() => {setActiveTab('exams'); setSelectedCourseId(null); setCreateContext(null)}} icon={<Hash size={14} />} label="Exams" />
                                 <TabButton active={activeTab === 'practice'} onClick={() => {setActiveTab('practice'); setSelectedCourseId(null); setCreateContext(null)}} icon={<BrainCircuit size={14} />} label="Practice" />
-                                <TabButton active={activeTab === 'sync'} onClick={() => {setActiveTab('sync'); setSelectedDb(null); setSelectedCourseId(null); setCreateContext(null)}} icon={<Database size={14} />} label="Sync" />
                             </div>
                         </div>
                     </div>
@@ -494,6 +482,32 @@ export default function AcademicDashboard() {
                                             <button onClick={() => setCreateContext(null)} className="px-4 bg-muted border border-border/40 text-muted-foreground text-[10px] uppercase tracking-widest font-black rounded hover:bg-muted/80 transition-colors">Abort</button>
                                         </div>
                                     )}
+                                    {activeTab === 'years' && (
+                                        <UniversalDatabaseTab 
+                                            dbId="09 - Years"
+                                            data={data?.years || []}
+                                            databases={databases}
+                                            selectedId={selectedCourseId}
+                                            onSelect={setSelectedCourseId}
+                                            onUpdate={(key, val) => handleUpdateRow("09 - Years", key, val)}
+                                            onCreate={() => handleCreateRow("09 - Years")}
+                                            onDelete={(id) => handleDeleteRow("09 - Years", id)}
+                                        />
+                                    )}
+
+                                    {activeTab === 'semesters' && (
+                                        <UniversalDatabaseTab 
+                                            dbId="08 - Semesters"
+                                            data={data?.semesters || []}
+                                            databases={databases}
+                                            selectedId={selectedCourseId}
+                                            onSelect={setSelectedCourseId}
+                                            onUpdate={(key, val) => handleUpdateRow("08 - Semesters", key, val)}
+                                            onCreate={() => handleCreateRow("08 - Semesters")}
+                                            onDelete={(id) => handleDeleteRow("08 - Semesters", id)}
+                                        />
+                                    )}
+
                                     {activeTab === 'courses' && (
                                         <div className="space-y-12">
                                         {!selectedCourseId ? (
@@ -501,17 +515,17 @@ export default function AcademicDashboard() {
                                                 <section className="space-y-6">
                                                     <SectionHeader title="Active Courses" onAction={handleCreateCourse} />
                                                     <div className="grid grid-cols-1 gap-2">
-                                                        {activeCourses.map((course, idx) => (
+                                                        {(data?.courses || []).filter(c => c.Status !== 'Completed').map((course, idx) => (
                                                             <CourseCard key={idx} course={course} onClick={() => setSelectedCourseId(course.id)} />
                                                         ))}
-                                                        {activeCourses.length === 0 && <EmptyState message="No courses." />}
+                                                        {(data?.courses || []).filter(c => c.Status !== 'Completed').length === 0 && <EmptyState message="No active courses." />}
                                                     </div>
                                                 </section>
                                                 <section className="space-y-6">
-                                                    <SectionHeader title="Upcoming" />
-                                                    <div className="space-y-1">
-                                                        {upcomingAssignments.slice(0, 4).map((item, idx) => (
-                                                            <TimelineItem key={idx} title={item.title} date={item.due_date} type="Task" onClick={() => navigate(`/obsidian?path=3-Database/03 - Assignments/${item.id}.md`)} />
+                                                    <SectionHeader title="History" />
+                                                    <div className="grid grid-cols-1 gap-2 opacity-60">
+                                                        {(data?.courses || []).filter(c => c.Status === 'Completed').map((course, idx) => (
+                                                            <CourseCard key={idx} course={course} onClick={() => setSelectedCourseId(course.id)} />
                                                         ))}
                                                     </div>
                                                 </section>
@@ -537,7 +551,7 @@ export default function AcademicDashboard() {
                                                 </section>
 
                                                 <section className="space-y-6">
-                                                    <SectionHeader title="Study Modules" />
+                                                    <SectionHeader title="Study Planner Modules" />
                                                     <div className="grid grid-cols-1 gap-2">
                                                         {courseHubs.map((hub, idx) => (
                                                             <HubCard key={idx} hub={hub} onClick={() => navigate(`/obsidian?path=3-Database/06 - Study Planner/${hub.id}.md&fullscreen=true`)} />
@@ -548,6 +562,19 @@ export default function AcademicDashboard() {
                                             </div>
                                         )}
                                     </div>
+                                )}
+
+                                {activeTab === 'planner' && (
+                                    <UniversalDatabaseTab 
+                                        dbId="06 - Study Planner"
+                                        data={data?.study_sessions || []}
+                                        databases={databases}
+                                        selectedId={selectedCourseId}
+                                        onSelect={setSelectedCourseId}
+                                        onUpdate={(key, val) => handleUpdateRow("06 - Study Planner", key, val)}
+                                        onCreate={() => handleCreateRow("06 - Study Planner")}
+                                        onDelete={(id) => handleDeleteRow("06 - Study Planner", id)}
+                                    />
                                 )}
 
                                 {activeTab === 'assignments' && (
@@ -574,53 +601,6 @@ export default function AcademicDashboard() {
                                         onCreate={() => handleCreateRow("04 - Exams")}
                                         onDelete={(id) => handleDeleteRow("04 - Exams", id)}
                                     />
-                                )}
-
-                                {activeTab === 'planner' && (
-                                    <UniversalDatabaseTab 
-                                        dbId="06 - Study Planner"
-                                        data={data?.study_sessions || []}
-                                        databases={databases}
-                                        selectedId={selectedCourseId}
-                                        onSelect={setSelectedCourseId}
-                                        onUpdate={(key, val) => handleUpdateRow("06 - Study Planner", key, val)}
-                                        onCreate={() => handleCreateRow("06 - Study Planner")}
-                                        onDelete={(id) => handleDeleteRow("06 - Study Planner", id)}
-                                    />
-                                )}
-
-                                {activeTab === 'semesters' && (
-                                    <UniversalDatabaseTab 
-                                        dbId="08 - Semesters"
-                                        data={data?.semesters || []}
-                                        databases={databases}
-                                        selectedId={selectedCourseId}
-                                        onSelect={setSelectedCourseId}
-                                        onUpdate={(key, val) => handleUpdateRow("08 - Semesters", key, val)}
-                                        onCreate={() => handleCreateRow("08 - Semesters")}
-                                        onDelete={(id) => handleDeleteRow("08 - Semesters", id)}
-                                    />
-                                )}
-
-                                {activeTab === 'years' && (
-                                    <UniversalDatabaseTab 
-                                        dbId="09 - Years"
-                                        data={data?.years || []}
-                                        databases={databases}
-                                        selectedId={selectedCourseId}
-                                        onSelect={setSelectedCourseId}
-                                        onUpdate={(key, val) => handleUpdateRow("09 - Years", key, val)}
-                                        onCreate={() => handleCreateRow("09 - Years")}
-                                        onDelete={(id) => handleDeleteRow("09 - Years", id)}
-                                    />
-                                )}
-
-                                {activeTab === 'sync' && (
-                                    <div className="h-full flex flex-col -m-10 overflow-hidden">
-                                        <div className="p-10 flex-1 overflow-hidden">
-                                            <VaultSyncModule hideHeader={true} />
-                                        </div>
-                                    </div>
                                 )}
                                 </div>
                             </div>
@@ -812,13 +792,160 @@ function EmptyState({ message }: { message: string }) {
     )
 }
 
+function SelectPropertyEditor({ value, source, onSave, onCancel }: { value: string, source?: string, onSave: (val: string) => void, onCancel: () => void }) {
+    const [options, setOptions] = useState<string[]>([])
+    const [loading, setLoading] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [editingOption, setEditingOption] = useState<string | null>(null)
+    const [newOptionValue, setNewOptionValue] = useState('')
+
+    const refreshOptions = useCallback(() => {
+        if (source) {
+            setLoading(true)
+            sidecarApi.getVaultOptions(source).then(res => {
+                setOptions(res.options)
+            }).catch(console.error).finally(() => setLoading(false))
+        }
+    }, [source])
+
+    useEffect(() => {
+        refreshOptions()
+    }, [refreshOptions])
+
+    const handleCreateOption = async () => {
+        if (!source || !searchTerm) return
+        try {
+            await sidecarApi.createVaultOption(source, searchTerm)
+            onSave(`[[${searchTerm}]]`)
+        } catch (err) {
+            toast.error("Failed to create option")
+        }
+    }
+
+    const handleDeleteOption = async (e: React.MouseEvent, opt: string) => {
+        e.stopPropagation()
+        if (!source) return
+        if (confirm(`Delete "${opt}"?`)) {
+            try {
+                await sidecarApi.deleteVaultOption(source, opt)
+                refreshOptions()
+            } catch (err) {
+                toast.error("Failed to delete option")
+            }
+        }
+    }
+
+    const handleRenameOption = async (opt: string) => {
+        if (!source || !newOptionValue) return
+        try {
+            await sidecarApi.updateVaultOption(source, opt, newOptionValue)
+            setEditingOption(null)
+            refreshOptions()
+        } catch (err) {
+            toast.error("Failed to rename option")
+        }
+    }
+
+    const filteredOptions = options.filter(o => o.toLowerCase().includes(searchTerm.toLowerCase()))
+    
+    // Convert wiki link [[Option]] to raw option name for matching
+    const rawValue = typeof value === 'string' && value.startsWith('[[') ? value.replace(/\[\[(.*?)\]\]/, '$1') : value
+
+    return (
+        <div className="absolute top-full left-0 mt-1 w-full min-w-[240px] bg-background border border-border/10 rounded-xl shadow-xl z-50 p-2 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-2 mb-2">
+                <input 
+                    autoFocus
+                    placeholder="Search or add..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    onKeyDown={e => {
+                        if (e.key === 'Escape') onCancel()
+                        if (e.key === 'Enter') {
+                            if (filteredOptions.length > 0) {
+                                onSave(`[[${filteredOptions[0]}]]`)
+                            } else if (searchTerm) {
+                                handleCreateOption()
+                            }
+                        }
+                    }}
+                    className="flex-1 bg-muted/5 border-none text-[10px] uppercase font-black px-3 py-2 rounded-lg focus:ring-1 focus:ring-primary/20"
+                />
+                {searchTerm && !options.some(o => o.toLowerCase() === searchTerm.toLowerCase()) && (
+                    <button 
+                        onClick={handleCreateOption}
+                        className="p-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-all"
+                    >
+                        <Plus size={14} />
+                    </button>
+                )}
+            </div>
+            
+            <div className="max-h-48 overflow-y-auto flex flex-col gap-1">
+                {loading && <span className="text-[9px] text-muted-foreground/40 px-3 py-1">Loading...</span>}
+                {!loading && filteredOptions.length === 0 && !searchTerm && <span className="text-[9px] text-muted-foreground/40 px-3 py-1">No options</span>}
+                
+                {filteredOptions.map(opt => (
+                    <div 
+                        key={opt}
+                        className={cn(
+                            "group flex items-center justify-between px-3 py-1.5 rounded-md transition-all",
+                            rawValue === opt ? "bg-primary/10 text-primary" : "hover:bg-muted/10 text-foreground/70"
+                        )}
+                    >
+                        {editingOption === opt ? (
+                            <input 
+                                autoFocus
+                                value={newOptionValue}
+                                onChange={e => setNewOptionValue(e.target.value)}
+                                onBlur={() => handleRenameOption(opt)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') handleRenameOption(opt)
+                                    if (e.key === 'Escape') setEditingOption(null)
+                                }}
+                                className="flex-1 bg-transparent border-none text-[10px] font-black uppercase p-0 focus:ring-0"
+                            />
+                        ) : (
+                            <button 
+                                onClick={() => onSave(`[[${opt}]]`)}
+                                className="flex-1 text-left text-[10px] font-black uppercase truncate"
+                            >
+                                {opt}
+                            </button>
+                        )}
+                        
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setEditingOption(opt)
+                                    setNewOptionValue(opt)
+                                }}
+                                className="p-1 hover:text-primary"
+                            >
+                                <Edit3 size={10} />
+                            </button>
+                            <button 
+                                onClick={(e) => handleDeleteOption(e, opt)}
+                                className="p-1 hover:text-destructive"
+                            >
+                                <Trash2 size={10} />
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
 function CoursePropertyGrid({ course, schema, onUpdate }: { course: any, schema: Record<string, any>, onUpdate: (key: string, value: any) => void }) {
     const [editingKey, setEditingKey] = useState<string | null>(null)
     const [editValue, setEditValue] = useState('')
 
     // Merge schema keys with existing course properties, excluding internal ones
     const allKeys = useMemo(() => {
-        const internalKeys = ['id', 'title', 'type', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by'];
+        const internalKeys = ['id', 'title', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by'];
         const keys = new Set([
             ...Object.keys(schema || {}),
             ...Object.keys(course || {})
@@ -826,8 +953,9 @@ function CoursePropertyGrid({ course, schema, onUpdate }: { course: any, schema:
         return Array.from(keys).filter(key => !internalKeys.includes(key)).sort();
     }, [schema, course]);
 
-    const handleSave = (key: string) => {
-        onUpdate(key, editValue)
+    const handleSave = (key: string, overrideValue?: any) => {
+        const valueToSave = overrideValue !== undefined ? overrideValue : editValue
+        onUpdate(key, valueToSave)
         setEditingKey(null)
     }
 
@@ -836,45 +964,89 @@ function CoursePropertyGrid({ course, schema, onUpdate }: { course: any, schema:
             {allKeys.map((key) => {
                 const value = course?.[key]
                 const isEmpty = value === undefined || value === null || value === ''
+                const propSchema = schema?.[key] || {}
+                const propType = propSchema.type || 'str'
+                
+                // For Checkbox (bool)
+                if (propType === 'bool') {
+                    const isChecked = value === true || value === 'true'
+                    return (
+                        <div key={key} className="p-4 bg-muted/5 border border-border/10 rounded-xl hover:bg-muted/10 transition-all flex items-center justify-between group/prop">
+                            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">{key.replace(/_/g, ' ')}</span>
+                            <button 
+                                onClick={() => handleSave(key, !isChecked)}
+                                className={cn(
+                                    "w-4 h-4 flex items-center justify-center rounded transition-all",
+                                    isChecked ? "bg-primary text-primary-foreground" : "border border-border/40 text-transparent hover:border-primary/50"
+                                )}
+                            >
+                                <Check size={10} strokeWidth={4} />
+                            </button>
+                        </div>
+                    )
+                }
                 
                 return (
-                    <div key={key} className="p-4 bg-muted/5 border border-border/10 rounded-xl hover:bg-muted/10 transition-all flex flex-col gap-2 group/prop">
+                    <div key={key} className="p-4 bg-muted/5 border border-border/10 rounded-xl hover:bg-muted/10 transition-all flex flex-col gap-2 group/prop relative">
                         <div className="flex items-center justify-between">
                             <span className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">{key.replace(/_/g, ' ')}</span>
                             <Edit3 size={10} className="text-muted-foreground/0 group-hover/prop:text-muted-foreground/20 transition-all" />
                         </div>
+                        
                         {editingKey === key ? (
-                            <div className="flex items-center gap-2">
-                                <input 
-                                    autoFocus
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            handleSave(key)
-                                            e.currentTarget.blur()
-                                        }
-                                        if (e.key === 'Escape') {
-                                            setEditingKey(null)
-                                        }
-                                    }}
-                                    onBlur={() => handleSave(key)}
-                                    className="flex-1 bg-transparent border-b border-primary text-[12px] font-bold text-foreground focus:outline-none pb-1"
+                            propType === 'select' || propType === 'relation' ? (
+                                <SelectPropertyEditor 
+                                    value={String(value || '')} 
+                                    source={propSchema.source} 
+                                    onSave={(v) => handleSave(key, v)} 
+                                    onCancel={() => setEditingKey(null)} 
                                 />
-                                <button onMouseDown={() => handleSave(key)} className="p-1 hover:text-primary text-muted-foreground/40"><Check size={12}/></button>
-                            </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <input 
+                                        autoFocus
+                                        type={propType === 'date' ? 'date' : propType === 'number' ? 'number' : 'text'}
+                                        value={editValue}
+                                        onChange={(e) => setEditValue(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                handleSave(key)
+                                                e.currentTarget.blur()
+                                            }
+                                            if (e.key === 'Escape') {
+                                                setEditingKey(null)
+                                            }
+                                        }}
+                                        onBlur={(e) => {
+                                            // Don't save on blur for date pickers immediately, they can be tricky
+                                            if (propType !== 'date') handleSave(key)
+                                        }}
+                                        className="flex-1 bg-transparent border-b border-primary text-[12px] font-bold text-foreground focus:outline-none pb-1"
+                                    />
+                                    <button onMouseDown={(e) => { e.preventDefault(); handleSave(key) }} className="p-1 hover:text-primary text-muted-foreground/40">
+                                        <Check size={12}/>
+                                    </button>
+                                </div>
+                            )
                         ) : (
                             <div 
                                 className={cn(
                                     "text-[12px] font-bold cursor-text truncate min-h-[18px]",
-                                    isEmpty ? "text-muted-foreground/20 italic" : "text-foreground"
+                                    isEmpty ? "text-muted-foreground/20 italic" : "text-foreground",
+                                    (propType === 'select' || propType === 'relation') && !isEmpty ? "text-primary hover:underline" : ""
                                 )}
                                 onClick={() => {
                                     setEditingKey(key)
                                     setEditValue(String(value || ''))
                                 }}
                             >
-                                {isEmpty ? 'Empty' : String(value)}
+                                {isEmpty ? 'Empty' : (
+                                    propType === 'select' || propType === 'relation' ? 
+                                        String(value).replace(/^\[\[(.*?)\]\]$/, '$1').split('/').pop() : 
+                                    propType === 'date' ? 
+                                        format(parseISO(String(value)), 'MMM dd, yyyy') :
+                                        String(value)
+                                )}
                             </div>
                         )}
                     </div>

@@ -1,7 +1,5 @@
 ---
-academic year: 2023-2024
-completed: false
-status: [[Active]]
+Current Year: false
 ---
 
 # Semesters
