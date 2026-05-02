@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
+                "file": "3-Database/08 - Semesters/Autumn 2025.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "7_Relational_Algebra_and_Calculus_Hub"
+              "title": "Autumn 2025"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
+                "file": "3-Database/08 - Semesters/Autumn 2025.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for 7_Relational_Algebra_and_Calculus_Hub"
+              "title": "Backlinks for Autumn 2025"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
+                "file": "3-Database/08 - Semesters/Autumn 2025.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from 7_Relational_Algebra_and_Calculus_Hub"
+              "title": "Outgoing links from Autumn 2025"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
+                "file": "3-Database/08 - Semesters/Autumn 2025.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of 7_Relational_Algebra_and_Calculus_Hub"
+              "title": "Outline of Autumn 2025"
             }
           }
         ]
@@ -185,41 +185,41 @@
   },
   "active": "e4e52099906a74b0",
   "lastOpenFiles": [
+    "3-Database/06 - Study Planner/New Hub.md",
+    "3-Database/09 - Years/Year IV.md",
+    "3-Database/09 - Years/Year III.md",
+    "3-Database/09 - Years/Year II.md",
+    "3-Database/09 - Years/Year I.md",
+    "3-Database/08 - Semesters/Autumn 2025.md",
+    "3-Database/09 - Years/Year IV (1).md",
+    "3-Database/09 - Years/Year III (1).md",
+    "3-Database/09 - Years/Year II (1).md",
+    "3-Database/09 - Years/Year I (1).md",
+    "3-Database/07 - Courses/sf.md",
+    "3-Database/08 - Semesters/Winter 2026.md",
+    "3-Database/09 - Years/Winter 2026.md",
+    "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
+    "5-Pdf Store/note generated/Chapter 5.pdf",
+    "5-Pdf Store/note generated/Chapter_7.pdf",
+    "5-Pdf Store/note generated/4.pdf",
+    "5-Pdf Store/note generated/Chapter 2.pdf",
+    "5-Pdf Store/note generated/2_Recurrence_Relations.pdf",
+    "5-Pdf Store/note generated/2.pdf",
+    "5-Pdf Store/oka_queue.db",
+    "5-Pdf Store/note generated",
+    "5-Pdf Store",
+    "3-Database/09 - Years/Year IV (2).md",
+    "3-Database/09 - Years/Year II (2).md",
     "3-Database/06 - Study Planner/Type/Possible Questions.md",
     "3-Database/06 - Study Planner/Type/Atomic Note.md",
     "3-Database/06 - Study Planner/Type/Hub.md",
     "3-Database/06 - Study Planner/5_Modular_Programming_Hub.md",
-    "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
     "3-Database/06 - Study Planner/4_Promoting_Inclusive_Culture_Hub.md",
     "3-Database/06 - Study Planner/Type/3 - High.md",
     "3-Database/06 - Study Planner/Type/2 - Medium.md",
     "3-Database/06 - Study Planner/Type/1 - Low.md",
     "3-Database/06 - Study Planner/Type",
     "3-Database/04 - Exams/Discrete Mathematics Final.md",
-    "3-Database/08 - Semesters/Autumn 2025.md",
-    "3-Database/04 - Exams/Computer Programming Final.md",
-    "3-Database/09 - Years/Year II.md",
-    "3-Database/06 - Study Planner/Unit/9.md",
-    "3-Database/06 - Study Planner/Unit/8.md",
-    "3-Database/06 - Study Planner/Unit/7.md",
-    "3-Database/06 - Study Planner/Unit/6.md",
-    "3-Database/06 - Study Planner/Unit/5.md",
-    "3-Database/06 - Study Planner/Unit/4.md",
-    "3-Database/06 - Study Planner/Unit/3.md",
-    "3-Database/06 - Study Planner/Unit/2.md",
-    "3-Database/06 - Study Planner/Unit/10.md",
-    "3-Database/06 - Study Planner/Unit/1.md",
-    "3-Database/06 - Study Planner/Unit",
-    "3-Database/03 - Assignments/Assignment 1.md",
-    "3-Database/07 - Courses/Professor/TBD.md",
-    "3-Database/07 - Courses/Professor",
-    "3-Database/07 - Courses/Grade/Incomplete.md",
-    "3-Database/07 - Courses/Grade",
-    "5-Pdf Store/note generated/Chapter_7.pdf",
-    "3-Database/04 - Exams/Type",
-    "3-Database/03 - Assignments/Priority",
-    "3-Database/03 - Assignments/Status",
-    "3-Database/06 - Study Planner/Confidence",
-    "3-Database/06 - Study Planner/Status"
+    "3-Database/04 - Exams/Computer Programming Final.md"
   ]
 }

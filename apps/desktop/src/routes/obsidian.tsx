@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { 
     Trash2, ShieldCheck, RefreshCw, 
     Sparkles, Paperclip, FileText, Folder, ChevronRight, 
@@ -73,6 +73,7 @@ function NoteProperties({
         if (['read', 'generated'].includes(k) || typeof value === 'boolean') return 'checkbox'
         if (k === 'type') return 'text'
         if (typeof value === 'number' || k.includes('unit')) return 'number'
+        if (k.includes('date') || (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value))) return 'date'
         if (Array.isArray(value)) return 'list'
         return 'text'
     }
@@ -641,101 +642,101 @@ export default function ObsidianVaultPage() {
     const [hubConnections, setHubConnections] = useState<string | null>(null)
     const studyTree = useMemo(() => parseHubTree(hubConnections || ''), [hubConnections])
 
-    useEffect(() => {
-        const fetchHubConnections = async () => {
-            if (!noteMetadata || Object.keys(noteMetadata).length === 0) {
-                setHubConnections(null)
-                return
-            }
+    const fetchHubConnections = useCallback(async () => {
+        if (!noteMetadata || Object.keys(noteMetadata).length === 0) {
+            setHubConnections(null)
+            return
+        }
 
-            // Expanded key list for hub detection
-            const hubKeys = ['hub', 'Hub', 'HUB', 'concept_hub', 'course', 'Course', 'course_hub', 'semester', 'area', 'project']
-            let rawHub: any = null
-            for (const key of hubKeys) {
-                if (noteMetadata[key]) {
-                    rawHub = noteMetadata[key]
-                    break
-                }
-            }
-
-            // Heuristic: If it's a Hub note itself, the hub is "self"
-            const isHubNote = selectedPath?.toLowerCase().includes('_hub.md') || noteMetadata?.type?.toLowerCase() === 'hub'
-            
-            if (!rawHub && !isHubNote) {
-                setHubConnections(null)
-                return
-            }
-            
-            try {
-                let topologies: string | null = null
-                
-                const extractSection = (content: string) => {
-                    if (!content) return null
-                    const match = content.match(/(?:#+\s*(?:Core Topologies|Connections|Structure|Nav|Outline|Course Map|Curriculum).*?)\s*\n([\s\S]*?)(?=\n#+\s|$)/i)
-                    if (match && match[1]) return match[1].trim()
-                    const listMatch = content.match(/(?:^|\n)(\s*[-*]\s+[\s\S]*?)(?=\n\n|\n#|$)/)
-                    if (listMatch && listMatch[1]) return listMatch[1].trim()
-                    return content.trim()
-                }
-
-                if (isHubNote && noteContent) {
-                    topologies = extractSection(noteContent)
-                }
-
-                if (!topologies && rawHub) {
-                    const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub]
-                    const hubVal = hubItems[0]
-                    const cleanHubName = String(hubVal).replace(/\[\[/g, '').replace(/\]\]/g, '').split('|')[0].trim()
-                    
-                    if (cleanHubName) {
-                        const res = await sidecarApi.findVaultPage(cleanHubName)
-                        const tryPath = async (p: string) => {
-                            try {
-                                const note = await sidecarApi.readObsidianNote(p)
-                                return extractSection(note.content)
-                            } catch(e) { console.error(e); }
-                            return null
-                        }
-
-                        if (res.found && res.path) {
-                            topologies = await tryPath(res.path)
-                        }
-                        
-                        if (!topologies) {
-                            const searchPaths = [
-                                `3-Database/06 - Study Planner/${cleanHubName}.md`,
-                                `3-Database/06 - Study Planner/${cleanHubName}_Hub.md`,
-                                `3-Database/01 - Areas/${cleanHubName}.md`,
-                                `3-Database/01 - Areas/${cleanHubName}_Hub.md`,
-                                `${cleanHubName}_Hub.md`
-                            ]
-                            for (const p of searchPaths) {
-                                topologies = await tryPath(p)
-                                if (topologies) break
-                            }
-                        }
-                    }
-                }
-                
-                if (topologies) {
-                    const pageName = selectedPath?.split('/').pop()?.replace('.md', '').replace('.pdf', '') || ''
-                    if (pageName) {
-                        const escapedPageName = pageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                        const regex = new RegExp(`(\\[\\[${escapedPageName}(?:\\|[^\\]]*)?\\]\\])`, 'gi')
-                        topologies = topologies.replace(regex, `**$1**`)
-                    }
-                    setHubConnections(topologies)
-                } else {
-                    setHubConnections(null)
-                }
-            } catch (err) {
-                console.error("Failed to fetch hub connections", err)
-                setHubConnections(null)
+        // Expanded key list for hub detection
+        const hubKeys = ['hub', 'Hub', 'HUB', 'concept_hub', 'course', 'Course', 'course_hub', 'semester', 'area', 'project']
+        let rawHub: any = null
+        for (const key of hubKeys) {
+            if (noteMetadata[key]) {
+                rawHub = noteMetadata[key]
+                break
             }
         }
+
+        // Heuristic: If it's a Hub note itself, the hub is "self"
+        const isHubNote = selectedPath?.toLowerCase().includes('_hub.md') || noteMetadata?.type?.toLowerCase() === 'hub'
         
-        fetchHubConnections()
+        if (!rawHub && !isHubNote) {
+            setHubConnections(null)
+            return
+        }
+        
+        try {
+            let topologies: string | null = null
+            
+            const extractSection = (content: string) => {
+                if (!content) return null
+                const match = content.match(/(?:#+\s*(?:Core Topologies|Connections|Structure|Nav|Outline|Course Map|Curriculum).*?)\s*\n([\s\S]*?)(?=\n#+\s|$)/i)
+                if (match && match[1]) return match[1].trim()
+                const listMatch = content.match(/(?:^|\n)(\s*[-*]\s+[\s\S]*?)(?=\n\n|\n#|$)/)
+                if (listMatch && listMatch[1]) return listMatch[1].trim()
+                return content.trim()
+            }
+
+            if (isHubNote && noteContent) {
+                topologies = extractSection(noteContent)
+            }
+
+            if (!topologies && rawHub) {
+                const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub]
+                const hubVal = hubItems[0]
+                const cleanHubName = String(hubVal).replace(/\[\[/g, '').replace(/\]\]/g, '').split('|')[0].trim()
+                
+                if (cleanHubName) {
+                    const res = await sidecarApi.findVaultPage(cleanHubName)
+                    const tryPath = async (p: string) => {
+                        try {
+                            const note = await sidecarApi.readObsidianNote(p)
+                            return extractSection(note.content)
+                        } catch(e) { console.error(e); }
+                        return null
+                    }
+
+                    if (res.found && res.path) {
+                        topologies = await tryPath(res.path)
+                    }
+                    
+                    if (!topologies) {
+                        const searchPaths = [
+                            `3-Database/06 - Study Planner/${cleanHubName}.md`,
+                            `3-Database/06 - Study Planner/${cleanHubName}_Hub.md`,
+                            `3-Database/01 - Areas/${cleanHubName}.md`,
+                            `3-Database/01 - Areas/${cleanHubName}_Hub.md`,
+                            `${cleanHubName}_Hub.md`
+                        ]
+                        for (const p of searchPaths) {
+                            topologies = await tryPath(p)
+                            if (topologies) break
+                        }
+                    }
+                }
+            }
+            
+            if (topologies) {
+                const pageName = selectedPath?.split('/').pop()?.replace('.md', '').replace('.pdf', '') || ''
+                if (pageName) {
+                    const escapedPageName = pageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                    const regex = new RegExp(`(\\[\\[${escapedPageName}(?:\\|[^\\]]*)?\\]\\])`, 'gi')
+                    topologies = topologies.replace(regex, `**$1**`)
+                }
+                setHubConnections(topologies)
+            } else {
+                setHubConnections(null)
+            }
+        } catch (err) {
+            console.error("Failed to fetch hub connections", err)
+            setHubConnections(null)
+        }
     }, [noteMetadata, selectedPath, noteContent])
+
+    useEffect(() => {
+        fetchHubConnections()
+    }, [fetchHubConnections])
 
     const handleToggleCheckbox = async (label: string, isChecked: boolean, target: string | null) => {
         if (selectedPath) {
@@ -1829,7 +1830,7 @@ export default function ObsidianVaultPage() {
                                                                             </button>
 
                                                                             <button 
-                                                                                onClick={(e) => handleDeleteItem(e as any, selectedPath!, false)}
+                                                                                onClick={() => handleDeleteItem(selectedPath!, false)}
                                                                                 className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-destructive hover:border-destructive transition-all shadow-sm"
                                                                                 title="Delete Note"
                                                                             >

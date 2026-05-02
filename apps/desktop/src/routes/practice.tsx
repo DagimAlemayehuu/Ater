@@ -319,12 +319,12 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
 
     return (
       <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-y-auto custom-scrollbar p-10 space-y-8">
-        <div className="flex items-center justify-between">
-            <div className="flex bg-muted/10 p-1 rounded-lg border border-border/10">
-                <button onClick={() => setView('dashboard')} className={cn("px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", view === 'dashboard' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>Dashboard</button>
-                <button onClick={() => setView('history')} className={cn("px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", view === 'history' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>History</button>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex bg-muted/10 p-1 rounded-lg border border-border/10 w-full sm:w-auto">
+                <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", true ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>Dashboard</button>
+                <button onClick={() => setView('history')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", false ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>History</button>
             </div>
-            <Button onClick={() => setView('configuring')} className="h-9 px-6 bg-primary text-primary-foreground rounded-md font-black uppercase tracking-widest text-[9px]">Start</Button>
+            <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-primary text-primary-foreground rounded-md font-black uppercase tracking-widest text-[9px]">Start</Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -390,12 +390,12 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
   if (view === 'history') {
     return (
       <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-y-auto custom-scrollbar p-10 space-y-8">
-        <div className="flex items-center justify-between">
-            <div className="flex bg-muted/10 p-1 rounded-lg border border-border/10">
-                <button onClick={() => setView('dashboard')} className={cn("px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", view === 'dashboard' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>Dashboard</button>
-                <button onClick={() => setView('history')} className={cn("px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", view === 'history' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>History</button>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex bg-muted/10 p-1 rounded-lg border border-border/10 w-full sm:w-auto">
+                <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", false ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>Dashboard</button>
+                <button onClick={() => setView('history')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", true ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>History</button>
             </div>
-            <Button onClick={() => setView('configuring')} className="h-9 px-6 bg-primary text-primary-foreground rounded-md font-black uppercase tracking-widest text-[9px]">Start</Button>
+            <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-primary text-primary-foreground rounded-md font-black uppercase tracking-widest text-[9px]">Start</Button>
         </div>
 
         <div className="space-y-4">
@@ -464,7 +464,7 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
                                     <Layers size={12} className="opacity-40" />
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-[400px] p-0 rounded-md border border-border bg-popover shadow-xl overflow-hidden" align="start">
+                            <PopoverContent className="w-[90vw] sm:w-[400px] p-0 rounded-md border border-border bg-popover shadow-xl overflow-hidden" align="start">
                                 <Command className="bg-transparent">
                                     <div className="p-3 border-b border-border flex justify-between items-center bg-muted/10">
                                         <span className="text-[8px] font-black uppercase text-muted-foreground/40">{availableNotes.length} Total</span>
@@ -553,17 +553,17 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
     const progress = ((currentQuestionIdx + 1) / questions.length) * 100;
     return (
       <div className="h-full w-full flex flex-col bg-background text-foreground overflow-hidden">
-        <div className="px-10 py-6 border-b border-border/10 flex items-center justify-between">
-          <div className="flex items-center gap-10">
+        <div className="px-6 sm:px-10 py-4 sm:py-6 border-b border-border/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-10 w-full sm:w-auto">
             <div className="flex flex-col gap-0.5">
               <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Practice</span>
-              <div className="text-xs font-black uppercase tracking-tight">{hubs.find(h => h.id === selectedHub)?.title.replace(/\[\[(.*?)\]\]/g, '$1')}</div>
+              <div className="text-xs font-black uppercase tracking-tight truncate max-w-[200px]">{hubs.find(h => h.id === selectedHub)?.title.replace(/\[\[(.*?)\]\]/g, '$1')}</div>
             </div>
-            <div className="w-64 h-1 bg-muted/20 rounded-full overflow-hidden">
+            <div className="flex-1 sm:w-64 h-1 bg-muted/20 rounded-full overflow-hidden">
               <div className="h-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
             </div>
           </div>
-          <div className="flex items-center gap-6 text-[9px] font-black uppercase tracking-widest">
+          <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-6 text-[9px] font-black uppercase tracking-widest">
             {globalTimeLeft !== null && <div className="text-muted-foreground/40">{Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}</div>}
             <span>{currentQuestionIdx + 1} / {questions.length}</span>
           </div>
@@ -636,7 +636,7 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
           </div>
         </div>
 
-        <div className="p-10 border-t border-border/10 bg-background/80 backdrop-blur-md">
+        <div className="p-6 sm:p-10 border-t border-border/10 bg-background/80 backdrop-blur-md">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <Button variant="ghost" onClick={resetSession} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Exit</Button>
             <div className="flex items-center gap-4">
@@ -671,10 +671,11 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
       <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground animate-in fade-in duration-500 items-center justify-center p-10 space-y-12">
             <div className="text-center space-y-2">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Finished</span>
-                <h1 className="text-8xl font-black tracking-tighter">{score}%</h1>
+                <h1 className="text-6xl sm:text-8xl font-black tracking-tighter">{score}%</h1>
             </div>
-            <div className="flex gap-12 text-center border-y border-border/10 py-8 px-12">
+            <div className="flex flex-col sm:flex-row gap-6 sm:gap-12 text-center border-y border-border/10 py-8 px-6 sm:px-12 w-full sm:w-auto items-center justify-center">
               <div className="space-y-1"><div className="text-2xl font-black tracking-tight">{correct}/{total}</div><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Correct</div></div>
+              <div className="space-y-1 hidden sm:block h-8 w-px bg-border/10"></div>
               <div className="space-y-1"><div className="text-2xl font-black tracking-tight">{total}</div><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total</div></div>
             </div>
             <div className="flex gap-4">

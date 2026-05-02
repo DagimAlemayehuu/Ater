@@ -41,7 +41,10 @@ export type QuestionType =
   | "matching"
   | "order"
   | "debug"
-  | "synthesis";
+  | "synthesis"
+  | "scenario"
+  | "code"
+  | "find_error";
 
 export interface BaseQuestion {
   id: number;
@@ -123,4 +126,7 @@ export type Question =
   | MatchingQuestion
   | OrderQuestion
   | DebugQuestion
-  | SynthesisQuestion;
+  | SynthesisQuestion
+  | ScenarioQuestion
+  | CodeQuestion
+  | FindErrorQuestion;

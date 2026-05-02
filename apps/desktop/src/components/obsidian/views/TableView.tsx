@@ -86,6 +86,11 @@ export function TableView({
         return Object.entries(map).map(([name, items]) => ({ name, items }));
     }, [visibleRows, rows, groupBy]);
 
+    const handleDeleteRows = () => {
+        selectedIds.forEach(id => onDeleteRow(id));
+        setSelectedIds(new Set());
+    }
+
     return (
         <div className="rounded-xl border border-border/40 overflow-hidden h-full flex flex-col bg-background">
             {selectedIds.size > 0 && (
@@ -93,9 +98,7 @@ export function TableView({
                     <div className="flex items-center gap-4">
                         <span className="text-[10px] font-black uppercase tracking-[0.2em]">{selectedIds.size} Items Command</span>
                         <button 
-                            onClick={() => {
-                                handleDeleteRows();
-                            }}
+                            onClick={handleDeleteRows}
                             className="px-4 py-1 bg-background text-foreground hover:bg-background/90 rounded text-[9px] font-black uppercase tracking-widest transition-all"
                         >
                             Bulk Purge
