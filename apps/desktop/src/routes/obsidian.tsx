@@ -903,7 +903,7 @@ export default function ObsidianVaultPage() {
     }
 
     const handleDeleteProperty = async (name: string) => {
-        if (!selectedPath || !confirm(`Delete property '${name}'?`)) return
+        if (!selectedPath) return
         setLoadingNote(true)
         try {
             const res = await sidecarApi.readObsidianNote(selectedPath)
@@ -993,9 +993,7 @@ export default function ObsidianVaultPage() {
         } finally { setLoadingInbox(false) }
     }
 
-    const handleDeleteItem = async (e: React.MouseEvent, path: string, isFolder: boolean) => {
-        e.stopPropagation()
-        if (!confirm(`Are you sure you want to delete this ${isFolder ? 'folder' : 'file'}?`)) return
+    const handleDeleteItem = async (path: string, isFolder: boolean) => {
         try {
             await sidecarApi.deleteObsidianItem(path)
             await fetchFiles()
@@ -1444,7 +1442,7 @@ export default function ObsidianVaultPage() {
                                     <Edit3 size={10} />
                                 </button>
                                 <button
-                                    onClick={(e) => handleDeleteItem(e, node.path, node.isFolder)}
+                                    onClick={(e) => handleDeleteItem(node.path, node.isFolder)}
                                     className="p-0.5 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
                                     title="Delete"
                                 >
@@ -1797,13 +1795,7 @@ export default function ObsidianVaultPage() {
                                                                         </button>
                                                                         <button 
                                                                             onClick={() => {
-                                                                                if (editedContent !== noteContent) {
-                                                                                    if (confirm("Discard unsaved changes?")) {
-                                                                                        setIsEditing(false)
-                                                                                    }
-                                                                                } else {
-                                                                                    setIsEditing(false)
-                                                                                }
+                                                                                setIsEditing(false)
                                                                             }}
                                                                             className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-accent transition-all shadow-sm"
                                                                         >

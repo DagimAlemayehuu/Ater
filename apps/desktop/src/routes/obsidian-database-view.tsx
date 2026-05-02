@@ -75,7 +75,6 @@ export default function ObsidianDatabaseView({ database, onBack, onNavigate, ini
     }
 
     const handleDeleteRow = async (rowId: string) => {
-        if (!confirm('Are you sure you want to delete this row?')) return
         try {
             await sidecarApi.deleteVaultRow(database.id, rowId)
             await fetchRows()

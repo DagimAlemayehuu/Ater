@@ -14,7 +14,7 @@ interface VaultDatabase {
     views?: any[]
 }
 
-export default function VaultSync() {
+export function VaultSyncModule({ hideHeader = false }: { hideHeader?: boolean }) {
     const [databases, setDatabases] = useState<VaultDatabase[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
@@ -69,7 +69,6 @@ export default function VaultSync() {
     }
 
     const handleDeleteDatabase = async (dbName: string) => {
-        if (!confirm(`Are you sure you want to delete "${dbName}"?`)) return;
         try {
             setLoading(true);
             await sidecarApi.deleteVaultDatabase(dbName);
@@ -152,16 +151,18 @@ export default function VaultSync() {
             )}
 
             <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <div className="max-w-7xl mx-auto px-16 py-12">
-                    <div className="flex flex-col mb-12">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-6 border-b border-border pb-4">
-                            <span>System</span>
-                            <span className="material-symbols-outlined text-[12px]"><ChevronRight size={12}/></span>
-                            <span className="text-muted-foreground">Vault Sync</span>
+                <div className={cn("max-w-7xl mx-auto px-16 py-12", hideHeader && "px-0 py-0 max-w-none")}>
+                    {!hideHeader && (
+                        <div className="flex flex-col mb-12">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-6 border-b border-border pb-4">
+                                <span>System</span>
+                                <span className="material-symbols-outlined text-[12px]"><ChevronRight size={12}/></span>
+                                <span className="text-muted-foreground">Vault Sync</span>
+                            </div>
+                            <h1 className="text-5xl font-extrabold text-foreground tracking-tight mb-4 leading-tight">Vault Modules</h1>
+                            <p className="text-[16px] leading-relaxed text-muted-foreground">Synchronize high-fidelity knowledge clusters and manage autonomous ingestion sectors.</p>
                         </div>
-                        <h1 className="text-5xl font-extrabold text-foreground tracking-tight mb-4 leading-tight">Vault Modules</h1>
-                        <p className="text-[16px] leading-relaxed text-muted-foreground">Synchronize high-fidelity knowledge clusters and manage autonomous ingestion sectors.</p>
-                    </div>
+                    )}
 
                     {/* Header with Search & Add Button */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between py-4 mb-8 border-y border-border gap-6">
@@ -305,3 +306,4 @@ export default function VaultSync() {
         </div>
     )
 }
+export default VaultSyncModule;

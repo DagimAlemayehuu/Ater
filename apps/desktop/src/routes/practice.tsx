@@ -96,7 +96,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   timeBoundDays: null
 }
 
-export function PracticeModule() {
+export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean }) {
   const [hubs, setHubs] = useState<Hub[]>([])
   const [selectedHub, setSelectedHub] = useState<string>('')
   const [advancedConfig, setAdvancedConfig] = useState<AdvancedPracticeConfig>(DEFAULT_CONFIG)
@@ -287,7 +287,10 @@ export function PracticeModule() {
 
   const resetSession = () => { setQuestions([]); setView('dashboard'); }
   const handleSelectAnswer = (val: any) => { if (!isRevealed) setUserAnswers(prev => ({ ...prev, [questions[currentQuestionIdx].id]: val })); }
-  const handleDeletePractice = async (path: string) => { if (confirm("Delete this history?")) { await sidecarApi.deletePractice(path); loadPastPractices(); } }
+  const handleDeletePractice = async (path: string) => { 
+    await sidecarApi.deletePractice(path); 
+    loadPastPractices(); 
+  }
 
   const toggleAtomicNote = (noteId: string) => {
     setAdvancedConfig(prev => ({
@@ -335,13 +338,13 @@ export function PracticeModule() {
     const gapSeverity = totalPrecision > 90 ? "Good" : totalPrecision > 70 ? "Okay" : totalPrecision > 0 ? "Needs Work" : "New";
 
     return (
-      <div className="h-full flex-1 flex flex-row w-full bg-background text-foreground animate-in fade-in duration-500 font-sans overflow-hidden">
+      <div className="h-full flex-1 flex flex-row w-full bg-background text-foreground font-sans overflow-hidden">
         <div className="w-64 border-r border-border bg-muted/20 flex flex-col shrink-0">
           <div className="p-6 space-y-8">
-            <div className="flex items-center gap-2 mb-10"><div className="w-5 h-5 rounded-sm bg-primary flex items-center justify-center"><BrainCircuit size={14} className="text-primary-foreground" /></div><span className="text-[10px] font-black uppercase tracking-widest">Practice</span></div>
+            <div className="flex items-center gap-2 mb-10"><div className="w-5 h-5 rounded-sm bg-primary flex items-center justify-center"><BrainCircuit size={14} className="text-primary-foreground" /></div><span className="text-[10px] font-black uppercase tracking-widest text-foreground">Practice</span></div>
             <div className="space-y-1">
               <button onClick={() => setView('dashboard')} className="w-full flex items-center gap-3 px-4 py-2 bg-background border border-border rounded-md text-[10px] font-black uppercase tracking-widest text-foreground transition-all"><LayoutGrid size={12}/> Main</button>
-              <button onClick={() => setView('history')} className="w-full flex items-center gap-3 px-4 py-2 hover:bg-muted rounded-md text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all"><History size={12}/> History</button>
+              <button onClick={() => setView('history')} className="w-full flex items-center gap-3 px-4 py-2 hover:bg-muted rounded-md text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 hover:text-foreground transition-all"><History size={12}/> History</button>
             </div>
           </div>
           <div className="flex-1" />
@@ -351,8 +354,8 @@ export function PracticeModule() {
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-16">
           <div className="flex items-end justify-between border-b border-border pb-6">
-            <div className="space-y-1"><span className="text-[9px] font-black text-muted-foreground/60 uppercase tracking-widest">Stats</span><h1 className="text-2xl font-black tracking-tighter uppercase leading-none text-foreground">My <span className="text-muted-foreground/30">Progress</span></h1></div>
-            <div className="flex gap-8"><div className="text-right space-y-1"><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Average</div><div className="text-2xl font-black tracking-tighter text-foreground tabular-nums">{totalPrecision}%</div></div><div className="text-right space-y-1"><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Done</div><div className="text-2xl font-black tracking-tighter text-foreground tabular-nums">{pastPractices.length}</div></div></div>
+            <div className="space-y-1"><span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Stats</span><h1 className="text-2xl font-black tracking-tighter uppercase leading-none text-foreground">My <span className="text-muted-foreground/60">Progress</span></h1></div>
+            <div className="flex gap-8"><div className="text-right space-y-1"><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/80">Average</div><div className="text-2xl font-black tracking-tighter text-foreground tabular-nums">{totalPrecision}%</div></div><div className="text-right space-y-1"><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/80">Done</div><div className="text-2xl font-black tracking-tighter text-foreground tabular-nums">{pastPractices.length}</div></div></div>
           </div>
           <div className="grid grid-cols-12 gap-8">
             <div className="col-span-12 space-y-12">
@@ -365,7 +368,7 @@ export function PracticeModule() {
                     { label: 'Target', value: '95%', icon: <Target size={12}/>, color: 'text-muted-foreground' }
                   ].map((stat, i) => (
                     <div key={i} className="p-5 border border-border bg-background rounded-lg space-y-2 hover:border-primary/50 transition-all group">
-                      <div className="flex items-center gap-2 text-muted-foreground/30">
+                      <div className="flex items-center gap-2 text-muted-foreground/60">
                         {stat.icon}
                         <span className="text-[8px] font-black uppercase tracking-widest">{stat.label}</span>
                       </div>
@@ -382,7 +385,7 @@ export function PracticeModule() {
                         <div className="w-1 h-4 bg-primary"></div>
                         <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Proficiency Trend</h3>
                       </div>
-                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Last 15 Sessions</span>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Last 15 Sessions</span>
                     </div>
                     <div className="flex-1 w-full min-h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
@@ -425,7 +428,7 @@ export function PracticeModule() {
                       ].map((stat, i) => (
                         <div key={i} className="space-y-2">
                           <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                            <span className="text-muted-foreground/40">{stat.type}</span>
+                            <span className="text-muted-foreground/70">{stat.type}</span>
                             <span className="text-foreground">{stat.p}%</span>
                           </div>
                           <div className="h-1 bg-muted/20 rounded-full overflow-hidden">
@@ -450,7 +453,7 @@ export function PracticeModule() {
                             <div className="text-[10px] font-black uppercase tracking-tight text-foreground h-10 line-clamp-2 leading-tight">{hub.title}</div>
                             <div className="flex items-end gap-2">
                               <div className="text-3xl font-black tracking-tighter text-primary leading-none">{mastery}%</div>
-                              <div className="text-[8px] font-black uppercase text-muted-foreground/30 mb-1 tracking-widest">Mastered</div>
+                              <div className="text-[8px] font-black uppercase text-muted-foreground/60 mb-1 tracking-widest">Mastered</div>
                             </div>
                             <div className="h-0.5 w-full bg-muted/10 rounded-full overflow-hidden">
                               <div className="h-full bg-foreground/20" style={{ width: `${mastery}%` }}></div>
@@ -462,7 +465,7 @@ export function PracticeModule() {
                   </div>
                </div>
                
-               <Button onClick={() => setView('history')} variant="ghost" className="w-full h-16 border border-dashed border-border text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all">
+               <Button onClick={() => setView('history')} variant="ghost" className="w-full h-16 border border-dashed border-border text-[9px] font-black uppercase tracking-widest text-muted-foreground/80 hover:text-foreground transition-all">
                  View Comprehensive History Log <ChevronRight size={10} className="ml-2"/>
                </Button>
             </div>
@@ -477,7 +480,7 @@ export function PracticeModule() {
   // ──────────────────────────────────────────────────────────────────────────
   if (view === 'history') {
     return (
-      <div className="h-full flex-1 flex flex-row w-full bg-background text-foreground animate-in fade-in duration-500 font-sans overflow-hidden">
+      <div className="h-full flex-1 flex flex-row w-full bg-background text-foreground font-sans overflow-hidden">
         <div className="w-64 border-r border-border bg-muted/20 flex flex-col shrink-0">
           <div className="p-6 space-y-8">
             <div className="flex items-center gap-2 mb-10"><div className="w-5 h-5 rounded-sm bg-primary flex items-center justify-center"><BrainCircuit size={14} className="text-primary-foreground" /></div><span className="text-[10px] font-black uppercase tracking-widest">Practice</span></div>
@@ -489,14 +492,14 @@ export function PracticeModule() {
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-10">
           <div className="flex items-end justify-between border-b border-border pb-10">
-            <div className="space-y-2"><span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">History</span><h1 className="text-4xl font-black tracking-tighter uppercase leading-none text-foreground">Past<br/><span className="text-muted-foreground/30">Sessions</span></h1></div>
-            <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">{pastPractices.length} Sessions</span>
+            <div className="space-y-2"><span className="text-[10px] font-black text-muted-foreground/80 uppercase tracking-widest">History</span><h1 className="text-4xl font-black tracking-tighter uppercase leading-none text-foreground">Past<br/><span className="text-muted-foreground/50">Sessions</span></h1></div>
+            <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">{pastPractices.length} Sessions</span>
           </div>
           <div className="grid grid-cols-1 border border-border rounded-md overflow-hidden divide-y divide-border/50 shadow-sm">
             {pastPractices.slice().reverse().map((p, i) => (
               <div key={i} onClick={() => handleResumePractice(p.path)} className="bg-background hover:bg-muted/30 p-5 flex items-center justify-between group transition-colors cursor-pointer">
-                <div className="flex flex-col gap-1 min-w-0"><span className="text-[11px] font-black uppercase tracking-widest truncate text-foreground group-hover:text-primary transition-colors">{p.hub_title || 'Unknown Topic'}</span><span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">{p.course || 'Global'} // {new Date(p.date).toLocaleDateString()}</span></div>
-                <div className="flex items-center gap-10"><div className={cn("text-lg font-black tracking-tighter tabular-nums", parseInt(p.score) >= 80 ? "text-foreground" : "text-muted-foreground/30")}>{p.score}%</div><button onClick={(e) => { e.stopPropagation(); handleDeletePractice(p.path); }} className="p-2 opacity-0 group-hover:opacity-100 hover:text-destructive transition-all"><Trash2 size={12}/></button></div>
+                <div className="flex flex-col gap-1 min-w-0"><span className="text-[11px] font-black uppercase tracking-widest truncate text-foreground group-hover:text-primary transition-colors">{p.hub_title || 'Unknown Topic'}</span><span className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest">{p.course || 'Global'} // {new Date(p.date).toLocaleDateString()}</span></div>
+                <div className="flex items-center gap-10"><div className={cn("text-lg font-black tracking-tighter tabular-nums", parseInt(p.score) >= 80 ? "text-foreground" : "text-muted-foreground/50")}>{p.score}%</div><button onClick={(e) => { e.stopPropagation(); handleDeletePractice(p.path); }} className="p-2 opacity-0 group-hover:opacity-100 hover:text-destructive transition-all"><Trash2 size={12}/></button></div>
               </div>
             ))}
           </div>
@@ -511,27 +514,27 @@ export function PracticeModule() {
   if (view === 'configuring') {
     const totalQuestions = Object.values(advancedConfig.questionDistribution).reduce((a, b) => a + b, 0)
     return (
-      <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground animate-in fade-in duration-500 overflow-y-auto custom-scrollbar">
+      <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar">
         <div className="max-w-4xl mx-auto px-8 py-20 w-full space-y-16">
           <div className="flex items-end justify-between border-b border-border pb-10">
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground uppercase tracking-widest"><button onClick={() => setView('dashboard')} className="hover:text-foreground">Cancel</button><ChevronRight size={10} className="opacity-20"/><span className="text-foreground">Start</span></div>
-              <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">New <span className="text-muted-foreground/30">Session</span></h1>
+              <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">New <span className="text-muted-foreground/50">Session</span></h1>
             </div>
-            <div className="flex flex-col items-end gap-2"><span className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-widest">Questions</span><div className="text-2xl font-black text-primary tracking-tighter">{totalQuestions}</div></div>
+            <div className="flex flex-col items-end gap-2"><span className="text-[10px] font-black text-muted-foreground/70 uppercase tracking-widest">Questions</span><div className="text-2xl font-black text-primary tracking-tighter">{totalQuestions}</div></div>
           </div>
           <div className="flex flex-col gap-16">
             <div className="space-y-12">
                <div className="space-y-6">
-                 <div className="flex items-center gap-3"><span className="text-[10px] font-black text-muted-foreground/30">01</span><h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Topic</h3></div>
+                 <div className="flex items-center gap-3"><span className="text-[10px] font-black text-muted-foreground/50">01</span><h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Topic</h3></div>
                  <div className="space-y-4">
                     <Select value={selectedHub} onValueChange={setSelectedHub}>
-                        <SelectTrigger className="w-full h-14 bg-muted/10 border-border rounded-md px-6 text-left uppercase focus:ring-primary"><div className="flex flex-col gap-0.5"><span className="text-[8px] text-muted-foreground/40">{hubs.find(h => h.id === selectedHub)?.course || "SELECT"}</span><div className="text-[11px] font-black text-foreground"><SelectValue placeholder="Select topic..." /></div></div></SelectTrigger>
-                        <SelectContent className="rounded-md border-border bg-popover shadow-xl">{hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="py-3 px-4 focus:bg-accent uppercase"><div className="flex flex-col gap-0.5"><span className="text-[10px] font-black tracking-widest">{hub.title}</span><span className="text-[8px] font-black text-muted-foreground/50">{hub.course}</span></div></SelectItem>))}</SelectContent>
+                        <SelectTrigger className="w-full h-14 bg-muted/10 border-border rounded-md px-6 text-left uppercase focus:ring-primary"><div className="flex flex-col gap-0.5"><span className="text-[8px] text-muted-foreground/60">{hubs.find(h => h.id === selectedHub)?.course || "SELECT"}</span><div className="text-[11px] font-black text-foreground"><SelectValue placeholder="Select topic..." /></div></div></SelectTrigger>
+                        <SelectContent className="rounded-md border-border bg-popover shadow-xl">{hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="py-3 px-4 focus:bg-accent uppercase"><div className="flex flex-col gap-0.5"><span className="text-[10px] font-black tracking-widest">{hub.title}</span><span className="text-[8px] font-black text-muted-foreground/70">{hub.course}</span></div></SelectItem>))}</SelectContent>
                     </Select>
                  </div>
                  <div className="space-y-4">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground/50">Level</Label>
+                    <Label className="text-[10px] font-black uppercase text-foreground/80">Level</Label>
                     <RadioGroup value={advancedConfig.difficulty} onValueChange={(val) => setAdvancedConfig(prev => ({ ...prev, difficulty: val as any }))} className="grid grid-cols-2 gap-3">
                         {[
                           { val: 'L1', label: 'Level 1' },
@@ -545,10 +548,10 @@ export function PracticeModule() {
                   </div>
                </div>
                <div className="space-y-6">
-                 <div className="flex items-center gap-3"><span className="text-[10px] font-black text-muted-foreground/30">02</span><h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Time</h3></div>
+                 <div className="flex items-center gap-3"><span className="text-[10px] font-black text-muted-foreground/50">02</span><h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Time</h3></div>
                  <div className="grid grid-cols-2 gap-px bg-border border border-border overflow-hidden rounded-md">
                     <div className="bg-background p-5 space-y-2">
-                      <Label className="text-[9px] font-black uppercase text-muted-foreground/50">Total Time</Label>
+                      <Label className="text-[9px] font-black uppercase text-foreground/80">Total Time</Label>
                       <Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val) => setAdvancedConfig(prev => ({ ...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val) }))}>
                         <SelectTrigger className="bg-muted/5 border-none h-10 font-black text-[10px] uppercase tracking-widest focus:ring-0 px-0 shadow-none">
                           <SelectValue placeholder="None" />
@@ -562,7 +565,7 @@ export function PracticeModule() {
                       </Select>
                     </div>
                     <div className="bg-background p-5 space-y-2">
-                      <Label className="text-[9px] font-black uppercase text-muted-foreground/50">Per Question</Label>
+                      <Label className="text-[9px] font-black uppercase text-muted-foreground/70">Per Question</Label>
                       <Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val) => setAdvancedConfig(prev => ({ ...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val) }))}>
                         <SelectTrigger className="bg-muted/5 border-none h-10 font-black text-[10px] uppercase tracking-widest focus:ring-0 px-0 shadow-none">
                           <SelectValue placeholder="None" />
@@ -578,9 +581,9 @@ export function PracticeModule() {
                  </div>
                </div>
                <div className="space-y-6">
-                  <div className="flex items-center gap-3"><span className="text-[10px] font-black text-muted-foreground/30">03</span><h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Sources</h3></div>
+                  <div className="flex items-center gap-3"><span className="text-[10px] font-black text-muted-foreground/50">03</span><h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Sources</h3></div>
                   <div className="space-y-4">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground/50">Notes</Label>
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground/70">Notes</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-between h-14 border-border bg-muted/10 hover:bg-muted/20 rounded-md px-6 text-left group">
@@ -595,7 +598,7 @@ export function PracticeModule() {
                       <PopoverContent className="w-[400px] p-0 rounded-md border border-border bg-popover shadow-2xl" align="start">
                         <Command className="bg-transparent">
                           <div className="p-2 border-b border-border flex justify-between items-center bg-muted/5">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 ml-2">{availableNotes.length} Found</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 ml-2">{availableNotes.length} Found</span>
                             <Button 
                               variant="ghost" 
                               size="sm" 
@@ -613,7 +616,7 @@ export function PracticeModule() {
                           </div>
                           <CommandInput placeholder="Search notes..." className="font-black border-none h-12 text-[10px] uppercase tracking-widest" />
                           <CommandList className="custom-scrollbar max-h-72">
-                            <CommandEmpty className="py-12 text-center text-[10px] font-black text-muted-foreground/30 uppercase tracking-widest">No matching notes.</CommandEmpty>
+                            <CommandEmpty className="py-12 text-center text-[10px] font-black text-muted-foreground/50 uppercase tracking-widest">No matching notes.</CommandEmpty>
                             <CommandGroup>
                               {availableNotes.map(note => { 
                                 const id = note.id; 
@@ -636,7 +639,7 @@ export function PracticeModule() {
                   </div>
                </div>
                <div className="space-y-6">
-                  <div className="flex items-center gap-3"><span className="text-[10px] font-black text-muted-foreground/30">04</span><h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Questions</h3></div>
+                  <div className="flex items-center gap-3"><span className="text-[10px] font-black text-muted-foreground/50">04</span><h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Questions</h3></div>
                   <div className="grid grid-cols-2 gap-x-12 gap-y-10">
                     {[
                       { key: 'mcq', label: 'Choices', desc: 'Standard multiple choice questions.' }, 
@@ -651,12 +654,12 @@ export function PracticeModule() {
                       <div key={type.key} className="space-y-3">
                         <div className="flex justify-between items-center group/item">
                           <div className="flex items-center gap-2">
-                            <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{type.label}</Label>
+                            <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70">{type.label}</Label>
                             <Popover>
                               <PopoverTrigger asChild>
-                                <button className="text-muted-foreground/20 hover:text-primary transition-colors focus:outline-none"><Info size={10}/></button>
+                                <button className="text-muted-foreground/60 hover:text-primary transition-colors focus:outline-none"><Info size={10}/></button>
                               </PopoverTrigger>
-                              <PopoverContent side="top" align="start" className="p-3 w-48 bg-popover border border-border rounded shadow-xl animate-in fade-in zoom-in duration-200">
+                              <PopoverContent side="top" align="start" className="p-3 w-48 bg-popover border border-border rounded shadow-xl">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-foreground leading-tight">{type.desc}</p>
                               </PopoverContent>
                             </Popover>
@@ -690,7 +693,7 @@ export function PracticeModule() {
 
   if (view === 'loading') {
     return (
-        <div className="h-full flex-1 flex flex-col items-center justify-center bg-background text-foreground animate-in fade-in duration-500">
+        <div className="h-full flex-1 flex flex-col items-center justify-center bg-background text-foreground">
             <div className="flex flex-col items-center gap-10">
                 <div className="relative flex items-center justify-center">
                     <Loader2 size={64} className="text-primary animate-spin" />
@@ -710,12 +713,12 @@ export function PracticeModule() {
 
   if (view === 'session' && currentQuestion) {
     return (
-      <div className="h-full w-full flex flex-col bg-background text-foreground font-sans overflow-hidden animate-in fade-in duration-700">
+      <div className="h-full w-full flex flex-col bg-background text-foreground font-sans overflow-hidden">
         <div className="px-10 py-6 border-b border-border flex items-center justify-between bg-background/50 backdrop-blur-xl z-20 shrink-0">
           <div className="flex items-center gap-12">
             <div className="space-y-1.5">
-              <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">Current Session</span>
-              <div className="text-[11px] font-black uppercase tracking-widest text-foreground/80">
+              <span className="text-[9px] font-black text-muted-foreground/70 uppercase tracking-[0.2em]">Current Session</span>
+              <div className="text-[11px] font-black uppercase tracking-widest text-foreground">
                 {hubs.find(h => h.id === selectedHub)?.title || 'Topic Exploration'}
               </div>
             </div>
@@ -741,15 +744,15 @@ export function PracticeModule() {
                 {Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}
               </span>
             )}
-            <span className="text-muted-foreground/30">Progress <span className="text-foreground/70 ml-2">{currentQuestionIdx + 1} / {questions.length}</span></span>
+            <span className="text-muted-foreground/80">Progress <span className="text-foreground ml-2">{currentQuestionIdx + 1} / {questions.length}</span></span>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col">
           <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-10 flex flex-col justify-center">
              <div className="space-y-10">
-               <div className="space-y-6 animate-in slide-in-from-top-4 fade-in duration-700">
-                  <div className="flex items-center gap-3 text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">
+               <div className="space-y-6">
+                  <div className="flex items-center gap-3 text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/70">
                     <Badge variant="outline" className="text-[7px] px-1.5 py-0 border-border/50 rounded-sm uppercase bg-muted/5">
                       {currentQuestion.difficulty}
                     </Badge>
@@ -761,7 +764,7 @@ export function PracticeModule() {
                   </h2>
                </div>
 
-               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-1000 delay-200">
+               <div className="space-y-4">
                   {currentQuestion.type === 'mcq' && (
                     <div className="grid grid-cols-1 gap-3">
                       {Object.entries(currentQuestion.options!).map(([key, val]) => { 
@@ -943,7 +946,7 @@ export function PracticeModule() {
                         onChange={(e) => handleSelectAnswer(e.target.value)} 
                       />
                       {isRevealed && (
-                        <div className="p-10 border-l-4 border-primary bg-primary/5 space-y-6 rounded-r-2xl animate-in slide-in-from-left-4 duration-700">
+                        <div className="p-10 border-l-4 border-primary bg-primary/5 space-y-6 rounded-r-2xl">
                           <div className="text-[10px] font-black uppercase text-primary tracking-[0.3em]">System Solution</div>
                           <div className="text-[13px] font-medium tracking-tight text-foreground/70 leading-relaxed bg-black/40 p-6 rounded-xl whitespace-pre-wrap shadow-inner border border-white/5">{String(currentQuestion.answer || "No solution provided.")}</div>
                         </div>
@@ -985,7 +988,7 @@ export function PracticeModule() {
                         onChange={(e) => handleSelectAnswer(e.target.value)} 
                       />
                       {isRevealed && (
-                        <div className="p-10 border-l-4 border-primary bg-primary/5 space-y-6 animate-in slide-in-from-left-4 duration-1000 rounded-r-2xl">
+                        <div className="p-10 border-l-4 border-primary bg-primary/5 space-y-6 rounded-r-2xl">
                           <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary">
                             <Filter size={14}/> Academic Model
                           </div>
@@ -998,7 +1001,7 @@ export function PracticeModule() {
                   )}
 
                   {isRevealed && currentQuestion.explanation && (
-                    <div className="p-10 bg-muted/5 border border-border/50 rounded-2xl space-y-6 animate-in fade-in duration-1000">
+                    <div className="p-10 bg-muted/5 border border-border/50 rounded-2xl space-y-6">
                       <div className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-[0.3em]">Pedagogical Insight</div>
                       <div className="text-[12px] font-medium tracking-tight leading-relaxed text-foreground/50 italic">{currentQuestion.explanation}</div>
                     </div>
@@ -1012,7 +1015,7 @@ export function PracticeModule() {
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <Button 
               variant="ghost" 
-              onClick={() => { if (confirm("Terminate session?")) resetSession(); }} 
+              onClick={() => { resetSession(); }} 
               className="h-12 px-8 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 hover:text-destructive hover:bg-destructive/5 transition-all rounded-lg"
             >
               Exit <X size={12} className="ml-3 opacity-30"/>
@@ -1065,7 +1068,7 @@ export function PracticeModule() {
 
   if (view === 'results') {
     return (
-      <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground font-sans overflow-hidden animate-in fade-in duration-700 flex flex-col items-center justify-center p-10">
+      <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground font-sans overflow-hidden flex flex-col items-center justify-center p-10">
          <div className="max-w-md mx-auto w-full text-center space-y-8">
             <div className="space-y-1"><h1 className="text-6xl font-black tracking-tighter leading-none text-foreground">{calculateScore().score}<span className="text-xl text-muted-foreground/30 tracking-normal">%</span></h1><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Final Score</p></div>
             <div className="grid grid-cols-2 divide-x divide-border border-y border-border py-6"><div className="space-y-1"><div className="text-xl font-black tracking-tighter text-foreground">{calculateScore().correct}/{calculateScore().total}</div><div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Correct</div></div><div className="space-y-1"><div className="text-xl font-black tracking-tighter text-foreground">{calculateScore().total}</div><div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Questions</div></div></div>

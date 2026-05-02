@@ -94,10 +94,7 @@ export function TableView({
                         <span className="text-[10px] font-black uppercase tracking-[0.2em]">{selectedIds.size} Items Command</span>
                         <button 
                             onClick={() => {
-                                if (confirm(`Delete ${selectedIds.size} items?`)) {
-                                    selectedIds.forEach(id => onDeleteRow(id));
-                                    setSelectedIds(new Set());
-                                }
+                                handleDeleteRows();
                             }}
                             className="px-4 py-1 bg-background text-foreground hover:bg-background/90 rounded text-[9px] font-black uppercase tracking-widest transition-all"
                         >

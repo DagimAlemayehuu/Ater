@@ -11,7 +11,13 @@ import {
     Eye,
     EyeOff,
     BrainCircuit,
-    Search
+    Search,
+    Edit3,
+    Hash,
+    Plus,
+    X,
+    Check,
+    Trash2
 } from 'lucide-react'
 import { 
     format, 
@@ -33,6 +39,7 @@ import { toast } from 'sonner'
 import ObsidianDatabaseView from './obsidian-database-view'
 import { ObsidianPagePanel } from '@/components/obsidian/ObsidianPagePanel'
 import { PracticeModule } from './practice'
+import { VaultSyncModule } from './vault-sync'
 
 interface AcademicData {
     semesters: any[]
@@ -41,6 +48,7 @@ interface AcademicData {
     exams: any[]
     assignments: any[]
     study_sessions: any[]
+    years: any[]
 }
 
 interface VaultDatabase {
@@ -52,7 +60,7 @@ interface VaultDatabase {
     views?: any[]
 }
 
-type AcademicTab = 'overview' | 'sync' | 'practice'
+type AcademicTab = 'courses' | 'assignments' | 'exams' | 'planner' | 'semesters' | 'years' | 'practice' | 'sync'
 
 /* ─── Master Calendar Component ─── */
 function MasterCalendar({ data, selectedCourseId, onSelectEvent }: { data: AcademicData | null, selectedCourseId: string | null, onSelectEvent: (path: string) => void }) {
@@ -74,17 +82,17 @@ function MasterCalendar({ data, selectedCourseId, onSelectEvent }: { data: Acade
     const renderHeader = () => (
         <div className="flex items-center justify-between mb-8">
             <div className="flex flex-col gap-1">
-                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Timeline</span>
-                <h2 className="text-xl font-black uppercase tracking-tighter text-foreground/80">
+                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/70">Timeline</span>
+                <h2 className="text-xl font-black uppercase tracking-tighter text-foreground">
                     {format(currentMonth, 'MMMM yyyy')}
                 </h2>
             </div>
             <div className="flex items-center gap-2">
-                <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 hover:bg-muted rounded-md transition-colors border border-border/40 text-muted-foreground/40 hover:text-foreground">
+                <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 hover:bg-muted rounded-md transition-colors border border-border/40 text-muted-foreground/60 hover:text-foreground">
                     <ChevronLeft size={16} />
                 </button>
                 <button onClick={() => setCurrentMonth(new Date())} className="px-4 py-1.5 text-[9px] font-black uppercase tracking-widest border border-border/40 hover:bg-muted transition-all">Today</button>
-                <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 hover:bg-muted rounded-md transition-colors border border-border/40 text-muted-foreground/40 hover:text-foreground">
+                <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 hover:bg-muted rounded-md transition-colors border border-border/40 text-muted-foreground/60 hover:text-foreground">
                     <ChevronRight size={16} />
                 </button>
             </div>
@@ -96,7 +104,7 @@ function MasterCalendar({ data, selectedCourseId, onSelectEvent }: { data: Acade
         return (
             <div className="grid grid-cols-7 mb-4">
                 {days.map(day => (
-                    <div key={day} className="text-center text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20 py-2">
+                    <div key={day} className="text-center text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 py-2">
                         {day}
                     </div>
                 ))}
@@ -133,7 +141,7 @@ function MasterCalendar({ data, selectedCourseId, onSelectEvent }: { data: Acade
                         <div className="flex items-center justify-between">
                             <span className={cn(
                                 "text-[10px] font-black tracking-widest uppercase",
-                                isToday(cloneDay) ? "text-foreground" : "text-muted-foreground/20"
+                                isToday(cloneDay) ? "text-foreground" : "text-muted-foreground/80"
                             )}>
                                 {formattedDate}
                             </span>
@@ -184,7 +192,7 @@ export default function AcademicDashboard() {
     const [data, setData] = useState<AcademicData | null>(null)
     const [loading, setLoading] = useState(true)
     const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
-    const [activeTab, setActiveTab] = useState<AcademicTab>('overview')
+    const [activeTab, setActiveTab] = useState<AcademicTab>('courses')
     const [showCalendar, setShowCalendar] = useState(true)
     
     const [databases, setDatabases] = useState<VaultDatabase[]>([])
@@ -192,10 +200,14 @@ export default function AcademicDashboard() {
     const [dbLoading, setDbLoading] = useState(false)
     const [dbSearch, setDbSearch] = useState('')
     const [globalNotePath, setGlobalNotePath] = useState<string | null>(null)
+    
+    // Custom Creation UI State
+    const [createContext, setCreateContext] = useState<{ dbId: string, isCourse: boolean } | null>(null)
+    const [createName, setCreateName] = useState('')
 
     const navigate = useNavigate()
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             const res = await sidecarApi.academicsDashboard()
             setData(res as any)
@@ -205,7 +217,7 @@ export default function AcademicDashboard() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
     const fetchDatabases = useCallback(async () => {
         setDbLoading(true)
@@ -222,7 +234,7 @@ export default function AcademicDashboard() {
     useEffect(() => {
         fetchData()
         fetchDatabases()
-    }, [fetchDatabases])
+    }, [fetchData, fetchDatabases])
 
     if (loading) {
         return (
@@ -243,6 +255,9 @@ export default function AcademicDashboard() {
         return String(courseProp).includes(courseName) || String(h.id).includes(courseName)
     })
 
+    const courseDb = databases.find(db => db.id === "07 - Courses")
+    const courseSchema = courseDb?.schema || {}
+
     const handleSync = async () => {
         try {
             await sidecarApi.academicsSyncProfile()
@@ -251,6 +266,82 @@ export default function AcademicDashboard() {
             fetchDatabases()
         } catch (err) {
             toast.error("Sync Error.")
+        }
+    }
+
+    const handleUpdateCourseProperty = async (key: string, value: any) => {
+        if (!selectedCourseId) return
+        try {
+            await sidecarApi.updateVaultRow("07 - Courses", selectedCourseId, { [key]: value })
+            toast.success(`Updated ${key}`)
+            fetchData()
+        } catch (err) {
+            toast.error("Update failed")
+        }
+    }
+
+    const handleCreateCourse = () => {
+        setCreateName('')
+        setCreateContext({ dbId: "07 - Courses", isCourse: true })
+    }
+
+    const handleCreateRow = (dbId: string) => {
+        setCreateName('')
+        setCreateContext({ dbId, isCourse: false })
+    }
+
+    const confirmCreate = async () => {
+        if (!createContext || !createName.trim()) return
+        
+        try {
+            const res = await sidecarApi.createVaultRow(createContext.dbId, createName.trim(), createContext.isCourse ? { 
+                type: 'Course',
+                status: 'Active',
+                code: 'NEW'
+            } : {})
+            
+            toast.success("Created")
+            await fetchData()
+            if (res.id) setSelectedCourseId(res.id)
+        } catch (err) {
+            toast.error("Creation failed")
+        } finally {
+            setCreateContext(null)
+            setCreateName('')
+        }
+    }
+
+    const handleUpdateRow = async (dbId: string, key: string, value: any) => {
+        if (!selectedCourseId) return
+        try {
+            await sidecarApi.updateVaultRow(dbId, selectedCourseId, { [key]: value })
+            toast.success(`Updated ${key}`)
+            fetchData()
+        } catch (err) {
+            toast.error("Update failed")
+        }
+    }
+
+    const handleDeleteRow = async (dbId: string, id: string) => {
+        try {
+            await sidecarApi.deleteVaultRow(dbId, id)
+            toast.success("Deleted")
+            setSelectedCourseId(null)
+            fetchData()
+        } catch (err) {
+            toast.error("Deletion failed")
+        }
+    }
+
+    const handleDeleteCourse = async () => {
+        if (!selectedCourseId) return
+        try {
+            await sidecarApi.deleteVaultRow("07 - Courses", selectedCourseId)
+            toast.success("Course deleted")
+            setSelectedCourseId(null)
+            fetchData()
+        } catch (err) {
+            toast.error("Deletion failed")
         }
     }
 
@@ -284,7 +375,7 @@ export default function AcademicDashboard() {
     })
 
     return (
-        <div className="h-full flex-1 flex flex-col bg-background font-sans overflow-hidden animate-in fade-in duration-500">
+        <div className="h-full flex-1 flex flex-col bg-background font-sans overflow-hidden">
             {globalNotePath && (
                 <ObsidianPagePanel
                     isOpen={!!globalNotePath}
@@ -296,7 +387,7 @@ export default function AcademicDashboard() {
 
             <div className="flex flex-1 overflow-hidden h-full">
                 {showCalendar && (
-                    <aside className="w-[60%] border-r border-border/10 p-12 flex flex-col overflow-hidden animate-in slide-in-from-left duration-500">
+                    <aside className="w-[60%] border-r border-border/10 p-12 flex flex-col overflow-hidden">
                         <MasterCalendar 
                             data={data} 
                             selectedCourseId={selectedCourseId}
@@ -316,27 +407,43 @@ export default function AcademicDashboard() {
                                                 if (activeTab === 'sync' && selectedDb) setSelectedDb(null)
                                                 else setSelectedCourseId(null)
                                             }}
-                                            className="p-2 hover:bg-muted rounded-md transition-colors border border-border/40 text-muted-foreground/40 hover:text-foreground"
+                                            className="p-2 hover:bg-muted rounded-md transition-colors border border-border/40 text-muted-foreground/60 hover:text-foreground"
                                         >
                                             <ArrowLeft size={16} />
                                         </button>
                                     )}
                                     <div className="flex flex-col gap-0.5">
-                                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/20">
-                                            {selectedCourseId ? "Subject" : (activeTab === 'sync' && selectedDb) ? "Database" : "Command Center"}
+                                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">
+                                            {selectedCourseId ? "Subject" : (activeTab === 'sync' && selectedDb) ? "Database" : activeTab.toUpperCase()}
                                         </span>
-                                        <h1 className="text-xl font-black tracking-tight uppercase text-foreground/80 truncate max-w-[240px]">
-                                            {selectedCourseId ? selectedCourse?.title : (activeTab === 'sync' && selectedDb) ? selectedDb.name : "Academic Hub"}
+                                        <h1 className="text-xl font-black tracking-tight uppercase text-foreground truncate max-w-[240px]">
+                                            {selectedCourseId ? (
+                                                activeTab === 'courses' ? selectedCourse?.title : 
+                                                activeTab === 'assignments' ? data?.assignments?.find(a => a.id === selectedCourseId)?.title :
+                                                activeTab === 'exams' ? data?.exams?.find(e => e.id === selectedCourseId)?.title :
+                                                activeTab === 'planner' ? data?.study_sessions?.find(s => s.id === selectedCourseId)?.title :
+                                                activeTab === 'semesters' ? data?.semesters?.find(s => s.id === selectedCourseId)?.title :
+                                                data?.courses?.find(c => c.id === selectedCourseId)?.title // Fallback
+                                            ) : (activeTab === 'sync' && selectedDb) ? selectedDb.name : "Academic Hub"}
                                         </h1>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
+                                    {activeTab === 'sync' && (
+                                        <button 
+                                            onClick={handleSync}
+                                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-foreground text-foreground hover:bg-foreground hover:text-background text-[9px] font-black uppercase tracking-widest transition-all"
+                                        >
+                                            <RefreshCw size={14} />
+                                            <span className="hidden sm:inline">Sync Academic Profile</span>
+                                        </button>
+                                    )}
                                     <button 
                                         onClick={() => setShowCalendar(!showCalendar)}
                                         className={cn(
                                             "flex items-center gap-2 px-4 py-2 rounded-lg border text-[9px] font-black uppercase tracking-widest transition-all",
                                             showCalendar 
-                                                ? "bg-muted border-border/40 text-muted-foreground/40 hover:text-foreground" 
+                                                ? "bg-muted border-border/40 text-muted-foreground/60 hover:text-foreground" 
                                                 : "border-foreground text-foreground hover:bg-foreground hover:text-background"
                                         )}
                                     >
@@ -346,27 +453,53 @@ export default function AcademicDashboard() {
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-1 bg-muted/10 p-1 rounded-xl border border-border/10">
-                                <TabButton active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} icon={<LayoutGrid size={14} />} label="Overview" />
-                                <TabButton active={activeTab === 'sync'} onClick={() => setActiveTab('sync')} icon={<RefreshCw size={14} />} label="Sync" />
-                                <TabButton active={activeTab === 'practice'} onClick={() => setActiveTab('practice')} icon={<BrainCircuit size={14} />} label="Practice" />
+                            <div className="flex items-center gap-1 bg-muted/10 p-1 rounded-xl border border-border/10 overflow-x-auto custom-scrollbar">
+                                <TabButton active={activeTab === 'courses'} onClick={() => {setActiveTab('courses'); setSelectedCourseId(null); setCreateContext(null)}} icon={<LayoutGrid size={14} />} label="Courses" />
+                                <TabButton active={activeTab === 'assignments'} onClick={() => {setActiveTab('assignments'); setSelectedCourseId(null); setCreateContext(null)}} icon={<Layers size={14} />} label="Assignments" />
+                                <TabButton active={activeTab === 'exams'} onClick={() => {setActiveTab('exams'); setSelectedCourseId(null); setCreateContext(null)}} icon={<Database size={14} />} label="Exams" />
+                                <TabButton active={activeTab === 'planner'} onClick={() => {setActiveTab('planner'); setSelectedCourseId(null); setCreateContext(null)}} icon={<RefreshCw size={14} />} label="Planner" />
+                                <TabButton active={activeTab === 'semesters'} onClick={() => {setActiveTab('semesters'); setSelectedCourseId(null); setCreateContext(null)}} icon={<LayoutGrid size={14} />} label="Semesters" />
+                                <TabButton active={activeTab === 'years'} onClick={() => {setActiveTab('years'); setSelectedCourseId(null); setCreateContext(null)}} icon={<Layers size={14} />} label="Years" />
+                                <TabButton active={activeTab === 'practice'} onClick={() => {setActiveTab('practice'); setSelectedCourseId(null); setCreateContext(null)}} icon={<BrainCircuit size={14} />} label="Practice" />
+                                <TabButton active={activeTab === 'sync'} onClick={() => {setActiveTab('sync'); setSelectedDb(null); setSelectedCourseId(null); setCreateContext(null)}} icon={<Database size={14} />} label="Sync" />
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden relative">
                         {activeTab === 'practice' ? (
-                            <div className="h-full w-full bg-background overflow-hidden animate-in fade-in duration-500">
-                                <PracticeModule />
+                            <div className="h-full w-full bg-background overflow-hidden">
+                                <PracticeModule noAnimation={true} />
                             </div>
                         ) : (
                             <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-12 pb-32">
-                                {activeTab === 'overview' && (
-                                    <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500">
+                                <div className="max-w-4xl mx-auto h-full">
+                                    {createContext && (
+                                        <div className="p-4 bg-muted/10 border border-primary/20 rounded-xl mb-8 flex gap-3 shadow-lg shadow-primary/5 animate-in fade-in slide-in-from-top-2">
+                                            <div className="flex items-center gap-2 text-primary">
+                                                <Plus size={14} />
+                                            </div>
+                                            <input 
+                                                autoFocus
+                                                value={createName}
+                                                onChange={e => setCreateName(e.target.value)}
+                                                placeholder={`Name for new ${createContext.dbId.split(' - ')[1].slice(0, -1)}...`}
+                                                className="flex-1 bg-transparent border-b border-primary/40 focus:border-primary text-sm font-bold text-foreground focus:outline-none transition-colors"
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter') confirmCreate()
+                                                    if (e.key === 'Escape') setCreateContext(null)
+                                                }}
+                                            />
+                                            <button onClick={confirmCreate} className="px-4 bg-primary text-primary-foreground text-[10px] uppercase tracking-widest font-black rounded hover:opacity-90 transition-opacity">Deploy</button>
+                                            <button onClick={() => setCreateContext(null)} className="px-4 bg-muted border border-border/40 text-muted-foreground text-[10px] uppercase tracking-widest font-black rounded hover:bg-muted/80 transition-colors">Abort</button>
+                                        </div>
+                                    )}
+                                    {activeTab === 'courses' && (
+                                        <div className="space-y-12">
                                         {!selectedCourseId ? (
                                             <>
                                                 <section className="space-y-6">
-                                                    <SectionHeader title="Active Courses" />
+                                                    <SectionHeader title="Active Courses" onAction={handleCreateCourse} />
                                                     <div className="grid grid-cols-1 gap-2">
                                                         {activeCourses.map((course, idx) => (
                                                             <CourseCard key={idx} course={course} onClick={() => setSelectedCourseId(course.id)} />
@@ -384,53 +517,112 @@ export default function AcademicDashboard() {
                                                 </section>
                                             </>
                                         ) : (
-                                            <section className="space-y-6">
-                                                <SectionHeader title="Study Modules" />
-                                                <div className="grid grid-cols-1 gap-2">
-                                                    {courseHubs.map((hub, idx) => (
-                                                        <HubCard key={idx} hub={hub} onClick={() => navigate(`/obsidian?path=3-Database/06 - Study Planner/${hub.id}.md&fullscreen=true`)} />
-                                                    ))}
-                                                </div>
-                                            </section>
-                                        )}
-                                    </div>
-                                )}
-
-                                {activeTab === 'sync' && (
-                                    <div className="h-full flex flex-col -m-10 animate-in fade-in slide-in-from-right-4 duration-500 overflow-hidden">
-                                        {selectedDb ? (
-                                            <ObsidianDatabaseView database={selectedDb as any} onBack={() => setSelectedDb(null)} onNavigate={handleNavigate} onRefresh={fetchDatabases} />
-                                        ) : (
-                                            <div className="p-10 space-y-10 overflow-y-auto custom-scrollbar flex-1">
+                                            <div className="space-y-12">
                                                 <section className="space-y-6">
                                                     <div className="flex items-center justify-between">
-                                                        <SectionHeader title="Database Sync" />
-                                                        <button onClick={handleSync} className="p-2 border border-border/40 rounded-md hover:bg-muted transition-all"><RefreshCw size={14} /></button>
+                                                        <SectionHeader title="Course Configuration" />
+                                                        <button 
+                                                            onClick={() => handleDeleteCourse(selectedCourseId)}
+                                                            className="p-1.5 hover:bg-destructive/10 text-muted-foreground/20 hover:text-destructive transition-all rounded-md"
+                                                            title="Delete Course"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                        </button>
                                                     </div>
-                                                    <div className="relative">
-                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/30" size={14} />
-                                                        <input type="text" placeholder="SEARCH..." value={dbSearch} onChange={(e) => setDbSearch(e.target.value)} className="w-full bg-muted/10 border border-border/40 rounded-lg pl-9 pr-4 py-2.5 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:ring-0" />
-                                                    </div>
-                                                    <div className="space-y-8">
-                                                        {Object.entries(categorizedDbs).map(([area, dbs]) => (
-                                                            <div key={area} className="space-y-3">
-                                                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">{area}</span>
-                                                                <div className="grid grid-cols-1 gap-2">
-                                                                    {dbs.map(db => (
-                                                                        <div key={db.id} onClick={() => setSelectedDb(db)} className="flex items-center justify-between p-5 border border-border/40 rounded-lg hover:border-foreground/20 cursor-pointer transition-all">
-                                                                            <span className="text-[11px] font-black uppercase tracking-tight text-foreground/70">{db.name}</span>
-                                                                            <ChevronRight size={14} className="text-muted-foreground/20" />
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
+                                                    <CoursePropertyGrid 
+                                                        course={selectedCourse} 
+                                                        schema={courseSchema}
+                                                        onUpdate={handleUpdateCourseProperty} 
+                                                    />
+                                                </section>
+
+                                                <section className="space-y-6">
+                                                    <SectionHeader title="Study Modules" />
+                                                    <div className="grid grid-cols-1 gap-2">
+                                                        {courseHubs.map((hub, idx) => (
+                                                            <HubCard key={idx} hub={hub} onClick={() => navigate(`/obsidian?path=3-Database/06 - Study Planner/${hub.id}.md&fullscreen=true`)} />
                                                         ))}
+                                                        {courseHubs.length === 0 && <EmptyState message="No study modules found." />}
                                                     </div>
                                                 </section>
                                             </div>
                                         )}
                                     </div>
                                 )}
+
+                                {activeTab === 'assignments' && (
+                                    <UniversalDatabaseTab 
+                                        dbId="03 - Assignments"
+                                        data={data?.assignments || []}
+                                        databases={databases}
+                                        selectedId={selectedCourseId}
+                                        onSelect={setSelectedCourseId}
+                                        onUpdate={(key, val) => handleUpdateRow("03 - Assignments", key, val)}
+                                        onCreate={() => handleCreateRow("03 - Assignments")}
+                                        onDelete={(id) => handleDeleteRow("03 - Assignments", id)}
+                                    />
+                                )}
+
+                                {activeTab === 'exams' && (
+                                    <UniversalDatabaseTab 
+                                        dbId="04 - Exams"
+                                        data={data?.exams || []}
+                                        databases={databases}
+                                        selectedId={selectedCourseId}
+                                        onSelect={setSelectedCourseId}
+                                        onUpdate={(key, val) => handleUpdateRow("04 - Exams", key, val)}
+                                        onCreate={() => handleCreateRow("04 - Exams")}
+                                        onDelete={(id) => handleDeleteRow("04 - Exams", id)}
+                                    />
+                                )}
+
+                                {activeTab === 'planner' && (
+                                    <UniversalDatabaseTab 
+                                        dbId="06 - Study Planner"
+                                        data={data?.study_sessions || []}
+                                        databases={databases}
+                                        selectedId={selectedCourseId}
+                                        onSelect={setSelectedCourseId}
+                                        onUpdate={(key, val) => handleUpdateRow("06 - Study Planner", key, val)}
+                                        onCreate={() => handleCreateRow("06 - Study Planner")}
+                                        onDelete={(id) => handleDeleteRow("06 - Study Planner", id)}
+                                    />
+                                )}
+
+                                {activeTab === 'semesters' && (
+                                    <UniversalDatabaseTab 
+                                        dbId="08 - Semesters"
+                                        data={data?.semesters || []}
+                                        databases={databases}
+                                        selectedId={selectedCourseId}
+                                        onSelect={setSelectedCourseId}
+                                        onUpdate={(key, val) => handleUpdateRow("08 - Semesters", key, val)}
+                                        onCreate={() => handleCreateRow("08 - Semesters")}
+                                        onDelete={(id) => handleDeleteRow("08 - Semesters", id)}
+                                    />
+                                )}
+
+                                {activeTab === 'years' && (
+                                    <UniversalDatabaseTab 
+                                        dbId="09 - Years"
+                                        data={data?.years || []}
+                                        databases={databases}
+                                        selectedId={selectedCourseId}
+                                        onSelect={setSelectedCourseId}
+                                        onUpdate={(key, val) => handleUpdateRow("09 - Years", key, val)}
+                                        onCreate={() => handleCreateRow("09 - Years")}
+                                        onDelete={(id) => handleDeleteRow("09 - Years", id)}
+                                    />
+                                )}
+
+                                {activeTab === 'sync' && (
+                                    <div className="h-full flex flex-col -m-10 overflow-hidden">
+                                        <div className="p-10 flex-1 overflow-hidden">
+                                            <VaultSyncModule hideHeader={true} />
+                                        </div>
+                                    </div>
+                                )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -448,7 +640,7 @@ function TabButton({ active, onClick, icon, label }: { active: boolean, onClick:
                 "flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
                 active 
                     ? "bg-background text-foreground shadow-sm border border-border/40" 
-                    : "text-muted-foreground/30 hover:text-muted-foreground"
+                    : "text-muted-foreground/60 hover:text-muted-foreground"
             )}
         >
             {icon}
@@ -457,11 +649,124 @@ function TabButton({ active, onClick, icon, label }: { active: boolean, onClick:
     )
 }
 
-function SectionHeader({ title }: { title: string }) {
+function UniversalDatabaseTab({ 
+    dbId, 
+    data, 
+    databases, 
+    onSelect, 
+    selectedId,
+    onUpdate,
+    onCreate,
+    onDelete,
+    customDataFetcher
+}: { 
+    dbId: string, 
+    data: any[], 
+    databases: VaultDatabase[], 
+    onSelect: (id: string | null) => void,
+    selectedId: string | null,
+    onUpdate: (key: string, value: any) => void,
+    onCreate: () => void,
+    onDelete: (id: string) => void,
+    customDataFetcher?: () => Promise<any[]>
+}) {
+    const [localData, setLocalData] = useState<any[]>(data)
+    const [loading, setLoading] = useState(false)
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        if (customDataFetcher) {
+            setLoading(true)
+            customDataFetcher().then(res => {
+                setLocalData(res)
+                setLoading(false)
+            }).catch(() => setLoading(false))
+        } else {
+            setLocalData(data)
+        }
+    }, [data, customDataFetcher])
+
+    const db = databases.find(d => d.id === dbId)
+    const schema = db?.schema || {}
+    const selectedItem = localData.find(i => i.id === selectedId)
+
+    if (selectedId && selectedItem) {
+        return (
+            <div className="space-y-12">
+                <section className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <SectionHeader title="Properties" />
+                        <div className="flex items-center gap-3">
+                            <button 
+                                onClick={() => onDelete(selectedId)}
+                                className="p-1.5 hover:bg-destructive/10 text-muted-foreground/20 hover:text-destructive transition-all rounded-md"
+                                title="Delete Item"
+                            >
+                                <Trash2 size={12} />
+                            </button>
+                            <button 
+                                onClick={() => navigate(`/obsidian?path=3-Database/${dbId}/${selectedId}.md`)}
+                                className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground transition-all flex items-center gap-2"
+                            >
+                                Open Note <ChevronRight size={10} />
+                            </button>
+                        </div>
+                    </div>
+                    <CoursePropertyGrid 
+                        course={selectedItem} 
+                        schema={schema}
+                        onUpdate={onUpdate} 
+                    />
+                </section>
+                <section className="space-y-6">
+                    <SectionHeader title="Note Content" />
+                    <div className="p-8 border border-border/10 rounded-2xl bg-muted/5">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/20 text-center py-12">
+                            Select 'Open Note' for full editor
+                        </p>
+                    </div>
+                </section>
+            </div>
+        )
+    }
+
+    if (loading) return <div className="py-20 text-center text-muted-foreground">Loading...</div>
+
+    return (
+        <section className="space-y-6">
+            <SectionHeader title={db?.name || 'Items'} onAction={onCreate} />
+            <div className="grid grid-cols-1 gap-2">
+                {localData.map((item, idx) => (
+                    <div 
+                        key={idx} 
+                        onClick={() => onSelect(item.id)} 
+                        className="p-5 border border-border/40 rounded-xl hover:border-foreground/20 cursor-pointer transition-all flex items-center justify-between"
+                    >
+                        <div className="flex flex-col">
+                            <span className="text-[12px] font-black uppercase tracking-tight text-foreground">{item.title || item.id}</span>
+                            <span className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest">
+                                {item.code || item.date || item.status || (item.due_date ? `Due ${format(parseISO(item.due_date), 'MMM dd')}` : 'Active')}
+                            </span>
+                        </div>
+                        <ChevronRight size={14} className="text-muted-foreground/20" />
+                    </div>
+                ))}
+                {localData.length === 0 && <EmptyState message="Nothing found." />}
+            </div>
+        </section>
+    )
+}
+
+function SectionHeader({ title, onAction }: { title: string, onAction?: () => void }) {
     return (
         <div className="flex items-center gap-4">
-            <h2 className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/20">{title}</h2>
+            <h2 className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">{title}</h2>
             <div className="h-px flex-1 bg-border/10" />
+            {onAction && (
+                <button onClick={onAction} className="p-1 hover:bg-muted rounded-md text-muted-foreground/40 hover:text-foreground transition-all">
+                    <Plus size={10} />
+                </button>
+            )}
         </div>
     )
 }
@@ -470,8 +775,8 @@ function CourseCard({ course, onClick }: { course: any, onClick: () => void }) {
     return (
         <div onClick={onClick} className="p-5 border border-border/40 rounded-xl hover:border-foreground/20 cursor-pointer transition-all flex items-center justify-between">
             <div className="flex flex-col">
-                <span className="text-[12px] font-black uppercase tracking-tight text-foreground/70">{course.title}</span>
-                <span className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{course.Professor || 'General'}</span>
+                <span className="text-[12px] font-black uppercase tracking-tight text-foreground">{course.title}</span>
+                <span className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest">{course.Professor || 'General'}</span>
             </div>
             <ChevronRight size={14} className="text-muted-foreground/20" />
         </div>
@@ -482,8 +787,8 @@ function HubCard({ hub, onClick }: { hub: any, onClick: () => void }) {
     return (
         <div onClick={onClick} className="p-5 border border-border/40 rounded-xl hover:border-foreground/20 cursor-pointer transition-all flex items-center justify-between">
             <div className="flex flex-col">
-                <span className="text-[12px] font-black uppercase tracking-tight text-foreground/70">{hub.title}</span>
-                <span className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">Unit {hub.unit || '--'}</span>
+                <span className="text-[12px] font-black uppercase tracking-tight text-foreground">{hub.title}</span>
+                <span className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest">Unit {hub.unit || '--'}</span>
             </div>
             <ChevronRight size={14} className="text-muted-foreground/20" />
         </div>
@@ -493,8 +798,8 @@ function HubCard({ hub, onClick }: { hub: any, onClick: () => void }) {
 function TimelineItem({ title, date, type, onClick }: { title: string, date: string, type: string, onClick: () => void }) {
     return (
         <div onClick={onClick} className="p-4 border-b border-border/10 flex items-center justify-between hover:bg-muted/5 cursor-pointer transition-all">
-            <span className="text-[11px] font-black uppercase tracking-tight text-foreground/60">{title}</span>
-            <span className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{date ? format(parseISO(date), 'MMM dd') : '--'}</span>
+            <span className="text-[11px] font-black uppercase tracking-tight text-foreground/80">{title}</span>
+            <span className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest">{date ? format(parseISO(date), 'MMM dd') : '--'}</span>
         </div>
     )
 }
@@ -502,7 +807,84 @@ function TimelineItem({ title, date, type, onClick }: { title: string, date: str
 function EmptyState({ message }: { message: string }) {
     return (
         <div className="py-20 text-center border border-dashed border-border/20 rounded-2xl">
-            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/20">{message}</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">{message}</p>
+        </div>
+    )
+}
+
+function CoursePropertyGrid({ course, schema, onUpdate }: { course: any, schema: Record<string, any>, onUpdate: (key: string, value: any) => void }) {
+    const [editingKey, setEditingKey] = useState<string | null>(null)
+    const [editValue, setEditValue] = useState('')
+
+    // Merge schema keys with existing course properties, excluding internal ones
+    const allKeys = useMemo(() => {
+        const internalKeys = ['id', 'title', 'type', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by'];
+        const keys = new Set([
+            ...Object.keys(schema || {}),
+            ...Object.keys(course || {})
+        ]);
+        return Array.from(keys).filter(key => !internalKeys.includes(key)).sort();
+    }, [schema, course]);
+
+    const handleSave = (key: string) => {
+        onUpdate(key, editValue)
+        setEditingKey(null)
+    }
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {allKeys.map((key) => {
+                const value = course?.[key]
+                const isEmpty = value === undefined || value === null || value === ''
+                
+                return (
+                    <div key={key} className="p-4 bg-muted/5 border border-border/10 rounded-xl hover:bg-muted/10 transition-all flex flex-col gap-2 group/prop">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">{key.replace(/_/g, ' ')}</span>
+                            <Edit3 size={10} className="text-muted-foreground/0 group-hover/prop:text-muted-foreground/20 transition-all" />
+                        </div>
+                        {editingKey === key ? (
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    autoFocus
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleSave(key)
+                                            e.currentTarget.blur()
+                                        }
+                                        if (e.key === 'Escape') {
+                                            setEditingKey(null)
+                                        }
+                                    }}
+                                    onBlur={() => handleSave(key)}
+                                    className="flex-1 bg-transparent border-b border-primary text-[12px] font-bold text-foreground focus:outline-none pb-1"
+                                />
+                                <button onMouseDown={() => handleSave(key)} className="p-1 hover:text-primary text-muted-foreground/40"><Check size={12}/></button>
+                            </div>
+                        ) : (
+                            <div 
+                                className={cn(
+                                    "text-[12px] font-bold cursor-text truncate min-h-[18px]",
+                                    isEmpty ? "text-muted-foreground/20 italic" : "text-foreground"
+                                )}
+                                onClick={() => {
+                                    setEditingKey(key)
+                                    setEditValue(String(value || ''))
+                                }}
+                            >
+                                {isEmpty ? 'Empty' : String(value)}
+                            </div>
+                        )}
+                    </div>
+                )
+            })}
+            {allKeys.length === 0 && (
+                <div className="col-span-full py-12 text-center border border-dashed border-border/10 rounded-xl">
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20">No Configuration properties</span>
+                </div>
+            )}
         </div>
     )
 }

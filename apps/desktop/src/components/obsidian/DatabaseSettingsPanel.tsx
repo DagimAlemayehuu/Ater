@@ -97,12 +97,15 @@ export function DatabaseSettingsPanel({
         sidecarApi.updateVaultDatabaseSchema(database.id, updatedSchema, isRename ? editingProp : undefined, isRename ? formData.name : undefined).then(() => onUpdateSchema?.())
     }
 
-    const handleDeleteProperty = (name: string) => {
-        if (!confirm(`Delete property "${name}"?`)) return
-        const newSchema = { ...database.schema }
-        delete newSchema[name]
-        setPage('properties')
-        sidecarApi.updateVaultDatabaseSchema(database.id, newSchema).then(() => onUpdateSchema?.())
+    const handleDeleteProperty = async (name: string) => {
+        try {
+            const newSchema = { ...database.schema }
+            delete newSchema[name]
+            setPage('properties')
+            sidecarApi.updateVaultDatabaseSchema(database.id, newSchema).then(() => onUpdateSchema?.())
+        } catch (e) {
+            console.error(e)
+        }
     }
 
     const getIcon = (type: string) => {

@@ -181,7 +181,7 @@ async def query_vault_database(db_name: str, secrets: AppSecrets = Depends(get_a
                     props["last_edited_time"] = datetime.datetime.fromtimestamp(stats.st_mtime).isoformat()
                     
                     rows.append({
-                        "id": md_file.name,
+                        "id": md_file.stem,
                         "title": md_file.stem,
                         "properties": props,
                         "content": body # Include body for deep search
@@ -280,6 +280,10 @@ async def update_vault_row(db_name: str, file_name: str, req: UpdateRowRequest, 
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
         
     file_path = Path(secrets.vault_path) / DB_DIR_PREFIX / db_name / file_name
+    if not file_path.exists():
+        if not file_name.endswith(".md"):
+            file_path = Path(secrets.vault_path) / DB_DIR_PREFIX / db_name / f"{file_name}.md"
+    
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
         
@@ -423,7 +427,7 @@ async def create_vault_row(db_name: str, req: CreateRowRequest, secrets: AppSecr
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(f"---\n{new_frontmatter}---{body_content}")
             
-        return {"success": True, "id": file_name, "title": file_name.replace(".md", ""), "properties": data}
+        return {"success": True, "id": file_path.stem, "title": file_path.stem, "properties": data}
     except Exception as e:
         print(f"Error creating {file_name}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -434,6 +438,10 @@ async def delete_vault_row(db_name: str, file_name: str, secrets: AppSecrets = D
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
         
     file_path = Path(secrets.vault_path) / DB_DIR_PREFIX / db_name / file_name
+    if not file_path.exists():
+        if not file_name.endswith(".md"):
+            file_path = Path(secrets.vault_path) / DB_DIR_PREFIX / db_name / f"{file_name}.md"
+
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
         

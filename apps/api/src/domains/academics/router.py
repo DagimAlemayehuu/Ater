@@ -34,7 +34,8 @@ async def get_academics_dashboard(secrets: AppSecrets = Depends(get_app_secrets)
         "units": [],
         "exams": [],
         "assignments": [],
-        "study_sessions": []
+        "study_sessions": [],
+        "years": []
     }
     
     mapping = {
@@ -42,7 +43,8 @@ async def get_academics_dashboard(secrets: AppSecrets = Depends(get_app_secrets)
         "07 - Courses": "courses",
         "04 - Exams": "exams",
         "03 - Assignments": "assignments",
-        "06 - Study Planner": "study_sessions"
+        "06 - Study Planner": "study_sessions",
+        "09 - Years": "years"
     }
     
     for folder_name, key in mapping.items():

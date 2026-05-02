@@ -123,14 +123,12 @@ export default function Settings() {
     }
 
     const handleClear = async () => {
-        if (confirm('Are you sure? This will reset all API keys and local paths.')) {
-            await saveConfig({
-                notionApiKey: '',
-                aiApiKey: '',
-                obsidianVaultPath: '',
-            })
-            window.location.reload()
-        }
+        await saveConfig({
+            notionApiKey: '',
+            aiApiKey: '',
+            obsidianVaultPath: '',
+        })
+        window.location.reload()
     }
 
 
@@ -186,7 +184,7 @@ export default function Settings() {
                                         <div className="text-[12px] font-mono text-muted-foreground truncate opacity-60">••••••••{k.key.slice(-4)}</div>
                                         
                                         <button 
-                                            onClick={() => { if(confirm(`Delete ${k.name}?`)) deleteApiKey(k.id) }}
+                                            onClick={() => { deleteApiKey(k.id) }}
                                             className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
                                             <Trash2 size={12} />

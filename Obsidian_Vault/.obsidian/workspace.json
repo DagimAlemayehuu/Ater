@@ -11,14 +11,12 @@
             "id": "e4e52099906a74b0",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "pdf",
               "state": {
-                "file": "3-Database/06 - Study Planner/2_Recurrence_Relations_Hub.md",
-                "mode": "source",
-                "source": false
+                "file": "5-Pdf Store/note generated/Chapter_7.pdf"
               },
-              "icon": "lucide-file",
-              "title": "2_Recurrence_Relations_Hub"
+              "icon": "lucide-file-text",
+              "title": "Chapter_7"
             }
           }
         ]
@@ -94,7 +92,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "3-Database/06 - Study Planner/2_Recurrence_Relations_Hub.md",
+                "file": "5-Pdf Store/note generated/Chapter_7.pdf",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +102,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for 2_Recurrence_Relations_Hub"
+              "title": "Backlinks for Chapter_7"
             }
           },
           {
@@ -113,12 +111,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "3-Database/06 - Study Planner/2_Recurrence_Relations_Hub.md",
+                "file": "5-Pdf Store/note generated/Chapter_7.pdf",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from 2_Recurrence_Relations_Hub"
+              "title": "Outgoing links from Chapter_7"
             }
           },
           {
@@ -156,13 +154,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "3-Database/06 - Study Planner/2_Recurrence_Relations_Hub.md",
+                "file": "5-Pdf Store/note generated/Chapter_7.pdf",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of 2_Recurrence_Relations_Hub"
+              "title": "Outline of Chapter_7"
             }
           }
         ]
@@ -183,14 +181,26 @@
       "bases:Create new base": false
     }
   },
-  "active": "e4e52099906a74b0",
+  "active": "94183ec2254ed9df",
   "lastOpenFiles": [
+    "3-Database/03 - Assignments/Zc.md",
+    "3-Database/07 - Courses/dagim.md",
+    "3-Database/07 - Courses/New Record 1777702779695.md",
+    "3-Database/12 - Archive/01 - Areas_7f87/Wealth.md",
+    "3-Database/12 - Archive/01 - Areas_7f87/Social.md",
+    "3-Database/12 - Archive/01 - Areas_7f87/Personal.md",
+    "3-Database/12 - Archive/01 - Areas_7f87/Health.md",
+    "3-Database/12 - Archive/01 - Areas_7f87/Academics.md",
+    "3-Database/12 - Archive/01 - Areas_7f87",
+    "3-Database/12 - Archive",
+    "3-Database/06 - Study Planner/2_Recurrence_Relations_Hub.md",
+    "graphify-out",
+    "3-Database/03 - Assignments",
     "5-Pdf Store/note generated/Chapter_7.pdf",
     "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Grouping_With_Aggregation.md",
     "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
     "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Concept_Of_Recursion.md",
     "3-Database/06 - Study Planner/5_Modular_Programming_Hub.md",
-    "3-Database/06 - Study Planner/4_Promoting_Inclusive_Culture_Hub.md",
-    "3-Database/06 - Study Planner/2_Recurrence_Relations_Hub.md"
+    "3-Database/06 - Study Planner/4_Promoting_Inclusive_Culture_Hub.md"
   ]
 }

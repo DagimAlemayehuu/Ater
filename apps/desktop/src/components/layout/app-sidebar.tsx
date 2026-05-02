@@ -16,13 +16,6 @@ export function AppSidebar() {
                 <FileText className="w-6 h-6" />
             </NavLink>
             <NavLink 
-                to="/vault-sync"
-                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")} 
-                title="Vault Sync"
-            >
-                <RefreshCw className="w-6 h-6" />
-            </NavLink>
-            <NavLink 
                 to="/agents"
                 className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")} 
                 title="Agents"
@@ -35,13 +28,6 @@ export function AppSidebar() {
                 title="Academic Mastery"
             >
                 <GraduationCap className="w-6 h-6" />
-            </NavLink>
-            <NavLink 
-                to="/practice"
-                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")} 
-                title="Practice"
-            >
-                <Zap className="w-6 h-6" />
             </NavLink>
         </div>
 
