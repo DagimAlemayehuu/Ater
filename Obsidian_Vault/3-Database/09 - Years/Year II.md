@@ -1,5 +1,5 @@
 ---
-Current Year: false
+Current Year: true
 ---
 
 # Semesters

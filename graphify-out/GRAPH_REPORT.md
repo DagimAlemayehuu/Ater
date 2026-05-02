@@ -1,27 +1,28 @@
-# Graph Report - .  (2026-04-30)
+# Graph Report - LifeOs  (2026-05-02)
 
 ## Corpus Check
-- Large corpus: 400 files · ~278,128 words. Semantic extraction will be expensive (many Claude tokens). Consider running on a subfolder, or use --no-semantic to run AST-only.
+- 179 files · ~289,879 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 952 nodes · 2191 edges · 47 communities detected
-- Extraction: 49% EXTRACTED · 51% INFERRED · 0% AMBIGUOUS · INFERRED: 1123 edges (avg confidence: 0.56)
-- Token cost: 1,000 input · 200 output
+- 1060 nodes · 2741 edges · 49 communities detected
+- Extraction: 41% EXTRACTED · 59% INFERRED · 0% AMBIGUOUS · INFERRED: 1611 edges (avg confidence: 0.55)
+- Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- [[_COMMUNITY_Core AI Logic|Core AI Logic]]
-- [[_COMMUNITY_Notion Sync|Notion Sync]]
-- [[_COMMUNITY_OKA Workflows|OKA Workflows]]
-- [[_COMMUNITY_Agent Architecture|Agent Architecture]]
-- [[_COMMUNITY_Auth & Secrets|Auth & Secrets]]
-- [[_COMMUNITY_Native Bridges|Native Bridges]]
-- [[_COMMUNITY_UI Orchestration|UI Orchestration]]
+- [[_COMMUNITY_Community 0|Community 0]]
+- [[_COMMUNITY_Community 1|Community 1]]
+- [[_COMMUNITY_Community 2|Community 2]]
+- [[_COMMUNITY_Community 3|Community 3]]
+- [[_COMMUNITY_Community 4|Community 4]]
+- [[_COMMUNITY_Community 5|Community 5]]
+- [[_COMMUNITY_Community 6|Community 6]]
 - [[_COMMUNITY_Community 7|Community 7]]
 - [[_COMMUNITY_Community 8|Community 8]]
 - [[_COMMUNITY_Community 9|Community 9]]
 - [[_COMMUNITY_Community 10|Community 10]]
-- [[_COMMUNITY_Form Components (Sheets)|Form Components (Sheets)]]
-- [[_COMMUNITY_Selection UI|Selection UI]]
+- [[_COMMUNITY_Community 11|Community 11]]
+- [[_COMMUNITY_Community 12|Community 12]]
 - [[_COMMUNITY_Community 13|Community 13]]
 - [[_COMMUNITY_Community 15|Community 15]]
 - [[_COMMUNITY_Community 16|Community 16]]
@@ -30,8 +31,9 @@
 - [[_COMMUNITY_Community 19|Community 19]]
 - [[_COMMUNITY_Community 20|Community 20]]
 - [[_COMMUNITY_Community 21|Community 21]]
-- [[_COMMUNITY_AI Sidecar Chat|AI Sidecar Chat]]
-- [[_COMMUNITY_Profile Mapping|Profile Mapping]]
+- [[_COMMUNITY_Community 22|Community 22]]
+- [[_COMMUNITY_Community 23|Community 23]]
+- [[_COMMUNITY_Community 24|Community 24]]
 - [[_COMMUNITY_Community 25|Community 25]]
 - [[_COMMUNITY_Community 28|Community 28]]
 - [[_COMMUNITY_Community 32|Community 32]]
@@ -43,135 +45,140 @@
 - [[_COMMUNITY_Community 41|Community 41]]
 - [[_COMMUNITY_Community 44|Community 44]]
 - [[_COMMUNITY_Community 45|Community 45]]
-- [[_COMMUNITY_Obsidian Vault Structure|Obsidian Vault Structure]]
-- [[_COMMUNITY_Community 49|Community 49]]
+- [[_COMMUNITY_Community 48|Community 48]]
+- [[_COMMUNITY_Community 50|Community 50]]
 - [[_COMMUNITY_Community 51|Community 51]]
 - [[_COMMUNITY_Community 52|Community 52]]
-- [[_COMMUNITY_Community 53|Community 53]]
-- [[_COMMUNITY_Community 106|Community 106]]
-- [[_COMMUNITY_Community 107|Community 107]]
+- [[_COMMUNITY_Community 55|Community 55]]
+- [[_COMMUNITY_Community 56|Community 56]]
 - [[_COMMUNITY_Community 108|Community 108]]
 - [[_COMMUNITY_Community 109|Community 109]]
 - [[_COMMUNITY_Community 110|Community 110]]
+- [[_COMMUNITY_Community 111|Community 111]]
 - [[_COMMUNITY_Community 112|Community 112]]
-- [[_COMMUNITY_Community 113|Community 113]]
-- [[_COMMUNITY_Community 128|Community 128]]
+- [[_COMMUNITY_Community 114|Community 114]]
+- [[_COMMUNITY_Community 115|Community 115]]
+- [[_COMMUNITY_Community 130|Community 130]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `OkaService` - 111 edges
-2. `NotionClient` - 95 edges
-3. `ModelFactory` - 74 edges
-4. `AppSecrets` - 73 edges
-5. `VaultIndexer` - 67 edges
-6. `OkaQueueManager` - 65 edges
-7. `ChromaManager` - 64 edges
-8. `ObsidianClient` - 61 edges
-9. `NotionMirrorService` - 60 edges
-10. `RAGWatcherService` - 59 edges
+1. `OkaService` - 158 edges
+2. `NotionClient` - 142 edges
+3. `AppSecrets` - 125 edges
+4. `ModelFactory` - 121 edges
+5. `VaultIndexer` - 114 edges
+6. `OkaQueueManager` - 112 edges
+7. `ChromaManager` - 111 edges
+8. `ObsidianClient` - 108 edges
+9. `NotionMirrorService` - 107 edges
+10. `RAGWatcherService` - 106 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `LifeOS Mobile (Scriptable)` --provides_interface_for--> `Computer Programming`  [INFERRED]
-  LifeOs_Mobile.js → Obsidian_Vault/3-Database/07 - Courses/Computer Programming.md
+- `handleSync()` --calls--> `fetchDatabases()`  [INFERRED]
+  scratch/academic_snapshot.tsx → apps/mobile-client/src/routes/VaultSync.tsx
 - `main()` --calls--> `AppSecrets`  [INFERRED]
   scratch/test_detect.py → apps/api/src/api/deps.py
 - `main()` --calls--> `OkaService`  [INFERRED]
   scratch/test_detect.py → apps/api/src/domains/oka/service.py
-- `Watches the Inbox, maintains a queue, and processes files autonomously if enable` --uses--> `OkaService`  [INFERRED]
-  apps/api/src/domains/oka/watcher.py → apps/api/src/domains/oka/service.py
-- `Scans the inbox for existing files, adds them to the database, and resets errors` --uses--> `OkaService`  [INFERRED]
-  apps/api/src/domains/oka/watcher.py → apps/api/src/domains/oka/service.py
+- `ChromaManager` --uses--> `Loads mtimes from disk.`  [INFERRED]
+  apps/api/src/domains/rag/vector_store.py → apps/api/src/domains/rag/indexer.py
+- `ChromaManager` --uses--> `Clears the entire ChromaDB and resets local tracker.`  [INFERRED]
+  apps/api/src/domains/rag/vector_store.py → apps/api/src/domains/rag/indexer.py
 
 ## Communities
 
-### Community 0 - "Core AI Logic"
+### Community 0 - "Community 0"
 Cohesion: 0.04
-Nodes (107): get_model(), RateLimitTracker, ai_upload(), delete_obsidian_item(), delete_practice_session(), _ensure_watcher_path(), get_practice_session(), get_rag_sync_status() (+99 more)
+Nodes (185): AppSecrets, ai_upload(), create_notion_page(), delete_notion_page(), delete_obsidian_item(), delete_practice_session(), _ensure_watcher_path(), generate_practice_session() (+177 more)
 
-### Community 1 - "Notion Sync"
+### Community 1 - "Community 1"
 Cohesion: 0.04
-Nodes (64): create_notion_page(), delete_notion_page(), get_notion_page_content(), list_notion_databases(), list_notion_pages(), query_notion_database(), Updates properties for a specific Notion page.     Expects JSON body like: {"pro, Creates a new page in a Notion database.     Expects JSON body with 'properties' (+56 more)
+Nodes (35): NativeBackend, fetchImg(), if(), InlineDatabaseResolver(), load(), MermaidWrapper(), fetchRows(), fetchTemplates() (+27 more)
 
-### Community 2 - "OKA Workflows"
-Cohesion: 0.05
-Nodes (27): generate_practice_session(), oka_generate_plan(), oka_get_paused_sessions(), oka_process_manual(), oka_resume_paused_session(), Phase 1: Pure Detection. No AI usage., Phase 2: AI Planning with locked curriculum., Returns all sessions that were paused due to a rate limit and have saved progres (+19 more)
+### Community 2 - "Community 2"
+Cohesion: 0.11
+Nodes (64): ModelFactory, Unified Model Factory to provide a consistent LangChain interface      across mu, Writes (creates or updates) a specific note., ArchitectAgent, _count_wikilinks(), _has_domain_drift(), _is_rate_limit(), _parse_json() (+56 more)
 
-### Community 3 - "Agent Architecture"
-Cohesion: 0.05
-Nodes (47): AppSecrets, get_app_secrets(), Extracts core secrets from request headers.     Supports 3-tier reasoning levels, BaseModel, getAuthHeaders(), request(), create_property_option(), create_vault_row() (+39 more)
+### Community 3 - "Community 3"
+Cohesion: 0.04
+Nodes (37): get_academics_dashboard(), get_note_data(), get_model(), Captures rate limit information from LLM responses., Capture rate limits and usage stats from metadata., TrackingCallbackHandler, ProviderRateLimit, RateLimitTracker (+29 more)
 
-### Community 4 - "Auth & Secrets"
-Cohesion: 0.18
-Nodes (52): ModelFactory, Unified Model Factory to provide a consistent LangChain interface      across mu, ArchitectAgent, 2-Pass content generator.      Pass 1 (Theorist)  — Sections 1-3: deep prose wit, Returns True if the body talks about things clearly unrelated to the title., Plans the curriculum.  Token-efficient: uses a compact prompt and     falls back, WriterAgent, OkaDeployer (+44 more)
-
-### Community 5 - "Native Bridges"
-Cohesion: 0.08
-Nodes (15): NativeBackend, fetchImg(), load(), fetchRows(), fetchTemplates(), handleCreateRow(), fetchRows(), fetchTemplates() (+7 more)
-
-### Community 6 - "UI Orchestration"
+### Community 4 - "Community 4"
 Cohesion: 0.06
-Nodes (31): InlineDatabaseResolver(), MermaidWrapper(), confirmDeployment(), fetchFiles(), fetchHubConnections(), fetchInbox(), fetchStats(), fetchStatus() (+23 more)
+Nodes (33): cn(), getPageNumbers(), sleep(), NotionCacheService, Retrieves all cached pages for a database., Local SQLite caching layer for Notion data.     Provides 0ms latency for fronten, Retrieves a single cached page by ID., Lists all cached databases. (+25 more)
+
+### Community 5 - "Community 5"
+Cohesion: 0.06
+Nodes (27): handleBack(), handleForward(), confirmDeployment(), fetchFiles(), fetchHubConnections(), fetchInbox(), fetchStats(), fetchStatus() (+19 more)
+
+### Community 6 - "Community 6"
+Cohesion: 0.08
+Nodes (18): is_safe_to_normalize(), normalize(), PdfSanitizer, Scan existing store and prepare for background watching., Autonomously standardizes PDFs to a high-fidelity internal coordinate system., start_auto_sanitizer(), Public method to force save the mtimes to disk., Removes a file's chunks from the vector store and tracking when deleted. (+10 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.18
-Nodes (5): FileSystemEventHandler, InboxHandler, Listens for file changes in the Obsidian Vault and triggers the indexer.     Inc, Simple debounce to prevent spamming the indexer on rapid saves., VaultSyncHandler
+Cohesion: 0.08
+Nodes (9): FileSystemEventHandler, _deep_clean_value(), resolve_si_path(), _nuclear_wikilink_clean(), Asynchronously writes content to a file, ensuring parent directories exist., _strip_wikilink_quotes(), InboxHandler, Scans the inbox for existing files, adds them to the database, and resets errors (+1 more)
 
 ### Community 8 - "Community 8"
+Cohesion: 0.18
+Nodes (17): BaseQuestion, BatchSchema, CodeQuestion, DebugQuestion, FillInQuestion, FindErrorQuestion, MatchingPair, MatchingQuestion (+9 more)
+
+### Community 9 - "Community 9"
 Cohesion: 0.26
 Nodes (12): calculateScore(), handleDeletePractice(), handleResumePractice(), handleSelectAnswer(), handleStartSession(), handleSubmitAnswer(), loadHubNotes(), loadHubs() (+4 more)
 
-### Community 9 - "Community 9"
+### Community 10 - "Community 10"
+Cohesion: 0.18
+Nodes (4): calculateScore(), handleDeletePractice(), loadPastPractices(), nextQuestion()
+
+### Community 11 - "Community 11"
 Cohesion: 0.2
 Nodes (4): fetchInbox(), fetchStatus(), resetOkaSession(), toggleAutoDeploy()
 
-### Community 10 - "Community 10"
-Cohesion: 0.26
-Nodes (7): cn(), getPageNumbers(), sleep(), _count_wikilinks(), _has_domain_drift(), _is_rate_limit(), _parse_json()
-
-### Community 11 - "Form Components (Sheets)"
+### Community 12 - "Community 12"
 Cohesion: 0.33
 Nodes (9): Sheet(), SheetClose(), SheetDescription(), SheetFooter(), SheetHeader(), SheetOverlay(), SheetPortal(), SheetTitle() (+1 more)
 
-### Community 12 - "Selection UI"
+### Community 13 - "Community 13"
 Cohesion: 0.33
 Nodes (9): Select(), SelectGroup(), SelectItem(), SelectLabel(), SelectScrollDownButton(), SelectScrollUpButton(), SelectSeparator(), SelectTrigger() (+1 more)
 
-### Community 13 - "Community 13"
-Cohesion: 0.2
-Nodes (6): Captures rate limit information from LLM responses., Capture rate limits and usage stats from metadata., TrackingCallbackHandler, ProviderRateLimit, AsyncCallbackHandler, BaseCallbackHandler
-
 ### Community 15 - "Community 15"
+Cohesion: 0.22
+Nodes (6): Updates page content.      Simplification: Clears all current blocks and replace, update_notion_page_content(), Deletes a specific block., Appends blocks to a page or a block., Replaces the entire content of a page with the provided markdown text.         I, Retrieves all blocks (content) of a specific page using pagination.
+
+### Community 16 - "Community 16"
 Cohesion: 0.25
 Nodes (4): ThemeSwitch(), ThemeProvider(), useTheme(), Toaster()
 
-### Community 16 - "Community 16"
+### Community 17 - "Community 17"
 Cohesion: 0.36
 Nodes (3): getColor(), handleNodeCanvasObject(), updateDims()
 
-### Community 17 - "Community 17"
+### Community 18 - "Community 18"
 Cohesion: 0.33
 Nodes (3): LayoutProvider(), useLayout(), AuthenticatedLayoutContent()
 
-### Community 18 - "Community 18"
+### Community 19 - "Community 19"
 Cohesion: 0.33
 Nodes (2): cn(), CommandItem()
 
-### Community 19 - "Community 19"
+### Community 20 - "Community 20"
 Cohesion: 0.48
 Nodes (5): Dialog(), DialogClose(), DialogOverlay(), DialogPortal(), DialogTrigger()
 
-### Community 20 - "Community 20"
+### Community 21 - "Community 21"
 Cohesion: 0.33
 Nodes (2): SidebarMenuButton(), useSidebar()
 
-### Community 21 - "Community 21"
+### Community 22 - "Community 22"
 Cohesion: 0.33
 Nodes (2): fetchOptions(), handleCreateOption()
 
-### Community 22 - "AI Sidecar Chat"
+### Community 23 - "Community 23"
 Cohesion: 0.33
 Nodes (1): handleSendMessage()
 
-### Community 24 - "Profile Mapping"
+### Community 24 - "Community 24"
 Cohesion: 0.6
 Nodes (4): cleanLabel(), cleanValue(), parseMarkdownToProfileData(), stripMarkdown()
 
@@ -219,68 +226,72 @@ Nodes (2): ConfigProvider(), useConfig()
 Cohesion: 0.67
 Nodes (2): isActive(), renderNode()
 
-### Community 46 - "Obsidian Vault Structure"
-Cohesion: 0.5
-Nodes (4): Academic Profile, Computer Programming, LifeOS Mobile (Scriptable), OKA Protocol
-
-### Community 49 - "Community 49"
+### Community 48 - "Community 48"
 Cohesion: 0.67
 Nodes (1): Label()
 
-### Community 51 - "Community 51"
+### Community 50 - "Community 50"
 Cohesion: 0.67
 Nodes (1): Badge()
 
-### Community 52 - "Community 52"
+### Community 51 - "Community 51"
 Cohesion: 0.67
 Nodes (1): cn()
 
-### Community 53 - "Community 53"
+### Community 52 - "Community 52"
 Cohesion: 0.67
 Nodes (1): Input()
 
-### Community 106 - "Community 106"
-Cohesion: 1.0
-Nodes (1): Returns (is_valid, error_messages).         A note fails if it:           - Is m
+### Community 55 - "Community 55"
+Cohesion: 0.67
+Nodes (2): get_app_secrets(), Extracts core secrets from request headers.     Supports 3-tier reasoning levels
 
-### Community 107 - "Community 107"
-Cohesion: 1.0
-Nodes (1): Fault-tolerant JSON parser for weak model outputs.
+### Community 56 - "Community 56"
+Cohesion: 0.67
+Nodes (3): Academic Profile, Computer Programming, OKA Protocol
 
 ### Community 108 - "Community 108"
 Cohesion: 1.0
-Nodes (1): Normalise all prerequisite titles to [[Underscore_Title_Case]] format.
+Nodes (1): Returns (is_valid, error_messages).         A note fails if it:           - Is m
 
 ### Community 109 - "Community 109"
 Cohesion: 1.0
-Nodes (1): Recursively strips ALL quote forms from [[wikilink]] strings.
+Nodes (1): Fault-tolerant JSON parser for weak model outputs.
 
 ### Community 110 - "Community 110"
 Cohesion: 1.0
-Nodes (1): Strips internal quote patterns from [[wikilinks]] inside the brackets: [["X"]] -
+Nodes (1): Normalise all prerequisite titles to [[Underscore_Title_Case]] format.
+
+### Community 111 - "Community 111"
+Cohesion: 1.0
+Nodes (1): Recursively strips ALL quote forms from [[wikilink]] strings.
 
 ### Community 112 - "Community 112"
 Cohesion: 1.0
+Nodes (1): Strips internal quote patterns from [[wikilinks]] inside the brackets: [["X"]] -
+
+### Community 114 - "Community 114"
+Cohesion: 1.0
 Nodes (1): Instantiates and returns the appropriate LangChain ChatModel.
 
-### Community 113 - "Community 113"
+### Community 115 - "Community 115"
 Cohesion: 1.0
 Nodes (1): Safety check:          1. Must be a valid PDF.         2. Must be low resolution
 
-### Community 128 - "Community 128"
+### Community 130 - "Community 130"
 Cohesion: 1.0
 Nodes (1): Statistics and Probability
 
 ## Knowledge Gaps
-- **65 isolated node(s):** `Manages the local ChromaDB instance and the local embedding model.     Uses 'all`, `Embeds and adds documents to the vector store.`, `Queries the vector store for the most relevant chunks.`, `Deletes all chunks associated with a specific file path.         This is crucial`, `Life OS Notion API Client.     Synchronizes with the user's Notion workspace.` (+60 more)
+- **66 isolated node(s):** `Manages the local ChromaDB instance and the local embedding model.     Uses 'all`, `Embeds and adds documents to the vector store.`, `Queries the vector store for the most relevant chunks.`, `Deletes all chunks associated with a specific file path.         This is crucial`, `Life OS Notion API Client.     Synchronizes with the user's Notion workspace.` (+61 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 18`** (7 nodes): `command.tsx`, `command.tsx`, `cn()`, `CommandGroup()`, `CommandInput()`, `CommandItem()`, `CommandList()`
+- **Thin community `Community 19`** (7 nodes): `command.tsx`, `command.tsx`, `cn()`, `CommandGroup()`, `CommandInput()`, `CommandItem()`, `CommandList()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 20`** (7 nodes): `sidebar.tsx`, `cn()`, `handleKeyDown()`, `SidebarMenu()`, `SidebarMenuButton()`, `SidebarMenuItem()`, `useSidebar()`
+- **Thin community `Community 21`** (7 nodes): `sidebar.tsx`, `cn()`, `handleKeyDown()`, `SidebarMenu()`, `SidebarMenuButton()`, `SidebarMenuItem()`, `useSidebar()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 21`** (7 nodes): `EditableCell.tsx`, `compute()`, `fetchOptions()`, `getBadgeColor()`, `handleCreateOption()`, `renderInlineMarkdown()`, `TypeIcon()`
+- **Thin community `Community 22`** (7 nodes): `EditableCell.tsx`, `compute()`, `fetchOptions()`, `getBadgeColor()`, `handleCreateOption()`, `renderInlineMarkdown()`, `TypeIcon()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `AI Sidecar Chat`** (6 nodes): `AiSidecar.tsx`, `AiSidecar.tsx`, `handleAnswerQuiz()`, `handleInitialExplain()`, `handleSendMessage()`, `nextQuestion()`
+- **Thin community `Community 23`** (6 nodes): `AiSidecar.tsx`, `AiSidecar.tsx`, `handleAnswerQuiz()`, `handleInitialExplain()`, `handleSendMessage()`, `nextQuestion()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 25`** (6 nodes): `events.py`, `VaultEventBus`, `.__init__()`, `.publish()`, `.subscribe()`, `.unsubscribe()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -300,45 +311,47 @@ Nodes (1): Statistics and Probability
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 45`** (4 nodes): `NoteMetadata.tsx`, `getPropertyIcon()`, `isActive()`, `renderNode()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 49`** (3 nodes): `label.tsx`, `label.tsx`, `Label()`
+- **Thin community `Community 48`** (3 nodes): `label.tsx`, `label.tsx`, `Label()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 51`** (3 nodes): `badge.tsx`, `badge.tsx`, `Badge()`
+- **Thin community `Community 50`** (3 nodes): `badge.tsx`, `badge.tsx`, `Badge()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 52`** (3 nodes): `button.tsx`, `button.tsx`, `cn()`
+- **Thin community `Community 51`** (3 nodes): `button.tsx`, `button.tsx`, `cn()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 53`** (3 nodes): `input.tsx`, `input.tsx`, `Input()`
+- **Thin community `Community 52`** (3 nodes): `input.tsx`, `input.tsx`, `Input()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 106`** (1 nodes): `Returns (is_valid, error_messages).         A note fails if it:           - Is m`
+- **Thin community `Community 55`** (3 nodes): `get_app_secrets()`, `Extracts core secrets from request headers.     Supports 3-tier reasoning levels`, `deps.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 107`** (1 nodes): `Fault-tolerant JSON parser for weak model outputs.`
+- **Thin community `Community 108`** (1 nodes): `Returns (is_valid, error_messages).         A note fails if it:           - Is m`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 108`** (1 nodes): `Normalise all prerequisite titles to [[Underscore_Title_Case]] format.`
+- **Thin community `Community 109`** (1 nodes): `Fault-tolerant JSON parser for weak model outputs.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 109`** (1 nodes): `Recursively strips ALL quote forms from [[wikilink]] strings.`
+- **Thin community `Community 110`** (1 nodes): `Normalise all prerequisite titles to [[Underscore_Title_Case]] format.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 110`** (1 nodes): `Strips internal quote patterns from [[wikilinks]] inside the brackets: [["X"]] -`
+- **Thin community `Community 111`** (1 nodes): `Recursively strips ALL quote forms from [[wikilink]] strings.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 112`** (1 nodes): `Instantiates and returns the appropriate LangChain ChatModel.`
+- **Thin community `Community 112`** (1 nodes): `Strips internal quote patterns from [[wikilinks]] inside the brackets: [["X"]] -`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 113`** (1 nodes): `Safety check:          1. Must be a valid PDF.         2. Must be low resolution`
+- **Thin community `Community 114`** (1 nodes): `Instantiates and returns the appropriate LangChain ChatModel.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 128`** (1 nodes): `Statistics and Probability`
+- **Thin community `Community 115`** (1 nodes): `Safety check:          1. Must be a valid PDF.         2. Must be low resolution`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 130`** (1 nodes): `Statistics and Probability`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `OkaService` connect `OKA Workflows` to `Core AI Logic`, `Notion Sync`, `Auth & Secrets`, `Community 7`?**
-  _High betweenness centrality (0.087) - this node is a cross-community bridge._
-- **Why does `NotionClient` connect `Notion Sync` to `Core AI Logic`, `OKA Workflows`?**
-  _High betweenness centrality (0.055) - this node is a cross-community bridge._
-- **Why does `AppSecrets` connect `Agent Architecture` to `Core AI Logic`, `Notion Sync`, `OKA Workflows`?**
-  _High betweenness centrality (0.042) - this node is a cross-community bridge._
-- **Are the 79 inferred relationships involving `OkaService` (e.g. with `VaultManager` and `OkaDeployer`) actually correct?**
-  _`OkaService` has 79 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 80 inferred relationships involving `NotionClient` (e.g. with `NotionMirrorService` and `Pulls structured data from Notion Databases and writes them as      individual M`) actually correct?**
-  _`NotionClient` has 80 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 72 inferred relationships involving `ModelFactory` (e.g. with `OkaService` and `Main orchestrator for OKA.`) actually correct?**
-  _`ModelFactory` has 72 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 70 inferred relationships involving `AppSecrets` (e.g. with `Returns a list of all locally cached databases.` and `Returns the schema and rows for a specific database.     If not in cache or forc`) actually correct?**
-  _`AppSecrets` has 70 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `OkaService` connect `Community 0` to `Community 2`, `Community 3`, `Community 4`, `Community 7`, `Community 15`?**
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+- **Why does `NotionClient` connect `Community 0` to `Community 3`, `Community 4`, `Community 15`?**
+  _High betweenness centrality (0.054) - this node is a cross-community bridge._
+- **Why does `AppSecrets` connect `Community 0` to `Community 3`, `Community 4`, `Community 15`, `Community 55`?**
+  _High betweenness centrality (0.052) - this node is a cross-community bridge._
+- **Are the 126 inferred relationships involving `OkaService` (e.g. with `VaultManager` and `OkaDeployer`) actually correct?**
+  _`OkaService` has 126 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 127 inferred relationships involving `NotionClient` (e.g. with `NotionMirrorService` and `Pulls structured data from Notion Databases and writes them as      individual M`) actually correct?**
+  _`NotionClient` has 127 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 122 inferred relationships involving `AppSecrets` (e.g. with `Returns a list of all locally cached databases.` and `Returns the schema and rows for a specific database.     If not in cache or forc`) actually correct?**
+  _`AppSecrets` has 122 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 119 inferred relationships involving `ModelFactory` (e.g. with `OkaService` and `Main orchestrator for OKA.`) actually correct?**
+  _`ModelFactory` has 119 INFERRED edges - model-reasoned connections that need verification._

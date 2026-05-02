@@ -1,5 +1,5 @@
 ---
-Course: "[[3-Database/07 - Courses/Statistics & Probability]]"
+Course: "[[Statistics And Probability]]"
 Exam Date: '2026-02-19T11:30:00+03:00'
 Type: ''
 Score: ''

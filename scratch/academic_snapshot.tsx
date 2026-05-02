@@ -337,41 +337,6 @@ export default function AcademicDashboard() {
         }
     }
 
-    
-    const handleSetCurrentYear = async (id: string) => {
-        try {
-            const years = data?.years || [];
-            for (const y of years) {
-                if (y.id === id) {
-                    await sidecarApi.updateVaultRow("09 - Years", y.id, { "Current Year": true });
-                } else if (y["Current Year"] === true || y["Current Year"] === "true") {
-                    await sidecarApi.updateVaultRow("09 - Years", y.id, { "Current Year": false });
-                }
-            }
-            toast.success("Current Year Set");
-            fetchData();
-        } catch(err) {
-            toast.error("Failed to set year");
-        }
-    }
-
-    const handleSetCurrentSemester = async (id: string) => {
-        try {
-            const semesters = data?.semesters || [];
-            for (const s of semesters) {
-                if (s.id === id) {
-                    await sidecarApi.updateVaultRow("08 - Semesters", s.id, { "Status": "[[Active]]" });
-                } else if (s["Status"] === "[[Active]]" || s["Status"] === "Active") {
-                    await sidecarApi.updateVaultRow("08 - Semesters", s.id, { "Status": "[[Completed]]" });
-                }
-            }
-            toast.success("Current Semester Set");
-            fetchData();
-        } catch(err) {
-            toast.error("Failed to set semester");
-        }
-    }
-
     const handleDeleteCourse = async () => {
         if (!selectedCourseId) return
         try {
@@ -524,8 +489,7 @@ export default function AcademicDashboard() {
                                     )}
                                     {activeTab === 'years' && (
                                         <YearsDashboard 
-                                            data={data?.years || []} fullData={data} databases={databases}
-                                            onSetCurrent={handleSetCurrentYear}
+                                            data={data?.years || []} databases={databases}
                                             selectedId={selectedCourseId} onSelect={setSelectedCourseId}
                                             onUpdate={(key:string, val:any) => handleUpdateRow("09 - Years", key, val)}
                                             onCreate={() => handleCreateRow("09 - Years")} onDelete={(id:string) => handleDeleteRow("09 - Years", id)}
@@ -534,8 +498,7 @@ export default function AcademicDashboard() {
 
                                     {activeTab === 'semesters' && (
                                         <SemestersDashboard 
-                                            data={data?.semesters || []} fullData={data} databases={databases}
-                                            onSetCurrent={handleSetCurrentSemester}
+                                            data={data?.semesters || []} databases={databases}
                                             selectedId={selectedCourseId} onSelect={setSelectedCourseId}
                                             onUpdate={(key:string, val:any) => handleUpdateRow("08 - Semesters", key, val)}
                                             onCreate={() => handleCreateRow("08 - Semesters")} onDelete={(id:string) => handleDeleteRow("08 - Semesters", id)}
@@ -600,7 +563,7 @@ export default function AcademicDashboard() {
 
                                 {activeTab === 'planner' && (
                                         <PlannerDashboard 
-                                            data={data?.study_sessions || []} fullData={data} databases={databases} navigate={navigate}
+                                            data={data?.study_sessions || []} databases={databases} navigate={navigate}
                                             selectedId={selectedCourseId} onSelect={setSelectedCourseId}
                                             onUpdate={(key:string, val:any) => handleUpdateRow("06 - Study Planner", key, val)}
                                             onCreate={() => handleCreateRow("06 - Study Planner")} onDelete={(id:string) => handleDeleteRow("06 - Study Planner", id)}
@@ -609,7 +572,7 @@ export default function AcademicDashboard() {
 
                                 {activeTab === 'assignments' && (
                                         <AssignmentsDashboard 
-                                            data={data?.assignments || []} fullData={data} databases={databases}
+                                            data={data?.assignments || []} databases={databases}
                                             selectedId={selectedCourseId} onSelect={setSelectedCourseId}
                                             onUpdate={(id:string, key:string, val:any) => {
                                                 // Handle inline checkbox update differently
@@ -625,7 +588,7 @@ export default function AcademicDashboard() {
 
                                 {activeTab === 'exams' && (
                                         <ExamsDashboard 
-                                            data={data?.exams || []} fullData={data} databases={databases}
+                                            data={data?.exams || []} databases={databases}
                                             selectedId={selectedCourseId} onSelect={setSelectedCourseId}
                                             onUpdate={(key:string, val:any) => handleUpdateRow("04 - Exams", key, val)}
                                             onCreate={() => handleCreateRow("04 - Exams")} onDelete={(id:string) => handleDeleteRow("04 - Exams", id)}
@@ -1091,56 +1054,12 @@ function CoursePropertyGrid({ course, schema, onUpdate }: { course: any, schema:
 }
 
 
-
 // -----------------------------------------------------------------------------
 // NEW BENTO-BOX DASHBOARDS
 // -----------------------------------------------------------------------------
 
-function YearsDashboard({ data, fullData, databases, onSelect, selectedId, onUpdate, onCreate, onDelete, onSetCurrent }: any) {
-    if (selectedId) {
-        const selectedYear = data.find((y:any) => y.id === selectedId);
-        const relatedSemesters = (fullData?.semesters || []).filter((s:any) => String(s.Year).includes(selectedYear?.title) || String(s.Year).includes(selectedYear?.id));
-        
-        return (
-            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Year Detail</span>
-                        <h2 className="text-3xl font-black uppercase text-foreground">{selectedYear?.title}</h2>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button 
-                            onClick={() => onSetCurrent(selectedId)}
-                            className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-black uppercase tracking-widest rounded-md transition-all flex items-center gap-2"
-                        >
-                            <Check size={14}/> Set Active
-                        </button>
-                        <button onClick={() => onDelete(selectedId)} className="p-2 hover:bg-destructive/10 text-muted-foreground/40 hover:text-destructive rounded-md transition-all">
-                            <Trash2 size={16} />
-                        </button>
-                    </div>
-                </div>
-                
-                <section className="space-y-6">
-                    <SectionHeader title="Properties" />
-                    <CoursePropertyGrid course={selectedYear} schema={databases.find((d:any)=>d.id==="09 - Years")?.schema || {}} onUpdate={(k:string,v:any)=>onUpdate(k,v)} />
-                </section>
-                
-                <section className="space-y-6">
-                    <SectionHeader title="Related Semesters" />
-                    <div className="grid grid-cols-2 gap-4">
-                        {relatedSemesters.map((s:any, idx:number) => (
-                            <div key={idx} className="p-6 border border-border/40 rounded-xl bg-muted/5 flex flex-col gap-2">
-                                <span className="text-[14px] font-black uppercase text-foreground">{s.title}</span>
-                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{String(s.Status || 'Pending').replace(/\[\[(.*?)\]\]/g, '$1')}</span>
-                            </div>
-                        ))}
-                        {relatedSemesters.length === 0 && <EmptyState message="No semesters linked to this year" />}
-                    </div>
-                </section>
-            </div>
-        )
-    }
+function YearsDashboard({ data, databases, onSelect, selectedId, onUpdate, onCreate, onDelete }: any) {
+    if (selectedId) return <UniversalDatabaseTab dbId="09 - Years" data={data} databases={databases} selectedId={selectedId} onSelect={onSelect} onUpdate={onUpdate} onCreate={onCreate} onDelete={onDelete} />;
     
     const activeYears = data.filter((y:any) => y.Status !== 'Completed').length;
     const completedYears = data.filter((y:any) => y.Status === 'Completed').length;
@@ -1176,10 +1095,8 @@ function YearsDashboard({ data, fullData, databases, onSelect, selectedId, onUpd
                         <span className="text-5xl font-black tracking-tighter text-foreground">{data.length}</span>
                     </div>
                     <div className="p-8 border border-border/10 rounded-2xl bg-muted/5 flex flex-col justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Current Year</span>
-                        <span className="text-xl font-black tracking-tighter uppercase text-primary">
-                            {data.find((y:any) => y["Current Year"] === true || y["Current Year"] === "true")?.title || 'None Set'}
-                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Status</span>
+                        <span className="text-xl font-black tracking-tighter uppercase text-primary">In Progress</span>
                     </div>
                 </div>
             </div>
@@ -1190,51 +1107,8 @@ function YearsDashboard({ data, fullData, databases, onSelect, selectedId, onUpd
 
 function max(a: number, b: number) { return a > b ? a : b; }
 
-function SemestersDashboard({ data, fullData, databases, onSelect, selectedId, onUpdate, onCreate, onDelete, onSetCurrent }: any) {
-    if (selectedId) {
-        const selectedSem = data.find((s:any) => s.id === selectedId);
-        const relatedCourses = (fullData?.courses || []).filter((c:any) => String(c.Semester).includes(selectedSem?.title) || String(c.Semester).includes(selectedSem?.id));
-        
-        return (
-            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Semester Detail</span>
-                        <h2 className="text-3xl font-black uppercase text-foreground">{selectedSem?.title}</h2>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button 
-                            onClick={() => onSetCurrent(selectedId)}
-                            className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-black uppercase tracking-widest rounded-md transition-all flex items-center gap-2"
-                        >
-                            <Check size={14}/> Set Active
-                        </button>
-                        <button onClick={() => onDelete(selectedId)} className="p-2 hover:bg-destructive/10 text-muted-foreground/40 hover:text-destructive rounded-md transition-all">
-                            <Trash2 size={16} />
-                        </button>
-                    </div>
-                </div>
-                
-                <section className="space-y-6">
-                    <SectionHeader title="Properties" />
-                    <CoursePropertyGrid course={selectedSem} schema={databases.find((d:any)=>d.id==="08 - Semesters")?.schema || {}} onUpdate={(k:string,v:any)=>onUpdate(k,v)} />
-                </section>
-                
-                <section className="space-y-6">
-                    <SectionHeader title="Related Courses" />
-                    <div className="grid grid-cols-2 gap-4">
-                        {relatedCourses.map((c:any, idx:number) => (
-                            <div key={idx} className="p-6 border border-border/40 rounded-xl bg-muted/5 flex flex-col gap-2">
-                                <span className="text-[14px] font-black uppercase text-foreground">{c.title}</span>
-                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{String(c.Professor || 'No Prof').replace(/\[\[(.*?)\]\]/g, '$1')}</span>
-                            </div>
-                        ))}
-                        {relatedCourses.length === 0 && <EmptyState message="No courses linked to this semester" />}
-                    </div>
-                </section>
-            </div>
-        )
-    }
+function SemestersDashboard({ data, databases, onSelect, selectedId, onUpdate, onCreate, onDelete }: any) {
+    if (selectedId) return <UniversalDatabaseTab dbId="08 - Semesters" data={data} databases={databases} selectedId={selectedId} onSelect={onSelect} onUpdate={onUpdate} onCreate={onCreate} onDelete={onDelete} />;
     
     return (
         <div className="space-y-12">
@@ -1242,9 +1116,11 @@ function SemestersDashboard({ data, fullData, databases, onSelect, selectedId, o
                 <div className="col-span-2 p-8 border border-border/10 rounded-2xl bg-primary/10 border-primary/20 flex flex-col justify-between relative overflow-hidden">
                     <div className="z-10 space-y-2">
                         <span className="text-[10px] font-black uppercase tracking-widest text-primary">Current Term</span>
-                        <h3 className="text-3xl font-black tracking-tight text-foreground uppercase">{data.find((s:any) => s.Status === '[[Active]]' || s.Status === 'Active')?.title || 'No Active Term'}</h3>
+                        <h3 className="text-3xl font-black tracking-tight text-foreground uppercase">{data.find((s:any) => s.Status === 'Active')?.title || 'No Active Term'}</h3>
                     </div>
-                    
+                    <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-4 translate-y-4">
+                        <LayoutGrid size={120} />
+                    </div>
                 </div>
                 <div className="p-8 border border-border/10 rounded-2xl bg-muted/5 flex flex-col justify-between">
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Total</span>
@@ -1252,7 +1128,7 @@ function SemestersDashboard({ data, fullData, databases, onSelect, selectedId, o
                 </div>
                 <div className="p-8 border border-border/10 rounded-2xl bg-muted/5 flex flex-col justify-between">
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Completed</span>
-                    <span className="text-4xl font-black tracking-tighter text-muted-foreground/50">{data.filter((s:any) => String(s.Status).includes('Completed')).length}</span>
+                    <span className="text-4xl font-black tracking-tighter text-muted-foreground/50">{data.filter((s:any) => s.Status === 'Completed').length}</span>
                 </div>
             </div>
             <UniversalDatabaseTab dbId="08 - Semesters" data={data} databases={databases} selectedId={selectedId} onSelect={onSelect} onUpdate={onUpdate} onCreate={onCreate} onDelete={onDelete} />
@@ -1260,7 +1136,7 @@ function SemestersDashboard({ data, fullData, databases, onSelect, selectedId, o
     )
 }
 
-function PlannerDashboard({ data, fullData, databases, onSelect, selectedId, onUpdate, onCreate, onDelete, navigate }: any) {
+function PlannerDashboard({ data, databases, onSelect, selectedId, onUpdate, onCreate, onDelete, navigate }: any) {
     if (selectedId) return <UniversalDatabaseTab dbId="06 - Study Planner" data={data} databases={databases} selectedId={selectedId} onSelect={onSelect} onUpdate={onUpdate} onCreate={onCreate} onDelete={onDelete} />;
     
     return (
@@ -1269,7 +1145,7 @@ function PlannerDashboard({ data, fullData, databases, onSelect, selectedId, onU
                 <div className="col-span-3 p-8 border border-border/10 rounded-2xl bg-muted/5 flex items-center justify-between">
                     <div className="space-y-2">
                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Knowledge Hubs</span>
-                        <div className="text-2xl font-black uppercase text-foreground">Study Flow</div>
+                        <div className="text-2xl font-black uppercase text-foreground">Orchestrate Study Flow</div>
                     </div>
                     <div className="text-right space-y-1">
                         <div className="text-4xl font-black text-foreground">{data.length}</div>
@@ -1285,7 +1161,7 @@ function PlannerDashboard({ data, fullData, databases, onSelect, selectedId, onU
                             <div className="flex flex-col gap-2">
                                 <span className="text-[14px] font-black uppercase tracking-tight text-foreground group-hover:text-primary transition-colors">{hub.title}</span>
                                 <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
-                                    <span>{String(hub.Course || 'General').replace(/\[\[(.*?)\]\]/g, '$1')}</span>
+                                    <span>{hub.Course || 'General'}</span>
                                     <span>Unit {hub.Unit || '--'}</span>
                                 </div>
                             </div>
@@ -1297,7 +1173,7 @@ function PlannerDashboard({ data, fullData, databases, onSelect, selectedId, onU
     )
 }
 
-function AssignmentsDashboard({ data, fullData, databases, onSelect, selectedId, onUpdate, onCreate, onDelete }: any) {
+function AssignmentsDashboard({ data, databases, onSelect, selectedId, onUpdate, onCreate, onDelete }: any) {
     if (selectedId) return <UniversalDatabaseTab dbId="03 - Assignments" data={data} databases={databases} selectedId={selectedId} onSelect={onSelect} onUpdate={onUpdate} onCreate={onCreate} onDelete={onDelete} />;
     
     const pending = data.filter((a:any) => !a.done);
@@ -1333,7 +1209,7 @@ function AssignmentsDashboard({ data, fullData, databases, onSelect, selectedId,
                             </button>
                             <div className="flex-1 flex flex-col">
                                 <span className="text-[12px] font-black uppercase text-foreground">{a.title}</span>
-                                <span className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest">{String(a.Course || 'Uncategorized').replace(/\[\[(.*?)\]\]/g, '$1')}</span>
+                                <span className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest">{a.Course || 'Uncategorized'}</span>
                             </div>
                             <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground px-3 py-1 bg-muted/20 rounded-md">
                                 {a.due_date ? a.due_date.split('T')[0] : 'No Date'}
@@ -1346,7 +1222,7 @@ function AssignmentsDashboard({ data, fullData, databases, onSelect, selectedId,
     )
 }
 
-function ExamsDashboard({ data, fullData, databases, onSelect, selectedId, onUpdate, onCreate, onDelete }: any) {
+function ExamsDashboard({ data, databases, onSelect, selectedId, onUpdate, onCreate, onDelete }: any) {
     if (selectedId) return <UniversalDatabaseTab dbId="04 - Exams" data={data} databases={databases} selectedId={selectedId} onSelect={onSelect} onUpdate={onUpdate} onCreate={onCreate} onDelete={onDelete} />;
     
     const upcoming = data.filter((e:any) => new Date(e.date) >= new Date()).sort((a:any, b:any) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -1359,7 +1235,7 @@ function ExamsDashboard({ data, fullData, databases, onSelect, selectedId, onUpd
                     <div className="space-y-2">
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-background/60">Next Exam</span>
                         <h2 className="text-4xl font-black uppercase tracking-tighter">{nextExam.title}</h2>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-primary pt-2">{String(nextExam.Course).replace(/\[\[(.*?)\]\]/g, '$1')}</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-primary pt-2">{nextExam.Course}</div>
                     </div>
                     <div className="text-right">
                         <div className="text-5xl font-black tracking-tighter">{Math.ceil((new Date(nextExam.date).getTime() - new Date().getTime()) / (1000 * 3600 * 24))}</div>
@@ -1378,7 +1254,7 @@ function ExamsDashboard({ data, fullData, databases, onSelect, selectedId, onUpd
                                 <div className="flex flex-col gap-2">
                                     <span className="text-[14px] font-black uppercase tracking-tight text-foreground">{exam.title}</span>
                                     <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
-                                        <span>{String(exam.Course || 'General').replace(/\[\[(.*?)\]\]/g, '$1')}</span>
+                                        <span>{exam.Course || 'General'}</span>
                                         <span>{exam.date ? exam.date.split('T')[0] : '--'}</span>
                                     </div>
                                 </div>
