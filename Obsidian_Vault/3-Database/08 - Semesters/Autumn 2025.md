@@ -1,7 +1,7 @@
 ---
 Year: "[[Year II]]"
-Status: "[[Active]]"
-Start Date: ''
+Status: "[[Completed]]"
+Start Date: '2026-05-04'
 End Date: ''
 ---
 

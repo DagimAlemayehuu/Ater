@@ -1,18 +1,24 @@
-import React, { useState, useMemo } from 'react'
-import { Hash, ChevronRight, Plus, Check, BookOpen } from 'lucide-react'
+import React, { useState, useMemo, useEffect } from 'react'
+import { Hash, ChevronRight, Plus, Check, BookOpen, Trash2 } from 'lucide-react'
 import { format, parseISO, differenceInDays, isBefore, startOfDay } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { stripWL, getVal } from './utils'
-import { SectionHeader, EmptyState, StatCard } from './SharedComponents'
-import { CoursePropertyGrid } from './SharedComponents'
+import { SectionHeader, EmptyState, StatCard, BigPropertyCard } from './SharedComponents'
 import type { TabProps } from './types'
 
-export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo }: TabProps) {
+export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, initialSelectedId, onClearSelection }: TabProps) {
     const [courseFilter, setCourseFilter] = useState<string>('All')
-    const [selectedId, setSelectedId] = useState<string | null>(null)
+    const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId || null)
     const [editingScore, setEditingScore] = useState<string | null>(null)
     const [scoreInput, setScoreInput] = useState('')
+
+    useEffect(() => {
+        if (initialSelectedId) {
+            setSelectedId(initialSelectedId)
+            if (onClearSelection) onClearSelection()
+        }
+    }, [initialSelectedId, onClearSelection])
 
     const courses = data.courses || []
     const allExams = data.exams || []
@@ -23,7 +29,10 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
     const filtered = useMemo(() => {
         if (courseFilter === 'All') return allExams
         const cName = courses.find(c => c.id === courseFilter)?.title || ''
-        return allExams.filter(e => stripWL(getVal(e, 'Course', 'course')).toLowerCase().includes(cName.toLowerCase()))
+        return allExams.filter(e => {
+            const examCourse = getVal(e, 'Course', 'course').toLowerCase()
+            return examCourse === cName.toLowerCase() && examCourse !== ''
+        })
     }, [allExams, courseFilter, courses])
 
     const upcoming = filtered.filter(e => e.date && !isBefore(parseISO(e.date), now))
@@ -50,7 +59,10 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
         if (!exam) { setSelectedId(null); return null }
         const schema = databases.find(d => d.id === '04 - Exams')?.schema || {}
         const examCourse = stripWL(getVal(exam, 'Course', 'course'))
-        const relatedHubs = hubs.filter(h => stripWL(getVal(h, 'course', 'Course')).toLowerCase().includes(examCourse.toLowerCase()))
+        const relatedHubs = hubs.filter(h => {
+            const hubCourse = getVal(h, 'course', 'Course').toLowerCase()
+            return hubCourse === examCourse.toLowerCase() && hubCourse !== ''
+        })
         const doneHubs = relatedHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
 
         return (
@@ -58,22 +70,61 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                 <div className="flex items-center justify-between">
                     <div>
                         <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Exam Detail</span>
-                        <h2 className="text-2xl font-black uppercase">{exam.title}</h2>
+                        <h2 className="text-2xl font-black uppercase cursor-pointer hover:text-primary transition-colors block"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                const next = window.prompt('Rename Exam', exam.title || '')
+                                if (next && next !== exam.title) {
+                                    onUpdate('04 - Exams', exam.id, { title: next })
+                                    setSelectedId(next)
+                                }
+                            }}>{exam.title}</h2>
                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{examCourse}</span>
                     </div>
-                    <button onClick={() => setSelectedId(null)} className="px-3 py-1.5 bg-muted/10 border border-border/20 rounded-lg text-[9px] font-black uppercase hover:bg-muted/20 transition-all">Back</button>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => { onDelete('04 - Exams', selectedId); setSelectedId(null) }}
+                            className="p-2 text-muted-foreground/20 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all">
+                            <Trash2 size={13} />
+                        </button>
+                        <button onClick={() => setSelectedId(null)} className="px-3 py-1.5 bg-muted/10 border border-border/20 rounded-lg text-[9px] font-black uppercase hover:bg-muted/20 transition-all">Back</button>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                    <StatCard label="Date" value={exam.date ? format(parseISO(exam.date), 'MMM dd, yyyy') : '--'} />
-                    <StatCard label="Score" value={exam.score || '--'} accent />
-                    <StatCard label="Prep Progress" value={`${doneHubs}/${relatedHubs.length}`} />
+                {/* Quick Info */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <StatCard label="Preparation Progress" value={`${doneHubs} / ${relatedHubs.length} Hubs`} accent />
+                    {exam.date && !isBefore(parseISO(exam.date), now) && (
+                        <StatCard label="Countdown" value={`${differenceInDays(parseISO(exam.date), now)} Days Left`} />
+                    )}
                 </div>
 
-                <section className="space-y-4">
-                    <SectionHeader title="Exam Properties" />
-                    <CoursePropertyGrid item={exam} schema={schema} onUpdate={(k, v) => onUpdate('04 - Exams', exam.id, { [k]: v })} />
-                </section>
+                {/* Properties */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {(() => {
+                        const internal = ['id', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by']
+                        const keys = new Set([...Object.keys(schema || {}), ...Object.keys(exam || {})])
+                        return Array.from(keys)
+                            .filter(k => !internal.includes(k))
+                            .sort((a, b) => {
+                                const priority = ['date', 'score', 'Course', 'Type']
+                                const ai = priority.indexOf(a)
+                                const bi = priority.indexOf(b)
+                                if (ai !== -1 && bi !== -1) return ai - bi
+                                if (ai !== -1) return -1
+                                if (bi !== -1) return 1
+                                return a.localeCompare(b)
+                            })
+                            .map(key => (
+                                <BigPropertyCard
+                                    key={key}
+                                    label={key}
+                                    value={exam[key]}
+                                    schema={schema[key]}
+                                    onUpdate={(v) => onUpdate('04 - Exams', exam.id, { [key]: v })}
+                                />
+                            ))
+                    })()}
+                </div>
 
                 {relatedHubs.length > 0 && (
                     <section className="space-y-4">
@@ -140,7 +191,10 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                         )
                     })}
                 </div>
-                <button onClick={() => onCreate('04 - Exams', 'New Exam')}
+                <button onClick={() => {
+                    const title = window.prompt('Enter Exam Title', 'New Exam') || 'New Exam'
+                    onCreate('04 - Exams', title)
+                }}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-foreground text-background text-[8px] font-black uppercase rounded-lg hover:opacity-80 transition-all">
                     <Plus size={10} /> Add Exam
                 </button>
@@ -156,8 +210,11 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                         {upcoming.map((exam, idx) => {
                             const days = differenceInDays(parseISO(exam.date), now)
                             const urgency = days <= 3 ? 'text-red-400 border-red-500/20' : days <= 7 ? 'text-amber-400 border-amber-500/20' : 'text-muted-foreground/60 border-border/20'
-                            const examCourse = stripWL(getVal(exam, 'Course', 'course'))
-                            const relatedHubs = hubs.filter(h => stripWL(getVal(h, 'course', 'Course')).toLowerCase().includes(examCourse.toLowerCase()))
+                            const examCourse = stripWL(getVal(exam, 'Course', 'course')).toLowerCase()
+                            const relatedHubs = hubs.filter(h => {
+                                const hubCourse = stripWL(getVal(h, 'course', 'Course')).toLowerCase()
+                                return hubCourse === examCourse && hubCourse !== ''
+                            })
                             const doneHubs = relatedHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
                             const prepPct = relatedHubs.length > 0 ? Math.round((doneHubs / relatedHubs.length) * 100) : null
 

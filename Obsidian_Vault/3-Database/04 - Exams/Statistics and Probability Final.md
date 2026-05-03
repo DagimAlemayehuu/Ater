@@ -1,6 +1,6 @@
 ---
 Course: "[[Statistics And Probability]]"
-Exam Date: '2026-02-19T11:30:00+03:00'
+Exam Date: '2026-05-03'
 Type: ''
 Score: ''
 Total Score: '50'

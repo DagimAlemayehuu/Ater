@@ -1,13 +1,20 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Search, ChevronRight, Trash2, Check, BookOpen, Hash, GraduationCap, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { format, parseISO, differenceInDays, startOfDay } from 'date-fns'
 import { stripWL, getVal, gradeColorClass, getDaysUntil } from './utils'
-import { SectionHeader, EmptyState, StatCard, CoursePropertyGrid } from './SharedComponents'
+import { SectionHeader, EmptyState, StatCard, BigPropertyCard } from './SharedComponents'
 import type { TabProps } from './types'
 
-export default function CoursesTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo }: TabProps) {
-    const [selectedId, setSelectedId] = useState<string | null>(null)
+export default function CoursesTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, initialSelectedId, onClearSelection }: TabProps) {
+    const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId || null)
+
+    useEffect(() => {
+        if (initialSelectedId) {
+            setSelectedId(initialSelectedId)
+            if (onClearSelection) onClearSelection()
+        }
+    }, [initialSelectedId, onClearSelection])
     const [statusFilter, setStatusFilter] = useState<'Active' | 'All' | 'Completed'>('Active')
     const [search, setSearch] = useState('')
 
@@ -50,7 +57,15 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
                 <div className="flex items-start justify-between">
                     <div>
                         <button onClick={() => setSelectedId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground mb-2 transition-all">← Courses</button>
-                        <h2 className="text-3xl font-black uppercase tracking-tight">{course.title}</h2>
+                        <h2 className="text-3xl font-black uppercase tracking-tight cursor-pointer hover:text-primary transition-colors block"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                const next = window.prompt('Rename Course', course.title || '')
+                                if (next && next !== course.title) {
+                                    onUpdate('07 - Courses', course.id, { title: next })
+                                    setSelectedId(next)
+                                }
+                            }}>{course.title}</h2>
                         <div className="flex items-center gap-3 mt-1">
                             {professor && <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{professor}</span>}
                             {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase rounded border', gradeColorClass(grade))}>{grade}</span>}
@@ -61,13 +76,7 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
                     </button>
                 </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <StatCard label="Grade" value={grade || '--'} accent />
-                    <StatCard label="Credits" value={credits || '--'} />
-                    <StatCard label="Assignments" value={`${courseAssignments.length - pendingAssignments.length}/${courseAssignments.length}`} />
-                    <StatCard label="Study Hubs" value={`${doneHubs}/${courseHubs.length}`} />
-                </div>
+                {/* Quick Stats */}
 
                 {/* Next exam callout */}
                 {nextExam && (
@@ -84,15 +93,40 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
                 )}
 
                 {/* Properties */}
-                <section className="space-y-4">
-                    <SectionHeader title="Course Properties" />
-                    <CoursePropertyGrid item={course} schema={schema} onUpdate={(k, v) => onUpdate('07 - Courses', selectedId, { [k]: v })} />
-                </section>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {(() => {
+                        const internal = ['id', 'title', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by', 'Assignments', 'Study Progress']
+                        const keys = new Set([...Object.keys(schema || {}), ...Object.keys(course || {})])
+                        return Array.from(keys)
+                            .filter(k => !internal.includes(k))
+                            .sort((a, b) => {
+                                const priority = ['Status', 'Grade', 'Credits', 'Professor', 'Semester']
+                                const ai = priority.indexOf(a)
+                                const bi = priority.indexOf(b)
+                                if (ai !== -1 && bi !== -1) return ai - bi
+                                if (ai !== -1) return -1
+                                if (bi !== -1) return 1
+                                return a.localeCompare(b)
+                            })
+                            .map(key => (
+                                <BigPropertyCard
+                                    key={key}
+                                    label={key}
+                                    value={course[key]}
+                                    schema={schema[key]}
+                                    onUpdate={(v) => onUpdate('07 - Courses', selectedId, { [key]: v })}
+                                />
+                            ))
+                    })()}
+                </div>
 
                 {/* Pending Assignments */}
                 {pendingAssignments.length > 0 && (
                     <section className="space-y-4">
-                        <SectionHeader title={`Pending Assignments — ${pendingAssignments.length}`} onAction={() => onCreate('03 - Assignments', 'New Assignment', { Course: `[[${course.title}]]` })} />
+                        <SectionHeader title={`Pending Assignments — ${pendingAssignments.length}`} onAction={() => {
+                            const title = window.prompt('Enter Assignment Title', 'New Assignment') || 'New Assignment'
+                            onCreate('03 - Assignments', title, { Course: `[[${course.title}]]` })
+                        }} />
                         <div className="flex flex-col gap-2">
                             {pendingAssignments.slice(0, 5).map((a, idx) => (
                                 <div key={idx} onClick={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)}
@@ -150,7 +184,10 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
                     <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search courses..."
                         className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-foreground placeholder:text-muted-foreground/30" />
                 </div>
-                <button onClick={() => onCreate('07 - Courses', 'New Course', { status: '[[Active]]' })}
+                <button onClick={() => {
+                    const title = window.prompt('Enter Course Title', 'New Course') || 'New Course'
+                    onCreate('07 - Courses', title, { status: '[[Active]]' })
+                }}
                     className="flex items-center gap-1.5 px-3 py-2 bg-foreground text-background text-[8px] font-black uppercase rounded-lg hover:opacity-80 transition-all">
                     <Plus size={10} /> Add
                 </button>

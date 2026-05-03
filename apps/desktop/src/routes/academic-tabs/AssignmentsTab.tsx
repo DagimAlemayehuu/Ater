@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { AlertTriangle, Check, Clock, CalendarDays, ChevronDown, ChevronUp, Plus } from 'lucide-react'
+import { AlertTriangle, Check, Clock, CalendarDays, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react'
 import { format, parseISO, isSameDay, isAfter, isBefore, addDays, startOfDay, endOfDay } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -17,7 +17,10 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
     const filtered = useMemo(() => {
         if (courseFilter === 'All') return allAssignments
         const cName = courses.find(c => c.id === courseFilter)?.title || ''
-        return allAssignments.filter(a => stripWL(getVal(a, 'Course', 'course')).toLowerCase().includes(cName.toLowerCase()))
+        return allAssignments.filter(a => {
+            const assignmentCourse = getVal(a, 'Course', 'course').toLowerCase()
+            return assignmentCourse === cName.toLowerCase() && assignmentCourse !== ''
+        })
     }, [allAssignments, courseFilter, courses])
 
     const today = startOfDay(new Date())
@@ -65,7 +68,11 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                         )
                     })}
                 </div>
-                <button onClick={() => onCreate('03 - Assignments', 'New Assignment', courseFilter !== 'All' ? { Course: `[[${courses.find(c => c.id === courseFilter)?.title}]]` } : {})}
+                <button onClick={() => {
+                    const title = window.prompt('Enter Assignment Title', 'New Assignment') || 'New Assignment'
+                    const props = courseFilter !== 'All' ? { Course: `[[${courses.find(c => c.id === courseFilter)?.title}]]` } : {}
+                    onCreate('03 - Assignments', title, props)
+                }}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-foreground text-background text-[8px] font-black uppercase rounded-lg hover:opacity-80 transition-all">
                     <Plus size={10} /> Add
                 </button>
@@ -84,7 +91,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                             <div className="h-px flex-1 bg-red-500/10" />
                         </div>
                         <div className="flex flex-col gap-2">
-                            {overdue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} urgency="overdue" />)}
+                            {overdue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} urgency="overdue" />)}
                         </div>
                     </section>
                 )}
@@ -98,7 +105,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                             <div className="h-px flex-1 bg-amber-500/10" />
                         </div>
                         <div className="flex flex-col gap-2">
-                            {todayDue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} urgency="today" />)}
+                            {todayDue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} urgency="today" />)}
                         </div>
                     </section>
                 )}
@@ -112,7 +119,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                             <div className="h-px flex-1 bg-border/10" />
                         </div>
                         <div className="flex flex-col gap-2">
-                            {thisWeek.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} urgency="week" />)}
+                            {thisWeek.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} urgency="week" />)}
                         </div>
                     </section>
                 )}
@@ -122,7 +129,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                     <section className="space-y-2">
                         <SectionHeader title={`Upcoming — ${upcoming.length}`} />
                         <div className="flex flex-col gap-2">
-                            {upcoming.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} urgency="normal" />)}
+                            {upcoming.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} urgency="normal" />)}
                         </div>
                     </section>
                 )}
@@ -132,7 +139,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                     <section className="space-y-2">
                         <SectionHeader title={`No Due Date — ${undated.length}`} />
                         <div className="flex flex-col gap-2">
-                            {undated.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} urgency="normal" />)}
+                            {undated.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} urgency="normal" />)}
                         </div>
                     </section>
                 )}
@@ -148,7 +155,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                         </button>
                         {showDone && (
                             <div className="flex flex-col gap-2">
-                                {done.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={() => {}} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} urgency="done" />)}
+                                {done.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={() => {}} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} urgency="done" />)}
                             </div>
                         )}
                     </section>
@@ -159,8 +166,8 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
 }
 
 // ─── Assignment Row ────────────────────────────────────────────────────────────
-function AssignmentRow({ a, courses, onComplete, onOpen, urgency }: {
-    a: any; courses: any[]; onComplete: (a: any) => void; onOpen: () => void; urgency: 'overdue' | 'today' | 'week' | 'normal' | 'done'
+function AssignmentRow({ a, courses, onComplete, onOpen, onDelete, urgency }: {
+    a: any; courses: any[]; onComplete: (a: any) => void; onOpen: () => void; onDelete: () => void; urgency: 'overdue' | 'today' | 'week' | 'normal' | 'done'
 }) {
     const isDone = a.done === true || a.done === 'true'
     const courseName = stripWL(getVal(a, 'Course', 'course'))
@@ -195,16 +202,25 @@ function AssignmentRow({ a, courses, onComplete, onOpen, urgency }: {
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-                <span className={cn('text-[12px] font-black uppercase truncate block', isDone ? 'line-through text-muted-foreground/40' : 'text-foreground group-hover:text-primary transition-colors')}>
+                <span className={cn('text-[12px] font-black uppercase truncate block cursor-pointer hover:text-primary transition-colors', isDone ? 'line-through text-muted-foreground/40' : 'text-foreground group-hover:text-primary transition-colors')}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        const next = window.prompt('Rename Assignment', a.title)
+                        if (next && next !== a.title) onUpdate('03 - Assignments', a.id, { title: next })
+                    }}>
                     {a.title}
                 </span>
                 {courseName && <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{courseName}</span>}
             </div>
 
-            {/* Badges */}
+            {/* Badges & Actions */}
             <div className="flex items-center gap-2 shrink-0">
                 {priority && <span className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border', priorityColorClass(priority))}>{priority}</span>}
                 {daysLabel() && <span className={cn('text-[9px] font-black uppercase tracking-widest', daysColor)}>{daysLabel()}</span>}
+                <button onClick={(e) => { e.stopPropagation(); onDelete() }}
+                    className="p-1.5 text-muted-foreground/0 group-hover:text-muted-foreground/20 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all">
+                    <Trash2 size={11} />
+                </button>
             </div>
         </div>
     )

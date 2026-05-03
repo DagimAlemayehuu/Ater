@@ -49,11 +49,100 @@ export function EmptyState({ message, icon }: { message: string; icon?: React.Re
 }
 
 // ─── Stat Card ─────────────────────────────────────────────────────────────────
-export function StatCard({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
+export function StatCard({ label, value, accent, onClick }: { label: string; value: string | number; accent?: boolean; onClick?: () => void }) {
     return (
-        <div className="p-5 border border-border/10 rounded-xl bg-muted/5 flex flex-col gap-1">
-            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{label}</span>
-            <span className={cn('text-2xl font-black tracking-tighter', accent ? 'text-primary' : 'text-foreground')}>{value}</span>
+        <div onClick={onClick} className={cn('p-6 border border-border/10 rounded-2xl bg-muted/5 flex flex-col gap-2 transition-all', onClick && 'cursor-pointer hover:bg-muted/10 hover:border-foreground/10')}>
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{label}</span>
+            <span className={cn('text-3xl font-black tracking-tighter truncate', accent ? 'text-primary' : 'text-foreground')}>{value}</span>
+        </div>
+    )
+}
+
+// ─── Big Property Card ────────────────────────────────────────────────────────
+export function BigPropertyCard({ label, value, schema, onUpdate }: {
+    label: string; value: any; schema?: any; onUpdate: (val: any) => void
+}) {
+    const cardId = useMemo(() => Math.random().toString(36).substr(2, 9), [])
+    const [isEditing, setIsEditing] = useState(false)
+
+    useEffect(() => {
+        const handler = (e: any) => {
+            if (e.detail?.id !== cardId) setIsEditing(false)
+        }
+        window.addEventListener('ACADEMIC_CLOSE_MENUS', handler)
+        return () => window.removeEventListener('ACADEMIC_CLOSE_MENUS', handler)
+    }, [cardId])
+
+    const startEditing = (e?: React.MouseEvent) => {
+        if (e) e.stopPropagation()
+        window.dispatchEvent(new CustomEvent('ACADEMIC_CLOSE_MENUS', { detail: { id: cardId } }))
+        setIsEditing(true)
+    }
+    const [editValue, setEditValue] = useState(String(value || ''))
+    const type = schema?.type || 'str'
+    const isEmpty = value === undefined || value === null || value === ''
+
+    const handleSave = (val?: any) => {
+        onUpdate(val !== undefined ? val : editValue)
+        setIsEditing(false)
+    }
+
+    const displayLabel = label.replace(/_/g, ' ')
+
+    if (type === 'bool') {
+        const isChecked = value === true || value === 'true'
+        return (
+            <div className="p-6 border border-border/10 rounded-2xl bg-muted/5 flex flex-col justify-between gap-6 hover:border-foreground/10 transition-all">
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">{displayLabel}</span>
+                <div className="flex items-center justify-between">
+                    <span className="text-xl font-black uppercase tracking-tight">{isChecked ? 'Yes' : 'No'}</span>
+                    <button onClick={() => handleSave(!isChecked)} className={cn('w-8 h-8 flex items-center justify-center rounded-xl transition-all', isChecked ? 'bg-foreground text-background shadow-lg shadow-foreground/10' : 'bg-muted/10 border border-border/40 hover:bg-muted/20')}>
+                        <Check size={16} strokeWidth={4} />
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div className="p-6 border border-border/10 rounded-2xl bg-muted/5 flex flex-col gap-3 group/bigprop relative hover:bg-muted/10 hover:border-foreground/20 transition-all cursor-pointer"
+            onClick={startEditing}>
+            <div className="flex items-center justify-between">
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">{displayLabel}</span>
+                <div className="flex items-center gap-2">
+                    {isEditing && <span className="text-[8px] font-black text-primary uppercase animate-pulse">Editing</span>}
+                    <Edit3 size={11} className="text-muted-foreground/0 group-hover/bigprop:text-muted-foreground/20 transition-all" />
+                </div>
+            </div>
+
+            {isEditing ? (
+                type === 'select' || type === 'relation' ? (
+                    <div className="relative">
+                        <span className="text-2xl font-black tracking-tighter text-primary">Select {displayLabel}</span>
+                        <SelectPropertyEditor value={String(value || '')} source={schema?.source} label={displayLabel} onSave={handleSave} onCancel={() => setIsEditing(false)} />
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <input
+                            autoFocus
+                            type={type === 'number' ? 'number' : type === 'date' ? 'date' : 'text'}
+                            value={editValue}
+                            onChange={e => setEditValue(e.target.value)}
+                            onBlur={() => handleSave()}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false) }}
+                            className="bg-transparent text-2xl font-black tracking-tighter text-foreground border-b-2 border-primary w-full outline-none pb-1"
+                        />
+                    </div>
+                )
+            ) : (
+                <span className={cn('text-3xl font-black tracking-tighter truncate leading-none', isEmpty ? 'text-muted-foreground/10 italic' : 'text-foreground')}>
+                    {isEmpty ? 'None' : (
+                        type === 'select' || type === 'relation' ? stripWL(String(value)).split('/').pop() :
+                        type === 'date' && value ? (() => { try { return format(parseISO(String(value)), 'MMM dd, yyyy') } catch { return String(value) } })() :
+                        String(value)
+                    )}
+                </span>
+            )}
         </div>
     )
 }
@@ -140,91 +229,25 @@ export function AcademicRoadmap({ items, activeId, onSelect }: {
     )
 }
 
-// ─── Course Property Grid ──────────────────────────────────────────────────────
-export function CoursePropertyGrid({ item, schema, onUpdate }: {
-    item: any; schema: Record<string, any>; onUpdate: (key: string, value: any) => void
-}) {
-    const [editingKey, setEditingKey] = useState<string | null>(null)
-    const [editValue, setEditValue] = useState('')
-
-    const allKeys = useMemo(() => {
-        const internal = ['id', 'title', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by']
-        const keys = new Set([...Object.keys(schema || {}), ...Object.keys(item || {})])
-        return Array.from(keys).filter(k => !internal.includes(k)).sort()
-    }, [schema, item])
-
-    const handleSave = (key: string, val?: any) => {
-        onUpdate(key, val !== undefined ? val : editValue)
-        setEditingKey(null)
-    }
-
-    return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {allKeys.map(key => {
-                const value = item?.[key]
-                const propSchema = schema?.[key] || {}
-                const propType = propSchema.type || 'str'
-                const isEmpty = value === undefined || value === null || value === ''
-
-                if (propType === 'bool') {
-                    const isChecked = value === true || value === 'true'
-                    return (
-                        <div key={key} className="p-3 bg-muted/5 border border-border/10 rounded-xl flex items-center justify-between">
-                            <span className="text-[8px] font-black uppercase tracking-[0.25em] text-muted-foreground/40">{key.replace(/_/g, ' ')}</span>
-                            <button onClick={() => handleSave(key, !isChecked)} className={cn('w-4 h-4 flex items-center justify-center rounded transition-all', isChecked ? 'bg-primary text-primary-foreground' : 'border border-border/40')}>
-                                <Check size={9} strokeWidth={4} />
-                            </button>
-                        </div>
-                    )
-                }
-
-                return (
-                    <div key={key} className="p-3 bg-muted/5 border border-border/10 rounded-xl flex flex-col gap-1.5 group/prop relative hover:bg-muted/10 transition-all">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[8px] font-black uppercase tracking-[0.25em] text-muted-foreground/40">{key.replace(/_/g, ' ')}</span>
-                            <Edit3 size={9} className="text-muted-foreground/0 group-hover/prop:text-muted-foreground/30 transition-all" />
-                        </div>
-                        {editingKey === key ? (
-                            propType === 'select' || propType === 'relation' ? (
-                                <SelectPropertyEditor value={String(value || '')} source={propSchema.source} onSave={(v) => handleSave(key, v)} onCancel={() => setEditingKey(null)} />
-                            ) : (
-                                <div className="flex items-center gap-1">
-                                    <input autoFocus type={propType === 'date' ? 'date' : propType === 'number' ? 'number' : 'text'} value={editValue}
-                                        onChange={e => setEditValue(e.target.value)}
-                                        onKeyDown={e => { if (e.key === 'Enter') handleSave(key); if (e.key === 'Escape') setEditingKey(null) }}
-                                        className="flex-1 bg-transparent border-b border-primary text-[11px] font-bold focus:outline-none" />
-                                    <button onMouseDown={e => { e.preventDefault(); handleSave(key) }} className="text-primary"><Check size={11} /></button>
-                                </div>
-                            )
-                        ) : (
-                            <div className={cn('text-[11px] font-bold cursor-text truncate min-h-[16px]', isEmpty ? 'text-muted-foreground/20 italic' : 'text-foreground')}
-                                onClick={() => { setEditingKey(key); setEditValue(String(value || '')) }}>
-                                {isEmpty ? 'Empty' : (
-                                    propType === 'select' || propType === 'relation' ? stripWL(String(value)).split('/').pop() :
-                                    propType === 'date' && value ? (() => { try { return format(parseISO(String(value)), 'MMM dd, yyyy') } catch { return String(value) } })() :
-                                    String(value)
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )
-            })}
-        </div>
-    )
-}
 
 // ─── Select Property Editor ────────────────────────────────────────────────────
-export function SelectPropertyEditor({ value, source, onSave, onCancel }: {
-    value: string; source?: string; onSave: (val: string) => void; onCancel: () => void
+export function SelectPropertyEditor({ value, source, onSave, onCancel, label: displayLabel }: {
+    value: string; source?: string; onSave: (val: string) => void; onCancel: () => void; label?: string
 }) {
     const [options, setOptions] = useState<string[]>([])
     const [search, setSearch] = useState('')
 
     useEffect(() => {
         if (source) {
-            sidecarApi.getVaultOptions(source).then(r => setOptions(r.options || [])).catch(() => {})
+            sidecarApi.getVaultOptions(source).then(r => {
+                let opts = r.options || []
+                if (displayLabel?.toLowerCase().includes('status')) {
+                    opts = ['Active', 'Completed', 'Upcoming']
+                }
+                setOptions(opts)
+            }).catch(() => {})
         }
-    }, [source])
+    }, [source, displayLabel])
 
     const filtered = options.filter(o => o.toLowerCase().includes(search.toLowerCase()))
     const rawValue = stripWL(value)
@@ -240,8 +263,19 @@ export function SelectPropertyEditor({ value, source, onSave, onCancel }: {
                         rawValue === opt ? 'bg-primary/10 text-primary' : 'hover:bg-muted/10 text-foreground/70'
                     )}>{opt}</button>
                 ))}
-                {filtered.length === 0 && <p className="px-3 py-2 text-[9px] text-muted-foreground/30 font-black uppercase">No options</p>}
             </div>
+            <button onClick={async () => {
+                const name = window.prompt(`Add new ${displayLabel} option`)
+                if (name && source) {
+                    try {
+                        await sidecarApi.createVaultOption(source, name)
+                        setOptions(prev => [...prev, name].sort())
+                        toast.success('Option added')
+                    } catch { toast.error('Failed to add option') }
+                }
+            }} className="w-full mt-2 py-2 border border-dashed border-border/40 rounded-lg text-[8px] font-black uppercase text-muted-foreground/40 hover:text-foreground hover:bg-muted/10 transition-all flex items-center justify-center gap-2">
+                <Plus size={10} /> Add Option
+            </button>
         </div>
     )
 }

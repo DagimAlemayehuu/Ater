@@ -17,7 +17,7 @@ export interface VaultDatabase {
     views?: any[]
 }
 
-export type AcademicTab = 'PROGRAM' | 'COURSES' | 'PLANNER' | 'ASSIGNMENTS' | 'EXAMS' | 'PRACTICE'
+export type AcademicTab = 'PROGRAM' | 'COURSES' | 'PLANNER' | 'ASSIGNMENTS' | 'EXAMS' | 'PRACTICE' | 'CALENDAR'
 
 export interface TabProps {
     data: AcademicData
@@ -28,4 +28,6 @@ export interface TabProps {
     onOpenNote: (path: string) => void
     navigateTo: (tab: AcademicTab, id?: string) => void
     onRefresh: () => void
+    initialSelectedId?: string | null
+    onClearSelection?: () => void
 }

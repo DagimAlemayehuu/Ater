@@ -5,7 +5,6 @@ import { format, subMonths, addMonths, startOfMonth, endOfMonth, startOfWeek, en
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { sidecarApi } from '@/lib/sidecarApi'
-import { ObsidianPagePanel } from '@/components/obsidian/ObsidianPagePanel'
 import { PracticeModule } from './practice'
 import { TabButton } from './academic-tabs/SharedComponents'
 import ProgramTab from './academic-tabs/ProgramTab'
@@ -20,10 +19,10 @@ export default function AcademicDashboard() {
     const [loading, setLoading] = useState(true)
     const [databases, setDatabases] = useState<VaultDatabase[]>([])
     const [activeTab, setActiveTab] = useState<AcademicTab>('PROGRAM')
+    const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
     const [showCalendar, setShowCalendar] = useState(false)
     const [sidebarWidth, setSidebarWidth] = useState(32)
     const [isResizing, setIsResizing] = useState(false)
-    const [globalNotePath, setGlobalNotePath] = useState<string | null>(null)
     const nav = useNavigate()
     const API_BASE = 'http://127.0.0.1:8765'
 
@@ -78,8 +77,17 @@ export default function AcademicDashboard() {
 
     // ── Shared handlers ────────────────────────────────────────────────────────
     const onUpdate = useCallback(async (dbId: string, itemId: string, properties: Record<string, any>) => {
-        await sidecarApi.updateVaultRow(dbId, itemId, properties)
-        fetchData()
+        try {
+            // Special case: if renaming via 'title' property
+            if (properties.title && properties.title !== itemId) {
+                await sidecarApi.renameVaultFile(dbId, itemId, properties.title)
+            } else {
+                await sidecarApi.updateVaultRow(dbId, itemId, properties)
+            }
+            fetchData()
+        } catch {
+            toast.error('Update failed')
+        }
     }, [fetchData])
 
     const onCreate = useCallback(async (dbId: string, title: string, props?: Record<string, any>): Promise<string | null> => {
@@ -116,8 +124,11 @@ export default function AcademicDashboard() {
         onUpdate,
         onCreate,
         onDelete,
-        onOpenNote: (path) => setGlobalNotePath(path),
-        navigateTo: (tab, id) => setActiveTab(tab),
+        onOpenNote: (path) => nav(`/obsidian?path=${encodeURIComponent(path)}&fullscreen=true`),
+        navigateTo: (tab, id) => {
+            setActiveTab(tab)
+            if (id) setSelectedItemId(id)
+        },
         onRefresh: fetchData,
     }
 
@@ -145,82 +156,81 @@ export default function AcademicDashboard() {
         ...(data?.assignments || []).map(a => ({ ...a, _type: 'Assignment', _date: a.due_date })),
         ...(data?.exams || []).map(e => ({ ...e, _type: 'Exam', _date: e.date })),
     ]
-
     return (
         <div className="h-full flex flex-col bg-background font-sans overflow-hidden">
-            {/* Obsidian note slide-over */}
-            {globalNotePath && (
-                <ObsidianPagePanel
-                    isOpen={!!globalNotePath}
-                    fullPath={globalNotePath}
-                    onClose={() => setGlobalNotePath(null)}
-                    onNavigate={(pageName) => setGlobalNotePath(pageName.endsWith('.md') ? pageName : `${pageName}.md`)}
-                />
-            )}
-
-            <div className="flex flex-1 overflow-hidden">
-                {/* ── Calendar Sidebar ── */}
-                {showCalendar && (
-                    <>
-                        <aside className="flex flex-col overflow-hidden border-r border-border/10 bg-background" style={{ width: `${sidebarWidth}%` }}>
-                            <div className="flex-1 overflow-hidden p-5">
-                                <MiniCalendar events={calendarEvents} onSelectEvent={(path) => setGlobalNotePath(path)} />
-                            </div>
-                        </aside>
-                        {/* Resize handle */}
-                        <div className="w-1 cursor-col-resize bg-border/5 hover:bg-primary/20 transition-colors shrink-0" onMouseDown={() => setIsResizing(true)} />
-                    </>
-                )}
-
-                {/* ── Main Content ── */}
-                <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-                    {/* Top bar */}
-                    <div className="shrink-0 px-6 lg:px-10 pt-6 pb-3 border-b border-border/5">
-                        <div className="flex items-center justify-between mb-4">
+            <>
+                {/* ── Calendar Full Screen Overlay ── */}
+                {activeTab === 'CALENDAR' && (
+                    <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-in fade-in zoom-in-95">
+                        <div className="shrink-0 px-6 lg:px-10 py-6 border-b border-border/10 flex items-center justify-between bg-background">
                             <div>
                                 <p className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/30">Academic Hub</p>
-                                <h1 className="text-lg font-black uppercase tracking-tight text-foreground">{tabs.find(t => t.id === activeTab)?.label}</h1>
+                                <h1 className="text-2xl font-black uppercase tracking-tight text-foreground">Calendar</h1>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={handleSync} className="p-2 text-muted-foreground/30 hover:text-foreground hover:bg-muted/10 rounded-lg transition-all" title="Sync Vault">
-                                    <RefreshCw size={14} />
-                                </button>
-                                <button onClick={() => setShowCalendar(!showCalendar)}
-                                    className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all',
-                                        showCalendar ? 'bg-primary/10 text-primary border border-primary/20' : 'text-muted-foreground/30 hover:text-foreground hover:bg-muted/10')}>
-                                    <CalendarDays size={11} />
-                                    {showCalendar ? 'Hide Calendar' : 'Calendar'}
-                                </button>
+                            <button onClick={() => setActiveTab('PROGRAM')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/10 border border-border/20 text-muted-foreground/50 hover:text-foreground text-[8px] font-black uppercase tracking-widest rounded-lg transition-all">
+                                <ChevronLeft size={10} /> Close Calendar
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-10">
+                            <div className="max-w-5xl mx-auto">
+                                <MiniCalendar events={calendarEvents} onSelectEvent={(path) => nav(`/obsidian?path=${encodeURIComponent(path)}&fullscreen=true`)} />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex flex-1 overflow-hidden">
+                    {/* ── Main Content ── */}
+                    <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+                        {/* Top bar */}
+                        <div className="shrink-0 px-6 lg:px-10 pt-6 pb-3 border-b border-border/5">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <p className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/30">Academic Hub</p>
+                                    <h1 className="text-lg font-black uppercase tracking-tight text-foreground">{tabs.find(t => t.id === activeTab)?.label}</h1>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={handleSync} className="p-2 text-muted-foreground/30 hover:text-foreground hover:bg-muted/10 rounded-lg transition-all" title="Sync Vault">
+                                        <RefreshCw size={14} />
+                                    </button>
+                                    <button onClick={() => setActiveTab(activeTab === 'CALENDAR' ? 'PROGRAM' : 'CALENDAR')}
+                                        className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all',
+                                            activeTab === 'CALENDAR' ? 'bg-primary/10 text-primary border border-primary/20' : 'text-muted-foreground/30 hover:text-foreground hover:bg-muted/10')}>
+                                        <CalendarDays size={11} />
+                                        {activeTab === 'CALENDAR' ? 'Close Calendar' : 'Calendar'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Tab bar */}
+                            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide bg-muted/5 p-1 rounded-xl">
+                                {tabs.map(t => (
+                                    <TabButton key={t.id} active={activeTab === t.id} onClick={() => setActiveTab(t.id)} icon={t.icon} label={t.label} />
+                                ))}
                             </div>
                         </div>
 
-                        {/* Tab bar */}
-                        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide bg-muted/5 p-1 rounded-xl">
-                            {tabs.map(t => (
-                                <TabButton key={t.id} active={activeTab === t.id} onClick={() => setActiveTab(t.id)} icon={t.icon} label={t.label} />
-                            ))}
+                        {/* Tab content */}
+                        <div className="flex-1 overflow-hidden">
+                            {data && (
+                                <>
+                                    {activeTab === 'PROGRAM' && <ProgramTab {...tabProps} />}
+                                    {activeTab === 'COURSES' && <CoursesTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />}
+                                    {activeTab === 'PLANNER' && <StudyPlannerTab {...tabProps} />}
+                                    {activeTab === 'ASSIGNMENTS' && <AssignmentsTab {...tabProps} />}
+                                    {activeTab === 'EXAMS' && <ExamsTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />}
+                                    {activeTab === 'PRACTICE' && (
+                                        <div className="h-full overflow-hidden bg-background">
+                                            <PracticeModule noAnimation={true} />
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
-                    </div>
-
-                    {/* Tab content */}
-                    <div className="flex-1 overflow-hidden">
-                        {data && (
-                            <>
-                                {activeTab === 'PROGRAM' && <ProgramTab {...tabProps} />}
-                                {activeTab === 'COURSES' && <CoursesTab {...tabProps} />}
-                                {activeTab === 'PLANNER' && <StudyPlannerTab {...tabProps} />}
-                                {activeTab === 'ASSIGNMENTS' && <AssignmentsTab {...tabProps} />}
-                                {activeTab === 'EXAMS' && <ExamsTab {...tabProps} />}
-                                {activeTab === 'PRACTICE' && (
-                                    <div className="h-full overflow-hidden bg-background">
-                                        <PracticeModule noAnimation={true} />
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                </main>
-            </div>
+                    </main>
+                </div>
+            </>
         </div>
     )
 }

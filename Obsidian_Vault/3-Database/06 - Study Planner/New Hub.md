@@ -1,4 +1,0 @@
----
-course: "[[Computer Programming]]"
----
-

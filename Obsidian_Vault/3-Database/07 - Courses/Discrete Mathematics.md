@@ -5,6 +5,7 @@ Credits: '3'
 Status: "[[Active]]"
 Grade: ''
 Difficulty: "[[3 - Hard]]"
+title: Discrete Mathematics
 ---
 
 # Discrete Mathematics

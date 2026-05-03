@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Search, SortAsc, BookOpen, PlayCircle, Brain, Check, Plus } from 'lucide-react'
+import { Search, SortAsc, BookOpen, PlayCircle, Brain, Check, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { stripWL, getVal, statusColorClass, confidenceColorClass, groupBy } from './utils'
@@ -21,9 +21,11 @@ export default function StudyPlannerTab({ data, onUpdate, onCreate, onDelete, on
     // ── Stats per course ──────────────────────────────────────────────────────
     const courseStats = useMemo(() => {
         return courses.reduce((acc, c) => {
-            const hubs = allHubs.filter(h =>
-                stripWL(getVal(h, 'course', 'Course')).toLowerCase().includes(c.title?.toLowerCase() || '')
-            )
+            const hubs = allHubs.filter(h => {
+                const hubCourse = getVal(h, 'course', 'Course').toLowerCase()
+                const targetCourse = (c.title || '').toLowerCase()
+                return hubCourse === targetCourse && hubCourse !== ''
+            })
             const done = hubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
             acc[c.id] = { total: hubs.length, done }
             return acc
@@ -39,9 +41,11 @@ export default function StudyPlannerTab({ data, onUpdate, onCreate, onDelete, on
 
         // Course filter
         if (selectedCourseId && selectedCourse) {
-            hubs = hubs.filter(h =>
-                stripWL(getVal(h, 'course', 'Course')).toLowerCase().includes(selectedCourse.title?.toLowerCase() || '')
-            )
+            hubs = hubs.filter(h => {
+                const hubCourse = getVal(h, 'course', 'Course').toLowerCase()
+                const targetCourse = (selectedCourse.title || '').toLowerCase()
+                return hubCourse === targetCourse && hubCourse !== ''
+            })
         }
 
         // Status filter
@@ -95,9 +99,11 @@ export default function StudyPlannerTab({ data, onUpdate, onCreate, onDelete, on
         } else {
             // Group by course
             const withCourse = courses.map(course => {
-                const hubs = visibleHubs.filter(h =>
-                    stripWL(getVal(h, 'course', 'Course')).toLowerCase().includes(course.title?.toLowerCase() || '')
-                )
+                const hubs = visibleHubs.filter(h => {
+                    const hubCourse = getVal(h, 'course', 'Course').toLowerCase()
+                    const targetCourse = (course.title || '').toLowerCase()
+                    return hubCourse === targetCourse && hubCourse !== ''
+                })
                 return { title: course.title, hubs }
             }).filter(s => s.hubs.length > 0)
 
@@ -166,7 +172,10 @@ export default function StudyPlannerTab({ data, onUpdate, onCreate, onDelete, on
                 </div>
                 <div className="p-3 border-t border-border/10">
                     <button
-                        onClick={() => onCreate('06 - Study Planner', 'New Hub', selectedCourseId && selectedCourse ? { course: `[[${selectedCourse.title}]]` } : {})}
+                        onClick={() => {
+                            const title = window.prompt('Enter Hub Title', 'New Hub') || 'New Hub'
+                            onCreate('06 - Study Planner', title, selectedCourseId && selectedCourse ? { course: `[[${selectedCourse.title}]]` } : {})
+                        }}
                         className="w-full py-2 bg-foreground/5 hover:bg-foreground/10 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all">
                         + Add Hub
                     </button>
@@ -237,6 +246,8 @@ export default function StudyPlannerTab({ data, onUpdate, onCreate, onDelete, on
                                         onPractice={() => navigateTo('PRACTICE')}
                                         onSetStatus={handleSetStatus}
                                         onSetStudyDate={handleSetStudyDate}
+                                        onDelete={() => onDelete('06 - Study Planner', hub.id)}
+                                        onUpdate={onUpdate}
                                     />
                                 ))}
                             </div>
@@ -249,12 +260,14 @@ export default function StudyPlannerTab({ data, onUpdate, onCreate, onDelete, on
 }
 
 // ─── Hub Card ─────────────────────────────────────────────────────────────────
-function HubCard({ hub, onOpen, onPractice, onSetStatus, onSetStudyDate }: {
+function HubCard({ hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete, onUpdate }: {
     hub: any
     onOpen: () => void
     onPractice: () => void
     onSetStatus: (hub: any, status: string) => void
     onSetStudyDate: (hub: any, date: string) => void
+    onDelete: () => void
+    onUpdate: (folder: string, id: string, props: any) => void
 }) {
     const [showStatusMenu, setShowStatusMenu] = useState(false)
     const status = stripWL(getVal(hub, 'status', 'Status'))
@@ -270,10 +283,21 @@ function HubCard({ hub, onOpen, onPractice, onSetStatus, onSetStudyDate }: {
         )}>
             {/* Header */}
             <div className="flex items-start gap-2">
-                <h3 className={cn('text-[11px] font-black uppercase leading-tight flex-1', isCompleted ? 'text-muted-foreground/40 line-through' : 'text-foreground')}>
+                <h3 className={cn('text-[11px] font-black uppercase leading-tight flex-1 cursor-pointer hover:text-primary transition-colors', isCompleted ? 'text-muted-foreground/40 line-through' : 'text-foreground')}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        const next = window.prompt('Rename Hub', displayTitle)
+                        if (next && next !== displayTitle) onUpdate('06 - Study Planner', hub.id, { title: next })
+                    }}>
                     {displayTitle}
                 </h3>
-                {isCompleted && <Check size={12} className="text-emerald-500 shrink-0 mt-0.5" />}
+                <div className="flex items-center gap-1">
+                    {isCompleted && <Check size={12} className="text-emerald-500 shrink-0" />}
+                    <button onClick={(e) => { e.stopPropagation(); onDelete() }}
+                        className="p-1.5 text-muted-foreground/0 group-hover/hub:text-muted-foreground/20 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all">
+                        <Trash2 size={11} />
+                    </button>
+                </div>
             </div>
 
             {/* Badges */}
