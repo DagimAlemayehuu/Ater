@@ -23,7 +23,7 @@ import ruamel.yaml
 OKA_TIMEOUT = 600       # 10 minutes — headroom for large PDFs
 OKA_MAX_RETRIES = 10     # Retry on transient failures (524, timeout, rate-limit)
 OKA_RETRY_BACKOFF = 15  # Seconds between retries (doubles each attempt)
- # Characters to include in prompt
+MAX_SOURCE_CHARS = 150000  # Characters to include in prompt
 
 
 class OkaService:

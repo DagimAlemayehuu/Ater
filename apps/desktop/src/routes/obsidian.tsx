@@ -322,7 +322,7 @@ function parseHubTree(content: string): NavNode[] {
     return roots
 }
 
-function KnowledgeFooter({ tree, activePath, onNavigate }: { tree: NavNode[], activePath: string | null, onNavigate: (path: string) => void }) {
+function KnowledgeFooter({ tree, activePath, onNavigate, onFinish }: { tree: NavNode[], activePath: string | null, onNavigate: (path: string) => void, onFinish?: () => Promise<void> }) {
     const navigate = useNavigate();
     
     const flattened = useMemo(() => {
@@ -389,7 +389,10 @@ function KnowledgeFooter({ tree, activePath, onNavigate }: { tree: NavNode[], ac
                 <div className="flex items-center gap-4">
                     {nextNode && (
                         <button 
-                            onClick={() => onNavigate(nextNode.target!)}
+                            onClick={async () => {
+                                if (onFinish) await onFinish();
+                                onNavigate(nextNode.target!);
+                            }}
                             className="flex items-center gap-3 px-6 py-2.5 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border/40 transition-all group text-right"
                         >
                             <div className="flex flex-col items-end">
@@ -546,6 +549,9 @@ export default function ObsidianVaultPage() {
     const [editedContent, setEditedContent] = useState('')
     const [history, setHistory] = useState<string[]>([])
     const [historyIndex, setHistoryIndex] = useState(-1)
+    
+    // --- Sync & Topology Cache ---
+    const currentHubPath = useRef<string | null>(null);
     
     const { isFullscreen, setIsFullscreen } = useLayout()
 
@@ -734,97 +740,110 @@ export default function ObsidianVaultPage() {
         }
     }, [noteMetadata, selectedPath, noteContent])
 
+    // ── Shared helper: surgically update ONE frontmatter key without touching anything else ──
+    const updateFrontmatterProperty = async (
+        path: string,
+        key: string,
+        value: string | boolean | number,
+        currentMetadata?: Record<string, any>
+    ): Promise<void> => {
+        const noteData = await sidecarApi.readObsidianNote(path);
+        const body: string = noteData.content ?? '';
+        const meta: Record<string, any> = { ...(currentMetadata ?? noteData.metadata ?? {}) };
+
+        const normalKey = key.toLowerCase();
+        const existingKey = Object.keys(meta).find(k => k.toLowerCase() === normalKey) ?? key;
+        meta[existingKey] = value;
+
+        const yamlLines = Object.entries(meta).map(([k, v]) => {
+            if (v === null || v === undefined || v === '') return `${k}: ''`;
+            if (typeof v === 'boolean' || typeof v === 'number') return `${k}: ${v}`;
+            const s = String(v);
+            if (s.startsWith('[[') || s === 'true' || s === 'false') return `${k}: ${s}`;
+            if (Array.isArray(v)) {
+                return `${k}:\n${v.map(i => `  - "${String(i)}"`).join('\n')}`;
+            }
+            return `${k}: "${s}"`;
+        });
+
+        const newFileContent = `---\n${yamlLines.join('\n')}\n---\n\n${body.trimStart()}`;
+        await sidecarApi.updateObsidianNote(path, newFileContent);
+    };
+
     useEffect(() => {
         fetchHubConnections()
     }, [fetchHubConnections])
 
-    const handleToggleCheckbox = async (label: string, isChecked: boolean, target: string | null) => {
-        if (selectedPath) {
-            try {
-                // 1. Update the Hub Note (where the list resides)
-                const rawHub = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course || noteMetadata?.semester;
-                let cleanHubName = '';
-                if (rawHub) {
-                    const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub];
-                    cleanHubName = String(hubItems[0] || '').replace(/\[\[/g, '').replace(/\]\]/g, '').trim();
-                }
-                
-                const isCurrentAHub = selectedPath.toLowerCase().includes('_hub.md') || noteMetadata?.type?.toLowerCase() === 'hub'
-                if (!cleanHubName && isCurrentAHub) {
-                    cleanHubName = selectedPath.split('/').pop()?.replace('.md', '') || '';
-                }
+    const handleToggleCheckbox = async (label: string, isChecked: boolean, target: string | null, skipAtomicUpdate: boolean = false) => {
+        if (!selectedPath) return;
+        try {
+            // 1. Update the Hub Note checkbox
+            const rawHub = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course || noteMetadata?.semester;
+            let cleanHubName = '';
+            if (rawHub) {
+                const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub];
+                cleanHubName = String(hubItems[0] || '').replace(/\[\[/g, '').replace(/\]\]/g, '').trim();
+            }
+            
+            const isCurrentAHub = selectedPath.toLowerCase().includes('_hub.md') || noteMetadata?.type?.toLowerCase() === 'hub';
+            if (!cleanHubName && isCurrentAHub) {
+                cleanHubName = selectedPath.split('/').pop()?.replace('.md', '') || '';
+            }
 
-                if (cleanHubName) {
-                    const res = await sidecarApi.findVaultPage(cleanHubName);
-                    let hubPath = res.path;
-                    if (!hubPath) {
-                        const res2 = await sidecarApi.findVaultPage(`${cleanHubName}_Hub`);
-                        hubPath = res2.path;
-                    }
-                    if (hubPath) {
-                        const hubData = await sidecarApi.readObsidianNote(hubPath);
-                        if (hubData.content) {
-                            const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                            // Support multiple markers: -, *, +
-                            const regex = new RegExp(`^(\\s*[-*+] \\[(?: |x|X)\\]) (?:\\*\\*)?(\\[\\[(?:[^\\]|]+\\|)?${escapedLabel}\\]\\]|${escapedLabel})(?:\\*\\*)?`, 'gim');
-                            const newCheck = isChecked ? 'x' : ' ';
-                            const updatedContent = hubData.content.replace(regex, `$1`.replace(/\[(?: |x|X)\]/, `[${newCheck}]`) + ` $2`);
+            if (cleanHubName) {
+                const res = await sidecarApi.findVaultPage(cleanHubName);
+                let hubPath = res.path || (files.find(f => f.name.toLowerCase().includes(cleanHubName.toLowerCase()))?.path);
+                
+                if (hubPath) {
+                    const hubData = await sidecarApi.readObsidianNote(hubPath);
+                    if (hubData.content) {
+                        const normalizedLabel = label.toLowerCase().trim().replace(/_/g, ' ');
+                        const linkA = `[[${normalizedLabel}]]`;
+                        const linkB = `[[${normalizedLabel.replace(/ /g, '_')}]]`;
+                        
+                        let updated = false;
+                        const newBodyLines = hubData.content.split('\n').map(line => {
+                            const ll = line.toLowerCase();
+                            if (ll.includes(linkA) || ll.includes(linkB)) {
+                                updated = true;
+                                return line.replace(/\[(?: |x|X)\]/, isChecked ? '[x]' : '[ ]');
+                            }
+                            return line;
+                        });
+
+                        if (updated) {
+                            const hubMeta: Record<string, any> = hubData.metadata ?? {};
+                            const yamlLines = Object.entries(hubMeta).map(([k, v]) => `${k}: ${typeof v === 'string' ? `"${v}"` : v}`);
+                            const fullContent = yamlLines.length > 0 
+                                ? `---\n${yamlLines.join('\n')}\n---\n\n${newBodyLines.join('\n')}`
+                                : newBodyLines.join('\n');
                             
-                            if (updatedContent !== hubData.content) {
-                                await sidecarApi.updateObsidianNote(hubPath, updatedContent);
-                                if (selectedPath === hubPath) {
-                                    setNoteContent(updatedContent);
-                                    setEditedContent(updatedContent);
-                                }
-                                // Force connection reload
-                                setTimeout(() => {
-                                    fetchHubConnections();
-                                }, 500);
+                            await sidecarApi.updateObsidianNote(hubPath, fullContent);
+                            if (selectedPath === hubPath) {
+                                setNoteContent(newBodyLines.join('\n'));
+                                setEditedContent(newBodyLines.join('\n'));
                             }
                         }
                     }
                 }
-
-                // 2. Update the atomic note's internal 'read' property
-                const targetName = target || label
-                const resTarget = await sidecarApi.findVaultPage(targetName);
-                
-                if (resTarget.found && resTarget.path) {
-                    const targetData = await sidecarApi.readObsidianNote(resTarget.path);
-                    let content = targetData.content;
-                    const newCheckVal = isChecked ? 'true' : 'false';
-                    
-                    if (content.match(/^read:\s*(?:true|false|True|False)/im)) {
-                        content = content.replace(/^read:\s*(?:true|false|True|False)/im, `read: ${newCheckVal}`);
-                    } else if (content.match(/\nread:\s*(?:true|false|True|False)/i)) {
-                        content = content.replace(/\nread:\s*(?:true|false|True|False)/i, `\nread: ${newCheckVal}`);
-                    } else if (content.startsWith('---\n')) {
-                        content = content.replace('---\n', `---\nread: ${newCheckVal}\n`);
-                    } else {
-                        content = `---\nread: ${newCheckVal}\n---\n\n${content}`;
-                    }
-                    
-                    if (content !== targetData.content) {
-                        await sidecarApi.updateObsidianNote(resTarget.path, content);
-                        if (selectedPath === resTarget.path) {
-                            setNoteMetadata(prev => ({ ...prev, read: isChecked }));
-                        }
-                    }
-
-                    // 3. Navigate to the page if ticked - using the EXACT path we found
-                    if (isChecked) {
-                        selectFile(resTarget.path);
-                    }
-                } else if (isChecked && target) {
-                    // Only fallback to handleWikiLinkClick if we explicitly want auto-creation
-                    // but for robustness, let's just use it as it handles the creation logic correctly
-                    handleWikiLinkClick(target);
-                }
-
-                setNoteMetadata(prev => ({ ...prev }));
-            } catch(e) {
-                console.error("Failed to toggle checkbox", e);
             }
+
+            // 2. Update the atomic note's internal 'read' property
+            if (skipAtomicUpdate) return;
+            const targetPath = (target && target.endsWith('.md')) ? target : null;
+            let resTarget = { found: !!targetPath, path: targetPath };
+            if (!resTarget.found) {
+                resTarget = await sidecarApi.findVaultPage(target || label);
+            }
+            
+            if (resTarget.found && resTarget.path) {
+                await updateFrontmatterProperty(resTarget.path, 'read', isChecked);
+                if (selectedPath === resTarget.path) {
+                    setNoteMetadata(prev => ({ ...prev, read: isChecked }));
+                }
+            }
+        } catch(e) {
+            console.error("[Sync] handleToggleCheckbox failed:", e);
         }
     }
 
@@ -867,41 +886,31 @@ export default function ObsidianVaultPage() {
     }
 
     const handleUpdateProperty = async (name: string, value: any) => {
-        if (!selectedPath) return
-        setLoadingNote(true)
+        if (!selectedPath) return;
+        setLoadingNote(true);
         try {
-            const res = await sidecarApi.readObsidianNote(selectedPath)
-            let content = res.content
+            // Use the shared helper – guarantees ONLY this key changes
+            const finalVal = typeof value === 'boolean' ? value
+                : (value === 'true' || value === 'false') ? (value === 'true')
+                : typeof value === 'number' ? value
+                : String(value);
+
+            await updateFrontmatterProperty(selectedPath, name, finalVal, noteMetadata);
+
+            const refreshed = await sidecarApi.readObsidianNote(selectedPath);
+            setNoteMetadata(refreshed.metadata ?? {});
             
-            // Format value for YAML
-            let formattedVal = value
-            if (typeof value === 'string' && !value.startsWith('"')) {
-                formattedVal = `"${value}"`
+            // Sync 'read' to Hub checkbox (bi-directional)
+            if (name.toLowerCase() === 'read') {
+                const label = selectedPath.split('/').pop()?.replace('.md', '') ?? '';
+                await handleToggleCheckbox(label, !!value, selectedPath, true);
             }
-
-            const regex = new RegExp(`^${name}:.*$`, 'm')
-            if (content.match(regex)) {
-                content = content.replace(regex, `${name}: ${formattedVal}`)
-            } else {
-                // If not found in frontmatter, it might be in a malformed block or missing
-                // For simplicity, we just use regex replacement within the first --- block
-                const endMatch = content.indexOf('\n---', 4)
-                if (endMatch !== -1) {
-                    content = content.slice(0, endMatch) + `\n${name}: ${formattedVal}` + content.slice(endMatch)
-                }
-            }
-
-            await sidecarApi.updateObsidianNote(selectedPath, content)
-            const refreshed = await sidecarApi.readObsidianNote(selectedPath)
-            setNoteMetadata(refreshed.metadata || {})
-            setNoteContent(refreshed.content || '')
-            setEditedContent(refreshed.content || '')
         } catch (err) {
-            console.error("Failed to update property", err)
+            console.error('[Property] Failed to update property:', err);
         } finally {
-            setLoadingNote(false)
+            setLoadingNote(false);
         }
-    }
+    };
 
     const handleDeleteProperty = async (name: string) => {
         if (!selectedPath) return
@@ -2021,6 +2030,12 @@ export default function ObsidianVaultPage() {
                                                                 tree={studyTree} 
                                                                 activePath={selectedPath}
                                                                 onNavigate={handleWikiLinkClick}
+                                                                onFinish={async () => {
+                                                                    if (selectedPath) {
+                                                                        const label = selectedPath.split('/').pop()?.replace('.md', '') ?? '';
+                                                                        await handleToggleCheckbox(label, true, selectedPath);
+                                                                    }
+                                                                }}
                                                             />
                                                         </>
                                                     )}
