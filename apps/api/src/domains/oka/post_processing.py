@@ -181,11 +181,68 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path):
         print(f"[HubSync] No atomic notes found in {unit_dir}")
         return
 
+    # Extract prerequisites to build a tree
+    note_data = {}
+    for stem in deployed_stems:
+        note_file = unit_dir / f"{stem}.md"
+        try:
+            content = note_file.read_text(encoding="utf-8")
+            parts = content.split("---", 2)
+            prereq_stems = []
+            if len(parts) >= 3:
+                fm = yaml.safe_load(parts[1]) or {}
+                raw_prereqs = fm.get("prerequisites", [])
+                if isinstance(raw_prereqs, list):
+                    for p in raw_prereqs:
+                        m = re.search(r'\[\[(.*?)\]\]', str(p))
+                        if m:
+                            prereq_stems.append(m.group(1).split('|')[0].strip())
+            note_data[stem] = prereq_stems
+        except Exception:
+            note_data[stem] = []
+
+    children_map = {stem: [] for stem in deployed_stems}
+    roots = []
+    
+    for stem in deployed_stems:
+        prereqs = note_data[stem]
+        local_prereqs = [p for p in prereqs if p in note_data]
+        if local_prereqs:
+            parent = local_prereqs[0]
+            children_map[parent].append(stem)
+        else:
+            roots.append(stem)
+
+    lines = []
+    visited = set()
+    
+    def build_tree(node, current_depth):
+        if node in visited:
+            return
+        visited.add(node)
+        indent = min(current_depth, 3) * 2
+        prefix = " " * indent
+        lines.append(f"{prefix}- [ ] [[{node}]]")
+        
+        for child in sorted(children_map[node]):
+            if child not in visited:
+                build_tree(child, current_depth + 1)
+                
+    for root in sorted(roots):
+        build_tree(root, 1)
+        
+    # Catch any disconnected cycles
+    for stem in deployed_stems:
+        if stem not in visited:
+            build_tree(stem, 1)
+
     hub_text = hub_file.read_text(encoding="utf-8")
 
-    # Build a fresh connections block
-    connection_lines = "\n".join(f"- [ ] [[{stem}]]" for stem in deployed_stems)
-    new_connections_block = f"## Connections\n\n{connection_lines}\n"
+    hub_title = hub_file.stem.replace("_Hub", "").replace("_", " ")
+    hub_title = re.sub(r"^\d+[\s\-_]*", "", hub_title)
+
+    connection_lines = "\n".join(lines)
+    new_connections_block = f"## Connections\n\n- {hub_title}\n{connection_lines}\n"
 
     # Replace or append the Connections section
     if "## Connections" in hub_text:
@@ -200,4 +257,4 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path):
         hub_text = hub_text.rstrip() + f"\n\n{new_connections_block}"
 
     hub_file.write_text(hub_text, encoding="utf-8")
-    print(f"[HubSync] Rebuilt connections for {hub_file.name}: {len(deployed_stems)} notes linked.")
+    print(f"[HubSync] Rebuilt connections for {hub_file.name}: {len(deployed_stems)} notes linked in tree format.")

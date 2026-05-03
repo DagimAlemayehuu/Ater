@@ -667,7 +667,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 
  {(currentQuestion.type === 'writing' || currentQuestion.type === 'synthesis' || currentQuestion.type === 'debug') && (
  <div className="space-y-6">
- {currentQuestion.type === 'debug' && <div className="p-6 bg-muted/10 rounded-md text-xs font-mono text-foreground/60 overflow-x-auto"><MarkdownBlock content={`\`\`\`${currentQuestion.language || 'text'}\n${currentQuestion.content}\n\`\`\``} /></div>}
+ {currentQuestion.type === 'debug' && <MarkdownBlock content={`\`\`\`${currentQuestion.language || 'text'}\n${currentQuestion.content}\n\`\`\``} />}
  <textarea rows={8} disabled={isRevealed} className="w-full p-6 bg-muted/5 border border-border/10 rounded-md text-sm font-medium focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="Your answer..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
  {isRevealed && <div className="p-6 bg-muted/5 border-l border-primary rounded-r-md text-sm font-medium text-foreground/60 whitespace-pre-wrap"><MarkdownBlock content={String(currentQuestion.answer)} /></div>}
  </div>
@@ -692,7 +692,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const parts = (currentQuestion.textWithBlanks || '').split(/\[\[.*?\]\]/);
  return parts.map((part: string, i: number) => (
  <React.Fragment key={i}>
- <MarkdownBlock content={part} />
+ <div className="inline-block align-middle"><MarkdownBlock content={part} /></div>
  {i < parts.length - 1 && (
  <input type="text" disabled={isRevealed} value={(userAnswers[currentQuestion.id] || [])[i] || ''} onChange={(e) => {const newAns = [...(userAnswers[currentQuestion.id] || [])]; newAns[i] = e.target.value; handleSelectAnswer(newAns);}} className={cn("mx-2 border-b-2 bg-transparent outline-none w-32 text-center text-sm font-black uppercase shrink-0 self-center", isRevealed ? (String((userAnswers[currentQuestion.id] || [])[i] || '').toLowerCase() === String((currentQuestion.answer || [])[i] || '').toLowerCase() ? "border-primary text-primary" : "border-destructive text-destructive") : "border-muted/30 focus:border-primary")} />
  )}

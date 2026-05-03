@@ -278,7 +278,7 @@ class PractitionerAgent:
             pro_domain = get_professional_domain(note_title)
             walkthrough_instr = (
                 f"CRITICAL: Situate the walkthrough in this advanced professional domain: **{pro_domain}**.\n"
-                "Do NOT use trivial examples like 'x=5'. Each step must show a concrete state change."
+                "Do NOT use trivial examples like 'x=5'. However, for fundamental syntax or basic concepts, seamlessly scale the complexity so the scenario doesn't feel overly contrived. Each step must show a concrete state change."
             )
         else:
             walkthrough_instr = (
@@ -350,10 +350,11 @@ class ExaminerAgent:
                 "The 'answer' field names the exact error and corrects it. NEVER write 'no error is present'. VERIFY the flawed step is actually wrong."
             )
         elif is_code_mode:
+            db_rule = " For Database concepts, the buggy code MUST be SQL or flawed schema logic—NEVER JavaScript, Python, or generic languages." if mode_h1 == "Schema & Query Mechanics" else ""
             l3_rule = (
                 "- Q3 debug: 'content' field = ONLY the buggy code snippet — no hints, no comments revealing the bug. "
                 "Bug must be NON-TRIVIAL: logic inversion, wrong operator, race condition, type coercion. NOT a syntax error or missing semicolon. "
-                "The 'answer' names the exact bug and fix. NEVER write 'no error is present'."
+                f"The 'answer' names the exact bug and fix. NEVER write 'no error is present'.{db_rule}"
             )
         elif is_writing_mode:
             l3_rule = (
@@ -394,6 +395,8 @@ class ExaminerAgent:
 
     async def retry(self, note_title: str, theory_summary: str, primary_language: str, diagnosis: str) -> str:
         title_readable = note_title.replace("_", " ")
+        mode_h1 = self.domain.get("h1", "")
+        db_rule = " For Database concepts, ONLY use SQL or relational logic—NEVER JavaScript." if mode_h1 == "Schema & Query Mechanics" else ""
         sys_prompt = (
             "PREVIOUS JSON FAILED. Output a VALID JSON array of exactly 3 quiz questions. No fences. Just the array.\n"
             f"FIX INSTRUCTION: {diagnosis}\n\n"
@@ -404,7 +407,7 @@ class ExaminerAgent:
             "  mcq → needs 'options' (4-item array) AND 'answer' (letter like 'B').\n"
             "  fill_in → needs 'textWithBlanks' AND 'answer' (list of strings, e.g. ['word']).\n"
             "  true_false → 'answer' is bare boolean true or false. NO QUOTES.\n"
-            "  debug/scenario/writing → 'answer' is a non-empty string.\n"
+            f"  debug/scenario/writing → 'answer' is a non-empty string.{db_rule}\n"
             "Escape all LaTeX with double backslashes. Do not quiz the mental model analogy.\n\n"
             f"Concept: {title_readable}\n"
             f"Key facts: {theory_summary[:500]}"
