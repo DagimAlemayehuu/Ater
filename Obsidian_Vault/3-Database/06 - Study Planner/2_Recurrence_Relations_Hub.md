@@ -1,31 +1,29 @@
 ---
-
-title: 2_Recurrence_Relations_Hub
-type: Hub
-course: Discrete Mathematics
-semester: Autumn 2025
-unit: '2'
-source: "[[2_recurrence_relations.pdf]]"
-source_pages: []
-status: Not Started
-confidence: null
-study_date: null
+title: "2_Recurrence_Relations_Hub"
+type: "Hub"
+course: "Discrete Mathematics"
+semester: "Autumn 2025"
+unit: "2"
+source:
+ - "2_Recurrence_Relations.Pdf"
+source_pages: ''
+status: "Not Started"
+confidence: ''
+study_date: ''
 generated: true
-
 ---
 
 # 2 Recurrence Relations Hub
 
 ## Overview
+Recurrence relations form a fundamental technique for defining algorithms, sets, or functions in terms of themselves. This approach involves two key components: a rule for determining present and future values from earlier values, and one or more starting values to initiate the rule. At its core, a recurrence relation is an equation that expresses a term in a sequence as a function of one or more preceding terms. This concept is pivotal in defining sequences, which are functions with a domain restricted to integers greater than or equal to a certain value, typically denoted as \(n \geq n_0\).
 
-Recurrence relations are a fundamental concept in mathematics and computer science, enabling the definition of algorithms, sets, or functions in terms of themselves. This technique allows for the creation of sequences, which are functions whose domain is a subset of integers. A recurrence relation is an equation that expresses a term in a sequence as a function of previous terms, and it often requires one or more starting terms, known as initial conditions, to generate a specific sequence.
+The structure of recurrence relations can vary, but a significant focus is on linear recurrence relations, which can be homogeneous or non-homogeneous. A homogeneous linear recurrence relation is of the form \(c_0a_n + c_1a_{n-1} + c_2a_{n-2} + \cdots + c_k a_{n-k} = 0\), where the right-hand side is zero. Solving these relations often involves substituting \(a_n = r^n\) into the equation, leading to the characteristic equation, which is crucial for finding the general solution. The general solution represents the entire family of possible solutions and is typically a combination of terms formed from the roots of the characteristic equation.
 
-A solution to a recurrence relation can take the form of a general solution, which represents the entire family of possible solutions, or a specific solution that satisfies the recurrence relation with a particular set of initial conditions. To find these solutions, various methods can be employed, such as analyzing the homogeneous form of the recurrence relation, which is a linear recurrence relation where the function is equal to zero for all n. The characteristic equation, used to find the roots of a recurrence relation, plays a crucial role in determining the general solution.
+For a complete solution to a recurrence relation, a particular solution that satisfies both the recurrence relation and a specific set of initial conditions must be found. This particular solution, combined with the general solution to the homogeneous part, yields the complete solution to the recurrence relation. The study of recurrence relations, therefore, encompasses understanding sequences, the formulation of relations, solving homogeneous and non-homogeneous linear relations, and applying initial conditions to find specific solutions. This unified approach enables the analysis and solution of a wide range of problems that can be modeled using recurrence relations.
 
-The interplay between these concepts enables the effective use of recurrence relations to model and solve problems. For instance, to solve a non-homogeneous recurrence relation, one can use a method for finding a particular solution and then combine it with the general solution to the homogeneous form. A sequence is considered a solution to a recurrence relation if it satisfies the relation, and verifying this is essential to ensuring the correctness of the solution. By understanding how these concepts interlock, one can harness the power of recurrence relations to tackle a wide range of problems in mathematics, computer science, and other fields.
 
 ## Unit Objectives
-
 - [ ] Master all core technical definitions.
 - [ ] Internalize the mental models for each concept.
 - [ ] Trace and understand every worked example.
@@ -33,13 +31,17 @@ The interplay between these concepts enables the effective use of recurrence rel
 
 ## Connections
 
-- [ ] [[Sequence]]
-- [ ] [[Recursive_definition]]
-- [ ] [[Recurrence_relation]]
-    - [ ] [[General_solution]]
-        - [ ] [[Unique_solution]]
-    - [ ] [[Method_of_undetermined_coefficients]]
-    - [ ] [[Initial_condition]]
-    - [ ] [[Solution_of_a_relation]]
-    - [ ] [[Linear_homogeneous_recurrence_relation]]
-    - [ ] [[Characteristic_equation]]
+- [ ] [[Characteristic_Equation]]
+- [ ] [[General_Solution]]
+- [ ] [[Homogeneous_Recurrence_Relation]]
+- [ ] [[Kth_Order_Linear_Homogeneous_Recurrence_Relation]]
+- [ ] [[Linear_Homogeneous_Recurrence_Relation]]
+- [ ] [[Linear_Recurrence_Relation]]
+- [ ] [[Non_Homogeneous_Linear_Recurrence_Relation]]
+- [ ] [[Recurrence_Relation_Definition]]
+- [ ] [[Recursive_Definition]]
+- [ ] [[Second_Order_Linear_Homogeneous_Recurrence_Relation]]
+- [ ] [[Sequence_Definition]]
+- [ ] [[Sequence_Notation]]
+- [ ] [[Solving_Linear_Homogeneous_Recurrence_Relations]]
+- [ ] [[Unique_Solution]]

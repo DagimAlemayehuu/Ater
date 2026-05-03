@@ -11,14 +11,10 @@
             "id": "e4e52099906a74b0",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "h.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "h"
+              "title": "New tab"
             }
           }
         ]
@@ -94,7 +90,6 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "h.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +99,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for h"
+              "title": "Backlinks"
             }
           },
           {
@@ -113,12 +108,11 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "h.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from h"
+              "title": "Outgoing links"
             }
           },
           {
@@ -156,13 +150,12 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "h.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of h"
+              "title": "Outline"
             }
           }
         ]
@@ -183,43 +176,43 @@
       "bases:Create new base": false
     }
   },
-  "active": "e4e52099906a74b0",
+  "active": "94183ec2254ed9df",
   "lastOpenFiles": [
-    "h.md",
+    "5-Pdf Store/note generated/Chapter_3.pdf",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/DBMS_Selection.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Requirements_Collection_And_Analysis.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Database_Planning.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Information_System.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/ER_Diagram.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Participation.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Cardinality.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Multiplicity.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Attribute.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Relationship_Type.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Entity_Type.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Entity_Relationship_Model.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Physical_Database_Design.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Logical_Database_Design.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Conceptual_Database_Design.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Database_System_Development_Lifecycle.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design/Database_Development_Methodology.md",
+    "2-Academic/Winter 2026/Database_Systems/3_Database_Design",
+    "2-Academic/Winter 2026/Database_Systems",
+    "2-Academic/Winter 2026",
+    "3-Database/06 - Study Planner/3_Database_Design_Hub.md",
     "5-Pdf Store/note generated/Chapter 2.pdf",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Unary_Operators.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Expression.md",
     "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Static_Cast.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Type_Casting.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Logical_Operators.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Assignment_Operator.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Associativity.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Postfix_Operators.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Operator_Precedence.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Arithmetic_Operators.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Modulus_Operator.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Division_Operator.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Variable_Declaration.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Variables.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Literals.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Identifiers.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Keywords.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Basic_Elements.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Return_Statement.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Escape_Characters.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Stream_Insertion_Operator.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Preprocessor_Directives.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/White_Space.md",
-    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/C++_IS_Case_Sensitive.md",
+    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Explicit_Type_Casting.md",
+    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Implicit_Type_Casting.md",
+    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Precedence_Rules.md",
     "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Statements.md",
+    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Expression.md",
+    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals/Type_Conversion.md",
+    "5-Pdf Store/Chapter_3.pdf",
     "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals",
     "2-Academic/Autumn 2025/Computer_Programming",
-    "5-Pdf Store/oka_queue.db",
-    "5-Pdf Store/note generated/2_Recurrence_Relations.pdf",
-    "2-Academic/Autumn 2025/Discrete_Mathematics/2_Recurrence_Relations",
     "5-Pdf Store/Chapter 2.pdf",
-    "2-Academic/Autumn 2025/Discrete_Mathematics",
-    "2-Academic/Autumn 2025",
-    "5-Pdf Store/2_Recurrence_Relations.pdf"
+    "5-Pdf Store/oka_queue.db",
+    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Basics"
   ]
 }

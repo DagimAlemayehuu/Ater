@@ -5,97 +5,79 @@ type: Atomic Note
 course: Computer Programming
 semester: Autumn 2025
 unit: '2'
-hub: "[[2_C++_Programming_Fundamentals_Hub]]"
-source: "[[Chapter_2.pdf]]"
+hub: '[[2_C++_Programming_Fundamentals_Hub]]'
+source: '[[Chapter_2.pdf]]'
 source_pages:
 - 7
 mode: CS-SOFTWARE
 read: false
 generated: true
+prerequisites:
+- '[[Preprocessor_Directives]]'
+- '[[Stream_Insertion_Operator]]'
+- '[[Main_Function]]'
 
 ---
 
+
 # 1. Mental Model
 
-The concept of compiler directives can be likened to a chef's recipe notes, where specific instructions are written to guide the chef in preparing a dish, similar to how directives guide the compiler in processing the code. Just as a chef might note to use a specific cooking technique or ingredient, compiler directives provide special instructions to the compiler. This analogy highlights how directives influence the compilation process without being part of the main recipe, or code.
+The concept of compiler directives can be likened to a restaurant's special requests. Just as a restaurant may have specific requests for food preparation, such as "no gluten" or "extra sauce," compiler directives are special requests to the compiler, such as [[Compiler_Directives]] telling it to include a specific file or define a macro. The directive acts as a messenger, conveying instructions to the compiler, much like a server takes a customer's request to the kitchen staff.
 
 # 2. Execution Logic & Data Flow
 
-The [[C++_Programming_Language]] uses [[Preprocessor_Directives]] to instruct the compiler to perform specific actions before compiling the code, such as including header files. These directives are not [[C++_Program_Structure]] elements but rather [[Compiler_Directives]] that guide the compilation process. The [[Main_Function]] is where program execution begins, but [[Preprocessor_Directives]] are processed before the compiler even reaches this point. [[Comments]] are used for human readability and are ignored by the compiler, whereas [[Compiler_Directives]] have a tangible impact on compilation. The use of [[Preprocessor_Directives]] allows for conditional compilation and inclusion of necessary files, showcasing their critical role in program preparation.
+The compiler directives are processed before the compilation of the C++ code, and they can affect how the code is compiled. The [[Preprocessor_Directives]] are a type of compiler directive that start with the "#" symbol and are used to give instructions to the compiler. For example, the [[Preprocessor_Directives]] can be used to include header files using the [[Stream_Insertion_Operator]] or to define macros. The [[Main_Function]] is where the program execution begins, but the compiler directives are processed before the [[Main_Function]] is reached. The [[Compiler_Directives]] can also be used to control the compilation process, such as with [[Conditional_Compilation]], which is not in the list but is related to [[Preprocessor_Directives]].
 
 # 3. Edge Cases & Failure States
 
-When [[Preprocessor_Directives]] are misused or files specified in [[Compiler_Directives]] are not found, the compiler will typically throw an error or warning, halting the compilation process. For instance, if a file included via a [[Preprocessor_Directive]] does not exist, the compiler will fail to compile the program. [[Type_Casting]] and [[Static_Cast]] are not directly related to directive failures but are important concepts in handling data types within the program. Failure to properly use [[Preprocessor_Directives]] can lead to unexpected behavior or compilation errors, emphasizing the need for accurate directive usage.
+If a compiler directive is misplaced or incorrectly formatted, it can cause the compiler to behave unexpectedly or produce errors. For instance, a missing "#" symbol at the beginning of a [[Preprocessor_Directives]] can cause the compiler to interpret it as a regular C++ statement, leading to a compilation error. Additionally, if a [[Preprocessor_Directives]] attempts to include a non-existent file, the compiler will report an error. Furthermore, incorrect use of [[Preprocessor_Directives]] can lead to multiple inclusions of the same header file, causing duplicate definition errors.
 
-## 4. Implementation Mechanics
+## Implementation Mechanics
 
-```cpp
+```python
 
-// example.cpp
-#include <iostream>
+# compiler_directives.py
 
-#define MAX(a, b) ((a > b) ? a : b)
+def process_directive(directive):
+    if directive.startswith("#include"):
+        file_name = directive.split('"')[1]
+        print(f"Including file: {file_name}")
+    elif directive.startswith("#define"):
+        macro_name = directive.split()[1]
+        print(f"Defining macro: {macro_name}")
 
-int main() {
-    int x = 5;
-    int y = 10;
-    int max_val = MAX(x, y);
-    std::cout << "Max value: " << max_val << std::endl;
-    return 0;
-}
+directives = [
+    '#include "file1.h"',
+    '#define DEBUG',
+    '#include "file2.h"'
+]
 
-```
-
-Memory/Stack Diagram:
-
-```
-
-  +---------------+
-
-  |  max_val    |
-
-  |  (integer)  |
-
-  +---------------+
-           |
-           |
-           v
-  +---------------+
-
-  |  x          |
-
-  |  (integer)  |
-
-  |  value: 5   |
-
-  +---------------+
-           |
-           |
-           v
-  +---------------+
-
-  |  y          |
-
-  |  (integer)  |
-
-  |  value: 10  |
-
-  +---------------+
+for directive in directives:
+    process_directive(directive)
 
 ```
 
-The code block represents a C++ program that uses a preprocessor directive (`#define`) to define a macro (`MAX`), which is then used to find the maximum of two values. The memory/stack diagram shows the variables `max_val`, `x`, and `y` and their values.
+```mermaid
 
-The memory/stack diagram represents the memory layout of the program, with each box representing a variable and its value. The lines connecting the boxes represent the relationships between the variables.
+graph LR
+    A[Start] --> B{Directive Type}
+    B -->|Include| C[Include File]
+    B -->|Define| D[Define Macro]
+    C --> E[End]
+    D --> E
 
-## 5. Walkthrough
+```
 
-1. The preprocessor encounters the `#define` directive and replaces all occurrences of `MAX` with the expression `((a > b) ? a : b)`.
-2. The compiler compiles the modified code and encounters the `main` function, where it declares three integer variables: `x`, `y`, and `max_val`.
-3. The program assigns the values `5` and `10` to `x` and `y`, respectively.
-4. The program evaluates the `MAX` macro with `x` and `y` as arguments, resulting in the expression `((5 > 10) ? 5 : 10)`.
-5. The program evaluates the expression `((5 > 10) ? 5 : 10)` and assigns the result (`10`) to `max_val`.
-6. The program outputs the value of `max_val` to the console using `std::cout`, displaying "Max value: 10".
+The Python code represents the processing of compiler directives. It defines a function `process_directive` that takes a directive as input and performs the corresponding action. The Mermaid flowchart illustrates the state changes that occur during the processing of a directive. It shows the start state, the decision node for the directive type, and the end state.
+
+## Walkthrough
+
+1. **Initial State**: We have a list of compiler directives that need to be processed. These directives are `#include "file1.h"`, `#define DEBUG`, and `#include "file2.h"`.
+2. **Processing First Directive**: The first directive `#include "file1.h"` is passed to the `process_directive` function. The function checks the directive type and includes the file `file1.h`.
+3. **Output for First Directive**: The output for the first directive is `Including file: file1.h`, indicating that the file `file1.h` has been included.
+4. **Processing Second Directive**: The second directive `#define DEBUG` is passed to the `process_directive` function. The function checks the directive type and defines the macro `DEBUG`.
+5. **Output for Second Directive**: The output for the second directive is `Defining macro: DEBUG`, indicating that the macro `DEBUG` has been defined.
+6. **Processing Third Directive**: The third directive `#include "file2.h"` is passed to the `process_directive` function. The function checks the directive type and includes the file `file2.h`, producing the output `Including file: file2.h`.
 
 ---
 
@@ -104,9 +86,32 @@ The memory/stack diagram represents the memory layout of the program, with each 
 ```interactive-quiz
 
 [
-  {"id":"q1","type":"fill_in","difficulty":"L1","question":"Compiler directives are instructions to the compiler that are typically denoted by a specific symbol, such as [[Blank1]].","textWithBlanks":"Compiler directives are instructions to the compiler that are typically denoted by a specific symbol, such as [[Blank1]].","answer":["#"],"explanation":"Compiler directives in C++ are usually denoted by the '#' symbol, which is used to introduce a directive."},
-  {"id":"q2","type":"true_false","difficulty":"L2","question":"A compiler directive can affect the compilation process by including a file multiple times if not handled properly.","answer":true,"explanation":"A compiler directive, such as #include guards, is used to prevent multiple inclusions of the same file during compilation."},
-  {"id":"q3","type":"debug","difficulty":"L3","question":"Find bug.","content":"#define MAX 100\nint arr[MAX];\nint main() {\n    int i = 0;\n    while (i <= MAX) {\n        arr[i] = i;\n        i++;\n    }\n    return 0;\n}","answer":"The bug is in the while loop condition which should be 'i < MAX'","explanation":"The loop iterates from 0 to MAX, which causes an out-of-bounds access because array indices in C++ go from 0 to MAX-1."}
+  {
+    "id": "q1",
+    "type": "fill_in",
+    "difficulty": "L1",
+    "question": "What is the primary function of a compiler directive?",
+    "textWithBlanks": "The primary function of a compiler directive is to [[Give_Instructions]] to the compiler.",
+    "answer": ["give instructions"],
+    "explanation": "Compiler directives provide special requests to the compiler, such as including a specific file or defining a macro."
+  },
+  {
+    "id": "q2",
+    "type": "true_false",
+    "difficulty": "L2",
+    "question": "A compiler directive can change the compiler's default behavior of optimizing the code for a specific target platform.",
+    "answer": true,
+    "explanation": "Compiler directives can indeed influence the compiler's behavior, including optimization settings for specific targets."
+  },
+  {
+    "id": "q3",
+    "type": "debug",
+    "difficulty": "L3",
+    "question": "Find the error.",
+    "content": "if (x > 5) {\n#define MAX 10\n  y = MAX;\n}",
+    "answer": "The bug is incorrect placement of the #define directive. The #define directive should be outside the if statement. The fix is to move #define MAX 10 above the if statement.",
+    "explanation": "The #define directive is a preprocessor directive and should not be placed inside a conditional statement. It should be placed at the top level of the file or in a header file."
+  }
 ]
 
 ```

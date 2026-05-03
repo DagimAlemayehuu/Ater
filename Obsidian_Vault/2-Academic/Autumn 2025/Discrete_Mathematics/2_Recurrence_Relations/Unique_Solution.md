@@ -1,110 +1,114 @@
 ---
+
 title: Unique_Solution
 type: Atomic Note
 course: Discrete Mathematics
 semester: Autumn 2025
 unit: '2'
 hub: "[[2_Recurrence_Relations_Hub]]"
-source: "[[2_Recurrence_Relations.Pdf]]"
+source: "[[2_Recurrence_Relations.pdf]]"
 source_pages:
 - 15
-mode: CS-SOFTWARE
+mode: MATH-DISCRETE
 read: false
 generated: true
 prerequisites:
 - "[[General_Solution]]"
+
 ---
 
-# 1. Mental Model
-The concept of a unique solution can be likened to a master key in a musical composition, where the recurrence relation serves as the musical score and the initial conditions are the specific notes to be played at the beginning. Just as a master key uniquely unlocks a specific door, a unique solution uniquely satisfies the recurrence relation with a particular set of initial conditions. This analogy highlights the precise and singular nature of the solution.
+## 1. Mental Model
 
-# 2. Execution Logic & Data Flow
-The process of finding a [[Unique_Solution]] involves using the [[Method_Of_Undetermined_Coefficients]] to solve a [[Linear_Homogeneous_Recurrence_Relation]], which is often represented by a [[Recurrence_Relation]]. This method relies on finding the [[General_Solution]] to the homogeneous relation and then applying the [[Initial_Condition]] to determine the [[Sequence]] that satisfies the relation. The [[Characteristic_Equation]] plays a crucial role in determining the form of the general solution. By solving the characteristic equation, one can derive the general solution and subsequently apply the initial conditions to obtain the unique solution. The [[Solution_Of_A_Relation]] is then verified to ensure it satisfies the original recurrence relation.
+The concept of a unique solution in a recurrence relation can be analogously understood through a railroad track system, where the recurrence relation defines the switches (recursive rules) and the initial conditions set the starting point (initial train position). Just as a train follows a specific track based on the switches it encounters, a unique solution follows a specific sequence that satisfies both the recurrence relation and the given initial conditions. The structure of the track system (relation) and the starting point (initial conditions) uniquely determine the train's path (sequence).
 
-# 3. Edge Cases & Failure States
-When dealing with a [[Unique_Solution]], it is essential to consider the [[Initial_Condition]] that guarantees a singular solution. If the initial conditions are not properly specified or are inconsistent, the solution may not be unique or may not exist. In cases where the [[Recurrence_Relation]] is not linear or homogeneous, the method of undetermined coefficients may not apply, leading to a failure in finding a unique solution. Furthermore, if the [[Characteristic_Equation]] has repeated roots, special care must be taken to ensure that the solution is correctly formulated.
-## 4. Implementation Mechanics
-```python
-def find_unique_solution(recurrence_relation, initial_conditions):
-    """
-    Find a unique solution to a recurrence relation given initial conditions.
+## 2. Formal Definition & Structural Trace
 
-    Args:
-    recurrence_relation (function): A function representing the recurrence relation.
-    initial_conditions (list): A list of initial conditions.
+A [[Unique_Solution]] to a recurrence relation is a specific [[Sequence_Definition]] that satisfies the [[Recurrence_Relation_Definition]] with a given set of initial conditions. This solution can be expressed using [[Sequence_Notation]] and is derived through methods such as solving [[Linear_Homogeneous_Recurrence_Relation]] or [[Non_Homogeneous_Linear_Recurrence_Relation]]. The process often involves finding the [[General_Solution]] to the homogeneous part and a particular solution to the non-homogeneous part, then combining them to fit the initial conditions. The [[Characteristic_Equation]] plays a crucial role in determining the form of the general solution for homogeneous relations. By applying the initial conditions to the general solution, we obtain the [[Unique_Solution]].
 
-    Returns:
-    list: A list representing the unique solution.
-    """
-    solution = [0] * len(initial_conditions)
-    solution[0] = initial_conditions[0]
+## 3. Boundary Cases & Counterexamples
 
-    for i in range(1, len(initial_conditions)):
-        solution[i] = recurrence_relation(solution[i-1], initial_conditions[i])
+Boundary cases, such as a [[Second_Order_Linear_Homogeneous_Recurrence_Relation]] with repeated roots or a [[Kth_Order_Linear_Homogeneous_Recurrence_Relation]] with a large number of initial conditions, can challenge the existence or uniqueness of solutions. Failure states occur when the given initial conditions are inconsistent with the recurrence relation, or when the relation is not well-defined for certain values. For instance, a non-homogeneous linear recurrence relation may not have a unique solution if the particular solution is not properly constrained. Understanding [[Solving_Linear_Homogeneous_Recurrence_Relations]] and the role of [[Recursive_Definition]] is crucial in addressing these issues.
 
-    return solution
+## Discrete Proof Trace
 
-# Example usage
-def example_recurrence_relation(prev_term, curr_term):
-    return prev_term + curr_term
+### Recurrence Relation: $a_n = 2a_{n-1} + 1$, with initial condition $a_0 = 1$
 
-initial_conditions = [2, 3]
-unique_solution = find_unique_solution(example_recurrence_relation, initial_conditions)
-print(unique_solution)
-```
+To prove that the solution to this recurrence relation is unique, let's first try to find a solution by unrolling the recurrence.
 
-Memory/Stack Diagram:
-```
-+---------------+
-|  solution    |
-|  (list)      |
-+---------------+
-|  [2, 0, 0]   |
-+---------------+
-       |
-       |
-       v
-+---------------+
-|  recurrence  |
-|  relation    |
-|  (function)  |
-+---------------+
-       |
-       |
-       v
-+---------------+
-|  initial     |
-|  conditions  |
-|  (list)      |
-+---------------+
-       |
-       |
-       v
-+---------------+
-|  example     |
-|  recurrence  |
-|  relation    |
-+---------------+
-```
+$$
+\begin{aligned}
+a_n &= 2a_{n-1} + 1 \\
+&= 2(2a_{n-2} + 1) + 1 \\
+&= 2^2a_{n-2} + 2 + 1 \\
+&= 2^3a_{n-3} + 2^2 + 2 + 1 \\
+&\vdots \\
+&= 2^na_0 + \sum_{i=0}^{n-1} 2^i \\
+&= 2^n \cdot 1 + \sum_{i=0}^{n-1} 2^i \\
+&= 2^n + \frac{2^n - 1}{2-1} \\
+&= 2^n + 2^n - 1 \\
+&= 2 \cdot 2^n - 1 \\
+&= 2^{n+1} - 1 \\
+\end{aligned}
+$$
 
-The code block represents the implementation of a function that finds a unique solution to a recurrence relation given initial conditions. The memory/stack diagram shows the memory layout of the variables and data structures used in the function, with arrows indicating the flow of data between them.
+The recurrence unrolling table for the first few terms is:
 
-## 5. Walkthrough
-1. The function `find_unique_solution` is called with an example recurrence relation and initial conditions `[2, 3]`.
-2. The solution list is initialized with zeros, and the first term is set to the first initial condition, so `solution` becomes `[2, 0]`.
-3. The function then enters a loop, where it calculates the second term using the recurrence relation and the first term, so `solution` becomes `[2, 5]`.
-4. Since there are only two initial conditions, the loop ends, and the function returns the unique solution `[2, 5]`.
-5. The example recurrence relation `example_recurrence_relation` is defined as the sum of the previous term and the current term.
-6. The unique solution `[2, 5]` is printed to the console, representing the singular solution that satisfies the recurrence relation with the given initial conditions.
+| $n$ | $a_n$ | $2^{n+1} - 1$ |
+| --- | --- | --- |
+| 0   | 1     | $2^1 - 1 = 1$  |
+| 1   | 3     | $2^2 - 1 = 3$  |
+| 2   | 7     | $2^3 - 1 = 7$  |
+| 3   | 15    | $2^4 - 1 = 15$ |
+
+Each part of the table represents a step in verifying that $a_n = 2^{n+1} - 1$ is indeed a solution to the given recurrence relation. The column on the right verifies that our proposed solution matches the sequence generated by the recurrence relation.
+
+## Walkthrough
+
+1. **Start with the Recurrence Relation**: Given $a_n = 2a_{n-1} + 1$, with $a_0 = 1$. This step involves understanding the recursive definition of the sequence.
+
+2. **Unroll the Recurrence Relation**: Substitute $a_{n-1}$ with $2a_{n-2} + 1$ into the equation to get $a_n = 2(2a_{n-2} + 1) + 1$. This step begins to show the pattern of the sequence.
+
+3. **Continue Unrolling**: Keep substituting until a pattern emerges: $a_n = 2^2a_{n-2} + 2 + 1$. This helps in identifying how the powers of 2 and the sum of powers of 2 play a role.
+
+4. **Identify the Pattern**: Notice that $a_n = 2^na_0 + \sum_{i=0}^{n-1} 2^i$. Given $a_0 = 1$, this simplifies to $a_n = 2^n + \sum_{i=0}^{n-1} 2^i$.
+
+5. **Sum of Geometric Series**: Recognize $\sum_{i=0}^{n-1} 2^i$ as a geometric series with the first term $a = 1$, ratio $r = 2$, and $n$ terms. The sum is $\frac{2^n - 1}{2-1} = 2^n - 1$.
+
+6. **Combine Terms for Final Solution**: Therefore, $a_n = 2^n + 2^n - 1 = 2 \cdot 2^n - 1 = 2^{n+1} - 1$. This step confirms that the solution to the recurrence relation is $a_n = 2^{n+1} - 1$.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
+
 [
-  {"id":"q1","type":"fill_in","difficulty":"L1","question":"A [[Blank1]] solution to a recurrence relation is one that satisfies the relation and has a specific set of initial conditions.","textWithBlanks":"A [[Blank1]] solution to a recurrence relation is one that satisfies the relation and has a specific set of initial conditions.","answer":["unique"],"explanation":"This type of solution is precise and singular in nature."},
-  {"id":"q2","type":"true_false","difficulty":"L2","question":"A homogeneous recurrence relation can have a unique solution with non-homogeneous initial conditions.","answer":false,"explanation":"A homogeneous recurrence relation requires homogeneous initial conditions to produce a unique solution."},
-  {"id":"q3","type":"debug","difficulty":"L3","question":"Find bug.","content":"function findUniqueSolution(n) { let solution = 0; for (let i = 0; i <= n; i++) { solution = solution + i; } return solution; }","answer":"The function does not correctly implement a unique solution to a recurrence relation. It seems to be calculating the sum of numbers from 0 to n instead.","explanation":"The given function appears to calculate a cumulative sum rather than solving a recurrence relation. A correct approach would involve defining the recurrence relation and initial conditions, then iteratively or recursively solving for the specific case of n."}
+  {
+    "id": "q1",
+    "type": "fill_in",
+    "difficulty": "L1",
+    "question": "What term describes a solution that is the only one possible for a given recurrence relation and initial conditions?",
+    "textWithBlanks": "The [[Blank1]] solution is one that satisfies both the recurrence relation and the initial conditions.",
+    "answer": ["unique"],
+    "explanation": "A unique solution in a recurrence relation is one that is the only possible solution given the initial conditions and the relation itself."
+  },
+  {
+    "id": "q2",
+    "type": "true_false",
+    "difficulty": "L2",
+    "question": "A linear homogeneous recurrence relation with constant coefficients always has a unique solution for any given initial conditions.",
+    "answer": false,
+    "explanation": "A linear homogeneous recurrence relation with constant coefficients generally has a general solution that includes a complementary solution (the homogeneous part) and a particular solution (if applicable). The uniqueness of the solution depends on the initial conditions. Without specific initial conditions, there can be infinitely many solutions."
+  },
+  {
+    "id": "q3",
+    "type": "debug",
+    "difficulty": "L3",
+    "question": "Find the error in the following step to solve a recurrence relation.",
+    "content": "Given: $T(n) = 2T(n-1) + 1$\nStep: $T(n) = 2^kT(n-k) + \\sum_{i=0}^{k-1} 2^i$\nLet's set $k = n$: $T(n) = 2^nT(0) + \\sum_{i=0}^{n-1} 2^i = 2^nT(0) + \\frac{2^n - 1}{2 - 1} = 2^n(T(0) + 1) - 1$",
+    "answer": "The bug is in setting $T(n) = 2^kT(n-k) + \\sum_{i=0}^{k-1} 2^i$ directly without ensuring the summation correctly accounts for the initial condition and the form of the recurrence. The correct approach should involve a characteristic equation and particular solution if needed. However, a direct error is in assuming $T(0)$ is known or zero; the summation and formulation look structurally correct but lack verification against initial conditions and the original equation.",
+    "explanation": "The provided step seems to incorrectly solve the recurrence relation by not properly verifying against initial conditions and potentially misinterpreting the summation formula. A standard approach involves finding the homogeneous and particular solutions. For $T(n) = 2T(n-1) + 1$, let's assume $T(n) = r^n$ for homogeneous part: $r^n = 2r^{n-1}$, giving $r = 2$. For particular solution, assume $T(n) = c$: $c = 2c + 1 \\Rightarrow c = -1$. So, $T(n) = A \\cdot 2^n - 1$. Initial conditions would determine $A$."
+  }
 ]
+
 ```

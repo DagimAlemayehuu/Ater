@@ -99,7 +99,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
             }}
             placeholder="..."
             className={cn(
-              "mx-2 px-3 py-1 border-b-2 bg-transparent focus:outline-none transition-all w-28 text-center placeholder:opacity-20 font-black tracking-widest text-[11px]",
+              "mx-1 px-2 py-0.5 border-b-2 bg-transparent focus:outline-none transition-all w-32 text-center placeholder:opacity-20 font-bold tracking-widest text-[12px] inline-block",
               isRevealed 
                 ? (String((userAnswers[currentQ.id] || [])[i] || '').toLowerCase() === String((currentQ.answer || [])[i] || '').toLowerCase() ? "border-primary text-primary" : "border-destructive text-destructive")
                 : "border-muted-foreground/20 focus:border-foreground text-foreground"

@@ -106,7 +106,7 @@ def enforce_gutter(unit_dir: Path):
             note_file.write_text(final_text, encoding="utf-8")
             print(f"[GutterEnforce] Fixed spacing in: {note_file.name}")
 
-def deduplicate_plan(notes: List[dict], threshold: float = 0.72) -> List[dict]:
+def deduplicate_plan(notes: List[dict], threshold: float = 0.92) -> List[dict]:
     kept = []
     removed = 0
     for note in notes:

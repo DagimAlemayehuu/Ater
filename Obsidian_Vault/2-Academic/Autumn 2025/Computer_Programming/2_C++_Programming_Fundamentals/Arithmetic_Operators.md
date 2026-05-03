@@ -5,83 +5,86 @@ type: Atomic Note
 course: Computer Programming
 semester: Autumn 2025
 unit: '2'
-hub: "[[2_C++_Programming_Fundamentals_Hub]]"
-source: "[[Chapter_2.pdf]]"
+hub: '[[2_C++_Programming_Fundamentals_Hub]]'
+source: '[[Chapter_2.pdf]]'
 source_pages:
 - 40
 mode: CS-SOFTWARE
 read: false
 generated: true
+prerequisites:
+- '[[Operator_Precedence]]'
+- '[[Compiler_Directives]]'
+- '[[Preprocessor_Directives]]'
+- '[[Main_Function]]'
+- '[[Stream_Insertion_Operator]]'
 
 ---
 
+
 # 1. Mental Model
 
-The arithmetic operators' precedence and associativity can be likened to a skilled jazz drummer, where the division and modulus operators are like the drummer's syncopated rhythmic accents that occur second in the musical phrase, and the multiple operators are like the drummer's improvisational solo that flows from left to right, creating a cohesive rhythm. Just as the drummer's accents and solo create a harmonious whole, the arithmetic operators work together to produce a calculated result. The drummer's ability to adapt to the musical context is similar to how the operators adjust to the expression's structure.
+The concept of arithmetic operators can be likened to a car's control system, where the accelerator, brake, and gearshift can be seen as analogous to arithmetic operators. Just as the accelerator and brake pedals control the car's speed by adding or subtracting force, arithmetic operators such as addition and subtraction modify numerical values. Similarly, the gearshift can be compared to the operator precedence, where the gearshift determines the order in which the car's systems respond to the accelerator and brake, just as operator precedence determines the order in which arithmetic operations are performed.
 
 # 2. Execution Logic & Data Flow
 
-The [[Arithmetic_Operators]] are evaluated in a specific order, with the [[Division_Operator]] and [[Modulus_Operator]] being evaluated second in the expression, following the [[Operator_Precedence]] rules. The [[Postfix_Operators]] and [[Associativity]] of the operators then come into play, determining the order in which the operators are applied when there are multiple operators of the same precedence. The [[Expression]] is then evaluated from left to right, with each operator being applied in sequence. The [[Static_Cast]] is not typically required for arithmetic operations, but [[Type_Casting]] may occur implicitly. The result of the expression is then returned, taking into account the [[Return_Statement]].
+The expression `m*x + b` is evaluated using the [[Arithmetic_Operators]] in a specific order determined by [[Operator_Precedence]]. The [[Compiler_Directives]] and [[Preprocessor_Directives]] are processed before the expression is evaluated. The [[Main_Function]] is where the program starts executing, and the expression is evaluated using the [[Stream_Insertion_Operator]] or [[Stream_Extraction_Operator]] to input or output values. The [[Variables_In_C++]] `m`, `x`, and `b` are declared and initialized before the expression is evaluated. The expression is a combination of [[Literals_In_C++]], [[Identifiers_In_C++]], and [[Arithmetic_Operators]], which are evaluated using [[Precedence_Rules]].
 
 # 3. Edge Cases & Failure States
 
-When the divisor in a division operation is zero, a runtime error occurs, causing the program to terminate. This is because the [[Division_Operator]] is undefined for a divisor of zero, and the [[Arithmetic_Operators]] cannot produce a meaningful result in this case. Additionally, the use of [[Literals]] or [[Variables]] with extreme values can lead to overflow or underflow, causing the result to wrap around or produce unexpected values. The [[Unary_Operators]] and [[Logical_Operators]] may also interact with the arithmetic operators in complex ways, leading to edge cases that require careful consideration.
+When evaluating the expression `m*x + b`, boundary conditions such as overflow or underflow can occur if the result exceeds the maximum or minimum limit of the data type. Failure states can also occur if the variables `m`, `x`, or `b` are not initialized or are assigned invalid values. Additionally, the expression may not be equivalent to the intended mathematical expression if the [[Operator_Precedence]] is not considered, leading to incorrect results. If the [[Type_Conversion]] is not performed correctly, it can also lead to incorrect results or errors.
 
-## 4. Implementation Mechanics
+# 4. Implementation Mechanics
 
-```cpp
+```python
 
-int calculateExpression(int a, int b, int c) {
-    int result = a * b + c / 2;
-    return result;
-}
+# Define a simple function to demonstrate arithmetic operators
 
-```
+def calculate_values(a, b):
+    addition = a + b
+    subtraction = a - b
+    multiplication = a * b
+    division = a / b if b != 0 else 0
 
-```
+    return addition, subtraction, multiplication, division
 
-  +---------------+
+# Example usage
 
-  |  Stack       |
+a = 10
+b = 2
+addition, subtraction, multiplication, division = calculate_values(a, b)
 
-  +---------------+
-
-  |  result      |
-
-  |  a           |
-
-  |  b           |
-
-  |  c           |
-
-  +---------------+
-           |
-           |
-           v
-  +---------------+
-
-  |  Memory      |
-
-  |  a = 10      |
-
-  |  b = 2       |
-
-  |  c = 4       |
-
-  +---------------+
+print(f"Addition: {addition}")
+print(f"Subtraction: {subtraction}")
+print(f"Multiplication: {multiplication}")
+print(f"Division: {division}")
 
 ```
 
-The code block represents the C++ function `calculateExpression` that takes in three integers and returns a calculated result. The ASCII memory/stack diagram illustrates the memory and stack layout during the execution of the function, with the stack containing the local variables and the memory containing the actual values of the variables.
+```mermaid
+
+graph LR
+    A[a = 10, b = 2] --> B[Addition: a + b = 12]
+    A --> C[Subtraction: a - b = 8]
+    A --> D[Multiplication: a * b = 20]
+    A --> E[Division: a / b = 5]
+    B --> F[Result: 12]
+    C --> F
+    D --> F
+    E --> F
+
+```
+
+The code block demonstrates the use of basic arithmetic operators in Python, including addition, subtraction, multiplication, and division. The Mermaid flowchart illustrates the state changes that occur when applying these operators to two input values, `a` and `b`, and how they produce the corresponding results.
 
 ## 5. Walkthrough
 
-1. Initially, the function `calculateExpression` is called with `a = 10`, `b = 2`, and `c = 4`. The stack frame is created with space for the local variable `result`.
-2. The expression `a * b` is evaluated first, following the order of operations. The value of `a` (10) is multiplied by the value of `b` (2), resulting in a temporary value of 20.
-3. Next, the expression `c / 2` is evaluated. The value of `c` (4) is divided by 2, resulting in a temporary value of 2.
-4. The two temporary values from the previous steps are then added together: `20 + 2 = 22`.
-5. The result of the expression, 22, is assigned to the local variable `result`.
-6. Finally, the function returns the value of `result`, which is 22.
+1. In a telecommunications network, a routing table is updated with new values for packet forwarding; the current routing cost is `a = 10` and the updated cost is `b = 2`. 
+2. The network router applies the addition operator to calculate the new total cost: `10 + 2 = 12`, reflecting the updated routing information.
+3. The router then applies the subtraction operator to determine the cost difference: `10 - 2 = 8`, which helps in making routing decisions.
+4. Next, the router uses the multiplication operator to calculate the product of the costs: `10 * 2 = 20`, used for traffic engineering purposes.
+5. The division operator is applied to compute the ratio of the costs: `10 / 2 = 5`, aiding in network resource allocation.
+6. Finally, the router updates its routing table with the calculated values, ensuring efficient packet forwarding and network optimization.
 
 ---
 
@@ -90,9 +93,32 @@ The code block represents the C++ function `calculateExpression` that takes in t
 ```interactive-quiz
 
 [
-  {"id":"q1","type":"fill_in","difficulty":"L1","question":"The arithmetic operators' precedence and associativity can be likened to a skilled jazz drummer, where the division and modulus operators are like the drummer's syncopated rhythmic accents that occur [[Blank1]] in the musical phrase.","textWithBlanks":"The arithmetic operators' precedence and associativity can be likened to a skilled jazz drummer, where the division and modulus operators are like the drummer's syncopated rhythmic accents that occur [[Blank1]] in the musical phrase.","answer":["second"],"explanation":"The division and modulus operators have higher precedence than the addition and subtraction operators."},
-  {"id":"q2","type":"true_false","difficulty":"L2","question":"If a and b are integers, then the expression a / b * (b + 1) will always evaluate to an integer value.","answer":false,"explanation":"The expression a / b * (b + 1) may not evaluate to an integer value if b is zero, because division by zero is undefined."},
-  {"id":"q3","type":"debug","difficulty":"L3","question":"Find bug.","content":"int calculateSum(int arr[], int size) { int sum = 0; for (int i = 1; i <= size; i++) { sum += arr[i]; } return sum; }","answer":"The loop should start from 0 and go up to size - 1.","explanation":"In C++, arrays are 0-indexed, meaning that the first element is at index 0 and the last element is at index size - 1. Accessing arr[size] is out of bounds and will cause undefined behavior."}
+  {
+    "id": "q1",
+    "type": "fill_in",
+    "difficulty": "L1",
+    "question": "What is the term for the process of combining two or more numbers to get a total or a sum?",
+    "textWithBlanks": "The [[Blank1]] is a mathematical operation that combines two or more numbers.",
+    "answer": ["addition"],
+    "explanation": "The term for the process of combining two or more numbers to get a total or a sum is addition."
+  },
+  {
+    "id": "q2",
+    "type": "true_false",
+    "difficulty": "L2",
+    "question": "Is the expression 2 + 3 * 4 evaluated to 20 when following the order of operations?",
+    "answer": false,
+    "explanation": "The expression 2 + 3 * 4 is evaluated to 2 + 12 = 14, not 20, when following the order of operations."
+  },
+  {
+    "id": "q3",
+    "type": "debug",
+    "difficulty": "L3",
+    "question": "Find the error.",
+    "content": "int x = 5; int y = 2; int result = x / y * (y + 1);",
+    "answer": "The bug is integer division. The fix is to cast one of the operands to a floating-point number.",
+    "explanation": "The division operator / performs integer division when both operands are integers, resulting in truncation of the decimal part. To get a decimal result, one of the operands should be cast to a floating-point number, e.g., (double)x / y."
+  }
 ]
 
 ```

@@ -239,6 +239,7 @@ class OkaQueueManager:
                     has_more = True
                     temp_batch = saved_batch
                     deployment_failed = False
+                    curriculum_override_applied = True  # Already applied in a prior run
 
                     # Jump directly to the deployment loop below
                     goto_deployment = True
@@ -333,6 +334,7 @@ class OkaQueueManager:
                     has_more = True
                     temp_batch = 0
                     deployment_failed = False
+                    curriculum_override_applied = False  # Will be set True after first successful batch
 
                     # Save initial checkpoint
                     self._save_checkpoint(file_path_str, session_id, 0, self.total_batches, curriculum)
@@ -349,8 +351,8 @@ class OkaQueueManager:
                             confirm_res = await self.service.confirm_plan(
                                 session_id, 
                                 command=command,
-                                curriculum_override=curriculum if temp_batch == 0 else None,
-                                anchored_hub_id=anchored_hub.get("id") if (anchored_hub and temp_batch == 0) else None
+                                curriculum_override=curriculum if (temp_batch == 0 and not curriculum_override_applied) else None,
+                                anchored_hub_id=anchored_hub.get("id") if (anchored_hub and temp_batch == 0 and not curriculum_override_applied) else None
                             )
                             
                             if confirm_res.get("status") == "success":
@@ -360,6 +362,7 @@ class OkaQueueManager:
                                 new_notes = confirm_res.get("results", [])
                                 self.processed_notes.extend(new_notes)
                                 self.last_action = f"Deployed {temp_batch}/{self.total_batches}"
+                                curriculum_override_applied = True  # Ensure it only fires once even on 429 retries
                                 # Persist checkpoint after every successful batch
                                 self._save_checkpoint(file_path_str, session_id, temp_batch, self.total_batches, curriculum)
                                 success = True

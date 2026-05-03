@@ -5,60 +5,76 @@ type: Atomic Note
 course: Computer Programming
 semester: Autumn 2025
 unit: '2'
-hub: "[[2_C++_Programming_Fundamentals_Hub]]"
-source: "[[Chapter_2.pdf]]"
+hub: '[[2_C++_Programming_Fundamentals_Hub]]'
+source: '[[Chapter_2.pdf]]'
 source_pages:
 - 10
 mode: CS-SOFTWARE
 read: false
 generated: true
+prerequisites:
+- '[[Comments_In_C++]]'
+- '[[Main_Function]]'
+- '[[C++_Programming_Language]]'
+- '[[Compiler_Directives]]'
+- '[[Stream_Insertion_Operator]]'
 
 ---
 
+
 # 1. Mental Model
 
-The concept of preprocessor directives can be likened to a chef's recipe book, where specific instructions are written on special pages that are removed and replaced with actual recipes before the main course is prepared. Just as the chef's assistant replaces the special pages with recipes, the preprocessor replaces the directives with the actual code. This process allows the main compiler to focus on compiling the final code.
+The concept of preprocessor directives can be likened to a chef's preparation instructions for a recipe. Just as a chef might have specific instructions for preparing ingredients before cooking, such as chopping or marinating, preprocessor directives provide instructions for the preprocessor to prepare the source code before compilation. The `#include` directive, for example, is like instructing the chef to fetch a specific ingredient from the pantry, while the `#define` directive is like creating a shortcut or alias for a frequently used ingredient.
 
 # 2. Execution Logic & Data Flow
 
-The preprocessor directives are processed by the [[Preprocessor_Directives]] before the actual compilation of the code begins. The [[C++_Programming_Language]] uses these directives to include header files, define macros, and conditionally compile code. The [[Main_Function]] is the entry point of the program, but it is the preprocessor that sets the stage for the compiler by replacing the directives with the actual code. The [[Stream_Insertion_Operator]] and [[Return_Statement]] are used within the program, but they are not directly related to the preprocessor directives. The [[Compiler_Directives]] are not the same as preprocessor directives, but they serve a similar purpose in other contexts.
+The preprocessor directives are processed by the preprocessor before the compilation of the source code. The [[Preprocessor_Directives]] are used to provide instructions to the preprocessor, such as [[Comments_In_C++]] removal and [[Macro_Expansion]]. The [[Main_Function]] is not involved in this process, as the preprocessor directives are executed before the compilation of the source code. The [[C++_Programming_Language]] uses [[Compiler_Directives]] and [[Preprocessor_Directives]] to control the compilation process. The preprocessor directives are typically denoted by a `#` symbol, and the [[Stream_Insertion_Operator]] and [[Stream_Extraction_Operator]] are not directly related to this process.
 
 # 3. Edge Cases & Failure States
 
-If a preprocessor directive is not properly formatted, it may not be recognized by the preprocessor, leading to errors during compilation. For example, a missing [[#]] symbol at the beginning of a directive can cause the preprocessor to ignore it or treat it as a regular comment. Additionally, the misuse of [[Preprocessor_Directives]] such as [[Include]] can lead to multiple inclusions of the same header file, causing errors due to [[Variable_Declaration]] conflicts. The [[C++_Is_Case_Sensitive]] nature of the language also applies to preprocessor directives, so incorrect casing can lead to issues.
+If a preprocessor directive is not properly formatted or is unknown to the preprocessor, it may lead to a compilation error. For example, if a `#define` directive is not properly terminated, the preprocessor may not be able to correctly expand the macro, leading to unexpected behavior. Additionally, if a [[Preprocessor_Directives]] is used to include a header file that does not exist, the compiler will raise an error. In such cases, the [[Return_Statement]] and [[Tokens_In_C++]] may not be directly relevant, but the error will still need to be resolved.
 
-## 4. Implementation Mechanics
+## Implementation Mechanics
 
-```cpp
+```c
 
-// File: example.cpp
-#include <iostream>
+#include <stdio.h>
 
-#define MAX_SIZE 10
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 int main() {
-    int arr[MAX_SIZE];
-    for (int i = 0; i < MAX_SIZE; i++) {
-        arr[i] = i;
-    }
-    for (int i = 0; i < MAX_SIZE; i++) {
-        std::cout << arr[i] << " ";
-    }
+    int x = 5;
+    int y = 10;
+    int max_val = MAX(x, y);
+    printf("Max value: %d\n", max_val);
     return 0;
 }
 
 ```
 
-The code block represents the C++ source file `example.cpp` that uses a preprocessor directive `#define MAX_SIZE 10` to define a constant `MAX_SIZE`. The ASCII memory/stack diagram is not provided here, but it would show the memory allocation for the array `arr` and the stack frame for the `main` function.
+```mermaid
 
-## 5. Walkthrough
+graph LR
+    A[Start] --> B[Preprocessor Directive]
+    B --> C[Macro Expansion]
+    C --> D[Compilation]
+    D --> E[Execution]
+    E --> F[Output]
 
-1. The preprocessor reads the file `example.cpp` and encounters the directive `#define MAX_SIZE 10`, replacing all occurrences of `MAX_SIZE` with `10`.
-2. The preprocessor outputs a modified version of `example.cpp` with the directive replaced: `int arr[10];`.
-3. The compiler reads the modified file and compiles the code, allocating memory for the array `arr` on the stack.
-4. The compiler generates machine code for the `main` function, which initializes the array `arr` with values from 0 to 9.
-5. The linker resolves any external references, such as `std::cout`, and creates an executable file.
-6. The executable file is run, and the program outputs the values of the array `arr`: `0 1 2 3 4 5 6 7 8 9`.
+```
+
+The code block represents a simple C program that uses a preprocessor directive (`#define`) to define a macro (`MAX`) and then uses this macro to find the maximum of two values. The Mermaid flowchart represents the state changes that occur during the execution of this program, from the start to the output.
+
+The Mermaid flowchart shows the following states: Start, Preprocessor Directive, Macro Expansion, Compilation, Execution, and Output. Each arrow represents a state transition.
+
+## Walkthrough
+
+1. A global supply chain company, SeaLogix, uses a complex software system to manage its maritime logistics. The company wants to optimize its container allocation process by using preprocessor directives to simplify the code.
+2. The software development team at SeaLogix defines a macro `MAX_CONTAINER_SIZE` using the `#define` preprocessor directive to represent the maximum size of a container.
+3. The team then uses this macro in their code to determine the maximum size of a container that can be allocated for a specific shipment.
+4. When the code is compiled, the preprocessor expands the macro to its actual value, allowing the compiler to optimize the code for the specific container size.
+5. During execution, the program uses the defined maximum container size to allocate containers for shipments, ensuring that the containers are not overloaded.
+6. The optimized container allocation process results in more efficient use of resources, reduced costs, and improved logistics operations for SeaLogix.
 
 ---
 
@@ -67,9 +83,32 @@ The code block represents the C++ source file `example.cpp` that uses a preproce
 ```interactive-quiz
 
 [
-  {"id":"q1","type":"fill_in","difficulty":"L1","question":"Preprocessor directives in C++ are denoted by a '#' symbol followed by a [[Blank1]].","textWithBlanks":"Preprocessor directives in C++ are denoted by a '#' symbol followed by a [[Blank1]].","answer":["keyword"],"explanation":"Preprocessor directives in C++ are denoted by a '#' symbol followed by a keyword."},
-  {"id":"q2","type":"true_false","difficulty":"L2","question":"In C++, an #include directive can be used inside a function.","answer":false,"explanation":"The #include directive must be used outside of any function, at the top level of a file, because it is a preprocessor directive that is processed before the compiler sees the code."},
-  {"id":"q3","type":"debug","difficulty":"L3","question":"Find bug.","content":"#define MAX 10\nint arr[MAX];\nint main() {\n  int MAX = 20;\n  arr[10] = 5;\n  return 0;\n}","answer":"The array index out of bounds error.","explanation":"The bug is that the array 'arr' is declared with a size of 10, but the code attempts to access the 11th element (index 10). The #define directive defines MAX as 10, but the variable MAX is redefined inside main() to be 20, however, this does not change the size of the array 'arr'."}
+  {
+    "id": "q1",
+    "type": "fill_in",
+    "difficulty": "L1",
+    "question": "What is the primary function of preprocessor directives in source code?",
+    "textWithBlanks": "The primary function of preprocessor directives is to [[Blank1]] the source code before compilation.",
+    "answer": ["modify"],
+    "explanation": "Preprocessor directives provide instructions to modify or prepare the source code before it is compiled."
+  },
+  {
+    "id": "q2",
+    "type": "true_false",
+    "difficulty": "L2",
+    "question": "Can a #define directive be used to redefine a previously defined constant?",
+    "answer": true,
+    "explanation": "Yes, a #define directive can be used to redefine a previously defined constant. The preprocessor will simply replace the old definition with the new one."
+  },
+  {
+    "id": "q3",
+    "type": "debug",
+    "difficulty": "L3",
+    "question": "Find the error.",
+    "content": "#define MAX(a, b) a < b ? a : b\nint x = MAX(5, 10);",
+    "answer": "The bug is the incorrect operator in the #define directive. The correct operator should be > instead of <. The fix is to change the #define directive to #define MAX(a, b) a > b ? a : b.",
+    "explanation": "The bug is a logic inversion. The MAX macro is currently defined to return the smaller of the two values instead of the larger one. This is because the operator in the ternary expression is incorrect."
+  }
 ]
 
 ```

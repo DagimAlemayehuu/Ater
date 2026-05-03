@@ -15,7 +15,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from .vault_manager import VaultManager
 from .deployer import OkaDeployer
 from src.domains.ai.factory import ModelFactory
-from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, ExaminerAgent, CriticAgent, HubAgent, DOMAIN_MATRIX
+from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, ExaminerAgent, CriticAgent, HubAgent, VerifierAgent, QuizAuditorAgent, DOMAIN_MATRIX
 from .governor import TokenGovernor
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
 import ruamel.yaml
@@ -1430,7 +1430,7 @@ class OkaService:
                         await asyncio.sleep(5.0)
                     final_output = ""
                     generation_attempts = 0
-                    max_attempts = 3
+                    max_attempts = 2
                     
                     while generation_attempts < max_attempts:
                         generation_attempts += 1
@@ -1443,6 +1443,8 @@ class OkaService:
                             theory_agent = TheoryAgent(self.llm_creative, domain)
                             practitioner_agent = PractitionerAgent(self.llm_creative, domain)
                             examiner_agent = ExaminerAgent(self.llm_creative, domain)
+                            verifier_agent = VerifierAgent(self.llm_creative)
+                            quiz_auditor_agent = QuizAuditorAgent(self.llm_creative)
 
                             # Pass 1: Theory
                             await self.governor.acquire(expected_tokens=3500)
@@ -1460,7 +1462,7 @@ class OkaService:
                             
                             # Pass 2: Practitioner
                             await self.governor.acquire(expected_tokens=3500)
-                            practice = await practitioner_agent.generate(note_schema.title, theory, primary_language)
+                            practice = await practitioner_agent.generate(note_schema.title, theory, primary_language, note_schema.mode)
 
                             OkaService._status[session_id] = f"{phase_prefix} Examiner Pass: [[{current_note_title}]] (3/3)..."
 
@@ -1473,6 +1475,16 @@ class OkaService:
                             quiz_json_str = quiz_json_str.strip()
                             quiz_json_str = re.sub(r"^```[a-z]*\n?", "", quiz_json_str)
                             quiz_json_str = re.sub(r"\n?```$", "", quiz_json_str).strip()
+
+                            # Quiz Audit — inject diagnosis as hint for next retry (no inline retry to avoid broken JSON)
+                            if generation_attempts < max_attempts:
+                                audit_result = await quiz_auditor_agent.audit(note_schema.title, quiz_json_str, theory_summary)
+                                if not audit_result["passed"]:
+                                    print(f"[OKA Service] Quiz audit hint for '{current_note_title}': {audit_result['diagnosis']}")
+                                    note_schema.source_context = (
+                                        f"{note_schema.source_context or ''}\n\n"
+                                        f"[QUIZ_HINT]: {audit_result['diagnosis']}"
+                                    )
                             
                             probes = ProbeEnrichment(
                                 worked_example=practice,
@@ -1490,20 +1502,48 @@ class OkaService:
                             )
 
                             is_valid, struct_errors = self.validator.validate_structure(final_output)
+                            is_last_attempt = generation_attempts >= max_attempts
                             if is_valid:
+                                # Semantic verification gate — skip on last attempt to guarantee deployment
+                                if not is_last_attempt:
+                                    await self.governor.acquire(expected_tokens=2000)
+                                    verification = await verifier_agent.verify(
+                                        note_schema.title, note_schema.mode,
+                                        final_output, note_schema.source_context or ""
+                                    )
+                                    if not verification["passed"]:
+                                        fix_instructions = "; ".join(
+                                            f.get("fix_instruction", "") for f in verification["failures"]
+                                        )
+                                        print(f"[OKA Service] Semantic hint for '{current_note_title}': {fix_instructions}")
+                                        note_schema.source_context = (
+                                            f"{note_schema.source_context or ''}\n\n"
+                                            f"[SEMANTIC_HINT]: {fix_instructions}"
+                                        )
+                                        is_valid = False
+                                        struct_errors = [f"SEMANTIC: {fix_instructions}"]
+                            if is_valid or is_last_attempt:
+                                # Deploy — either clean pass or last-chance force-deploy
+                                if is_last_attempt and not is_valid and final_output:
+                                    print(f"[OKA Service] Force-deploying '{current_note_title}' on last attempt despite issues: {struct_errors}")
                                 local_results = self.deployer.deploy_atomic_notes(
                                     session_id, [current_note_title], [final_output], plan_obj, session.get("path", "")
                                 )
+                                # Per-note gutter enforcement
+                                if local_results:
+                                    try:
+                                        from .post_processing import enforce_gutter
+                                        _note_abs = self.deployer.vm.vault_path / local_results[0]["path"]
+                                        if _note_abs.parent.exists():
+                                            enforce_gutter(_note_abs.parent)
+                                    except Exception as _ge:
+                                        print(f"[OKA Service] Per-note gutter fix failed: {_ge}")
                                 break
                             else:
                                 print(f"[OKA Service] Validation errors on '{current_note_title}': {struct_errors}")
-                                if generation_attempts >= max_attempts:
-                                    import logging
-                                    logging.getLogger("LifeOS").error(f"[OKA Service] Max attempts reached for '{current_note_title}'. Dropping note to preserve queue integrity.")
-                                    break
                                 note_schema.source_context = (
                                     f"{note_schema.source_context or ''}\n\n"
-                                    f"[REGENERATION_HINT]: STRUCTURAL VALIDATION FAILED: {', '.join(struct_errors)}"
+                                    f"[REGENERATION_HINT]: VALIDATION FAILED: {', '.join(struct_errors)}"
                                 )
                         except Exception as e:
                             err_str = str(e)
@@ -1569,26 +1609,40 @@ class OkaService:
                             canonicalize_unit, infer_unit_prerequisites, enforce_gutter,
                             audit_walkthroughs, audit_intra_links, sync_hub_connections
                         )
-                        # Resolve the actual deployed unit directory
+                        # Resolve hub file (may be the anchored Study Planner hub)
                         relative_path = local_results[0]["path"]
                         hub_file = self.deployer.vm.vault_path / relative_path
-                        
-                        curr = session.get("curriculum", {})
-                        semester = curr.get("semester", "Unknown Semester")
-                        course = curr.get("course", "Unknown Course")
-                        unit_str = str(curr.get("unit", "0"))
-                        hub_t = curr.get("hub_title", "")
-                        unit_dir_name = f"{unit_str}_{hub_t.replace(' ', '_')}" if hub_t else unit_str
-                        unit_dir = self.deployer.vm.vault_path / "2-Academic" / semester / course / unit_dir_name
-                        
-                        canonicalize_unit(unit_dir)
-                        infer_unit_prerequisites(unit_dir)
-                        enforce_gutter(unit_dir)
-                        audit_walkthroughs(unit_dir)
-                        audit_intra_links(unit_dir)
-                        if hub_file.exists():
-                            sync_hub_connections(hub_file, unit_dir)
-                        OkaService._status[session_id] = "Post-Processing Complete"
+
+                        # Resolve unit directory using the SAME logic as VaultManager.get_note_path
+                        # Data lives in session["metadata"], NOT session["curriculum"]
+                        meta = session.get("metadata", {})
+                        _semester = (meta.get("semester") or "General").strip()
+                        _course_raw = (meta.get("course") or "General_Knowledge").strip()
+                        _unit_str = str(meta.get("unit") or "").strip()
+                        _hub_t_raw = (meta.get("hub_title") or "").strip()
+
+                        _clean_course = self.deployer.vm.get_canonical_title(
+                            self.deployer.vm.super_clean(_course_raw)
+                        ) or "General_Knowledge"
+                        _hub_clean_base = self.deployer.vm.get_canonical_title(
+                            self.deployer.vm.super_clean(_hub_t_raw)
+                        )
+                        _unit_prefix = f"{_unit_str}_" if _unit_str else ""
+                        _unit_folder = f"{_unit_prefix}{_hub_clean_base}" if _hub_clean_base else (_unit_str or "General")
+
+                        unit_dir = self.deployer.vm.academic_root / _semester / _clean_course / _unit_folder
+
+                        if unit_dir.exists():
+                            canonicalize_unit(unit_dir)
+                            infer_unit_prerequisites(unit_dir)
+                            enforce_gutter(unit_dir)
+                            audit_walkthroughs(unit_dir)
+                            audit_intra_links(unit_dir)
+                            if hub_file.exists():
+                                sync_hub_connections(hub_file, unit_dir)
+                            OkaService._status[session_id] = "Post-Processing Complete"
+                        else:
+                            print(f"[OKA Service] Post-processing skipped: unit dir not found: {unit_dir}")
                     except Exception as pp_e:
                         print(f"[OKA Service] Post-processing failed: {pp_e}")
 

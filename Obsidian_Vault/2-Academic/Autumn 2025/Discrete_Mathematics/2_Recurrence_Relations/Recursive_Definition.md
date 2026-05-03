@@ -1,88 +1,105 @@
 ---
+
 title: Recursive_Definition
 type: Atomic Note
 course: Discrete Mathematics
 semester: Autumn 2025
 unit: '2'
-hub: "[[2_Recurrence_Relations_Hub]]"
-source: "[[2_Recurrence_Relations.Pdf]]"
+hub: '[[2_Recurrence_Relations_Hub]]'
+source: '[[2_Recurrence_Relations.pdf]]'
 source_pages:
 - 9
-mode: CS-SOFTWARE
+mode: MATH-DISCRETE
 read: false
 generated: true
+prerequisites:
+- '[[Sequence_Definition]]'
+- '[[Recurrence_Relation_Definition]]'
+- '[[Linear_Recurrence_Relation]]'
+- '[[Homogeneous_Recurrence_Relation]]'
+- '[[Non_Homogeneous_Linear_Recurrence_Relation]]'
+
 ---
 
-# 1. Mental Model
-The concept of a recursive definition can be likened to a set of Russian nesting dolls, where each doll is defined in terms of a smaller version of itself, with the smallest doll serving as the base case that stops the recursion. This self-referential definition allows for a compact and elegant description of a sequence or function. Just as the Russian doll's size and design are defined recursively, a recursive definition in mathematics or computer science defines a problem or function in terms of smaller instances of the same problem.
 
-# 2. Execution Logic & Data Flow
-The execution of a [[Recursive_Definition]] involves applying a rule that expresses the current value of a sequence or function in terms of its previous values, as specified by a [[Recurrence_Relation]]. This process continues until it reaches a base case defined by an [[Initial_Condition]], at which point the recursion stops and the results are propagated back up the sequence. The [[Characteristic_Equation]] of a [[Linear_Homogeneous_Recurrence_Relation]] can be used to find the [[General_Solution]], which describes the overall behavior of the sequence. To obtain a [[Unique_Solution]], one must apply the [[Method_Of_Undetermined_Coefficients]] and use the given [[Initial_Condition]] to determine the constants of the general solution. The solution is then obtained through the [[Solution_Of_A_Relation]], which may involve a [[Sequence]] of operations.
+## 1. Mental Model
 
-# 3. Edge Cases & Failure States
-When dealing with recursive definitions, it is crucial to handle edge cases and failure states properly, as the absence of a well-defined [[Initial_Condition]] can lead to an infinite recursion or ambiguous results. If the [[Characteristic_Equation]] has repeated roots, the [[Method_Of_Undetermined_Coefficients]] may need to be modified to ensure a [[Unique_Solution]]. Failure to account for these edge cases can result in a flawed [[Solution_Of_A_Relation]], rendering the recursive definition useless. Furthermore, an improperly defined [[Recurrence_Relation]] can lead to an incorrect [[General_Solution]], highlighting the need for careful analysis and validation.
-## 4. Implementation Mechanics
-```python
-def factorial(n: int) -> int:
-    if n == 0:  # base case
-        return 1
-    else:
-        return n * factorial(n-1)  # recursive call
-```
-```
-  +---------------+
-  |  Stack Frame  |
-  +---------------+
-  |  n=3          |
-  |  return addr  |
-  +---------------+
-           |
-           |
-           v
-  +---------------+
-  |  Stack Frame  |
-  +---------------+
-  |  n=2          |
-  |  return addr  |
-  +---------------+
-           |
-           |
-           v
-  +---------------+
-  |  Stack Frame  |
-  +---------------+
-  |  n=1          |
-  |  return addr  |
-  +---------------+
-           |
-           |
-           v
-  +---------------+
-  |  Stack Frame  |
-  +---------------+
-  |  n=0          |
-  |  return 1     |
-  +---------------+
-```
+A recursive definition can be thought of as a set of instructions that are similar to a game of dominoes, where the falling of one domino triggers the falling of the next, with the initial push representing the base case. Just as each domino's fall is determined by the previous one, a recursive definition determines each term in a sequence based on previous terms. The mechanism matches in that both involve a repetitive application of a rule, with the recursive definition applying a rule to earlier values to find present and future values.
 
-The code block represents the recursive function `factorial` implemented in Python, where each call to `factorial` creates a new stack frame. The ASCII diagram illustrates the stack frames created during the recursive calls, with each frame containing the current value of `n` and the return address.
+## 2. Formal Definition & Structural Trace
+
+A [[Recursive_Definition]] provides a way to define a [[Sequence_Definition]] or a function in terms of itself. This is often achieved through a [[Recurrence_Relation_Definition]], which specifies how to find the next term in a sequence given one or more preceding terms. For a [[Linear_Recurrence_Relation]], the relationship between successive terms is linear, and it can be [[Homogeneous_Recurrence_Relation]] or [[Non_Homogeneous_Linear_Recurrence_Relation]]. Solving these relations often involves finding the [[Characteristic_Equation]] and then determining the [[General_Solution]], from which a [[Unique_Solution]] can be found given appropriate initial conditions. The solution to a [[Linear_Homogeneous_Recurrence_Relation]] can typically be expressed as a linear combination of terms formed from the roots of the characteristic equation.
+
+## 3. Boundary Cases & Counterexamples
+
+Boundary cases for recursive definitions include the base case, which must be defined to prevent infinite recursion, and the case where the recurrence relation does not apply, such as for sequences defined only for positive integers. A failure state can occur if the base case is not properly defined or if the recurrence relation leads to a situation that cannot be resolved, such as division by zero. For [[Second_Order_Linear_Homogeneous_Recurrence_Relation]] and [[Kth_Order_Linear_Homogeneous_Recurrence_Relation]], if the characteristic equation has repeated roots, the solution involves terms that increase linearly with the index, which must be accounted for in the [[General_Solution]]. The process of finding a [[Unique_Solution]] relies on having as many initial conditions as the order of the recurrence relation.
+
+## 4. Discrete Proof Trace
+
+### Recurrence Unrolling Table
+
+Let's consider a simple recursive sequence defined as:
+- $a_0 = 2$
+- $a_n = 3a_{n-1} + 1$ for $n > 0$
+
+We will unroll this recurrence to find $a_3$.
+
+| $n$ | $a_n$ | Calculation          |
+|-----|-------|----------------------|
+| 0   | 2     | Given                |
+| 1   | 7     | $3 \cdot 2 + 1$      |
+| 2   | 22    | $3 \cdot 7 + 1$      |
+| 3   | 67    | $3 \cdot 22 + 1$     |
+
+Each part of the table represents a step in the recurrence relation. The first column ($n$) indicates the term number in the sequence, the second column ($a_n$) gives the value of that term, and the third column (Calculation) shows how the value was computed using the recurrence relation.
 
 ## 5. Walkthrough
-1. Initially, we call `factorial(3)`, which creates a stack frame with `n=3` and a return address. The function calls `factorial(2)`.
-2. The call to `factorial(2)` creates a new stack frame with `n=2` and a return address. The function then calls `factorial(1)`.
-3. The call to `factorial(1)` creates another stack frame with `n=1` and a return address. The function then calls `factorial(0)`.
-4. The call to `factorial(0)` creates a stack frame with `n=0`, which is the base case. The function returns `1`.
-5. The return value of `1` is passed back to the stack frame with `n=1`, which then returns `1 * 1 = 1`.
-6. The return value of `1` is passed back to the stack frame with `n=2`, which then returns `2 * 1 = 2`, and finally, the stack frame with `n=3` returns `3 * 2 = 6`.
+
+1. **Base Case Identification**: The base case of the recurrence is given as $a_0 = 2$. This provides the starting point for unrolling the recurrence.
+
+2. **First Term Calculation**: To find $a_1$, we substitute $n = 1$ into the recurrence relation: $a_1 = 3a_0 + 1$. Given $a_0 = 2$, we compute $a_1 = 3 \cdot 2 + 1 = 6 + 1 = 7$.
+
+3. **Second Term Calculation**: For $a_2$, we use $a_1$ in the recurrence relation: $a_2 = 3a_1 + 1$. Given $a_1 = 7$, we compute $a_2 = 3 \cdot 7 + 1 = 21 + 1 = 22$.
+
+4. **Third Term Calculation**: To find $a_3$, we apply the recurrence relation again: $a_3 = 3a_2 + 1$. Given $a_2 = 22$, we compute $a_3 = 3 \cdot 22 + 1 = 66 + 1 = 67$.
+
+5. **Verification**: We verify that our calculations are consistent with the recurrence unrolling table provided.
+
+6. **Conclusion**: Through the step-by-step application of the recurrence relation, we have found that $a_3 = 67$. This demonstrates how a recursive definition can be systematically unrolled to find specific terms in a sequence.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
+
 [
-  {"id":"q1","type":"fill_in","difficulty":"L1","question":"A recursive definition is similar to a set of Russian nesting dolls, where each doll is defined in terms of a [[Blank1]] version of itself.","textWithBlanks":"A recursive definition is similar to a set of Russian nesting dolls, where each doll is defined in terms of a [[Blank1]] version of itself.","answer":["smaller"],"explanation":"This highlights the self-referential nature of recursive definitions."},
-  {"id":"q2","type":"true_false","difficulty":"L2","question":"A recursive function must always have a base case that is an edge case.","answer":false,"explanation":"While it's common for recursive functions to have a base case that handles an edge case, it's not a requirement for the base case to be an edge case specifically, but rather a case that stops the recursion."},
-  {"id":"q3","type":"debug","difficulty":"L3","question":"Find bug.","content":"int factorial(int n) { if (n == 0) return 1; else return n * factorial(n-1); }","answer":"The function does not handle the case when n is negative.","explanation":"The function should either handle or explicitly disallow negative inputs to prevent incorrect results or a stack overflow."}
+  {
+    "id": "q1",
+    "type": "fill_in",
+    "difficulty": "L1",
+    "question": "What is the core concept of a recursive definition?",
+    "textWithBlanks": "A recursive definition is a method of defining a sequence or function where each term is defined in terms of [[Blank1]]",
+    "answer": ["previous terms"],
+    "explanation": "This definition is fundamental to understanding recursive definitions, emphasizing that each term in a sequence or function is defined based on earlier terms."
+  },
+  {
+    "id": "q2",
+    "type": "true_false",
+    "difficulty": "L2",
+    "question": "A recursive definition must have a base case that is never used in the recursive steps.",
+    "answer": false,
+    "explanation": "A recursive definition requires a base case that stops the recursion. The base case is essential and is used to terminate the recursive calls, making this statement false."
+  },
+  {
+    "id": "q3",
+    "type": "debug",
+    "difficulty": "L3",
+    "question": "Find the error in the following flawed mathematical step using block LaTeX.",
+    "content": "Given a recursive sequence defined by $a_n = 2a_{n-1} + 1$, the solution claims that $a_n = 2^n - 1$ is a valid closed-form expression. The flawed step to verify this is: $$a_n = 2a_{n-1} + 1 = 2(2^{n-1} - 1) + 1 = 2^n - 2 + 1 = 2^n - 1$$",
+    "answer": "The bug is that the initial condition or base case was not verified or considered; assuming $a_1 = 1$ fits $2^1 - 1 = 1$, but this verification step was skipped.",
+    "explanation": "The provided step seems mathematically correct given the assumed formula; however, a critical error lies in not checking the base case of the recursion or initial conditions to ensure the proposed solution $a_n = 2^n - 1$ aligns with them."
+  }
 ]
+
 ```

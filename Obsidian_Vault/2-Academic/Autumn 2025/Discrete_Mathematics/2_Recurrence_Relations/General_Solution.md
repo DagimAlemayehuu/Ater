@@ -1,84 +1,114 @@
 ---
+
 title: General_Solution
 type: Atomic Note
 course: Discrete Mathematics
 semester: Autumn 2025
 unit: '2'
-hub: "[[2_Recurrence_Relations_Hub]]"
-source: "[[2_Recurrence_Relations.Pdf]]"
+hub: '[[2_Recurrence_Relations_Hub]]'
+source: '[[2_Recurrence_Relations.pdf]]'
 source_pages:
 - 15
-mode: CS-SOFTWARE
+mode: MATH-DISCRETE
 read: false
 generated: true
 prerequisites:
-- "[[Recurrence_Relation]]"
+- '[[Sequence_Definition]]'
+- '[[Sequence_Notation]]'
+- '[[Recursive_Definition]]'
+- '[[Recurrence_Relation_Definition]]'
+- '[[Characteristic_Equation]]'
+
 ---
 
-# 1. Mental Model
-The concept of a general solution in recurrence relations can be likened to a master key that can unlock a variety of specific solutions, much like how a single musical chord progression can be the foundation for numerous songs. Just as a skilled musician can create multiple songs using the same chord progression, a general solution provides the framework for finding multiple specific solutions to a recurrence relation. By adjusting the arbitrary constants, one can derive various particular solutions.
 
-# 2. Execution Logic & Data Flow
-The [[General_Solution]] to a recurrence relation, such as a [[Linear_Homogeneous_Recurrence_Relation]], is expressed with arbitrary constants that are determined by the [[Initial_Condition]]. This solution is derived from the [[Characteristic_Equation]] of the relation, which is a crucial step in finding the [[Sequence]] that satisfies the relation. The [[Method_Of_Undetermined_Coefficients]] can be used to find a particular solution, which, when combined with the [[Solution_Of_A_Relation]], leads to the [[General_Solution]]. The [[Recursive_Definition]] of the relation is essential in understanding how each term in the sequence depends on previous terms. By solving the [[Characteristic_Equation]], one can obtain the [[General_Solution]], which encompasses all possible solutions, including the [[Unique_Solution]], to the recurrence relation.
+## 1. Mental Model
 
-# 3. Edge Cases & Failure States
-When the [[Initial_Condition]] is not properly specified, the [[General_Solution]] may not converge to a unique solution, leading to multiple possible solutions. If the [[Characteristic_Equation]] has repeated roots, the [[General_Solution]] may not be directly applicable, requiring special treatment to find a valid solution. In cases where the recurrence relation is not [[Linear_Homogeneous_Recurrence_Relation]], alternative methods, such as the [[Method_Of_Undetermined_Coefficients]], may be necessary to find a solution. Failure to account for these edge cases can result in an incorrect [[Solution_Of_A_Relation]].
-## 4. Implementation Mechanics
-```python
-def general_solution(a, b, n):
-    # General solution to a second-order linear homogeneous recurrence relation
-    # with constant coefficients: F(n) = a*F(n-1) + b*F(n-2)
-    def F(n, A, B):
-        if n == 0:
-            return A
-        elif n == 1:
-            return B
-        else:
-            return a*F(n-1, A, B) + b*F(n-2, A, B)
+The concept of a general solution in recurrence relations can be analogously understood through the lens of a musical composition. Just as a musical composition can be represented by a sheet of music that allows for various interpretations through different performances (with musicians playing the same notes but with varying expressions), a general solution represents the family of solutions that satisfy a given recurrence relation, with arbitrary constants akin to the expressive variables in a performance. The structure of the general solution, much like the musical score, dictates the overall form and constraints, while the specific values of the arbitrary constants, similar to the nuances of a performance, allow for a range of specific solutions.
 
-    # Particular solution for demonstration
-    A, B = 1, 2  # Initial conditions
-    return F(n, A, B)
+## 2. Formal Definition & Structural Trace
 
-# ASCII memory/stack diagram (simplified)
-#  +---------------+
-#  |  Function   |
-#  |  (n, A, B)  |
-#  +---------------+
-#           |
-#           |
-#           v
-#  +---------------+
-#  |  a*F(n-1, A, B) |
-#  |  + b*F(n-2, A, B)|
-#  +---------------+
-#           |
-#           |
-#           v
-#  +---------------+
-#  |  Base Case   |
-#  |  (n == 0 or  |
-#  |   n == 1)     |
-#  +---------------+
-```
-The code block represents a Python function implementing a general solution to a second-order linear homogeneous recurrence relation, and the ASCII diagram illustrates the recursive call stack. The function `F(n, A, B)` computes the `n`-th term using initial conditions `A` and `B`.
+A general solution to a recurrence relation is an explicit formula for the terms of the sequence that satisfies the relation, expressed in terms of arbitrary constants. This concept is deeply connected to the [[Sequence_Definition]] and is often denoted using [[Sequence_Notation]]. The process of finding a general solution frequently involves a [[Recursive_Definition]] of the sequence and solving the associated [[Recurrence_Relation_Definition]], particularly for [[Linear_Recurrence_Relation|linear]] and [[Homogeneous_Recurrence_Relation|homogeneous]] cases, through the [[Characteristic_Equation]]. The [[General_Solution]] encompasses all possible solutions, from which a [[Unique_Solution]] can be determined with appropriate initial conditions. This approach is systematically applied in [[Solving_Linear_Homogeneous_Recurrence_Relations]].
 
-## 5. Walkthrough
-1. **Initial Conditions**: Given a recurrence relation `F(n) = a*F(n-1) + b*F(n-2)`, we set initial conditions `A = 1` and `B = 2` for a particular solution.
-2. **Base Case**: When `n = 0`, `F(0) = A = 1`. When `n = 1`, `F(1) = B = 2`.
-3. **Recursive Case**: For `n = 2`, `F(2) = a*F(1) + b*F(0) = a*2 + b*1`. Let's assume `a = 2` and `b = 3`, then `F(2) = 2*2 + 3*1 = 7`.
-4. **Further Recursion**: For `n = 3`, `F(3) = a*F(2) + b*F(1) = 2*7 + 3*2 = 20`.
-5. **General Solution Application**: The general solution allows us to find `F(n)` for any `n` by adjusting `A` and `B`. For instance, changing `A = 2` and `B = 1`, we recompute `F(3)`.
-6. **Verification**: Verifying with `A = 2` and `B = 1`, for `n = 2`, `F(2) = 2*1 + 3*2 = 8`, and for `n = 3`, `F(3) = 2*8 + 3*1 = 19`, confirming the solution's adaptability.
+## 3. Boundary Cases & Counterexamples
+
+The general solution approach can encounter limitations in certain boundary cases, such as non-homogeneous recurrence relations, where the [[Non_Homogeneous_Linear_Recurrence_Relation]] requires additional particular solutions to complement the homogeneous solution. Failure to properly account for initial conditions can lead to an infinite family of solutions rather than a unique one. Moreover, for [[Second_Order_Linear_Homogeneous_Recurrence_Relation|second-order]] or [[Kth_Order_Linear_Homogeneous_Recurrence_Relation|higher-order]] linear homogeneous recurrence relations, ensuring that the general solution accurately reflects all roots of the characteristic equation is critical. In cases where the characteristic equation has repeated roots, special care must be taken to construct the general solution.
+
+## Discrete Proof Trace
+
+### Recurrence Relation: $T(n) = 2T(n-1) + 1$
+
+### Step-by-Step Discrete Proof
+
+Given: $T(n) = 2T(n-1) + 1$
+
+Goal: Find the general solution.
+
+#### Unrolling the Recurrence Relation
+
+Let's unroll the recurrence relation for a few terms to identify a pattern.
+
+| $n$ | $T(n)$          | $T(n-1)$       | $T(n-2)$       |
+|-----|------------------|----------------|----------------|
+| 1   | $T(1) = c$        | -              | -              |
+| 2   | $T(2) = 2T(1) + 1$| $T(1) = c$     | -              |
+| 3   | $T(3) = 2T(2) + 1$| $T(2) = 2c + 1$| $T(1) = c$     |
+
+## Walkthrough
+
+1. **Initial Condition**: Assume $T(1) = c$, where $c$ is a constant.
+
+2. **First Unrolling**: For $n = 2$, $T(2) = 2T(1) + 1 = 2c + 1$.
+
+3. **Second Unrolling**: For $n = 3$, $T(3) = 2T(2) + 1 = 2(2c + 1) + 1 = 4c + 3$.
+
+4. **Hypothesis**: Observe the pattern, $T(n) = 2^{n-1}c + (2^{n-1} - 1)$.
+
+5. **Verification - Base Case**: For $n = 1$, $T(1) = 2^{1-1}c + (2^{1-1} - 1) = c$, which matches our initial condition.
+
+6. **Verification - Inductive Step**: Assume $T(k) = 2^{k-1}c + (2^{k-1} - 1)$ is true. We must show $T(k+1) = 2^k c + (2^k - 1)$.
+
+$T(k+1) = 2T(k) + 1 = 2[2^{k-1}c + (2^{k-1} - 1)] + 1 = 2^kc + 2^k - 2 + 1 = 2^kc + (2^k - 1)$.
+
+Thus, the general solution is $T(n) = 2^{n-1}c + (2^{n-1} - 1)$.
+
+**Explanation**: The recurrence unrolling table shows how the recurrence relation $T(n) = 2T(n-1) + 1$ expands for the first few values of $n$. Each row represents the relation at a different $n$, with $T(n)$ expressed in terms of $T(n-1)$ and $T(n-2)$ where applicable.
+
+The walkthrough explains the step-by-step process of solving the recurrence relation. It starts with an initial condition, then unrolls the recurrence for $n=2$ and $n=3$ to identify a pattern. A hypothesis for the general solution is proposed and verified through a base case and an inductive step.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
+
 [
-  {"id":"q1","type":"fill_in","difficulty":"L1","question":"A general solution to a recurrence relation is a [[Blank1]] that contains arbitrary constants.","textWithBlanks":"A general solution to a recurrence relation is a [[Blank1]] that contains arbitrary constants.","answer":["formula"],"explanation":"This is a basic definition."},
-  {"id":"q2","type":"true_false","difficulty":"L2","question":"A general solution to a linear homogeneous recurrence relation with constant coefficients can have only one specific solution.","answer":false,"explanation":"A general solution can have multiple specific solutions based on initial conditions."},
-  {"id":"q3","type":"debug","difficulty":"L3","question":"Find bug.","content":"function generalSolution(n){  var a = 1;  var b = 2;  return a \\rightarrow b; }","answer":"The bug is that the function is trying to use an invalid operator '\\rightarrow'. The correct operator for assignment or another operation should be used.","explanation":"The function seems to be attempting to return a value based on some operation between a and b, but it uses an invalid operator."}
+  {
+    "id": "q1",
+    "type": "fill_in",
+    "difficulty": "L1",
+    "question": "What is the term for the family of solutions that satisfy a given recurrence relation?",
+    "textWithBlanks": "The [[Blank1]] is a solution that contains arbitrary constants.",
+    "answer": ["general solution"],
+    "explanation": "The general solution to a recurrence relation is a solution that contains arbitrary constants and encompasses all possible solutions to the relation."
+  },
+  {
+    "id": "q2",
+    "type": "true_false",
+    "difficulty": "L2",
+    "question": "A general solution to a recurrence relation is unique.",
+    "answer": false,
+    "explanation": "A general solution to a recurrence relation is not unique because it contains arbitrary constants, leading to a family of solutions."
+  },
+  {
+    "id": "q3",
+    "type": "debug",
+    "difficulty": "L3",
+    "question": "Find the error in the following mathematical step.",
+    "content": "Given a recurrence relation $T(n) = 2T(n-1) + 1$, the general solution is claimed to be $T(n) = 2^n \\cdot C - 1$, where $C$ is a constant.",
+    "answer": "The incorrect substitution of the homogeneous solution into the particular solution; correct general solution should be of the form $T(n) = A \\cdot 2^n + B$.",
+    "explanation": "The provided solution incorrectly applies the form of the solution to the given recurrence relation. The homogeneous part of the solution is $A \\cdot 2^n$, and a particular solution needs to be found to account for the constant term $+1$. A common guess for the particular solution in such cases is a constant $B$. Therefore, the general solution should be of the form $T(n) = A \\cdot 2^n + B$, not $2^n \\cdot C - 1$."
+  }
 ]
+
 ```

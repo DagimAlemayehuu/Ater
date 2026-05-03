@@ -1,31 +1,28 @@
 ---
-
 title: 2_C++_Programming_Fundamentals_Hub
 type: Hub
 course: Computer Programming
 semester: Autumn 2025
 unit: '2'
-source: "[[Chapter_2.pdf]]"
+source: "[[Chapter 2.Pdf]]"
 source_pages: []
 status: Not Started
 confidence: null
 study_date: null
 generated: true
-
 ---
 
 # 2 C++ Programming Fundamentals Hub
 
 ## Overview
+The C++ programming language is a high-level, general-purpose language that consists of various components, including preprocessor directives, namespace declarations, global declarations, function declarations, and user-defined function definitions. A C++ program begins execution at the main function, which is the entry point of every program. The main function and other user-defined functions comprise blocks of code marked by braces, and each statement within these blocks must end with a semicolon. 
 
-The C++ programming language is a high-level, general-purpose language comprised of various fundamental elements, including comments, keywords, identifiers, literals, and operators. A C++ program is structured into several key components, such as preprocessor directives, namespace declarations, global declarations, function declarations, the main function, and user-defined function definitions. The main function serves as the entry point of every C++ program, and it utilizes statements, which are instructions that direct the computer to perform specific tasks.
+The syntax of C++ is composed of five kinds of tokens: comments, keywords, identifiers, literals, and operators. Comments, which can be single-line or multi-line, are used to provide explanations and notes within the code. Keywords, or reserved words, have special meanings to the compiler, while identifiers are programmer-given names for classes, variables, functions, and other program elements. Literals represent explicit constant values, and operators are used to perform various operations, such as arithmetic, comparison, and assignment.
 
-The syntax and structure of C++ programs rely heavily on the proper use of various symbols and characters, including braces, which denote the beginning and end of a block of code, and operators, which facilitate arithmetic, logical, and assignment operations. The language is case-sensitive and interprets uppercase and lowercase letters differently. Additionally, C++ programs often employ white space to enhance readability. The language also supports various operations, such as type casting, and uses escape characters, which are preceded by a backslash, to represent special characters.
+The language also features various operators and constructs that enable data manipulation and control flow. These include the stream insertion operator (<<) and stream extraction operator (>>), which facilitate input/output operations. Additionally, C++ supports the use of variables, which are locations in memory where values can be stored, and expressions, which are combinations of variables, constants, operators, and function calls that produce a value. Understanding the rules for evaluating expressions with multiple operators, type conversions, and explicit type casting are essential for effective C++ programming.
 
-The C++ programming language provides a range of tools and features that enable developers to write efficient and effective code. The language's basic elements, including variables, data types, and operators, work together to facilitate the creation of expressions, which are combinations of variables, constants, operators, and function calls that produce a value. Understanding how these components interact and interlock is essential for mastering C++ programming fundamentals and creating robust, well-structured programs. By combining these elements, developers can create complex programs that utilize the language's various features, including input/output operations, which rely on the stream insertion operator, and control structures, which rely on logical and arithmetic operations.
 
 ## Unit Objectives
-
 - [ ] Master all core technical definitions.
 - [ ] Internalize the mental models for each concept.
 - [ ] Trace and understand every worked example.
@@ -33,34 +30,39 @@ The C++ programming language provides a range of tools and features that enable 
 
 ## Connections
 
-- [ ] [[C++_Programming_Language]]
-- [ ] [[General_Structure_Of_A_C++_Program]]
-- [ ] [[C++_Program_Structure]]
-- [ ] [[Comments]]
-- [ ] [[Compiler_Directives]]
-- [ ] [[Main_Function]]
-- [ ] [[Statements]]
-- [ ] [[C++_IS_Case_Sensitive]]
-- [ ] [[White_Space]]
-- [ ] [[Preprocessor_Directives]]
-- [ ] [[Stream_Insertion_Operator]]
-- [ ] [[Escape_Characters]]
-- [ ] [[Return_Statement]]
-- [ ] [[Basic_Elements]]
-- [ ] [[Keywords]]
-- [ ] [[Identifiers]]
-- [ ] [[Literals]]
-- [ ] [[Variables]]
-- [ ] [[Variable_Declaration]]
-- [ ] [[Division_Operator]]
-- [ ] [[Modulus_Operator]]
 - [ ] [[Arithmetic_Operators]]
-- [ ] [[Operator_Precedence]]
-- [ ] [[Postfix_Operators]]
-- [ ] [[Associativity]]
 - [ ] [[Assignment_Operator]]
-- [ ] [[Logical_Operators]]
-- [ ] [[Type_Casting]]
-- [ ] [[Static_Cast]]
+- [ ] [[Braces_In_C++]]
+- [ ] [[C++_IS_Case_Sensitive]]
+- [ ] [[C++_Programming_Language]]
+- [ ] [[Comments_In_C++]]
+- [ ] [[Comments_Types]]
+- [ ] [[Compiler_Directives]]
+- [ ] [[Decrement_Operator]]
+- [ ] [[Escape_Characters]]
+- [ ] [[Explicit_Type_Casting]]
 - [ ] [[Expression]]
-- [ ] [[Unary_Operators]]
+- [ ] [[General_Structure_Of_A_C++_Program]]
+- [ ] [[Identifiers_In_C++]]
+- [ ] [[Implicit_Type_Casting]]
+- [ ] [[Increment_Operator]]
+- [ ] [[Keywords_In_C++]]
+- [ ] [[Literals_In_C++]]
+- [ ] [[Logical_Operators]]
+- [ ] [[Main_Function]]
+- [ ] [[Modulus_Operator]]
+- [ ] [[Operator_Precedence]]
+- [ ] [[Precedence_Rules]]
+- [ ] [[Preprocessor_Directives]]
+- [ ] [[Relational_Operators]]
+- [ ] [[Return_Statement]]
+- [ ] [[Statements]]
+- [ ] [[Statements_In_C++]]
+- [ ] [[Static_Cast]]
+- [ ] [[Stream_Extraction_Operator]]
+- [ ] [[Stream_Insertion_Operator]]
+- [ ] [[Tokens_In_C++]]
+- [ ] [[Type_Conversion]]
+- [ ] [[Variable_Declaration]]
+- [ ] [[Variables_In_C++]]
+- [ ] [[White_Space_In_C++]]

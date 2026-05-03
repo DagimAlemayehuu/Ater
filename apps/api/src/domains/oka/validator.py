@@ -134,8 +134,10 @@ class OkaValidator:
         quiz_match = re.search(r"```interactive-quiz\s*(.*?)\s*```", body, re.DOTALL)
         if quiz_match:
             quiz_str = quiz_match.group(1).strip()
-            try:
-                quiz_data = json.loads(quiz_str, strict=False)
+            is_valid_json, quiz_data, json_err = OkaValidator.validate_json_robust(quiz_str)
+            if not is_valid_json:
+                errors.append(f"QUIZ_INVALID_JSON: {json_err}")
+            else:
                 if not isinstance(quiz_data, list):
                     errors.append(f"QUIZ_NOT_ARRAY: got {type(quiz_data).__name__}")
                 elif len(quiz_data) != 3:
@@ -166,8 +168,6 @@ class OkaValidator:
                                     "content field. content must contain ONLY the buggy code."
                                 )
 
-            except json.JSONDecodeError as e:
-                errors.append(f"QUIZ_INVALID_JSON: {e}")
         else:
             # Only flag missing quiz for atomic notes
             if note_type not in ("hub", "possible questions"):
@@ -194,7 +194,7 @@ class OkaValidator:
         return len(errors) == 0, errors
 
     @staticmethod
-    def validate_json_robust(raw_json: str) -> Tuple[bool, Dict[str, Any], Optional[str]]:
+    def validate_json_robust(raw_json: str) -> Tuple[bool, Any, Optional[str]]:
         """Fault-tolerant JSON parser for weak model outputs."""
         if not raw_json:
             return False, {}, "EMPTY_INPUT"
@@ -204,12 +204,21 @@ class OkaValidator:
         clean_json = re.sub(r"^```[a-z]*\n?", "", clean_json)
         clean_json = re.sub(r"\n?```$", "", clean_json).strip()
 
-        # Find outermost JSON object
-        start = clean_json.find("{")
-        end = clean_json.rfind("}")
-        if start == -1 or end == -1:
-            start = clean_json.find("[")
+        # Find outermost JSON object or array
+        start_dict = clean_json.find("{")
+        start_array = clean_json.find("[")
+        
+        is_array = False
+        if start_array != -1 and (start_dict == -1 or start_array < start_dict):
+            is_array = True
+            
+        if is_array:
+            start = start_array
             end = clean_json.rfind("]")
+        else:
+            start = start_dict
+            end = clean_json.rfind("}")
+
         if start == -1 or end == -1:
             return False, {}, "NO_JSON_FOUND"
 
@@ -223,6 +232,20 @@ class OkaValidator:
             data = json.loads(clean_json, strict=False)
             return True, data, None
         except Exception as e:
+            # Fallback to brace counting
+            brace_char = '[' if is_array else '{'
+            close_char = ']' if is_array else '}'
+            brace_count = 0
+            for i, char in enumerate(clean_json):
+                if char == brace_char: brace_count += 1
+                elif char == close_char: brace_count -= 1
+                if brace_count == 0 and i > 0:
+                    try:
+                        data = json.loads(clean_json[:i+1], strict=False)
+                        return True, data, None
+                    except Exception:
+                        pass
+            
             # Try ast fallback
             try:
                 import ast

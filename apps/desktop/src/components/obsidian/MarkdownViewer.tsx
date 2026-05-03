@@ -240,17 +240,20 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                 </p>
             )
         },
-        h1: ({ children }: any) => <h1 className="text-2xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-border text-foreground">
+        h1: ({ children }: any) => <h1 className="text-2xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-border text-foreground break-words">
             {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigateRef.current) : child)}
         </h1>,
-        h2: ({ children }: any) => <h2 className="text-xl font-black mt-8 mb-4 tracking-tight text-foreground">
+        h2: ({ children }: any) => <h2 className="text-xl font-black mt-8 mb-4 tracking-tight text-foreground break-words">
             {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigateRef.current) : child)}
         </h2>,
-        h3: ({ children }: any) => <h3 className="text-lg font-bold mt-6 mb-3 tracking-tight text-foreground/90">
+        h3: ({ children }: any) => <h3 className="text-lg font-bold mt-6 mb-3 tracking-tight text-foreground/90 break-words">
             {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigateRef.current) : child)}
         </h3>,
         h4: ({ children }: any) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] text-muted-foreground/60">{children}</h4>,
-        ul: ({ children }: any) => <ul className="list-disc pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ul>,
+        ul: ({ children, className }: any) => {
+            const isTaskList = className?.includes('contains-task-list');
+            return <ul className={cn("space-y-1 mb-4 text-[13px] text-foreground", isTaskList ? "list-none pl-1" : "list-disc pl-5")}>{children}</ul>
+        },
         ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ol>,
         li: ({ children, className }: any) => {
             const isTask = className?.includes('task-list-item');

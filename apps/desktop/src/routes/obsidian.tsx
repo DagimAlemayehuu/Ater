@@ -451,7 +451,7 @@ function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox}: 
  <div key={`${node.target ?? node.label}-${idx}`} className="flex flex-col">
  <div 
  className={cn(
- "group flex items-center gap-1.5 py-1 px-2 rounded-sm cursor-pointer transition-colors relative",
+ "group flex items-center gap-1.5 py-1 px-3 rounded-sm cursor-pointer transition-colors relative",
  active ? "bg-accent text-accent-foreground font-semibold" : "hover:bg-accent/50 text-muted-foreground/80"
  )}
  >

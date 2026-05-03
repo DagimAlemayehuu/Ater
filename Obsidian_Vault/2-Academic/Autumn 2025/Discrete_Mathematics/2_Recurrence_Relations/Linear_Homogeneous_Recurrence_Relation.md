@@ -1,73 +1,96 @@
 ---
+
 title: Linear_Homogeneous_Recurrence_Relation
 type: Atomic Note
 course: Discrete Mathematics
 semester: Autumn 2025
 unit: '2'
 hub: "[[2_Recurrence_Relations_Hub]]"
-source: "[[2_Recurrence_Relations.Pdf]]"
-source_pages:
-- 16
-mode: CS-SOFTWARE
+source: "[[2_Recurrence_Relations.pdf]]"
+source_pages: []
+mode: MATH-DISCRETE
 read: false
 generated: true
 prerequisites:
-- "[[Linear_Recurrence_Relation]]"
+- "[[Homogeneous_Recurrence_Relation]]"
+
 ---
 
-# 1. Mental Model
-The concept of a Linear Homogeneous Recurrence Relation can be thought of as a musical composition where each note is determined by the previous notes, similar to how a pianist plays a melody where each key pressed is a function of the previous keys pressed, with the relation being the rules that govern the chord progression. Just as a musician uses rules of harmony to determine the next note, a Linear Homogeneous Recurrence Relation uses a set of coefficients to determine the next term in a sequence. The relation defines a recursive structure that generates a sequence of values.
+## 1. Mental Model
 
-# 2. Execution Logic & Data Flow
-The solution to a [[Linear_Homogeneous_Recurrence_Relation]] involves finding a [[General_Solution]] that satisfies the given recurrence relation. This is typically achieved by solving the [[Characteristic_Equation]], which is derived from the recurrence relation by substituting $a_n = r^n$ into the relation. The roots of the characteristic equation determine the form of the general solution, which can be expressed as a [[Sequence]] of terms. The [[Method_Of_Undetermined_Coefficients]] may be used to find a particular solution if the relation has a non-homogeneous part, but for a homogeneous relation, the general solution is the complete solution. The [[Initial_Condition]] is used to determine the [[Unique_Solution]] by specifying the values of the first k terms of the sequence.
+A Linear Homogeneous Recurrence Relation can be thought of as a financial transaction system where the balance at each step is determined by the previous balances, similar to how a recurrence relation defines each term as a function of preceding terms. Just as a specific payment schedule can be represented by a sequence of transactions, a Linear Homogeneous Recurrence Relation represents a sequence where each term is a linear combination of previous terms. The coefficients in the recurrence relation act like fixed transaction fees or interest rates that apply at each step.
 
-# 3. Edge Cases & Failure States
-When dealing with Linear Homogeneous Recurrence Relations, edge cases arise when the characteristic equation has repeated roots or when the relation is of a very low order, such as $k=0$ or $k=1$. In such cases, the [[Solution_Of_A_Relation]] may not be unique or may not exist, leading to failure states. If the [[Initial_Condition]] is not properly specified or is inconsistent with the recurrence relation, the solution may not converge or may not be well-defined. Furthermore, if the coefficients of the recurrence relation are not properly chosen, the relation may not have a [[Unique_Solution]].
-## 4. Implementation Mechanics
-```python
-def linear_homogeneous_recurrence_relation(coefficients, initial_conditions, n):
-    """
-    Compute the nth term of a linear homogeneous recurrence relation.
+## 2. Formal Definition & Structural Trace
 
-    Args:
-    coefficients (list): The coefficients of the recurrence relation.
-    initial_conditions (list): The initial conditions of the sequence.
-    n (int): The term number to compute.
+A [[Linear_Homogeneous_Recurrence_Relation]] is defined as a sequence $a_n$ that satisfies a recurrence relation of the form $a_n = c_1a_{n-1} + c_2a_{n-2} + \cdots + c_ka_{n-k}$, where $c_1, c_2, \ldots, c_k$ are constants. This relation is [[Homogeneous_Recurrence_Relation|homogeneous]] because it is a linear combination of previous terms without any additional constant term. The [[Characteristic_Equation]] of this recurrence relation is $x^k - c_1x^{k-1} - c_2x^{k-2} - \cdots - c_k = 0$. The [[General_Solution]] to the recurrence relation can be expressed as a linear combination of terms formed by the roots of the characteristic equation. The [[Unique_Solution]] can be determined by the initial conditions of the sequence.
 
-    Returns:
-    int: The nth term of the sequence.
-    """
-    sequence = initial_conditions[:]
-    for i in range(len(initial_conditions), n + 1):
-        term = sum(coefficients[j] * sequence[i - j - 1] for j in range(len(coefficients)))
-        sequence.append(term)
-    return sequence[n]
+## 3. Boundary Cases & Counterexamples
 
-# Example usage
-coefficients = [1, 1]  # Fibonacci sequence: F(n) = F(n-1) + F(n-2)
-initial_conditions = [0, 1]  # F(0) = 0, F(1) = 1
-n = 10
-result = linear_homogeneous_recurrence_relation(coefficients, initial_conditions, n)
-print(result)  # Output: 55
-```
-The code block represents a Python function that calculates the nth term of a linear homogeneous recurrence relation. The ASCII memory/stack diagram is not provided here, but it would show the call stack and memory allocation for the function.
+When the characteristic equation has repeated roots, the general solution involves terms of the form $r^n$ and $nr^n$, where $r$ is a repeated root. If the initial conditions are not provided or are inconsistent, there may not be a unique solution to the recurrence relation. For a [[Second_Order_Linear_Homogeneous_Recurrence_Relation]], if the characteristic equation has no real roots, the sequence's terms may involve complex numbers. A non-homogeneous version of such a relation, like a [[Non_Homogeneous_Linear_Recurrence_Relation]], would have an additional constant term, altering its behavior significantly.
+
+## 4. Discrete Proof Trace
+
+### Recurrence Relation: $a_n = 2a_{n-1} + 3a_{n-2}$
+
+### Unrolling Table:
+
+| $n$ | $a_n$ | $a_{n-1}$ | $a_{n-2}$ |
+| --- | --- | --- | --- |
+| 0   | $a_0$ | -       | -       |
+| 1   | $a_1$ | $a_0$   | -       |
+| 2   | $2a_1 + 3a_0$ | $a_1$ | $a_0$ |
+| 3   | $2(2a_1 + 3a_0) + 3a_1$ | $2a_1 + 3a_0$ | $a_1$ |
+| ... | ... | ... | ... |
+
+The unrolling table represents how each term in the sequence is generated based on the recurrence relation. Each row corresponds to a term in the sequence, with columns showing the term's value and its dependencies.
 
 ## 5. Walkthrough
-1. Initialize the sequence with the given initial conditions: `[0, 1]`.
-2. Compute the third term (`n=2`): `term = coefficients[0]*sequence[0] + coefficients[1]*sequence[1] = 1*0 + 1*1 = 1`, so the sequence becomes `[0, 1, 1]`.
-3. Compute the fourth term (`n=3`): `term = coefficients[0]*sequence[1] + coefficients[1]*sequence[2] = 1*1 + 1*1 = 2`, so the sequence becomes `[0, 1, 1, 2]`.
-4. Compute the fifth term (`n=4`): `term = coefficients[0]*sequence[2] + coefficients[1]*sequence[3] = 1*1 + 1*2 = 3`, so the sequence becomes `[0, 1, 1, 2, 3]`.
-5. Continue this process until the tenth term (`n=10`): the sequence becomes `[0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55]`.
-6. Return the tenth term: `55`.
+
+1. **Define the Recurrence Relation**: The given Linear Homogeneous Recurrence Relation is $a_n = 2a_{n-1} + 3a_{n-2}$. This means that to find the value of the sequence at any term $n$, we need the values of the two preceding terms.
+
+2. **Identify Initial Conditions**: Let's assume initial conditions $a_0 = 1$ and $a_1 = 2$. These are necessary to start computing the sequence.
+
+3. **Compute $a_2$**: Using the recurrence relation, $a_2 = 2a_1 + 3a_0 = 2(2) + 3(1) = 4 + 3 = 7$.
+
+4. **Compute $a_3$**: Again, using the recurrence relation, $a_3 = 2a_2 + 3a_1 = 2(7) + 3(2) = 14 + 6 = 20$.
+
+5. **Verify the Sequence**: So far, the sequence is $a_0 = 1$, $a_1 = 2$, $a_2 = 7$, $a_3 = 20$. This step ensures that our calculations are correct.
+
+6. **Generalize the Sequence**: For a Linear Homogeneous Recurrence Relation like $a_n = 2a_{n-1} + 3a_{n-2}$, the solution typically has the form $a_n = r^n$, where $r$ is a root of the characteristic equation $r^2 - 2r - 3 = 0$. Solving this equation gives $(r - 3)(r + 1) = 0$, so $r = 3$ or $r = -1$. Thus, the general solution is $a_n = c_1(3)^n + c_2(-1)^n$, where $c_1$ and $c_2$ are determined by initial conditions.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
+
 [
-  {"id":"q1","type":"fill_in","difficulty":"L1","question":"A Linear Homogeneous Recurrence Relation is defined by a set of [[Blank1]] that determine the next term.","textWithBlanks":"A Linear Homogeneous Recurrence Relation is defined by a set of [[Blank1]] that determine the next term.","answer":["coefficients"],"explanation":"These coefficients are used to compute the next term in the sequence."},
-  {"id":"q2","type":"true_false","difficulty":"L2","question":"A Linear Homogeneous Recurrence Relation of order 2 has a characteristic equation that is a [[Blank1]] degree polynomial.","answer":false,"explanation":"A Linear Homogeneous Recurrence Relation of order k has a characteristic equation that is a k degree polynomial."},
-  {"id":"q3","type":"debug","difficulty":"L3","question":"Find bug.","content":"int T(n) { if (n <= 1) return 1; else return 2*T(n-1) + 3*T(n-2); }","answer":"The recurrence relation is not homogeneous because of the added constant.","explanation":"The given recurrence relation is not homogeneous due to the presence of an added constant term which disrupts the homogeneity property."}
+  {
+    "id": "q1",
+    "type": "fill_in",
+    "difficulty": "L1",
+    "question": "Definition of Linear Homogeneous Recurrence Relation",
+    "textWithBlanks": "A Linear Homogeneous Recurrence Relation is a recurrence relation of the form $a_n = c_1a_{n-1} + c_2a_{n-2} + \\ldots + c_ka_{n-k}$, where the [[Blank1]] are constants.",
+    "answer": ["coefficients"],
+    "explanation": "The definition of a Linear Homogeneous Recurrence Relation involves a linear combination of previous terms with constant coefficients."
+  },
+  {
+    "id": "q2",
+    "type": "true_false",
+    "difficulty": "L2",
+    "question": "A Linear Homogeneous Recurrence Relation of order 2 has a solution of the form $a_n = r^n$ for some constant $r$.",
+    "answer": true,
+    "explanation": "The characteristic equation of a Linear Homogeneous Recurrence Relation of order 2 is of the form $r^2 - c_1r - c_2 = 0$, which indeed has solutions of the form $a_n = r^n$ for some constant $r$."
+  },
+  {
+    "id": "q3",
+    "type": "debug",
+    "difficulty": "L3",
+    "question": "Find the error in the following flawed mathematical step.",
+    "content": "The characteristic equation of $a_n = 3a_{n-1} - 2a_{n-2}$ is $r^2 + 3r - 2 = 0$. Solving for $r$, we get $r = \\frac{-3 \\pm \\sqrt{9 + 8}}{2} = \\frac{-3 \\pm \\sqrt{17}}{2}$. Therefore, the general solution is $a_n = C_1\\left(\\frac{-3 + \\sqrt{17}}{2}\\right)^n$.",
+    "answer": "The bug is that the general solution is incomplete; it should be $a_n = C_1\\left(\\frac{-3 + \\sqrt{17}}{2}\\right)^n + C_2\\left(\\frac{-3 - \\sqrt{17}}{2}\\right)^n$.",
+    "explanation": "The characteristic equation has two distinct roots, so the general solution must include both roots."
+  }
 ]
+
 ```

@@ -107,15 +107,15 @@ class NoteSchema(BaseModel):
 class AtomicNoteSchema(NoteSchema):
     prerequisites: List[str] = Field(default_factory=list)
     mode: Literal[
-        "CS-SOFTWARE", "CS-SYSTEMS", "CS-DB", "CS-AI",
-        "MATH-PURE", "MATH-STAT", "MATH-CRYPTO",
+        "CS-SOFTWARE", "CS-SYSTEMS", "CS-DB", "CS-AI", "CS-TESTING", "CS-ARCH", "CS-REQUIREMENTS",
+        "MATH-PURE", "MATH-DISCRETE", "MATH-STAT", "MATH-CRYPTO",
         "PHYSICS-KINEMATICS", "CHEMISTRY", "BIOLOGY",
         "ENG-MECH", "ENG-ELEC", "MED-PHYSIO", "MED-PHARMA",
         "ECON-MACRO", "ECON-FINANCE", "BIZ-STRATEGY",
         "LAW-CASE", "LAW-CONTRACT", "HIST-CATALYST",
         "PHILOSOPHY", "PSYCH-SOCIOLOGY", "LANG-LINGUISTICS",
         "LANG-LIT", "ARTS-DESIGN", "SKILLS-HARD", "SKILLS-FITNESS",
-        "EDUCATION"
+        "EDUCATION", "RESEARCH-METHODS"
     ] = Field(default="CS-SOFTWARE")
 class BatchSchema(BaseModel):
     id: int
