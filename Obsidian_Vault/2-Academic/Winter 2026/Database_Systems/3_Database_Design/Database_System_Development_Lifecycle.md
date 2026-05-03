@@ -31,11 +31,8 @@ The [[Database_System_Development_Lifecycle]] encompasses several critical phase
 In the context of the [[Database_System_Development_Lifecycle]], ACID violations and scaling limits become critical in the [[Implementation]] and [[Operational_Maintenance]] phases. If a database system is not properly designed or scaled, it may encounter failure states such as data inconsistencies or system crashes, particularly when handling high volumes of transactions. Boundary conditions, like reaching maximum capacity or experiencing peak usage, can exacerbate these issues, leading to ACID violations. 
 
 | Failure State | Description | 
-
 |---|---|
-
 | Data Inconsistency | Occurs when transactions are not properly synchronized. | 
-
 | System Crash | Happens when the system fails to handle peak loads. | 
 
 Inadequate [[Dbms_Selection]] or poor [[Database_Design]] can lead to these problems, emphasizing the importance of careful planning and testing within the [[Database_System_Development_Lifecycle]].

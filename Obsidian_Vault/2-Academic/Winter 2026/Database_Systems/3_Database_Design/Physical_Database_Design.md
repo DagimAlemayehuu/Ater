@@ -30,15 +30,10 @@ The [[Physical_Database_Design]] process involves implementing the [[Logical_Dat
 If the physical database design is not optimized for concurrency, it may lead to [[Acid]] violations, such as inconsistent data or failed transactions. As the database scales, poorly designed file organizations and indexing systems can cause performance bottlenecks, leading to slower query execution times. In extreme cases, this can result in the database becoming unresponsive or even crashing. 
 
 | Scaling Issue | Description |
-
 |---|---|
-
 | Concurrency Control | Failure to manage concurrent access to data |
-
 | Data Fragmentation | Poor data distribution leading to slower query performance |
-
 | Index Overhead | Excessive indexing causing increased storage requirements | 
-
 | Query Optimization | Inefficient query execution plans resulting in slower performance |
 
 ## 4. Entity-Relationship Model

@@ -35,11 +35,8 @@ The development of an Information System involves a structured approach, startin
 As an Information System grows and scales, it may encounter limitations in its ability to maintain [[Acid]] properties, particularly in distributed environments. If the system is not designed to handle high volumes of transactions, it may experience [[Acid]] violations, leading to inconsistencies and errors. 
 
 | Scale | Issue |
-
 |---|---|
-
 | Horizontal | Distributed transaction management becomes increasingly complex |
-
 | Vertical | Increased load on individual components can lead to bottlenecks |
 
 In such cases, the system's [[Information_System]] architecture may need to be reevaluated to ensure that it can handle the increased load and maintain data consistency.

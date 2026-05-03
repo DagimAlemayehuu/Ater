@@ -35,11 +35,8 @@ The database development methodology encompasses various stages, including [[Dat
 In a database system developed using a structured methodology, ACID (Atomicity, Consistency, Isolation, Durability) properties are essential for ensuring transactional reliability. However, if the database is not properly scaled or if there are flaws in the [[Database_Development_Methodology]], ACID violations can occur, leading to inconsistencies and potential data loss. For instance, if the system is not designed to handle high transaction volumes, it may fail to maintain isolation, leading to data corruption. Similarly, if the durability aspect is compromised due to inadequate logging or recovery mechanisms, data could be lost in the event of a failure. 
 
 | Scaling Issue | ACID Property Affected | Potential Impact |
-
 |---------------|------------------------|--------------------|
-
 | High transaction volume | Isolation             | Data corruption    |
-
 | Inadequate logging     | Durability            | Data loss          |
 
 ## 4. Entity-Relationship Model

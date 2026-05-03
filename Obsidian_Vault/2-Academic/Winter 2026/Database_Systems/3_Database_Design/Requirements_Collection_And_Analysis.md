@@ -30,11 +30,8 @@ Requirements Collection And Analysis is a critical phase in [[Database_Developme
 Requirements Collection And Analysis can lead to ACID violations and scaling limits if not properly managed, particularly when dealing with distributed systems or high-transaction databases. For instance, if the requirements do not adequately address concurrency control, the system may experience inconsistencies, violating the atomicity and consistency principles of ACID. Similarly, poor analysis might lead to underestimating the database's future growth, resulting in scalability issues when the system needs to handle increased loads or larger datasets. 
 
 | Failure Mode | Description | Impact on ACID | Scaling Impact |
-
 |--------------|-------------|----------------|---------------|
-
 | Inadequate Concurrency Control | Insufficient mechanisms for managing simultaneous transactions | Atomicity, Consistency | Vertical scaling limits |
-
 | Underestimated Data Growth | Failure to anticipate future data volume increases | Availability, Performance | Horizontal scaling challenges |
 
 ## 4. Entity-Relationship Model

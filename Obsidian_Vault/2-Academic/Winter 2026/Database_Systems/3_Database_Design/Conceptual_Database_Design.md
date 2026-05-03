@@ -30,11 +30,8 @@ The [[Conceptual_Database_Design]] process involves constructing a model of the 
 If the [[Conceptual_Database_Design]] does not accurately reflect the needs of the enterprise, it can lead to [[Acid]] violations, such as inconsistencies in data relationships, ultimately causing the database to break under certain failure states. For instance, a failure to properly define [[Entity_Type]] relationships can result in data inconsistencies when scaling the database. 
 
 | Failure State | Description |
-
 |---|---|
-
 | Inconsistent Data | Data becomes inconsistent due to poor relationship definition. |
-
 | Scalability Issues | Database struggles to scale due to flawed conceptual design. | 
 
 As the database grows, these issues can lead to significant problems, including decreased performance and reliability.

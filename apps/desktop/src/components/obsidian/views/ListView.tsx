@@ -23,8 +23,8 @@ export function ListView({
     loading
 }: ListViewProps) {
     const effectiveColumns = React.useMemo(() => {
-        if (columns && columns.length > 0) return columns;
-        return Object.keys(schema || {});
+        if (columns && columns.length > 0) return columns.filter(c => c !== 'title');
+        return Object.keys(schema || {}).filter(c => c !== 'title');
     }, [columns, schema]);
 
     if (loading) {

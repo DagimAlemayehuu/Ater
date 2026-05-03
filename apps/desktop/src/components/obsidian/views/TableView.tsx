@@ -35,8 +35,8 @@ export function TableView({
 
     // Compute effective columns if not provided
     const effectiveColumns = React.useMemo(() => {
-        if (columns && columns.length > 0) return columns;
-        return Object.keys(schema || {}).filter(c => !hiddenProperties.includes(c));
+        if (columns && columns.length > 0) return columns.filter(c => c !== 'title');
+        return Object.keys(schema || {}).filter(c => !hiddenProperties.includes(c) && c !== 'title');
     }, [columns, schema, hiddenProperties]);
 
     const toggleExpand = (e: React.MouseEvent, id: string) => {

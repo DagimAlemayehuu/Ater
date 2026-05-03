@@ -30,11 +30,8 @@ The process of [[Logical_Database_Design]] involves transforming the [[Conceptua
 In a logical database design, if relationships between tables are not properly defined, it can lead to inconsistencies and potential [[Acid]] violations when the design is implemented. For instance, if a critical relationship is missed or incorrectly defined, it can result in data inconsistencies during [[Participation]] and [[Cardinality]] enforcement. As the database scales, poorly designed relationships can lead to performance bottlenecks and make it difficult to maintain data integrity. Moreover, overlooking [[Multiplicity]] constraints can cause issues with data redundancy and lead to scalability issues. 
 
 | Error Type | Description | Impact on Design |
-
 |------------|-------------|------------------|
-
 | Missing Relationships | Omitting critical relationships between entities | Data inconsistency and potential ACID violations |
-
 | Incorrect Cardinality | Incorrectly defining cardinality constraints | Data redundancy and scalability issues |
 
 ## 4. Entity-Relationship Model

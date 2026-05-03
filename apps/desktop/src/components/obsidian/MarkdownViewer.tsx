@@ -164,6 +164,17 @@ const CodeRenderer = memo((props: any) => {
 
     if (language === 'mermaid') return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />
 
+    // Render ```markdown blocks as actual Markdown documents to support rendered artifact tables
+    if (language === 'markdown') {
+        return (
+            <div className="my-6 p-6 bg-muted/5 border border-border/20 rounded-xl prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-table:my-0">
+                <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]}>
+                    {String(children).replace(/\n$/, '')}
+                </ReactMarkdown>
+            </div>
+        );
+    }
+    
     // Render ```latex blocks as actual Markdown documents to support mixed text and equations
     if (language === 'latex') {
         const src = String(children).replace(/\n$/, '');

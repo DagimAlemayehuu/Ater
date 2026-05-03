@@ -74,31 +74,48 @@ def enforce_gutter(unit_dir: Path):
         r'(^#{1,3} .+)',           # headings
         r'(^```)',                  # code fence
         r'(^---$)',                 # horizontal rule
-        r'(^\|.+\|$)',             # table rows (first one)
     ]
     combined = re.compile('|'.join(PATTERNS))
     
+    def is_table_row(l):
+        s = l.strip()
+        return s.startswith('|') and s.endswith('|') and len(s) > 1
+
     for note_file in unit_dir.glob("*.md"):
         lines = note_file.read_text(encoding="utf-8").split('\n')
         result = []
         for i, line in enumerate(lines):
-            # If current line is a pattern match AND previous line is not blank
-            if combined.match(line.strip()) and result and result[-1].strip() != '':
-                result.append('')  # insert blank line before
+            match = combined.match(line.strip())
+            is_tr = is_table_row(line)
+            is_prev_tr = i > 0 and is_table_row(lines[i-1])
+            
+            needs_blank_before = False
+            if match and result and result[-1].strip() != '':
+                needs_blank_before = True
+            if is_tr and not is_prev_tr and result and result[-1].strip() != '':
+                needs_blank_before = True
+                
+            if needs_blank_before:
+                result.append('')
+                
             result.append(line)
-            # If current line is a pattern match AND next line is not blank
-            if combined.match(line.strip()) and i + 1 < len(lines) and lines[i+1].strip() != '':
-                # Note: this logic modifies next line during current step if we aren't careful, 
-                # actually it's easier to just insert after, but we handle it passively
-                pass
-        
-        fixed = '\n'.join(result)
-        # One pass for after-gutter
-        final_lines = fixed.split('\n')
+            
+        final_lines = result
         final_result = []
+        
         for i, line in enumerate(final_lines):
             final_result.append(line)
-            if combined.match(line.strip()) and i + 1 < len(final_lines) and final_lines[i+1].strip() != '':
+            match = combined.match(line.strip())
+            is_tr = is_table_row(line)
+            is_next_tr = i + 1 < len(final_lines) and is_table_row(final_lines[i+1])
+            
+            needs_blank_after = False
+            if match and i + 1 < len(final_lines) and final_lines[i+1].strip() != '':
+                needs_blank_after = True
+            if is_tr and not is_next_tr and i + 1 < len(final_lines) and final_lines[i+1].strip() != '':
+                needs_blank_after = True
+                
+            if needs_blank_after:
                 final_result.append('')
 
         final_text = '\n'.join(final_result)

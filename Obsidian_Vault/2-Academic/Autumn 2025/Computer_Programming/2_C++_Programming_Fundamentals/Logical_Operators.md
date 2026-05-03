@@ -35,13 +35,9 @@ The execution logic of logical operators in a program involves evaluating one or
 When using logical operators, edge cases can arise when dealing with boundary conditions such as evaluating to true or false. For example, if a condition is evaluated to true, but the program expects a false value, it can lead to unexpected behavior. Failure states can occur when logical operators are used incorrectly, such as using a single ampersand (&) instead of a double ampersand (&&) for an AND operation. 
 
 | Operator | Description | Example |
-
 | --- | --- | --- |
-
 | && | AND | true && true |
-
 | || | OR | true || false |
-
 | ! | NOT | !true | 
 
 In such cases, the program may not behave as expected, leading to errors or incorrect results.
