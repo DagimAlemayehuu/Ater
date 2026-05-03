@@ -366,13 +366,14 @@ class OkaQueueManager:
                             else:
                                 raise ValueError(confirm_res.get("message", "Unknown service error"))
                         except Exception as e:
-                            batch_retry += 1
                             err_msg = str(e).lower()
-                            watcher_logger.error(f"Batch execution failed (Attempt {batch_retry}/5): {e}")
                             if "tpd" in err_msg or "daily" in err_msg or "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg:
-                                watcher_logger.warning("Rate limit hit during deployment. Sleeping for 60s...")
+                                watcher_logger.warning("Rate limit hit during deployment. Sleeping for 60s and retrying...")
                                 await asyncio.sleep(60)
+                                # Do NOT increment batch_retry for rate limits, just wait it out
                             else:
+                                batch_retry += 1
+                                watcher_logger.error(f"Batch execution failed (Attempt {batch_retry}/5): {e}")
                                 await asyncio.sleep(15)
                     
                     if not success:

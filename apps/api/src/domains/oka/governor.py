@@ -35,29 +35,10 @@ class TokenGovernor:
         """
         Wait until we have enough capacity to proceed.
         """
-        logged_pacing = False
-        while True:
-            tpm_usage, rpm_usage = self._get_last_minute_usage()
-            tpd_usage = self._get_daily_usage()
-            
-            if tpd_usage + expected_tokens > self.max_tpd:
-                if not logged_pacing:
-                    print(f"[TokenGovernor] DAILY LIMIT REACHED ({tpd_usage}/{self.max_tpd}). Pausing 10m...")
-                    logged_pacing = True
-                await asyncio.sleep(600) # Wait 10 mins and check again
-                continue
-                
-            if tpm_usage + expected_tokens > self.max_tpm or rpm_usage + expected_requests > self.max_rpm:
-                # Need to wait out the minute window
-                if not logged_pacing:
-                    print(f"[TokenGovernor] Waiting for token capacity... ({tpm_usage}/{self.max_tpm} tokens, {rpm_usage}/{self.max_rpm} reqs). Resting...")
-                    logged_pacing = True
-                await asyncio.sleep(5)
-                continue
-                
-            # If we're good, record the usage and return
-            self._record_usage(expected_tokens, expected_requests)
-            break
+        # Feature flag: Local token tracking disabled. 
+        # Relying entirely on natural pacing and upstream 429 handling.
+        self._record_usage(expected_tokens, expected_requests)
+        return
 
     def _get_last_minute_usage(self):
         cutoff = time.time() - 60

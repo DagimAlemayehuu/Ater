@@ -999,7 +999,6 @@ class OkaService:
                             f"confidence: null\n"
                             f"study_date: null\n"
                             f"generated: false\n"
-
                             f"---\n\n"
                             f"# {hub_title}\n\n"
                             f"> Auto-created stub by OKA. Full content will be generated after plan confirmation.\n"
@@ -1427,8 +1426,8 @@ class OkaService:
                         note_schema = AtomicNoteSchema(**note_schema_dict)
 
                     if b_num > 1:
-                        await asyncio.sleep(2.1)
-
+                        # Natural pacing break between notes
+                        await asyncio.sleep(5.0)
                     final_output = ""
                     generation_attempts = 0
                     max_attempts = 3

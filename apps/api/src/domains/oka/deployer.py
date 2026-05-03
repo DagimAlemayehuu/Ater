@@ -303,7 +303,7 @@ class OkaDeployer:
             meta["title"] = target_path.stem
 
             # ── WRITE ──
-            yaml_content = self.vm.dump_obsidian_yaml(meta)
+            yaml_content = self.vm.dump_obsidian_yaml(meta).strip()
             full_content = f"---\n{yaml_content}\n---\n\n{content.strip()}\n"
             self.vm.write_note(target_path, full_content)
 

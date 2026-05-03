@@ -162,52 +162,42 @@ def audit_intra_links(unit_dir: Path) -> List[str]:
     return weak_notes
 
 def sync_hub_connections(hub_file: Path, unit_dir: Path):
-    deployed_stems = {f.stem for f in unit_dir.glob("*.md") 
-                      if f.stem not in ("Hub", "PQ") and "Hub" not in f.stem and "PQ" not in f.stem}
+    """
+    Rebuild the hub's ## Connections section from the actual deployed atomic notes.
+    Scans unit_dir for all .md files and writes them as checklist items into the hub.
+    This is the ground-truth rebuild approach — no ghost-link detection needed.
+    """
+    if not unit_dir.exists():
+        print(f"[HubSync] Unit directory not found: {unit_dir}")
+        return
+
+    # Collect all deployed atomic note stems (exclude hub/PQ files)
+    deployed_stems = sorted(
+        f.stem for f in unit_dir.glob("*.md")
+        if "Hub" not in f.stem and "PQ" not in f.stem and not f.stem.startswith(".")
+    )
+
+    if not deployed_stems:
+        print(f"[HubSync] No atomic notes found in {unit_dir}")
+        return
+
     hub_text = hub_file.read_text(encoding="utf-8")
-    
-    # Extract connections section
-    linked = set(re.findall(r'\[\[([^\]]+)\]\]', hub_text))
-    
-    # 1. Title-Case Canonicalization
-    # We want to replace any link in the hub text that matches a deployed stem case-insensitively with the EXACT deployed stem.
-    # We also want to remove checklist lines for ghost links.
-    
-    # Create case-insensitive map of deployed stems
-    deployed_lower = {s.lower().replace("_", " ").replace("-", " "): s for s in deployed_stems}
-    
-    lines = hub_text.split("\n")
-    final_lines = []
-    
-    # We will track which valid stems we have linked to
-    valid_linked = set()
-    
-    for line in lines:
-        match = re.search(r'\[\[([^\]]+)\]\]', line)
-        if match and "- [ ]" in line:
-            raw_link = match.group(1)
-            raw_norm = raw_link.lower().replace("_", " ").replace("-", " ")
-            
-            if raw_norm in deployed_lower:
-                # Fix the link canonicalization
-                correct_stem = deployed_lower[raw_norm]
-                new_line = line.replace(f"[[{raw_link}]]", f"[[{correct_stem}]]")
-                final_lines.append(new_line)
-                valid_linked.add(correct_stem)
-            else:
-                # Ghost link! Cull it.
-                print(f"[HubSync] Culled ghost link: {raw_link}")
-                continue
-        else:
-            final_lines.append(line)
-            
-    hub_text = "\n".join(final_lines)
-    
-    # 2. Add missing notes to hub
-    missing = deployed_stems - valid_linked
-    if missing:
-        new_lines = "\n".join(f"- [ ] [[{s}]]" for s in sorted(missing))
-        hub_text = hub_text.rstrip() + f"\n\n### Also Deployed\n{new_lines}\n"
-        print(f"[HubSync] Added {len(missing)} missing connections to hub")
-        
+
+    # Build a fresh connections block
+    connection_lines = "\n".join(f"- [ ] [[{stem}]]" for stem in deployed_stems)
+    new_connections_block = f"## Connections\n\n{connection_lines}\n"
+
+    # Replace or append the Connections section
+    if "## Connections" in hub_text:
+        # Replace everything from ## Connections to end of file
+        hub_text = re.sub(
+            r"## Connections.*$",
+            new_connections_block,
+            hub_text,
+            flags=re.DOTALL
+        )
+    else:
+        hub_text = hub_text.rstrip() + f"\n\n{new_connections_block}"
+
     hub_file.write_text(hub_text, encoding="utf-8")
+    print(f"[HubSync] Rebuilt connections for {hub_file.name}: {len(deployed_stems)} notes linked.")
