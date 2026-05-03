@@ -1,18 +1,5 @@
 ---
-title: Indigenous_Inclusive_Values
-type: Atomic Note
-course: Inclusiveness
-semester: Autumn 2025
-unit: '4'
-hub: "[[4_Promoting_Inclusive_Culture_Hub]]"
-source: "[[4.Pdf]]"
-source_pages:
-- 16
-mode: EDUCATION
-read: false
-generated: true
-prerequisites:
-- "[[Definition_Of_Inclusive_Culture]]"
+read: true
 ---
 
 # 1. Mental Model
