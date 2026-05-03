@@ -1,7 +1,7 @@
 import json
 import re
 import asyncio
-from typing import Any, Dict
+from typing import Any, Dict, List
 from langchain_core.language_models.chat_models import BaseChatModel
 from .schemas import NoteContent, PartialPlan, ProbeEnrichment
 
@@ -159,287 +159,189 @@ class ArchitectAgent:
         return "429" in s or "rate_limit" in s or "rate limit" in s
 
 
-# ── WRITER AGENT ──────────────────────────────────────────────────────────────
+# ── NEW SPLIT AGENTS (Theory, Practitioner, Examiner, Critic) ──
 
-class WriterAgent:
-    """
-    2-Pass content generator.
+class TheoryAgent:
+    def __init__(self, llm: BaseChatModel, domain: dict):
+        self.llm = llm
+        self.domain = domain
 
-    Pass 1 (Theorist)  — Sections 1-3: deep prose with mandatory wikilinks.
-    Pass 2 (Inquisitor)— Sections 4-6: artifact + walkthrough + quiz JSON.
+    async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str) -> str:
+        title_readable = note_schema.title.replace("_", " ")
+        sys_prompt = (
+            f"You are {self.domain['persona']}.\n"
+            "Write EXACTLY 3 sections. Nothing else.\n\n"
+            "# 1. Mental Model\n"
+            "Write 2-3 sentences. Use a SPECIFIC, UNCOMMON real-world analogy that maps precisely to how this works. "
+            "Do NOT use: boxes, containers, or blueprints.\n\n"
+            f"# 2. {self.domain['h1']}\n"
+            "Write EXACTLY 5 sentences of continuous technical prose. No bullets.\n"
+            "You MUST embed 4-6 wikilinks from this list: {all_concepts}\n"
+            "Format: [[Underscore_Title_Case]] — zero spaces inside brackets.\n\n"
+            f"# 3. {self.domain['h2']}\n"
+            "Write EXACTLY 4 sentences of continuous technical prose. No bullets.\n"
+            "Cover boundary conditions, failure states, what breaks and why.\n"
+            "You MUST embed 3-5 wikilinks from the list above.\n\n"
+            f"Concept: {title_readable}\n"
+            f"Source context: {source_text[:1500]}"
+        )
+        sys_prompt = sys_prompt.replace("{all_concepts}", all_concepts)
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the theory sections.")])
+        return res.content.strip()
 
-    Designed to be robust on weak / token-limited models:
-    - Compact prompts with exact format examples
-    - Drift detection: rejects and retries if body is about the wrong concept
-    - Quiz answer never leaked in the question content field
-    - Prerequisite titles forced to underscored form
-    """
+    async def retry(self, note_schema, source_text: str, primary_language: str, all_concepts: str, diagnosis: str) -> str:
+        title_readable = note_schema.title.replace("_", " ")
+        sys_prompt = (
+            f"You are {self.domain['persona']}.\n"
+            f"PREVIOUS ATTEMPT FAILED. FIX INSTRUCTION: {diagnosis}\n\n"
+            "Write EXACTLY 3 sections. Nothing else.\n\n"
+            "# 1. Mental Model\n"
+            "Write 2-3 sentences. Vivid, specific analogy.\n\n"
+            f"# 2. {self.domain['h1']}\n"
+            "Write EXACTLY 5 sentences of continuous technical prose.\n"
+            f"MANDATORY: embed 4-6 [[Wikilinks]] from this list: {all_concepts}\n"
+            "Format: [[Underscore_Title_Case]]\n\n"
+            f"# 3. {self.domain['h2']}\n"
+            "Write EXACTLY 4 sentences. Cover boundary conditions.\n"
+            "MANDATORY: embed 3-5 [[Wikilinks]]\n\n"
+            f"Concept: {title_readable}\n"
+            f"Source context: {source_text[:1500]}"
+        )
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the corrected theory sections.")])
+        return res.content.strip()
 
+class PractitionerAgent:
+    def __init__(self, llm: BaseChatModel, domain: dict):
+        self.llm = llm
+        self.domain = domain
+
+    async def generate(self, note_title: str, theory_body: str, primary_language: str) -> str:
+        title_readable = note_title.replace("_", " ")
+        sys_prompt = (
+            f"You are {self.domain['persona']}.\n"
+            "Write EXACTLY 2 sections. Nothing else.\n\n"
+            f"# 4. {self.domain['h3']}\n"
+            f"Create a {self.domain['artifact']}. Use correct markdown fences with language tag {primary_language}.\n"
+            "After the artifact, write 2 sentences ONLY explaining what each part represents and how to read it.\n\n"
+            "## 5. Walkthrough\n"
+            "Write EXACTLY 6 numbered steps. No more. No fewer.\n"
+            f"Use realistic data. Professional domain: {self.domain.get('walkthrough_domain', 'realistic scenario')}.\n"
+            "Each step must show a concrete state change.\n\n"
+            f"Concept: {title_readable}\n"
+            f"Theory context: {theory_body[:600]}"
+        )
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the artifact and walkthrough.")])
+        return res.content.strip()
+
+    async def retry(self, note_title: str, theory_body: str, primary_language: str, diagnosis: str) -> str:
+        title_readable = note_title.replace("_", " ")
+        sys_prompt = (
+            f"You are {self.domain['persona']}.\n"
+            f"PREVIOUS ATTEMPT FAILED. FIX: {diagnosis}\n\n"
+            "Write EXACTLY 2 sections.\n\n"
+            f"# 4. {self.domain['h3']}\n"
+            f"Create a {self.domain['artifact']}. Use correct markdown fences.\n"
+            "Below the artifact, write 2 sentences explaining it.\n\n"
+            "## 5. Walkthrough\n"
+            "Write EXACTLY 6 numbered steps showing concrete state changes.\n\n"
+            f"Concept: {title_readable}\n"
+            f"Theory context: {theory_body[:600]}"
+        )
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the corrected artifact and walkthrough.")])
+        return res.content.strip()
+
+class ExaminerAgent:
+    def __init__(self, llm: BaseChatModel, domain: dict):
+        self.llm = llm
+        self.domain = domain
+
+    async def generate(self, note_title: str, theory_summary: str, primary_language: str) -> str:
+        title_readable = note_title.replace("_", " ")
+        sys_prompt = (
+            "Output a valid JSON array of exactly 3 quiz questions. No markdown fences. Just the array.\n\n"
+            f"Q1: type=\"{self.domain['l1']}\", difficulty=\"L1\"\n"
+            f"Q2: type=\"{self.domain['l2']}\", difficulty=\"L2\"\n"
+            f"Q3: type=\"{self.domain['l3']}\", difficulty=\"L3\"\n\n"
+            "RULES:\n"
+            f"- Q1 type=\"{self.domain['l1']}\" difficulty=\"L1\": Tests recall/definition. Be precise.\n"
+            f"- Q2 type=\"{self.domain['l2']}\" difficulty=\"L2\": Tests application to an edge case. Non-obvious.\n"
+            f"- Q3 type=\"{self.domain['l3']}\" difficulty=\"L3\": Tests execution/debugging. A realistic scenario.\n"
+            "- For debug type: content field = ONLY the buggy code, no hints. Bug must be a RUNTIME logic error, not a compile error.\n"
+            "- For fill_in type: textWithBlanks uses [[blank1]] markers, answer is a list of strings.\n"
+            f"- All code MUST use language: {primary_language}\n"
+            "- JSON ESCAPING: double-escape all LaTeX (e.g. \\\\frac, \\\\rightarrow). CRITICAL: Do NOT use unescaped double quotes inside string values! Use single quotes ('like this') or properly escape double quotes (\\\\\"like this\\\\\").\n"
+            "- answer field for true_false MUST be boolean: true or false (no quotes).\n"
+            "EXAMPLE PERFECT OUTPUT:\n"
+            "[\n"
+            "  {\"id\":\"q1\",\"type\":\"fill_in\",\"difficulty\":\"L1\",\"question\":\"The [[Blank1]] operator...\",\"textWithBlanks\":\"The [[Blank1]] operator...\",\"answer\":[\"precedence\"],\"explanation\":\"...\"},\n"
+            "  {\"id\":\"q2\",\"type\":\"true_false\",\"difficulty\":\"L2\",\"question\":\"In C++, prefix ++ returns value before increment.\",\"answer\":false,\"explanation\":\"...\"},\n"
+            "  {\"id\":\"q3\",\"type\":\"debug\",\"difficulty\":\"L3\",\"question\":\"Find bug.\",\"content\":\"int x=1;\",\"answer\":\"...\",\"explanation\":\"...\"}\n"
+            "]\n\n"
+            f"Concept: {title_readable}\n"
+            f"Key facts: {theory_summary[:500]}"
+        )
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Output the JSON quiz.")])
+        return res.content.strip()
+
+    async def retry(self, note_title: str, theory_summary: str, primary_language: str, diagnosis: str) -> str:
+        title_readable = note_title.replace("_", " ")
+        sys_prompt = (
+            "PREVIOUS JSON FAILED. Output a VALID JSON array of exactly 3 quiz questions. No fences. Just the array.\n"
+            f"FIX INSTRUCTION: {diagnosis}\n\n"
+            f"Q1: type=\"{self.domain['l1']}\", difficulty=\"L1\"\n"
+            f"Q2: type=\"{self.domain['l2']}\", difficulty=\"L2\"\n"
+            f"Q3: type=\"{self.domain['l3']}\", difficulty=\"L3\"\n"
+            "Escape all LaTeX with double backslashes.\n"
+            "answer for true_false MUST be boolean (true/false, no quotes).\n\n"
+            f"Concept: {title_readable}\n"
+            f"Key facts: {theory_summary[:500]}"
+        )
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Output the corrected JSON quiz.")])
+        return res.content.strip()
+
+class CriticAgent:
     def __init__(self, llm: BaseChatModel):
         self.llm = llm
 
-    # ─────────────────────────────────────────────────────────────
-    # PASS 1 — Theory
-    # ─────────────────────────────────────────────────────────────
-    async def generate_content(
-        self,
-        note_schema,
-        source_text: str,
-        primary_language: str,
-        all_concepts: str,
-    ) -> NoteContent:
-        domain = DOMAIN_MATRIX.get(note_schema.mode, DOMAIN_MATRIX["CS-SOFTWARE"])
-        title_readable = note_schema.title.replace("_", " ")
-
-        # ── Token-efficient Pass 1 prompt ──
+    async def diagnose(self, content: str, errors: List[str]) -> str:
         sys_prompt = (
-            f"You are a hostile, unforgiving senior {domain['persona']}.\n"
-            f"Write deep technical notes about: {title_readable}\n\n"
-            "FORMAT (use EXACTLY these headings):\n\n"
-            "# 1. Mental Model\n"
-            "(2-3 sentences. Explain the core idea using a real-world analogy a 10-year-old can picture. "
-            "Must be about THIS concept, not a generic concept.)\n\n"
-            f"# 2. {domain['h1']}\n"
-            "(4-6 sentences of continuous technical prose — NO bullet points. "
-            "Explain HOW this concept works mechanically. "
-            "MANDATORY: wrap 3-5 related technical terms in [[Wikilinks]] like [[Stack_Frame]] or [[Operator_Precedence]])\n\n"
-            f"# 3. {domain['h2']}\n"
-            "(4-6 sentences of continuous technical prose — NO bullet points. "
-            "Cover boundary conditions, failure states, and constraints. "
-            "MANDATORY: wrap 3-5 related technical terms in [[Wikilinks]])\n\n"
-            "RULES:\n"
-            "- No intro filler. Start immediately with # 1.\n"
-            "- Code terms use `backticks`. For Math/Physics/Chemistry, wrap inline math in `$` (NO spaces inside, e.g. `$x^2$`) and block math in `$$` on their own lines.\n"
-            "- Wikilinks use [[Underscore_Title_Case]] format.\n"
-            f"- MANDATORY LANGUAGE: If code is required, you MUST use '{primary_language}'. Do not default to Python unless explicitly asked.\n"
-            "- Every factual claim must be technically accurate for the specific concept title above.\n"
-            f"- The concept is '{title_readable}' — stay 100% on this topic.\n"
+            "You are a validation reviewer. A generated note section failed quality checks.\n"
+            "Analyze the content and the failed checks.\n"
+            "Return JSON only:\n"
+            "{\n"
+            "  \"diagnosis\": \"One sentence: exactly what went wrong\",\n"
+            "  \"fix_instruction\": \"One sentence: exactly what the agent must do differently\"\n"
+            "}\n\n"
+            f"Failed checks: {errors}\n"
+            f"Content that failed: {content[:800]}"
         )
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Provide diagnosis.")])
+        try:
+            data = ArchitectAgent._parse_json(res.content)
+            return data.get("fix_instruction", "Follow instructions carefully.")
+        except:
+            return "Follow instructions carefully and fix the previous errors."
 
-        src = (note_schema.source_context or source_text[:4000]).strip()
-        user_msg = f"Concept: {title_readable}\nSource:\n{src[:3000]}"
+class HubAgent:
+    def __init__(self, llm: BaseChatModel):
+        self.llm = llm
 
-        last_error = None
-        for attempt in range(3):
-            try:
-                if attempt > 0:
-                    sys_prompt += f"\n\nPREVIOUS ATTEMPT FAILED: {last_error}. Try again."
-
-                res = await self.llm.ainvoke([("system", sys_prompt), ("human", user_msg)])
-                body = res.content.strip()
-                # Strip accidental markdown fences
-                body = re.sub(r"^```markdown\n?", "", body)
-                body = re.sub(r"\n?```$", "", body).strip()
-
-                # ── Quality Gates ──
-                if _has_domain_drift(note_schema.title, body):
-                    last_error = (
-                        f"Domain drift detected: body does not discuss '{title_readable}'. "
-                        "You wrote about a completely different concept. Correct this now."
-                    )
-                    print(f"[WriterAgent] Pass 1 drift on '{note_schema.title}'. Retrying...")
-                    continue
-
-                wikilink_count = _count_wikilinks(body)
-                if wikilink_count < 3:
-                    last_error = (
-                        f"Only {wikilink_count} [[Wikilinks]] found. You MUST include at least 3-5 "
-                        "Obsidian wikilinks in sections 2 and 3."
-                    )
-                    print(f"[WriterAgent] Insufficient wikilinks ({wikilink_count}) on '{note_schema.title}'. Retrying...")
-                    continue
-
-                if "Error generating" in body or len(body) < 200:
-                    last_error = "Output too short or contains error marker."
-                    continue
-
-                return NoteContent(markdown_body=body, search_keywords=[])
-
-            except Exception as e:
-                last_error = e
-                if ArchitectAgent._is_rate_limit(e):
-                    # Exponential backoff with 60s floor (matches Groq's 1-min TPM window)
-                    wait = min(60 * (2 ** attempt), 300)
-                    print(f"[WriterAgent] Pass 1 rate limited. Waiting {wait}s...")
-                    await asyncio.sleep(wait)
-                else:
-                    print(f"[WriterAgent] Pass 1 attempt {attempt+1} failed: {e}")
-
-        raise Exception(f"WriterAgent Pass 1 failed after 3 attempts: {last_error}")
-
-    # ─────────────────────────────────────────────────────────────
-    # PASS 2 — Artifacts + Quiz
-    # ─────────────────────────────────────────────────────────────
-    async def generate_probes(
-        self,
-        note_title: str,
-        note_body: str,
-        source_text: str,
-        primary_language: str,
-        all_concepts: str,
-    ) -> ProbeEnrichment:
-        # Detect domain from body headings
-        domain = DOMAIN_MATRIX["CS-SOFTWARE"]
-        for key, vals in DOMAIN_MATRIX.items():
-            if vals["h1"] in note_body or vals["h2"] in note_body:
-                domain = vals
-                break
-
-        title_readable = note_title.replace("_", " ")
-
-        # ── Token-efficient Pass 2 prompt ──
+    async def generate_hub(self, unit_title: str, descriptions: List[str], current_hub_text: str) -> str:
         sys_prompt = (
-            f"You are a hostile senior {domain['persona']} writing exam material about: {title_readable}\n\n"
-            "PRODUCE exactly these 3 sections:\n\n"
-            f"# 4. {domain['h3']}\n"
-            f"(Create a {domain['artifact']} for this concept. Use correct markdown code fences with language tag.)\n"
-            "(IMMEDIATELY below the block: 2-3 sentences explaining how to read it.)\n\n"
-            "---\n\n"
-            "## 5. Walkthrough\n"
-            "(A rigorous, multi-step exam scenario applying this concept. Use realistic data. "
-            "At least 5 numbered steps. Show intermediate calculations or state changes.)\n\n"
-            "---\n\n"
-            "## 6. The Proving Grounds\n"
-            "```interactive-quiz\n"
-            "[\n"
-            "  {QUESTION_1},\n"
-            "  {QUESTION_2},\n"
-            "  {QUESTION_3}\n"
-            "]\n"
-            "```\n\n"
-            "QUIZ RULES:\n"
-            f"- Q1: type={domain['l1']}, difficulty=L1 (Theory Recall)\n"
-            f"- Q2: type={domain['l2']}, difficulty=L2 (Theory Application)\n"
-            f"- Q3: type={domain['l3']}, difficulty=L3 (In-Action / Execution)\n"
-            "- Exactly 3 questions in a valid JSON array.\n"
-            "- CRITICAL for debug type: Step 1: Think of correct code/logic. Step 2: Introduce ONE realistic bug that breaks functionality. Step 3: Put ONLY the buggy code in the `content` field. Never put the answer or the word 'bug' in `content`.\n"
-            "- CRITICAL for fill_in: `textWithBlanks` must use [[blank1]], [[blank2]] markers. "
-            "`answer` must be a list of strings.\n"
-            f"- CRITICAL LANGUAGE RULE: ALL code examples/artifacts MUST be written in '{primary_language}'. No exceptions.\n"
-            "- Wrap inline math in `$` (NO spaces inside, e.g. `$x=1$`) and block math in `$$` on their own lines.\n"
-            "- JSON ESCAPING: Inside the JSON block, you MUST double-escape all LaTeX commands (e.g. `\\\\frac`, `\\\\rightarrow`, `\\\\ldots`) or the JSON parser will fail.\n"
-            "- Every question must test knowledge of '{title_readable}' specifically.\n"
-            "- L1: tests definition/recall. L2: tests application to a new scenario. "
-            "L3: tests debugging or execution in a complex realistic case.\n"
-            "- `explanation` must be 1-2 sentences of clear reasoning.\n\n"
-            "JSON TYPE REFERENCE:\n"
-            '- mcq: {"id":"q1","type":"mcq","difficulty":"L1","question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"answer":"A","explanation":"..."}\n'
-            '- true_false: {"id":"q2","type":"true_false","difficulty":"L1","question":"...","answer":"True","explanation":"..."}\n'
-            '- fill_in: {"id":"q3","type":"fill_in","difficulty":"L1","question":"...","textWithBlanks":"The [[blank1]] does X","answer":["term"],"explanation":"..."}\n'
-            '- scenario: {"id":"q4","type":"scenario","difficulty":"L2","question":"A system does X...","answer":"...","explanation":"..."}\n'
-            '- debug: {"id":"q5","type":"debug","difficulty":"L3","question":"Find the bug.","content":"<BUGGY CODE ONLY - NO HINT>","answer":"<what the bug is and fix>","explanation":"..."}\n'
-            '- writing: {"id":"q6","type":"writing","difficulty":"L2","question":"Explain X...","answer":"...","explanation":"..."}\n'
+            "You are the OKA Curriculum Architect. Synthesize a unified Hub overview.\n"
+            "Given the descriptions of the atomic notes in this unit, write a 3-paragraph executive summary "
+            "of how these concepts interlock to form the larger system.\n\n"
+            "Output ONLY the text of the overview. Do not include markdown headers or greetings."
         )
+        user_msg = f"Unit: {unit_title}\n\nConcepts in this unit:\n" + "\n".join(descriptions)
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", user_msg)])
+        
+        # Inject the generated overview into the static hub structure
+        new_hub_text = re.sub(
+            r"(## Overview\n)(.*?)(?=\n## Unit Objectives)",
+            f"\\1{res.content.strip()}\n",
+            current_hub_text,
+            flags=re.DOTALL
+        )
+        return new_hub_text
 
-        user_msg = f"Theory:\n{note_body[:3000]}"
-
-        last_error = None
-        res_content = ""
-        for attempt in range(4):
-            try:
-                if attempt == 0:
-                    res = await self.llm.ainvoke([("system", sys_prompt), ("human", user_msg)])
-                else:
-                    retry_msg = (
-                        f"Your previous JSON was INVALID. Error: {last_error}\n"
-                        "Output the FULL response again. The interactive-quiz block MUST be a valid JSON array of exactly 3 objects. "
-                        "Escape all backslashes (\\\\) and quotes (\\\") inside JSON strings."
-                    )
-                    res = await self.llm.ainvoke([
-                        ("system", sys_prompt),
-                        ("human", user_msg),
-                        ("assistant", res_content),
-                        ("human", retry_msg),
-                    ])
-
-                res_content = res.content.strip()
-
-                # ── Extract artifact + walkthrough ──
-                artifact_match = re.search(
-                    r"(# 4\..*?)(?=## 6\.|```interactive-quiz|$)", res_content, re.DOTALL
-                )
-                artifact_text = artifact_match.group(1).strip() if artifact_match else ""
-
-                if not artifact_text:
-                    last_error = "Section 4 (artifact) not found in output."
-                    continue
-
-                # ── Extract and validate quiz JSON ──
-                quiz_match = re.search(r"```interactive-quiz\s*(.*?)\s*```", res_content, re.DOTALL)
-                if not quiz_match:
-                    # Auto-repair: model sometimes outputs ```json instead of ```interactive-quiz
-                    # Try to find ANY json/array block that looks like quiz data
-                    fallback_match = re.search(
-                        r"```(?:json|JSON|quiz)?\s*(\[\s*\{.*?\}\s*\])\s*```",
-                        res_content, re.DOTALL
-                    )
-                    if fallback_match:
-                        # Splice in the correct fence language and continue parsing
-                        print(f"[WriterAgent] Auto-repairing quiz fence language on '{note_title}'")
-                        res_content = res_content[:fallback_match.start()] + \
-                            f"```interactive-quiz\n{fallback_match.group(1).strip()}\n```" + \
-                            res_content[fallback_match.end():]
-                        quiz_match = re.search(r"```interactive-quiz\s*(.*?)\s*```", res_content, re.DOTALL)
-
-                if not quiz_match:
-                    # Find what fence was actually used to give a useful retry hint
-                    wrong_fence = re.search(r"```(\w+)", res_content)
-                    fence_hint = f" (you used ```{wrong_fence.group(1)})" if wrong_fence else ""
-                    last_error = f"```interactive-quiz block not found{fence_hint}. You MUST wrap the JSON array with ```interactive-quiz ... ``` exactly."
-                    continue
-
-                quiz_str = quiz_match.group(1).strip()
-                quiz_str = re.sub(r",\s*([\]\}])", r"\1", quiz_str)  # remove trailing commas
-
-                try:
-                    quiz_data = json.loads(quiz_str, strict=False)
-                except json.JSONDecodeError as e:
-                    # Attempt ast fallback for single quotes or unquoted keys
-                    try:
-                        import ast
-                        py_str = quiz_str.replace("true", "True").replace("false", "False").replace("null", "None")
-                        quiz_data = ast.literal_eval(py_str)
-                        # Re-dump to canonical strict JSON
-                        quiz_str = json.dumps(quiz_data, indent=2, ensure_ascii=False)
-                    except Exception as ast_e:
-                        last_error = f"JSON parse failed: {e}. Auto-repair failed: {ast_e}"
-                        continue
-
-                if not isinstance(quiz_data, list) or len(quiz_data) != 3:
-                    last_error = f"Quiz must be array of exactly 3 items, got {type(quiz_data).__name__} len={len(quiz_data) if isinstance(quiz_data, list) else 'N/A'}"
-                    continue
-
-                # ── Safety: ensure debug content doesn't contain the answer ──
-                for q in quiz_data:
-                    if q.get("type") == "debug":
-                        answer_words = set(str(q.get("answer", "")).lower().split())
-                        content_lower = str(q.get("content", "")).lower()
-                        # Mirror the validator threshold: >6 long words (>5 chars)
-                        # to avoid false-positives on theory/DB concepts
-                        leak_count = sum(1 for w in answer_words if len(w) > 5 and w in content_lower)
-                        if leak_count > 6:
-                            last_error = "The content field must contain ONLY the buggy code, no hints or answer text."
-                            break
-                else:
-                    # No leaks — success
-                    canonical_quiz = json.dumps(quiz_data, indent=2, ensure_ascii=False)
-                    return ProbeEnrichment(
-                        worked_example=artifact_text,
-                        interactive_quiz=f"```interactive-quiz\n{canonical_quiz}\n```",
-                    )
-
-                # If we broke out of the for loop due to leak
-                print(f"[WriterAgent] Pass 2 answer leak on '{note_title}'. Retrying...")
-                continue
-
-            except Exception as e:
-                last_error = e
-                if ArchitectAgent._is_rate_limit(e):
-                    # Exponential backoff with 60s floor (matches Groq's 1-min TPM window)
-                    wait = min(60 * (2 ** attempt), 300)
-                    print(f"[WriterAgent] Pass 2 rate limited. Waiting {wait}s...")
-                    await asyncio.sleep(wait)
-                else:
-                    print(f"[WriterAgent] Pass 2 attempt {attempt+1} failed: {e}")
-
-        raise Exception(f"WriterAgent Pass 2 failed after 4 attempts: {last_error}")

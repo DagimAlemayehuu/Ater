@@ -1,130 +1,109 @@
 ---
+
 title: Expression
 type: Atomic Note
 course: Computer Programming
 semester: Autumn 2025
 unit: '2'
 hub: "[[2_C++_Programming_Fundamentals_Hub]]"
-source: "[[Chapter 2.Pdf]]"
+source: "[[Chapter_2.pdf]]"
 source_pages:
 - 51
 mode: CS-SOFTWARE
 read: false
 generated: true
+
 ---
 
 # 1. Mental Model
-Imagine you're baking a cake and you need to make a specific mixture. An expression is like a recipe for that mixture, where you combine ingredients (variables and constants), follow specific instructions (operators), and maybe even use special tools (function calls) to create the final mixture (a value).
+
+A mental model for an expression can be likened to a recipe, where ingredients (variables and constants), cooking techniques (operators), and preparation methods (function calls) are combined in a specific order to produce a final dish (a value). Just as a recipe requires precise measurements and techniques to yield the desired result, an expression requires a specific arrangement of elements to produce a value. This analogy highlights the importance of syntax and semantics in expressions.
 
 # 2. Execution Logic & Data Flow
-An expression is evaluated by traversing its [[Abstract_Syntax_Tree]] and applying the [[Operator_Precedence]] rules to determine the order of operations. The process starts with [[Lexical_Analysis]], breaking the expression into tokens, which are then parsed into an [[Parse_Tree]]. As the expression is evaluated, [[Stack_Frame]]s are created to store intermediate results. The expression's value is produced by applying operators to operands, which can be variables, constants, or the results of [[Function_Call]]s.
+
+The execution logic of an expression involves the evaluation of [[Variables]], [[Literals]], and [[Operators]] in a specific order, governed by [[Operator_Precedence]] and [[Associativity]]. The [[Compiler_Directives]] and [[Preprocessor_Directives]] are processed before the expression is evaluated, allowing for conditional compilation and macro substitutions. During evaluation, the [[Stream_Insertion_Operator]] and [[Arithmetic_Operators]] are used to perform operations on the variables and literals, producing an [[Expression]] that yields a value. The [[Type_Casting]] and [[Static_Cast]] mechanisms ensure that the data types of the operands are compatible, and the [[Return_Statement]] is used to return the final value of the expression. The [[C++_Programming_Language]] syntax and semantics dictate how expressions are evaluated, and the [[General_Structure_Of_A_C++_Program]] provides the context in which expressions are used.
 
 # 3. Edge Cases & Failure States
-When dealing with expressions, edge cases arise from handling [[Nullpointerexception]]s, [[Type_Mismatch]]es, and [[Division_By_Zero]] errors. For instance, if an expression attempts to divide by zero, the program must handle this [[Exception Handling]] case to prevent crashes. Additionally, expressions with [[Undeclared_Variables]] or [[Invalid_Syntax]] must be detected and reported during [[Semantic_Analysis]]. The expression's validity and correctness rely on proper [[Type Checking]] and [[Scope Resolution]].
-# 4. Implementation Mechanics
+
+Expressions can fail to evaluate correctly due to [[C++_Is_Case_Sensitive]] issues, [[White_Space]] errors, or incorrect use of [[Keywords]] and [[Identifiers]]. Boundary conditions, such as division by zero or out-of-range values, can cause expressions to produce unexpected results or throw exceptions, which can be mitigated by using [[Division_Operator]] and [[Modulus_Operator]] checks. Additionally, expressions can be invalid due to incorrect [[Variable_Declaration]] or [[Type_Casting]], leading to compilation errors or runtime exceptions. In such cases, the [[Compiler_Directives]] and [[Preprocessor_Directives]] can be used to handle errors and exceptions.
+
+## 4. Implementation Mechanics
+
 ```cpp
+
 #include <iostream>
-#include <stack>
-#include <string>
 
-int evaluateExpression(const std::string& expression) {
-    std::stack<int> stack;
-    int num = 0;
-    char sign = '+';
-
-    for (int i = 0; i < expression.size(); ++i) {
-        if (isdigit(expression[i])) {
-            num = num * 10 + (expression[i] - '0');
-        }
-
-        if ((!isdigit(expression[i]) && !isspace(expression[i])) || i == expression.size() - 1) {
-            if (sign == '+') {
-                stack.push(num);
-            } else if (sign == '-') {
-                stack.push(-num);
-            } else if (sign == '*') {
-                int top = stack.top();
-                stack.pop();
-                stack.push(top * num);
-            } else if (sign == '/') {
-                int top = stack.top();
-                stack.pop();
-                stack.push(top / num);
-            }
-
-            sign = expression[i];
-            num = 0;
-        }
-    }
-
-    int result = 0;
-    while (!stack.empty()) {
-        result += stack.top();
-        stack.pop();
-    }
-
-    return result;
+int add(int a, int b) {
+    return a + b;
 }
 
 int main() {
-    std::string expression = "3+2*4-1";
-    int result = evaluateExpression(expression);
+    int x = 5;
+    int y = 3;
+    int result = add(x, y);
     std::cout << "Result: " << result << std::endl;
     return 0;
 }
+
 ```
-#### Reading the Code:
-The provided C++ code implements a simple expression evaluator using a stack. It iterates through the input expression, parsing numbers and operators, and applies the operators to the operands stored on the stack. The final result is calculated by summing up all the values on the stack.
 
----
+```
+
+  +---------------+
+
+  |  Stack       |
+
+  +---------------+
+
+  |  result      | 
+
+  |  (4 bytes)   |
+
+  +---------------+
+
+  |  y           | 
+
+  |  (4 bytes)   |
+
+  +---------------+
+
+  |  x           | 
+
+  |  (4 bytes)   |
+
+  +---------------+
+           |
+           |
+           v
+  +---------------+
+
+  |  Heap        |
+
+  +---------------+
+
+```
+
+The code block represents the C++ program that evaluates an expression, and the ASCII diagram represents the memory layout of the program's stack and heap. The stack contains the variables `x`, `y`, and `result`, while the heap is empty in this example.
+
 ## 5. Walkthrough
-Let's evaluate the expression `$3+2*4-1$` using the provided implementation:
 
-1. **Initialization**: The input expression is `$3+2*4-1$`. The stack is empty, `num` is 0, and `sign` is `+`.
-2. **Parsing '3'**: `num` becomes 3. Since `sign` is `+`, 3 is pushed onto the stack. The stack now contains `[3]`.
-3. **Parsing '+'**: `sign` becomes `+`.
-4. **Parsing '2'**: `num` becomes 2.
-5. **Parsing '*'**: Since `sign` is now `*`, the top of the stack (3) is popped, multiplied by 2, and pushed back onto the stack. The stack still contains `[3, 2]`, but we actually have `[6]` because we did `2*4` in next step; my mistake, correct step: 
-6. **Parsing '2*4'**: `num` becomes 24 (because we correctly parse 2 and then multiply it by 4), then we do `2*4=8`, push 8 on stack `[3,8]`.
-7. **Parsing '-'**: `sign` becomes `-`.
-8. **Parsing '1'**: `num` becomes 1. Since `sign` is `-`, -1 is pushed onto the stack. The stack now contains `[3, 8, -1]`.
-9. **Final Calculation**: The stack is summed up: `3 + 8 - 1 = 10`.
-10. **Result**: The final result of the expression `$3+2*4-1$` is `$10$`.
+1. Initially, the program has variables `x` and `y` with values 5 and 3, respectively, and an empty stack frame for the `main` function.
+2. The program calls the `add` function with `x` and `y` as arguments, pushing a new stack frame for `add` onto the stack with parameters `a=5` and `b=3`.
+3. The `add` function calculates the sum of `a` and `b` and stores it in a local variable, which is then returned to the `main` function.
+4. The `main` function receives the return value from `add` and assigns it to the variable `result`.
+5. The program prints the value of `result` to the console, which outputs "Result: 8".
+6. The program terminates, and the stack frame for `main` is destroyed, releasing the memory allocated for `x`, `y`, and `result`.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
+
 [
-  {
-    "id": "q1",
-    "type": "fill_in",
-    "difficulty": "L1",
-    "question": "An expression is evaluated by traversing its [[Abstract_Syntax_Tree]] and applying the [[Operator_Precedence]] rules to determine the order of operations. The process starts with [[Lexical_Analysis]], breaking the expression into [[Tokens]], which are then parsed into an [[Parse_Tree]].",
-    "textWithBlanks": "An expression is evaluated by traversing its [[Abstract_Syntax_Tree]] and applying the [[Operator_Precedence]] rules to determine the order of [[Operations]]. The process starts with [[Lexical_Analysis]], breaking the expression into [[Tokens]], which are then parsed into an [[Parse_Tree]]. As the expression is evaluated, [[Stack_Frame]]s are created to store [[Intermediate Results]].",
-    "answer": [
-      "operations",
-      "intermediate results"
-    ],
-    "explanation": "The question tests understanding of the expression evaluation process."
-  },
-  {
-    "id": "q2",
-    "type": "true_false",
-    "difficulty": "L2",
-    "question": "The expression evaluation process involves creating stack frames to store intermediate results.",
-    "answer": "True",
-    "explanation": "The expression evaluation process indeed involves creating stack frames to store intermediate results."
-  },
-  {
-    "id": "q3",
-    "type": "debug",
-    "difficulty": "L3",
-    "question": "Find the bug in the given expression evaluation code.",
-    "content": "int evaluateExpression(const std::string& expression) {\n    std::stack<int> stack;\n    int num = 0;\n    char sign = '+';\n\n    for (int i = 0; i < expression.size(); ++i) {\n        if (isdigit(expression[i])) {\n            num = num * 10 + (expression[i] - '0');\n        }\n\n        if ((!isdigit(expression[i]) && !isspace(expression[i])) || i == expression.size() - 1) {\n            if (sign == '+') {\n                stack.push(num);\n            } else if (sign == '-') {\n                stack.push(-num);\n            } else if (sign == '*') {\n                int top = stack.top();\n                stack.pop();\n                stack.push(top * num);\n            } else if (sign == '/') {\n                int top = stack.top();\n                stack.pop();\n                stack.push(top / (num+0));\n            }\n\n            sign = expression[i];\n            num = 0;\n        }\n    }\n\n    int result = 0;\n    while (!stack.empty()) {\n        result += stack.top();\n        stack.pop();\n    }\n\n    return result;\n}",
-    "answer": "The bug is in the line where division is performed. The code checks for division by zero but does not handle it properly. It should throw an exception or handle it accordingly.",
-    "explanation": "The code provided seems mostly correct but does not handle division by zero properly. It should be modified to handle such cases."
-  }
+  {"id":"q1","type":"fill_in","difficulty":"L1","question":"In C++, the [[Blank1]] operator is used to access the value of a variable.","textWithBlanks":"In C++, the [[Blank1]] operator is used to access the value of a variable.","answer":["dereference"],"explanation":"The dereference operator (*) is used to access the value of a pointer variable."},
+  {"id":"q2","type":"true_false","difficulty":"L2","question":"Consider the expression \"(5 \\% 2) == 0\".","answer":false,"explanation":"The expression (5 \\% 2) equals 1, which is not equal to 0, so the statement is false."},
+  {"id":"q3","type":"debug","difficulty":"L3","question":"Find bug.","content":"int sum = 0; for (int i = 1; i <= 10; i++); sum += i;","answer":"The semicolon at the end of the for loop declaration is causing the loop to execute an empty statement, and the sum += i; line is executed only once with i = 11.","explanation":"The corrected code should be: int sum = 0; for (int i = 1; i <= 10; i++) sum += i;"}
 ]
+
 ```

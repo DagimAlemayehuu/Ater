@@ -8,76 +8,72 @@ hub: "[[2_Recurrence_Relations_Hub]]"
 source: "[[2_Recurrence_Relations.Pdf]]"
 source_pages:
 - 9
-mode: MATH-PURE
+mode: CS-SOFTWARE
 read: false
 generated: true
 ---
 
 # 1. Mental Model
-Imagine you're trying to define what a "family tree" is. You might say it's a tree where each person has parents, and those parents are also people who have parents, and so on. A recursive definition is like this: it defines something in terms of itself, but with a clear base case that stops the recursion.
+The concept of a recursive definition can be likened to a set of Russian nesting dolls, where each doll is defined in terms of a smaller version of itself, with the smallest doll serving as the base case that stops the recursion. This self-referential definition allows for a compact and elegant description of a sequence or function. Just as the Russian doll's size and design are defined recursively, a recursive definition in mathematics or computer science defines a problem or function in terms of smaller instances of the same problem.
 
-# 2. Derivation & Logical Trace
-A recursive definition works by specifying a [[Base_Case]] that provides a foundation for the definition, and a [[Recursive_Case]] that defines the concept in terms of itself. The recursive case involves applying a [[Function_Application]] to a smaller instance of the concept, which reduces the problem size until it reaches the base case. This process unfolds through a series of [[Stack_Frames]], each representing a recursive call. The definition is well-formed if it satisfies the conditions of termination and uniqueness.
+# 2. Execution Logic & Data Flow
+The execution of a [[Recursive_Definition]] involves applying a rule that expresses the current value of a sequence or function in terms of its previous values, as specified by a [[Recurrence_Relation]]. This process continues until it reaches a base case defined by an [[Initial_Condition]], at which point the recursion stops and the results are propagated back up the sequence. The [[Characteristic_Equation]] of a [[Linear_Homogeneous_Recurrence_Relation]] can be used to find the [[General_Solution]], which describes the overall behavior of the sequence. To obtain a [[Unique_Solution]], one must apply the [[Method_Of_Undetermined_Coefficients]] and use the given [[Initial_Condition]] to determine the constants of the general solution. The solution is then obtained through the [[Solution_Of_A_Relation]], which may involve a [[Sequence]] of operations.
 
-# 3. Theorem Constraints & Incompleteness
-For a recursive definition to be well-defined, it must satisfy certain constraints, including [[Termination_Condition]] and [[Uniqueness_Constraint]]. If these conditions are not met, the definition may lead to [[Non_Termination]] or [[Ambiguity]]. Furthermore, the [[Halting_Problem]] implies that it's impossible to determine in general whether a recursive definition will terminate for all possible inputs. Therefore, careful consideration of boundary conditions and failure states is essential when constructing a recursive definition.
-# 4. Formal Proof Trace
-```latex
-\documentclass{article}
-\usepackage{amsmath}
-
-\begin{document}
-
-\section{Recursive Definition Proof}
-
-Let $f$ be a function defined recursively as follows:
-
-$$ 
-f(x) = 
-\begin{cases} 
-x & \text{if } x \leq 0 \\
-f(f(x-1)) & \text{if } x > 0 
-\end{cases}
-$$
-
-\subsection*{Base Case}
-The base case is when $x \leq 0$. In this case, $f(x) = x$.
-
-\subsection*{Inductive Step}
-Assume that for some $k \geq 0$, $f(k) = 0$. We need to show that $f(k+1) = f(f(k))$.
-
-\[
-f(k+1) = f(f(k)) = f(0) = 0
-\]
-
-\subsection*{Termination Condition}
-To prove termination, we observe that $f(x)$ decreases with each recursive call until it reaches the base case.
-
-\end{document}
+# 3. Edge Cases & Failure States
+When dealing with recursive definitions, it is crucial to handle edge cases and failure states properly, as the absence of a well-defined [[Initial_Condition]] can lead to an infinite recursion or ambiguous results. If the [[Characteristic_Equation]] has repeated roots, the [[Method_Of_Undetermined_Coefficients]] may need to be modified to ensure a [[Unique_Solution]]. Failure to account for these edge cases can result in a flawed [[Solution_Of_A_Relation]], rendering the recursive definition useless. Furthermore, an improperly defined [[Recurrence_Relation]] can lead to an incorrect [[General_Solution]], highlighting the need for careful analysis and validation.
+## 4. Implementation Mechanics
+```python
+def factorial(n: int) -> int:
+    if n == 0:  # base case
+        return 1
+    else:
+        return n * factorial(n-1)  # recursive call
+```
+```
+  +---------------+
+  |  Stack Frame  |
+  +---------------+
+  |  n=3          |
+  |  return addr  |
+  +---------------+
+           |
+           |
+           v
+  +---------------+
+  |  Stack Frame  |
+  +---------------+
+  |  n=2          |
+  |  return addr  |
+  +---------------+
+           |
+           |
+           v
+  +---------------+
+  |  Stack Frame  |
+  +---------------+
+  |  n=1          |
+  |  return addr  |
+  +---------------+
+           |
+           |
+           v
+  +---------------+
+  |  Stack Frame  |
+  +---------------+
+  |  n=0          |
+  |  return 1     |
+  +---------------+
 ```
 
-To read this LaTeX code: This is a formal proof that a simple recursive function $f(x)$ terminates. The function is defined in two parts: a base case when $x$ is less than or equal to $0$, and a recursive case when $x$ is greater than $0$. The proof shows that the function decreases with each recursive call until it reaches the base case, ensuring termination.
+The code block represents the recursive function `factorial` implemented in Python, where each call to `factorial` creates a new stack frame. The ASCII diagram illustrates the stack frames created during the recursive calls, with each frame containing the current value of `n` and the return address.
 
 ## 5. Walkthrough
-Consider a recursive definition for the factorial function:
-
-$$
-\text{factorial}(n) =
-\begin{cases}
-1 & \text{if } n = 0 \\
-n \times \text{factorial}(n-1) & \text{if } n > 0
-\end{cases}
-$$
-
-Here are the steps to calculate $\text{factorial}(3)$:
-
-1. $\text{factorial}(3) = 3 \times \text{factorial}(2)$
-2. $\text{factorial}(2) = 2 \times \text{factorial}(1)$
-3. $\text{factorial}(1) = 1 \times \text{factorial}(0)$
-4. $\text{factorial}(0) = 1$ (base case)
-5. Backtrack: $\text{factorial}(1) = 1 \times 1 = 1$
-6. Backtrack: $\text{factorial}(2) = 2 \times 1 = 2$
-7. Backtrack: $\text{factorial}(3) = 3 \times 2 = 6$
+1. Initially, we call `factorial(3)`, which creates a stack frame with `n=3` and a return address. The function calls `factorial(2)`.
+2. The call to `factorial(2)` creates a new stack frame with `n=2` and a return address. The function then calls `factorial(1)`.
+3. The call to `factorial(1)` creates another stack frame with `n=1` and a return address. The function then calls `factorial(0)`.
+4. The call to `factorial(0)` creates a stack frame with `n=0`, which is the base case. The function returns `1`.
+5. The return value of `1` is passed back to the stack frame with `n=1`, which then returns `1 * 1 = 1`.
+6. The return value of `1` is passed back to the stack frame with `n=2`, which then returns `2 * 1 = 2`, and finally, the stack frame with `n=3` returns `3 * 2 = 6`.
 
 ---
 
@@ -85,39 +81,8 @@ Here are the steps to calculate $\text{factorial}(3)$:
 
 ```interactive-quiz
 [
-  {
-    "id": "q1",
-    "type": "mcq",
-    "difficulty": "L1",
-    "question": "What is a key component of a recursive definition?",
-    "options": {
-      "A": "Base Case",
-      "B": "Recursive Case",
-      "C": "Function Application",
-      "D": "All of the above"
-    },
-    "answer": "D",
-    "explanation": "A recursive definition consists of a base case, a recursive case, and function application."
-  },
-  {
-    "id": "q2",
-    "type": "fill_in",
-    "difficulty": "L2",
-    "question": "A recursive definition must satisfy the [[Blank1]] condition to ensure that the recursion stops.",
-    "textWithBlanks": "A recursive definition must satisfy the [[Blank1]] condition to ensure that the recursion stops.",
-    "answer": [
-      "Termination"
-    ],
-    "explanation": "The termination condition is crucial for a recursive definition to prevent infinite loops."
-  },
-  {
-    "id": "q3",
-    "type": "debug",
-    "difficulty": "L3",
-    "question": "Find the bug in the recursive function.",
-    "content": "def factorial(n):\n  if n == 0:\n    return 1\n  else:\n    return n * factorial(n)",
-    "answer": "The function does not decrement $n$ in the recursive call, leading to infinite recursion.",
-    "explanation": "The recursive call should be with $n-1$, not $n$, to ensure termination."
-  }
+  {"id":"q1","type":"fill_in","difficulty":"L1","question":"A recursive definition is similar to a set of Russian nesting dolls, where each doll is defined in terms of a [[Blank1]] version of itself.","textWithBlanks":"A recursive definition is similar to a set of Russian nesting dolls, where each doll is defined in terms of a [[Blank1]] version of itself.","answer":["smaller"],"explanation":"This highlights the self-referential nature of recursive definitions."},
+  {"id":"q2","type":"true_false","difficulty":"L2","question":"A recursive function must always have a base case that is an edge case.","answer":false,"explanation":"While it's common for recursive functions to have a base case that handles an edge case, it's not a requirement for the base case to be an edge case specifically, but rather a case that stops the recursion."},
+  {"id":"q3","type":"debug","difficulty":"L3","question":"Find bug.","content":"int factorial(int n) { if (n == 0) return 1; else return n * factorial(n-1); }","answer":"The function does not handle the case when n is negative.","explanation":"The function should either handle or explicitly disallow negative inputs to prevent incorrect results or a stack overflow."}
 ]
 ```

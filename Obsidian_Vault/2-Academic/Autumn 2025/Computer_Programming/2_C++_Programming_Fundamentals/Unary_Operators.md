@@ -1,106 +1,72 @@
 ---
+
 title: Unary_Operators
 type: Atomic Note
 course: Computer Programming
 semester: Autumn 2025
 unit: '2'
 hub: "[[2_C++_Programming_Fundamentals_Hub]]"
-source: "[[Chapter 2.Pdf]]"
+source: "[[Chapter_2.pdf]]"
 source_pages:
 - 51
 mode: CS-SOFTWARE
 read: false
 generated: true
+
 ---
 
 # 1. Mental Model
-Imagine you're at a store with a "reverse" discount sign. A unary operator is like a single-action button that takes one value and changes it in some way, like flipping a switch to turn something on or off. For example, if you have a sign that says "-10%" and you apply it to one price, that's like a unary operator.
+
+The unary operator's behavior can be likened to a photographic enlarger, where a single input (the operand) is processed to produce an output (the result) with a specific effect, such as changing the sign or incrementing/decrementing the value. Just as the enlarger adjusts the image size without altering its fundamental content, unary operators modify the operand's value or sign without changing its type. This analogy highlights the operator's singular input and output relationship.
 
 # 2. Execution Logic & Data Flow
-Unary operators work by taking a single operand and applying a specific operation to it. In C++, when a unary operator is encountered, the compiler generates code that performs the operation and returns the result. The [[Operator_Precedence]] rules dictate the order in which unary operators are evaluated when there are multiple operators in an expression. The [[Stack_Frame]] is used to store the temporary results of the operation. For example, in the expression `x = -5`, the unary minus operator is applied to the literal `5`, and the result is stored in `x`. The [[Type Promotion]] rules also come into play when the operand is promoted to a compatible type.
+
+The [[Unary_Operators]] in C++ are used to operate on a single operand, and their execution logic relies on the [[Operator_Precedence]] and [[Associativity]] rules to evaluate expressions. When a unary operator is encountered, the [[Compiler_Directives]] and [[Preprocessor_Directives]] are already resolved, and the [[Main_Function]] has started executing. The [[C++_Programming_Language]] syntax dictates that unary operators, such as the increment (++) and decrement (--), are applied to the operand, and the result is used in the expression, which may involve [[Arithmetic_Operators]] and [[Assignment_Operator]]. The [[C++_Is_Case_Sensitive]] nature of the language ensures that the correct operator is identified. The [[Stream_Insertion_Operator]] may be used to output the result of the unary operation.
 
 # 3. Edge Cases & Failure States
-When dealing with unary operators, edge cases arise when the operand is not a numeric type or when the operator is not defined for the operand's type. For instance, applying the unary minus operator to a non-numeric type, such as a `std::string`, results in a [[Compiler_Error]]. Additionally, when working with [[Pointer]] types, unary operators like `*` and `&` must be used carefully to avoid [[Dereferencing]] issues. The [[Overflow]] behavior also needs to be considered when applying unary operators to large values. In C++, the `++` and `--` operators can lead to [[Undefined Behavior]] if applied to invalid or non-modifiable lvalues.
-# 4. Implementation Mechanics
+
+When using unary operators, boundary conditions such as overflow or underflow can occur if the result exceeds the [[Variables]]' declared range. For instance, if `b = 10` and `x--` is executed repeatedly, `x` may eventually underflow if its type is an unsigned integer. A failure state can arise when attempting to apply a unary operator to an operand that is not a [[Literals]] or a [[Variable_Declaration]], leading to a compilation error due to [[Type_Casting]] issues. The [[Return_Statement]] in a function may also be affected by the unary operator's result, potentially causing incorrect output or program termination.
+
+## Implementation Mechanics
+
 ```cpp
+
 int x = 5;
-int y = -x;  // Unary minus operator
-```
-The above code block demonstrates the use of the unary minus operator in C++. The operator takes the value of `x` and negates it, storing the result in `y`. 
+int y = -x;  // Unary negation operator
+int z = ++x;  // Pre-increment operator
 
-To read this: The variable `x` is initialized with the value `5`. The unary minus operator is then applied to `x`, and the result is stored in `y`. Therefore, `y` will have the value `-5`.
+// ASCII Memory/Stack Diagram (simplified)
+//  +---------------+
+//  |  Variable  | Value |
+//  +---------------+
+//  |  x          | 5    |
+//  |  y          | -5   |
+//  |  z          | 6    |
+//  +---------------+
 
-```
-  +---------------+
-  |  Stack Frame  |
-  +---------------+
-  |  x = 5       |
-  |  y = -x      |
-  |  y = -5      |
-  +---------------+
-           |
-           |
-           v
-  +---------------+
-  |  Memory      |
-  +---------------+
-  |  x:  5       |
-  |  y: -5       |
-  +---------------+
 ```
 
-## 5. Walkthrough
-Consider the following scenario:
+The code block represents the implementation of unary operators in C++, where `x`, `y`, and `z` are variables with values modified using the unary negation and pre-increment operators. The ASCII diagram illustrates the memory layout with variable names and their corresponding values.
 
-1. We have an integer variable `a` initialized to `10`.
-2. We apply the unary plus operator to `a` and store the result in `b`. The expression is `b = +a;`.
-3. The value of `b` is then printed to the console.
-4. Next, we apply the unary minus operator to `a` and store the result in `c`. The expression is `c = -a;`.
-5. Finally, the values of `b` and `c` are printed to the console.
+## Walkthrough
 
-Intermediate calculations:
-
-* `b = +a` => `b = +10` => `b = 10`
-* `c = -a` => `c = -10`
-
-The final values are:
-
-* `b = 10`
-* `c = -10`
+1. Initially, the variable `x` is assigned a value of `5`.
+2. The unary negation operator `-` is applied to `x` and the result is stored in `y`, so `y` becomes `-5`.
+3. The pre-increment operator `++` is applied to `x`, incrementing its value to `6`, and the result is stored in `z`, so `z` becomes `6`.
+4. As a result of the pre-increment operation, the value of `x` is now `6`.
+5. The values of `y` and `z` remain `-5` and `6`, respectively, as they were not modified after their initial assignment.
+6. The final state of the variables is: `x = 6`, `y = -5`, and `z = 6`.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
+
 [
-  {
-    "id": "q1",
-    "type": "fill_in",
-    "difficulty": "L1",
-    "question": "The unary operator that changes the sign of a number is [[Blank1]].",
-    "textWithBlanks": "The [[Blank1]] operator changes the sign of a number.",
-    "answer": [
-      "minus"
-    ],
-    "explanation": "The unary minus operator changes the sign of a number."
-  },
-  {
-    "id": "q2",
-    "type": "true_false",
-    "difficulty": "L2",
-    "question": "Applying the unary minus operator to a non-numeric type results in a compiler warning.",
-    "answer": "False",
-    "explanation": "Applying the unary minus operator to a non-numeric type results in a compiler error."
-  },
-  {
-    "id": "q3",
-    "type": "debug",
-    "difficulty": "L3",
-    "question": "Find the bug in the code.",
-    "content": "int x = 5; int y = -x++;",
-    "answer": "The bug is that the code is trying to modify a variable in a way that results in undefined behavior. The correct code should be either 'int x = 5; int y = -x; x++;' or 'int x = 5; x++; int y = -x;'.",
-    "explanation": "The bug is due to the post-increment operator being applied to 'x' after it has been negated and assigned to 'y', resulting in undefined behavior."
-  }
+  {"id":"q1","type":"fill_in","difficulty":"L1","question":"The unary operator that changes the sign of its operand is the [[Blank1]] operator.","textWithBlanks":"The unary operator that changes the sign of its operand is the [[Blank1]] operator.","answer":["unary minus","-"],"explanation":"The unary minus operator, denoted by -, changes the sign of its operand."},
+  {"id":"q2","type":"true_false","difficulty":"L2","question":"If p is a pointer to an integer, the expression *p++ is equivalent to *(p++).","answer":true,"explanation":"The expression *p++ is indeed equivalent to *(p++), as the post-increment operator ++ has higher precedence than the dereference operator *."},
+  {"id":"q3","type":"debug","difficulty":"L3","question":"Find bug.","content":"int sum = 0; for (int i = 1; i <= 10; i--); sum += i;","answer":"The loop never terminates because the condition is always true and the increment is i--.","explanation":"The bug is in the for loop where the increment is i-- instead of i++. This causes the loop to run indefinitely because i will always be greater than 0."}
 ]
+
 ```

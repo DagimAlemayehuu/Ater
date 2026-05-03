@@ -261,7 +261,7 @@ class OkaQueueManager:
                         detect_res = await self.service.detect_curriculum(str(path.absolute()))
                     except Exception as e:
                         watcher_logger.error(f"Detection failed for {path.name}: {e}")
-                        if "429" in str(e) or "rate_limit" in str(e).lower():
+                        if "429" in str(e) or "rate limit" in str(e).lower() or "rate_limit" in str(e).lower():
                             watcher_logger.warning("Rate limit during detection. Cooling down for 60s...")
                             await asyncio.sleep(60)
                         else:
@@ -307,7 +307,7 @@ class OkaQueueManager:
                             plan_retry += 1
                             err_msg = str(e).lower()
                             watcher_logger.warning(f"Planning failed (Attempt {plan_retry}/5): {e}")
-                            if "429" in err_msg or "rate_limit" in err_msg:
+                            if "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg:
                                 await asyncio.sleep(60)
                             else:
                                 await asyncio.sleep(10)
@@ -369,7 +369,7 @@ class OkaQueueManager:
                             batch_retry += 1
                             err_msg = str(e).lower()
                             watcher_logger.error(f"Batch execution failed (Attempt {batch_retry}/5): {e}")
-                            if "tpd" in err_msg or "daily" in err_msg or "429" in err_msg or "rate_limit" in err_msg:
+                            if "tpd" in err_msg or "daily" in err_msg or "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg:
                                 watcher_logger.warning("Rate limit hit during deployment. Sleeping for 60s...")
                                 await asyncio.sleep(60)
                             else:

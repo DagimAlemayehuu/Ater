@@ -19,8 +19,22 @@ class OkaValidator:
     Checks structure, wikilink density, error markers, and JSON integrity.
     """
 
+    _CONTINUOUS_MATH_SIGNALS = {
+        "differential equation", "d^2y", "spring-mass", "laplace transform",
+        "continuous time", "e^{rt}", "dy/dt", "d/dt", "ode", "pde",
+        "ordinary differential", "partial differential"
+    }
+
     @staticmethod
-    def validate_structure(content: str) -> Tuple[bool, List[str]]:
+    def _has_math_domain_drift(body: str, course: str, mode: str) -> bool:
+        if "discrete" not in course.lower() and mode != "MATH-PURE":
+            return False
+        body_lower = body.lower()
+        hits = sum(1 for signal in OkaValidator._CONTINUOUS_MATH_SIGNALS if signal in body_lower)
+        return hits >= 2
+
+    @staticmethod
+    def validate_structure(content: str, course: str = "", mode: str = "", unit_stems: List[str] = None) -> Tuple[bool, List[str]]:
         """
         Returns (is_valid, error_messages).
         A note fails if it:
@@ -86,6 +100,22 @@ class OkaValidator:
                 "Sections 2 and 3 must wrap related concepts in [[Wikilinks]]."
             )
 
+        # Wikilink Format check: no spaces inside brackets
+        broken_wikilinks = re.findall(r'\[\[\s+[^\]]+\]\]|\[\[[^\]]+\s+\]\]', body)
+        if broken_wikilinks:
+            errors.append(f"BROKEN_WIKILINKS: {broken_wikilinks[:3]} have spaces inside brackets")
+
+        # Math Domain Guard
+        if OkaValidator._has_math_domain_drift(body, course, mode):
+            errors.append("MATH_DOMAIN_DRIFT: Continuous math signals detected in discrete course.")
+
+        # Intra-unit wikilinks check
+        if unit_stems and note_type not in ("hub", "possible questions"):
+            intra_links = [w for w in re.findall(r'\[\[([^\]]+)\]\]', body) 
+                           if w.replace(' ', '_') in unit_stems and w.replace(' ', '_') != meta.get("title", "")]
+            if not intra_links:
+                errors.append("NO_INTRA_UNIT_LINKS: Must wikilink to at least 1 other note in this unit")
+
         # -- 4. Code block balance -------------------------------------------
         # Exclude the interactive-quiz block (it contains its own fences)
         body_no_quiz = re.sub(r"```interactive-quiz.*?```", "", body, flags=re.DOTALL)
@@ -146,6 +176,20 @@ class OkaValidator:
         # ── 6. Minimum body length ──────────────────────────────────────────
         if len(body.strip()) < 300:
             errors.append(f"BODY_TOO_SHORT: {len(body.strip())} chars. Minimum is 300.")
+
+        # ── 7. Walkthrough step count (soft warning handled by post-processing, but good to catch here too if needed, though we won't block deployment) ──
+        walkthrough_match = re.search(r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)', body, re.DOTALL)
+        if walkthrough_match:
+            steps = re.findall(r'^\d+\.', walkthrough_match.group(1), re.MULTILINE)
+            if len(steps) < 5:
+                import logging
+                logging.getLogger("LifeOS").warning(f"[OkaValidator] WALKTHROUGH_TOO_SHORT: {len(steps)} steps, need 5+")
+
+        # ── 8. Gutter law violation (handled by post-processing script, soft warning only)
+        gutter_violations = re.findall(r'[^\n]\n(#{1,3} )', body)
+        if gutter_violations:
+            import logging
+            logging.getLogger("LifeOS").warning(f"[OkaValidator] GUTTER_LAW_VIOLATION: {len(gutter_violations)} headings missing blank line before them. (Will auto-fix)")
 
         return len(errors) == 0, errors
 

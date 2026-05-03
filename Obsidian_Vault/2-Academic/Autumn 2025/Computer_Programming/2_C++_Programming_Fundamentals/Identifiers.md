@@ -1,124 +1,98 @@
 ---
+
 title: Identifiers
 type: Atomic Note
 course: Computer Programming
 semester: Autumn 2025
 unit: '2'
 hub: "[[2_C++_Programming_Fundamentals_Hub]]"
-source: "[[Chapter 2.Pdf]]"
+source: "[[Chapter_2.pdf]]"
 source_pages:
 - 19
 mode: CS-SOFTWARE
 read: false
 generated: true
+
 ---
 
 # 1. Mental Model
-Think of identifiers like the names you give to your friends. Just as you use a specific name to refer to a particular friend, programmers use identifiers to refer to specific parts of their code, such as variables, functions, or classes. This helps keep the code organized and easy to understand.
+
+A programmer's choice of [[Identifiers]] can be likened to naming ships, where each name must be unique and follow specific maritime conventions to avoid confusion. Just as ship names are carefully chosen to reflect their purpose and origin, [[Identifiers]] in code are selected to convey their role and scope. A well-chosen identifier navigates the complexities of code readability and maintainability.
 
 # 2. Execution Logic & Data Flow
-In C++, identifiers are used to name variables, functions, classes, and other program elements. When the compiler encounters an identifier, it checks its [[Symbol_Table]] to resolve the identifier to a specific memory location or definition. The [[Lexical_Analysis]] phase of compilation is responsible for breaking the source code into tokens, including identifiers. The [[Semantic_Analysis]] phase then checks the identifiers for correctness and scope. For example, when you declare a variable `int x;`, the identifier `x` is added to the symbol table, and subsequent uses of `x` are resolved to the same memory location.
+
+The process of defining and using [[Identifiers]] in a C++ program involves a series of steps that start with the [[Variable_Declaration]], where a programmer assigns a name to a variable, function, or class. This name, or [[Identifier]], must adhere to specific rules, such as beginning with a letter or underscore and consisting only of letters, digits, and underscores. The [[C++_Programming_Language]] is case-sensitive, so [[Identifiers]] like "myVariable" and "myvariable" would be treated as distinct. When writing code, [[White_Space]] and [[Braces]] help organize the structure, but do not affect the validity of [[Identifiers]]. The [[Compiler_Directives]] and [[Preprocessor_Directives]] also play a role in how [[Identifiers]] are interpreted during the compilation process.
 
 # 3. Edge Cases & Failure States
-Identifiers in C++ must follow specific rules, such as starting with a letter or underscore, and not containing special characters. If an identifier is misspelled or out of scope, the compiler will report an [[Undefined_Reference]] or [[Undeclared_Identifier]] error. Additionally, C++ is [[Case_Sensitive]], so `x` and `X` are considered different identifiers. Identifiers that are too long may be truncated, but this is implementation-defined and may lead to [[Name_Mangling]] issues.
-# 4. Implementation Mechanics
+
+When choosing [[Identifiers]], programmers must avoid using [[Keywords]] and ensure that they do not duplicate existing [[Identifiers]] within the same scope, as this can lead to naming conflicts. If an [[Identifier]] is misspelled or not declared before use, the compiler will throw an error, highlighting the importance of careful naming and [[Type_Casting]] practices. Furthermore, while [[Literals]] and [[Variables]] can be used to initialize [[Identifiers]], using reserved names can cause issues with [[Operator_Precedence]] and [[Associativity]], ultimately affecting the program's logic flow. A failure to properly manage [[Identifiers]] can result in code that is difficult to debug and maintain.
+
+## 4. Implementation Mechanics
+
 ```cpp
+
 #include <iostream>
-using namespace std;
+#include <string>
 
 int main() {
-    int x = 10;  // declare and initialize variable x
-    int y = x;   // use identifier x to assign to y
+    // Declare and initialize variables
+    int shipId = 123;
+    std::string shipName = "Navigator";
 
-    cout << "Value of y: " << y << endl;
+    // Use variables
+    std::cout << "Ship ID: " << shipId << std::endl;
+    std::cout << "Ship Name: " << shipName << std::endl;
 
     return 0;
 }
-```
-This C++ code demonstrates the use of identifiers in a simple program. The identifiers `x` and `y` are used to refer to specific variables.
 
-The code can be read as follows: we declare a variable `x` and initialize it to `10`, then declare another variable `y` and assign it the value of `x`. Finally, we print the value of `y` to the console.
+```
 
-Here's a simple ASCII memory/stack diagram to illustrate the concept:
+Memory/Stack Diagram:
+
 ```
+
   +---------------+
-  |  Memory      |
+
+  |  shipId (int)  |
+
+  |  Value: 123    |
+
   +---------------+
-  |  x  |  10    |
-  |  y  |  10    |
+
+  |  shipName (str) |
+
+  |  Value: "Navigator" |
+
   +---------------+
-           |
-           |
-           v
+
+  |  (empty stack)  |
+
   +---------------+
-  |  Stack       |
-  |  main()      |
-  |  x           |
-  |  y           |
-  +---------------+
+
 ```
-In this diagram, `x` and `y` are identifiers that refer to specific memory locations.
+
+The code block represents the C++ program that declares and uses variables, while the ASCII memory/stack diagram illustrates the memory layout of the variables. The diagram shows the variables `shipId` and `shipName` stored in memory with their respective values.
 
 ## 5. Walkthrough
-Let's walk through a scenario where identifiers are used in a C++ program:
 
-1. We declare a function `addNumbers` that takes two `int` parameters, `a` and `b`, and returns their sum.
-2. We declare a variable `result` to store the sum of `a` and `b`.
-3. We use the identifier `a` to access the value of the first parameter.
-4. We use the identifier `b` to access the value of the second parameter.
-5. We return the value of `result` from the function.
-
-Here's the code:
-```cpp
-int addNumbers(int a, int b) {
-    int result = a + b;
-    return result;
-}
-
-int main() {
-    int x = 5;
-    int y = 10;
-    int sum = addNumbers(x, y);
-    cout << "Sum: " << sum << endl;
-    return 0;
-}
-```
-In this scenario, the identifiers `a`, `b`, `result`, `x`, `y`, and `sum` are used to refer to specific variables and function parameters.
+1. The program starts with the declaration of two variables, `shipId` and `shipName`, which are initialized with the values `123` and `"Navigator"`, respectively.
+2. The variables are stored in memory, with `shipId` occupying an integer-sized space with the value `123`, and `shipName` occupying a string-sized space with the value `"Navigator"`.
+3. The program then uses the `std::cout` statement to print the value of `shipId` to the console, which outputs `Ship ID: 123`.
+4. Next, the program uses the `std::cout` statement to print the value of `shipName` to the console, which outputs `Ship Name: Navigator`.
+5. As the program executes, the call stack remains empty since there are no function calls.
+6. The program terminates, and the memory occupied by the variables `shipId` and `shipName` is released.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
+
 [
-  {
-    "id": "q1",
-    "type": "fill_in",
-    "difficulty": "L1",
-    "question": "Identifiers in C++ must start with a [[Blank1]] or [[Blank2]].",
-    "textWithBlanks": "Identifiers in C++ must start with a [[Blank1]] or [[Blank2]].",
-    "answer": [
-      "letter",
-      "underscore"
-    ],
-    "explanation": "Identifiers in C++ must follow specific rules, including starting with a letter or underscore."
-  },
-  {
-    "id": "q2",
-    "type": "true_false",
-    "difficulty": "L2",
-    "question": "C++ is case-insensitive when it comes to identifiers.",
-    "answer": "False",
-    "explanation": "C++ is case-sensitive, so `x` and `X` are considered different identifiers."
-  },
-  {
-    "id": "q3",
-    "type": "debug",
-    "difficulty": "L3",
-    "question": "Find the bug in the code.",
-    "content": "int x = 10;\nint y = X;",
-    "answer": "The bug is that the identifier `X` is not declared. The correct code should use the identifier `x` instead.",
-    "explanation": "The bug is due to the incorrect use of the identifier `X`, which is not declared."
-  }
+  {"id":"q1","type":"fill_in","difficulty":"L1","question":"A programmer's choice of [[Identifiers]] can be likened to naming ships, where each name must be unique and follow specific maritime conventions to avoid confusion. The term for a name given to a variable, function, or class in code is an [[Identifier]].","textWithBlanks":"A programmer's choice of [[Identifiers]] can be likened to naming ships, where each name must be unique and follow specific maritime conventions to avoid confusion. The term for a name given to a variable, function, or class in code is an [[Identifier]].","answer":["identifier"],"explanation":"An identifier is a name given to a variable, function, or class in code."},
+  {"id":"q2","type":"true_false","difficulty":"L2","question":"In C++, an identifier can start with a digit.","answer":false,"explanation":"In C++, an identifier cannot start with a digit, but can contain digits."},
+  {"id":"q3","type":"debug","difficulty":"L3","question":"Find bug.","content":"int x = 1; int y = x / 0;","answer":"Division by zero","explanation":"The bug is a division by zero error, which will cause a runtime exception."}
 ]
+
 ```

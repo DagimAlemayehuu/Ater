@@ -15,7 +15,8 @@ from langchain_community.document_loaders import PyPDFLoader
 from .vault_manager import VaultManager
 from .deployer import OkaDeployer
 from src.domains.ai.factory import ModelFactory
-from .agents import ArchitectAgent, WriterAgent
+from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, ExaminerAgent, CriticAgent, HubAgent, DOMAIN_MATRIX
+from .governor import TokenGovernor
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
 import ruamel.yaml
 
@@ -84,7 +85,10 @@ class OkaService:
             max_tokens=4096,
         ) if secrets.ai_key else None
         
-        self.writer_agent = WriterAgent(llm=self.llm_creative) if self.llm_creative else None
+        self.writer_agent = None  # replaced by split agents
+        self.critic_agent = CriticAgent(llm=self.llm_creative) if self.llm_creative else None
+        self.hub_agent = HubAgent(llm=self.llm) if self.llm else None
+        self.governor = TokenGovernor()
         
         from .validator import OkaValidator
         self.validator = OkaValidator()
@@ -229,8 +233,10 @@ class OkaService:
                 max_tokens=4096,
             )
             self.llm_creative = self.llm
-            if self.writer_agent:
-                self.writer_agent.llm = self.llm
+            if self.critic_agent:
+                self.critic_agent.llm = self.llm
+            if self.hub_agent:
+                self.hub_agent.llm = self.llm
             if self.architect_agent:
                 self.architect_agent.llm = self.llm
                 try:
@@ -1227,6 +1233,14 @@ class OkaService:
                 OkaService._status[session_id] = f"Load Failed during Architecting: {str(e)}"
                 raise e
 
+        # Deduplicate Plan
+        try:
+            from .post_processing import deduplicate_plan
+            print(f"[OKA Service] Deduplicating {len(all_atomic_notes)} concepts...")
+            all_atomic_notes = deduplicate_plan(all_atomic_notes)
+        except Exception as e:
+            print(f"[OKA Service] Deduplication failed: {e}")
+
         # Synthesize the Hub Note
         hub_base = hub_title.replace(" Hub", "").replace(" ", "_")
         # Prevent redundant prefixing (e.g. 5_5_Modular_Programming)
@@ -1425,23 +1439,45 @@ class OkaService:
                         OkaService._status[session_id] = f"{phase_prefix} Surgical Pass: [[{current_note_title}]] (1/2)..."
 
                         try:
-                            note_content = await self.writer_agent.generate_content(
-                                note_schema=note_schema,
-                                source_text=note_schema.source_context or "No specific context extracted.",
-                                primary_language=primary_language,
-                                all_concepts=all_concepts_list
-                            )
+                            # ── 3-PASS PIPELINE ──
+                            domain = DOMAIN_MATRIX.get(note_schema.mode, DOMAIN_MATRIX["CS-SOFTWARE"])
+                            theory_agent = TheoryAgent(self.llm_creative, domain)
+                            practitioner_agent = PractitionerAgent(self.llm_creative, domain)
+                            examiner_agent = ExaminerAgent(self.llm_creative, domain)
 
-                            OkaService._status[session_id] = f"{phase_prefix} Socratic Pass: [[{current_note_title}]] (2/2)..."
-                            # Brief cooldown between Pass 1 and Pass 2 to avoid back-to-back
-                            # requests consuming Groq's per-minute TPM budget simultaneously
-                            await asyncio.sleep(3)
-                            probes = await self.writer_agent.generate_probes(
-                                note_title=note_schema.title,
-                                note_body=note_content.markdown_body,
-                                source_text=note_schema.source_context or "",
-                                primary_language=primary_language,
-                                all_concepts=all_concepts_list
+                            # Pass 1: Theory
+                            await self.governor.acquire(expected_tokens=3500)
+                            theory = await theory_agent.generate(note_schema, note_schema.source_context or "No context", primary_language, all_concepts_list)
+                            is_valid, errors = self.validator.validate_structure(theory + "\n```interactive-quiz\n[]\n```\n# 4. Artifact\n```text\n```\n## 5. Walkthrough\n1. \n2. \n3. \n4. \n5. ")
+                            if "INSUFFICIENT_WIKILINKS" in str(errors):
+                                await self.governor.acquire(expected_tokens=300)
+                                diagnosis = await self.critic_agent.diagnose(theory, errors) if self.critic_agent else "Add more wikilinks."
+                                await self.governor.acquire(expected_tokens=1000)
+                                theory = await theory_agent.retry(note_schema, note_schema.source_context or "No context", primary_language, all_concepts_list, diagnosis)
+
+                            note_content = NoteContent(markdown_body=theory, search_keywords=[])
+
+                            OkaService._status[session_id] = f"{phase_prefix} Socratic Pass: [[{current_note_title}]] (2/3)..."
+                            
+                            # Pass 2: Practitioner
+                            await self.governor.acquire(expected_tokens=3500)
+                            practice = await practitioner_agent.generate(note_schema.title, theory, primary_language)
+
+                            OkaService._status[session_id] = f"{phase_prefix} Examiner Pass: [[{current_note_title}]] (3/3)..."
+
+                            # Pass 3: Examiner
+                            await self.governor.acquire(expected_tokens=2500)
+                            theory_summary = theory[:600] # simple summary
+                            quiz_json_str = await examiner_agent.generate(note_schema.title, theory_summary, primary_language)
+
+                            # Repair Quiz JSON if needed
+                            quiz_json_str = quiz_json_str.strip()
+                            quiz_json_str = re.sub(r"^```[a-z]*\n?", "", quiz_json_str)
+                            quiz_json_str = re.sub(r"\n?```$", "", quiz_json_str).strip()
+                            
+                            probes = ProbeEnrichment(
+                                worked_example=practice,
+                                interactive_quiz=f"```interactive-quiz\n{quiz_json_str}\n```"
                             )
                             if probes:
                                 session["all_note_probes"][note_schema.title] = probes
@@ -1463,10 +1499,9 @@ class OkaService:
                             else:
                                 print(f"[OKA Service] Validation errors on '{current_note_title}': {struct_errors}")
                                 if generation_attempts >= max_attempts:
-                                    raise ValueError(
-                                        f"Failed to generate a valid note after {max_attempts} attempts. "
-                                        f"Errors: {struct_errors}"
-                                    )
+                                    import logging
+                                    logging.getLogger("LifeOS").error(f"[OKA Service] Max attempts reached for '{current_note_title}'. Dropping note to preserve queue integrity.")
+                                    break
                                 note_schema.source_context = (
                                     f"{note_schema.source_context or ''}\n\n"
                                     f"[REGENERATION_HINT]: STRUCTURAL VALIDATION FAILED: {', '.join(struct_errors)}"
@@ -1494,7 +1529,9 @@ class OkaService:
                                     "results": deployment_results,
                                 }
                             if generation_attempts >= max_attempts:
-                                raise e
+                                import logging
+                                logging.getLogger("LifeOS").error(f"[OKA Service] Max attempts reached due to error for '{current_note_title}'. Dropping note. Error: {e}")
+                                break
                             await asyncio.sleep(5)
                     
                 elif b_type == "pq":
@@ -1519,7 +1556,42 @@ class OkaService:
                 elif b_type == "hub":
                     OkaService._status[session_id] = "Compiling Unit Mastery Hub..."
                     ai_output = self._compile_hub_note(plan_obj, session_path=session.get("path", ""))
+                    
+                    if self.hub_agent:
+                        await self.governor.acquire(expected_tokens=1000)
+                        descriptions = [n.get("description", "") for n in session["metadata"]["atomic_notes"]]
+                        ai_output = await self.hub_agent.generate_hub(plan_obj.hub_title, descriptions, ai_output)
+                        
                     local_results = self.deployer.deploy_hub_note(session_id, ai_output, plan_obj, session.get("path", ""))
+                    
+                    # ── POST-PROCESSING (Scripts) ──
+                    try:
+                        from .post_processing import (
+                            canonicalize_unit, infer_unit_prerequisites, enforce_gutter,
+                            audit_walkthroughs, audit_intra_links, sync_hub_connections
+                        )
+                        # Resolve the actual deployed unit directory
+                        relative_path = local_results[0]["path"]
+                        hub_file = self.deployer.vm.vault_path / relative_path
+                        
+                        curr = session.get("curriculum", {})
+                        semester = curr.get("semester", "Unknown Semester")
+                        course = curr.get("course", "Unknown Course")
+                        unit_str = str(curr.get("unit", "0"))
+                        hub_t = curr.get("hub_title", "")
+                        unit_dir_name = f"{unit_str}_{hub_t.replace(' ', '_')}" if hub_t else unit_str
+                        unit_dir = self.deployer.vm.vault_path / "2-Academic" / semester / course / unit_dir_name
+                        
+                        canonicalize_unit(unit_dir)
+                        infer_unit_prerequisites(unit_dir)
+                        enforce_gutter(unit_dir)
+                        audit_walkthroughs(unit_dir)
+                        audit_intra_links(unit_dir)
+                        if hub_file.exists():
+                            sync_hub_connections(hub_file, unit_dir)
+                        OkaService._status[session_id] = "Post-Processing Complete"
+                    except Exception as pp_e:
+                        print(f"[OKA Service] Post-processing failed: {pp_e}")
 
                 deployment_results.extend(local_results)
                 session["current_batch"] = b_num
@@ -1528,6 +1600,9 @@ class OkaService:
 
             # ── EXECUTION ──
             has_more = await run_single_batch(batch_number, batch_type, batch_notes)
+
+            if isinstance(has_more, dict) and has_more.get("status") == "rate_limited":
+                return has_more
 
             if not has_more:
                 OkaService._sessions.pop(session_id, None)
