@@ -1,6 +1,6 @@
 ---
 Course: "[[Discrete Mathematics]]"
-Exam Date: 2026-02-07 09:00:00+03:00
+date: 2026-02-07 09:00:00+03:00
 Type: ''
 Score: ''
 Total Score: 50

@@ -3,7 +3,7 @@ import { Search, ChevronRight, Trash2, Check, BookOpen, Hash, GraduationCap, Plu
 import { cn } from '@/lib/utils'
 import { format, parseISO, differenceInDays, startOfDay } from 'date-fns'
 import { stripWL, getVal, gradeColorClass, getDaysUntil } from './utils'
-import { SectionHeader, EmptyState, StatCard, BigPropertyCard } from './SharedComponents'
+import { SectionHeader, EmptyState, StatCard, BigPropertyCard, EditableTitle } from './SharedComponents'
 import type { TabProps } from './types'
 
 export default function CoursesTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, initialSelectedId, onClearSelection }: TabProps) {
@@ -57,15 +57,14 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
                 <div className="flex items-start justify-between">
                     <div>
                         <button onClick={() => setSelectedId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground mb-2 transition-all">← Courses</button>
-                        <h2 className="text-3xl font-black uppercase tracking-tight cursor-pointer hover:text-primary transition-colors block"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                const next = window.prompt('Rename Course', course.title || '')
-                                if (next && next !== course.title) {
-                                    onUpdate('07 - Courses', course.id, { title: next })
-                                    setSelectedId(next)
-                                }
-                            }}>{course.title}</h2>
+                        <EditableTitle
+                            value={course.title}
+                            className="text-3xl font-black uppercase tracking-tight"
+                            onSave={(next) => {
+                                onUpdate('07 - Courses', course.id, { title: next })
+                                setSelectedId(next)
+                            }}
+                        />
                         <div className="flex items-center gap-3 mt-1">
                             {professor && <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{professor}</span>}
                             {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase rounded border', gradeColorClass(grade))}>{grade}</span>}
@@ -214,7 +213,12 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
                                 className="p-5 border border-border/20 rounded-xl hover:border-foreground/20 cursor-pointer bg-background transition-all group flex flex-col gap-3">
                                 {/* Title + Grade */}
                                 <div className="flex items-start justify-between gap-2">
-                                    <h3 className="text-[13px] font-black uppercase leading-tight group-hover:text-primary transition-colors">{course.title}</h3>
+                                    <h3 className="text-[13px] font-black uppercase leading-tight group-hover:text-primary transition-colors cursor-pointer"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            const next = window.prompt('Rename Course', course.title || '')
+                                            if (next && next !== course.title) onUpdate('07 - Courses', course.id, { title: next })
+                                        }}>{course.title}</h3>
                                     {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase rounded border shrink-0', gradeColorClass(grade))}>{grade}</span>}
                                 </div>
 

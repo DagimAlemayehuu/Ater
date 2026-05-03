@@ -1,6 +1,6 @@
 ---
 Course: "[[Computer Programming]]"
-Exam Date: 2026-02-17 11:30:00+03:00
+date: 2026-02-17 11:30:00+03:00
 Type: ''
 Score: ''
 Total Score: 50

@@ -3,7 +3,7 @@ import { Search, SortAsc, BookOpen, PlayCircle, Brain, Check, Plus, Trash2 } fro
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { stripWL, getVal, statusColorClass, confidenceColorClass, groupBy } from './utils'
-import { SectionHeader, EmptyState, ProgressRing } from './SharedComponents'
+import { SectionHeader, EmptyState, ProgressRing, EditableTitle } from './SharedComponents'
 import type { TabProps } from './types'
 
 type SortKey = 'unit' | 'status' | 'confidence' | 'study_date'
@@ -283,14 +283,11 @@ function HubCard({ hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelet
         )}>
             {/* Header */}
             <div className="flex items-start gap-2">
-                <h3 className={cn('text-[11px] font-black uppercase leading-tight flex-1 cursor-pointer hover:text-primary transition-colors', isCompleted ? 'text-muted-foreground/40 line-through' : 'text-foreground')}
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        const next = window.prompt('Rename Hub', displayTitle)
-                        if (next && next !== displayTitle) onUpdate('06 - Study Planner', hub.id, { title: next })
-                    }}>
-                    {displayTitle}
-                </h3>
+                <EditableTitle
+                    value={displayTitle}
+                    className={cn('text-[11px] font-black uppercase leading-tight flex-1', isCompleted ? 'text-muted-foreground/40 line-through' : 'text-foreground')}
+                    onSave={(next) => onUpdate('06 - Study Planner', hub.id, { title: next })}
+                />
                 <div className="flex items-center gap-1">
                     {isCompleted && <Check size={12} className="text-emerald-500 shrink-0" />}
                     <button onClick={(e) => { e.stopPropagation(); onDelete() }}

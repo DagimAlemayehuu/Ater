@@ -124,14 +124,13 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
                 ) : (
                     <div className="flex items-center gap-2">
                         <input
-                            autoFocus
-                            type={type === 'number' ? 'number' : type === 'date' ? 'date' : 'text'}
-                            value={editValue}
-                            onChange={e => setEditValue(e.target.value)}
-                            onBlur={() => handleSave()}
-                            onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false) }}
-                            className="bg-transparent text-2xl font-black tracking-tighter text-foreground border-b-2 border-primary w-full outline-none pb-1"
-                        />
+                        autoFocus
+                        value={editValue}
+                        onChange={e => setEditValue(e.target.value)}
+                        onBlur={() => handleSave()}
+                        onKeyDown={e => e.key === 'Enter' && handleSave()}
+                        className="w-full bg-muted/10 px-2 py-1 rounded text-xl font-black uppercase outline-none focus:ring-1 focus:ring-primary/30 transition-all border-none"
+                    />
                     </div>
                 )
             ) : (
@@ -143,6 +142,51 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
                     )}
                 </span>
             )}
+        </div>
+    )
+}
+
+// ─── Inline Title Editor ──────────────────────────────────────────────────────
+export function EditableTitle({ value, onSave, className }: {
+    value: string; onSave: (next: string) => void; className?: string
+}) {
+    const [isEditing, setIsEditing] = useState(false)
+    const [editValue, setEditValue] = useState(value)
+
+    useEffect(() => {
+        setEditValue(value)
+    }, [value])
+
+    if (isEditing) {
+        return (
+            <input
+                autoFocus
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                onBlur={() => {
+                    if (editValue.trim() && editValue !== value) onSave(editValue.trim())
+                    setIsEditing(false)
+                }}
+                onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                        if (editValue.trim() && editValue !== value) onSave(editValue.trim())
+                        setIsEditing(false)
+                    }
+                    if (e.key === 'Escape') {
+                        setEditValue(value)
+                        setIsEditing(false)
+                    }
+                }}
+                className={cn('bg-muted/10 px-2 rounded outline-none w-full border-none focus:ring-1 focus:ring-primary/30 transition-all', className)}
+            />
+        )
+    }
+
+    return (
+        <div className={cn('cursor-pointer hover:text-primary transition-colors block group/title relative outline-none', className)}
+            onClick={() => setIsEditing(true)}>
+            {value}
+            <Edit3 size={12} className="inline-block ml-2 opacity-0 group-hover/title:opacity-10 transition-all" />
         </div>
     )
 }
@@ -253,12 +297,13 @@ export function SelectPropertyEditor({ value, source, onSave, onCancel, label: d
     const rawValue = stripWL(value)
 
     return (
-        <div className="absolute top-full left-0 mt-1 w-full min-w-[220px] bg-background border border-border/20 rounded-xl shadow-xl z-50 p-2 animate-in fade-in zoom-in-95">
+        <div className="absolute top-full left-0 mt-1 w-full min-w-[220px] bg-background border border-border/20 rounded-xl shadow-xl z-50 p-2 animate-in fade-in zoom-in-95"
+            onClick={e => e.stopPropagation()}>
             <input autoFocus placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
                 className="w-full bg-muted/5 text-[10px] font-black uppercase px-3 py-2 rounded-lg mb-2 focus:outline-none" />
             <div className="max-h-44 overflow-y-auto flex flex-col gap-0.5">
                 {filtered.map(opt => (
-                    <button key={opt} onClick={() => onSave(`[[${opt}]]`)} className={cn(
+                    <button key={opt} onClick={(e) => { e.stopPropagation(); onSave(`[[${opt}]]`) }} className={cn(
                         'px-3 py-1.5 rounded-md text-[10px] font-black uppercase text-left transition-all',
                         rawValue === opt ? 'bg-primary/10 text-primary' : 'hover:bg-muted/10 text-foreground/70'
                     )}>{opt}</button>
@@ -273,7 +318,7 @@ export function SelectPropertyEditor({ value, source, onSave, onCancel, label: d
                         toast.success('Option added')
                     } catch { toast.error('Failed to add option') }
                 }
-            }} className="w-full mt-2 py-2 border border-dashed border-border/40 rounded-lg text-[8px] font-black uppercase text-muted-foreground/40 hover:text-foreground hover:bg-muted/10 transition-all flex items-center justify-center gap-2">
+            }} onClick={e => e.stopPropagation()} className="w-full mt-2 py-2 border border-dashed border-border/40 rounded-lg text-[8px] font-black uppercase text-muted-foreground/40 hover:text-foreground hover:bg-muted/10 transition-all flex items-center justify-center gap-2">
                 <Plus size={10} /> Add Option
             </button>
         </div>

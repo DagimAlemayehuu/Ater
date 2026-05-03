@@ -1,6 +1,6 @@
 ---
 Semester: "[[Winter 2026]]"
-Status: "[[Active]]"
+Status: "[[Upcoming]]"
 Credits: ''
 title: New Course
 ---

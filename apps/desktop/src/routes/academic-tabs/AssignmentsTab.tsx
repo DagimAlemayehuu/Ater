@@ -3,8 +3,8 @@ import { AlertTriangle, Check, Clock, CalendarDays, ChevronDown, ChevronUp, Plus
 import { format, parseISO, isSameDay, isAfter, isBefore, addDays, startOfDay, endOfDay } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { stripWL, getVal, priorityColorClass, getDaysUntil, isOverdue } from './utils'
-import { SectionHeader, EmptyState, BadgePill } from './SharedComponents'
+import { stripWL, getVal, priorityColorClass, getDaysUntil, isOverdue, statusColorClass } from './utils'
+import { SectionHeader, EmptyState, BadgePill, EditableTitle } from './SharedComponents'
 import type { TabProps } from './types'
 
 export default function AssignmentsTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo }: TabProps) {
@@ -30,11 +30,23 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
     const pending = filtered.filter(a => !a.done && a.done !== true)
     const done = filtered.filter(a => a.done === true || a.done === 'true')
 
-    const overdue = pending.filter(a => a.due_date && isBefore(parseISO(a.due_date), today))
-    const todayDue = pending.filter(a => a.due_date && isSameDay(parseISO(a.due_date), new Date()))
-    const thisWeek = pending.filter(a => a.due_date && isAfter(parseISO(a.due_date), endOfToday) && isBefore(parseISO(a.due_date), endOfThisWeek))
-    const upcoming = pending.filter(a => a.due_date && isAfter(parseISO(a.due_date), endOfThisWeek))
-    const undated = pending.filter(a => !a.due_date)
+    const overdue = pending.filter(a => {
+        const d = getVal(a, 'due date', 'due_date')
+        return d && isBefore(parseISO(d), today)
+    })
+    const todayDue = pending.filter(a => {
+        const d = getVal(a, 'due date', 'due_date')
+        return d && isSameDay(parseISO(d), new Date())
+    })
+    const thisWeek = pending.filter(a => {
+        const d = getVal(a, 'due date', 'due_date')
+        return d && isAfter(parseISO(d), endOfToday) && isBefore(parseISO(d), endOfThisWeek)
+    })
+    const upcoming = pending.filter(a => {
+        const d = getVal(a, 'due date', 'due_date')
+        return d && isAfter(parseISO(d), endOfThisWeek)
+    })
+    const undated = pending.filter(a => !getVal(a, 'due date', 'due_date'))
 
     const handleComplete = async (a: any) => {
         try {
@@ -91,7 +103,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                             <div className="h-px flex-1 bg-red-500/10" />
                         </div>
                         <div className="flex flex-col gap-2">
-                            {overdue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} urgency="overdue" />)}
+                            {overdue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="overdue" />)}
                         </div>
                     </section>
                 )}
@@ -105,7 +117,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                             <div className="h-px flex-1 bg-amber-500/10" />
                         </div>
                         <div className="flex flex-col gap-2">
-                            {todayDue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} urgency="today" />)}
+                            {todayDue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="today" />)}
                         </div>
                     </section>
                 )}
@@ -119,7 +131,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                             <div className="h-px flex-1 bg-border/10" />
                         </div>
                         <div className="flex flex-col gap-2">
-                            {thisWeek.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} urgency="week" />)}
+                            {thisWeek.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="week" />)}
                         </div>
                     </section>
                 )}
@@ -129,7 +141,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                     <section className="space-y-2">
                         <SectionHeader title={`Upcoming — ${upcoming.length}`} />
                         <div className="flex flex-col gap-2">
-                            {upcoming.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} urgency="normal" />)}
+                            {upcoming.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
                         </div>
                     </section>
                 )}
@@ -139,7 +151,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                     <section className="space-y-2">
                         <SectionHeader title={`No Due Date — ${undated.length}`} />
                         <div className="flex flex-col gap-2">
-                            {undated.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} urgency="normal" />)}
+                            {undated.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
                         </div>
                     </section>
                 )}
@@ -155,7 +167,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                         </button>
                         {showDone && (
                             <div className="flex flex-col gap-2">
-                                {done.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={() => {}} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} urgency="done" />)}
+                                {done.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={() => {}} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="done" />)}
                             </div>
                         )}
                     </section>
@@ -166,16 +178,18 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
 }
 
 // ─── Assignment Row ────────────────────────────────────────────────────────────
-function AssignmentRow({ a, courses, onComplete, onOpen, onDelete, urgency }: {
-    a: any; courses: any[]; onComplete: (a: any) => void; onOpen: () => void; onDelete: () => void; urgency: 'overdue' | 'today' | 'week' | 'normal' | 'done'
+function AssignmentRow({ a, courses, onComplete, onOpen, onDelete, onUpdate, urgency }: {
+    a: any; courses: any[]; onComplete: (a: any) => void; onOpen: () => void; onDelete: () => void; onUpdate: (db: string, id: string, props: any) => void; urgency: 'overdue' | 'today' | 'week' | 'normal' | 'done'
 }) {
+    const [showStatusMenu, setShowStatusMenu] = useState(false)
     const isDone = a.done === true || a.done === 'true'
     const courseName = stripWL(getVal(a, 'Course', 'course'))
     const priority = stripWL(getVal(a, 'Priority', 'priority'))
-    const days = getDaysUntil(a.due_date)
+    const dueDate = getVal(a, 'due date', 'due_date')
+    const days = getDaysUntil(dueDate)
 
     const daysLabel = () => {
-        if (!a.due_date) return null
+        if (!dueDate) return null
         if (days === null) return null
         if (days < 0) return `${Math.abs(days)}d overdue`
         if (days === 0) return 'Today'
@@ -202,19 +216,33 @@ function AssignmentRow({ a, courses, onComplete, onOpen, onDelete, urgency }: {
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-                <span className={cn('text-[12px] font-black uppercase truncate block cursor-pointer hover:text-primary transition-colors', isDone ? 'line-through text-muted-foreground/40' : 'text-foreground group-hover:text-primary transition-colors')}
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        const next = window.prompt('Rename Assignment', a.title)
-                        if (next && next !== a.title) onUpdate('03 - Assignments', a.id, { title: next })
-                    }}>
-                    {a.title}
-                </span>
+                <EditableTitle
+                    value={a.title}
+                    className={cn('text-[12px] font-black uppercase truncate block', isDone ? 'line-through text-muted-foreground/40' : 'text-foreground')}
+                    onSave={(next) => onUpdate('03 - Assignments', a.id, { title: next })}
+                />
                 {courseName && <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{courseName}</span>}
             </div>
 
             {/* Badges & Actions */}
             <div className="flex items-center gap-2 shrink-0">
+                <div className="relative">
+                    <button onClick={e => { e.stopPropagation(); setShowStatusMenu(!showStatusMenu) }}
+                        className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border transition-all',
+                            statusColorClass(stripWL(getVal(a, 'Status', 'status'))) || 'text-muted-foreground/30 bg-muted/10 border-border/10')}>
+                        {stripWL(getVal(a, 'Status', 'status')) || 'Planned'}
+                    </button>
+                    {showStatusMenu && (
+                        <div className="absolute top-full right-0 mt-1 bg-background border border-border/20 rounded-lg shadow-xl z-50 p-1 min-w-[120px]">
+                            {['Planned', 'In Progress', 'Completed'].map(s => (
+                                <button key={s} onClick={(e) => { e.stopPropagation(); onUpdate('03 - Assignments', a.id, { Status: `[[${s}]]` }); setShowStatusMenu(false) }}
+                                    className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase rounded hover:bg-muted/10 transition-all', statusColorClass(s))}>
+                                    {s}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
                 {priority && <span className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border', priorityColorClass(priority))}>{priority}</span>}
                 {daysLabel() && <span className={cn('text-[9px] font-black uppercase tracking-widest', daysColor)}>{daysLabel()}</span>}
                 <button onClick={(e) => { e.stopPropagation(); onDelete() }}

@@ -4,7 +4,7 @@ import { format, parseISO, differenceInDays, isBefore, startOfDay } from 'date-f
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { stripWL, getVal } from './utils'
-import { SectionHeader, EmptyState, StatCard, BigPropertyCard } from './SharedComponents'
+import { SectionHeader, EmptyState, StatCard, BigPropertyCard, EditableTitle } from './SharedComponents'
 import type { TabProps } from './types'
 
 export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, initialSelectedId, onClearSelection }: TabProps) {
@@ -35,13 +35,26 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
         })
     }, [allExams, courseFilter, courses])
 
-    const upcoming = filtered.filter(e => e.date && !isBefore(parseISO(e.date), now))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    const past = filtered.filter(e => !e.date || isBefore(parseISO(e.date), now))
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    const upcoming = filtered.filter(e => {
+        const d = getVal(e, 'date', 'Exam Date')
+        return d && !isBefore(parseISO(d), now)
+    }).sort((a, b) => {
+        const da = getVal(a, 'date', 'Exam Date')
+        const db = getVal(b, 'date', 'Exam Date')
+        return new Date(da).getTime() - new Date(db).getTime()
+    })
+    const past = filtered.filter(e => {
+        const d = getVal(e, 'date', 'Exam Date')
+        return !d || isBefore(parseISO(d), now)
+    }).sort((a, b) => {
+        const da = getVal(a, 'date', 'Exam Date')
+        const db = getVal(b, 'date', 'Exam Date')
+        return new Date(db).getTime() - new Date(da).getTime()
+    })
 
     const nextExam = upcoming[0]
-    const daysToNext = nextExam?.date ? differenceInDays(parseISO(nextExam.date), now) : null
+    const nextDate = nextExam ? getVal(nextExam, 'date', 'Exam Date') : null
+    const daysToNext = nextDate ? differenceInDays(parseISO(nextDate), now) : null
 
     const handleAddScore = async (exam: any) => {
         if (!scoreInput.trim()) return
@@ -70,15 +83,14 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                 <div className="flex items-center justify-between">
                     <div>
                         <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Exam Detail</span>
-                        <h2 className="text-2xl font-black uppercase cursor-pointer hover:text-primary transition-colors block"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                const next = window.prompt('Rename Exam', exam.title || '')
-                                if (next && next !== exam.title) {
-                                    onUpdate('04 - Exams', exam.id, { title: next })
-                                    setSelectedId(next)
-                                }
-                            }}>{exam.title}</h2>
+                        <EditableTitle
+                            value={exam.title}
+                            className="text-2xl font-black uppercase"
+                            onSave={(next) => {
+                                onUpdate('04 - Exams', exam.id, { title: next })
+                                setSelectedId(next)
+                            }}
+                        />
                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{examCourse}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -93,8 +105,8 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                 {/* Quick Info */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <StatCard label="Preparation Progress" value={`${doneHubs} / ${relatedHubs.length} Hubs`} accent />
-                    {exam.date && !isBefore(parseISO(exam.date), now) && (
-                        <StatCard label="Countdown" value={`${differenceInDays(parseISO(exam.date), now)} Days Left`} />
+                    {getVal(exam, 'date', 'Exam Date') && !isBefore(parseISO(getVal(exam, 'date', 'Exam Date')), now) && (
+                        <StatCard label="Countdown" value={`${differenceInDays(parseISO(getVal(exam, 'date', 'Exam Date')), now)} Days Left`} />
                     )}
                 </div>
 
@@ -164,7 +176,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                             <span className="text-[9px] font-black uppercase tracking-[0.3em] text-background/50">Next Exam</span>
                             <h2 className="text-3xl font-black uppercase tracking-tighter">{nextExam.title}</h2>
                             <p className="text-[10px] font-black uppercase tracking-widest text-background/60">
-                                {stripWL(getVal(nextExam, 'Course', 'course'))} · {nextExam.date ? format(parseISO(nextExam.date), 'MMM dd, yyyy') : '--'}
+                                {stripWL(getVal(nextExam, 'Course', 'course'))} · {getVal(nextExam, 'date', 'Exam Date') ? format(parseISO(getVal(nextExam, 'date', 'Exam Date')), 'MMM dd, yyyy') : '--'}
                             </p>
                         </div>
                         <div className="text-right shrink-0">
@@ -208,7 +220,8 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                     {upcoming.length === 0 && <EmptyState message="No upcoming exams." />}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {upcoming.map((exam, idx) => {
-                            const days = differenceInDays(parseISO(exam.date), now)
+                            const edate = getVal(exam, 'date', 'Exam Date')
+                            const days = edate ? differenceInDays(parseISO(edate), now) : 0
                             const urgency = days <= 3 ? 'text-red-400 border-red-500/20' : days <= 7 ? 'text-amber-400 border-amber-500/20' : 'text-muted-foreground/60 border-border/20'
                             const examCourse = stripWL(getVal(exam, 'Course', 'course')).toLowerCase()
                             const relatedHubs = hubs.filter(h => {
@@ -232,7 +245,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                                         </div>
                                     </div>
                                     <div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 mb-2">
-                                        {format(parseISO(exam.date), 'EEE, MMM dd')}
+                                        {getVal(exam, 'date', 'Exam Date') ? format(parseISO(getVal(exam, 'date', 'Exam Date')), 'EEE, MMM dd') : 'No Date'}
                                     </div>
                                     {prepPct !== null && (
                                         <div className="space-y-1">
@@ -266,7 +279,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                                             <div className="flex-1 min-w-0">
                                                 <span className="text-[13px] font-black uppercase block truncate">{exam.title}</span>
                                                 <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">
-                                                    {stripWL(getVal(exam, 'Course', 'course'))} · {exam.date ? format(parseISO(exam.date), 'MMM dd') : '--'}
+                                                    {stripWL(getVal(exam, 'Course', 'course'))} · {getVal(exam, 'date', 'Exam Date') ? format(parseISO(getVal(exam, 'date', 'Exam Date')), 'MMM dd') : '--'}
                                                 </span>
                                             </div>
                                             <div onClick={e => e.stopPropagation()}>

@@ -8,7 +8,7 @@ source: "[[2_Recurrence_Relations.Pdf]]"
 source_pages: null
 status: "Not Started"
 confidence: null
-study_date: null
+study date: null
 generated: true
 ---
 

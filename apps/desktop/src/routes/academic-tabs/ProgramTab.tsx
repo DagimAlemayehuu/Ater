@@ -3,7 +3,7 @@ import { Check, Zap, Trash2, Plus, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { stripWL, getVal, getYearOrder, deriveStatus } from './utils'
-import { SectionHeader, EmptyState, StatCard, AcademicRoadmap, ProgramSetupForm, BigPropertyCard } from './SharedComponents'
+import { SectionHeader, EmptyState, StatCard, AcademicRoadmap, ProgramSetupForm, BigPropertyCard, EditableTitle } from './SharedComponents'
 import type { TabProps } from './types'
 
 export default function ProgramTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, onRefresh }: TabProps) {
@@ -100,15 +100,14 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                 <div className="flex items-start justify-between">
                     <div>
                         <button onClick={() => setSelectedSemesterId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground mb-2 transition-all">← {selectedYear?.title || 'Year'}</button>
-                        <h2 className="text-3xl font-black uppercase tracking-tight cursor-pointer hover:text-primary transition-colors block"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                const next = window.prompt('Rename Semester', semester.title || '')
-                                if (next && next !== semester.title) {
-                                    onUpdate('08 - Semesters', semester.id, { title: next })
-                                    setSelectedSemesterId(next)
-                                }
-                            }}>{semester.title}</h2>
+                        <EditableTitle
+                            value={semester.title}
+                            className="text-3xl font-black uppercase tracking-tight"
+                            onSave={(next) => {
+                                onUpdate('08 - Semesters', semester.id, { title: next })
+                                setSelectedSemesterId(next)
+                            }}
+                        />
                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{activeProgram} · {selectedYear?.title}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -120,14 +119,19 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <StatCard label="Status" value={stripWL(semester.Status || 'Active')} accent />
+                    <BigPropertyCard
+                        label="Status"
+                        value={semester.Status || semester.properties?.Status || 'Active'}
+                        schema={semesterSchema['Status']}
+                        onUpdate={(v) => onUpdate('08 - Semesters', selectedSemesterId, { Status: v })}
+                    />
                     <StatCard label="Total Credits" value={semCourses.reduce((acc, c) => acc + (parseFloat(getVal(c, 'Credits', 'credits')) || 0), 0)} />
                     <StatCard label="Courses" value={semCourses.length} />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {(() => {
-                        const internal = ['id', 'title', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by', 'Status', 'Year', 'Term']
+                        const internal = ['id', 'title', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by', 'Status', 'status', 'Year', 'year', 'Term', 'term']
                         const keys = new Set([...Object.keys(semesterSchema || {}), ...Object.keys(semester || {})])
                         return Array.from(keys)
                             .filter(k => !internal.includes(k))
@@ -194,15 +198,14 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                 <div className="flex items-start justify-between">
                     <div>
                         <button onClick={() => setSelectedYearId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground mb-2 transition-all">← Program</button>
-                        <h2 className="text-5xl font-black uppercase tracking-tighter mb-2 cursor-pointer hover:text-primary transition-colors block"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                const next = window.prompt('Rename Year', selectedYear.title || '')
-                                if (next && next !== selectedYear.title) {
-                                    onUpdate('09 - Years', selectedYear.id, { title: next })
-                                    setSelectedYearId(next)
-                                }
-                            }}>{selectedYear.title}</h2>
+                        <EditableTitle
+                            value={selectedYear.title}
+                            className="text-5xl font-black uppercase tracking-tighter mb-2"
+                            onSave={(next) => {
+                                onUpdate('09 - Years', selectedYear.id, { title: next })
+                                setSelectedYearId(next)
+                            }}
+                        />
                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{activeProgram} · {level}</span>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -219,9 +222,20 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                     </div>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <BigPropertyCard
+                        label="Status"
+                        value={selectedYear.Status || selectedYear.properties?.Status || 'Active'}
+                        schema={yearSchema['Status']}
+                        onUpdate={(v) => onUpdate('09 - Years', selectedYearId, { Status: v })}
+                    />
+                    <StatCard label="Credits" value={`${earnedCredits} / ${targetCredits}`} />
+                    <StatCard label="GPA" value={gpa} />
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {(() => {
-                        const internal = ['id', 'title', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by', 'Academic Level', 'Earned Credits', 'Target Credits', 'Current Year', 'Program', 'Target Years']
+                        const internal = ['id', 'title', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by', 'Academic Level', 'Earned Credits', 'Target Credits', 'Current Year', 'Program', 'Target Years', 'Status', 'status']
                         const keys = new Set([...Object.keys(yearSchema || {}), ...Object.keys(selectedYear || {})])
                         return Array.from(keys)
                             .filter(k => !internal.includes(k))
@@ -322,9 +336,15 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                 ) : (
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4">
                         <div className="flex items-center justify-between">
-                            <div>
+                            <div className="group/protitle">
                                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Program</p>
-                                <h2 className="text-5xl font-black uppercase tracking-tight">{activeProgram || 'Your Program'}</h2>
+                                <EditableTitle
+                                    value={activeProgram || 'Your Program'}
+                                    className="text-5xl font-black uppercase tracking-tight"
+                                    onSave={(next) => {
+                                        handleUpdateProgram(activeProgram, next, stripWL(getVal(activeYear, 'Academic Level')), targetYears)
+                                    }}
+                                />
                                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">
                                     {stripWL(getVal(activeYear, 'Academic Level', 'academic_level'))}
                                 </span>

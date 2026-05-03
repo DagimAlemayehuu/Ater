@@ -77,8 +77,34 @@ export default function AcademicDashboard() {
 
     // ── Shared handlers ────────────────────────────────────────────────────────
     const onUpdate = useCallback(async (dbId: string, itemId: string, properties: Record<string, any>) => {
+        console.log(`[Academic] Updating ${dbId}/${itemId}:`, properties)
+        // Optimistic update
+        setData(prev => {
+            if (!prev) return prev
+            const next = { ...prev }
+            const dbMap: Record<string, keyof AcademicData> = {
+                '09 - Years': 'years',
+                '08 - Semesters': 'semesters',
+                '07 - Courses': 'courses',
+                '06 - Study Planner': 'study_sessions',
+                '04 - Exams': 'exams',
+                '03 - Assignments': 'assignments'
+            }
+            const key = dbMap[dbId]
+            if (key && Array.isArray(next[key])) {
+                next[key] = (next[key] as any[]).map(item => {
+                    if (item.id === itemId) {
+                        const updated = { ...item, ...properties }
+                        if (properties.title) updated.id = properties.title
+                        return updated
+                    }
+                    return item
+                })
+            }
+            return next
+        })
+
         try {
-            // Special case: if renaming via 'title' property
             if (properties.title && properties.title !== itemId) {
                 await sidecarApi.renameVaultFile(dbId, itemId, properties.title)
             } else {
@@ -87,19 +113,58 @@ export default function AcademicDashboard() {
             fetchData()
         } catch {
             toast.error('Update failed')
+            fetchData() // Revert to server state
         }
     }, [fetchData])
 
     const onCreate = useCallback(async (dbId: string, title: string, props?: Record<string, any>): Promise<string | null> => {
+        // Optimistic update for creation
+        setData(prev => {
+            if (!prev) return prev
+            const next = { ...prev }
+            const dbMap: Record<string, keyof AcademicData> = {
+                '09 - Years': 'years',
+                '08 - Semesters': 'semesters',
+                '07 - Courses': 'courses',
+                '06 - Study Planner': 'study_sessions',
+                '04 - Exams': 'exams',
+                '03 - Assignments': 'assignments'
+            }
+            const key = dbMap[dbId]
+            if (key && Array.isArray(next[key])) {
+                const newItem = { id: title, title, ...props }
+                next[key] = [...(next[key] as any[]), newItem]
+            }
+            return next
+        })
+
         try {
             const res = await sidecarApi.createVaultRow(dbId, title, props || {})
             fetchData()
             return res.id || null
         } catch {
             toast.error('Creation failed')
+            fetchData()
             return null
         }
     }, [fetchData])
+
+    const handleUpdateProgram = async (oldName: string, newName: string, level: string, yearsCount: number) => {
+        try {
+            console.log('Renaming program globally:', oldName, '->', newName)
+            const yearsToUpdate = (data?.years || []).filter(y => {
+                const p = (y.Program || y.program || '').replace(/[[\]]/g, '')
+                return p.toLowerCase() === oldName.toLowerCase()
+            })
+            await Promise.all(yearsToUpdate.map(y => 
+                onUpdate('09 - Years', y.id, { Program: `[[${newName}]]` })
+            ))
+            toast.success('Program renamed across all years')
+        } catch (err) { 
+            console.error('Program rename failed:', err)
+            toast.error('Rename failed') 
+        }
+    }
 
     const onDelete = useCallback(async (dbId: string, itemId: string) => {
         try {
@@ -234,6 +299,9 @@ export default function AcademicDashboard() {
         </div>
     )
 }
+
+// ─── Shared Editable UI Components ───────────────────────────────────────────
+// (Moved to SharedComponents.tsx)
 
 // ─── Mini Calendar (for sidebar) ──────────────────────────────────────────────
 function MiniCalendar({ events, onSelectEvent }: { events: any[]; onSelectEvent: (path: string) => void }) {
