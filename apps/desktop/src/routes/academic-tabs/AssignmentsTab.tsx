@@ -1,255 +1,255 @@
-import React, { useState, useMemo } from 'react'
-import { AlertTriangle, Check, Clock, CalendarDays, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react'
-import { format, parseISO, isSameDay, isAfter, isBefore, addDays, startOfDay, endOfDay } from 'date-fns'
-import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
-import { stripWL, getVal, priorityColorClass, getDaysUntil, isOverdue, statusColorClass } from './utils'
-import { SectionHeader, EmptyState, BadgePill, EditableTitle } from './SharedComponents'
-import type { TabProps } from './types'
+import React, {useState, useMemo} from 'react'
+import {AlertTriangle, Check, Clock, CalendarDays, ChevronDown, ChevronUp, Plus, Trash2} from 'lucide-react'
+import {format, parseISO, isSameDay, isAfter, isBefore, addDays, startOfDay, endOfDay} from 'date-fns'
+import {cn} from '@/lib/utils'
+import {toast} from 'sonner'
+import {stripWL, getVal, priorityColorClass, getDaysUntil, isOverdue, statusColorClass} from './utils'
+import {SectionHeader, EmptyState, BadgePill, EditableTitle} from './SharedComponents'
+import type {TabProps} from './types'
 
-export default function AssignmentsTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo }: TabProps) {
-    const [courseFilter, setCourseFilter] = useState<string>('All')
-    const [showDone, setShowDone] = useState(false)
+export default function AssignmentsTab({data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo}: TabProps) {
+ const [courseFilter, setCourseFilter] = useState<string>('All')
+ const [showDone, setShowDone] = useState(false)
 
-    const courses = data.courses || []
-    const allAssignments = data.assignments || []
+ const courses = data.courses || []
+ const allAssignments = data.assignments || []
 
-    const filtered = useMemo(() => {
-        if (courseFilter === 'All') return allAssignments
-        const cName = courses.find(c => c.id === courseFilter)?.title || ''
-        return allAssignments.filter(a => {
-            const assignmentCourse = getVal(a, 'Course', 'course').toLowerCase()
-            return assignmentCourse === cName.toLowerCase() && assignmentCourse !== ''
-        })
-    }, [allAssignments, courseFilter, courses])
+ const filtered = useMemo(() => {
+ if (courseFilter === 'All') return allAssignments
+ const cName = courses.find(c => c.id === courseFilter)?.title || ''
+ return allAssignments.filter(a => {
+ const assignmentCourse = getVal(a, 'Course', 'course').toLowerCase()
+ return assignmentCourse === cName.toLowerCase() && assignmentCourse !== ''
+})
+}, [allAssignments, courseFilter, courses])
 
-    const today = startOfDay(new Date())
-    const endOfToday = endOfDay(new Date())
-    const endOfThisWeek = addDays(today, 7)
+ const today = startOfDay(new Date())
+ const endOfToday = endOfDay(new Date())
+ const endOfThisWeek = addDays(today, 7)
 
-    const pending = filtered.filter(a => !a.done && a.done !== true)
-    const done = filtered.filter(a => a.done === true || a.done === 'true')
+ const pending = filtered.filter(a => !a.done && a.done !== true)
+ const done = filtered.filter(a => a.done === true || a.done === 'true')
 
-    const overdue = pending.filter(a => {
-        const d = getVal(a, 'due date', 'due_date')
-        return d && isBefore(parseISO(d), today)
-    })
-    const todayDue = pending.filter(a => {
-        const d = getVal(a, 'due date', 'due_date')
-        return d && isSameDay(parseISO(d), new Date())
-    })
-    const thisWeek = pending.filter(a => {
-        const d = getVal(a, 'due date', 'due_date')
-        return d && isAfter(parseISO(d), endOfToday) && isBefore(parseISO(d), endOfThisWeek)
-    })
-    const upcoming = pending.filter(a => {
-        const d = getVal(a, 'due date', 'due_date')
-        return d && isAfter(parseISO(d), endOfThisWeek)
-    })
-    const undated = pending.filter(a => !getVal(a, 'due date', 'due_date'))
+ const overdue = pending.filter(a => {
+ const d = getVal(a, 'due date', 'due_date')
+ return d && isBefore(parseISO(d), today)
+})
+ const todayDue = pending.filter(a => {
+ const d = getVal(a, 'due date', 'due_date')
+ return d && isSameDay(parseISO(d), new Date())
+})
+ const thisWeek = pending.filter(a => {
+ const d = getVal(a, 'due date', 'due_date')
+ return d && isAfter(parseISO(d), endOfToday) && isBefore(parseISO(d), endOfThisWeek)
+})
+ const upcoming = pending.filter(a => {
+ const d = getVal(a, 'due date', 'due_date')
+ return d && isAfter(parseISO(d), endOfThisWeek)
+})
+ const undated = pending.filter(a => !getVal(a, 'due date', 'due_date'))
 
-    const handleComplete = async (a: any) => {
-        try {
-            await onUpdate('03 - Assignments', a.id, { done: true })
-            toast.success('Marked done')
-        } catch { toast.error('Update failed') }
-    }
+ const handleComplete = async (a: any) => {
+ try {
+ await onUpdate('03 - Assignments', a.id, {done: true})
+ toast.success('Marked done')
+} catch {toast.error('Update failed')}
+}
 
-    return (
-        <div className="h-full flex flex-col overflow-hidden">
-            {/* ── Stats + Filters ── */}
-            <div className="px-6 py-4 border-b border-border/10 flex items-center gap-4 flex-wrap shrink-0">
-                {/* Stats */}
-                <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest">
-                    <span className="text-foreground">{pending.length} <span className="text-muted-foreground/40">pending</span></span>
-                    {overdue.length > 0 && <span className="text-red-400">{overdue.length} <span className="text-muted-foreground/40">overdue</span></span>}
-                    {todayDue.length > 0 && <span className="text-amber-400">{todayDue.length} <span className="text-muted-foreground/40">today</span></span>}
-                    <span className="text-muted-foreground/30">{done.length} done</span>
-                </div>
-                <div className="flex-1" />
-                {/* Course filter pills */}
-                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-                    {['All', ...courses.map(c => c.id)].map(id => {
-                        const label = id === 'All' ? 'All' : courses.find(c => c.id === id)?.title || id
-                        return (
-                            <button key={id} onClick={() => setCourseFilter(id)}
-                                className={cn(
-                                    'px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wide whitespace-nowrap transition-all',
-                                    courseFilter === id ? 'bg-foreground text-background' : 'bg-muted/10 text-muted-foreground/50 hover:text-foreground'
-                                )}>{label}</button>
-                        )
-                    })}
-                </div>
-                <button onClick={() => {
-                    const title = window.prompt('Enter Assignment Title', 'New Assignment') || 'New Assignment'
-                    const props = courseFilter !== 'All' ? { Course: `[[${courses.find(c => c.id === courseFilter)?.title}]]` } : {}
-                    onCreate('03 - Assignments', title, props)
-                }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-foreground text-background text-[8px] font-black uppercase rounded-lg hover:opacity-80 transition-all">
-                    <Plus size={10} /> Add
-                </button>
-            </div>
+ return (
+ <div className="h-full flex flex-col overflow-hidden">
+ {/* ── Stats + Filters ── */}
+ <div className="px-6 py-4 border-b border-border/10 flex items-center gap-4 flex-wrap shrink-0">
+ {/* Stats */}
+ <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest">
+ <span className="text-foreground">{pending.length} <span className="text-muted-foreground/40">pending</span></span>
+ {overdue.length > 0 && <span className="text-foreground font-black">{overdue.length} <span className="text-muted-foreground/40">overdue</span></span>}
+ {todayDue.length > 0 && <span className="text-foreground/70">{todayDue.length} <span className="text-muted-foreground/40">today</span></span>}
+ <span className="text-muted-foreground/30">{done.length} done</span>
+ </div>
+ <div className="flex-1" />
+ {/* Course filter pills */}
+ <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+ {['All', ...courses.map(c => c.id)].map(id => {
+ const label = id === 'All' ? 'All' : courses.find(c => c.id === id)?.title || id
+ return (
+ <button key={id} onClick={() => setCourseFilter(id)}
+ className={cn(
+ 'px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wide whitespace-nowrap transition-all',
+ courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-transparent bg-muted/5 text-muted-foreground/50 hover:text-foreground hover:border-border/50'
+ )}>{label}</button>
+ )
+})}
+ </div>
+ <button onClick={() => {
+ const title = window.prompt('Enter Assignment Title', 'New Assignment') || 'New Assignment'
+ const props = courseFilter !== 'All' ? {Course: `[[${courses.find(c => c.id === courseFilter)?.title}]]`} : {}
+ onCreate('03 - Assignments', title, props)
+}}
+ className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-lg hover:border-foreground/30 transition-all">
+ <Plus size={10} /> Add
+ </button>
+ </div>
 
-            {/* ── Assignment list ── */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8 pb-24">
-                {pending.length === 0 && done.length === 0 && <EmptyState message="No assignments. Add one to get started." icon={<CalendarDays size={24} />} />}
+ {/* ── Assignment list ── */}
+ <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8 pb-24">
+ {pending.length === 0 && done.length === 0 && <EmptyState message="No assignments. Add one to get started." icon={<CalendarDays size={24} />} />}
 
-                {/* OVERDUE */}
-                {overdue.length > 0 && (
-                    <section className="space-y-2">
-                        <div className="flex items-center gap-3">
-                            <AlertTriangle size={11} className="text-red-400" />
-                            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-red-400">Overdue — {overdue.length}</span>
-                            <div className="h-px flex-1 bg-red-500/10" />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            {overdue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="overdue" />)}
-                        </div>
-                    </section>
-                )}
+ {/* OVERDUE */}
+ {overdue.length > 0 && (
+ <section className="space-y-2">
+ <div className="flex items-center gap-3">
+ <AlertTriangle size={11} className="text-foreground/60" />
+ <span className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/60">Overdue — {overdue.length}</span>
+ <div className="h-px flex-1 bg-border/20" />
+ </div>
+ <div className="flex flex-col gap-2">
+ {overdue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="overdue" />)}
+ </div>
+ </section>
+ )}
 
-                {/* TODAY */}
-                {todayDue.length > 0 && (
-                    <section className="space-y-2">
-                        <div className="flex items-center gap-3">
-                            <Clock size={11} className="text-amber-400" />
-                            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-amber-400">Due Today — {todayDue.length}</span>
-                            <div className="h-px flex-1 bg-amber-500/10" />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            {todayDue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="today" />)}
-                        </div>
-                    </section>
-                )}
+ {/* TODAY */}
+ {todayDue.length > 0 && (
+ <section className="space-y-2">
+ <div className="flex items-center gap-3">
+ <Clock size={11} className="text-muted-foreground/60" />
+ <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">Due Today — {todayDue.length}</span>
+ <div className="h-px flex-1 bg-border/10" />
+ </div>
+ <div className="flex flex-col gap-2">
+ {todayDue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="today" />)}
+ </div>
+ </section>
+ )}
 
-                {/* THIS WEEK */}
-                {thisWeek.length > 0 && (
-                    <section className="space-y-2">
-                        <div className="flex items-center gap-3">
-                            <CalendarDays size={11} className="text-muted-foreground/40" />
-                            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/40">This Week — {thisWeek.length}</span>
-                            <div className="h-px flex-1 bg-border/10" />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            {thisWeek.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="week" />)}
-                        </div>
-                    </section>
-                )}
+ {/* THIS WEEK */}
+ {thisWeek.length > 0 && (
+ <section className="space-y-2">
+ <div className="flex items-center gap-3">
+ <CalendarDays size={11} className="text-muted-foreground/40" />
+ <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/40">This Week — {thisWeek.length}</span>
+ <div className="h-px flex-1 bg-border/10" />
+ </div>
+ <div className="flex flex-col gap-2">
+ {thisWeek.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="week" />)}
+ </div>
+ </section>
+ )}
 
-                {/* UPCOMING */}
-                {upcoming.length > 0 && (
-                    <section className="space-y-2">
-                        <SectionHeader title={`Upcoming — ${upcoming.length}`} />
-                        <div className="flex flex-col gap-2">
-                            {upcoming.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
-                        </div>
-                    </section>
-                )}
+ {/* UPCOMING */}
+ {upcoming.length > 0 && (
+ <section className="space-y-2">
+ <SectionHeader title={`Upcoming — ${upcoming.length}`} />
+ <div className="flex flex-col gap-2">
+ {upcoming.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
+ </div>
+ </section>
+ )}
 
-                {/* UNDATED */}
-                {undated.length > 0 && (
-                    <section className="space-y-2">
-                        <SectionHeader title={`No Due Date — ${undated.length}`} />
-                        <div className="flex flex-col gap-2">
-                            {undated.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
-                        </div>
-                    </section>
-                )}
+ {/* UNDATED */}
+ {undated.length > 0 && (
+ <section className="space-y-2">
+ <SectionHeader title={`No Due Date — ${undated.length}`} />
+ <div className="flex flex-col gap-2">
+ {undated.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
+ </div>
+ </section>
+ )}
 
-                {/* DONE (collapsible) */}
-                {done.length > 0 && (
-                    <section className="space-y-2 opacity-50">
-                        <button onClick={() => setShowDone(!showDone)} className="flex items-center gap-3 w-full group">
-                            <Check size={11} className="text-emerald-500" />
-                            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/40">Done — {done.length}</span>
-                            <div className="h-px flex-1 bg-border/10" />
-                            {showDone ? <ChevronUp size={10} className="text-muted-foreground/30" /> : <ChevronDown size={10} className="text-muted-foreground/30" />}
-                        </button>
-                        {showDone && (
-                            <div className="flex flex-col gap-2">
-                                {done.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={() => {}} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="done" />)}
-                            </div>
-                        )}
-                    </section>
-                )}
-            </div>
-        </div>
-    )
+ {/* DONE (collapsible) */}
+ {done.length > 0 && (
+ <section className="space-y-2 opacity-50">
+ <button onClick={() => setShowDone(!showDone)} className="flex items-center gap-3 w-full group">
+ <Check size={11} className="text-muted-foreground/40" />
+ <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/40">Done — {done.length}</span>
+ <div className="h-px flex-1 bg-border/10" />
+ {showDone ? <ChevronUp size={10} className="text-muted-foreground/30" /> : <ChevronDown size={10} className="text-muted-foreground/30" />}
+ </button>
+ {showDone && (
+ <div className="flex flex-col gap-2">
+ {done.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={() => {}} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="done" />)}
+ </div>
+ )}
+ </section>
+ )}
+ </div>
+ </div>
+ )
 }
 
 // ─── Assignment Row ────────────────────────────────────────────────────────────
-function AssignmentRow({ a, courses, onComplete, onOpen, onDelete, onUpdate, urgency }: {
-    a: any; courses: any[]; onComplete: (a: any) => void; onOpen: () => void; onDelete: () => void; onUpdate: (db: string, id: string, props: any) => void; urgency: 'overdue' | 'today' | 'week' | 'normal' | 'done'
+function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urgency}: {
+ a: any; courses: any[]; onComplete: (a: any) => void; onOpen: () => void; onDelete: () => void; onUpdate: (db: string, id: string, props: any) => void; urgency: 'overdue' | 'today' | 'week' | 'normal' | 'done'
 }) {
-    const [showStatusMenu, setShowStatusMenu] = useState(false)
-    const isDone = a.done === true || a.done === 'true'
-    const courseName = stripWL(getVal(a, 'Course', 'course'))
-    const priority = stripWL(getVal(a, 'Priority', 'priority'))
-    const dueDate = getVal(a, 'due date', 'due_date')
-    const days = getDaysUntil(dueDate)
+ const [showStatusMenu, setShowStatusMenu] = useState(false)
+ const isDone = a.done === true || a.done === 'true'
+ const courseName = stripWL(getVal(a, 'Course', 'course'))
+ const priority = stripWL(getVal(a, 'Priority', 'priority'))
+ const dueDate = getVal(a, 'due date', 'due_date')
+ const days = getDaysUntil(dueDate)
 
-    const daysLabel = () => {
-        if (!dueDate) return null
-        if (days === null) return null
-        if (days < 0) return `${Math.abs(days)}d overdue`
-        if (days === 0) return 'Today'
-        if (days === 1) return 'Tomorrow'
-        return `${days}d`
-    }
+ const daysLabel = () => {
+ if (!dueDate) return null
+ if (days === null) return null
+ if (days < 0) return `${Math.abs(days)}d overdue`
+ if (days === 0) return 'Today'
+ if (days === 1) return 'Tomorrow'
+ return `${days}d`
+}
 
-    const daysColor = urgency === 'overdue' ? 'text-red-400' : urgency === 'today' ? 'text-amber-400' : 'text-muted-foreground/40'
+ const daysColor = urgency === 'overdue' ? 'text-foreground font-black' : urgency === 'today' ? 'text-foreground/70' : 'text-muted-foreground/40'
 
-    return (
-        <div onClick={onOpen} className={cn(
-            'flex items-center gap-3 p-3.5 border rounded-xl cursor-pointer transition-all group',
-            urgency === 'overdue' ? 'border-red-500/15 bg-red-500/[0.02] hover:border-red-500/30' :
-            urgency === 'today' ? 'border-amber-500/15 bg-amber-500/[0.02] hover:border-amber-500/30' :
-            urgency === 'done' ? 'border-border/5 opacity-60' : 'border-border/15 hover:border-foreground/10 bg-background'
-        )}>
-            {/* Checkbox */}
-            <button onClick={e => { e.stopPropagation(); if (!isDone) onComplete(a) }}
-                className={cn('w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all',
-                    isDone ? 'bg-emerald-500 border-emerald-500' : 'border-border/40 hover:border-primary'
-                )}>
-                {isDone && <Check size={9} strokeWidth={4} className="text-white" />}
-            </button>
+ return (
+ <div onClick={onOpen} className={cn(
+ 'flex items-center gap-3 p-3.5 border rounded-xl cursor-pointer transition-all group',
+ urgency === 'overdue' ? 'border-border bg-muted/5 hover:border-foreground/30' :
+ urgency === 'today' ? 'border-border/40 bg-muted/5 hover:border-foreground/20' :
+ urgency === 'done' ? 'border-border/5 opacity-60' : 'border-border/15 hover:border-foreground/10 bg-background'
+ )}>
+ {/* Checkbox */}
+ <button onClick={e => {e.stopPropagation(); if (!isDone) onComplete(a)}}
+ className={cn('w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all',
+ isDone ? 'bg-primary border-primary' : 'border-border/40 hover:border-primary'
+ )}>
+ {isDone && <Check size={9} strokeWidth={4} className="text-primary-foreground" />}
+ </button>
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-                <EditableTitle
-                    value={a.title}
-                    className={cn('text-[12px] font-black uppercase truncate block', isDone ? 'line-through text-muted-foreground/40' : 'text-foreground')}
-                    onSave={(next) => onUpdate('03 - Assignments', a.id, { title: next })}
-                />
-                {courseName && <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{courseName}</span>}
-            </div>
+ {/* Content */}
+ <div className="flex-1 min-w-0">
+ <EditableTitle
+ value={a.title}
+ className={cn('text-[12px] font-black uppercase truncate block', isDone ? 'line-through text-muted-foreground/40' : 'text-foreground')}
+ onSave={(next) => onUpdate('03 - Assignments', a.id, {title: next})}
+ />
+ {courseName && <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{courseName}</span>}
+ </div>
 
-            {/* Badges & Actions */}
-            <div className="flex items-center gap-2 shrink-0">
-                <div className="relative">
-                    <button onClick={e => { e.stopPropagation(); setShowStatusMenu(!showStatusMenu) }}
-                        className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border transition-all',
-                            statusColorClass(stripWL(getVal(a, 'Status', 'status'))) || 'text-muted-foreground/30 bg-muted/10 border-border/10')}>
-                        {stripWL(getVal(a, 'Status', 'status')) || 'Planned'}
-                    </button>
-                    {showStatusMenu && (
-                        <div className="absolute top-full right-0 mt-1 bg-background border border-border/20 rounded-lg shadow-xl z-50 p-1 min-w-[120px]">
-                            {['Planned', 'In Progress', 'Completed'].map(s => (
-                                <button key={s} onClick={(e) => { e.stopPropagation(); onUpdate('03 - Assignments', a.id, { Status: `[[${s}]]` }); setShowStatusMenu(false) }}
-                                    className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase rounded hover:bg-muted/10 transition-all', statusColorClass(s))}>
-                                    {s}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                {priority && <span className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border', priorityColorClass(priority))}>{priority}</span>}
-                {daysLabel() && <span className={cn('text-[9px] font-black uppercase tracking-widest', daysColor)}>{daysLabel()}</span>}
-                <button onClick={(e) => { e.stopPropagation(); onDelete() }}
-                    className="p-1.5 text-muted-foreground/0 group-hover:text-muted-foreground/20 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all">
-                    <Trash2 size={11} />
-                </button>
-            </div>
-        </div>
-    )
+ {/* Badges & Actions */}
+ <div className="flex items-center gap-2 shrink-0">
+ <div className="relative">
+ <button onClick={e => {e.stopPropagation(); setShowStatusMenu(!showStatusMenu)}}
+ className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border transition-all',
+ statusColorClass(stripWL(getVal(a, 'Status', 'status'))) || 'text-muted-foreground/30 bg-muted/10 border-border/10')}>
+ {stripWL(getVal(a, 'Status', 'status')) || 'Planned'}
+ </button>
+ {showStatusMenu && (
+ <div className="absolute top-full right-0 mt-1 bg-background border border-border/20 rounded-lg shadow-xl z-50 p-1 min-w-[120px]">
+ {['Planned', 'In Progress', 'Completed'].map(s => (
+ <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('03 - Assignments', a.id, {Status: `[[${s}]]`}); setShowStatusMenu(false)}}
+ className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase rounded hover:bg-muted/10 transition-all', statusColorClass(s))}>
+ {s}
+ </button>
+ ))}
+ </div>
+ )}
+ </div>
+ {priority && <span className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border', priorityColorClass(priority))}>{priority}</span>}
+ {daysLabel() && <span className={cn('text-[9px] font-black uppercase tracking-widest', daysColor)}>{daysLabel()}</span>}
+ <button onClick={(e) => {e.stopPropagation(); onDelete()}}
+ className="p-1.5 text-muted-foreground/0 group-hover:text-muted-foreground/20 hover:text-destructive hover:bg-destructive/10 rounded-md transition-all">
+ <Trash2 size={11} />
+ </button>
+ </div>
+ </div>
+ )
 }

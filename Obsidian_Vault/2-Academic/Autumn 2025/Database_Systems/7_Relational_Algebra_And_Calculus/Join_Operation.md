@@ -15,85 +15,85 @@ prerequisites:
 ---
 
 # 1. Mental Model
-Imagine you have two big boxes of LEGOs, one with wheels and one with bodies. A JOIN operation is like finding all the wheels and bodies that can be combined to make a complete car, based on matching pieces like axle holes. The result is a new box with all the combined LEGOs.
+Imagine you have two big boxes of toys, one with toy cars and the other with toy drivers. Each toy car has a special number on it, and each toy driver has a matching special number on their driver's license. A JOIN operation is like finding all the toy drivers who can drive all the toy cars by matching the special numbers, so you can play with them together.
 
 # 2. Schema & Query Mechanics
-The JOIN operation mechanically combines rows from two tables based on a common column, known as the join key. When a database performs a JOIN, it iterates through each row of one table, searching for matching rows in the other table, using an [[Equi-Join]] or [[Theta-Join]] algorithm. The database uses [[Index_Scan]] or [[Table_Scan]] to find matching rows, depending on the query plan. The resulting joined table contains columns from both original tables, with each row representing a combined match. The database resolves potential [[Column_Ambiguity]] by requiring that column names be qualified with the table name.
+The JOIN operation mechanically combines rows from two or more tables based on a related column between them, typically using a [[Equi-Join]] condition. When a database executes a JOIN, it iterates through each row of one table, searching for matching rows in the other table(s) based on the specified join condition, often utilizing [[Index_Scan]] or [[Table_Scan]] operations. The database then constructs a new result set by combining the columns of the joined tables, following the rules of [[Operator_Precedence]] when multiple joins are present. For example, in a query like `SELECT * FROM cars JOIN drivers ON cars.driver_id = drivers.id`, the database will match rows from `cars` and `drivers` tables where the `driver_id` in `cars` equals the `id` in `drivers`, producing a combined result set.
 
 # 3. ACID Violations & Scaling Limits
-When performing a JOIN operation, databases must handle boundary conditions like empty tables, unmatched rows, or duplicate join keys. If not properly synchronized, concurrent JOIN operations can lead to [[Dirty_Reads]] or [[Non-Repeatable_Reads]], violating [[Acid]] principles. As the size of the joined tables increases, the operation can become computationally expensive, leading to [[Scalability]] limits. Large JOIN operations can cause [[Deadlocks]] or [[Livelocks]], especially if multiple transactions are competing for resources. To mitigate these issues, databases use techniques like [[Query_Optimization]] and [[Lock_Escalation]].
+When dealing with large tables, JOIN operations can lead to [[Deadlocks]] or [[Livelocks]] if multiple transactions are attempting to access and join the same tables simultaneously, potentially violating [[Acid]] properties, specifically atomicity and consistency. Furthermore, as the size of the joined tables increases, the operation's complexity grows exponentially, leading to performance bottlenecks and scaling limits, often necessitating the use of [[Distributed_Transaction]] protocols or [[Sharding]] techniques to maintain performance. If not properly optimized, JOIN operations can result in [[Cartesian_Product]]s of large intermediate result sets, causing query execution times to skyrocket or even lead to [[Out_Of_Memory]] errors. Therefore, careful indexing, partitioning, and query optimization are crucial to mitigate these risks.
 # 4. Entity-Relationship Model
 ```json
 {
   "tables": [
     {
-      "name": "Customers",
+      "name": "cars",
       "columns": [
-        {"name": "CustomerID", "type": "int"},
-        {"name": "Name", "type": "varchar"}
+        {"name": "id", "type": "int"},
+        {"name": "driver_id", "type": "int"},
+        {"name": "car_model", "type": "varchar"}
       ]
     },
     {
-      "name": "Orders",
+      "name": "drivers",
       "columns": [
-        {"name": "OrderID", "type": "int"},
-        {"name": "CustomerID", "type": "int"},
-        {"name": "OrderDate", "type": "date"}
+        {"name": "id", "type": "int"},
+        {"name": "name", "type": "varchar"},
+        {"name": "license_number", "type": "varchar"}
       ]
     }
   ],
   "relationships": [
     {
-      "type": "one-to-many",
-      "source": "Customers",
-      "target": "Orders",
-      "key": "CustomerID"
+      "type": "one_to_one",
+      "table1": "cars",
+      "column1": "driver_id",
+      "table2": "drivers",
+      "column2": "id"
     }
   ]
 }
 ```
-This Entity-Relationship model represents two tables, `Customers` and `Orders`, with a one-to-many relationship between them based on the `CustomerID` column. The relationship indicates that one customer can have multiple orders.
+This Entity-Relationship model represents two tables, `cars` and `drivers`, with a one-to-one relationship between them based on the `driver_id` column in `cars` and the `id` column in `drivers`. The relationship is established through a shared identifier, enabling a JOIN operation to combine rows from both tables.
 
 ## 5. Walkthrough
-Suppose we have two tables, `Customers` and `Orders`, with the following data:
+Consider a scenario where you have two tables, `cars` and `drivers`, with the following data:
 
-`Customers` table:
+`cars` table:
 
-| CustomerID | Name |
-| --- | --- |
-| 1 | John Smith |
-| 2 | Jane Doe |
-| 3 | Bob Brown |
+| id | driver_id | car_model |
+|----|-----------|------------|
+| 1  | 101       | Toyota     |
+| 2  | 102       | Honda      |
+| 3  | 101       | Ford       |
 
-`Orders` table:
+`drivers` table:
 
-| OrderID | CustomerID | OrderDate |
-| --- | --- | --- |
-| 101 | 1 | 2022-01-01 |
-| 102 | 1 | 2022-01-15 |
-| 103 | 2 | 2022-02-01 |
-| 104 | 3 | 2022-03-01 |
+| id | name    | license_number |
+|----|---------|-----------------|
+| 101| John    | ABC123          |
+| 102| Jane    | DEF456          |
 
-Perform an INNER JOIN operation on these tables based on the `CustomerID` column.
+Perform an INNER JOIN operation on these tables based on the `driver_id` column:
 
-1. Start with the first row of the `Customers` table (CustomerID = 1).
-2. Search for matching rows in the `Orders` table with CustomerID = 1. Find two matches: OrderID = 101 and OrderID = 102.
-3. Combine the columns from both tables to create two new rows:
-	* (1, John Smith, 101, 1, 2022-01-01)
-	* (1, John Smith, 102, 1, 2022-01-15)
-4. Move to the next row of the `Customers` table (CustomerID = 2).
-5. Search for matching rows in the `Orders` table with CustomerID = 2. Find one match: OrderID = 103.
-6. Combine the columns from both tables to create one new row:
-	* (2, Jane Doe, 103, 2, 2022-02-01)
-7. Repeat the process for the remaining rows of the `Customers` table.
-8. The final joined table contains:
+1. Start with the first row of the `cars` table (id = 1, driver_id = 101).
+2. Search for a matching row in the `drivers` table with id = 101.
+3. Find a match (id = 101, name = John, license_number = ABC123).
+4. Combine the columns of both rows to form a new row: (1, 101, Toyota, 101, John, ABC123).
+5. Repeat steps 1-4 for the remaining rows in the `cars` table.
+6. For the second row (id = 2, driver_id = 102), find a matching row in the `drivers` table with id = 102.
+7. Find a match (id = 102, name = Jane, license_number = DEF456).
+8. Combine the columns of both rows to form a new row: (2, 102, Honda, 102, Jane, DEF456).
+9. For the third row (id = 3, driver_id = 101), find a matching row in the `drivers` table with id = 101 (already found in step 2).
+10. Combine the columns of both rows to form a new row: (3, 101, Ford, 101, John, ABC123).
 
-| CustomerID | Name | OrderID | OrderDate |
-| --- | --- | --- | --- |
-| 1 | John Smith | 101 | 2022-01-01 |
-| 1 | John Smith | 102 | 2022-01-15 |
-| 2 | Jane Doe | 103 | 2022-02-01 |
-| 3 | Bob Brown | 104 | 2022-03-01 |
+The resulting joined table:
+
+| id | driver_id | car_model | id | name    | license_number |
+|----|-----------|------------|----|---------|-----------------|
+| 1  | 101       | Toyota     | 101| John    | ABC123          |
+| 2  | 102       | Honda      | 102| Jane    | DEF456          |
+| 3  | 101       | Ford       | 101| John    | ABC123          |
 
 ---
 
@@ -105,26 +105,26 @@ Perform an INNER JOIN operation on these tables based on the `CustomerID` column
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "A JOIN operation can only be performed on two tables with the same number of columns.",
-    "answer": "False",
-    "explanation": "A JOIN operation can be performed on two tables with any number of columns, as long as they have a common column to join on."
+    "question": "A JOIN operation combines rows from two tables based on a related column between them.",
+    "answer": "True",
+    "explanation": "A JOIN operation mechanically combines rows from two or more tables based on a related column between them."
   },
   {
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Suppose we have two tables, `Employees` and `Departments`, with the following data: ... Perform an INNER JOIN operation on these tables based on the `DepartmentID` column.",
-    "answer": "The resulting joined table will contain ...",
-    "explanation": "The resulting joined table will contain columns from both tables, with each row representing a combined match."
+    "question": "You have two tables, `orders` and `customers`, with a common column `customer_id`. Write a query to retrieve all orders with their corresponding customer information.",
+    "answer": "SELECT * FROM orders JOIN customers ON orders.customer_id = customers.id",
+    "explanation": "This query performs an INNER JOIN operation on the `orders` and `customers` tables based on the `customer_id` column."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following JOIN query: `SELECT * FROM Customers, Orders WHERE Customers.CustomerID = Orders.CustomerID`",
-    "content": "SELECT * FROM Customers, Orders WHERE Customers.CustomerID = Orders.CustomerID",
-    "answer": "The bug is that the query uses an old-style, implicit JOIN syntax, which can lead to confusion and errors. A better approach is to use the explicit JOIN syntax: `SELECT * FROM Customers INNER JOIN Orders ON Customers.CustomerID = Orders.CustomerID`",
-    "explanation": "The old-style syntax can lead to confusion and errors, especially when working with multiple tables or complex queries."
+    "question": "Find the bug in the following JOIN query: `SELECT * FROM orders JOIN customers ON orders.customer_id = customers.name`",
+    "content": "SELECT * FROM orders JOIN customers ON orders.customer_id = customers.name",
+    "answer": "The bug is that the JOIN condition is using the `name` column from the `customers` table instead of the `id` column.",
+    "explanation": "The correct JOIN condition should be based on the `id` column of the `customers` table, not the `name` column."
   }
 ]
 ```

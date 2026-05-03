@@ -16,13 +16,13 @@ prerequisites:
 ---
 
 # 1. Mental Model
-Imagine you have two big boxes of LEGOs, one with pictures of cars and the other with pictures of trees. Additional Relational Operations are like special tools that help you combine these boxes in different ways, like matching cars with trees that have similar colors or combining all the pictures into one big box while keeping track of which ones came from where.
+Imagine you have two big boxes of LEGOs, one with all the pieces for a spaceship and the other with all the pieces for a castle. Additional Relational Operations are like special tools that help you combine these boxes in different ways, so you can ask questions like "What are all the LEGO pieces I have that can either be used for a spaceship or a castle?" or "How many LEGO pieces do I have in total for both the spaceship and the castle?"
 
 # 2. Schema & Query Mechanics
-Additional Relational Operations such as OUTER JOINS, OUTER UNION, and AGGREGATE FUNCTIONS work by extending the basic JOIN and UNION operations. When performing an OUTER JOIN, the database engine will [[Hash Join]] the two tables on the specified columns, producing a result set that includes all records from both tables, with NULL values in the columns where there are no matches. The [[Sql Parser]] analyzes the query and determines the [[Operator Precedence]] to ensure that the operations are executed correctly. For AGGREGATE FUNCTIONS, the database engine groups the rows based on the specified columns and applies the aggregate function, such as SUM or COUNT, to produce the result.
+Additional Relational Operations in SQL, such as OUTER JOINS, OUTER UNION, and AGGREGATE FUNCTIONS, work by manipulating and combining data from one or more tables. When performing an OUTER JOIN, the database creates a [[Temporary_Result_Set]] that includes all records from both tables, with NULL values in the columns where there are no matches. The OUTER UNION operation combines the result sets of two or more SELECT statements into a single result set, eliminating duplicate rows. AGGREGATE FUNCTIONS, like `SUM`, `COUNT`, `AVG`, `MIN`, and `MAX`, compute summary values from a set of data, often using a [[Group_By_Clause]] to categorize the data before aggregation. These operations rely on the [[Relational_Algebra]] and are executed through [[Query_Optimization]] techniques to ensure efficient data retrieval.
 
 # 3. ACID Violations & Scaling Limits
-When dealing with Additional Relational Operations, there is a risk of [[Dirty Reads]] and [[Non-Repeatable Reads]] if the database does not properly handle concurrent transactions. For example, if two transactions are executing an OUTER JOIN simultaneously, the results may be inconsistent if one transaction modifies the data being joined while the other transaction is still executing. Additionally, as the size of the tables increases, the performance of these operations can degrade, leading to [[Scalability]] issues. To mitigate these risks, database administrators must carefully design the schema, index the tables, and optimize the queries to ensure that the operations are executed efficiently and consistently, adhering to [[Acid Properties]].
+When dealing with Additional Relational Operations, especially in a distributed database system, there are risks of [[Acid]] violations, such as inconsistencies arising from concurrent modifications during long-running transactions that involve complex joins or aggregations. OUTER JOINS and UNION operations can lead to [[Data_Duplication]] and [[Inconsistent_Reads]] if not properly synchronized. Furthermore, as the volume of data grows, the performance of AGGREGATE FUNCTIONS can degrade, leading to [[Scalability_Limits]] and [[Query_Performance]] issues. To mitigate these risks, databases employ [[Locking_Mechanisms]] and [[Transaction_Isolation]] levels to ensure data consistency and integrity.
 # 4. Entity-Relationship Model
 ```json
 {
@@ -50,55 +50,55 @@ When dealing with Additional Relational Operations, there is a risk of [[Dirty R
         "type": "object",
         "properties": {
           "type": {"type": "string"},
-          "table1": {"type": "string"},
-          "table2": {"type": "string"},
-          "columns": {
-            "type": "array",
-            "items": {"type": "string"}
-          }
+          "tables": {"type": "array", "items": {"type": "string"}},
+          "result": {"type": "object"}
         },
-        "required": ["type", "table1", "table2", "columns"]
+        "required": ["type", "tables", "result"]
       }
     }
   },
   "required": ["tables", "operations"]
 }
 ```
-This JSON schema represents the entity-relationship model for additional relational operations. It defines two main entities: tables and operations. Tables have a name and a list of columns, while operations have a type, two table names, and a list of columns.
+This JSON schema represents the structure of data for Additional Relational Operations, including tables with their columns and operations such as OUTER JOINS, OUTER UNION, and AGGREGATE FUNCTIONS. The schema defines the properties of tables and operations, ensuring data consistency.
+
+To read this schema, start by understanding the root object which contains two main properties: `tables` and `operations`. The `tables` property is an array of objects, each representing a table with a `name` and an array of `columns`. The `operations` property is an array of objects, each describing an operation with a `type`, an array of `tables` it operates on, and a `result` object.
 
 ## 5. Walkthrough
-Suppose we have two tables: `cars` and `trees`. The `cars` table has columns `id`, `color`, and `model`, while the `trees` table has columns `id`, `color`, and `species`.
+Suppose we have two tables, `Employees` and `Departments`, and we want to perform an OUTER JOIN to find all employees and their respective departments.
 
-| id | color | model |
-|----|-------|-------|
-| 1  | red   | Toyota|
-| 2  | blue  | Honda |
-| 3  | green | Ford  |
+`Employees` table:
 
-| id | color | species |
-|----|-------|---------|
-| 1  | red   | Oak     |
-| 2  | blue  | Pine    |
-| 3  | yellow| Maple   |
+| EmployeeID (PK) | Name | DepartmentID (FK) |
+| --- | --- | --- |
+| 1 | John Smith | 1 |
+| 2 | Jane Doe | 2 |
+| 3 | Bob Brown | NULL |
 
-We want to perform an OUTER JOIN on these two tables based on the `color` column.
+`Departments` table:
 
-Here are the steps:
+| DepartmentID (PK) | DepartmentName |
+| --- | --- |
+| 1 | Sales |
+| 2 | Marketing |
+| 3 | IT |
 
-1. Identify the common column: The common column between the two tables is `color`.
-2. Choose the join type: We want to perform an OUTER JOIN, which means we want to include all records from both tables, with NULL values in the columns where there are no matches.
-3. Perform the join:
+**Step-by-Step Walkthrough:**
 
-| id | color | model | id | species |
-|----|-------|-------|----|---------|
-| 1  | red   | Toyota| 1  | Oak     |
-| 2  | blue  | Honda | 2  | Pine    |
-| 3  | green | Ford  | NULL| NULL    |
-| NULL| red   | NULL  | 1  | Oak     |
-| NULL| blue  | NULL  | 2  | Pine    |
-| NULL| yellow| NULL  | 3  | Maple   |
+1. **Identify the Tables and Columns**: Identify the tables `Employees` and `Departments`, and the columns to be used in the OUTER JOIN: `DepartmentID` in both tables.
 
-4. The result set includes all records from both tables, with NULL values in the columns where there are no matches.
+2. **Perform OUTER JOIN**: Perform a LEFT OUTER JOIN on `Employees` and `Departments` based on `DepartmentID`.
+
+3. **Construct the Temporary Result Set**: Create a temporary result set that includes all records from `Employees` and matching records from `Departments`. If there is no match, the result set will contain NULL values for the `Departments` columns.
+
+4. **Result Set**:
+    | EmployeeID | Name | DepartmentID | DepartmentID | DepartmentName |
+    | --- | --- | --- | --- | --- |
+    | 1 | John Smith | 1 | 1 | Sales |
+    | 2 | Jane Doe | 2 | 2 | Marketing |
+    | 3 | Bob Brown | NULL | NULL | NULL |
+
+5. **Interpret the Results**: The result set shows all employees, their department IDs, and the department names if available. If an employee does not have a department assigned (like Bob Brown), the department columns will be NULL.
 
 ---
 
@@ -110,26 +110,26 @@ Here are the steps:
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "An OUTER JOIN returns only the rows that have matches in both tables.",
+    "question": "An OUTER JOIN returns only the rows that have matching values in both tables.",
     "answer": "False",
-    "explanation": "An OUTER JOIN returns all rows from both tables, with NULL values in the columns where there are no matches."
+    "explanation": "An OUTER JOIN returns all rows from one or both tables, with NULL in the columns where there are no matches."
   },
   {
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Suppose we have two tables: `orders` and `customers`. The `orders` table has columns `id`, `customer_id`, and `order_date`, while the `customers` table has columns `id`, `name`, and `email`. We want to perform an OUTER JOIN on these two tables based on the `customer_id` column. If there are 10 rows in the `orders` table and 5 rows in the `customers` table, how many rows will be in the result set?",
-    "answer": "At least 10 rows",
-    "explanation": "The result set will include all rows from the `orders` table, with NULL values in the columns where there are no matches in the `customers` table. Since there are 10 rows in the `orders` table, the result set will have at least 10 rows."
+    "question": "Suppose you have two tables, `Products` and `Orders`, and you want to find all products and their corresponding orders. If a product does not have an order, it should still be included in the results. What type of join would you use?",
+    "answer": "LEFT OUTER JOIN",
+    "explanation": "A LEFT OUTER JOIN would be used to include all products and their orders if available."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following SQL query: SELECT * FROM orders OUTER JOIN customers ON orders.customer_id = customers.id",
-    "content": "SELECT * FROM orders OUTER JOIN customers ON orders.customer_id = customers.id",
-    "answer": "The bug is that the type of OUTER JOIN is not specified. It should be LEFT OUTER JOIN or RIGHT OUTER JOIN.",
-    "explanation": "The SQL query is missing the type of OUTER JOIN. It should specify whether it is a LEFT OUTER JOIN or RIGHT OUTER JOIN."
+    "question": "Find the bug in the SQL query for performing an OUTER UNION operation.",
+    "content": "SELECT * FROM table1 UNION SELECT * FROM table2",
+    "answer": "The bug is that the UNION operation by default eliminates duplicate rows. To allow duplicates, use UNION ALL.",
+    "explanation": "The given SQL query uses UNION, which removes duplicate rows. For an OUTER UNION that preserves duplicates, UNION ALL should be used."
   }
 ]
 ```

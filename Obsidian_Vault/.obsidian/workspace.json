@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "3-Database/06 - Study Planner/7_Relational_Algebra_And_Calculus_Hub.md",
+                "file": "2-Academic/2024/25/Discrete_Mathematics/2_Recurrence_Relations/Order_Of_Recurrence_Relation.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "7_Relational_Algebra_And_Calculus_Hub"
+              "title": "Order_Of_Recurrence_Relation"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "3-Database/06 - Study Planner/7_Relational_Algebra_And_Calculus_Hub.md",
+                "file": "2-Academic/2024/25/Discrete_Mathematics/2_Recurrence_Relations/Order_Of_Recurrence_Relation.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for 7_Relational_Algebra_And_Calculus_Hub"
+              "title": "Backlinks for Order_Of_Recurrence_Relation"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "3-Database/06 - Study Planner/7_Relational_Algebra_And_Calculus_Hub.md",
+                "file": "2-Academic/2024/25/Discrete_Mathematics/2_Recurrence_Relations/Order_Of_Recurrence_Relation.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from 7_Relational_Algebra_And_Calculus_Hub"
+              "title": "Outgoing links from Order_Of_Recurrence_Relation"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "3-Database/06 - Study Planner/7_Relational_Algebra_And_Calculus_Hub.md",
+                "file": "2-Academic/2024/25/Discrete_Mathematics/2_Recurrence_Relations/Order_Of_Recurrence_Relation.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of 7_Relational_Algebra_And_Calculus_Hub"
+              "title": "Outline of Order_Of_Recurrence_Relation"
             }
           }
         ]
@@ -185,41 +185,41 @@
   },
   "active": "e4e52099906a74b0",
   "lastOpenFiles": [
-    "3-Database/06 - Study Planner/New Hub.md",
-    "3-Database/06 - Study Planner/7_Relational_Algebra_and_Calculus_Hub.md",
-    "3-Database/06 - Study Planner/5_Modular_Programming_Hub.md",
-    "3-Database/06 - Study Planner/4_Promoting_Inclusive_Culture_Hub.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Workplace_Accommodations.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Universal_Design.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Representation.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Recruitment_And_Advancement.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Receptivity.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Modern_Curriculum_Skills.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Indigenous_Ways_Of_Learning.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Indigenous_Inclusive_Values.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Inclusive_Values.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Inclusive_Leadership.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Inclusive_Culture_Core_Values.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Frameworks_Of_Inclusive_Values.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Dimensions_Of_Inclusive_Culture.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Fairness.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Definition_Of_Inclusive_Culture.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture/Building_Inclusive_Community.md",
-    "2-Academic/Autumn 2025/Discrete_Mathematics/2_Recurrence_Relations/Unique_Solution.md",
-    "2-Academic/Autumn 2025/Discrete_Mathematics/2_Recurrence_Relations/Sequence_Notation.md",
-    "2-Academic/Autumn 2025/Discrete_Mathematics/2_Recurrence_Relations/Sequence_Definition.md",
-    "2-Academic/Autumn 2025/Discrete_Mathematics/2_Recurrence_Relations/Second_Order_Linear_Homogeneous_Recurrence_Relation.md",
-    "2-Academic/Autumn 2025/Discrete_Mathematics/2_Recurrence_Relations/Recursive_Definition.md",
-    "2-Academic/Autumn 2025/Discrete_Mathematics/2_Recurrence_Relations/Recurrence_Relation.md",
-    "2-Academic/Autumn 2025/Inclusiveness/4_Promoting_Inclusive_Culture",
-    "2-Academic/Autumn 2025/Discrete_Mathematics/2_Recurrence_Relations",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus",
+    "3-Database/07 - Courses/Web Dev.md",
+    "5-Pdf Store/note generated/Chapter 5.pdf",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Call.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Return_Type.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Definition.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Prototypes.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Declaration.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Functions_In_C++.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Modules.md",
+    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Modular_Programming.md",
     "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming",
-    "2-Academic/Autumn 2025/Inclusiveness",
-    "2-Academic/Autumn 2025/Discrete_Mathematics",
-    "2-Academic/Autumn 2025/Database_Systems",
     "2-Academic/Autumn 2025/Computer_Programming",
+    "3-Database/06 - Study Planner/5_Modular_Programming_Hub.md",
+    "5-Pdf Store/Chapter 5.pdf",
+    "5-Pdf Store/note generated/Chapter_7.pdf",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Query_Tree.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Outer_Union.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Outer_Join.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Grouping.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Aggregate_Functions.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Division.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Natural_Join.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Equijoin.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Theta_Join.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Domain_Relational_Calculus.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Tuple_Relational_Calculus.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Relational_Calculus.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Additional_Relational_Operations.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Division_Operation.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Join_Operation.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus",
+    "2-Academic/Autumn 2025/Database_Systems",
     "2-Academic/Autumn 2025",
-    "5-Pdf Store/oka_queue.db"
+    "5-Pdf Store/Chapter_7.pdf",
+    "5-Pdf Store/note generated/1777792221_2_Recurrence_Relations.pdf"
   ]
 }

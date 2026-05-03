@@ -22,7 +22,7 @@ Imagine you have a huge library with millions of books, and you want to find all
 The SELECT operation works by taking a relation, which is essentially a table in a database, and applying a selection condition to filter the rows. When a `SELECT` statement is executed, the database management system creates a [[Query_Tree]] to parse the query and generate an [[Execution_Plan]]. The [[Execution_Engine]] then uses this plan to iterate through the rows of the relation, applying the selection condition to each row. The condition is typically specified using a `WHERE` clause, which contains a [[Predicate]] that evaluates to `TRUE` or `FALSE` for each row. Rows that evaluate to `TRUE` are included in the result set, while rows that evaluate to `FALSE` are discarded.
 
 # 3. ACID Violations & Scaling Limits
-As the number of rows in the relation increases, the SELECT operation can become a bottleneck, leading to [[Scalability_Issues]]. If the selection condition is not properly indexed, the database may have to perform a [[Full_Table_Scan]], which can be slow and [[Resource_-Intensive]]. Furthermore, if multiple transactions are executing SELECT operations concurrently, there is a risk of [[Dirty_Reads]] or [[Non-Repeatable_Reads]], which can violate [[Acid]] principles. To mitigate these risks, database administrators may use techniques like [[Locking]] or [[Snapshot_Isolation]] to ensure consistency and integrity.
+As the number of rows in the relation increases, the SELECT operation can become a bottleneck, leading to [[Scalability_Issues]]. If the selection condition is not properly indexed, the database may have to perform a [[Full_Table_Scan]], which can be slow and [[Resource_Intensive]]. Furthermore, if multiple transactions are executing SELECT operations concurrently, there is a risk of [[Dirty_Reads]] or [[Non-Repeatable_Reads]], which can violate [[Acid]] principles. To mitigate these risks, database administrators often implement [[Locking_Mechanisms]] or [[Isolation_Levels]] to ensure that transactions are executed consistently and reliably.
 # 4. Entity-Relationship Model
 ```json
 {
@@ -44,9 +44,9 @@ As the number of rows in the relation increases, the SELECT operation can become
   "relationships": []
 }
 ```
-The Entity-Relationship Model represents the concept of a book with attributes title and author. The SELECT operation can be applied to this model to filter books based on a specific author.
+The Entity-Relationship Model represents the concept of a book with attributes title and author. This simple model can be used to illustrate the SELECT operation, where we filter books based on a specific condition, such as author.
 
-## 5. Walkthrough
+# 5. Walkthrough
 Suppose we have a table called `Books` with the following data:
 
 | title | author |
@@ -54,21 +54,22 @@ Suppose we have a table called `Books` with the following data:
 | Harry Potter | J.K. Rowling |
 | The Lord of the Rings | J.R.R. Tolkien |
 | The Hunger Games | Suzanne Collins |
-| The Golden Compass | Philip Pullman |
-| The Handmaid's Tale | Margaret Atwood |
+| Fantastic Beasts | J.K. Rowling |
 
-We want to find all the books written by J.K. Rowling. Here are the steps:
+We want to execute a SELECT operation to find all books written by J.K. Rowling.
 
-1. Define the selection condition: `author = 'J.K. Rowling'`.
-2. Apply the selection condition to each row in the `Books` table.
-3. Evaluate the condition for each row:
-	* Row 1: `author = 'J.K. Rowling'` evaluates to `TRUE`.
-	* Row 2: `author = 'J.R.R. Tolkien'` evaluates to `FALSE`.
-	* Row 3: `author = 'Suzanne Collins'` evaluates to `FALSE`.
-	* Row 4: `author = 'Philip Pullman'` evaluates to `FALSE`.
-	* Row 5: `author = 'Margaret Atwood'` evaluates to `FALSE`.
-4. Include rows that evaluate to `TRUE` in the result set.
-5. The result set contains only one row: `title = 'Harry Potter'`, `author = 'J.K. Rowling'`.
+1. The database management system receives the query: `SELECT * FROM Books WHERE author = 'J.K. Rowling'`.
+2. The query is parsed and an execution plan is generated.
+3. The execution engine iterates through the rows of the `Books` table.
+4. For each row, the selection condition `author = 'J.K. Rowling'` is evaluated.
+5. Rows that evaluate to `TRUE` are included in the result set.
+
+Result set:
+
+| title | author |
+| --- | --- |
+| Harry Potter | J.K. Rowling |
+| Fantastic Beasts | J.K. Rowling |
 
 ---
 
@@ -80,26 +81,26 @@ We want to find all the books written by J.K. Rowling. Here are the steps:
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "The SELECT operation is used to filter rows in a table based on a specific condition.",
-    "answer": "True",
-    "explanation": "The SELECT operation is used to filter rows in a table based on a specific condition."
+    "question": "The SELECT operation is used to insert new data into a table.",
+    "answer": "False",
+    "explanation": "The SELECT operation is used to retrieve data from a table, not insert new data."
   },
   {
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Suppose we have a table called `Employees` with columns `name`, `department`, and `salary`. We want to find all employees in the 'Sales' department with a salary greater than $50,000. Write a SELECT statement to achieve this.",
-    "answer": "SELECT * FROM Employees WHERE department = 'Sales' AND salary > 50000",
-    "explanation": "The SELECT statement uses the WHERE clause to filter employees in the 'Sales' department with a salary greater than $50,000."
+    "question": "Suppose we have a table called `Employees` with columns `name`, `age`, and `department`. We want to find all employees who are older than 30 and work in the sales department. Write a SELECT statement to achieve this.",
+    "answer": "SELECT * FROM Employees WHERE age > 30 AND department = 'sales'",
+    "explanation": "This SELECT statement uses a combination of conditions to filter the employees based on age and department."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following SELECT statement: SELECT * FROM Customers WHERE country='USA' OR country=NULL",
+    "question": "Find the bug in the following SELECT statement: `SELECT * FROM Customers WHERE country='USA' OR country=NULL`",
     "content": "SELECT * FROM Customers WHERE country='USA' OR country=NULL",
-    "answer": "The bug is that the condition 'country=NULL' will always evaluate to FALSE, because NULL is not equal to anything, including NULL. The correct condition should be 'country IS NULL' or 'country=''USA'' AND country!='Canada''",
-    "explanation": "The bug is due to the incorrect use of the NULL value in the condition."
+    "answer": "The bug is that the condition `country=NULL` will always evaluate to `NULL`, not `TRUE` or `FALSE`. To fix this, use `IS NULL` or `IS NOT NULL` operator.",
+    "explanation": "The correct SELECT statement should be: `SELECT * FROM Customers WHERE country='USA' OR country IS NULL`"
   }
 ]
 ```

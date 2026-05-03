@@ -15,78 +15,55 @@ prerequisites:
 ---
 
 # 1. Mental Model
-Imagine you have a list of students and a list of classes they are enrolled in. The division operation helps you find students who are enrolled in all the classes that another specific student is enrolled in. For example, if student A is enrolled in classes X and Y, the division operation can find students who are also enrolled in both classes X and Y.
+Imagine you have 12 cookies and you want to put them into boxes that hold 4 cookies each. The division operation helps you figure out how many boxes you can fill. It's like repeatedly subtracting 4 cookies until you run out, and counting how many times you can do that.
 
 # 2. Schema & Query Mechanics
-The division operation is typically denoted as `R ÷ S`, where R and S are relations. Mechanically, it works by [[Tuple_Variables]] iterating over each tuple in R and checking if the [[Cartesian_Product]] of that tuple with S results in a subset of R. The [[Projection]] of R onto the attributes not common with S is then returned. In SQL, this can be achieved using `SELECT DISTINCT` with a subquery that checks for the presence of tuples in R that match all tuples in S. For instance, `SELECT DISTINCT student_id FROM enrollments e1 WHERE NOT EXISTS (SELECT class_id FROM classes WHERE class_id NOT IN (SELECT class_id FROM enrollments e2 WHERE e2.student_id = e1.student_id))`.
+The division operation in a database involves using the `/` or `DIV` operator to split a dividend by a divisor, producing a quotient. Mechanically, this operation relies on the [[Arithmetic_Unit]] within the CPU to perform the calculation. When executed, the division operation checks for [[Division_By_Zero]] errors and handles [[Integer_Overflow]] conditions. The query optimizer may also consider [[Operator_Precedence]] when evaluating complex expressions involving division. For example, in a query like `SELECT 12 / 4 AS result`, the database engine performs the division and returns the result.
 
 # 3. ACID Violations & Scaling Limits
-The division operation can lead to [[Isolation_Level]] violations if not properly synchronized, as concurrent modifications to the relations can result in inconsistent results. Additionally, the operation can be computationally expensive for large relations, leading to [[Scalability]] limits. As the size of the relations increases, the [[Join_Operation]] required to compute the division can become a bottleneck. Furthermore, [[Deadlocks]] can occur if multiple transactions are waiting for each other to release locks on the relations involved in the division operation. To mitigate these issues, database systems often employ [[Query_Optimization]] techniques, such as reordering the operations or using [[Indexing]] to speed up the computation.
+When dealing with division operations in a database, boundary conditions such as [[Division_By_Zero]] can lead to errors or unexpected behavior. Additionally, [[Integer_Overflow]] can occur when dividing large numbers, potentially causing data corruption. In distributed systems, scaling limits can be reached when handling a high volume of division operations concurrently, leading to [[Deadlock]] situations. Furthermore, if not properly synchronized, division operations can result in [[Inconsistent_Read]] states, violating ACID principles. To mitigate these risks, databases employ various [[Concurrency_Control]] mechanisms.
 # 4. Entity-Relationship Model
 ```json
 {
-  "students": {
-    "student_id": "int",
-    "name": "varchar(255)"
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Division Operation",
+  "type": "object",
+  "properties": {
+    "dividend": {"type": "integer"},
+    "divisor": {"type": "integer"},
+    "quotient": {"type": "integer"}
   },
-  "classes": {
-    "class_id": "int",
-    "class_name": "varchar(255)"
-  },
-  "enrollments": {
-    "student_id": "int",
-    "class_id": "int",
-    "enrollment_date": "date"
-  }
+  "required": ["dividend", "divisor"],
+  "additionalProperties": {}
 }
 ```
-This JSON schema represents the entities involved in the division operation: students, classes, and enrollments. The enrollments table has foreign keys referencing the students and classes tables.
+This JSON schema represents the division operation with a dividend, divisor, and quotient. The dividend and divisor are required properties, and both are integers.
 
-To read this schema: The schema consists of three entities: students, classes, and enrollments. Each student can have multiple enrollments, and each class can have multiple enrollments. The enrollments entity has a composite key consisting of student_id and class_id.
+To read this schema: The schema defines a simple object with three integer properties: `dividend`, `divisor`, and `quotient`. The `dividend` and `divisor` are required, meaning a valid division operation must provide these two values.
 
 ## 5. Walkthrough
-Suppose we have the following data:
+Suppose we have a simple database table `cookies` with the following structure:
 
-students table:
-
-| student_id | name |
+| cookie_id | quantity |
 | --- | --- |
-| 1 | John |
-| 2 | Jane |
-| 3 | Joe |
+| 1 | 12 |
+| 2 | 8 |
+| 3 | 16 |
 
-classes table:
+We want to divide the quantity of cookies by 4 to determine how many boxes we can fill.
 
-| class_id | class_name |
-| --- | --- |
-| 1 | Math |
-| 2 | Science |
-| 3 | History |
+1. **Identify the dividend and divisor**: For the first row, the dividend is 12 (quantity of cookies) and the divisor is 4 (cookies per box).
+2. **Perform the division**: 12 ÷ 4 = 3, so the quotient is 3.
+3. **Repeat for all rows**: For the second row, 8 ÷ 4 = 2. For the third row, 16 ÷ 4 = 4.
+4. **Store the results**: We can store the results in a new column called `boxes_filled`.
 
-enrollments table:
-
-| student_id | class_id | enrollment_date |
+| cookie_id | quantity | boxes_filled |
 | --- | --- | --- |
-| 1 | 1 | 2022-01-01 |
-| 1 | 2 | 2022-01-02 |
-| 2 | 1 | 2022-01-03 |
-| 2 | 2 | 2022-01-04 |
-| 3 | 1 | 2022-01-05 |
+| 1 | 12 | 3 |
+| 2 | 8 | 2 |
+| 3 | 16 | 4 |
 
-We want to find students who are enrolled in all the classes that student 1 is enrolled in (Math and Science).
-
-1. Find the classes that student 1 is enrolled in: classes 1 and 2.
-2. For each student, check if they are enrolled in both classes 1 and 2.
-3. Student 1 is enrolled in both classes 1 and 2.
-4. Student 2 is also enrolled in both classes 1 and 2.
-5. Student 3 is only enrolled in class 1, not class 2.
-
-The result of the division operation is:
-
-| student_id | name |
-| --- | --- |
-| 1 | John |
-| 2 | Jane |
+5. **Verify the results**: The division operation has successfully determined how many boxes can be filled with the given quantity of cookies.
 
 ---
 
@@ -98,26 +75,26 @@ The result of the division operation is:
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "The division operation in a relational database returns students who are enrolled in all the classes that another specific student is enrolled in.",
-    "answer": "True",
-    "explanation": "The division operation is used to find students who are enrolled in all the classes that another specific student is enrolled in."
+    "question": "The division operation in a database returns a fractional result.",
+    "answer": "False",
+    "explanation": "The division operation in a database typically returns an integer result, truncating any fractional part."
   },
   {
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Suppose we have two students, Alice and Bob. Alice is enrolled in classes A and B, while Bob is enrolled in classes A, B, and C. What is the result of the division operation if we want to find students who are enrolled in all the classes that Alice is enrolled in?",
-    "answer": "Only Bob is not the correct answer; the correct answer is that there are no students enrolled in all classes Alice is enrolled in, or only Bob if he was enrolled in A and B but not C; However in a correct scenario only Bob would not qualify because he is enrolled in an extra class",
-    "explanation": "The division operation returns students who are enrolled in all the classes that Alice is enrolled in, which are classes A and B. Since Bob is enrolled in an extra class C, he does not qualify."
+    "question": "A database query divides a column of integers by a constant value. What happens if the column contains a zero value?",
+    "answer": "A Division_by_Zero error occurs.",
+    "explanation": "When dividing by zero, the database engine raises an error to prevent undefined behavior."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug.",
-    "content": "SELECT DISTINCT student_id FROM enrollments e1 WHERE NOT EXISTS (SELECT class_id FROM classes WHERE class_id NOT IN (SELECT class_id FROM enrollments e2 WHERE e2.student_id = e1.student_id));",
-    "answer": "The subquery logic is incorrect.",
-    "explanation": "The bug is related to incorrect subquery logic."
+    "question": "Find the bug in the following division operation: `SELECT 10 / 0 AS result`",
+    "content": "SELECT 10 / 0 AS result",
+    "answer": "The divisor is zero, causing a Division_by_Zero error. To fix, ensure the divisor is non-zero.",
+    "explanation": "The query attempts to divide by zero, which is undefined. A correct divisor value should be provided."
   }
 ]
 ```

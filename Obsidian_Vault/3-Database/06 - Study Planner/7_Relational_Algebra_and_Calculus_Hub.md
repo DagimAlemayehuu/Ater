@@ -1,9 +1,15 @@
 ---
-Course: "[[Database Systems]]"
-Unit: "[[7]]"
-Status: "[[Not Started]]"
-Confidence: ''
-Study Date: ''
+title: 7_Relational_Algebra_and_Calculus_Hub
+type: Hub
+course: Database Systems
+semester: Autumn 2025
+unit: '7'
+source: "[[Chapter_7.Pdf]]"
+source_pages: []
+status: Not Started
+confidence: null
+study_date: null
+generated: true
 ---
 
 # 7 Relational Algebra and Calculus Hub
@@ -30,17 +36,17 @@ Hub note for Database Systems - 7 Relational Algebra and Calculus Hub
     - [ ] [[Cartesian_Product_Operation]]
     - [ ] [[Binary_Relational_Operations]]
         - [ ] [[Join_Operation]]
-        - [ ] [[Theta_Join]]
-        - [ ] [[Equijoin_Operation]]
-        - [ ] [[Natural_Join_Operation]]
         - [ ] [[Division_Operation]]
     - [ ] [[Additional_Relational_Operations]]
+    - [ ] [[Theta_Join]]
+        - [ ] [[Equijoin]]
+        - [ ] [[Natural_Join]]
+        - [ ] [[Outer_Join]]
+    - [ ] [[Division]]
 - [ ] [[Relational_Calculus]]
     - [ ] [[Tuple_Relational_Calculus]]
     - [ ] [[Domain_Relational_Calculus]]
 - [ ] [[Aggregate_Functions]]
-    - [ ] [[Grouping_With_Aggregation]]
-- [ ] [[Outer_Join_Operation]]
-- [ ] [[Outer_Union_Operation]]
-- [ ] [[Complete_Set_Of_Relational_Operations]]
+    - [ ] [[Grouping]]
+- [ ] [[Outer_Union]]
 - [ ] [[Query_Tree]]

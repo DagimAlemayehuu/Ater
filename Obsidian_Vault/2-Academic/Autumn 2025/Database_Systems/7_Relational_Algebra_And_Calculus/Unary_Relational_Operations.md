@@ -16,78 +16,71 @@ prerequisites:
 ---
 
 # 1. Mental Model
-Imagine you have a big box of different colored pens, and you want to pick out only the red ones or show only the pens with their colors written on them. Unary relational operations work similarly, helping you filter or change how you view data in a database table, one table at a time.
+Imagine you have a big box of different colored pens, and you want to pick out only the red ones or show only the pens with their colors written on them. Unary relational operations work similarly by taking one set of data and applying a single rule to filter or change it, like selecting specific items or showing only certain details.
 
 # 2. Schema & Query Mechanics
-Unary relational operations involve working with a single relation [[Relation_Schema]] at a time. The SELECT operation, denoted as `σ` (sigma), filters tuples based on a [[Predicate]] condition, producing a new relation with the same [[Attribute_Set]] as the original. For example, `σ age > 18 (Employees)` selects only the employees older than 18. The PROJECT operation, denoted as `π` (pi), returns a relation with a subset of the attributes, eliminating duplicates through [[Tuple_Visibility]]. Lastly, the RENAME operation, often symbolized as `ρ` (rho), changes the names of attributes in the relation, useful for clarity or when combining operations.
+Unary relational operations involve applying a single operation to a relation. The SELECT operation, denoted as `σ`, works by applying a [[Predicate]] to filter tuples from a relation. For example, `σ age > 18 (Customers)` selects only the customers older than 18. The PROJECT operation, denoted as `π`, works by returning a subset of the relation's attributes. For instance, `π name, email (Customers)` returns only the name and email of each customer. The RENAME operation, denoted as `ρ`, changes the name of a relation or its attributes. Mechanically, these operations are executed using [[Iterator_Interface]]s and [[Tuple_Streams]], which allow for efficient processing of large relations.
 
 # 3. ACID Violations & Scaling Limits
-Unary operations like SELECT, PROJECT, and RENAME do not inherently violate [[Acid_Properties]] since they do not involve multiple transactions or alter data integrity directly. However, when these operations are part of complex queries or transactions, ensuring [[Isolation_Level]]s can prevent [[Dirty_Reads]] or [[Lost_Update]]s. Scaling limits arise when dealing with very large relations, as operations like PROJECT may require significant [[Storage_Engine]] resources to eliminate duplicates efficiently. Moreover, frequent or complex RENAME operations can lead to confusion if not managed within a coherent [[Database_Schema]] evolution strategy.
+Unary relational operations can lead to [[Dirty_Reads]] if not properly synchronized, especially when dealing with concurrent transactions. For instance, a SELECT operation may see an inconsistent view of the data if a transaction modifying the data is not properly [[Locked]]. Additionally, large-scale projections can lead to [[Data_Skew]], causing some nodes in a distributed database to handle much larger loads than others. As the size of the relation increases, the time complexity of these operations can become a bottleneck, especially for operations like SELECT, which may require a full [[Index_Scan]]. Therefore, efficient indexing and partitioning strategies are crucial to scaling unary relational operations.
 # 4. Entity-Relationship Model
-```json
-{
-  "entities": [
-    {
-      "name": "Relation",
-      "attributes": [
-        {
-          "name": "Attribute_Set",
-          "type": "string"
-        },
-        {
-          "name": "Tuple_Visibility",
-          "type": "boolean"
-        }
-      ]
-    },
-    {
-      "name": "Unary_Operation",
-      "attributes": [
-        {
-          "name": "Operation_Type",
-          "type": "string"
-        },
-        {
-          "name": "Predicate",
-          "type": "string"
-        }
-      ]
-    }
-  ],
-  "relationships": [
-    {
-      "name": "applies",
-      "entities": ["Unary_Operation", "Relation"],
-      "cardinality": "many-to-one"
-    }
-  ]
-}
+```markdown
 ```
-To read this Entity-Relationship diagram, focus on the entities `Relation` and `Unary_Operation`, and the relationship `applies`. The `Relation` entity has attributes like `Attribute_Set` and `Tuple_Visibility`, while `Unary_Operation` has attributes like `Operation_Type` and `Predicate`. The `applies` relationship connects a unary operation to the relation it is applied to.
+
+### Entity-Relationship Diagram for Unary Relational Operations
+
+```mermaid
+erDiagram
+    RELATION ||--o{ UNARY_OPERATION : applies
+    UNARY_OPERATION ||--|{ SELECT : is_a
+    UNARY_OPERATION ||--|{ PROJECT : is_a
+    UNARY_OPERATION ||--|{ RENAME : is_a
+    SELECT ||--o{ PREDICATE : uses
+    RELATION ||--o{ ATTRIBUTE : has
+    PROJECT ||--o{ ATTRIBUTE : returns
+    RENAME ||--o{ RELATION : renames
+```
+
+To read this diagram, start with the `RELATION` entity, which represents a set of data. The `UNARY_OPERATION` entity represents a single operation applied to this relation, which can be a `SELECT`, `PROJECT`, or `RENAME` operation. Each of these operations has its own specific characteristics, such as `SELECT` using a `PREDICATE` to filter tuples, `PROJECT` returning a subset of `ATTRIBUTE`s, and `RENAME` changing the name of a `RELATION` or its `ATTRIBUTE`s.
+```
+
+```
 
 ## 5. Walkthrough
-Consider a database table `Employees` with attributes `Employee_ID`, `Name`, `Age`, and `Department`. We want to apply unary relational operations to this table.
+Here's a step-by-step walkthrough of applying unary relational operations:
 
-1. **SELECT Operation**: First, we apply a SELECT operation to filter employees older than 30. The operation is denoted as `σ Age > 30 (Employees)`. The resulting relation will have the same attributes as `Employees` but only include tuples where `Age` is greater than 30.
+Suppose we have a relation `Customers` with attributes `name`, `age`, and `email`.
 
-| Employee_ID | Name | Age | Department |
-|-------------|------|-----|------------|
-| 101         | John | 35  | Sales      |
-| 102         | Jane | 32  | Marketing  |
+| name  | age | email          |
+|-------|-----|----------------|
+| John  | 25  | john@example.com|
+| Alice | 30  | alice@example.com|
+| Bob   | 20  | bob@example.com  |
 
-2. **PROJECT Operation**: Next, we apply a PROJECT operation to only include `Name` and `Department` attributes. The operation is denoted as `π Name, Department (σ Age > 30 (Employees))`. This will eliminate any duplicate combinations of `Name` and `Department`.
+1. **SELECT Operation**: We want to select only the customers older than 25. We apply the `SELECT` operation with the predicate `age > 25`.
+   - `σ age > 25 (Customers)`
+   - Result:
+     | name  | age | email          |
+     |-------|-----|----------------|
+     | Alice | 30  | alice@example.com|
 
-| Name | Department |
-|------|------------|
-| John | Sales      |
-| Jane | Marketing  |
+2. **PROJECT Operation**: We want to show only the names and emails of all customers.
+   - `π name, email (Customers)`
+   - Result:
+     | name  | email          |
+     |-------|----------------|
+     | John  | john@example.com|
+     | Alice | alice@example.com|
+     | Bob   | bob@example.com  |
 
-3. **RENAME Operation**: Finally, we apply a RENAME operation to change the attribute names to `Employee_Name` and `Department_Name`. The operation is denoted as `ρ Employee_Name=Name, Department_Name=Department (π Name, Department (σ Age > 30 (Employees)))`.
-
-| Employee_Name | Department_Name |
-|---------------|-----------------|
-| John          | Sales           |
-| Jane          | Marketing       |
+3. **RENAME Operation**: We want to rename the `name` attribute to `customer_name`.
+   - `ρ Customers (name -> customer_name) (Customers)`
+   - Result:
+     | customer_name | age | email          |
+     |---------------|-----|----------------|
+     | John          | 25  | john@example.com|
+     | Alice         | 30  | alice@example.com|
+     | Bob           | 20  | bob@example.com  |
 
 ---
 
@@ -99,26 +92,26 @@ Consider a database table `Employees` with attributes `Employee_ID`, `Name`, `Ag
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "Unary relational operations involve working with multiple relations at a time.",
+    "question": "The SELECT operation in relational algebra is used to return a subset of the relation's attributes.",
     "answer": "False",
-    "explanation": "Unary relational operations involve working with a single relation at a time."
+    "explanation": "The SELECT operation is used to filter tuples from a relation based on a predicate, not to return a subset of attributes."
   },
   {
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Given a table `Students` with attributes `Student_ID`, `Name`, and `Grade`, apply a SELECT operation to find students with a grade greater than 85, then apply a PROJECT operation to only include `Name` and `Grade`.",
-    "answer": "The resulting relation will have attributes `Name` and `Grade`, and only include tuples where `Grade` is greater than 85.",
-    "explanation": "This requires applying SELECT and PROJECT operations in sequence."
+    "question": "Given a relation `Employees` with attributes `id`, `name`, and `department`, apply a PROJECT operation to show only the `name` and `department` of employees.",
+    "answer": "π name, department (Employees)",
+    "explanation": "The PROJECT operation is used to return a subset of the relation's attributes."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following query: `π Name, Department (σ Age > 30 (Employees))` where the intention is to find employees older than 30 with names and departments, but the original table has a typo in age values.",
-    "content": "SELECT * FROM Employees WHERE Age > 30; // Age values are actually stored in 'Years_Old'",
-    "answer": "The bug is that the query is using 'Age' instead of 'Years_Old'. The correct query should be `SELECT Name, Department FROM Employees WHERE Years_Old > 30;`",
-    "explanation": "The bug is in the attribute name used in the SELECT and WHERE clauses."
+    "question": "Find the bug in the following relational algebra expression: `σ age > 18 AND age < 18 (Customers)`",
+    "content": "σ age > 18 AND age < 18 (Customers)",
+    "answer": "The condition 'age > 18 AND age < 18' will always be false because a value cannot be both greater than 18 and less than 18 at the same time. The correct condition should be 'age > 18' or another valid predicate.",
+    "explanation": "The given condition is a contradiction and will result in an empty set."
   }
 ]
 ```

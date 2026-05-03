@@ -283,11 +283,13 @@ class OkaService:
         return Path(self.secrets.vault_path) / "3-Database" / "06 - Study Planner"
 
     def list_available_options(self) -> Dict[str, List[str]]:
-        """Returns all available options for Course, Semester, and Units from the vault."""
+        """Returns all available options for Course, Semester, Year, Hubs, and Units from the vault."""
         base_path = Path(self.secrets.vault_path) / "3-Database"
         
         courses = [f.stem for f in (base_path / "07 - Courses").glob("*.md") if not f.name.startswith("_")]
         semesters = [f.stem for f in (base_path / "08 - Semesters").glob("*.md") if not f.name.startswith("_")]
+        years = [f.stem for f in (base_path / "09 - Years").glob("*.md") if not f.name.startswith("_")]
+        hubs = [f.stem for f in (base_path / "06 - Study Planner").glob("*.md") if not f.name.startswith("_")]
         units = [f.stem for f in (base_path / "06 - Study Planner" / "_Units").glob("*.md")]
         
         # Sort units numerically if possible
@@ -297,6 +299,8 @@ class OkaService:
         return {
             "courses": courses,
             "semesters": semesters,
+            "years": years,
+            "hubs": hubs,
             "units": units
         }
 
@@ -960,6 +964,7 @@ class OkaService:
                 unit_num = dc.get("unit", "").strip()
                 course = dc.get("course", "").strip()
                 semester = dc.get("semester", "").strip()
+                year = dc.get("year", "").strip()
                 
                 if hub_title and hub_title.lower() not in ("unknown", ""):
                     # Build the canonical hub filename
@@ -980,6 +985,7 @@ class OkaService:
                             f"type: Hub\n"
                             f"course: {course}\n"
                             f"semester: {semester}\n"
+                            f"year: {year}\n"
                             f"unit: {unit_num}\n"
                             f"source: \n"
                             f"source_pages: []\n"
@@ -987,6 +993,7 @@ class OkaService:
                             f"confidence: null\n"
                             f"study_date: null\n"
                             f"generated: false\n"
+
                             f"---\n\n"
                             f"# {hub_title}\n\n"
                             f"> Auto-created stub by OKA. Full content will be generated after plan confirmation.\n"
@@ -1022,10 +1029,10 @@ class OkaService:
             }
 
     async def _detect_metadata_with_ai(self, text: str) -> Dict[str, str]:
-        """Uses AI to extract course, semester, unit, and hub_title from text.
+        """Uses AI to extract course, semester, year, unit, and hub_title from text.
         
-        Critically important: course and semester must match EXACT stems from the vault
-        database files (07 - Courses / 08 - Semesters). The AI is shown these exact names
+        Critically important: year, course and semester must match EXACT stems from the vault
+        database files (07 - Courses / 08 - Semesters / 09 - Years). The AI is shown these exact names
         and instructed to pick the CLOSEST match. If nothing matches, it invents a new value.
         """
         options = self.list_available_options()
@@ -1033,21 +1040,28 @@ class OkaService:
         # Build numbered option lists so AI can pick by index or name
         course_list = "\n".join(f"  {i+1}. \"{c}\"" for i, c in enumerate(options['courses']))
         semester_list = "\n".join(f"  {i+1}. \"{s}\"" for i, s in enumerate(options['semesters']))
+        year_list = "\n".join(f"  {i+1}. \"{y}\"" for i, y in enumerate(options.get('years', [])))
+        hub_list = "\n".join(f"  {i+1}. \"{h}\"" for i, h in enumerate(options.get('hubs', [])))
         
         prompt = (
-            "You are a Senior Academic Librarian. Your task is to analyze the following document excerpt and categorize it into the most appropriate course and unit hub.\n\n"
-            "Extract these five fields and return ONLY a JSON object:\n"
+            "You are a Senior Academic Librarian. Your task is to analyze the following document excerpt and categorize it into the most appropriate academic hierarchy.\n\n"
+            "Extract these fields and return ONLY a JSON object:\n"
             "{\n"
+            "  \"year\": \"<exact year name from the list below, or closest match>\",\n"
             "  \"course\": \"<exact course name from the list below, or closest match>\",\n"
             "  \"semester\": \"<exact semester name from the list below, or closest match>\",\n"
             "  \"unit\": \"<chapter or unit NUMBER only, e.g. '5'>\",\n"
-            "  \"hub_title\": \"<concise subject title for this chapter, NO unit numbers, NO 'Hub'>\",\n"
+            "  \"hub_title\": \"<concise subject title for this chapter, NO unit numbers, NO 'Hub'. Check AVAILABLE HUBS to match if it already exists>\",\n"
             "  \"primary_language\": \"<primary technical language, e.g. 'C++', 'Python', 'SQL', or 'General'>\"\n"
             "}\n\n"
+            "AVAILABLE YEARS:\n"
+            f"{year_list}\n\n"
             "AVAILABLE COURSES (pick the CLOSEST match based on subject matter):\n"
             f"{course_list}\n\n"
             "AVAILABLE SEMESTERS (pick the most recent/likely based on context):\n"
             f"{semester_list}\n\n"
+            "AVAILABLE HUBS (use as inspiration or exact match for 'hub_title' if the topic perfectly aligns):\n"
+            f"{hub_list}\n\n"
             "MATCHING RULES:\n"
             "- Use the EXACT string from the list above if it matches the subject matter.\n"
             "- CATEGORY: [CS/TECH] \u2192 If covers C++, arrays, OOP, memory, SQL, databases \u2192 likely 'Computer Programming' or 'Database Systems'.\n"
@@ -1071,6 +1085,7 @@ class OkaService:
             
             data = json.loads(clean_content)
             
+            detected_year = str(data.get("year", "")).strip()
             detected_course = str(data.get("course", "")).strip()
             detected_semester = str(data.get("semester", "")).strip()
             
@@ -1092,18 +1107,21 @@ class OkaService:
                 # Return original if no match (it's a new value)
                 return detected
             
+            final_year = _snap_to_existing(detected_year, options.get('years', []))
             final_course = _snap_to_existing(detected_course, options['courses'])
             final_semester = _snap_to_existing(detected_semester, options['semesters'])
             
-            print(f"[OKA Service] AI detected: course='{final_course}', semester='{final_semester}', unit='{data.get('unit')}', hub='{data.get('hub_title')}', language='{data.get('primary_language', 'General')}'")
+            print(f"[OKA Service] AI detected: year='{final_year}', course='{final_course}', semester='{final_semester}', unit='{data.get('unit')}', hub='{data.get('hub_title')}', language='{data.get('primary_language', 'General')}'")
             
             return {
+                "year": final_year,
                 "course": final_course,
                 "semester": final_semester,
-                "unit": str(data.get("unit", "")),
-                "hub_title": str(data.get("hub_title", "")),
-                "primary_language": str(data.get("primary_language", "General"))
+                "unit": data.get("unit"),
+                "hub_title": data.get("hub_title"),
+                "primary_language": data.get("primary_language", "General")
             }
+
         except Exception as e:
             print(f"[OKA Service] AI Metadata detection failed: {e}")
             return {"course": "", "semester": "", "unit": "", "hub_title": "", "primary_language": "General"}

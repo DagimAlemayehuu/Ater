@@ -39,16 +39,16 @@ def add_numbers(a, b):
     result = a + b
     return result
 ```
-To read this code block: This is a Python function named `add_numbers` that takes two parameters, `a` and `b`, adds them together, and returns the result. The function includes a docstring that provides a description of what the function does, its parameters, and its return value.
+To read this code block: This is a Python function named `add_numbers` that takes two parameters, `a` and `b`, adds them together, and returns the result. The function includes a docstring that provides a description, explains the parameters, and describes the return value.
 
 ## 5. Walkthrough
 Here's a step-by-step walkthrough of how the `add_numbers` function works:
 
 1. The function is called with two arguments, `5` and `10`, like this: `add_numbers(5, 10)`.
-2. A new stack frame is created for the function, and the parameters `a` and `b` are assigned the values `5` and `10`, respectively.
-3. The function body executes, adding `a` and `b` together and storing the result in the `result` variable: `result = 5 + 10 = 15`.
-4. The function reaches the return statement and returns the value of `result`, which is `15`.
-5. The stack frame is destroyed, and the returned value is passed back to the caller.
+2. A new stack frame is created for the function call, and the parameters `a` and `b` are assigned the values `5` and `10`, respectively.
+3. The function body executes, adding `a` and `b` together and storing the result in the `result` variable: `result = 5 + 10`.
+4. The `result` variable now holds the value `15`.
+5. The function reaches the return statement and returns the value of `result`, which is `15`, to the caller.
 
 ---
 
@@ -60,13 +60,12 @@ Here's a step-by-step walkthrough of how the `add_numbers` function works:
     "id": "q1",
     "type": "fill_in",
     "difficulty": "L1",
-    "question": "A function in programming is similar to a [[Blank1]] where you can change the [[Blank2]] to get different outputs.",
-    "textWithBlanks": "A function in programming is similar to a [[Blank1]] where you can change the [[Blank2]] to get different outputs.",
+    "question": "A function in programming is similar to a [[Blank1]] where you can change the inputs to get different outputs.",
+    "textWithBlanks": "A function in programming is similar to a [[Blank1]] where you can change the inputs to get different outputs.",
     "answer": [
-      "recipe",
-      "ingredients"
+      "recipe"
     ],
-    "explanation": "This question tests the understanding of the mental model of a function."
+    "explanation": "This is a recall of the mental model of a function."
   },
   {
     "id": "q2",
@@ -74,16 +73,16 @@ Here's a step-by-step walkthrough of how the `add_numbers` function works:
     "difficulty": "L2",
     "question": "When a function is called, it creates a new stack frame on the call stack.",
     "answer": "True",
-    "explanation": "This question tests the understanding of the execution logic and data flow of a function."
+    "explanation": "This tests understanding of execution logic and data flow."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following code:",
-    "content": "def add_numbers(a, b):\n  result = a + c\n  return result",
-    "answer": "The bug is that the variable 'c' is not defined. It should be 'b' instead.",
-    "explanation": "This question tests the ability to debug a function and identify the cause of an error."
+    "question": "Find the bug in the function.",
+    "content": "def add_numbers(a, b):\n  result = a * b\n  return result",
+    "answer": "The bug is that the function is supposed to add two numbers, but it is currently multiplying them. The correct line should be: result = a + b",
+    "explanation": "This tests debugging skills in a realistic scenario."
   }
 ]
 ```

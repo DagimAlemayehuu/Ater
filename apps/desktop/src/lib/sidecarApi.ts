@@ -225,24 +225,24 @@ export const sidecarApi = {
     },
     
     updateVaultRow: (dbName: string, fileName: string, properties: any) =>
-        request<{ success: boolean; id: string; properties: any }>(`/api/vault/databases/${dbName}/${fileName}`, {
+        request<{ success: boolean; id: string; properties: any }>(`/api/vault/databases/${encodeURIComponent(dbName)}/${encodeURIComponent(fileName)}`, {
             method: 'PATCH',
             body: JSON.stringify({ properties })
         }),
         
     createVaultRow: (dbName: string, title: string, properties: any) =>
-        request<{ success: boolean; id: string; title: string; properties: any }>(`/api/vault/databases/${dbName}`, {
+        request<{ success: boolean; id: string; title: string; properties: any }>(`/api/vault/databases/${encodeURIComponent(dbName)}`, {
             method: 'POST',
             body: JSON.stringify({ title, properties })
         }),
         
     deleteVaultRow: (dbName: string, fileName: string) =>
-        request<{ success: boolean }>(`/api/vault/databases/${dbName}/${fileName}`, {
+        request<{ success: boolean }>(`/api/vault/databases/${encodeURIComponent(dbName)}/${encodeURIComponent(fileName)}`, {
             method: 'DELETE'
         }),
 
     renameVaultFile: (dbName: string, oldFileName: string, newFileName: string) =>
-        request<{ success: boolean }>(`/api/vault/databases/${dbName}/${oldFileName}/rename`, {
+        request<{ success: boolean }>(`/api/vault/databases/${encodeURIComponent(dbName)}/${encodeURIComponent(oldFileName)}/rename`, {
             method: 'POST',
             body: JSON.stringify({ new_name: newFileName })
         }),

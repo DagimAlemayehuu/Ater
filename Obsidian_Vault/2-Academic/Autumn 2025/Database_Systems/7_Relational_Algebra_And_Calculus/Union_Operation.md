@@ -62,14 +62,14 @@ The UNION operation can lead to [[Acid]] violations if not properly synchronized
   ]
 }
 ```
-To read this Entity-Relationship diagram: The diagram shows two entities, `SELECT Statement` and `UNION Operation`, each with their own attributes. The relationships between these entities indicate that a SELECT statement can be part of multiple UNION operations, and a UNION operation can combine multiple SELECT statements.
+To read this Entity-Relationship (ER) diagram: The diagram describes two entities, `SELECT Statement` and `UNION Operation`, each with a `Result Set` attribute. The relationships between these entities indicate that a `SELECT Statement` can be part of multiple `UNION Operation`s and a `UNION Operation` can combine multiple `SELECT Statement`s.
 
 ## 5. Walkthrough
 Suppose we have two tables, `Employees` and `Contractors`, with the following data:
 
 `Employees` table:
 
-| Employee ID | Name | Department |
+| EmployeeID | Name | Department |
 | --- | --- | --- |
 | 1 | John Smith | Sales |
 | 2 | Jane Doe | Marketing |
@@ -77,68 +77,47 @@ Suppose we have two tables, `Employees` and `Contractors`, with the following da
 
 `Contractors` table:
 
-| Contractor ID | Name | Department |
+| ContractorID | Name | Department |
 | --- | --- | --- |
 | 4 | Alice Johnson | Sales |
 | 5 | Mike Davis | IT |
 | 6 | Emily Taylor | HR |
 
-We want to combine the result sets of two SELECT statements to retrieve the names and departments of all employees and contractors.
+We want to combine the names of all employees and contractors who work in the Sales or IT departments.
 
-1. Execute the first SELECT statement to retrieve the names and departments of all employees:
-
-```sql
-SELECT Name, Department FROM Employees;
-```
-
-Result set:
-
-| Name | Department |
-| --- | --- |
-| John Smith | Sales |
-| Jane Doe | Marketing |
-| Bob Brown | IT |
-
-2. Execute the second SELECT statement to retrieve the names and departments of all contractors:
+1. First, we execute two SELECT statements to retrieve the names of employees and contractors in the Sales and IT departments:
 
 ```sql
-SELECT Name, Department FROM Contractors;
+SELECT Name FROM Employees WHERE Department IN ('Sales', 'IT');
+SELECT Name FROM Contractors WHERE Department IN ('Sales', 'IT');
 ```
 
-Result set:
+2. The result sets of these SELECT statements are:
 
-| Name | Department |
-| --- | --- |
-| Alice Johnson | Sales |
-| Mike Davis | IT |
-| Emily Taylor | HR |
+`Employees` result set:
 
-3. Combine the result sets using the UNION operation:
+| Name |
+| --- |
+| John Smith |
+| Bob Brown |
 
-```sql
-SELECT Name, Department FROM Employees
-UNION
-SELECT Name, Department FROM Contractors;
-```
+`Contractors` result set:
 
-Result set:
+| Name |
+| --- |
+| Alice Johnson |
+| Mike Davis |
 
-| Name | Department |
-| --- | --- |
-| John Smith | Sales |
-| Jane Doe | Marketing |
-| Bob Brown | IT |
-| Alice Johnson | Sales |
-| Mike Davis | IT |
-| Emily Taylor | HR |
+3. The UNION operation combines these result sets into a single result set, eliminating duplicates:
 
-4. Eliminate duplicate rows:
+| Name |
+| --- |
+| John Smith |
+| Bob Brown |
+| Alice Johnson |
+| Mike Davis |
 
-The result set already has no duplicates.
-
-5. Return the final result set:
-
-The final result set is the same as the previous step.
+4. The final result set contains all unique names of employees and contractors who work in the Sales or IT departments.
 
 ---
 
@@ -150,26 +129,26 @@ The final result set is the same as the previous step.
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "The UNION operation can combine SELECT statements with different numbers of columns.",
+    "question": "The UNION operation allows duplicate rows in the result set.",
     "answer": "False",
-    "explanation": "The UNION operation requires that the number and data types of columns must match between the SELECT statements."
+    "explanation": "The UNION operation eliminates duplicate rows by default."
   },
   {
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Suppose we have two tables, `TableA` and `TableB`, with the same structure. We want to retrieve all rows from both tables using the UNION operation. However, `TableA` has 1000 rows and `TableB` has 500 rows, and 200 rows are common to both tables. How many rows will the UNION operation return?",
+    "question": "Suppose we have two tables, `TableA` and `TableB`, with the same structure. We want to combine the rows of these tables into a single result set. However, `TableA` has 1000 rows and `TableB` has 500 rows, and 200 rows are common to both tables. How many rows will the UNION operation return?",
     "answer": "1300",
-    "explanation": "The UNION operation will return 1300 rows because it eliminates duplicate rows."
+    "explanation": "The UNION operation will return 1300 rows (1000 + 500 - 200)."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
     "question": "Find the bug in the following SQL query:",
-    "content": "SELECT * FROM TableA UNION SELECT * FROM TableB",
-    "answer": "The bug is that the query does not specify the columns to select, which can lead to errors if the tables have different structures.",
-    "explanation": "The query should specify the columns to select, like this: SELECT column1, column2 FROM TableA UNION SELECT column1, column2 FROM TableB."
+    "content": "SELECT * FROM TableA UNION SELECT * FROM TableB ORDER BY Column1;",
+    "answer": "The ORDER BY clause should be applied to each SELECT statement separately, or a subquery should be used to order the combined result set.",
+    "explanation": "The ORDER BY clause is applied to the combined result set, not to each individual SELECT statement."
   }
 ]
 ```

@@ -6,8 +6,7 @@ semester: Autumn 2025
 unit: '7'
 hub: "[[7_Relational_Algebra_And_Calculus_Hub]]"
 source: "[[Chapter_7.Pdf]]"
-source_pages:
-- 6
+source_pages: []
 mode: CS-DB
 read: false
 generated: true
@@ -22,7 +21,7 @@ Imagine you have two boxes of toys, one from your friend Emma and one from your 
 The INTERSECTION operation mechanically works by comparing the [[Tuple]] values from two relations, R and S, and returning only the tuples that are common to both. This operation assumes that both relations have the same [[Attribute_Set]], meaning they have the same columns with the same data types. The [[Relational_Algebra]] operation is typically implemented using a [[Hash Join]] or [[Sort-Merge Join]] algorithm, which allows for efficient comparison of tuples. When executing an INTERSECTION operation in SQL, the query optimizer may choose to use `INTERSECT` keyword or rewrite the query using `INNER JOIN` and `GROUP BY` clauses.
 
 # 3. ACID Violations & Scaling Limits
-When dealing with large relations, the INTERSECTION operation can be resource-intensive and may lead to [[Deadlocks]] or [[Livelocks]] if not properly synchronized. Additionally, if the relations are not properly indexed, the operation may incur significant [[I/O Overhead]], leading to performance bottlenecks. As the size of the relations grows, the INTERSECTION operation may also be limited by the available [[Memory_Buffer_Pool]], requiring careful tuning of database parameters to avoid [[Buffer_Pool_Starvation]]. Furthermore, if the relations are constantly being updated, the INTERSECTION operation may be prone to [[Dirty_Reads]] or [[Non-Repeatable_Reads]], requiring careful consideration of [[Transaction_Isolation_Level]]s.
+When dealing with large relations, the INTERSECTION operation can be resource-intensive and may lead to [[Deadlocks]] or [[Livelocks]] if not properly synchronized. Additionally, if the relations are not properly indexed, the operation may incur significant [[I/O Overhead]], leading to performance bottlenecks. As the size of the relations grows, the INTERSECTION operation may also be limited by the available [[Memory_Buffer_Pool]], requiring careful tuning of database parameters to avoid [[Buffer_Pool_Starvation]]. Furthermore, if the relations are constantly being updated, the INTERSECTION operation may return inconsistent results if not properly [[Locking]] the relations during execution.
 # 4. Entity-Relationship Model
 ```json
 {
@@ -67,7 +66,7 @@ When dealing with large relations, the INTERSECTION operation can be resource-in
   "required": ["Relation_R", "Relation_S", "Intersection"]
 }
 ```
-This JSON schema represents two relations, R and S, with their respective attributes and the intersection of these relations. The intersection relation contains only the tuples common to both R and S.
+This JSON schema represents two relations, R and S, with their respective attributes and the intersection result. The schema defines the structure of the data, including the attributes and their data types.
 
 ## 5. Walkthrough
 Suppose we have two relations, `Employees` and `Managers`, with the following data:
@@ -90,11 +89,9 @@ Suppose we have two relations, `Employees` and `Managers`, with the following da
 
 To find the intersection of these two relations, we perform the following steps:
 
-1. Compare the tuples of `Employees` and `Managers` based on their `EmployeeID`, `Name`, and `Department` attributes.
-2. Identify the common tuples: (1, John, Sales) and (3, Joe, IT).
-3. Create a new relation, `Intersection`, containing only these common tuples.
-
-`Intersection`:
+1. Compare the attributes of both relations: Both `Employees` and `Managers` have the same attributes, `EmployeeID`, `Name`, and `Department`.
+2. Identify the common tuples: Compare each tuple in `Employees` with each tuple in `Managers`. The common tuples are those with the same `EmployeeID`, `Name`, and `Department`.
+3. Return the common tuples: The intersection of `Employees` and `Managers` is:
 
 | EmployeeID | Name | Department |
 | --- | --- | --- |
@@ -119,18 +116,18 @@ To find the intersection of these two relations, we perform the following steps:
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Suppose we have two relations, `Students` and `Scholarship_Winners`, with the same attributes (StudentID, Name, GPA). How would you write a query to find the students who are both in the `Students` relation and have won a scholarship (i.e., are in the `Scholarship_Winners` relation)?",
-    "answer": "SELECT * FROM Students INTERSECT SELECT * FROM Scholarship_Winners",
-    "explanation": "The INTERSECT keyword is used to find the intersection of two relations."
+    "question": "Suppose we have two relations, `Orders` and `Shipments`, with the following data: Orders: OrderID, CustomerID, OrderDate; Shipments: OrderID, ShipmentDate. How would you write a query to find the intersection of these two relations?",
+    "answer": "SELECT OrderID FROM Orders INTERSECT SELECT OrderID FROM Shipments",
+    "explanation": "The INTERSECT keyword is used to find the intersection of two relations. In this case, we select the OrderID from both relations and use INTERSECT to find the common OrderIDs."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following query: SELECT * FROM Employees INNER JOIN Managers ON Employees.EmployeeID = Managers.EmployeeID",
-    "content": "SELECT * FROM Employees INNER JOIN Managers ON Employees.EmployeeID = Managers.EmployeeID",
-    "answer": "The bug is that this query returns a Cartesian product of the two relations, not their intersection. To fix this, we need to add additional conditions to the JOIN clause or use the INTERSECT keyword.",
-    "explanation": "The given query performs an INNER JOIN, which returns a Cartesian product, not the intersection of the two relations."
+    "question": "Find the bug in the following query: SELECT * FROM R INTERSECT SELECT * FROM S WHERE R.Attribute1 = S.Attribute1",
+    "content": "SELECT * FROM R INTERSECT SELECT * FROM S WHERE R.Attribute1 = S.Attribute1",
+    "answer": "The bug is that the INTERSECT operation requires both relations to have the same attributes. However, the query adds a condition to the second relation, which may change the result set. To fix this, the condition should be applied before the INTERSECT operation.",
+    "explanation": "The INTERSECT operation requires both relations to have the same attributes. Adding a condition to one of the relations changes the result set and may lead to incorrect results."
   }
 ]
 ```

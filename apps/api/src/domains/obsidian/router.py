@@ -432,6 +432,63 @@ async def create_vault_row(db_name: str, req: CreateRowRequest, secrets: AppSecr
         print(f"Error creating {file_name}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+class RenameRowRequest(BaseModel):
+    new_name: str
+
+@router.post("/vault/databases/{db_name}/{old_file_name}/rename")
+async def rename_vault_row(db_name: str, old_file_name: str, req: RenameRowRequest, secrets: AppSecrets = Depends(get_app_secrets)):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+
+    db_path = Path(secrets.vault_path) / DB_DIR_PREFIX / db_name
+    
+    old_file_path = db_path / f"{old_file_name}.md" if not old_file_name.endswith(".md") else db_path / old_file_name
+    
+    if not old_file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    safe_title = "".join([c for c in req.new_name if c.isalnum() or c in (' ', '-', '_')]).strip()
+    if not safe_title:
+        safe_title = "Untitled"
+        
+    new_file_name = f"{safe_title}.md"
+    new_file_path = db_path / new_file_name
+    
+    counter = 1
+    while new_file_path.exists() and new_file_path != old_file_path:
+        new_file_name = f"{safe_title} ({counter}).md"
+        new_file_path = db_path / new_file_name
+        counter += 1
+
+    try:
+        if old_file_path.exists():
+            import yaml
+            from src.domains.obsidian.router import ObsidianDumper
+            with open(old_file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                
+            if content.startswith("---"):
+                end_idx = content.find("---", 3)
+                if end_idx != -1:
+                    frontmatter_str = content[3:end_idx]
+                    body_str = content[end_idx+3:]
+                    data = yaml.load(frontmatter_str, Loader=yaml.SafeLoader) or {}
+                    if "title" in data or True:  # always set title
+                        data["title"] = req.new_name
+                    import io
+                    buf = io.StringIO()
+                    yaml.dump(data, buf, Dumper=ObsidianDumper, allow_unicode=True, default_flow_style=False, sort_keys=False)
+                    new_frontmatter = buf.getvalue()
+                    with open(old_file_path, "w", encoding="utf-8") as f:
+                        f.write(f"---\n{new_frontmatter}---{body_str}")
+        
+        old_file_path.rename(new_file_path)
+        return {"success": True}
+    except Exception as e:
+        print(f"Error renaming {old_file_name} to {new_file_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/vault/databases/{db_name}/{file_name}")
 async def delete_vault_row(db_name: str, file_name: str, secrets: AppSecrets = Depends(get_app_secrets)):
     if not secrets.vault_path:

@@ -19,10 +19,10 @@ prerequisites:
 Imagine you're ordering food at a restaurant. The waiter tells you what kind of dish they can prepare, like "we have pizza" or "we have salad". In programming, when you call a function, the "return type" is like the type of dish the function promises to give you back, such as a number, a word, or a list of items.
 
 # 2. Execution Logic & Data Flow
-The return type of a function is determined by the type of value it is designed to produce when it completes execution. When a function is called, a [[Stack_Frame]] is created to store its local variables and parameters. The function's execution logic is then carried out, and when it reaches a `return` statement, the specified value is passed back to the caller. The return type is checked against the [[Type_System]] of the programming language to ensure type safety. The function's return value is then [[Type_Coerced]] if necessary to match the declared return type. The return type is also used by the [[Compiler]] to perform static type checking.
+The return type of a function is determined by the type of value it is designed to output when it finishes executing. When a function is called, a [[Stack_Frame]] is created to store its local variables and parameters. The function's execution logic is then carried out, and when it reaches a `return` statement, the specified value is passed back to the caller. The return type is checked against the [[Type_System]] of the programming language to ensure type safety. The function's return value is then [[Type_Coerced]] if necessary to match the declared return type. The return type is also used by the [[Compiler]] to perform static type checking.
 
 # 3. Edge Cases & Failure States
-When the return type of a function is not properly declared or is ambiguous, it can lead to [[Type_Errors]] at runtime. For example, if a function is declared to return an integer but actually returns a string, a type error will occur. Additionally, if a function does not explicitly return a value, its return type may be considered [[Void]] or undefined. In some languages, the return type of a function can also be [[Nullable]], which means it can return a special null value. In such cases, the function's return type must be carefully handled to avoid [[Null_Pointer_Exceptions]].
+When the return type of a function is not properly declared or is ambiguous, it can lead to [[Type_Errors]] at runtime. If a function is declared to return a specific type but actually returns a different type, it can cause issues downstream in the code. For example, if a function is declared to return an integer but actually returns a string, it can cause a [[Type_Mismatch]] error when the caller tries to use the returned value as an integer. Additionally, if a function does not explicitly return a value, its return type may be considered [[Void]] or undefined, which can also lead to errors. In some cases, the [[Static_Type_Checker]] may be able to catch type-related errors at compile-time, but in other cases, they may only be detectable at runtime.
 # 4. Implementation Mechanics
 ```python
 def greet(name: str) -> str:
@@ -34,18 +34,23 @@ def greet(name: str) -> str:
 # Call the greet function
 result = greet("Alice")
 print(result)  # Output: Hello, Alice!
+print(type(result))  # Output: <class 'str'>
 ```
-To read this code snippet: The `greet` function takes a string parameter `name` and returns a string. The function's execution block creates a greeting message by concatenating strings, then returns the message. The return type of the function is explicitly declared as `str`.
+This code snippet demonstrates the implementation mechanics of return types in Python. The `greet` function is declared to return a string (`-> str`), and it indeed returns a string value.
+
+The `greet` function takes a `name` parameter, creates a greeting message, and returns it. When we call the `greet` function with the argument `"Alice"`, it returns the string `"Hello, Alice!"`, which is then printed to the console. The `type(result)` expression confirms that the return value is indeed a string.
 
 ## 5. Walkthrough
 Here's a step-by-step walkthrough of how the return type of the `greet` function works:
 
-1. The `greet` function is defined with a parameter `name` of type `str` and a return type of `str`.
-2. When the `greet` function is called with the argument `"Alice"`, a stack frame is created to store the local variable `name` and the parameter `Alice`.
-3. The function's execution logic is carried out, concatenating the strings `"Hello, "`, `"Alice"`, and `"!"` to create the greeting message.
-4. When the function reaches the `return` statement, the greeting message `"Hello, Alice!"` is passed back to the caller.
-5. The return type of the function is checked against the type system of the Python language, which ensures that the returned value is indeed a string.
-6. The returned string is then assigned to the variable `result` in the caller's scope.
+1. The `greet` function is declared with a return type of `str`, indicating that it promises to return a string value.
+2. When we call the `greet` function with the argument `"Alice"`, a new stack frame is created to store the function's local variables and parameters.
+3. The function's execution logic is carried out, which creates a greeting message by concatenating the strings `"Hello, "`, `"Alice"`, and `"!"`.
+4. When the function reaches the `return` statement, it passes the greeting message back to the caller.
+5. The return value is checked against the declared return type (`str`) to ensure type safety.
+6. Since the return value is indeed a string, it is returned to the caller and assigned to the `result` variable.
+7. The `print(result)` statement outputs the returned string value, which is `"Hello, Alice!"`.
+8. The `print(type(result))` statement confirms that the return value is indeed a string by outputting `<class 'str'>`.
 
 ---
 
@@ -57,30 +62,29 @@ Here's a step-by-step walkthrough of how the return type of the `greet` function
     "id": "q1",
     "type": "fill_in",
     "difficulty": "L1",
-    "question": "The return type of a function is like the type of dish a function promises to give you back, such as a [[Blank1]] or a [[Blank2]].",
-    "textWithBlanks": "The return type of a function is like the type of dish a function promises to give you back, such as a [[Blank1]] or a [[Blank2]].",
+    "question": "What is the return type of the greet function?",
+    "textWithBlanks": "The return type of the greet function is [[Blank1]].",
     "answer": [
-      "number",
-      "string"
+      "str"
     ],
-    "explanation": "The return type of a function specifies the type of value it will produce when completed."
+    "explanation": "The return type of the greet function is declared as str, indicating that it returns a string value."
   },
   {
     "id": "q2",
     "type": "true_false",
     "difficulty": "L2",
-    "question": "If a function is declared to return an integer but actually returns a string, a type error will occur at compile-time.",
-    "answer": "False",
-    "explanation": "A type error will occur at runtime, not compile-time."
+    "question": "If the greet function is declared to return an integer but actually returns a string, it will cause a type mismatch error.",
+    "answer": "True",
+    "explanation": "If a function is declared to return a specific type but actually returns a different type, it can cause type-related errors."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following code.",
-    "content": "def add(a, b) -> int:\n  return a + b",
-    "answer": "The function does not handle cases where a and b are not numbers. The function should be modified to include type checking and handling for non-numeric inputs.",
-    "explanation": "The bug is that the function does not ensure that the inputs are numbers, which could lead to a type error if non-numeric inputs are provided."
+    "question": "Find the bug in the buggy code.",
+    "content": "def add(a, b) -> int:\n  return a + b\nresult = add(2, 3.5)\nprint(result)",
+    "answer": "The bug is that the add function returns a float value (2 + 3.5 = 5.5) but is declared to return an integer. This can cause a type mismatch error.",
+    "explanation": "The add function should be declared to return a float or the result should be cast to an integer."
   }
 ]
 ```

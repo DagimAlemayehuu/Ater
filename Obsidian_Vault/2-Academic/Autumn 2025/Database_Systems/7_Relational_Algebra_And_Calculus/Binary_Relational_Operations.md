@@ -16,13 +16,13 @@ prerequisites:
 ---
 
 # 1. Mental Model
-Imagine you have two big boxes of LEGOs, one with different colored bricks and the other with various shapes. A binary relational operation is like combining these boxes based on specific rules, like matching colors with shapes. This helps you find or create new LEGO combinations that fit your needs.
+Imagine you have two boxes of LEGOs, one with different colored bricks and the other with various shapes. A binary relational operation is like combining these boxes based on specific rules, such as matching colors with shapes. This helps create a new, more organized box of LEGOs that shows relationships between the bricks and shapes.
 
 # 2. Schema & Query Mechanics
-Binary relational operations, such as `JOIN` and `DIVISION`, mechanically work by taking two relations (or tables) as input and producing a new relation as output. In a `JOIN` operation, the database combines rows from both tables based on a related column, using [[Inner_Join]], [[Left_Join]], [[Right_Join]], or [[Full_Outer_Join]] methods. The `DIVISION` operation, on the other hand, produces a relation that contains values from one attribute that are related to all values in another attribute. This process involves [[Tuple_Variables]] and [[Relational_Algebra]] to define the operation's outcome. When executing these operations, the database utilizes [[Query_Optimization]] techniques to determine the most efficient execution plan.
+Binary relational operations, specifically JOIN and DIVISION, work by taking two relations (or tables) as input and producing a new relation as output. In a JOIN operation, the [[Relational_Algebra]] defines how to combine rows from two tables based on a common attribute, such as a key. The [[Theta_Join]] and [[Equijoin]] are types of JOIN operations that apply different conditions for matching rows. Mechanically, the database uses [[Hash_Joins]] or [[Sort_Merge_Joins]] to efficiently combine the rows. When performing a DIVISION operation, the database produces a new relation that contains attributes not present in the divisor relation.
 
 # 3. ACID Violations & Scaling Limits
-When performing binary relational operations, especially in a [[Distributed_Database]] environment, there is a risk of [[Acid]] violations if the operations are not properly synchronized. For instance, a `JOIN` operation might produce inconsistent results if one of the tables is modified concurrently. Moreover, as the size of the tables increases, the operation's performance may degrade, leading to [[Scalability]] issues. [[Deadlocks]] can also occur if multiple transactions are waiting for each other to release resources, further complicating the execution of binary relational operations. Therefore, it is crucial to implement proper [[Concurrency_Control]] mechanisms to ensure the reliability and efficiency of these operations.
+When performing binary relational operations, especially in a [[Distributed_Database]] or under high concurrency, there is a risk of [[Dirty_Reads]] and [[Non-Repeatable_Reads]], which can violate [[Acid]] properties. As the size of the input relations increases, the operation's performance may degrade, leading to [[Scalability]] issues. In such cases, the database may need to employ [[Sharding]] or [[Parallel_Processing]] to distribute the workload and maintain performance. However, these solutions can introduce additional complexity and potential [[Deadlocks]], requiring careful tuning and monitoring.
 # 4. Entity-Relationship Model
 ```json
 {
@@ -30,65 +30,69 @@ When performing binary relational operations, especially in a [[Distributed_Data
   "title": "Binary Relational Operations",
   "type": "object",
   "properties": {
-    "Table1": {
-      "type": "object",
-      "properties": {
-        "Column1": {"type": "string"},
-        "Column2": {"type": "integer"}
-      },
-      "required": ["Column1", "Column2"]
+    "tables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "attributes": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "required": ["name", "attributes"]
+      }
     },
-    "Table2": {
-      "type": "object",
-      "properties": {
-        "Column3": {"type": "string"},
-        "Column4": {"type": "integer"}
-      },
-      "required": ["Column3", "Column4"]
-    },
-    "JoinType": {
+    "operation": {
       "type": "string",
-      "enum": ["Inner", "Left", "Right", "Full Outer"]
+      "enum": ["JOIN", "DIVISION"]
+    },
+    "joinCondition": {
+      "type": "object",
+      "properties": {
+        "type": {"type": "string", "enum": ["Equijoin", "Theta Join"]},
+        "attribute": {"type": "string"}
+      },
+      "required": ["type", "attribute"]
     }
   },
-  "required": ["Table1", "Table2", "JoinType"]
+  "required": ["tables", "operation", "joinCondition"]
 }
 ```
-This JSON schema represents the structure of two tables and the type of join operation to be performed. It defines the properties of each table, including the data types of their columns, and the possible join types.
+This JSON schema represents the structure of binary relational operations, including the tables involved, the type of operation (JOIN or DIVISION), and the join condition (if applicable). The schema defines the properties of the tables, such as their names and attributes, and the join condition, including the type of join (Equijoin or Theta Join) and the attribute used for matching.
 
 ## 5. Walkthrough
-Suppose we have two tables, `Employees` and `Departments`, and we want to perform an inner join on the `DepartmentID` column.
+Suppose we have two tables, `Orders` and `Customers`, and we want to perform an Equijoin on the `CustomerID` attribute.
 
-`Employees` table:
+`Orders` table:
 
-| EmployeeID | Name | DepartmentID |
+| OrderID | CustomerID | OrderDate |
 | --- | --- | --- |
-| 1 | John | 101 |
-| 2 | Jane | 102 |
-| 3 | Joe | 101 |
+| 1 | 101 | 2022-01-01 |
+| 2 | 102 | 2022-01-15 |
+| 3 | 101 | 2022-02-01 |
 
-`Departments` table:
+`Customers` table:
 
-| DepartmentID | DepartmentName |
-| --- | --- |
-| 101 | Sales |
-| 102 | Marketing |
+| CustomerID | Name | Address |
+| --- | --- | --- |
+| 101 | John Smith | New York |
+| 102 | Jane Doe | Los Angeles |
 
-Here are the steps to perform the inner join:
+Here are the steps to perform the Equijoin:
 
-1. Identify the common column: The common column between the two tables is `DepartmentID`.
-2. Choose the join type: We want to perform an inner join, which returns only the rows that have a match in both tables.
-3. Match the rows: The database matches the rows from both tables based on the `DepartmentID` column.
-4. Combine the rows: The database combines the rows that have a match, creating a new table with the columns from both tables.
-5. Return the result: The resulting table contains the employee information along with the department name.
+1. Identify the join attribute: `CustomerID`.
+2. Match the rows from `Orders` and `Customers` based on the `CustomerID` attribute.
+3. Create a new table with the combined attributes from both tables.
 
 Resulting table:
 
-| EmployeeID | Name | DepartmentID | DepartmentName |
-| --- | --- | --- | --- |
-| 1 | John | 101 | Sales |
-| 3 | Joe | 101 | Sales |
-| 2 | Jane | 102 | Marketing |
+| OrderID | CustomerID | OrderDate | Name | Address |
+| --- | --- | --- | --- | --- |
+| 1 | 101 | 2022-01-01 | John Smith | New York |
+| 3 | 101 | 2022-02-01 | John Smith | New York |
+| 2 | 102 | 2022-01-15 | Jane Doe | Los Angeles |
 
 ---
 
@@ -100,26 +104,26 @@ Resulting table:
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "A binary relational operation takes only one relation as input.",
+    "question": "A binary relational operation can only be performed on two tables with the same attributes.",
     "answer": "False",
-    "explanation": "Binary relational operations, such as JOIN and DIVISION, take two relations as input and produce a new relation as output."
+    "explanation": "Binary relational operations can be performed on two tables with different attributes, as long as there is a common attribute to join on."
   },
   {
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Suppose we have two tables, `Customers` and `Orders`, and we want to perform a left join on the `CustomerID` column. If a customer has no orders, what will be the result?",
-    "answer": "The customer information will be included in the result, with null values for the order columns.",
-    "explanation": "A left join returns all the rows from the left table and the matching rows from the right table. If there are no matches, the result will contain null values for the right table columns."
+    "question": "Suppose we have two tables, `Employees` and `Departments`, and we want to perform a Theta Join on the `Salary` attribute. The `Employees` table has the following rows: `| EmployeeID | Name | Salary | DepartmentID |`, and the `Departments` table has the following rows: `| DepartmentID | DepartmentName |`. How would you perform the Theta Join to get the employees with a salary greater than $50,000 and their corresponding department names?",
+    "answer": "SELECT * FROM Employees JOIN Departments ON Employees.DepartmentID = Departments.DepartmentID AND Employees.Salary > 50000",
+    "explanation": "The Theta Join is performed by specifying the join condition, including the attribute to join on and the condition for the salary."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following SQL query: `SELECT * FROM Customers JOIN Orders ON Customers.CustomerID = Orders.OrderID`",
-    "content": "SELECT * FROM Customers JOIN Orders ON Customers.CustomerID = Orders.OrderID",
-    "answer": "The bug is that the join condition is incorrect. It should be `Customers.CustomerID = Orders.CustomerID` instead of `Customers.CustomerID = Orders.OrderID`.",
-    "explanation": "The join condition should match the correct columns between the two tables. In this case, the correct column to match is `CustomerID`, not `OrderID`."
+    "question": "Find the bug in the following code: `SELECT * FROM Orders JOIN Customers ON Orders.CustomerID = Customers.CustomerID OR Orders.OrderID = Customers.CustomerID`",
+    "content": "SELECT * FROM Orders JOIN Customers ON Orders.CustomerID = Customers.CustomerID OR Orders.OrderID = Customers.CustomerID",
+    "answer": "The bug is that the join condition is using an OR operator, which can lead to incorrect results. The correct join condition should only use the AND operator to specify the join attribute.",
+    "explanation": "The OR operator can cause the join to produce incorrect results, as it will match rows based on either the CustomerID or the OrderID attributes."
   }
 ]
 ```

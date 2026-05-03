@@ -14,13 +14,13 @@ generated: true
 ---
 
 # 1. Mental Model
-Imagine you're building a LEGO castle. Instead of having one huge, complex piece, you have many smaller, simpler pieces (like walls, towers, and gates) that can be built and tested separately. When you're done, you can easily connect them to form the complete castle. This is similar to modular programming, where you break down a program into smaller, independent modules that can be developed, tested, and then combined to form the final program.
+Imagine you're building a LEGO castle. Instead of having one huge, complex piece, you have many smaller, simpler pieces (like walls, towers, and gates) that can be built and tested separately before being connected to form the complete castle. This is similar to modular programming, where a program is broken down into individual, independent modules that can be developed, tested, and maintained separately.
 
 # 2. Execution Logic & Data Flow
-In modular programming, each module is a self-contained piece of code that performs a specific function. When these modules are combined, they form a cohesive program. Mechanically, this works by having each module define its own [[Interface_(Computing)|Interface]], which specifies how other modules can interact with it. During execution, modules are loaded into memory and their [[Function_Call|Function Calls]] are resolved, allowing them to exchange data and control through [[Application_Programming_Interface|Apis]]. The operating system or runtime environment manages the loading and linking of modules, ensuring that they can communicate with each other seamlessly.
+In modular programming, each module is a self-contained piece of code that performs a specific function. When these modules are executed, they follow a specific [[Control_Flow]] path, where data is passed between modules through well-defined [[Application_Programming_Interfaces]] (APIs) or [[Function_Signatures]]. The [[Call_Stack]] manages the flow of control between modules, allowing them to be executed in a specific order. This modular approach enables developers to focus on individual components without affecting the entire program.
 
 # 3. Edge Cases & Failure States
-When dealing with modular programming, edge cases and failure states can arise from issues like [[Module_Dependencies|Module Dependencies]], [[Version_Conflict|Version Conflicts]], and [[Circular_Reference|Circular References]]. For instance, if two modules depend on each other, it can create a circular reference that's difficult to resolve. Similarly, if multiple modules have different version requirements for a shared library, it can lead to version conflicts. To mitigate these issues, developers use techniques like dependency injection, module isolation, and careful planning of module interactions to ensure that the program remains stable and maintainable.
+When dealing with modular programming, edge cases and failure states can arise from issues like [[Module_Dependencies]], [[Interface_Mismatches]], or [[Error_Propagation]]. For instance, if a module relies on another module that's not properly initialized, it may lead to a [[Runtime_Error]]. Similarly, if a module's API changes, it may break the [[Backward_Compatibility]] of dependent modules. To mitigate these risks, developers must carefully manage module dependencies, ensure consistent interface definitions, and implement robust error handling mechanisms.
 # 4. Implementation Mechanics
 ```python
 # example.py
@@ -28,69 +28,31 @@ def greet(name: str) -> str:
     """Return a personalized greeting."""
     return f"Hello, {name}!"
 
-def farewell(name: str) -> str:
-    """Return a farewell message."""
-    return f"Goodbye, {name}!"
+def get_user_name() -> str:
+    """Simulate getting user input."""
+    return "Alice"
 
 def main() -> None:
-    """Program entry point."""
-    name = "Alice"
-    greeting = greet(name)
+    """Entry point of the program."""
+    user_name = get_user_name()
+    greeting = greet(user_name)
     print(greeting)
-    farewell_message = farewell(name)
-    print(farewell_message)
 
 if __name__ == "__main__":
     main()
 ```
-This code snippet demonstrates a simple modular program in Python, where each function represents a self-contained module. The `greet` and `farewell` functions can be developed, tested, and reused independently.
+This code snippet demonstrates a simple modular program with three separate functions: `greet`, `get_user_name`, and `main`. Each function has a specific responsibility and can be tested independently.
 
-To read this code: The code defines three functions: `greet`, `farewell`, and `main`. The `greet` and `farewell` functions take a `name` parameter and return a personalized message. The `main` function orchestrates the program flow by calling these functions and printing their results.
+To read this code: The `greet` function takes a `name` parameter and returns a personalized greeting. The `get_user_name` function simulates getting user input. The `main` function orchestrates the execution of these modules, passing data between them.
 
 ## 5. Walkthrough
-Suppose we want to extend this program to support multiple languages. We'll create a new module called `translator` that provides a function to translate messages.
+Here's a step-by-step walkthrough of how this modular program executes:
 
-1. **Create the `translator` module**: We'll define a new Python file called `translator.py` with a function `translate` that takes a message and a language code as input.
-```python
-# translator.py
-def translate(message: str, language_code: str) -> str:
-    """Translate a message to a specific language."""
-    translations = {
-        "es": lambda x: x.replace("Hello", "Hola").replace("Goodbye", "Adiós"),
-        "fr": lambda x: x.replace("Hello", "Bonjour").replace("Goodbye", "Au revoir"),
-    }
-    if language_code in translations:
-        return translations[language_code](message)
-    return message
-```
-2. **Modify the `greet` and `farewell` functions to use the `translator` module**: We'll update the `greet` and `farewell` functions to take an additional `language_code` parameter and use the `translate` function to translate their messages.
-```python
-# example.py (updated)
-from translator import translate
-
-def greet(name: str, language_code: str) -> str:
-    """Return a personalized greeting in a specific language."""
-    message = f"Hello, {name}!"
-    return translate(message, language_code)
-
-def farewell(name: str, language_code: str) -> str:
-    """Return a farewell message in a specific language."""
-    message = f"Goodbye, {name}!"
-    return translate(message, language_code)
-
-def main() -> None:
-    """Program entry point."""
-    name = "Alice"
-    language_code = "es"
-    greeting = greet(name, language_code)
-    print(greeting)
-    farewell_message = farewell(name, language_code)
-    print(farewell_message)
-
-if __name__ == "__main__":
-    main()
-```
-3. **Run the updated program**: When we run the program with the `language_code` set to `"es"`, it will print the greeting and farewell messages in Spanish.
+1. The program starts executing at the `main` function.
+2. The `main` function calls `get_user_name()` to retrieve the user's name, which returns the string `"Alice"`.
+3. The `main` function then calls `greet(user_name)` with the retrieved name, which returns the greeting string `"Hello, Alice!"`.
+4. The `main` function prints the greeting string to the console.
+5. If any issues arise during the execution of these modules (e.g., `get_user_name()` returns an empty string), the program may encounter errors or produce unexpected output.
 
 ---
 
@@ -107,24 +69,24 @@ if __name__ == "__main__":
     "answer": [
       "function"
     ],
-    "explanation": "A module in modular programming is a self-contained piece of code that performs a specific function."
+    "explanation": "A module in modular programming performs a specific function."
   },
   {
     "id": "q2",
     "type": "true_false",
     "difficulty": "L2",
-    "question": "Modular programming allows for easier maintenance and modification of code by enabling changes to be made at the module level without affecting the entire program.",
+    "question": "In modular programming, modules can be developed and tested independently.",
     "answer": "True",
-    "explanation": "Modular programming enables changes to be made at the module level without affecting the entire program, making maintenance and modification easier."
+    "explanation": "Modular programming allows developers to focus on individual components without affecting the entire program."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following code:",
-    "content": "def greet(name) -> str:\n  return f\"Hello, {name}\"",
-    "answer": "The bug is that the function is missing a closing quotation mark in the return statement. The corrected code is: def greet(name) -> str:\n  return f\"Hello, {name}!\"",
-    "explanation": "The bug is a syntax error due to a missing closing quotation mark."
+    "question": "Find the bug in the code.",
+    "content": "def greet(name: str) -> None:\n    return f\"Hello, {name}!\"\ndef main() -> None:\n    greeting = greet(\"Bob\")\n    print(greeting)",
+    "answer": "The bug is that the greet function is defined to return None, but it actually returns a string. The corrected code should be: def greet(name: str) -> str: ...",
+    "explanation": "The bug is a mismatch between the function's return type and its actual behavior."
   }
 ]
 ```
