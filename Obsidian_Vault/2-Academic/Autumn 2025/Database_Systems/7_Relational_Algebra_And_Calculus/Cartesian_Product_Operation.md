@@ -6,7 +6,8 @@ semester: Autumn 2025
 unit: '7'
 hub: "[[7_Relational_Algebra_And_Calculus_Hub]]"
 source: "[[Chapter_7.Pdf]]"
-source_pages: []
+source_pages:
+- 6
 mode: CS-DB
 read: false
 generated: true
@@ -21,7 +22,7 @@ Imagine you have two boxes, one containing 3 different colored shirts and the ot
 The CARTESIAN PRODUCT operation, often denoted as a cross join, mechanically combines rows from two relations, `R1` and `R2`, by creating a new relation that contains all possible pairs of rows from `R1` and `R2`. This is achieved through a [[Nested_Loop_Join]] algorithm, which iterates over each row in `R1` and pairs it with each row in `R2`, resulting in a [[Cartesian_Product]] relation. The resulting relation's schema consists of all attributes from both `R1` and `R2`, with [[Attribute_Resolution]] ensuring that attribute names are properly qualified to avoid ambiguity. When executing a CARTESIAN PRODUCT query, the database optimizer may choose to use a [[Join_Algorithm]] that avoids creating an intermediate result set.
 
 # 3. ACID Violations & Scaling Limits
-The CARTESIAN PRODUCT operation can lead to [[Acid]] violations if not properly managed, particularly in terms of [[Isolation_Level]] and [[Atomicity]]. As the size of the input relations increases, the result set can grow exponentially, leading to [[Scalability]] issues and potential [[Deadlocks]]. Furthermore, if one or both of the input relations are very large, the operation may exceed available [[Memory_Allocation]], causing the system to [[Page]] to disk or even fail. Therefore, it's crucial to carefully evaluate the input relations and apply [[Predicate_Pushing]] or [[Filtering]] to reduce the result set size before performing a CARTESIAN PRODUCT operation.
+The CARTESIAN PRODUCT operation can lead to [[Acid]] violations if not properly managed, particularly in terms of [[Isolation_Level]] and [[Atomicity]]. As the size of the input relations increases, the result set can grow exponentially, leading to [[Scalability]] issues and potential [[Deadlocks]]. Furthermore, if one or both of the input relations are very large, the operation may exceed available memory, causing the system to [[Page]] or even [[Abort]] the transaction. Therefore, careful consideration must be given to the size of the input relations and the available system resources when planning to execute a CARTESIAN PRODUCT operation.
 # 4. Entity-Relationship Model
 ```json
 {
@@ -80,20 +81,20 @@ Suppose we have two tables:
 To compute the Cartesian Product of `Table1` and `Table2`, we follow these steps:
 
 1. Take the first row from `Table1` (id = 1, name = John) and pair it with each row from `Table2`.
-2. The first pair is (id = 1, name = John) from `Table1` and (id = 1, city = New York) from `Table2`, resulting in (id = 1, name = John, Table2_id = 1, city = New York).
-3. The second pair is (id = 1, name = John) from `Table1` and (id = 2, city = London) from `Table2`, resulting in (id = 1, name = John, Table2_id = 2, city = London).
+2. The first pair is (id = 1, name = John) from `Table1` and (id = 1, city = New York) from `Table2`, resulting in (id = 1, name = John, id = 1, city = New York).
+3. The second pair is (id = 1, name = John) from `Table1` and (id = 2, city = London) from `Table2`, resulting in (id = 1, name = John, id = 2, city = London).
 4. Take the second row from `Table1` (id = 2, name = Alice) and pair it with each row from `Table2`.
-5. The first pair is (id = 2, name = Alice) from `Table1` and (id = 1, city = New York) from `Table2`, resulting in (id = 2, name = Alice, Table2_id = 1, city = New York).
-6. The second pair is (id = 2, name = Alice) from `Table1` and (id = 2, city = London) from `Table2`, resulting in (id = 2, name = Alice, Table2_id = 2, city = London).
+5. The first pair is (id = 2, name = Alice) from `Table1` and (id = 1, city = New York) from `Table2`, resulting in (id = 2, name = Alice, id = 1, city = New York).
+6. The second pair is (id = 2, name = Alice) from `Table1` and (id = 2, city = London) from `Table2`, resulting in (id = 2, name = Alice, id = 2, city = London).
 
 The resulting Cartesian Product table is:
 
-| id | name  | Table2_id | city    |
-|----|-------|-----------|---------|
-| 1  | John  | 1         | New York|
-| 1  | John  | 2         | London  |
-| 2  | Alice | 1         | New York|
-| 2  | Alice | 2         | London  |
+| id | name  | id | city    |
+|----|-------|----|---------|
+| 1  | John  | 1  | New York|
+| 1  | John  | 2  | London  |
+| 2  | Alice | 1  | New York|
+| 2  | Alice | 2  | London  |
 
 ---
 
@@ -121,10 +122,10 @@ The resulting Cartesian Product table is:
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug.",
-    "content": "SELECT * FROM Table1, Table1;",
-    "answer": "The bug is that the query is performing a Cartesian Product with the same table, which may not be the intended result.",
-    "explanation": "The query seems to be attempting a Cartesian Product but with the same table."
+    "question": "Find the bug in the following SQL code for computing the Cartesian Product of two tables:",
+    "content": "SELECT * FROM Table1, Table2 WHERE Table1.id = Table2.id",
+    "answer": "The bug is that the SQL code is attempting to compute an inner join instead of a Cartesian Product. To fix this, remove the WHERE clause.",
+    "explanation": "The given SQL code is computing an inner join instead of a Cartesian Product because it includes a WHERE clause with a join condition. To compute a Cartesian Product, the query should be SELECT * FROM Table1, Table2 or SELECT * FROM Table1 CROSS JOIN Table2."
   }
 ]
 ```

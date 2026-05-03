@@ -6,7 +6,8 @@ semester: Autumn 2025
 unit: '7'
 hub: "[[7_Relational_Algebra_And_Calculus_Hub]]"
 source: "[[Chapter_7.Pdf]]"
-source_pages: []
+source_pages:
+- 6
 mode: CS-DB
 read: false
 generated: true
@@ -87,16 +88,20 @@ Suppose we have two relations, `Employees` and `Managers`, with the following da
 | 3 | Joe | IT |
 | 4 | Sarah | HR |
 
-To find the intersection of these two relations, we perform the following steps:
+To perform the intersection operation:
 
-1. Compare the attributes of both relations: Both `Employees` and `Managers` have the same attributes, `EmployeeID`, `Name`, and `Department`.
-2. Identify the common tuples: Compare each tuple in `Employees` with each tuple in `Managers`. The common tuples are those with the same `EmployeeID`, `Name`, and `Department`.
-3. Return the common tuples: The intersection of `Employees` and `Managers` is:
+1. Compare the tuples of `Employees` and `Managers` based on all attributes (EmployeeID, Name, Department).
+2. Identify the common tuples: (1, John, Sales) and (3, Joe, IT).
+3. Return the intersection result:
+
+`Intersection`:
 
 | EmployeeID | Name | Department |
 | --- | --- | --- |
 | 1 | John | Sales |
 | 3 | Joe | IT |
+
+The intersection operation returns the tuples that are common to both `Employees` and `Managers`.
 
 ---
 
@@ -108,7 +113,7 @@ To find the intersection of these two relations, we perform the following steps:
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "The INTERSECTION operation returns all tuples that are present in either of the two relations.",
+    "question": "The INTERSECTION operation returns all tuples from both relations.",
     "answer": "False",
     "explanation": "The INTERSECTION operation returns only the tuples that are common to both relations."
   },
@@ -116,18 +121,18 @@ To find the intersection of these two relations, we perform the following steps:
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Suppose we have two relations, `Orders` and `Shipments`, with the following data: Orders: OrderID, CustomerID, OrderDate; Shipments: OrderID, ShipmentDate. How would you write a query to find the intersection of these two relations?",
-    "answer": "SELECT OrderID FROM Orders INTERSECT SELECT OrderID FROM Shipments",
-    "explanation": "The INTERSECT keyword is used to find the intersection of two relations. In this case, we select the OrderID from both relations and use INTERSECT to find the common OrderIDs."
+    "question": "Suppose we have two relations, `Customers` and `Orders`, with the following data: ...",
+    "answer": "...",
+    "explanation": "..."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following query: SELECT * FROM R INTERSECT SELECT * FROM S WHERE R.Attribute1 = S.Attribute1",
+    "question": "Find the bug in the following SQL query: `SELECT * FROM R INTERSECT SELECT * FROM S WHERE R.Attribute1 = S.Attribute1`",
     "content": "SELECT * FROM R INTERSECT SELECT * FROM S WHERE R.Attribute1 = S.Attribute1",
-    "answer": "The bug is that the INTERSECT operation requires both relations to have the same attributes. However, the query adds a condition to the second relation, which may change the result set. To fix this, the condition should be applied before the INTERSECT operation.",
-    "explanation": "The INTERSECT operation requires both relations to have the same attributes. Adding a condition to one of the relations changes the result set and may lead to incorrect results."
+    "answer": "The bug is that the INTERSECT operator requires both relations to have the same attribute set, but the query adds a condition that may not be met.",
+    "explanation": "The INTERSECT operator requires both relations to have the same attribute set, but the query adds a condition that may not be met."
   }
 ]
 ```

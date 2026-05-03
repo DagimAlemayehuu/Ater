@@ -16,13 +16,13 @@ prerequisites:
 ---
 
 # 1. Mental Model
-Imagine you have a big box full of labeled folders, and you want to change the labels on some of the folders or even the label on the box itself. The RENAME operation in databases works similarly, allowing you to change the names of columns in a table or the name of the table, without altering the data inside.
+Imagine you have a big box full of labeled folders, and you want to change the labels on some of the folders or even the name of the box itself. The RENAME operation in databases works similarly, allowing you to change the names of columns in a table or the name of the table, without altering the data inside.
 
 # 2. Schema & Query Mechanics
-The RENAME operation mechanically involves updating the [[Data_Dictionary]] to reflect the new names for the attributes or the relation. When renaming a column, the database updates the [[Schema_Catalog]] to map the old column name to the new one, ensuring that any queries referencing the old name are rewritten or throw an error. The operation is typically performed using the `RENAME COLUMN` or `RENAME TABLE` syntax, such as `ALTER TABLE old_table RENAME TO new_table;` or `ALTER TABLE table_name RENAME COLUMN old_column_name TO new_column_name;`. Internally, the database may use [[Tuple_Structure]] to manage the mapping between old and new names. The [[Query_Optimizer]] may also recompile existing queries to use the new names.
+The RENAME operation mechanically involves updating the [[Data_Dictionary]] to reflect the new names for the attributes or the relation. When renaming a table or columns, the database management system checks for [[Name_Clashes]] and ensures that the new names are [[Uniquely_Resolvable]]. The operation is typically performed using a `RENAME TABLE` or `ALTER TABLE` statement with a `RENAME COLUMN` clause, such as `ALTER TABLE old_table RENAME TO new_table;` or `ALTER TABLE table_name RENAME COLUMN old_column_name TO new_column_name;`. Internally, the database updates the [[System_Catalog]] to reflect the changes, which may involve cascading updates to [[Dependent_Objects]].
 
 # 3. ACID Violations & Scaling Limits
-The RENAME operation must be performed atomically to avoid [[Acid]] violations, ensuring that either the entire rename operation succeeds or neither change is made. If the operation fails partway through, the database may need to [[Rollback]] changes to maintain consistency. As the database scales, the RENAME operation may become a bottleneck if it requires [[Exclusive_Locks]] on the table or schema, potentially leading to contention with other operations. Additionally, very large tables may have many dependencies on the old name, requiring careful [[Cascade_Rename]] operations to update all references.
+The RENAME operation must be performed within the bounds of [[Atomicity]], ensuring that either the entire operation completes successfully or the system remains in its original state. However, concurrent rename operations can lead to [[Deadlocks]] or [[Serialization_Conflicts]], particularly in high-transaction environments. Moreover, renaming tables or columns can cause issues with [[Referential_Integrity]] and may require updates to [[Foreign_Key]] constraints. As such, the operation is often subject to locking mechanisms to prevent [[Data_Inconsistency]] during the rename process.
 # 4. Entity-Relationship Model
 ```json
 {
@@ -30,41 +30,52 @@ The RENAME operation must be performed atomically to avoid [[Acid]] violations, 
   "title": "Rename Operation",
   "type": "object",
   "properties": {
-    "oldName": {"type": "string"},
-    "newName": {"type": "string"},
-    "table": {"type": "string"},
-    "column": {"type": ["string", "null"]}
+    "old_table_name": {"type": "string"},
+    "new_table_name": {"type": "string"},
+    "old_column_name": {"type": ["string", "null"]},
+    "new_column_name": {"type": ["string", "null"]}
   },
-  "required": ["oldName", "newName", "table"],
+  "required": ["old_table_name", "new_table_name"],
   "additionalProperties": false
 }
 ```
-This JSON schema represents the RENAME operation, which involves specifying the old and new names, the table affected, and optionally the column being renamed. The schema ensures that the old and new names are provided as strings, along with the table name.
+This JSON schema represents the RENAME operation, which involves renaming a table or a column within a table. The `old_table_name` and `new_table_name` properties are required, while the `old_column_name` and `new_column_name` properties are optional and used for column renaming.
 
 ## 5. Walkthrough
-Suppose we have a table named `Employees` with columns `EmployeeID`, `Name`, and `Department`. We want to rename the `Department` column to `Dept` and the table itself to `Staff`.
+Suppose we have a table called `employees` with columns `employee_id`, `name`, and `department`. We want to rename the table to `staff` and the `department` column to `dept`.
 
-1. **Initial State**: 
-   - Table: `Employees`
-   - Columns: `EmployeeID`, `Name`, `Department`
-
-2. **Rename Column**: 
-   - SQL Command: `ALTER TABLE Employees RENAME COLUMN Department TO Dept;`
-   - Result: 
-     - Table: `Employees`
-     - Columns: `EmployeeID`, `Name`, `Dept`
-
-3. **Rename Table**: 
-   - SQL Command: `ALTER TABLE Employees RENAME TO Staff;`
-   - Result: 
-     - Table: `Staff`
-     - Columns: `EmployeeID`, `Name`, `Dept`
-
-4. **Verify Changes**: 
-   - The table name and column name have been successfully updated.
-
-5. **Check Dependencies**: 
-   - Any views, stored procedures, or applications referencing `Employees` or `Department` need to be updated to reference `Staff` and `Dept`, respectively.
+1. Initially, the table `employees` has the following structure:
+```sql
+   CREATE TABLE employees (
+     employee_id INT PRIMARY KEY,
+     name VARCHAR(255),
+     department VARCHAR(255)
+   );
+```
+2. We execute the RENAME operation to change the table name to `staff`:
+```sql
+   ALTER TABLE employees RENAME TO staff;
+```
+3. After the table rename, the structure remains the same, but the table name changes:
+```sql
+   CREATE TABLE staff (
+     employee_id INT PRIMARY KEY,
+     name VARCHAR(255),
+     department VARCHAR(255)
+   );
+```
+4. Next, we rename the `department` column to `dept`:
+```sql
+   ALTER TABLE staff RENAME COLUMN department TO dept;
+```
+5. Finally, the `staff` table has the updated structure:
+```sql
+   CREATE TABLE staff (
+     employee_id INT PRIMARY KEY,
+     name VARCHAR(255),
+     dept VARCHAR(255)
+   );
+```
 
 ---
 
@@ -78,24 +89,24 @@ Suppose we have a table named `Employees` with columns `EmployeeID`, `Name`, and
     "difficulty": "L1",
     "question": "The RENAME operation in databases changes the data inside the tables.",
     "answer": "False",
-    "explanation": "The RENAME operation changes the names of columns or tables without altering the data inside."
+    "explanation": "The RENAME operation only changes the names of tables or columns, not the data inside."
   },
   {
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "You have a table named `Products` with a column `ProductDescription`. You want to rename the column to `Desc`. However, there are several views and stored procedures referencing `ProductDescription`. What should you do?",
-    "answer": "Rename the column using the appropriate SQL syntax, then update any views and stored procedures to reference the new column name `Desc`.",
-    "explanation": "This ensures that all parts of the database and applications using it are updated to use the new column name, preventing errors."
+    "question": "You have a table named `orders` with a column `order_date`. You want to rename the table to `sales` and the column to `date_ordered`. How would you accomplish this?",
+    "answer": "First, rename the table: `ALTER TABLE orders RENAME TO sales;`. Then, rename the column: `ALTER TABLE sales RENAME COLUMN order_date TO date_ordered;`.",
+    "explanation": "This approach ensures that both the table and column are renamed correctly without altering the data."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following SQL commands to rename a table and a column:",
-    "content": "ALTER TABLE Customers RENAME COLUMN CustomerName TO Name;\nALTER TABLE Customers RENAME TO Clients;",
-    "answer": "The bug is in the order of operations. The column rename operation is attempted on a table that is then immediately renamed. The correct order should be to rename the table first, then rename the column, but since the table name is changing, the column rename command will fail as there's no table named 'Customers'. The correct sequence should consider the impact on dependent objects.",
-    "explanation": "The correct sequence should be to rename the table, and then attempt to rename the column, but given the table rename, the column rename command needs adjustment."
+    "question": "Find the bug in the following SQL commands to rename a table and a column.",
+    "content": "ALTER TABLE customers RENAME COLUMN customer_name TO client_name;\nALTER TABLE customers RENAME TO clients;",
+    "answer": "The bug is that the table name is being changed after attempting to rename a column that no longer exists under the original table name. The correct sequence should be: `ALTER TABLE customers RENAME TO clients;` followed by `ALTER TABLE clients RENAME COLUMN client_name TO another_name;` if needed.",
+    "explanation": "The correct sequence of operations is crucial to avoid errors due to non-existent tables or columns."
   }
 ]
 ```

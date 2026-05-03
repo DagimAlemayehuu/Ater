@@ -1,3 +1,18 @@
+---
+title: Sequence
+type: Atomic Note
+course: Discrete Mathematics
+semester: 2024/25
+unit: '2'
+hub: "[[2_Recurrence_Relations_Hub]]"
+source: "[[2_Recurrence_Relations.Pdf]]"
+source_pages:
+- 4
+mode: MATH-PURE
+read: false
+generated: true
+---
+
 # 1. Mental Model
 Imagine you have a never-ending staircase where each step has a number on it, starting from a certain step number, say the first step. A sequence is like a rule that assigns a specific number to each step, and you can keep going up the staircase, getting a new number at each step, according to that rule.
 
@@ -40,7 +55,7 @@ For each input $n$, the sequence outputs a value $a_n$.
 \begin{align*}
 \forall n \in \mathbb{N}, \exists a_n \in \mathbb{R} \text{ s.t. } a_n &= f(n) \\
 &\downarrow \\
-\forall n \in \mathbb{N}, \exists a_n \in \mathbb{R} \text{ s.t. } a_n &\text{ is a function application}
+\forall n \in \mathbb{N}, \exists a_n \in \mathbb{R} \text{ s.t. } a_n &\text{ is a real number}
 \end{align*}
 
 \end{document}
@@ -54,9 +69,8 @@ Suppose we have a sequence $a_n = 2n + 1$, and we want to evaluate its propertie
 2. **Determine the domain**: The domain of the sequence is all natural numbers $n \geq 1$.
 3. **Evaluate the sequence at $n = 3$**: Substitute $n = 3$ into the sequence formula: $a_3 = 2(3) + 1 = 7$.
 4. **Check for monotonicity**: To check if the sequence is monotonic, evaluate the difference between consecutive terms: $a_{n+1} - a_n = 2(n+1) + 1 - (2n + 1) = 2 > 0$. Since the difference is positive, the sequence is increasing.
-5. **Determine the limit**: To determine the limit of the sequence as $n$ approaches infinity, evaluate $\lim_{n \to \infty} (2n + 1) = \infty$. Since the limit does not exist, the sequence is divergent.
+5. **Determine the limit**: To determine the limit of the sequence as $n$ approaches infinity, evaluate $\lim_{n \to \infty} (2n + 1) = \infty$. Since the limit does not exist, the sequence is not convergent.
 
-read: true
 ---
 
 ## 6. The Proving Grounds
@@ -71,8 +85,8 @@ read: true
     "options": {
       "A": "A function from natural numbers to real numbers",
       "B": "A function from real numbers to natural numbers",
-      "C": "A set of natural numbers",
-      "D": "A set of real numbers"
+      "C": "A set of real numbers",
+      "D": "A set of natural numbers"
     },
     "answer": "A",
     "explanation": "A sequence is formally defined as a function whose domain is a subset of integers $n \\geq n_0$ and the codomain is usually a set of numbers, such as $\\mathbb{R}$ or $\\mathbb{C}$."
@@ -92,10 +106,10 @@ read: true
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following code:",
-    "content": "def sequence(n):\n  return 2 * n",
-    "answer": "The bug is that the sequence is not defined for $n < 1$. The domain restriction $n \\geq n_0$ is not enforced.",
-    "explanation": "The code does not check if the input $n$ is a natural number greater than or equal to $n_0$, which can lead to incorrect results or errors."
+    "question": "Find the bug in the following code",
+    "content": "def sequence(n):\n  if n <= 0:\n    return 'undefined'\n  else:\n    return 2 * n - 1",
+    "answer": "The bug is that the sequence is not defined for $n = 0$ and the function does not handle non-integer inputs.",
+    "explanation": "The given code does not correctly implement a sequence as it does not handle non-integer inputs and returns 'undefined' for $n \\leq 0$ instead of restricting the domain to $n \\geq 1$."
   }
 ]
 ```

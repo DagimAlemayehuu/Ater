@@ -16,78 +16,99 @@ prerequisites:
 ---
 
 # 1. Mental Model
-Imagine you have two boxes of colored pencils. Each pencil represents a row in a database table. Relational algebra operations from set theory help you combine or compare these boxes (or tables) in different ways, like putting all the pencils from both boxes into one box (UNION), finding the pencils that are exactly the same in both boxes (INTERSECTION), or finding the pencils that are in one box but not the other (DIFFERENCE).
+Imagine you have two boxes of colored pencils. Each pencil represents a record in a database. Relational Algebra Operations from Set Theory are like combining or comparing these boxes in different ways. For example, you can put all the pencils from both boxes into one box (UNION), or find the pencils that are exactly the same in both boxes (INTERSECTION).
 
 # 2. Schema & Query Mechanics
-Relational algebra operations from set theory are used to combine or compare tables in a database. The UNION operation combines the rows of two tables, eliminating any duplicate rows. This is mechanically achieved through [[Tuple_Variables]] and [[Schema_Compatibility]] checks, ensuring that the tables have the same [[Attribute_Names]]. The INTERSECTION operation returns only the rows that are common to both tables, while the DIFFERENCE operation returns only the rows that are in one table but not the other. The CARTESIAN PRODUCT operation combines each row of one table with each row of another table, creating a new table with all possible combinations. This is often achieved through [[Join_Operations]] and [[Cross_Join]] mechanics.
+Relational Algebra Operations from Set Theory work by taking two relations (or tables) as input and producing a new relation as output. The UNION operation combines the tuples of two relations, eliminating duplicates, and is often implemented using a [[Hash_Set]] or [[Sort_Merge]] algorithm. The INTERSECTION operation returns the tuples common to both relations, which can be achieved using [[Inner Join]] or [[Intersect]] operations. The DIFFERENCE operation returns the tuples in one relation but not the other, often implemented using [[Left_Join]] or [[Except]] operations. The CARTESIAN PRODUCT operation combines each tuple of one relation with each tuple of another relation, resulting in a new relation with a large number of tuples, often implemented using [[Nested_Loops]].
 
 # 3. ACID Violations & Scaling Limits
-When performing relational algebra operations from set theory, there are several boundary conditions and failure states to consider. For example, if the tables being combined have different schemas, the operation may fail or produce incorrect results, potentially leading to [[Dirty_Reads]] or [[Inconsistent_Views]]. Additionally, large tables can cause scaling issues, particularly with the CARTESIAN PRODUCT operation, which can result in a huge table that exceeds the available [[Storage_Resources]]. Furthermore, concurrent modifications to the tables being combined can lead to [[Lost_Updates]] or [[Non-Repeatable_Reads]], violating [[Acid_Properties]]. As a result, careful planning and optimization are necessary to ensure that these operations are performed efficiently and safely.
+When performing Relational Algebra Operations from Set Theory, it's essential to consider the potential for [[Acid]] violations, particularly in distributed databases where concurrent transactions may interfere with each other. For example, a UNION operation may lead to inconsistent results if the underlying relations are modified simultaneously. Additionally, large relations can lead to scaling limits, as operations like CARTESIAN PRODUCT can result in an exponentially large output. To mitigate these issues, database systems often employ [[Locking_Mechanisms]] and [[Parallel_Processing]] techniques to ensure consistency and performance. However, these solutions can introduce additional complexity and [[Query_Optimization]] challenges.
 # 4. Entity-Relationship Model
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Relational Algebra Operations From Set Theory",
+  "title": "Relational Algebra Operations from Set Theory",
   "type": "object",
   "properties": {
-    "Table1": {
-      "type": "object",
-      "properties": {
-        "Attribute1": {"type": "string"},
-        "Attribute2": {"type": "integer"}
-      },
-      "required": ["Attribute1", "Attribute2"]
-    },
-    "Table2": {
-      "type": "object",
-      "properties": {
-        "Attribute1": {"type": "string"},
-        "Attribute2": {"type": "integer"}
-      },
-      "required": ["Attribute1", "Attribute2"]
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "description": {"type": "string"}
+        },
+        "required": ["name", "description"]
+      }
     }
   },
-  "required": ["Table1", "Table2"]
+  "required": ["operations"]
 }
 ```
-This JSON schema represents two tables, `Table1` and `Table2`, each with two attributes, `Attribute1` and `Attribute2`. The schema ensures that both tables have the same attribute names and data types, which is a requirement for performing relational algebra operations from set theory.
+This JSON schema represents the entity-relationship model for Relational Algebra Operations from Set Theory. It defines a single object with an array of operations, each with a name and description.
 
-To read this schema, start by understanding the top-level properties, `Table1` and `Table2`, which represent the two tables being combined. Each table has two properties, `Attribute1` and `Attribute2`, which define the attributes of the table. The `required` keyword ensures that both attributes are present in each table.
+To read this schema, start by understanding the top-level object, which represents the overall structure of the data. The `operations` property is an array of objects, each describing a specific relational algebra operation. For example, an instance of this schema might contain an array with objects for UNION, INTERSECTION, and DIFFERENCE operations.
 
 ## 5. Walkthrough
-Suppose we have two tables, `Employees` and `Contractors`, with the following data:
+Suppose we have two relations, `R1` and `R2`, representing sets of colored pencils:
 
-`Employees`:
+`R1`:
 
-| EmployeeID | Name | Department |
-| --- | --- | --- |
-| 1 | John Smith | Sales |
-| 2 | Jane Doe | Marketing |
-| 3 | Bob Brown | IT |
+| Color | Quantity |
+| --- | --- |
+| Red   | 5       |
+| Blue  | 3       |
+| Green | 2       |
 
-`Contractors`:
+`R2`:
 
-| ContractorID | Name | Department |
-| --- | --- | --- |
-| 4 | Alice Johnson | Sales |
-| 5 | Mike Davis | IT |
-| 6 | Emily Taylor | HR |
+| Color | Quantity |
+| --- | --- |
+| Red   | 3       |
+| Blue  | 3       |
+| Yellow| 4       |
 
-We want to perform a UNION operation on these two tables to get a list of all employees and contractors.
+Let's perform the following operations:
 
-1. First, we need to ensure that both tables have the same attribute names and data types. In this case, we can rename the `EmployeeID` and `ContractorID` attributes to `ID` to make them compatible.
-2. Next, we perform the UNION operation by combining the rows of both tables and eliminating any duplicate rows.
+1. **UNION**: Combine the tuples of `R1` and `R2`, eliminating duplicates.
 
-Result:
+`R1 ∪ R2`:
 
-| ID | Name | Department |
-| --- | --- | --- |
-| 1 | John Smith | Sales |
-| 2 | Jane Doe | Marketing |
-| 3 | Bob Brown | IT |
-| 4 | Alice Johnson | Sales |
-| 5 | Mike Davis | IT |
-| 6 | Emily Taylor | HR |
+| Color | Quantity |
+| --- | --- |
+| Red   | 5       |
+| Blue  | 3       |
+| Green | 2       |
+| Yellow| 4       |
+
+2. **INTERSECTION**: Return the tuples common to both `R1` and `R2`.
+
+`R1 ∩ R2`:
+
+| Color | Quantity |
+| --- | --- |
+| Red   | 3       |
+| Blue  | 3       |
+
+3. **DIFFERENCE**: Return the tuples in `R1` but not in `R2`.
+
+`R1 - R2`:
+
+| Color | Quantity |
+| --- | --- |
+| Green | 2       |
+
+4. **CARTESIAN PRODUCT**: Combine each tuple of `R1` with each tuple of `R2`.
+
+`R1 × R2`:
+
+| Color1 | Quantity1 | Color2 | Quantity2 |
+| --- | --- | --- | --- |
+| Red   | 5       | Red   | 3       |
+| Red   | 5       | Blue  | 3       |
+| Red   | 5       | Yellow| 4       |
+| Blue  | 3       | Red   | 3       |
+| ...  | ...     | ...  | ...     |
 
 ---
 
@@ -99,26 +120,26 @@ Result:
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "The UNION operation in relational algebra eliminates duplicate rows.",
+    "question": "The UNION operation in Relational Algebra eliminates duplicates.",
     "answer": "True",
-    "explanation": "The UNION operation combines the rows of two tables and eliminates any duplicate rows."
+    "explanation": "The UNION operation combines the tuples of two relations and eliminates duplicates."
   },
   {
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Suppose we have two tables, `TableA` and `TableB`, with the same attribute names and data types. We perform a UNION operation on these tables. What is the result if `TableA` has 10 rows and `TableB` has 5 rows, with 2 rows being duplicates?",
-    "answer": "13",
-    "explanation": "The UNION operation combines the rows of both tables and eliminates any duplicate rows. Therefore, the result will have 10 + 5 - 2 = 13 rows."
+    "question": "Suppose we have two relations, `R1` and `R2`, with the same schema. `R1` contains 1000 tuples and `R2` contains 500 tuples. If we perform a UNION operation on `R1` and `R2`, what is the maximum number of tuples in the resulting relation?",
+    "answer": "1000",
+    "explanation": "The UNION operation eliminates duplicates, so the maximum number of tuples in the resulting relation is the number of tuples in the larger relation, which is 1000."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following code:",
-    "content": "SELECT * FROM TableA UNION SELECT * FROM TableB INTERSECT SELECT * FROM TableC",
-    "answer": "The INTERSECT operation should be performed before the UNION operation, or the query should be rewritten using subqueries or joins.",
-    "explanation": "The given code is trying to perform a UNION operation followed by an INTERSECT operation. However, the INTERSECT operation has higher precedence than the UNION operation, which may lead to incorrect results. To fix this, we need to use parentheses to group the operations correctly or rewrite the query using subqueries or joins."
+    "question": "Find the bug in the following code for performing the INTERSECTION operation:",
+    "content": "INTERSECTION(R1, R2) = R1 INNER JOIN R2 ON R1.Color = R2.Color",
+    "answer": "The bug is that the INTERSECTION operation should return only the common tuples, but the INNER JOIN operation returns a Cartesian product of the common tuples. The correct implementation should use a DISTINCT or GROUP BY clause to eliminate duplicates.",
+    "explanation": "The INTERSECTION operation should return only the common tuples, without duplicates."
   }
 ]
 ```

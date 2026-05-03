@@ -16,71 +16,102 @@ prerequisites:
 ---
 
 # 1. Mental Model
-Imagine you have a big box of different colored pens, and you want to pick out only the red ones or show only the pens with their colors written on them. Unary relational operations work similarly by taking one set of data and applying a single rule to filter or change it, like selecting specific items or showing only certain details.
+Imagine you have a big box of different colored pens, and you want to work with a specific subset of those pens. Unary relational operations are like tools that help you pick out specific pens (or rows) from the box, or change how you look at the pens (or columns), without combining the box with another box of pens. 
 
 # 2. Schema & Query Mechanics
-Unary relational operations involve applying a single operation to a relation. The SELECT operation, denoted as `σ`, works by applying a [[Predicate]] to filter tuples from a relation. For example, `σ age > 18 (Customers)` selects only the customers older than 18. The PROJECT operation, denoted as `π`, works by returning a subset of the relation's attributes. For instance, `π name, email (Customers)` returns only the name and email of each customer. The RENAME operation, denoted as `ρ`, changes the name of a relation or its attributes. Mechanically, these operations are executed using [[Iterator_Interface]]s and [[Tuple_Streams]], which allow for efficient processing of large relations.
+Unary relational operations work on a single relation, modifying it in some way. The SELECT operation, denoted as `σ`, filters rows based on a condition, like choosing only the red pens. This is mechanically achieved through [[Predicate_Evaluation]] against the relation's tuples. The PROJECT operation, denoted as `π`, selects a subset of attributes, similar to picking only the pens with a specific tip size. This involves [[Attribute_Selection]] and [[Tuple_Construction]]. The RENAME operation, denoted as `ρ`, changes the names of attributes, which can be thought of as relabeling the pens. Mechanically, this involves updating the [[Relation_Schema]].
 
 # 3. ACID Violations & Scaling Limits
-Unary relational operations can lead to [[Dirty_Reads]] if not properly synchronized, especially when dealing with concurrent transactions. For instance, a SELECT operation may see an inconsistent view of the data if a transaction modifying the data is not properly [[Locked]]. Additionally, large-scale projections can lead to [[Data_Skew]], causing some nodes in a distributed database to handle much larger loads than others. As the size of the relation increases, the time complexity of these operations can become a bottleneck, especially for operations like SELECT, which may require a full [[Index_Scan]]. Therefore, efficient indexing and partitioning strategies are crucial to scaling unary relational operations.
+Unary operations like SELECT, PROJECT, and RENAME do not inherently violate [[Acid_Properties]] since they do not combine multiple relations and thus do not introduce issues with consistency or isolation. However, when these operations are applied in a large-scale database, performance can become a concern, particularly with very large relations. The [[Query_Optimizer]] plays a crucial role in minimizing the impact on performance by choosing efficient methods for [[Index_Selection]] and [[Access_Method]]s. Despite this, as databases grow, even simple unary operations can become bottlenecks if not properly managed.
 # 4. Entity-Relationship Model
 ```markdown
 ```
 
-### Entity-Relationship Diagram for Unary Relational Operations
-
-```mermaid
-erDiagram
-    RELATION ||--o{ UNARY_OPERATION : applies
-    UNARY_OPERATION ||--|{ SELECT : is_a
-    UNARY_OPERATION ||--|{ PROJECT : is_a
-    UNARY_OPERATION ||--|{ RENAME : is_a
-    SELECT ||--o{ PREDICATE : uses
-    RELATION ||--o{ ATTRIBUTE : has
-    PROJECT ||--o{ ATTRIBUTE : returns
-    RENAME ||--o{ RELATION : renames
+### JSON Schema for Unary Relational Operations
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Unary Relational Operations",
+  "type": "object",
+  "properties": {
+    "operation": {
+      "type": "string",
+      "enum": ["SELECT", "PROJECT", "RENAME"]
+    },
+    "relation": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "attributes": {"type": "array", "items": {"type": "string"}},
+        "tuples": {"type": "array", "items": {"type": "object"}}
+      },
+      "required": ["name", "attributes", "tuples"]
+    },
+    "condition": {
+      "type": ["string", "null"]
+    },
+    "attributes": {
+      "type": ["array", "null"],
+      "items": {"type": "string"}
+    },
+    "newName": {
+      "type": ["string", "null"]
+    }
+  },
+  "required": ["operation", "relation"]
+}
 ```
-
-To read this diagram, start with the `RELATION` entity, which represents a set of data. The `UNARY_OPERATION` entity represents a single operation applied to this relation, which can be a `SELECT`, `PROJECT`, or `RENAME` operation. Each of these operations has its own specific characteristics, such as `SELECT` using a `PREDICATE` to filter tuples, `PROJECT` returning a subset of `ATTRIBUTE`s, and `RENAME` changing the name of a `RELATION` or its `ATTRIBUTE`s.
-```
-
-```
+The JSON schema defines the structure for representing unary relational operations, including the operation type, the relation being operated on, and any additional parameters such as the condition for a SELECT operation or the attributes for a PROJECT operation.
 
 ## 5. Walkthrough
-Here's a step-by-step walkthrough of applying unary relational operations:
+Let's consider a relation `R` with attributes `A`, `B`, and `C`, and tuples:
+```
++----+----+----+
+| A  | B  | C  |
++----+----+----+
+| 1  | 2  | 3  |
+| 4  | 5  | 6  |
+| 7  | 8  | 9  |
++----+----+----+
+```
+We want to perform the following unary relational operations:
 
-Suppose we have a relation `Customers` with attributes `name`, `age`, and `email`.
-
-| name  | age | email          |
-|-------|-----|----------------|
-| John  | 25  | john@example.com|
-| Alice | 30  | alice@example.com|
-| Bob   | 20  | bob@example.com  |
-
-1. **SELECT Operation**: We want to select only the customers older than 25. We apply the `SELECT` operation with the predicate `age > 25`.
-   - `σ age > 25 (Customers)`
+1. **SELECT**: Find all tuples where `A > 4`.
+   - Operation: `σ(A > 4)(R)`
    - Result:
-     | name  | age | email          |
-     |-------|-----|----------------|
-     | Alice | 30  | alice@example.com|
+```
+     +----+----+----+
+     | A  | B  | C  |
+     +----+----+----+
+     | 7  | 8  | 9  |
+     +----+----+----+
+```
 
-2. **PROJECT Operation**: We want to show only the names and emails of all customers.
-   - `π name, email (Customers)`
+2. **PROJECT**: Select only attributes `A` and `C`.
+   - Operation: `π(A, C)(R)`
    - Result:
-     | name  | email          |
-     |-------|----------------|
-     | John  | john@example.com|
-     | Alice | alice@example.com|
-     | Bob   | bob@example.com  |
+```
+     +----+----+
+     | A  | C  |
+     +----+----+
+     | 1  | 3  |
+     | 4  | 6  |
+     | 7  | 9  |
+     +----+----+
+```
 
-3. **RENAME Operation**: We want to rename the `name` attribute to `customer_name`.
-   - `ρ Customers (name -> customer_name) (Customers)`
-   - Result:
-     | customer_name | age | email          |
-     |---------------|-----|----------------|
-     | John          | 25  | john@example.com|
-     | Alice         | 30  | alice@example.com|
-     | Bob           | 20  | bob@example.com  |
+3. **RENAME**: Rename attribute `A` to `X`.
+   - Operation: `ρ(R1, A → X)(R)`
+   - Result (relation schema change):
+```
+     +----+----+----+
+     | X  | B  | C  |
+     +----+----+----+
+     | 1  | 2  | 3  |
+     | 4  | 5  | 6  |
+     | 7  | 8  | 9  |
+     +----+----+----+
+```
 
 ---
 
@@ -92,26 +123,26 @@ Suppose we have a relation `Customers` with attributes `name`, `age`, and `email
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "The SELECT operation in relational algebra is used to return a subset of the relation's attributes.",
+    "question": "Unary relational operations involve combining two or more relations.",
     "answer": "False",
-    "explanation": "The SELECT operation is used to filter tuples from a relation based on a predicate, not to return a subset of attributes."
+    "explanation": "Unary relational operations work on a single relation."
   },
   {
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Given a relation `Employees` with attributes `id`, `name`, and `department`, apply a PROJECT operation to show only the `name` and `department` of employees.",
-    "answer": "π name, department (Employees)",
-    "explanation": "The PROJECT operation is used to return a subset of the relation's attributes."
+    "question": "Given a relation with attributes 'name', 'age', and 'city', how would you use a unary relational operation to find all individuals older than 30?",
+    "answer": "Use the SELECT operation: σ(age > 30)(relation)",
+    "explanation": "The SELECT operation filters rows based on a condition."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following relational algebra expression: `σ age > 18 AND age < 18 (Customers)`",
-    "content": "σ age > 18 AND age < 18 (Customers)",
-    "answer": "The condition 'age > 18 AND age < 18' will always be false because a value cannot be both greater than 18 and less than 18 at the same time. The correct condition should be 'age > 18' or another valid predicate.",
-    "explanation": "The given condition is a contradiction and will result in an empty set."
+    "question": "Find the bug in the following operation: π(A, B)(σ(A > 5 ∧ B < 3)(R)) where R has attributes A, B, C.",
+    "content": "π(B, C)(σ(A > 5 ∧ B < 3 ∧ C = 10)(R))",
+    "answer": "The bug is that the projection attributes do not match the filter condition attributes; the correct operation should be π(A, B)(σ(A > 5 ∧ B < 3)(R)).",
+    "explanation": "The projection should match the attributes used in the selection and the relation schema."
   }
 ]
 ```

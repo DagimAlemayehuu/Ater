@@ -11,14 +11,10 @@
             "id": "e4e52099906a74b0",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "2-Academic/2024/25/Discrete_Mathematics/2_Recurrence_Relations/Order_Of_Recurrence_Relation.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "Order_Of_Recurrence_Relation"
+              "title": "New tab"
             }
           }
         ]
@@ -94,7 +90,6 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "2-Academic/2024/25/Discrete_Mathematics/2_Recurrence_Relations/Order_Of_Recurrence_Relation.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +99,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for Order_Of_Recurrence_Relation"
+              "title": "Backlinks"
             }
           },
           {
@@ -113,12 +108,11 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "2-Academic/2024/25/Discrete_Mathematics/2_Recurrence_Relations/Order_Of_Recurrence_Relation.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from Order_Of_Recurrence_Relation"
+              "title": "Outgoing links"
             }
           },
           {
@@ -156,13 +150,12 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "2-Academic/2024/25/Discrete_Mathematics/2_Recurrence_Relations/Order_Of_Recurrence_Relation.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Order_Of_Recurrence_Relation"
+              "title": "Outline"
             }
           }
         ]
@@ -185,41 +178,41 @@
   },
   "active": "e4e52099906a74b0",
   "lastOpenFiles": [
-    "3-Database/07 - Courses/Web Dev.md",
-    "5-Pdf Store/note generated/Chapter 5.pdf",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Call.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Return_Type.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Definition.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Prototypes.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function_Declaration.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Function.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Functions_In_C++.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Modules.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming/Modular_Programming.md",
-    "2-Academic/Autumn 2025/Computer_Programming/5_Modular_Programming",
-    "2-Academic/Autumn 2025/Computer_Programming",
-    "3-Database/06 - Study Planner/5_Modular_Programming_Hub.md",
-    "5-Pdf Store/Chapter 5.pdf",
+    "5-Pdf Store/note generated/2 copy.pdf",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Inclusive_Education.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Equality_And_Equity.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Inclusion_As_A_Process.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Institutional_Barriers.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Environmental_And_Technical_Barriers.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Attitudinal_Barriers.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Barriers_To_Inclusion.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Features_Of_Inclusive_Environment.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Foundations_For_Building_Inclusive_Society.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Economic_Foundations_Of_Inclusion.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Legal_Foundations_Of_Inclusion.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Social_Foundations_Of_Inclusion.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Educational_Foundations_Of_Inclusion.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Rationale_For_Inclusion.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Principles_Of_Inclusion.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion/Definition_Of_Inclusion.md",
+    "2-Academic/Autumn 2025/Inclusiveness/2_Concept_Of_Inclusion",
+    "2-Academic/Autumn 2025/Inclusiveness",
+    "3-Database/06 - Study Planner/2_Concept_of_Inclusion_Hub.md",
     "5-Pdf Store/note generated/Chapter_7.pdf",
     "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Query_Tree.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Outer_Union.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Outer_Join.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Grouping.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Complete_Set_Of_Relational_Operations.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Outer_Union_Operation.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Relational_Algebra.md",
+    "5-Pdf Store/Chapter_7.pdf",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Outer_Join_Operation.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Grouping_With_Aggregation.md",
     "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Aggregate_Functions.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Division.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Natural_Join.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Equijoin.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Theta_Join.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Domain_Relational_Calculus.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Tuple_Relational_Calculus.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Relational_Calculus.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Additional_Relational_Operations.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Division_Operation.md",
-    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Join_Operation.md",
+    "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus/Natural_Join_Operation.md",
     "2-Academic/Autumn 2025/Database_Systems/7_Relational_Algebra_And_Calculus",
     "2-Academic/Autumn 2025/Database_Systems",
-    "2-Academic/Autumn 2025",
-    "5-Pdf Store/Chapter_7.pdf",
-    "5-Pdf Store/note generated/1777792221_2_Recurrence_Relations.pdf"
+    "5-Pdf Store/note generated/Chapter 2.pdf",
+    "2-Academic/Autumn 2025/Computer_Programming/2_C++_Programming_Fundamentals",
+    "2-Academic/Autumn 2025/Computer_Programming",
+    "5-Pdf Store/note generated/2.pdf"
   ]
 }

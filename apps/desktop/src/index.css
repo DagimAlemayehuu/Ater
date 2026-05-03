@@ -351,3 +351,16 @@
   letter-spacing: 0.15em;
   opacity: 0.4;
 }
+
+/* ─── Checked Task Strikethrough ─── */
+.prose li:has(input[type="checkbox"]:checked) {
+  opacity: 0.5;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.prose input[type="checkbox"]:checked + span,
+.prose input[type="checkbox"]:checked + button {
+  opacity: 0.5;
+  text-decoration: line-through;
+}

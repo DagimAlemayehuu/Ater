@@ -1,20 +1,18 @@
 ---
-title: "Order_of_Recurrence_Relation"
-type: "Atomic Note"
-course: "Discrete Mathematics"
-semester: "2024/25"
-unit: "2"
-hub:
-  - "2_Recurrence_Relations_Hub"
-source:
-  - "2_Recurrence_Relations.Pdf"
+title: Order_of_Recurrence_Relation
+type: Atomic Note
+course: Discrete Mathematics
+semester: 2024/25
+unit: '2'
+hub: "[[2_Recurrence_Relations_Hub]]"
+source: "[[2_Recurrence_Relations.Pdf]]"
 source_pages:
-  - "14"
-mode: "MATH-PURE"
+- 14
+mode: MATH-PURE
 read: false
 generated: true
 prerequisites:
-  - "Recurrence_Relation"
+- "[[Recurrence_Relation]]"
 ---
 
 # 1. Mental Model
@@ -40,7 +38,6 @@ Given a recurrence relation of the form:
 We aim to show that the order of this recurrence relation is $k$.
 
 \subsection{Definition of Order}
-
 The order of a recurrence relation is defined as the maximum difference between the indices of the terms involved.
 
 \subsection{Proof Steps}
@@ -48,27 +45,25 @@ The order of a recurrence relation is defined as the maximum difference between 
 \begin{enumerate}
     \item Consider the recurrence relation: $a_n = f(a_{n-1}, a_{n-2}, ..., a_{n-k})$
     \item Identify the term indices: $n, n-1, n-2, ..., n-k$
-    \item Compute the index differences: $n - (n-1) = 1, n - (n-2) = 2, ..., n - (n-k) = k$
-    \item Determine the maximum index difference: $\max(1, 2, ..., k) = k$
+    \item Compute the index differences: $n - (n-k) = k$
+    \item Since $k$ is the maximum difference, the order of the recurrence relation is $k$.
 \end{enumerate}
 
-\subsection{Conclusion}
-
-Therefore, the order of the recurrence relation $a_n = f(a_{n-1}, a_{n-2}, ..., a_{n-k})$ is $k$.
+\section{Conclusion}
+The order of the recurrence relation $a_n = f(a_{n-1}, a_{n-2}, ..., a_{n-k})$ is indeed $k$.
 
 \end{document}
 ```
-
-To read this LaTeX code: This is a step-by-step formal proof that the order of a recurrence relation is determined by the maximum difference between the indices of the terms involved. The proof involves defining the order, listing the term indices, computing the index differences, and concluding that the order is $k$.
+To read this LaTeX code: This is a step-by-step formal proof that the order of a recurrence relation of the form `a_n = f(a_{n-1}, a_{n-2}, ..., a_{n-k})` is `k`. The proof involves defining the order, listing the term indices, computing the index differences, and concluding that the order is `k`.
 
 ## 5. Walkthrough
-Consider the recurrence relation: $a_n = 2a_{n-1} + 3a_{n-2}$.
+Consider the recurrence relation: `a_n = 2*a_{n-1} + 3*a_{n-2}`.
 
-1. **Identify the Term Indices**: The term indices involved are $n, n-1,$ and $n-2$.
-2. **Compute the Index Differences**: The differences are $n - (n-1) = 1$ and $n - (n-2) = 2$.
-3. **Determine the Maximum Index Difference**: The maximum index difference is $2$.
-4. **Conclude the Order**: Therefore, the order of the recurrence relation $a_n = 2a_{n-1} + 3a_{n-2}$ is $2$.
-5. **Verify with Initial Conditions**: To solve this relation, we would need two initial conditions, such as $a_0$ and $a_1$, because the order is $2$.
+1. **Identify the Term Indices**: The term indices are $n, n-1, n-2$.
+2. **Compute the Index Differences**: The maximum difference between the indices is $n - (n-2) = 2$.
+3. **Determine the Order**: The order of the recurrence relation is $2$.
+4. **Verify the Relation**: The relation depends on two previous terms, confirming that the order is indeed $2$.
+5. **Conclusion**: The order of the given recurrence relation is $2$.
 
 ---
 
@@ -80,7 +75,7 @@ Consider the recurrence relation: $a_n = 2a_{n-1} + 3a_{n-2}$.
     "id": "q1",
     "type": "mcq",
     "difficulty": "L1",
-    "question": "What is the order of the recurrence relation $a_n = a_{n-2} + a_{n-3}$?",
+    "question": "What is the order of the recurrence relation $a_n = a_{n-1} + a_{n-2}$?",
     "options": {
       "A": "1",
       "B": "2",
@@ -88,7 +83,7 @@ Consider the recurrence relation: $a_n = 2a_{n-1} + 3a_{n-2}$.
       "D": "4"
     },
     "answer": "B",
-    "explanation": "The order is determined by the maximum difference between term indices, which here is $n - (n-2) = 2$ and $n - (n-3) = 3$. The maximum is $3$, but since we look at differences, the correct interpretation leads to the order being $2$ because we consider how many steps back we go, which makes the maximum relevant difference $2$ steps."
+    "explanation": "The order is determined by the maximum difference between term indices, which is 2."
   },
   {
     "id": "q2",
@@ -99,16 +94,16 @@ Consider the recurrence relation: $a_n = 2a_{n-1} + 3a_{n-2}$.
     "answer": [
       "k"
     ],
-    "explanation": "The order is directly $k$ because that's the maximum difference in indices of terms involved."
+    "explanation": "The order is directly related to the maximum difference between term indices, which is k."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following code intended to calculate the order of a recurrence relation:",
-    "content": "def calculate_order(terms):\n  order = 0\n  for term in terms:\n    index_diff = term - current_index\n    if index_diff > order:\n      order = index_diff\n  return order",
-    "answer": "The bug is that 'current_index' is not defined anywhere in the function. It should presumably be the index of the term for which we are calculating the recurrence relation, typically denoted as $n$. The corrected code should reference $n$ properly or use a different approach that does not require an undefined variable.",
-    "explanation": "The bug involves an undefined variable 'current_index'. A correct approach would involve directly computing the differences based on provided term indices."
+    "question": "Find the bug in the following code for determining the order of a recurrence relation:",
+    "content": "def find_order(relation):\n  terms = relation.split('+')\n  order = 1\n  for term in terms:\n    if 'a_' in term:\n      index = int(term.split('_')[1])\n      order = max(order, index)\n  return order",
+    "answer": "The bug is in the line 'order = max(order, index)'. It should be 'order = max(order, abs(index - n))' or a similar correction to properly calculate the difference in indices. Also, 'n' is not defined in the function; it should be replaced with the current term's index or another way to track the current index.",
+    "explanation": "The original code does not correctly calculate the order as it does not consider the actual differences in indices between terms but rather their absolute values or a direct comparison."
   }
 ]
 ```

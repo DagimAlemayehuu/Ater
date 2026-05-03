@@ -106,12 +106,12 @@ class OkaQueueManager:
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
         try:
             conn = sqlite3.connect(self.db_path)
-            # 1. Reset any 'error' status to 'pending' on startup
+            # Reset 'error' → 'pending'; preserve 'deploying' (has checkpoint data)
             conn.execute("UPDATE queue SET status = 'pending' WHERE status = 'error'")
             conn.commit()
             conn.close()
             
-            # 2. Add any new files
+            # Add any new files
             for item in self.inbox_path.iterdir():
                 if item.is_file() and not item.name.startswith('.') and item.suffix.lower() in supported:
                     self.add_to_queue(item)
@@ -120,7 +120,24 @@ class OkaQueueManager:
 
     def _init_db(self):
         conn = sqlite3.connect(self.db_path)
-        conn.execute("CREATE TABLE IF NOT EXISTS queue (file_path TEXT PRIMARY KEY, status TEXT, added_at TEXT)")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS queue (
+                file_path TEXT PRIMARY KEY,
+                status TEXT,
+                added_at TEXT,
+                session_id TEXT,
+                current_batch INTEGER DEFAULT 0,
+                total_batches INTEGER DEFAULT 0,
+                curriculum TEXT
+            )
+        """)
+        # Migrate existing tables that don't have the new columns
+        for col, defval in [("session_id", "NULL"), ("current_batch", "0"),
+                            ("total_batches", "0"), ("curriculum", "NULL")]:
+            try:
+                conn.execute(f"ALTER TABLE queue ADD COLUMN {col} {'TEXT' if col in ('session_id','curriculum') else 'INTEGER'} DEFAULT {defval}")
+            except Exception:
+                pass  # Column already exists
         conn.commit()
         conn.close()
 
@@ -138,7 +155,11 @@ class OkaQueueManager:
 
     def _get_next_task(self):
         conn = sqlite3.connect(self.db_path)
-        row = conn.execute("SELECT file_path FROM queue WHERE status = 'pending' ORDER BY added_at ASC LIMIT 1").fetchone()
+        # Pick up 'deploying' first (crash-resume), then 'pending' (new files)
+        row = conn.execute(
+            "SELECT file_path FROM queue WHERE status IN ('deploying', 'pending') ORDER BY "
+            "CASE status WHEN 'deploying' THEN 0 ELSE 1 END, added_at ASC LIMIT 1"
+        ).fetchone()
         conn.close()
         return row[0] if row else None
 
@@ -153,6 +174,31 @@ class OkaQueueManager:
         conn.execute("UPDATE queue SET status = 'error' WHERE file_path = ?", (file_path,))
         conn.commit()
         conn.close()
+
+    def _save_checkpoint(self, file_path: str, session_id: str, batch: int, total: int, curriculum: dict):
+        """Persist deployment progress so a server restart can resume."""
+        import json as _json
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            "UPDATE queue SET status='deploying', session_id=?, current_batch=?, "
+            "total_batches=?, curriculum=? WHERE file_path=?",
+            (session_id, batch, total, _json.dumps(curriculum), file_path)
+        )
+        conn.commit()
+        conn.close()
+
+    def _get_checkpoint(self, file_path: str):
+        """Return (session_id, current_batch, total_batches, curriculum) if a checkpoint exists."""
+        import json as _json
+        conn = sqlite3.connect(self.db_path)
+        row = conn.execute(
+            "SELECT session_id, current_batch, total_batches, curriculum FROM queue WHERE file_path=?",
+            (file_path,)
+        ).fetchone()
+        conn.close()
+        if row and row[0]:
+            return row[0], row[1] or 0, row[2] or 0, _json.loads(row[3] or "{}")
+        return None, 0, 0, {}
 
     async def _worker_loop(self):
         """Continuous background loop for autonomous processing."""
@@ -174,95 +220,124 @@ class OkaQueueManager:
                     continue
 
                 self.current_file = file_path_str
-                
-                # Clear state for new file
-                self.current_batch = 0
-                self.total_batches = 0
-                self.planned_batches = []
-                self.processed_notes = []
-                self.last_action = "Inbound Detection..."
-                self.status = "detecting"
-                
-                watcher_logger.info(f"Starting autonomous planning for: {path.name}")
-                
-                # 1. Detection Phase
-                try:
-                    detect_res = await self.service.detect_curriculum(str(path.absolute()))
-                except Exception as e:
-                    watcher_logger.error(f"Detection failed for {path.name}: {e}")
-                    if "429" in str(e) or "rate_limit" in str(e).lower():
-                        watcher_logger.warning("Rate limit during detection. Cooling down for 60s...")
-                        await asyncio.sleep(60)
-                    else:
-                        self._mark_error(file_path_str)
-                    continue
 
-                anchored_hub = detect_res.get("anchored_hub")
-                detected = detect_res.get("detected_curriculum") or {}
-                
-                curriculum = {
-                    "course": (anchored_hub.get("course") if anchored_hub else detected.get("course")) or "",
-                    "unit": (anchored_hub.get("unit") if anchored_hub else detected.get("unit")) or "",
-                    "semester": (anchored_hub.get("semester") if anchored_hub else detected.get("semester")) or "",
-                    "hub_title": (anchored_hub.get("title") if anchored_hub else detected.get("hub_title") or path.stem) or path.stem,
-                    "primary_language": detected.get("primary_language", "General")
-                }
+                # ── Check for an existing checkpoint (crash-resume) ──────────────────
+                saved_session_id, saved_batch, saved_total, saved_curriculum = self._get_checkpoint(file_path_str)
 
-                if not curriculum["course"]:
-                    parts = path.parts
-                    for i, p in enumerate(parts):
-                        if p == "2-Academic" and i + 1 < len(parts):
-                            potential_course = parts[i+1]
-                            if potential_course != path.name and potential_course != "PDF Inbox":
-                                curriculum["course"] = potential_course
-                                break
+                if saved_session_id and saved_batch > 0:
+                    watcher_logger.info(
+                        f"Resuming {path.name} from batch {saved_batch}/{saved_total} "
+                        f"(session={saved_session_id[:8]}...)"
+                    )
+                    self.current_batch = saved_batch
+                    self.total_batches = saved_total
+                    self.status = "deploying"
+                    self.last_action = f"Resuming from batch {saved_batch}"
+                    curriculum = saved_curriculum
+                    session_id = saved_session_id
+                    anchored_hub = None  # not needed for resume
+                    has_more = True
+                    temp_batch = saved_batch
+                    deployment_failed = False
 
-                # 2. Planning Phase
-                self.status = "planning"
-                self.last_action = "Architecting Knowledge Plan..."
-                
-                plan_retry = 0
-                res = None
-                while plan_retry < 5:
+                    # Jump directly to the deployment loop below
+                    goto_deployment = True
+                else:
+                    goto_deployment = False
+
+                if not goto_deployment:
+                    # Clear state for new file
+                    self.current_batch = 0
+                    self.total_batches = 0
+                    self.planned_batches = []
+                    self.processed_notes = []
+                    self.last_action = "Inbound Detection..."
+                    self.status = "detecting"
+
+                    watcher_logger.info(f"Starting autonomous planning for: {path.name}")
+
+                    # 1. Detection Phase
                     try:
-                        res = await self.service.generate_plan(
-                            str(path.absolute()), 
-                            self.si_path,
-                            curriculum=curriculum,
-                            target_hub_id=anchored_hub.get("id") if anchored_hub else None
-                        )
-                        if res: break
+                        detect_res = await self.service.detect_curriculum(str(path.absolute()))
                     except Exception as e:
-                        plan_retry += 1
-                        err_msg = str(e).lower()
-                        watcher_logger.warning(f"Planning failed (Attempt {plan_retry}/5): {e}")
-                        if "429" in err_msg or "rate_limit" in err_msg:
+                        watcher_logger.error(f"Detection failed for {path.name}: {e}")
+                        if "429" in str(e) or "rate_limit" in str(e).lower():
+                            watcher_logger.warning("Rate limit during detection. Cooling down for 60s...")
                             await asyncio.sleep(60)
                         else:
-                            await asyncio.sleep(10)
+                            self._mark_error(file_path_str)
+                        continue
 
-                if not res:
-                    watcher_logger.error(f"Planning exhausted all retries for {path.name}")
-                    self._mark_error(file_path_str)
-                    continue
+                    anchored_hub = detect_res.get("anchored_hub")
+                    detected = detect_res.get("detected_curriculum") or {}
 
-                session_id = res["session_id"]
-                structured_plan = res["plan_structured"]
-                self.planned_batches = structured_plan.get("batches", [])
-                self.total_batches = len(self.planned_batches)
-                self.status = "deploying"
-                self.last_action = f"Architecting {self.total_batches} Batches"
+                    curriculum = {
+                        "course": (anchored_hub.get("course") if anchored_hub else detected.get("course")) or "",
+                        "unit": (anchored_hub.get("unit") if anchored_hub else detected.get("unit")) or "",
+                        "semester": (anchored_hub.get("semester") if anchored_hub else detected.get("semester")) or "",
+                        "hub_title": (anchored_hub.get("title") if anchored_hub else detected.get("hub_title") or path.stem) or path.stem,
+                        "primary_language": detected.get("primary_language", "General")
+                    }
 
-                watcher_logger.info(f"Plan generated for {path.name}. Total batches: {self.total_batches}")
+                    if not curriculum["course"]:
+                        parts = path.parts
+                        for i, p in enumerate(parts):
+                            if p == "2-Academic" and i + 1 < len(parts):
+                                potential_course = parts[i+1]
+                                if potential_course != path.name and potential_course != "PDF Inbox":
+                                    curriculum["course"] = potential_course
+                                    break
 
-                # 3. Deployment Phase (Strict Continuous Loop)
-                watcher_logger.info(f"Starting strict continuous deployment for {path.name}")
-                self.last_action = "Continuous Deployment Active..."
-                
-                has_more = True
-                temp_batch = 0
-                deployment_failed = False
-                
+                    # 2. Planning Phase
+                    self.status = "planning"
+                    self.last_action = "Architecting Knowledge Plan..."
+
+                    plan_retry = 0
+                    res = None
+                    while plan_retry < 5:
+                        try:
+                            res = await self.service.generate_plan(
+                                str(path.absolute()),
+                                self.si_path,
+                                curriculum=curriculum,
+                                target_hub_id=anchored_hub.get("id") if anchored_hub else None
+                            )
+                            if res: break
+                        except Exception as e:
+                            plan_retry += 1
+                            err_msg = str(e).lower()
+                            watcher_logger.warning(f"Planning failed (Attempt {plan_retry}/5): {e}")
+                            if "429" in err_msg or "rate_limit" in err_msg:
+                                await asyncio.sleep(60)
+                            else:
+                                await asyncio.sleep(10)
+
+                    if not res:
+                        watcher_logger.error(f"Planning exhausted all retries for {path.name}")
+                        self._mark_error(file_path_str)
+                        continue
+
+                    session_id = res["session_id"]
+                    structured_plan = res["plan_structured"]
+                    self.planned_batches = structured_plan.get("batches", [])
+                    self.total_batches = len(self.planned_batches)
+                    self.status = "deploying"
+                    self.last_action = f"Architecting {self.total_batches} Batches"
+
+                    watcher_logger.info(f"Plan generated for {path.name}. Total batches: {self.total_batches}")
+
+                    # 3. Deployment Phase (Strict Continuous Loop)
+                    watcher_logger.info(f"Starting strict continuous deployment for {path.name}")
+                    self.last_action = "Continuous Deployment Active..."
+
+                    has_more = True
+                    temp_batch = 0
+                    deployment_failed = False
+
+                    # Save initial checkpoint
+                    self._save_checkpoint(file_path_str, session_id, 0, self.total_batches, curriculum)
+
+                # ── Deployment loop (shared for both fresh and resumed) ──────────────
                 while has_more and self.auto_process:
                     command = "Confirm Final Plan & Proceed Batch 1" if temp_batch == 0 else f"Proceed Batch {temp_batch + 1}"
                     watcher_logger.info(f"Auto-confirming {command} for {path.name}")
@@ -285,6 +360,8 @@ class OkaQueueManager:
                                 new_notes = confirm_res.get("results", [])
                                 self.processed_notes.extend(new_notes)
                                 self.last_action = f"Deployed {temp_batch}/{self.total_batches}"
+                                # Persist checkpoint after every successful batch
+                                self._save_checkpoint(file_path_str, session_id, temp_batch, self.total_batches, curriculum)
                                 success = True
                             else:
                                 raise ValueError(confirm_res.get("message", "Unknown service error"))
@@ -302,6 +379,7 @@ class OkaQueueManager:
                         watcher_logger.error(f"Deployment exhausted all retries for {path.name} at batch {temp_batch}")
                         deployment_failed = True
                         break
+
                     
                 # 4. Finalize (Only if fully successful)
                 if not deployment_failed and not has_more:

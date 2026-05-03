@@ -1,15 +1,15 @@
 ---
-title: "Recurrence_Relation"
-type: "Atomic Note"
-course: "Discrete Mathematics"
-semester: "2024/25"
-unit: "2"
-hub: [[2_Recurrence_Relations_Hub]]
-source: [[2_Recurrence_Relations.Pdf]]
+title: Recurrence_Relation
+type: Atomic Note
+course: Discrete Mathematics
+semester: 2024/25
+unit: '2'
+hub: "[[2_Recurrence_Relations_Hub]]"
+source: "[[2_Recurrence_Relations.Pdf]]"
 source_pages:
-  - "10"
-mode: "MATH-PURE"
-read: true
+- 10
+mode: MATH-PURE
+read: false
 generated: true
 ---
 
@@ -46,14 +46,14 @@ We need to show that:
 
 Using the recurrence relation:
 \[ a_{k+1} = a_k + a_{k-1} \]
-This confirms our inductive step.
+which is what we needed to show.
 
 \subsection*{Conclusion}
 By mathematical induction, the recurrence relation $a_n = a_{n-1} + a_{n-2}$ holds for all $n \geq 2$.
 
 \end{document}
 ```
-To read this LaTeX code: This is a step-by-step formal proof of a simple recurrence relation using mathematical induction. The code first defines the recurrence relation and initial conditions, then proceeds with the base case and inductive step, and finally concludes the proof.
+To read this LaTeX code: This is a step-by-step formal proof of a recurrence relation using mathematical induction. The code first defines the sequence and its initial conditions, then proceeds with the base case and inductive step to prove that the relation holds for all $n \geq 2$.
 
 ## 5. Walkthrough
 Consider the recurrence relation:
@@ -61,27 +61,21 @@ Consider the recurrence relation:
 for $n > 1$, with $T(1) = 1$.
 
 ### Steps to Solve:
-1. **Identify the Recurrence Relation**: 
-   \[ T(n) = 2T\left(\frac{n}{2}\right) + n \]
-
-2. **Apply the Master Theorem or Solve by Substitution**:
-   For simplicity and adherence to common techniques, let's assume we solve it by substitution or recognize it as a form that can be simplified.
-
-3. **Solve by Backward Substitution**:
-   \[ T(n) = 2T\left(\frac{n}{2}\right) + n \]
-   \[ T(n) = 2\left(2T\left(\frac{n}{4}\right) + \frac{n}{2}\right) + n \]
-   \[ T(n) = 4T\left(\frac{n}{4}\right) + 2n \]
-   Assuming $n = 2^k$ for simplicity:
-   \[ T(2^k) = 2^k T(1) + k \cdot 2^k \]
-   \[ T(2^k) = 2^k + k \cdot 2^k \]
-   \[ T(n) = n + n\log_2(n) \]
-
-4. **Verify the Solution (Optional)**:
-   Plug back into the original equation to verify.
-
-5. **Conclusion**:
-   \[ T(n) = n + n\log_2(n) \]
-   This provides a closed-form solution to the given recurrence relation.
+1. **Identify the Recurrence Relation**: The given relation is $T(n) = 2T\left(\frac{n}{2}\right) + n$.
+2. **Apply the Master Theorem or Substitution Method**: Here, we opt for substitution for clarity.
+3. **Solve for $T(n)$**:
+   - Assume $n = 2^k$.
+   - Substitute $T(n)$ into itself:
+     \[ T(n) = 2T\left(\frac{n}{2}\right) + n = 2\left(2T\left(\frac{n}{4}\right) + \frac{n}{2}\right) + n = 2^2T\left(\frac{n}{4}\right) + 2\frac{n}{2} + n \]
+   - Generalizing:
+     \[ T(n) = 2^kT(1) + \sum_{i=0}^{k-1} 2^i n \]
+   - Since $n = 2^k$, $k = \log_2 n$:
+     \[ T(n) = n + n\sum_{i=0}^{\log_2 n - 1} 2^i \]
+   - Using the sum of a geometric series $\sum_{i=0}^{m} r^i = \frac{1-r^{m+1}}{1-r}$:
+     \[ T(n) = n + n\left(\frac{1-2^{\log_2 n}}{1-2}\right) \]
+   - Simplifying:
+     \[ T(n) = n + n(2^{\log_2 n} - 1) = n + n(n - 1) = n^2 + n - n = n^2 \]
+4. **Conclusion**: $T(n) = n^2$.
 
 ---
 
@@ -101,14 +95,14 @@ for $n > 1$, with $T(1) = 1$.
       "D": "A numerical method for approximations"
     },
     "answer": "A",
-    "explanation": "A recurrence relation is an equation that expresses a term in a sequence using one or more previous terms."
+    "explanation": "A recurrence relation is an equation that expresses a term in a sequence as a function of previous terms."
   },
   {
     "id": "q2",
     "type": "fill_in",
     "difficulty": "L2",
-    "question": "The solution to a recurrence relation often involves finding a [[Blank1]] that satisfies the equation for all n.",
-    "textWithBlanks": "The solution to a recurrence relation often involves finding a [[Blank1]] that satisfies the equation for all n.",
+    "question": "The solution to a recurrence relation often involves finding a [[Blank1]] that satisfies the equation for all $n$.",
+    "textWithBlanks": "The solution to a recurrence relation often involves finding a [[Blank1]] that satisfies the equation for all $n$.",
     "answer": [
       "Closed-Form Expression"
     ],
@@ -118,10 +112,10 @@ for $n > 1$, with $T(1) = 1$.
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the given recurrence relation solution process.",
-    "content": "T(n) = T(n/2) + n; T(1) = 1; assume T(n) = n; substitute to get n = n/2 + n; conclude T(n) = n is a solution",
-    "answer": "The conclusion that T(n) = n is a solution is incorrect because it does not satisfy the original recurrence relation; proper solution involves more rigorous substitution or application of a theorem",
-    "explanation": "The provided solution process contains a logical fallacy in concluding T(n) = n as a valid solution without proper verification."
+    "question": "Find the bug in the following code/logic for solving a recurrence relation.",
+    "content": "T(n) = T(n/2) + n; assume T(1) = 1; then T(n) = T(n/4) + n/2 + n; conclude T(n) = n",
+    "answer": "The bug is in not properly substituting and simplifying the recurrence relation across all levels, leading to an incorrect conclusion of T(n) = n without considering all terms.",
+    "explanation": "The provided logic incorrectly concludes T(n) = n without proper substitution and summation of all terms across levels of the recurrence relation."
   }
 ]
 ```

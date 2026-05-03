@@ -253,7 +253,8 @@ class WriterAgent:
             except Exception as e:
                 last_error = e
                 if ArchitectAgent._is_rate_limit(e):
-                    wait = 30 * (attempt + 1)
+                    # Exponential backoff with 60s floor (matches Groq's 1-min TPM window)
+                    wait = min(60 * (2 ** attempt), 300)
                     print(f"[WriterAgent] Pass 1 rate limited. Waiting {wait}s...")
                     await asyncio.sleep(wait)
                 else:
@@ -359,7 +360,25 @@ class WriterAgent:
                 # ── Extract and validate quiz JSON ──
                 quiz_match = re.search(r"```interactive-quiz\s*(.*?)\s*```", res_content, re.DOTALL)
                 if not quiz_match:
-                    last_error = "```interactive-quiz block not found."
+                    # Auto-repair: model sometimes outputs ```json instead of ```interactive-quiz
+                    # Try to find ANY json/array block that looks like quiz data
+                    fallback_match = re.search(
+                        r"```(?:json|JSON|quiz)?\s*(\[\s*\{.*?\}\s*\])\s*```",
+                        res_content, re.DOTALL
+                    )
+                    if fallback_match:
+                        # Splice in the correct fence language and continue parsing
+                        print(f"[WriterAgent] Auto-repairing quiz fence language on '{note_title}'")
+                        res_content = res_content[:fallback_match.start()] + \
+                            f"```interactive-quiz\n{fallback_match.group(1).strip()}\n```" + \
+                            res_content[fallback_match.end():]
+                        quiz_match = re.search(r"```interactive-quiz\s*(.*?)\s*```", res_content, re.DOTALL)
+
+                if not quiz_match:
+                    # Find what fence was actually used to give a useful retry hint
+                    wrong_fence = re.search(r"```(\w+)", res_content)
+                    fence_hint = f" (you used ```{wrong_fence.group(1)})" if wrong_fence else ""
+                    last_error = f"```interactive-quiz block not found{fence_hint}. You MUST wrap the JSON array with ```interactive-quiz ... ``` exactly."
                     continue
 
                 quiz_str = quiz_match.group(1).strip()
@@ -387,13 +406,11 @@ class WriterAgent:
                     if q.get("type") == "debug":
                         answer_words = set(str(q.get("answer", "")).lower().split())
                         content_lower = str(q.get("content", "")).lower()
-                        # If more than 3 answer words appear in content, it's a leak
-                        leak_count = sum(1 for w in answer_words if len(w) > 4 and w in content_lower)
-                        if leak_count > 3:
-                            last_error = (
-                                "Debug question leaks the answer in the content field. "
-                                "The content field must contain ONLY the buggy code, no hints or answer text."
-                            )
+                        # Mirror the validator threshold: >6 long words (>5 chars)
+                        # to avoid false-positives on theory/DB concepts
+                        leak_count = sum(1 for w in answer_words if len(w) > 5 and w in content_lower)
+                        if leak_count > 6:
+                            last_error = "The content field must contain ONLY the buggy code, no hints or answer text."
                             break
                 else:
                     # No leaks — success
@@ -410,7 +427,8 @@ class WriterAgent:
             except Exception as e:
                 last_error = e
                 if ArchitectAgent._is_rate_limit(e):
-                    wait = 30 * (attempt + 1)
+                    # Exponential backoff with 60s floor (matches Groq's 1-min TPM window)
+                    wait = min(60 * (2 ** attempt), 300)
                     print(f"[WriterAgent] Pass 2 rate limited. Waiting {wait}s...")
                     await asyncio.sleep(wait)
                 else:

@@ -346,7 +346,7 @@ function KnowledgeFooter({tree, activePath, onNavigate, onFinish}: {tree: NavNod
  const prevNode = currentIndex > 0 ? flattened[currentIndex - 1] : null;
  const nextNode = currentIndex < flattened.length - 1 && currentIndex !== -1 ? flattened[currentIndex + 1] : null;
 
- const isHub = activePath?.toLowerCase().includes('_hub.md');
+ const isHub = activePath?.toLowerCase().includes('_hub.md') || (typeof (tree as any)?.type === 'string' && (tree as any).type === 'hub');
  const hubId = activePath?.split('/').pop()?.replace('.md', '');
 
  if (!activePath) return null;
@@ -545,6 +545,7 @@ export default function ObsidianVaultPage() {
  const [selectedFilteredPages, setSelectedFilteredPages] = useState<number[]>([])
  const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const [noteContent, setNoteContent] = useState('')
+  const noteContentRef = useRef('')
  const [isEditing, setIsEditing] = useState(false)
  const [editedContent, setEditedContent] = useState('')
  const [history, setHistory] = useState<string[]>([])
@@ -684,8 +685,8 @@ export default function ObsidianVaultPage() {
  return content.trim()
 }
 
- if (isHubNote && noteContent) {
- topologies = extractSection(noteContent)
+ if (isHubNote && noteContentRef.current) {
+ topologies = extractSection(noteContentRef.current)
 }
 
  if (!topologies && rawHub) {
@@ -738,7 +739,8 @@ export default function ObsidianVaultPage() {
  console.error("Failed to fetch hub connections", err)
  setHubConnections(null)
 }
-}, [noteMetadata, selectedPath, noteContent])
+  // noteContentRef used instead of noteContent to avoid refetching on every edit
+}, [noteMetadata, selectedPath])
 
  // ── Shared helper: surgically update ONE frontmatter key without touching anything else ──
  const updateFrontmatterProperty = async (
@@ -756,14 +758,15 @@ export default function ObsidianVaultPage() {
  meta[existingKey] = value;
 
  const yamlLines = Object.entries(meta).map(([k, v]) => {
- if (v === null || v === undefined || v === '') return `${k}: ''`;
- if (typeof v === 'boolean' || typeof v === 'number') return `${k}: ${v}`;
- const s = String(v);
- if (s.startsWith('[[') || s === 'true' || s === 'false') return `${k}: ${s}`;
- if (Array.isArray(v)) {
- return `${k}:\n${v.map(i => ` - "${String(i)}"`).join('\n')}`;
+  if (v === null || v === undefined || v === '') return `${k}: ''`;
+  if (typeof v === 'boolean' || typeof v === 'number') return `${k}: ${v}`;
+  // Array check MUST come before String(v) to avoid "item1,item2" corruption
+  if (Array.isArray(v)) {
+  return `${k}:\n${v.map((i: any) => ` - "${String(i)}"`).join('\n')}`;
 }
- return `${k}: "${s}"`;
+  const s = String(v);
+  if (s.startsWith('[[') || s === 'true' || s === 'false') return `${k}: ${s}`;
+  return `${k}: "${s}"`;
 });
 
  const newFileContent = `---\n${yamlLines.join('\n')}\n---\n\n${body.trimStart()}`;
@@ -813,15 +816,22 @@ export default function ObsidianVaultPage() {
 
  if (updated) {
  const hubMeta: Record<string, any> = hubData.metadata ?? {};
- const yamlLines = Object.entries(hubMeta).map(([k, v]) => `${k}: ${typeof v === 'string' ? `"${v}"` : v}`);
- const fullContent = yamlLines.length > 0 
- ? `---\n${yamlLines.join('\n')}\n---\n\n${newBodyLines.join('\n')}`
- : newBodyLines.join('\n');
- 
- await sidecarApi.updateObsidianNote(hubPath, fullContent);
- if (selectedPath === hubPath) {
- setNoteContent(newBodyLines.join('\n'));
- setEditedContent(newBodyLines.join('\n'));
+ const hubYamlLines = Object.entries(hubMeta).map(([k, v]) => {
+  if (v === null || v === undefined || v === '') return `${k}: ''`;
+  if (typeof v === 'boolean' || typeof v === 'number') return `${k}: ${v}`;
+  if (Array.isArray(v)) return `${k}:\n${v.map((i: any) => ` - "${String(i)}"`).join('\n')}`;
+  const s = String(v);
+  if (s.startsWith('[[') || s === 'true' || s === 'false') return `${k}: ${s}`;
+  return `${k}: "${s}"`;
+  });
+  const fullContent = hubYamlLines.length > 0
+  ? `---\n${hubYamlLines.join('\n')}\n---\n\n${newBodyLines.join('\n').trimStart()}`
+  : newBodyLines.join('\n');
+  
+  await sidecarApi.updateObsidianNote(hubPath, fullContent);
+  if (selectedPath === hubPath) {
+  setNoteContent(newBodyLines.join('\n'));
+  setEditedContent(newBodyLines.join('\n'));
 }
 }
 }
@@ -913,23 +923,33 @@ export default function ObsidianVaultPage() {
 };
 
  const handleDeleteProperty = async (name: string) => {
- if (!selectedPath) return
- setLoadingNote(true)
- try {
- const res = await sidecarApi.readObsidianNote(selectedPath)
- let content = res.content
- const regex = new RegExp(`^${name}:.*$\\n?`, 'm')
- content = content.replace(regex, '')
+  if (!selectedPath) return
+  setLoadingNote(true)
+  try {
+  const res = await sidecarApi.readObsidianNote(selectedPath)
+  let content = res.content
+  // Only remove the property inside the YAML frontmatter block
+  if (content.startsWith('---\n')) {
+  const endIdx = content.indexOf('\n---', 4)
+  if (endIdx !== -1) {
+  const frontmatter = content.slice(4, endIdx)
+  const body = content.slice(endIdx)
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`^${escapedName}:.*(?:\n(?!\\S).*)*\n?`, 'm')
+  const newFrontmatter = frontmatter.replace(regex, '')
+  content = `---\n${newFrontmatter}${body}`
+}
+}
 
- await sidecarApi.updateObsidianNote(selectedPath, content)
- const refreshed = await sidecarApi.readObsidianNote(selectedPath)
- setNoteMetadata(refreshed.metadata || {})
- setNoteContent(refreshed.content || '')
- setEditedContent(refreshed.content || '')
+  await sidecarApi.updateObsidianNote(selectedPath, content)
+  const refreshed = await sidecarApi.readObsidianNote(selectedPath)
+  setNoteMetadata(refreshed.metadata || {})
+  setNoteContent(refreshed.content || '')
+  setEditedContent(refreshed.content || '')
 } catch (err) {
- console.error("Failed to delete property", err)
+  console.error("Failed to delete property", err)
 } finally {
- setLoadingNote(false)
+  setLoadingNote(false)
 }
 }
 
@@ -948,14 +968,19 @@ export default function ObsidianVaultPage() {
  selectFile(initPath)
  
  // Expand parent folders
- const parts = initPath.split('/')
- const newExpanded = new Set(expandedFolders)
- let current = ''
- parts.slice(0, -1).forEach(part => {
- current = current ? `${current}/${part}` : part
- newExpanded.add(current)
+  // Expand parent folders using functional update to avoid stale closure
+  const parts = initPath.split('/')
+  const toExpand: string[] = []
+  let current = ''
+  parts.slice(0, -1).forEach(part => {
+  current = current ? `${current}/${part}` : part
+  toExpand.push(current)
 })
- setExpandedFolders(newExpanded)
+  setExpandedFolders(prev => {
+  const next = new Set(prev)
+  toExpand.forEach(p => next.add(p))
+  return next
+})
 } else if (initSearch) {
  setSearchQuery(initSearch)
 }
@@ -1109,6 +1134,7 @@ export default function ObsidianVaultPage() {
  const metadata = res.metadata || {}
  setNoteMetadata(metadata)
  setNoteContent(res.content || '')
+  noteContentRef.current = res.content || ''
  setEditedContent(res.content || '')
  setIsEditing(false)
 
@@ -1513,22 +1539,6 @@ export default function ObsidianVaultPage() {
 
  return (
  <div className="flex flex-col h-full w-full select-none bg-background text-foreground overflow-hidden font-sans">
- <style>{`
-
-
-/* ─── Checkbox Strikethrough ─── */
-.prose li:has(input[type="checkbox"]:checked),
-.prose div:has(input[type="checkbox"]:checked) {
- @apply opacity-50;
- text-decoration: line-through;
- text-decoration-thickness: 1px;
-}
-
-.prose input[type="checkbox"]:checked + * {
- @apply opacity-50;
- text-decoration: line-through;
-}
-`}</style>
  <div className="flex flex-1 overflow-hidden h-full">
  {/* MainContentArea */}
  <main className="flex-1 flex flex-col min-w-0">
@@ -1583,6 +1593,13 @@ export default function ObsidianVaultPage() {
  >
  <Network className="w-4 h-4" />
  </div>
+ <button
+ onClick={() => setShowArchitect(!showArchitect)}
+ className={cn("cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 transition-colors", showArchitect ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground")}
+ title="Toggle OKA Architect"
+ >
+ <BrainCircuit className="w-4 h-4" />
+ </button>
  </div>
  </div>
  
@@ -1966,61 +1983,6 @@ export default function ObsidianVaultPage() {
  content={noteContent} 
  onNavigate={handleWikiLinkClick} 
  path={selectedPath || undefined}
- components={{
- input: ({node, type, checked}: any) => {
- if (type === 'checkbox') {
- return (
- <input 
- type="checkbox" 
- defaultChecked={checked} 
- onChange={async (e) => {
- if (!selectedPath) return;
- const newChecked = e.target.checked;
- const li = e.target.closest('li');
- if (li) {
- if (newChecked) {li.style.textDecoration = 'line-through'; li.style.opacity = '0.5';} 
- else {li.style.textDecoration = 'none'; li.style.opacity = '1';}
-}
- const line = node?.position?.start?.line;
- if (line) {
- try {
- const res = await sidecarApi.readObsidianNote(selectedPath);
- const lines = res.content.split('\n');
- const targetLine = lines[line - 1];
- if (targetLine && targetLine.match(/\[[ xX]\]/)) {
- lines[line - 1] = targetLine.replace(/\[[ xX]\]/, `[${newChecked ? 'x' : ' '}]`);
- const updatedContent = lines.join('\n');
- await sidecarApi.updateObsidianNote(selectedPath, updatedContent);
- const wikilinkMatch = targetLine.match(/\[\[(.*?)\]\]/);
- if (wikilinkMatch) {
- const targetNote = wikilinkMatch[1].split('|')[0];
- const targetRes = await sidecarApi.findVaultPage(targetNote);
- if (targetRes.path) {
- const atomicRes = await sidecarApi.readObsidianNote(targetRes.path);
- let newAtomicContent = atomicRes.content;
- const hasFrontmatter = newAtomicContent.startsWith('---\n');
- 
- if (newAtomicContent.includes('read: ')) {
- newAtomicContent = newAtomicContent.replace(/read:\s*(true|false|True|False)/i, `read: ${newChecked}`);
-} else if (hasFrontmatter) {
- newAtomicContent = newAtomicContent.replace('---\n', `---\nread: ${newChecked}\n`);
-} else {
- newAtomicContent = `---\nread: ${newChecked}\n---\n\n${newAtomicContent}`;
-}
- await sidecarApi.updateObsidianNote(targetRes.path, newAtomicContent);
-}
-}
-}
-} catch (err) {console.error("Failed to toggle markdown checkbox", err);}
-}
-}}
- className="mt-1 size-3.5 appearance-none border border-border/50 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[4px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer transition-colors shrink-0" 
- />
- );
-}
- return null;
-}
-}}
  />
  )}
  </div>

@@ -1433,6 +1433,9 @@ class OkaService:
                             )
 
                             OkaService._status[session_id] = f"{phase_prefix} Socratic Pass: [[{current_note_title}]] (2/2)..."
+                            # Brief cooldown between Pass 1 and Pass 2 to avoid back-to-back
+                            # requests consuming Groq's per-minute TPM budget simultaneously
+                            await asyncio.sleep(3)
                             probes = await self.writer_agent.generate_probes(
                                 note_title=note_schema.title,
                                 note_body=note_content.markdown_body,

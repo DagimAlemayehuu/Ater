@@ -1,5 +1,5 @@
 ---
-title: Theta_Join
+title: Theta-join
 type: Atomic Note
 course: Database Systems
 semester: Autumn 2025
@@ -7,98 +7,109 @@ unit: '7'
 hub: "[[7_Relational_Algebra_And_Calculus_Hub]]"
 source: "[[Chapter_7.Pdf]]"
 source_pages:
-- 41
+- 42
 mode: CS-DB
 read: false
 generated: true
 prerequisites:
-- "[[Relational_Algebra]]"
+- "[[Join_Operation]]"
 ---
 
 # 1. Mental Model
-Imagine you have two big boxes of toys, one labeled "Cars" and the other "Wheels". A Theta Join is like finding all the pairs of cars and wheels where the car can actually use the wheel, based on some rule like the wheel's size matching the car's wheel size. This rule is like a special condition that must be true for a car and wheel to be paired.
+Imagine you have two big boxes of different colored toys, and you want to pick out the toys that match a certain rule, like "all the red toys from one box that match with the blue toys from the other box". A theta-join is like a way to combine these boxes based on a specific rule, not just an exact match.
 
 # 2. Schema & Query Mechanics
-The Theta Join is a type of [[Equi-Join]] where the join condition is defined by a [[Theta]] condition, which is a comparison operator (such as <, >, <=, >=, =, <>). When performing a Theta Join on two tables `R` and `S`, the database engine will iterate over each row in `R` and each row in `S`, applying the Theta condition to the specified columns. The [[Join Algorithm]] used can vary, but typically involves a [[Nested Loop Join]] or a [[Sort-Merge Join]], depending on the database system's optimizer. The result set will contain all columns from both `R` and `S` where the Theta condition is met.
+The theta-join operation combines rows from two relations, R and S, based on a conditional expression, θ (theta), that defines the join criterion. This is achieved through a [[Cartesian_Product]] of the two relations, followed by a [[Selection]] operation that filters the combined rows based on the theta condition. Mechanically, the database executes this by iterating over each row in R and S, applying the theta condition, and including the combined row in the result set if the condition is met. The theta condition can be any valid [[Predicate]], including those involving comparison operators, arithmetic operations, or even [[Subqueries]]. 
 
 # 3. ACID Violations & Scaling Limits
-When dealing with large tables, Theta Joins can lead to [[Deadlocks]] or [[Livelocks]] if not properly optimized, especially if the join operation involves complex conditions or [[Index]]-intensive tables. Furthermore, if the Theta condition is not properly indexed, it can lead to a significant increase in [[I/O]] operations, causing performance bottlenecks. As the size of the tables grows, the join operation can become a [[Single Point Of Failure]], impacting the overall [[Scalability]] of the database system. Therefore, careful indexing and optimization of Theta Join operations are crucial to maintaining [[Acid]] compliance and ensuring the system's reliability.
+When performing a theta-join, there is a risk of [[Deadlocks]] occurring if multiple transactions are contending for the same resources, such as locks on the relations being joined. Additionally, theta-joins can lead to [[Data Skew]], particularly if the join condition is not properly indexed or if the data distribution is highly uneven. As the size of the relations being joined increases, the risk of [[Overflow]] also grows, which can severely impact performance. Furthermore, poorly optimized theta-joins can result in [[Latching]] contention, leading to performance bottlenecks in high-concurrency environments. Effective indexing and query optimization are crucial to mitigating these risks.
 # 4. Entity-Relationship Model
 ```json
 {
-  "tables": [
-    {
-      "name": "Cars",
-      "columns": [
-        {"name": "car_id", "type": "int"},
-        {"name": "wheel_size", "type": "int"}
-      ]
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Theta Join",
+  "type": "object",
+  "properties": {
+    "Relation_R": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "integer"},
+        "name": {"type": "string"},
+        "age": {"type": "integer"}
+      },
+      "required": ["id", "name", "age"]
     },
-    {
-      "name": "Wheels",
-      "columns": [
-        {"name": "wheel_id", "type": "int"},
-        {"name": "size", "type": "int"}
-      ]
+    "Relation_S": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "integer"},
+        "department": {"type": "string"},
+        "salary": {"type": "integer"}
+      },
+      "required": ["id", "department", "salary"]
+    },
+    "Theta_Condition": {
+      "type": "object",
+      "properties": {
+        "condition": {"type": "string"}
+      },
+      "required": ["condition"]
     }
-  ],
-  "relationships": [
-    {
-      "type": "Theta Join",
-      "condition": "Cars.wheel_size = Wheels.size"
-    }
-  ]
+  },
+  "required": ["Relation_R", "Relation_S", "Theta_Condition"]
 }
 ```
-This ER diagram represents two tables, `Cars` and `Wheels`, with a Theta Join relationship based on the condition that the `wheel_size` of a car matches the `size` of a wheel.
+This JSON schema represents two relations, R and S, and a theta condition. The relations have properties such as id, name, age, department, and salary. The theta condition is a string that defines the join criterion.
+
+To read this schema, start by understanding the properties of each relation, R and S. Relation R has an id, name, and age, while Relation S has an id, department, and salary. The theta condition is a string that specifies how to join these relations, such as "R.age > S.salary".
 
 ## 5. Walkthrough
-Suppose we have two tables, `Cars` and `Wheels`, with the following data:
+Suppose we have two relations, Employees and Departments, and we want to perform a theta-join to find all employees who earn more than their department's average salary.
 
-`Cars` table:
+**Employees Table**
 
-| car_id | wheel_size |
-| --- | --- |
-| 1    | 16        |
-| 2    | 17        |
-| 3    | 16        |
+| id | name | age | salary |
+|----|------|-----|--------|
+| 1  | John | 30  | 50000  |
+| 2  | Jane | 25  | 60000  |
+| 3  | Joe  | 40  | 70000  |
 
-`Wheels` table:
+**Departments Table**
 
-| wheel_id | size |
-| --- | --- |
-| 101    | 16   |
-| 102    | 17   |
-| 103    | 18   |
+| id | department | avg_salary |
+|----|------------|------------|
+| 1  | Sales      | 40000      |
+| 2  | Marketing  | 55000      |
+| 3  | IT         | 65000      |
 
-We want to perform a Theta Join on these tables based on the condition that the `wheel_size` of a car is equal to the `size` of a wheel.
+Here are the steps to perform the theta-join:
 
-Here are the steps:
+1. First, we need to calculate the average salary for each department. This can be done using a subquery or a join with a derived table.
 
-1. Iterate over each row in `Cars`: 
-   - For car_id = 1, wheel_size = 16
-   - For car_id = 2, wheel_size = 17
-   - For car_id = 3, wheel_size = 16
+2. Next, we perform a Cartesian product of the Employees and Departments tables.
 
-2. Iterate over each row in `Wheels`:
-   - For wheel_id = 101, size = 16
-   - For wheel_id = 102, size = 17
-   - For wheel_id = 103, size = 18
+3. Then, we apply the theta condition to filter the combined rows. The condition is "Employees.salary > Departments.avg_salary".
 
-3. Apply the Theta condition (`wheel_size = size`) to each pair of rows:
-   - (car_id = 1, wheel_size = 16) matches (wheel_id = 101, size = 16)
-   - (car_id = 2, wheel_size = 17) matches (wheel_id = 102, size = 17)
-   - (car_id = 3, wheel_size = 16) matches (wheel_id = 101, size = 16)
+4. After applying the condition, we get the following result:
 
-4. Create the result set with all columns from both tables where the Theta condition is met:
+| id | name | age | salary | id | department | avg_salary |
+|----|------|-----|--------|----|------------|------------|
+| 2  | Jane | 25  | 60000  | 1  | Sales      | 40000      |
+| 3  | Joe  | 40  | 70000  | 1  | Sales      | 40000      |
+| 1  | John | 30  | 50000  | 2  | Marketing  | 55000      |
+| 2  | Jane | 25  | 60000  | 2  | Marketing  | 55000      |
+| 3  | Joe  | 40  | 70000  | 2  | Marketing  | 55000      |
+| 3  | Joe  | 40  | 70000  | 3  | IT         | 65000      |
 
-| car_id | wheel_size | wheel_id | size |
-| --- | --- | --- | --- |
-| 1    | 16        | 101    | 16   |
-| 2    | 17        | 102    | 17   |
-| 3    | 16        | 101    | 16   |
+5. Finally, we select the desired columns from the result.
 
-5. The final result set contains all pairs of cars and wheels where the wheel size matches.
+The final result will be:
+
+| name | department | salary |
+|------|------------|--------|
+| Jane | Sales      | 60000  |
+| Joe  | Sales      | 70000  |
+| Joe  | IT         | 70000  |
 
 ---
 
@@ -110,26 +121,26 @@ Here are the steps:
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "A Theta Join is a type of join where the join condition is defined by an equality operator.",
+    "question": "A theta-join can only be performed using equality conditions.",
     "answer": "False",
-    "explanation": "A Theta Join is a type of join where the join condition is defined by a Theta condition, which can be any comparison operator (such as <, >, <=, >=, =, <>)."
+    "explanation": "A theta-join can be performed using any valid predicate, including those involving comparison operators, arithmetic operations, or subqueries."
   },
   {
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Suppose we have two tables, `Employees` and `Departments`, with columns `employee_id`, `department_id`, `name`, and `department_name`. We want to perform a Theta Join on these tables based on the condition that the `department_id` of an employee is greater than the `department_id` of a department. How would you write the query?",
-    "answer": "SELECT * FROM Employees, Departments WHERE Employees.department_id > Departments.department_id",
-    "explanation": "This query performs a Theta Join on the `Employees` and `Departments` tables based on the condition that the `department_id` of an employee is greater than the `department_id` of a department."
+    "question": "Suppose we have two tables, Customers and Orders. Customers has columns id, name, and address. Orders has columns id, customer_id, and order_date. Write a theta-join query to find all customers who have placed an order in the last 30 days.",
+    "answer": "SELECT * FROM Customers JOIN Orders ON Customers.id = Orders.customer_id AND Orders.order_date > CURRENT_DATE - INTERVAL 30 DAY",
+    "explanation": "This query performs a theta-join on the Customers and Orders tables based on the condition that the customer_id matches and the order_date is within the last 30 days."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following query: SELECT * FROM Customers, Orders WHERE Customers.customer_id = Orders.customer_id AND Orders.total_amount > 1000",
-    "content": "SELECT * FROM Customers, Orders WHERE Customers.customer_id = Orders.customer_id AND Orders.total_amount > 1000",
-    "answer": "The bug is that the query is using an Equi-Join condition (Customers.customer_id = Orders.customer_id) instead of a Theta Join condition. To fix it, change the condition to a Theta condition, such as Customers.customer_id > Orders.customer_id",
-    "explanation": "The query is using an Equi-Join condition instead of a Theta Join condition."
+    "question": "Find the bug in the following theta-join query: SELECT * FROM Employees JOIN Departments ON Employees.salary = Departments.budget",
+    "content": "SELECT * FROM Employees JOIN Departments ON Employees.salary = Departments.budget",
+    "answer": "The bug is that the query assumes that the salary column in the Employees table and the budget column in the Departments table have the same data type and are compatible for comparison. However, if the data types are different or if there are null values in either column, the query may not produce the expected results. To fix this, we need to ensure that the columns have compatible data types and add additional conditions to handle null values.",
+    "explanation": "The query may not produce the expected results due to data type incompatibility or null values."
   }
 ]
 ```

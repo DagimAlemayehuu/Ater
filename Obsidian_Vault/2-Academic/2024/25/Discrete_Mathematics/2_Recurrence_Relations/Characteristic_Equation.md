@@ -1,27 +1,29 @@
 ---
-title: "Characteristic_Equation"
-type: "Atomic Note"
-course: "Discrete Mathematics"
-semester: "2024/25"
-unit: "2"
-hub: [[2_Recurrence_Relations_Hub]]
-source: [[2_Recurrence_Relations.Pdf]]
+title: Characteristic_Equation
+type: Atomic Note
+course: Discrete Mathematics
+semester: 2024/25
+unit: '2'
+hub: "[[2_Recurrence_Relations_Hub]]"
+source: "[[2_Recurrence_Relations.Pdf]]"
 source_pages:
-  - "17"
-mode: "MATH-PURE"
-read: true
+- 17
+mode: MATH-PURE
+read: false
 generated: true
-prerequisites: [[Linear_Homogeneous_Recurrence_Relation]]
+prerequisites:
+- "[[Linear_Recurrence_Relation]]"
+- "[[Homogeneous_Recurrence_Relation]]"
 ---
 
 # 1. Mental Model
-Imagine you're trying to find the resonant frequency of a guitar string. The characteristic equation is like a mathematical string that vibrates at specific frequencies, and solving it helps you find those frequencies. Just as the guitar string's vibrations are determined by its physical properties, the characteristic equation's solutions depend on the coefficients of the polynomial.
+Imagine you're trying to find the resonant frequency of a swing. The characteristic equation is like a secret formula that helps you calculate this frequency. It's a simple equation that captures the essential behavior of the swing, and its solutions tell you how the swing will respond to different inputs.
 
 # 2. Derivation & Logical Trace
-The characteristic equation is derived from a [[Linear_Recurrence_Relation]] of the form $y_k + a_1y_{k-1} + a_2y_{k-2} + \cdots + a_ky = 0$. By substituting $y_k = r^k$ into the recurrence relation, we obtain the characteristic equation `c0*r^k + c1*r^(k-1) + c2*r^(k-2) + ... + ck = 0`. This equation is a [[Polynomial_Equation]] in $r$, and its solutions are the [[Eigenvalues]] of the recurrence relation. The mechanical process involves substituting, rearranging, and factoring the polynomial to obtain the characteristic equation.
+The characteristic equation is derived from a [[Linear_Differential_Equation]] of the form `c0*y'' + c1*y' + c2*y = 0`, where `c0`, `c1`, and `c2` are constants. To find the characteristic equation, we assume a solution of the form `y = e^(r*x)`, where `r` is a constant. Substituting this into the differential equation, we get `c0*r^2*e^(r*x) + c1*r*e^(r*x) + c2*e^(r*x) = 0`. Canceling out the `e^(r*x)` term, we're left with the characteristic equation `c0*r^2 + c1*r + c2 = 0`. This is a [[Quadratic_Equation]] in `r`, and its solutions are the [[Eigenvalues]] of the differential equation.
 
 # 3. Theorem Constraints & Incompleteness
-The characteristic equation's solutions are subject to certain constraints, such as the [[Fundamental_Theorem_Of_Algebra]], which states that a polynomial equation has at least one complex root. However, the equation may have [[Repeated_Roots]], which can lead to [[Generalized_Eigenvectors]] and a more complex solution structure. Additionally, the equation's coefficients must satisfy certain [[Stability_Conditions]] to ensure that the recurrence relation converges. If these conditions are not met, the solution may exhibit [[Unstable_Behavior]].
+The characteristic equation has certain constraints and limitations. For instance, if the [[Discriminant]] of the quadratic equation is negative, the solutions will be complex conjugates, indicating oscillatory behavior. On the other hand, if the discriminant is positive, the solutions will be real and distinct, indicating exponential growth or decay. However, if the discriminant is zero, the solutions will be repeated, leading to a [[Degenerate_Case]]. Furthermore, the characteristic equation assumes that the differential equation has constant coefficients, which may not always be the case in real-world applications.
 # 4. Formal Proof Trace
 ```latex
 \documentclass{article}
@@ -31,51 +33,36 @@ The characteristic equation's solutions are subject to certain constraints, such
 
 \section{Characteristic Equation}
 
-Given a linear recurrence relation of the form:
-\[y_k + a_1y_{k-1} + a_2y_{k-2} + \cdots + a_ky = 0\]
+Given a linear differential equation of the form:
+\[ c_0y'' + c_1y' + c_2y = 0 \]
 
-We substitute $y_k = r^k$ into the recurrence relation:
+Assume a solution of the form:
+\[ y = e^{rx} \]
 
-\begin{align*}
-r^k + a_1r^{k-1} + a_2r^{k-2} + \cdots + a_kr^0 &= 0 \\
-r^k \left(1 + a_1r^{-1} + a_2r^{-2} + \cdots + a_kr^{-k} \right) &= 0
-\end{align*}
+Differentiating:
+\[ y' = re^{rx} \]
+\[ y'' = r^2e^{rx} \]
 
-Dividing through by $r^{-k}$, we obtain:
+Substituting into the differential equation:
+\[ c_0r^2e^{rx} + c_1re^{rx} + c_2e^{rx} = 0 \]
 
-\[r^k + a_1r^{k-1} + a_2r^{k-2} + \cdots + a_k = 0\]
+Canceling out the $e^{rx}$ term:
+\[ c_0r^2 + c_1r + c_2 = 0 \]
 
 This is the characteristic equation.
 
 \end{document}
 ```
-To read this LaTeX code, start from the top and follow the step-by-step derivation of the characteristic equation. The code begins with a standard LaTeX document class and preamble, then defines the characteristic equation using standard mathematical notation.
+To read this LaTeX code: This is a step-by-step derivation of the characteristic equation, starting with a linear differential equation and assuming a solution of the form `y = e^(rx)`. The code then differentiates and substitutes into the differential equation to obtain the characteristic equation.
 
 ## 5. Walkthrough
 Here's a rigorous, multi-step exam scenario applying the concept of the characteristic equation:
 
-Suppose we have a linear recurrence relation:
-\[y_k = 2y_{k-1} + 3y_{k-2}\]
-
-with initial conditions $y_0 = 1$ and $y_1 = 2$. 
-
-1. Write down the characteristic equation:
-The characteristic equation is obtained by substituting $y_k = r^k$ into the recurrence relation:
-\[r^k = 2r^{k-1} + 3r^{k-2}\]
-
-2. Rearrange the equation:
-\[r^k - 2r^{k-1} - 3r^{k-2} = 0\]
-
-3. Divide through by $r^{k-2}$:
-\[r^2 - 2r - 3 = 0\]
-
-4. Solve the quadratic equation:
-\[(r - 3)(r + 1) = 0\]
-\[r = 3 \text{ or } r = -1\]
-
-5. Write down the general solution:
-The general solution to the recurrence relation is:
-\[y_k = A(3)^k + B(-1)^k\]
+1. Consider a mass-spring system with a differential equation of the form: `m*x'' + b*x' + k*x = 0`, where `m = 1`, `b = 5`, and `k = 6`.
+2. Write down the characteristic equation: `r^2 + 5*r + 6 = 0`.
+3. Solve the characteristic equation: `(r + 2)*(r + 3) = 0`, so `r1 = -2` and `r2 = -3`.
+4. Write down the general solution: `x(t) = c1*e^(-2*t) + c2*e^(-3*t)`.
+5. Determine the behavior of the system: Since both eigenvalues are negative, the system is overdamped and will decay exponentially to zero.
 
 ---
 
@@ -87,36 +74,35 @@ The general solution to the recurrence relation is:
     "id": "q1",
     "type": "mcq",
     "difficulty": "L1",
-    "question": "What is the characteristic equation of the recurrence relation $y_k = 2y_{k-1} + 3y_{k-2}$?",
+    "question": "What is the characteristic equation for a differential equation of the form $y'' + 3y' + 2y = 0$?",
     "options": {
-      "A": "$r^2 - 2r - 3 = 0$",
-      "B": "$r^2 + 2r + 3 = 0$",
-      "C": "$r^2 - 2r + 3 = 0$",
-      "D": "$r^2 + 2r - 3 = 0$"
+      "A": "$r^2 + 3r + 2 = 0$",
+      "B": "$r^2 - 3r - 2 = 0$",
+      "C": "$r^2 + 2r + 3 = 0$",
+      "D": "$r^2 - 2r - 3 = 0$"
     },
     "answer": "A",
-    "explanation": "The characteristic equation is obtained by substituting $y_k = r^k$ into the recurrence relation."
+    "explanation": "The characteristic equation is obtained by substituting $y = e^{rx}$ into the differential equation."
   },
   {
     "id": "q2",
     "type": "fill_in",
     "difficulty": "L2",
-    "question": "The characteristic equation of the recurrence relation $y_k = 4y_{k-1} - 4y_{k-2}$ is $r^2 - [[Blank1]]r + [[Blank2]] = 0$. ",
-    "textWithBlanks": "The characteristic equation of the recurrence relation $y_k = 4y_{k-1} - 4y_{k-2}$ is $r^2 - [[Blank1]]r + [[Blank2]] = 0$. ",
+    "question": "The characteristic equation for a differential equation of the form $2y'' + 4y' + 3y = 0$ is [[Blank1]].",
+    "textWithBlanks": "The characteristic equation for a differential equation of the form $2y'' + 4y' + 3y = 0$ is $[[Blank1]] = 0$.",
     "answer": [
-      "4",
-      "4"
+      "2r^2 + 4r + 3"
     ],
-    "explanation": "The characteristic equation is obtained by substituting $y_k = r^k$ into the recurrence relation."
+    "explanation": "The characteristic equation is obtained by substituting $y = e^{rx}$ into the differential equation and canceling out the $e^{rx}$ term."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
     "question": "Find the bug in the following code:",
-    "content": "def characteristic_equation(a, b):\n  return $r^2 + ar + b = 0$\nprint(characteristic_equation(2, 3))",
-    "answer": "The bug is that the function is trying to return a mathematical equation as a string, but it's not properly formatted. The correct implementation should be",
-    "explanation": "The bug is in the return statement of the function. The correct implementation should use Python's string formatting to insert the values of a and b into the equation."
+    "content": "def characteristic_equation(c0, c1, c2):\n  return c0*r^2 + c1*r + c2",
+    "answer": "The bug is that the variable 'r' is not defined. The correct code should be: def characteristic_equation(c0, c1, c2, r):\n  return c0*r**2 + c1*r + c2",
+    "explanation": "The variable 'r' should be defined as a parameter of the function or as a symbolic variable."
   }
 ]
 ```

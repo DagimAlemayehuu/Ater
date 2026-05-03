@@ -6,8 +6,7 @@ semester: Autumn 2025
 unit: '7'
 hub: "[[7_Relational_Algebra_And_Calculus_Hub]]"
 source: "[[Chapter_7.Pdf]]"
-source_pages:
-- 2
+source_pages: []
 mode: CS-DB
 read: false
 generated: true
@@ -47,12 +46,12 @@ When dealing with large datasets, Domain Relational Calculus queries can lead to
     {
       "name": "wrote",
       "entities": ["Author", "Book"],
-      "cardinality": "many-to-many"
+      "attributes": []
     }
   ]
 }
 ```
-This Entity-Relationship diagram represents two entities: Book and Author, with their respective attributes. The relationship "wrote" connects an Author to a Book, allowing for many authors to write many books.
+This Entity-Relationship diagram represents two entities: Book and Author, with their respective attributes. The relationship "wrote" connects an Author to a Book, indicating that an author wrote a book.
 
 ## 5. Walkthrough
 Suppose we have a database with the following data:
@@ -72,15 +71,13 @@ Authors:
 | AuthorA | 1960-01-01 |
 | AuthorB | 1970-01-01 |
 
-We want to find all authors who published more than one book in the 1990s.
+Using Domain Relational Calculus, we want to find all authors who published more than one book in the 1990s.
 
-1. Define the domain variables: Let B represent the set of all books, A represent the set of all authors, and let `title(B)`, `author(B)`, and `publication_date(B)` represent the attributes of a book.
-2. Formulate the query: Find all authors A such that there exists at least two books B1 and B2 in B, written by A, with publication dates in the 1990s.
-3. Express the query using Domain Relational Calculus: `{A | ∃B1, B2 ∈ B (author(B1) = A ∧ author(B2) = A ∧ publication_date(B1) ∈ [1990, 1999] ∧ publication_date(B2) ∈ [1990, 1999] ∧ B1 ≠ B2)}`
-4. Evaluate the query:
-   - For AuthorA, we find Book1 and Book3, both published in the 1990s.
-   - For AuthorB, we find only Book2, published in 2000, which does not meet the criteria.
-5. The result set contains AuthorA.
+1. Define the domain variables: Let B represent the set of all books, A represent the set of all authors, and D represent the set of all publication dates.
+2. Define the tuple variables: Let b represent a book, a represent an author, and d represent a publication date.
+3. Formulate the query: Find all authors a such that there exists a book b and a publication date d where a wrote b, b was published on d, and d is in the 1990s.
+4. Express the query using predicate logic: ∃b ∃d (Wrote(a, b) ∧ Published(b, d) ∧ (d ≥ 1990-01-01 ∧ d ≤ 1999-12-31) ∧ (∃b' ∃d' (Wrote(a, b') ∧ Published(b', d') ∧ (d' ≥ 1990-01-01 ∧ d' ≤ 1999-12-31) ∧ b ≠ b')))
+5. Evaluate the query: From the given data, we can see that AuthorA published two books, Book1 and Book3, both in the 1990s. Therefore, the result set will contain AuthorA.
 
 ---
 
@@ -92,26 +89,26 @@ We want to find all authors who published more than one book in the 1990s.
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "Domain Relational Calculus is used for querying relational databases.",
+    "question": "Domain Relational Calculus is used to find specific books based on complex rules about their details.",
     "answer": "True",
-    "explanation": "Domain Relational Calculus is indeed a method used for querying relational databases by specifying complex conditions."
+    "explanation": "Domain Relational Calculus is a way to ask complex questions about data, like finding all books written by authors who published more than one book in the 1990s."
   },
   {
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Given a database of employees and departments, how would you use Domain Relational Calculus to find all departments with more than 5 employees?",
-    "answer": "{D | ∃E1, E2, E3, E4, E5, E6 ∈ E (department(E1) = D ∧ department(E2) = D ∧ department(E3) = D ∧ department(E4) = D ∧ department(E5) = D ∧ department(E6) = D ∧ E1 ≠ E2 ∧ E1 ≠ E3 ∧ E1 ≠ E4 ∧ E1 ≠ E5 ∧ E1 ≠ E6)}",
-    "explanation": "This query finds all departments D such that there exist at least 6 distinct employees E1 through E6, all working in department D."
+    "question": "Suppose we have a database with information about students, courses, and enrollments. Using Domain Relational Calculus, how would you find all students who are enrolled in more than one course?",
+    "answer": "Define domain variables for students, courses, and enrollments. Formulate a query using tuple variables and predicate logic to find students with multiple enrollments.",
+    "explanation": "This requires applying Domain Relational Calculus concepts to a new scenario, demonstrating understanding of the calculus."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug.",
-    "content": "{A | ∃B (author(B) = A ∧ publication_date(B) ∈ [1990, 1999]) ∧ (author(B) = A ∧ publication_date(B) ∈ [2000, 2009])}",
-    "answer": "The variable B should be quantified twice with different conditions or combined with an existential quantifier for B1 and B2.",
-    "explanation": "The bug is related to incorrect quantification and conjunction."
+    "question": "Find the bug in the following query: ∃a ∃b (Wrote(a, b) ∧ Published(b, d) ∧ (d ≥ 1990-01-01 ∧ d ≤ 1999-12-31))",
+    "content": "∃a ∃b (Wrote(a, b) ∧ Published(b, d) ∧ (d ≥ 1990-01-01 ∧ d ≤ 1999-12-31))",
+    "answer": "The variable d is not defined in the query.",
+    "explanation": "The bug is that the variable d is used but not defined in the query. It should be ∃a ∃b ∃d (Wrote(a, b) ∧ Published(b, d) ∧ (d ≥ 1990-01-01 ∧ d ≤ 1999-12-31))."
   }
 ]
 ```

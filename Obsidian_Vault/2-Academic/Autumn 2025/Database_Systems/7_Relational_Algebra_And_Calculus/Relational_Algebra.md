@@ -17,79 +17,83 @@ generated: true
 Imagine you have a big box full of different colored cards, each with some information written on it, like a name and an age. Relational Algebra is like having a set of instructions on how to pick specific cards from the box, combine them, or throw some away based on certain rules. It's a way to work with these sets of information using basic operations.
 
 # 2. Schema & Query Mechanics
-Relational Algebra works by taking relations (or tables) as input and producing new relations as output through a set of operators. The operations include [[Union]], [[Intersection]], and [[Difference]] for combining or filtering relations, as well as [[Projection]] and [[Selection]] to manipulate the structure and content of the relations. These operations can be composed together to form more complex queries. The [[Cartesian Product]] operator combines each row of one relation with each row of another, allowing for joins and other combinations. Queries in Relational Algebra are typically expressed using a formal notation, often using `σ` for selection, `π` for projection, and `⋈` for joins.
+Relational Algebra works by taking relations (or tables) as input and producing new relations as output through a set of operators. The operations include [[Union]], [[Intersection]], and [[Difference]] for combining or filtering relations, as well as [[Projection]] and [[Selection]] to manipulate the structure and content of the relations. These operations can be composed together to form more complex queries. The process involves understanding the [[Schema]] of the relations, which defines the structure of the tables, and applying the operators in a way that respects the [[Referential Integrity]] of the data. When a query is executed, the relational algebra expression is translated into an [[Algebraic Expression]] that can be optimized and executed by the database management system.
 
 # 3. ACID Violations & Scaling Limits
-When implementing Relational Algebra operations in a real-world database, there are constraints and potential failure states to consider. For instance, the [[Atomicity]] of transactions that perform complex Relational Algebra operations must be maintained to prevent partial updates. Additionally, [[Isolation]] levels can affect the outcome of concurrent queries that involve Relational Algebra operations like [[Union]] or [[Intersection]]. As databases scale, operations like [[Cartesian Product]] can become extremely resource-intensive, leading to performance bottlenecks. Ensuring [[Consistency]] across distributed databases when executing Relational Algebra queries also poses significant challenges.
+When working with Relational Algebra, it's essential to consider the [[Atomicity]] of transactions to ensure that either all or none of the operations are executed, maintaining data consistency. However, complex relational algebra expressions can lead to [[Isolation]] issues if not properly managed, potentially causing [[Dirty Reads]] or [[Non-Repeatable Reads]]. As databases scale, the complexity of relational algebra expressions can become a bottleneck, particularly if they involve large intermediate results or complex joins. Moreover, the [[Scalability]] of relational databases can be limited by the need to maintain [[Consistency]] across distributed nodes, which can impact the performance of relational algebra operations. Careful optimization and indexing are necessary to mitigate these issues.
 # 4. Entity-Relationship Model
 ```json
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Relational Algebra Operations",
-  "type": "object",
-  "properties": {
-    "operations": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {"type": "string"},
-          "description": {"type": "string"}
-        },
-        "required": ["name", "description"]
-      }
+  "entities": [
+    {
+      "name": "Customer",
+      "attributes": [
+        {"name": "customer_id", "type": "int"},
+        {"name": "name", "type": "string"},
+        {"name": "age", "type": "int"}
+      ]
+    },
+    {
+      "name": "Order",
+      "attributes": [
+        {"name": "order_id", "type": "int"},
+        {"name": "customer_id", "type": "int"},
+        {"name": "order_date", "type": "date"}
+      ]
     }
-  },
-  "required": ["operations"]
+  ],
+  "relationships": [
+    {
+      "name": "places",
+      "type": "one_to_many",
+      "entities": ["Customer", "Order"],
+      "attributes": ["customer_id"]
+    }
+  ]
 }
 ```
-This JSON schema represents the entity-relationship model for Relational Algebra operations. It defines a structure for describing various operations, including their names and descriptions.
-
-The schema consists of an array of operation objects, each containing a name and a description. This allows for the representation of different Relational Algebra operations, such as Union, Intersection, and Projection.
+This Entity-Relationship model represents two entities: Customer and Order. The Customer entity has attributes for customer_id, name, and age, while the Order entity has attributes for order_id, customer_id, and order_date. The relationship between Customer and Order is a one-to-many relationship, where one customer can place many orders.
 
 ## 5. Walkthrough
-Suppose we have two relations, `Students` and `Courses`, with the following tuples:
+Suppose we have two relations: Customer and Order. The Customer relation has the following tuples:
 
-`Students`:
-
-| StudentID | Name | Age |
+| customer_id | name | age |
 | --- | --- | --- |
-| 1 | John | 20 |
-| 2 | Jane | 22 |
-| 3 | Joe | 21 |
+| 1 | John | 25 |
+| 2 | Jane | 30 |
+| 3 | Joe | 20 |
 
-`Courses`:
+The Order relation has the following tuples:
 
-| CourseID | CourseName | StudentID |
+| order_id | customer_id | order_date |
 | --- | --- | --- |
-| 101 | Math | 1 |
-| 102 | Science | 2 |
-| 103 | History | 3 |
+| 101 | 1 | 2022-01-01 |
+| 102 | 1 | 2022-01-15 |
+| 103 | 2 | 2022-02-01 |
 
-Let's perform the following operations:
+Let's apply the following relational algebra operations:
 
-1. **Selection**: Find all students with age greater than 20.
-   - `σ Age > 20 (Students)`
-   - Result: `{(2, Jane, 22), (3, Joe, 21)}`
+1. **Selection**: Select all customers with age greater than 25.
+   - σ (age > 25) (Customer) = 
+     | customer_id | name | age |
+     | --- | --- | --- |
+     | 2 | Jane | 30 |
 
-2. **Projection**: Find the names and ages of all students.
-   - `π Name, Age (Students)`
-   - Result: `{(John, 20), (Jane, 22), (Joe, 21)}`
+2. **Projection**: Project the customer_id and order_date from the Order relation.
+   - π (customer_id, order_date) (Order) =
+     | customer_id | order_date |
+     | --- | --- |
+     | 1 | 2022-01-01 |
+     | 1 | 2022-01-15 |
+     | 2 | 2022-02-01 |
 
-3. **Union**: Find all students and courses combined.
-   - `Students ∪ Courses`
-   - Note: This requires compatible schemas. For simplicity, let's assume we're only considering StudentID and Name.
-   - `Students` (projected to `StudentID`, `Name`): `{(1, John), (2, Jane), (3, Joe)}`
-   - `Courses` (projected to `StudentID`, `Name`): `{(1, Math), (2, Science), (3, History)}`
-   - Result: `{(1, John), (2, Jane), (3, Joe), (1, Math), (2, Science), (3, History)}`
-
-4. **Cartesian Product**: Find the Cartesian product of `Students` and `Courses`.
-   - `Students × Courses`
-   - This will result in a large relation with all possible combinations of students and courses.
-
-5. **Join**: Find the courses each student is enrolled in.
-   - `Students ⋈ Courses`
-   - Result: `{(1, John, 20, 101, Math), (2, Jane, 22, 102, Science), (3, Joe, 21, 103, History)}`
+3. **Join**: Join the Customer and Order relations on the customer_id attribute.
+   - Customer ⨝ Order =
+     | customer_id | name | age | order_id | customer_id | order_date |
+     | --- | --- | --- | --- | --- | --- |
+     | 1 | John | 25 | 101 | 1 | 2022-01-01 |
+     | 1 | John | 25 | 102 | 1 | 2022-01-15 |
+     | 2 | Jane | 30 | 103 | 2 | 2022-02-01 |
 
 ---
 
@@ -101,26 +105,26 @@ Let's perform the following operations:
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "Relational Algebra operations are used to manipulate and combine relations.",
+    "question": "Relational Algebra is used to optimize database queries by reducing the number of operations.",
     "answer": "True",
-    "explanation": "Relational Algebra provides a set of operations to work with relations, including selection, projection, union, intersection, and more."
+    "explanation": "Relational Algebra provides a formal system for manipulating relations, which helps in optimizing database queries."
   },
   {
     "id": "q2",
     "type": "scenario",
     "difficulty": "L2",
-    "question": "Given two relations, `Employees` and `Departments`, how would you find the names of all employees and their respective department names?",
-    "answer": "First, project the `Employees` relation to include employee names and department IDs. Then, join this projected relation with the `Departments` relation on the department ID to get the department names. Finally, project the result to include only employee names and department names.",
-    "explanation": "This involves a combination of projection and join operations in Relational Algebra."
+    "question": "Suppose we have two relations: Student and Course. The Student relation has attributes for student_id, name, and age, while the Course relation has attributes for course_id, course_name, and student_id. Write a relational algebra expression to find all courses taken by students who are older than 20.",
+    "answer": "σ (age > 20) (Student) ⨝ Course",
+    "explanation": "First, we select all students who are older than 20, then join the result with the Course relation on the student_id attribute."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug.",
-    "content": "σ Age > 20 (Students) ∪ π Name (Courses)",
-    "answer": "The schemas are incompatible for union.",
-    "explanation": "The bug involves a misunderstanding of the schema requirements for union operations in Relational Algebra."
+    "question": "Find the bug in the following relational algebra expression: π (student_id) (σ (age > 20) (Student) ⨝ Course)",
+    "content": "π (student_id) (σ (age > 20) (Course) ⨝ Student)",
+    "answer": "The bug is that the selection operation σ (age > 20) is applied to the Course relation instead of the Student relation. The correct expression should be π (student_id) (σ (age > 20) (Student) ⨝ Course).",
+    "explanation": "The selection operation should be applied to the Student relation to filter students older than 20 before joining with the Course relation."
   }
 ]
 ```

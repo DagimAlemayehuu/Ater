@@ -1,20 +1,18 @@
 ---
-title: "General_Solution"
-type: "Atomic Note"
-course: "Discrete Mathematics"
-semester: "2024/25"
-unit: "2"
-hub:
-  - "2_Recurrence_Relations_Hub"
-source:
-  - "2_Recurrence_Relations.Pdf"
+title: General_Solution
+type: Atomic Note
+course: Discrete Mathematics
+semester: 2024/25
+unit: '2'
+hub: "[[2_Recurrence_Relations_Hub]]"
+source: "[[2_Recurrence_Relations.Pdf]]"
 source_pages:
-  - "15"
-mode: "MATH-PURE"
-read: true
+- 15
+mode: MATH-PURE
+read: false
 generated: true
 prerequisites:
-  - "Recurrence_Relation"
+- "[[Solution_Of_Recurrence_Relation]]"
 ---
 
 # 1. Mental Model
@@ -37,50 +35,64 @@ The general solution must satisfy the recurrence relation for all `n`, and its [
 Given a linear homogeneous recurrence relation of the form:
 \[a_n = r \cdot a_{n-1}\]
 
-\subsection*{Homogeneous Solution}
+\subsection*{Step 1: Characteristic Equation}
 The characteristic equation is:
 \[x - r = 0\]
-Solving for \(x\), we get:
-\[x = r\]
-Thus, the homogeneous solution is:
+which has one root, $r$.
+
+\subsection*{Step 2: Homogeneous Solution}
+The solution to the homogeneous part is:
 \[a_n^{(h)} = C \cdot r^n\]
-where \(C\) is an arbitrary constant.
+where $C$ is an arbitrary constant.
 
-\subsection*{Particular Solution}
-For a non-homogeneous recurrence relation, assume a particular solution of the form:
-\[a_n^{(p)} = f(n)\]
-Using the method of undetermined coefficients or variation of parameters, we find \(f(n)\).
+\subsection*{Step 3: Particular Solution for Non-Homogeneous Case}
+Assume a particular solution of the form $a_n^{(p)} = k$, where $k$ is a constant. Substituting into a non-homogeneous recurrence relation:
+\[k = r \cdot k + d\]
+Solving for $k$ yields:
+\[k = \frac{d}{1 - r}\]
 
-\subsection*{General Solution}
-The general solution is the sum of the homogeneous and particular solutions:
-\[a_n = a_n^{(h)} + a_n^{(p)} = C \cdot r^n + f(n)\]
-For initial conditions \(a_0, a_1, \ldots, a_{k-1}\), we solve for \(C\) and other arbitrary constants.
+\subsection*{Step 4: General Solution}
+The general solution is a combination of the homogeneous and particular solutions:
+\[a_n = a_n^{(h)} + a_n^{(p)} = C \cdot r^n + \frac{d}{1 - r}\]
+
+\subsection*{Step 5: Applying Initial Conditions}
+Given initial conditions $a_0$, we can solve for $C$:
+\[a_0 = C + \frac{d}{1 - r}\]
+\[C = a_0 - \frac{d}{1 - r}\]
+
+\subsection*{Step 6: Specific Solution}
+Substituting $C$ back into the general solution:
+\[a_n = \left(a_0 - \frac{d}{1 - r}\right) \cdot r^n + \frac{d}{1 - r}\]
 
 \end{document}
 ```
-To read this LaTeX code: This is a step-by-step derivation of the general solution to a recurrence relation, starting with the homogeneous solution, finding the particular solution, and combining them. The code uses standard LaTeX mathematical formatting.
+
+To read this LaTeX code: This is a step-by-step formal proof of how to derive and structure a general solution for a simple linear recurrence relation. It starts with defining the characteristic equation, then finds the homogeneous and particular solutions, combines them into a general solution, and finally applies initial conditions to get a specific solution.
 
 ## 5. Walkthrough
-Consider the recurrence relation:
-\[a_n = 2a_{n-1} + 3\]
-with initial condition \(a_0 = 1\).
+Consider the recurrence relation $a_n = 2a_{n-1} + 3$ with initial condition $a_0 = 5$. 
 
-1. **Homogeneous Solution**: Solve \(a_n^{(h)} = 2a_{n-1}^{(h)}\).
-   - Characteristic equation: \(x - 2 = 0\), so \(x = 2\).
-   - Thus, \(a_n^{(h)} = C \cdot 2^n\).
+1. **Characteristic Equation**: The characteristic equation for the homogeneous part $a_n = 2a_{n-1}$ is $x - 2 = 0$, which has one root, $r = 2$.
 
-2. **Particular Solution**: Guess \(a_n^{(p)} = k\).
-   - Substituting into the recurrence relation: \(k = 2k + 3\).
-   - Solving for \(k\): \(k = -3\).
-   - So, \(a_n^{(p)} = -3\).
+2. **Homogeneous Solution**: The homogeneous solution is $a_n^{(h)} = C \cdot 2^n$.
 
-3. **General Solution**: Combine homogeneous and particular solutions.
-   - \(a_n = C \cdot 2^n - 3\).
+3. **Particular Solution**: Guess a particular solution of the form $a_n^{(p)} = k$. Substituting into the recurrence relation:
+\[k = 2k + 3\]
+Solving for $k$:
+\[k - 2k = 3\]
+\[-k = 3\]
+\[k = -3\]
 
-4. **Apply Initial Condition**: \(a_0 = 1 = C \cdot 2^0 - 3\).
-   - Solving for \(C\): \(1 = C - 3\), so \(C = 4\).
+4. **General Solution**: The general solution is:
+\[a_n = C \cdot 2^n - 3\]
 
-5. **Specific Solution**: \(a_n = 4 \cdot 2^n - 3\).
+5. **Apply Initial Condition**: Given $a_0 = 5$:
+\[5 = C \cdot 2^0 - 3\]
+\[5 = C - 3\]
+\[C = 8\]
+
+6. **Specific Solution**: Substituting $C$ back into the general solution:
+\[a_n = 8 \cdot 2^n - 3\]
 
 ---
 
@@ -92,35 +104,36 @@ with initial condition \(a_0 = 1\).
     "id": "q1",
     "type": "mcq",
     "difficulty": "L1",
-    "question": "What is the general form of the homogeneous solution to a recurrence relation of the form $a_n = r \\cdot a_{n-1}$?",
+    "question": "What is the general form of the homogeneous solution to a linear recurrence relation?",
     "options": {
-      "A": "$a_n^{(h)} = C \\cdot r^n$",
-      "B": "$a_n^{(h)} = C \\cdot n^r$",
-      "C": "$a_n^{(h)} = C \\cdot r^{n-1}$",
-      "D": "$a_n^{(h)} = C \\cdot n \\cdot r^n$"
+      "A": "an = C * r^n",
+      "B": "an = C * n",
+      "C": "an = r * an-1",
+      "D": "an = C * n * r^n"
     },
     "answer": "A",
-    "explanation": "The homogeneous solution has the form $a_n^{(h)} = C \\cdot r^n$."
+    "explanation": "The homogeneous solution has the form an = C * r^n, where C is an arbitrary constant and r is the root of the characteristic equation."
   },
   {
     "id": "q2",
     "type": "fill_in",
     "difficulty": "L2",
-    "question": "The general solution to a recurrence relation combines the [[Homogeneous Solution]] and the [[Particular Solution]] as $a_n = a_n^{(h)} + a_n^{(p)} = C \\cdot r^n + [[Blank1]]$.",
-    "textWithBlanks": "The general solution to a recurrence relation combines the [[Homogeneous Solution]] and the [[Particular Solution]] as $a_n = a_n^{(h)} + a_n^{(p)} = C \\cdot r^n + [[Blank1]]$.",
+    "question": "The general solution to a recurrence relation combines the [[Homogeneous Solution]] and the [[Particular Solution]] as $a_n = [[Blank1]] + [[Blank2]]$.",
+    "textWithBlanks": "The general solution to a recurrence relation combines the [[Homogeneous Solution]] and the [[Particular Solution]] as $a_n = [[Blank1]] + [[Blank2]]$.",
     "answer": [
-      "f(n)"
+      "homogeneous solution",
+      "particular solution"
     ],
-    "explanation": "The particular solution $a_n^{(p)}$ is typically represented as $f(n)$."
+    "explanation": "The general solution combines both the homogeneous and particular solutions."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following proposed solution for $a_n = 3a_{n-1} + 2$ with $a_0 = 2$:",
-    "content": "1. Homogeneous solution: $a_n^{(h)} = C \\cdot 3^n$\n2. Particular solution: Guess $a_n^{(p)} = 2$\n3. General solution: $a_n = C \\cdot 3^n + 2$\n4. Apply $a_0 = 2$: $2 = C \\cdot 3^0 + 2 \\Rightarrow C = 0$\n5. Specific solution: $a_n = 0 \\cdot 3^n + 2 = 2$",
-    "answer": "The specific solution $a_n = 2$ does not satisfy the recurrence relation $a_n = 3a_{n-1} + 2$. For $n=1$, $a_1 = 3a_0 + 2 = 3 \\cdot 2 + 2 = 8$, but the proposed solution yields $a_1 = 2$.",
-    "explanation": "The proposed particular solution $a_n^{(p)} = 2$ does not satisfy the non-homogeneous recurrence relation."
+    "question": "Find the bug in the following code/logic for solving a recurrence relation.",
+    "content": "Given an = 2an-1 + 3, the general solution is an = C * 2^n. To find C, use a0 = 10: 10 = C * 2^1 => C = 5. Thus, an = 5 * 2^n.",
+    "answer": "The bug is that the particular solution is missing. The correct general solution should be an = C * 2^n + (-3) because the particular solution to the non-homogeneous part is -3.",
+    "explanation": "The code/logic provided does not account for the particular solution to the non-homogeneous recurrence relation."
   }
 ]
 ```

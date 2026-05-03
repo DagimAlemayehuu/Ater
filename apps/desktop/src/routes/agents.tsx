@@ -555,6 +555,11 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  <div>
  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Processing File</p>
  <h2 className="text-xl font-black uppercase tracking-tight text-foreground">{queueStatus?.current_file || 'Initializing...'}</h2>
+ {queueStatus?.queue_size > 0 && (
+ <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
+ + {queueStatus.queue_size} file{queueStatus.queue_size > 1 ? 's' : ''} pending
+ </p>
+ )}
  </div>
  </div>
  <div className="text-right">
@@ -573,15 +578,19 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  </div>
  </div>
 
- <div className="p-4 bg-background rounded border border-border/10">
- <p className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-2">Last Action</p>
- <p className="text-[11px] font-bold text-muted-foreground">{queueStatus?.last_action || 'Waking up agent...'}</p>
+ <div className={cn("p-4 rounded border", 
+ queueStatus?.last_action?.toLowerCase().includes("rate limit") || queueStatus?.last_action?.toLowerCase().includes("fail") || queueStatus?.status === 'error'
+ ? "bg-destructive/10 border-destructive/20 text-destructive" 
+ : "bg-background border-border/10 text-muted-foreground"
+ )}>
+ <p className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60 mb-2">Last Action</p>
+ <p className="text-[11px] font-bold currentColor">{queueStatus?.last_action || 'Waking up agent...'}</p>
  </div>
 
- {queueStatus?.plan_raw && (
+ {queueStatus?.planned_batches?.length > 0 && (
  <div className="pt-6 border-t border-border/10">
- <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-4">Plan</h4>
- <PlanCardView planRaw={queueStatus.plan_raw} />
+ <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-4">Plan Feed</h4>
+ <BatchTreeView batches={queueStatus.planned_batches} processedNotes={queueStatus.processed_notes || []} />
  </div>
  )}
  </div>

@@ -1,5 +1,18 @@
 ---
-read: true
+title: Linear_Recurrence_Relation
+type: Atomic Note
+course: Discrete Mathematics
+semester: 2024/25
+unit: '2'
+hub: "[[2_Recurrence_Relations_Hub]]"
+source: "[[2_Recurrence_Relations.Pdf]]"
+source_pages:
+- 13
+mode: MATH-PURE
+read: false
+generated: true
+prerequisites:
+- "[[Recurrence_Relation]]"
 ---
 
 # 1. Mental Model
@@ -19,62 +32,79 @@ For a linear recurrence relation to be well-defined, the leading coefficient `c0
 
 \section{Linear Recurrence Relation}
 
-Given a sequence $a_n$ and a fixed number $k$, a linear recurrence relation can be expressed as:
-\[c_0a_n + c_1a_{n-1} + c_2a_{n-2} + \ldots + c_ka_{n-k} = f(n)\]
+Given a sequence $a_n$ and a set of constants $c_0, c_1, \ldots, c_k$, a linear recurrence relation can be expressed as:
+
+\begin{equation}
+c_0a_n + c_1a_{n-1} + \ldots + c_ka_{n-k} = f(n)
+\label{eq:linear-recurrence}
+\end{equation}
+
+where $f(n)$ is a function of $n$.
 
 \subsection{Proof of Well-Definedness}
 
 Assume $c_0 \neq 0$. We can solve for $a_n$:
-\[a_n = \frac{1}{c_0}(-c_1a_{n-1} - c_2a_{n-2} - \ldots - c_ka_{n-k} + f(n))\]
+
+\begin{equation}
+a_n = \frac{1}{c_0} \left( -c_1a_{n-1} - \ldots - c_ka_{n-k} + f(n) \right)
+\label{eq:solve-for-an}
+\end{equation}
+
+This shows that $a_n$ can be uniquely determined given the preceding terms.
 
 \subsection{Characteristic Equation}
 
-For the homogeneous part, $f(n) = 0$:
-\[c_0a_n + c_1a_{n-1} + c_2a_{n-2} + \ldots + c_ka_{n-k} = 0\]
-Assume $a_n = r^n$:
-\[c_0r^n + c_1r^{n-1} + c_2r^{n-2} + \ldots + c_kr^{n-k} = 0\]
-Divide by $r^{n-k}$:
-\[c_0r^k + c_1r^{k-1} + c_2r^{k-2} + \ldots + c_k = 0\]
-This is the characteristic equation.
+For the homogeneous part of the relation ($f(n) = 0$), we have:
+
+\begin{equation}
+c_0a_n + c_1a_{n-1} + \ldots + c_ka_{n-k} = 0
+\label{eq:homogeneous}
+\end{equation}
+
+The characteristic equation is:
+
+\begin{equation}
+c_0x^k + c_1x^{k-1} + \ldots + c_k = 0
+\label{eq:characteristic}
+\end{equation}
 
 \end{document}
 ```
-To read this LaTeX code: This is a step-by-step formal proof of the linear recurrence relation concept. The code first defines the linear recurrence relation, then proves that it is well-defined by solving for $a_n$. It also derives the characteristic equation for the homogeneous part of the relation.
+
+To read this LaTeX code: This is a step-by-step formal proof of the linear recurrence relation concept. The code first presents the general form of a linear recurrence relation, then proves that the relation is well-defined by solving for $a_n$. Finally, it introduces the characteristic equation for the homogeneous part of the relation.
 
 ## 5. Walkthrough
-Consider the linear recurrence relation: $a_n = 2a_{n-1} + 3a_{n-2} + n$.
+Consider the linear recurrence relation:
 
-### Steps:
+$$a_n = 2a_{n-1} + 3a_{n-2} + n$$
 
-1. **Identify the relation**: The given relation is $a_n = 2a_{n-1} + 3a_{n-2} + n$. Here, $c_0 = 1$, $c_1 = -2$, $c_2 = -3$, and $f(n) = n$.
+with initial conditions $a_0 = 1$ and $a_1 = 2$. 
 
-2. **Formulate the characteristic equation**: For the homogeneous part, $a_n - 2a_{n-1} - 3a_{n-2} = 0$. Assume $a_n = r^n$:
-\[r^n - 2r^{n-1} - 3r^{n-2} = 0\]
-Divide by $r^{n-2}$:
-\[r^2 - 2r - 3 = 0\]
+1. **Identify the Recurrence Relation**: The given relation is $a_n = 2a_{n-1} + 3a_{n-2} + n$. This is a second-order linear recurrence relation.
 
-3. **Solve the characteristic equation**:
-\[r^2 - 2r - 3 = (r - 3)(r + 1) = 0\]
-Thus, $r = 3$ or $r = -1$.
+2. **Determine the Characteristic Equation**: For the homogeneous part $a_n - 2a_{n-1} - 3a_{n-2} = 0$, the characteristic equation is $x^2 - 2x - 3 = 0$.
 
-4. **Find the general solution to the homogeneous part**:
-\[a_n^{(h)} = A(3)^n + B(-1)^n\]
+3. **Solve the Characteristic Equation**: 
+   $$x^2 - 2x - 3 = (x - 3)(x + 1) = 0$$
+   So, $x = 3$ or $x = -1$.
 
-5. **Find a particular solution for the non-homogeneous part**:
-Given $f(n) = n$, assume $a_n^{(p)} = Cn + D$:
-\[Cn + D = 2(C(n-1) + D) + 3(C(n-2) + D) + n\]
-Simplify and equate coefficients:
-\[Cn + D = (2C + 3C)n + (-2C - 6C + 2D + 3D) + n\]
-\[Cn + D = 5Cn + (-8C + 5D) + n\]
-Equating:
-\[C = -1\]
-\[-8C + 5D = 0\]
-Solving gives $C = -1$ and $D = -\frac{8}{5}$.
+4. **Find the Particular Solution**: Assume a particular solution of the form $a_n^{(p)} = An + B$. Substituting into the recurrence relation:
+   $$An + B = 2(A(n-1) + B) + 3(A(n-2) + B) + n$$
+   Simplifying yields:
+   $$An + B = (2A + 3A)n + (-2A - 6A + 2B + 3B) + n$$
+   $$An + B = 5An + (-8A + 5B) + n$$
+   Equating coefficients:
+   $$A = 5A + 1$$
+   $$B = -8A + 5B$$
+   Solving these equations gives $A = -\frac{1}{4}$ and $B = -\frac{2}{5}$.
 
-6. **Combine solutions**:
-\[a_n = A(3)^n + B(-1)^n - n - \frac{8}{5}\]
+5. **Combine Solutions**: The general solution to the homogeneous part is $a_n^{(h)} = C_1(3)^n + C_2(-1)^n$. The general solution to the recurrence relation is:
+   $$a_n = C_1(3)^n + C_2(-1)^n - \frac{1}{4}n - \frac{2}{5}$$
 
-read: true
+6. **Apply Initial Conditions**: Given $a_0 = 1$ and $a_1 = 2$:
+   - For $n = 0$: $1 = C_1 + C_2 - \frac{2}{5}$
+   - For $n = 1$: $2 = 3C_1 - C_2 - \frac{1}{4} - \frac{2}{5}$
+
 ---
 
 ## 6. The Proving Grounds
@@ -85,36 +115,35 @@ read: true
     "id": "q1",
     "type": "mcq",
     "difficulty": "L1",
-    "question": "What is a necessary condition for a linear recurrence relation to be well-defined?",
+    "question": "What is the characteristic equation for the homogeneous part of the recurrence relation $a_n = 2a_{n-1} + 3a_{n-2}$?",
     "options": {
-      "A": "The leading coefficient $c_0$ must be zero.",
-      "B": "The leading coefficient $c_0$ and $c_k$ must be non-zero.",
-      "C": "The relation must be homogeneous.",
-      "D": "The relation must be non-homogeneous."
+      "A": "x^2 - 2x - 3 = 0",
+      "B": "x^2 + 2x + 3 = 0",
+      "C": "x^2 - 2x + 3 = 0",
+      "D": "x^2 + 2x - 3 = 0"
     },
-    "answer": "B",
-    "explanation": "For a linear recurrence relation to be well-defined, the leading coefficient $c_0$ and the coefficient $c_k$ must be non-zero."
+    "answer": "A",
+    "explanation": "The characteristic equation is derived from the homogeneous part of the recurrence relation by substituting $a_n = x^n$."
   },
   {
     "id": "q2",
     "type": "fill_in",
     "difficulty": "L2",
-    "question": "In the linear recurrence relation $a_n = 2a_{n-1} + 3a_{n-2}$, the characteristic equation is [[Blank1]].",
-    "textWithBlanks": "The characteristic equation is $r^2 - [[Blank1]]r - [[Blank2]] = 0$.",
+    "question": "In a linear recurrence relation of the form $a_n = c_1a_{n-1} + c_2a_{n-2}$, the number of initial conditions required to uniquely determine the sequence is [[Blank1]].",
+    "textWithBlanks": "In a linear recurrence relation of the form $a_n = c_1a_{n-1} + c_2a_{n-2}$, the number of initial conditions required to uniquely determine the sequence is [[Blank1]].",
     "answer": [
-      "2",
-      "3"
+      "2"
     ],
-    "explanation": "The characteristic equation is derived from the homogeneous part of the relation."
+    "explanation": "The order of the recurrence relation dictates the number of initial conditions needed."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
     "question": "Find the bug in the following code for solving a linear recurrence relation.",
-    "content": "def solve_recurrence(n):\n  if n == 0:\n    return 0\n  elif n == 1:\n    return 1\n  else:\n    return 2 * solve_recurrence(n-1) + 3 * solve_recurrence(n-2) + n",
-    "answer": "The function does not store or reuse previously computed values, leading to exponential time complexity. It should be modified to use dynamic programming.",
-    "explanation": "The given recursive function does not optimize for repeated computations."
+    "content": "def solve_recurrence(n, a0, a1):\n  if n == 0:\n    return a0\n  elif n == 1:\n    return a1\n  else:\n    return 2 * solve_recurrence(n-1, a0, a1) + 3 * solve_recurrence(n-2, a0, a1)",
+    "answer": "The function does not correctly implement memoization or dynamic programming, leading to exponential time complexity due to repeated computation of the same subproblems.",
+    "explanation": "The given recursive solution lacks optimization for performance."
   }
 ]
 ```

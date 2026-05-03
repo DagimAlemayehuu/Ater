@@ -6,8 +6,7 @@ semester: Autumn 2025
 unit: '7'
 hub: "[[7_Relational_Algebra_And_Calculus_Hub]]"
 source: "[[Chapter_7.Pdf]]"
-source_pages:
-- 2
+source_pages: []
 mode: CS-DB
 read: false
 generated: true
@@ -42,7 +41,7 @@ When dealing with large datasets, tuple relational calculus can lead to [[Atomic
   }
 }
 ```
-This JSON schema represents the entity-relationship model for the tuple relational calculus concept. It defines a single entity, `Student`, with attributes `name`, `age`, and `grade`. 
+This JSON schema represents the entity-relationship model for the tuple relational calculus concept. It defines a single entity, "Student", with attributes "name", "age", and "grade". 
 
 ## 5. Walkthrough
 Suppose we have a relation `Student` with the following tuples:
@@ -100,8 +99,8 @@ We want to find all students who are 12 years old and in 7th grade using tuple r
     "difficulty": "L3",
     "question": "Find the bug in the following tuple relational calculus query: {t | R(t) ∧ t.x = 5 ∧ t.y > 10}",
     "content": "{t | R(t) ∧ t.x = 5}",
-    "answer": "The bug is that the condition t.y > 10 is missing. The correct query should be {t | R(t) ∧ t.x = 5 ∧ t.y > 10}.",
-    "explanation": "The query is incomplete, as it does not specify the condition for attribute y."
+    "answer": "The bug is that the condition 't.y > 10' is missing. The correct query should be: {t | R(t) ∧ t.x = 5 ∧ t.y > 10}",
+    "explanation": "The query is incomplete as it does not specify the condition for attribute 'y'."
   }
 ]
 ```

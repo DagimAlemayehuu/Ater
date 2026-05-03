@@ -1,17 +1,19 @@
 ---
-title: "Unique_Solution"
-type: "Atomic Note"
-course: "Discrete Mathematics"
-semester: "2024/25"
-unit: "2"
-hub: [[2_Recurrence_Relations_Hub]]
-source: [[2_Recurrence_Relations.Pdf]]
+title: Unique_Solution
+type: Atomic Note
+course: Discrete Mathematics
+semester: 2024/25
+unit: '2'
+hub: "[[2_Recurrence_Relations_Hub]]"
+source: "[[2_Recurrence_Relations.Pdf]]"
 source_pages:
-  - "15"
-mode: "MATH-PURE"
-read: true
+- 15
+mode: MATH-PURE
+read: false
 generated: true
-prerequisites: [[Recurrence_Relation]]
+prerequisites:
+- "[[Solution_Of_Recurrence_Relation]]"
+- "[[Initial_Condition]]"
 ---
 
 # 1. Mental Model
@@ -127,22 +129,22 @@ Solving this system of equations yields $A_1 = \frac{3}{4}$ and $A_2 = \frac{1}{
     "id": "q1",
     "type": "mcq",
     "difficulty": "L1",
-    "question": "What is the primary purpose of the characteristic equation in finding a unique solution to a recurrence relation?",
+    "question": "What is the primary method used to derive the unique solution to a recurrence relation?",
     "options": {
-      "A": "To directly compute the terms of the sequence",
-      "B": "To find the eigenvalues of the relation",
-      "C": "To apply the initial conditions",
-      "D": "To guess the solution"
+      "A": "Substitution of $a_n = r^n$ into the recurrence relation",
+      "B": "Direct application of initial conditions",
+      "C": "Elimination of variables",
+      "D": "Graphical analysis"
     },
-    "answer": "B",
-    "explanation": "The characteristic equation is used to find the eigenvalues of the recurrence relation, which are essential for constructing the general solution."
+    "answer": "A",
+    "explanation": "The primary method involves substituting $a_n = r^n$ into the recurrence relation to obtain the characteristic equation."
   },
   {
     "id": "q2",
     "type": "fill_in",
     "difficulty": "L2",
-    "question": "The general solution to a recurrence relation with distinct eigenvalues $r_1, r_2, \\ldots, r_k$ is given by $a_n = [[A_1]]r_1^n + [[A_2]]r_2^n + \\ldots + [[A_K]]r_k^n$.",
-    "textWithBlanks": "The general solution to a recurrence relation with distinct eigenvalues $r_1, r_2, \\ldots, r_k$ is given by $a_n = [[A_1]]r_1^n + [[A_2]]r_2^n + \\ldots + [[A_K]]r_k^n$.",
+    "question": "The general solution to a recurrence relation with distinct [[Eigenvalues]] $r_1, r_2, \\ldots, r_k$ is given by $a_n = [[A_1]]r_1^n + [[A_2]]r_2^n + \\ldots + [[A_K]]r_k^n$.",
+    "textWithBlanks": "The general solution to a recurrence relation with distinct [[Eigenvalues]] $r_1, r_2, \\ldots, r_k$ is given by $a_n = [[A_1]]r_1^n + [[A_2]]r_2^n + \\ldots + [[A_K]]r_k^n$.",
     "answer": [
       "A_1",
       "A_2",
@@ -155,10 +157,10 @@ Solving this system of equations yields $A_1 = \frac{3}{4}$ and $A_2 = \frac{1}{
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the given code.",
-    "content": "def solve_recurrence(relation, initial_conditions):\n    eigenvalues = [1, 2]\n    return [eigenvalues[0]**n + eigenvalues[1]**n for n in range(10)]",
-    "answer": "The code does not derive the characteristic equation or apply initial conditions.",
-    "explanation": "The code seems to incorrectly assume eigenvalues and does not follow proper procedure."
+    "question": "Find the bug in the following code/logic for solving a recurrence relation:",
+    "content": "Characteristic equation: $r^2 = 4r$; Solve for $r$: $r(r - 4) = 0$, so $r = 0$ or $r = 4$. General solution: $a_n = A_1(0)^n + A_2(4)^n$.",
+    "answer": "The issue arises when $r=0$ because it leads to a term that vanishes for all $n>0$, effectively reducing the number of independent solutions. This could cause issues with satisfying initial conditions if $a_0$ is not equal to $A_1$.",
+    "explanation": "The bug involves not considering the implications of a root being zero, which may affect the ability to satisfy all initial conditions."
   }
 ]
 ```

@@ -576,8 +576,9 @@ async def oka_queue_status(
     if not oka_watcher:
         return {"status": "offline", "pending_files": [], "manual_status": dict(OkaService._status)}
         
-    # Sync settings just in case
-    oka_watcher.update_settings(auto_process=secrets.auto_deploy)
+    # Sync settings only when the value actually changed (avoids log spam)
+    if oka_watcher.auto_process != secrets.auto_deploy:
+        oka_watcher.update_settings(auto_process=secrets.auto_deploy)
     
     status_dict = oka_watcher.get_status()
     status_dict["manual_status"] = dict(OkaService._status)
