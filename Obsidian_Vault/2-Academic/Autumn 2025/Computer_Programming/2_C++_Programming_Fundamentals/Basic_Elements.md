@@ -14,38 +14,61 @@ generated: true
 ---
 
 # 1. Mental Model
-Imagine you're building with LEGO blocks, and each block represents a fundamental piece of a program. Just as LEGO blocks come in different shapes and colors, the basic elements of C++ are like the different types of blocks you can use to construct your program, such as blocks for comments (like notes you leave for yourself), blocks for keywords (special words that have meaning in the program), and blocks for operators (like instructions for how to combine blocks).
+Imagine you're building with LEGO bricks. Just as LEGO bricks have basic shapes like plates, bricks, and tiles, C++ has basic elements like tokens, which are the building blocks of the language. These tokens can be thought of as LEGO pieces that fit together in specific ways to create programs.
 
 # 2. Execution Logic & Data Flow
-The basic elements of C++ work together mechanically through the [[Compiler]] process. Comments are ignored by the [[Compiler]] but serve as crucial documentation for developers. Keywords are reserved words that have specific meanings in C++, such as `if` or `while`, and are used to control the flow of the program. Identifiers, which are user-defined names for variables, functions, and classes, are resolved through [[Symbol_Table]] lookups. Literals, like `5` or `"hello"`, directly represent data values. Operators, such as `+` or `==`, are used to perform operations on data and are subject to [[Operator_Precedence]] rules to ensure expressions are evaluated correctly.
+In C++, the basic elements are the fundamental tokens that make up the source code. These tokens are [[Lexical_Analysis|Lexically Analyzed]] into five categories: comments, keywords, identifiers, literals, and operators. When the preprocessor encounters a comment, it [[Discards]] the comment. Keywords are [[Reserved_Words]] that have special meanings in the language, while identifiers are user-defined names for variables, functions, and labels. Literals represent [[Constant_Values]] like numbers or strings, and operators are [[Symbolic_Representations]] of operations like `+` or `-`. The [[Token_Stream]] is then fed into the parser for [[Syntax_Analysis]].
 
 # 3. Edge Cases & Failure States
-When dealing with basic elements, edge cases include ensuring that comments are properly terminated and do not interfere with code. For identifiers, an edge case is ensuring they are not [[Keyword]]s and are used consistently throughout the program. Failure states can occur when literals are used in a context that doesn't match their type, such as trying to use a string where an integer is expected. Additionally, misusing operators can lead to unexpected behavior due to [[Type_Coercion]] or [[Side_Effects]], and incorrect use of [[Precedence]] can alter the intended evaluation of expressions.
+When dealing with basic elements, edge cases arise when the compiler encounters invalid or ambiguous tokens. For instance, a [[Syntax_Error]] occurs when an identifier is misspelled or an operator is used incorrectly. Additionally, [[Preprocessor_Directives]] can affect how comments and keywords are handled. The compiler must also handle [[Trigraphs]] and [[Universal_Character_Names]], which can lead to issues with character encoding and interpretation. Furthermore, the [[Linker]] must resolve identifiers and ensure that they are properly defined and linked.
 # 4. Implementation Mechanics
 ```cpp
-// Example C++ code snippet
+// C++ code demonstrating basic elements
+#include <iostream>
+
 int main() {
-    // This is a comment, ignored by the compiler
-    int x = 5;  // Literal '5' assigned to variable 'x'
-    int y = x + 3;  // Identifier 'x', operator '+', and literal '3'
-    if (y > 10) {  // Keyword 'if', identifier 'y', operator '>', and literal '10'
-        // Code block
+    // Literal
+    int x = 5;  // 5 is a literal
+
+    // Identifier
+    int y = x;  // y and x are identifiers
+
+    // Operator
+    int z = x + y;  // + is an operator
+
+    // Keyword
+    if (x > 5) {  // if is a keyword
+        std::cout << "x is greater than 5" << std::endl;
     }
+
+    // Comment
+    // This is a comment
+
     return 0;
 }
 ```
-This code snippet demonstrates how basic elements of C++ such as comments, keywords, identifiers, literals, and operators work together. The comment is ignored by the compiler, while keywords like `if` control the program flow. Identifiers like `x` and `y` are used to store and manipulate data, and literals like `5` and `10` provide direct data values. Operators like `+` and `>` perform operations on data.
+This C++ code demonstrates basic elements such as literals, identifiers, operators, keywords, and comments. The code defines variables, performs operations, and uses control structures, showcasing how these elements fit together to create a program.
+
+The code can be represented in an ASCII memory/stack diagram, but for simplicity, we'll focus on the code itself.
 
 ## 5. Walkthrough
-Consider a scenario where we need to evaluate an expression `2 + 3 * 4`:
+Here's a rigorous, multi-step exam scenario applying the concept of basic elements:
 
-1. **Lexer**: The lexer breaks the expression into tokens: `2`, `+`, `3`, `*`, `4`.
-2. **Parser**: The parser constructs an abstract syntax tree (AST) representing the expression: `2 + (3 * 4)`.
-3. **Semantic Analysis**: The semantic analyzer checks the types of operands and operators, ensuring they match.
-4. **Evaluation**: The expression is evaluated following [[Operator_Precedence]] rules:
-   - First, `3 * 4 = 12`.
-   - Then, `2 + 12 = 14`.
-5. **Result**: The final result of the expression `2 + 3 * 4` is `14`.
+1. **Preprocessing**: The preprocessor encounters the code and discards the comment (`// This is a comment`).
+2. **Lexical Analysis**: The code is lexically analyzed into tokens:
+	* `int` (keyword)
+	* `x` (identifier)
+	* `=` (operator)
+	* `5` (literal)
+	* `;` (punctuator)
+3. **Syntax Analysis**: The parser analyzes the tokens for syntax errors:
+	* The parser checks if the tokens form a valid declaration (`int x = 5;`).
+4. **Semantic Analysis**: The parser checks the semantics of the code:
+	* The parser checks if the identifier `x` is used correctly.
+5. **Execution**: The program executes:
+	* The value `5` is assigned to `x`.
+	* The value of `x` is assigned to `y`.
+	* The expression `x + y` is evaluated, and the result is assigned to `z`.
 
 ---
 
@@ -57,29 +80,29 @@ Consider a scenario where we need to evaluate an expression `2 + 3 * 4`:
     "id": "q1",
     "type": "fill_in",
     "difficulty": "L1",
-    "question": "The basic elements of C++ include [[Blank1]], which are ignored by the compiler but serve as documentation.",
-    "textWithBlanks": "The basic elements of C++ include [[Blank1]], which are ignored by the compiler but serve as documentation.",
+    "question": "The basic elements of C++ are lexically analyzed into [[Blank1]], which include comments, keywords, identifiers, literals, and operators.",
+    "textWithBlanks": "The basic elements of C++ are lexically analyzed into [[Blank1]], which include comments, keywords, identifiers, literals, and operators.",
     "answer": [
-      "comments"
+      "five categories"
     ],
-    "explanation": "Comments are a fundamental element in C++ that provide crucial documentation for developers but are ignored by the compiler."
+    "explanation": "The basic elements of C++ are lexically analyzed into five categories."
   },
   {
     "id": "q2",
     "type": "true_false",
     "difficulty": "L2",
-    "question": "Identifiers in C++ can be keywords.",
-    "answer": "False",
-    "explanation": "Identifiers in C++ must not be keywords; keywords have specific meanings and uses in the language."
+    "question": "The preprocessor discards comments and keeps keywords.",
+    "answer": "True",
+    "explanation": "The preprocessor discards comments, and keywords have special meanings in the language."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the given code snippet.",
-    "content": "int main() { int x = 5; int y = x + 3; if (y > 10) { return x; } }",
-    "answer": "The function is supposed to return an integer but does not have a return statement for all paths; it should return 0 or another appropriate value when the condition is not met.",
-    "explanation": "The code does not handle the case when the condition `y > 10` is false. It should either return a value in this case or ensure that all paths lead to a return statement."
+    "question": "Find the bug in the code.",
+    "content": "int x = ;  // syntax error",
+    "answer": "The bug is that the literal value is missing. The correct code is `int x = 5;`.",
+    "explanation": "The bug is a syntax error due to a missing literal value."
   }
 ]
 ```

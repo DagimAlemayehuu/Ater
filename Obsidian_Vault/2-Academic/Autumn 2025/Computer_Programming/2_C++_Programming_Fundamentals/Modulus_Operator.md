@@ -14,35 +14,53 @@ generated: true
 ---
 
 # 1. Mental Model
-Imagine you have 5 cookies, but they're all wrapped in bags that hold 2 cookies each, and one bag has only 1 cookie left over because you can't evenly divide -5 cookies into bags of 2. The modulus operator finds that leftover amount, which in this case is 1.
+Imagine you have a jar of 5 cookies, and you want to package them into bags of 2 cookies each. The modulus operator helps you find out how many cookies are left over after filling as many bags as possible. In this case, you can fill 2 bags with 4 cookies, and you'll have 1 cookie left over. This leftover amount is what the modulus operator gives you.
 
 # 2. Execution Logic & Data Flow
-The modulus operator, denoted by the `%` symbol, calculates the remainder of an integer division operation. When given two operands, `a` and `b`, it performs the operation `a % b = a - (b * (a / b))`, where `a / b` is an integer division that discards the fractional part, effectively rounding towards zero in languages like C and Java. This process involves [[Integer_Overflow]] checks and [[Two'S_Complement]] arithmetic for handling negative numbers. For instance, `-5 % 2` evaluates to `1` because `-5 / 2` equals `-2` with a remainder of `-1`, but due to [[Rounding_Towards_Zero]] in integer division, it results in `1`. The operation relies on the [[Call_Stack]] to manage temporary results.
+The modulus operator, denoted by the `%` symbol, calculates the remainder of an integer division operation. Mechanically, when you evaluate an expression like `-5 % 2`, the [[Integer_Division]] operation `-5 / 2` yields `-2` with a remainder of `-1`, but due to the [[C++_Implementation]] of the modulus operator, it actually produces a result with the same sign as the divisor, which is `2` in this case, resulting in `1`. This behavior follows from the [[Operator_Precedence]] rules and the [[Stack_Frame]] management in the C++ compiler. Specifically, the expression `-5 % 2` is evaluated as `(-5) % 2`, not as `-(5 % 2)`.
 
 # 3. Edge Cases & Failure States
-When dealing with the modulus operator, edge cases arise with negative numbers and zero. For example, `0 % 2` equals `0`, but `0 % 0` results in a [[Division_By_Zero]] error in most programming languages. Additionally, the behavior of the modulus operator with negative numbers can vary; in some languages, `-5 % 2` might evaluate to `-1` instead of `1`, depending on how [[Integer_Division]] handles rounding. Understanding these nuances is crucial to avoid [[Undefined_Behavior]] in software development.
+When using the modulus operator, you need to consider edge cases such as division by zero, which results in a [[Division_By_Zero]] error. Additionally, the modulus operator's behavior with negative numbers can be counterintuitive, as seen in the example `-5 % 2`. The [[C++_Standard]] defines the result of the modulus operator for negative numbers to have the same sign as the divisor. Another constraint is that the modulus operator is only defined for integer types, and attempting to use it with floating-point numbers will result in a [[Type_Mismatch]] error. For example, the expression `5.5 % 2.2` is not well-formed in C++.
 # 4. Implementation Mechanics
-```c
-int modulus(int a, int b) {
-    if (b == 0) {
-        // Handle division by zero error
-        return 0; // Or throw an exception
+```cpp
+int modulus_example(int dividend, int divisor) {
+    if (divisor == 0) {
+        throw std::runtime_error("Division by zero");
     }
-    return a - (b * (a / b));
+    return dividend % divisor;
 }
 ```
-To read this code block: The provided C function `modulus` takes two integers `a` and `b` as input and calculates the remainder of `a` divided by `b`. It first checks if `b` is zero to prevent division by zero errors.
+This C++ code defines a function `modulus_example` that calculates the remainder of `dividend` divided by `divisor` using the modulus operator `%`. It also includes a check to ensure that the `divisor` is not zero, throwing a `std::runtime_error` if it is.
 
----
+The code can be understood by reading it as follows: The function takes two integer parameters, `dividend` and `divisor`, and returns their remainder. If the `divisor` is zero, it throws an exception.
+
+```
+  +---------------+
+  |  Stack Frame  |
+  +---------------+
+  |  dividend    |
+  |  divisor     |
+  |  return value|
+  +---------------+
+           |
+           |
+           v
+  +---------------+
+  |  Modulus Op   |
+  |  (dividend %  |
+  |   divisor)    |
+  +---------------+
+```
 
 ## 5. Walkthrough
-Here's a step-by-step walkthrough of the modulus operation with `a = -5` and `b = 2`:
+Here's a step-by-step walkthrough of using the modulus operator:
 
-1. **Division**: First, perform integer division `-5 / 2`. This results in `-2` because the fractional part is discarded.
-2. **Multiplication**: Next, multiply the result of the division by `b`: `-2 * 2 = -4`.
-3. **Subtraction**: Finally, subtract the product from `a`: `-5 - (-4) = -5 + 4 = -1`. However, due to rounding towards zero in integer division, the correct result for `-5 % 2` should be `1`, indicating a specific implementation detail.
-4. **Adjustment for Language Specifics**: Recognize that some languages adjust the result to ensure it is positive or aligned with a specific standard, which might lead to `1` as the final result for `-5 % 2`.
-5. **Verification**: Verify that the modulus operation aligns with language-specific definitions, especially for negative numbers.
+1. Suppose we want to calculate the remainder of 17 divided by 5.
+2. The division operation `17 / 5` yields 3 with a remainder of 2.
+3. The modulus operator `17 % 5` returns the remainder, which is 2.
+4. Now, let's consider a case with negative numbers: `-17 % 5`.
+5. The division operation `-17 / 5` yields -3 with a remainder of -2, but due to the C++ implementation, the result is `-17 % 5 == -2`.
+6. Finally, consider the edge case of division by zero: `17 % 0`. This should throw a `std::runtime_error` exception.
 
 ---
 
@@ -54,30 +72,29 @@ Here's a step-by-step walkthrough of the modulus operation with `a = -5` and `b 
     "id": "q1",
     "type": "fill_in",
     "difficulty": "L1",
-    "question": "The modulus operator finds the [[Remainder]] of an integer division operation.",
-    "textWithBlanks": "The [[Modulus]] operator finds the [[Remainder]] of an integer division operation.",
+    "question": "The modulus operator [[Blank1]] calculates the remainder of an integer division operation.",
+    "textWithBlanks": "The modulus operator [[Blank1]] calculates the remainder of an integer division operation.",
     "answer": [
-      "modulus",
-      "remainder"
+      "%"
     ],
-    "explanation": "The modulus operator is used to find the remainder."
+    "explanation": "The modulus operator is denoted by the % symbol."
   },
   {
     "id": "q2",
     "type": "true_false",
     "difficulty": "L2",
-    "question": "The result of `-5 % 2` is always `-1` across all programming languages.",
+    "question": "The expression `-5 % 2` evaluates to `-1`.",
     "answer": "False",
-    "explanation": "The result can vary depending on the language's implementation of integer division and modulus operations."
+    "explanation": "The expression `-5 % 2` evaluates to `1` in C++."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the given code for calculating the modulus.",
-    "content": "int modulus(int a, int b) { return a / b; }",
-    "answer": "The bug is that the code does not calculate the modulus but instead performs integer division. The correct implementation should be `int modulus(int a, int b) { if (b == 0) { /* handle error */ } return a - (b * (a / b)); }",
-    "explanation": "The given code does not implement the modulus operation correctly."
+    "question": "Find the bug in the code.",
+    "content": "int buggy_modulus(int dividend, int divisor) { return dividend % divisor; }",
+    "answer": "The bug is that the function does not check for division by zero.",
+    "explanation": "The function should throw an exception when the divisor is zero."
   }
 ]
 ```

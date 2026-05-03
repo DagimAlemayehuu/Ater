@@ -14,61 +14,57 @@ generated: true
 ---
 
 # 1. Mental Model
-Imagine you're building with LEGO blocks, but you also want to create complex structures like houses, cars, and trees. The C++ programming language is like having a huge box of LEGO blocks and instructions that let you build almost anything. It's a way to tell a computer how to perform tasks using a special set of rules and tools.
+Imagine you're building with LEGO blocks, but you also want to create complex structures like houses, cars, and trees. The C++ programming language is like having a huge box of LEGO blocks and instructions that let you build almost anything. It's an extension of an earlier set of blocks called C, with extra pieces like special blocks that can do lots of things at once (like object-oriented programming).
 
 # 2. Execution Logic & Data Flow
-The C++ programming language is compiled into machine code, which is then executed by the computer's processor. This process involves the [[Compiler]] translating C++ code into [[Assembly Language]], which is then assembled into [[Machine Code]]. The execution logic and data flow are managed through [[Stack Frames]], which organize function calls and returns. The language supports various [[Operator Precedence]] rules to ensure expressions are evaluated correctly. When a program runs, the [[Linker]] resolves external references, allowing the code to access libraries and other object files.
+The C++ programming language executes logic through a [[Compiler]] that translates human-readable code into machine code. This process starts with the [[Preprocessor]] handling directives, then the compiler performs [[Syntax_Analysis]] and [[Semantic_Analysis]] before generating [[Object_Code]]. The linker resolves [[External_References]] to create an executable. C++ supports [[Object-Oriented_Programming]] (OOP) concepts like encapsulation, inheritance, and polymorphism, which facilitate code reuse and organization.
 
 # 3. Edge Cases & Failure States
-In C++, edge cases and failure states can occur due to issues like [[Memory Leaks]], [[Null Pointer Exceptions]], and [[Undefined Behavior]]. For example, if a program tries to access memory that hasn't been allocated, it may crash or produce unexpected results. Additionally, [[Template Metaprogramming]] can lead to complex errors if not used carefully. The language's [[Raii (Resource Acquisition Is Initialization)]] idiom helps mitigate some of these issues by ensuring resources are properly released. However, programmers must still be mindful of [[Exception Handling]] mechanisms to handle runtime errors effectively.
+When working with C++, edge cases and failure states can arise from issues like [[Memory_Leaks]], [[Null_Pointer_Dereferences]], and [[Undefined_Behavior]]. The language's lack of [[Garbage_Collection]] means developers must manually manage memory using pointers, which can lead to [[Dangling_Pointers]] and [[Buffer_Overflows]]. Additionally, C++'s [[Template_Metaprogramming]] and [[Operator_Overloading]] features can introduce complexity and opportunities for errors if not used carefully.
 # 4. Implementation Mechanics
 ```cpp
-// Annotated AST snippet for a simple C++ function
-int add(int a, int b) {
-  // Function call expression
-  int result = a + b; // BinaryOperator: '+'
-  return result; // ReturnStmt
-}
-```
-This code snippet shows a simple C++ function `add` that takes two integers as arguments and returns their sum. The annotated Abstract Syntax Tree (AST) highlights the function call expression, binary operator, and return statement.
+#include <iostream>
 
-To read this: The code defines a function `add` with two parameters `a` and `b`. The function body contains a binary operator `+` that adds `a` and `b`, and the result is returned via a `ReturnStmt`.
-
-## 5. Walkthrough
-Here's a rigorous, multi-step exam scenario applying the concept of implementation mechanics in C++:
-
-Suppose we have a C++ program that calculates the area of a rectangle:
-```cpp
-int calculateArea(int width, int height) {
-  int area = width * height;
-  return area;
-}
+class MyClass {
+public:
+    MyClass() { std::cout << "Constructor called" << std::endl; }
+    ~MyClass() { std::cout << "Destructor called" << std::endl; }
+    void myMethod() { std::cout << "myMethod called" << std::endl; }
+};
 
 int main() {
-  int width = 5;
-  int height = 10;
-  int area = calculateArea(width, height);
-  return 0;
+    MyClass obj;
+    obj.myMethod();
+    return 0;
 }
 ```
-Let's walk through the execution:
+This C++ code defines a class `MyClass` with a constructor, destructor, and a method `myMethod`. In the `main` function, an object `obj` of `MyClass` is created, and `myMethod` is called on it.
 
-1. The program starts executing at `main()`.
-2. The `main()` function declares two integer variables `width` and `height` and initializes them to 5 and 10, respectively.
-3. The `calculateArea()` function is called with `width` and `height` as arguments.
-4. Within `calculateArea()`, the `area` variable is calculated by multiplying `width` and `height` using the binary operator `*`.
-5. The result of the multiplication is stored in the `area` variable.
-6. The `calculateArea()` function returns the `area` value to `main()`.
-7. In `main()`, the returned `area` value is stored in the local `area` variable.
+To read this code: The code demonstrates basic object-oriented programming (OOP) concepts in C++. It shows how a class can be defined with a constructor, destructor, and methods, and how an object of the class can be created and used.
 
-Intermediate calculations:
+## 5. Walkthrough
+Here's a step-by-step walkthrough of the code execution:
 
-* `width * height` = 5 * 10 = 50
+1. The program starts executing the `main` function.
+2. The constructor of `MyClass` is called when the object `obj` is created, printing "Constructor called" to the console.
+3. The `myMethod` of `MyClass` is called on the object `obj`, printing "myMethod called" to the console.
+4. When the `main` function returns, the destructor of `MyClass` is called automatically, printing "Destructor called" to the console.
 
-State changes:
-
-* `area` in `calculateArea()` = 50
-* `area` in `main()` = 50
+The memory layout can be visualized as:
+```
+  +---------------+
+  |  Stack       |
+  +---------------+
+  |  obj (MyClass) |
+  +---------------+
+           |
+           |
+           v
+  +---------------+
+  |  Heap        |
+  +---------------+
+```
+In this example, the object `obj` is stored on the stack, and its memory is managed automatically.
 
 ---
 
@@ -80,29 +76,29 @@ State changes:
     "id": "q1",
     "type": "fill_in",
     "difficulty": "L1",
-    "question": "The C++ compiler translates the code into [[Blank1]] which is then executed by the computer's processor.",
-    "textWithBlanks": "The C++ compiler translates the code into [[Blank1]] which is then executed by the computer's processor.",
+    "question": "The C++ programming language is an extension of an earlier language called [[Blank1]].",
+    "textWithBlanks": "The C++ programming language is an extension of an earlier language called [[Blank1]].",
     "answer": [
-      "Machine Code"
+      "C"
     ],
-    "explanation": "The C++ compiler translates the code into machine code which is then executed by the computer's processor."
+    "explanation": "C++ is an extension of the C programming language."
   },
   {
     "id": "q2",
     "type": "true_false",
     "difficulty": "L2",
-    "question": "The C++ language uses a [[Stack-Based]] memory management model.",
-    "answer": "True",
-    "explanation": "The C++ language uses a stack-based memory management model to organize function calls and returns."
+    "question": "C++ has automatic garbage collection.",
+    "answer": "False",
+    "explanation": "C++ does not have automatic garbage collection; it requires manual memory management using pointers."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the given code snippet.",
-    "content": "int add(int a, int b) { int result = a * b; return result; }",
-    "answer": "The bug is that the code is multiplying the numbers instead of adding them. The correct operator should be '+' instead of '*'.",
-    "explanation": "The code is supposed to add two numbers but is currently multiplying them, resulting in incorrect results."
+    "question": "Find the bug in the code.",
+    "content": "int main() { int* ptr = new int; *ptr = 10; delete ptr; std::cout << *ptr << std::endl; return 0; }",
+    "answer": "The bug is that the memory is being accessed after it has been deleted. The fix is to remove the delete statement or use a smart pointer.",
+    "explanation": "The code is trying to access memory that has already been deallocated, which results in undefined behavior."
   }
 ]
 ```

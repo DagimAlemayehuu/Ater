@@ -7,14 +7,17 @@ from .schemas import NoteContent, PartialPlan, ProbeEnrichment
 
 # ── DOMAIN MATRIX v25.5 ──────────────────────────────────────────────────────
 DOMAIN_MATRIX = {
-    "CS-SOFTWARE":        {"persona":"Principal Software Engineer","h1":"Execution Logic & Data Flow","h2":"Edge Cases & Failure States","h3":"Implementation Mechanics","artifact":"Execution block or annotated AST snippet","l1":"fill_in","l2":"true_false","l3":"debug"},
+    "CS-SOFTWARE":        {"persona":"Principal Software Engineer","h1":"Execution Logic & Data Flow","h2":"Edge Cases & Failure States","h3":"Implementation Mechanics","artifact":"Code block (use primary_language) + ASCII memory/stack diagram if relevant","l1":"fill_in","l2":"true_false","l3":"debug"},
     "CS-SYSTEMS":         {"persona":"Systems Architect","h1":"Protocol & Signal Topology","h2":"Bottlenecks & Partition Failures","h3":"Architecture Topology","artifact":"Mermaid sequence diagram","l1":"mcq","l2":"scenario","l3":"debug"},
-    "CS-DB":              {"persona":"Database Administrator","h1":"Schema & Query Mechanics","h2":"ACID Violations & Scaling Limits","h3":"Entity-Relationship Model","artifact":"ER diagram or JSON schema","l1":"true_false","l2":"scenario","l3":"debug"},
-    "CS-AI":              {"persona":"Machine Learning Engineer","h1":"Forward Pass & Backpropagation","h2":"Overfitting & Dimensionality","h3":"Model Architecture","artifact":"Neural network architecture diagram","l1":"mcq","l2":"fill_in","l3":"scenario"},
+    "CS-DB":              {"persona":"Database Administrator","h1":"Schema & Query Mechanics","h2":"ACID Violations & Scaling Limits","h3":"Entity-Relationship Model","artifact":"Mermaid erDiagram showing entity relationships","l1":"true_false","l2":"scenario","l3":"debug"},
+    "CS-AI":              {"persona":"Machine Learning Engineer","h1":"Forward Pass & Backpropagation","h2":"Overfitting & Dimensionality","h3":"Model Architecture","artifact":"Mermaid flowchart or markdown table of hyperparameters","l1":"mcq","l2":"fill_in","l3":"scenario"},
+    "CS-TESTING":         {"persona":"QA Lead Engineer","h1":"Test Strategy & Coverage Analysis","h2":"Defect Taxonomy & Regression Risk","h3":"Test Case Matrix","artifact":"Test case table with inputs/expected/actual","l1":"true_false","l2":"scenario","l3":"debug"},
+    "CS-ARCH":            {"persona":"Principal Architect","h1":"Architectural Pattern & Component Interaction","h2":"Coupling Failures & Scalability Walls","h3":"Component Diagram","artifact":"Mermaid classDiagram or flowchart","l1":"mcq","l2":"scenario","l3":"writing"},
+    "CS-REQUIREMENTS":    {"persona":"Requirements Engineer","h1":"Requirement Elicitation & Specification","h2":"Ambiguity Failures & Scope Creep","h3":"Requirements Traceability Matrix","artifact":"Requirements traceability table","l1":"true_false","l2":"scenario","l3":"writing"},
     "MATH-PURE":          {"persona":"Formal Logician","h1":"Derivation & Logical Trace","h2":"Theorem Constraints & Incompleteness","h3":"Formal Proof Trace","artifact":"LaTeX step-by-step proof","l1":"mcq","l2":"fill_in","l3":"debug"},
-    "MATH-STAT":          {"persona":"Data Scientist","h1":"Statistical Modeling & Inference","h2":"Confounding Variables & Bias","h3":"Probability Distribution","artifact":"Confusion matrix or probability table","l1":"true_false","l2":"scenario","l3":"writing"},
+    "MATH-STAT":          {"persona":"Data Scientist","h1":"Statistical Modeling & Inference","h2":"Confounding Variables & Bias","h3":"Probability Distribution","artifact":"Markdown probability table AND LaTeX formula","l1":"true_false","l2":"scenario","l3":"writing"},
     "MATH-CRYPTO":        {"persona":"Cryptographer","h1":"Cryptographic Operations","h2":"Collision Vulnerabilities & Brute Force","h3":"Hash Sequence Trace","artifact":"Hash sequence table","l1":"mcq","l2":"fill_in","l3":"scenario"},
-    "PHYSICS-KINEMATICS": {"persona":"Theoretical Physicist","h1":"Kinematic & Quantum Dynamics","h2":"Entropy & Boundary Limits","h3":"Physical Force Model","artifact":"Free-body or Feynman diagram","l1":"fill_in","l2":"scenario","l3":"writing"},
+    "PHYSICS-KINEMATICS": {"persona":"Theoretical Physicist","h1":"Kinematic & Quantum Dynamics","h2":"Entropy & Boundary Limits","h3":"Physical Force Model","artifact":"LaTeX equations + ASCII free-body diagram","l1":"fill_in","l2":"scenario","l3":"writing"},
     "CHEMISTRY":          {"persona":"Chemist","h1":"Reaction Mechanisms & Stoichiometry","h2":"Equilibrium Shifts & Catalytic Decay","h3":"Molecular Pathway","artifact":"Molecular structure or reaction pathway","l1":"mcq","l2":"scenario","l3":"debug"},
     "BIOLOGY":            {"persona":"Biologist","h1":"Biochemical Pathways","h2":"Genetic Drift & Environmental Collapse","h3":"Metabolic Map","artifact":"Metabolic pathway flowchart","l1":"true_false","l2":"scenario","l3":"writing"},
     "ENG-MECH":           {"persona":"Mechanical Engineer","h1":"Kinematic Linkages & Load Transfer","h2":"Yield Strengths & Fatigue Limits","h3":"Load Tolerance Specs","artifact":"Load-bearing tolerance table","l1":"fill_in","l2":"scenario","l3":"debug"},
@@ -26,7 +29,7 @@ DOMAIN_MATRIX = {
     "BIZ-STRATEGY":       {"persona":"Corporate Strategist","h1":"Go-to-Market Execution & Supply Chain","h2":"Strategic Moat Vulnerabilities","h3":"Value Chain Framework","artifact":"Value chain diagram or SWOT matrix","l1":"mcq","l2":"scenario","l3":"writing"},
     "LAW-CASE":           {"persona":"Appellate Litigator","h1":"Ratio Decidendi (Legal Trace)","h2":"Appellate Reversals & Jurisdictional Limits","h3":"Precedent Analysis","artifact":"IRAC mapping table","l1":"mcq","l2":"scenario","l3":"writing"},
     "LAW-CONTRACT":       {"persona":"Corporate Lawyer","h1":"Obligation Mechanics & Fulfillment","h2":"Breach Conditions & Liability Triggers","h3":"Condition-Result Model","artifact":"Condition-result matrix","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "HIST-CATALYST":      {"persona":"Historical Archivist","h1":"Chronological Catalysts & Execution","h2":"Multi-Generational Fallout","h3":"Causality Timeline","artifact":"Annotated timeline","l1":"fill_in","l2":"scenario","l3":"writing"},
+    "HIST-CATALYST":      {"persona":"Historical Archivist","h1":"Chronological Catalysts & Execution","h2":"Multi-Generational Fallout","h3":"Causality Timeline","artifact":"Mermaid gantt chart as annotated timeline","l1":"fill_in","l2":"scenario","l3":"writing"},
     "PHILOSOPHY":         {"persona":"Philosopher","h1":"Dialectical Progression","h2":"Logical Fallacies & Existential Paradoxes","h3":"Dialectical Map","artifact":"Dialectical map","l1":"mcq","l2":"scenario","l3":"writing"},
     "PSYCH-SOCIOLOGY":    {"persona":"Behavioral Researcher","h1":"Behavioral Triggers & Societal Shift","h2":"Cognitive Bias & Systemic Erosion","h3":"Cognitive Map","artifact":"Cognitive bias map","l1":"true_false","l2":"scenario","l3":"writing"},
     "LANG-LINGUISTICS":   {"persona":"Grammarian","h1":"Morphological Transformation","h2":"Semantic Ambiguity & Exceptions","h3":"Syntactical Tree","artifact":"Syntactical parsing tree","l1":"mcq","l2":"fill_in","l3":"writing"},
@@ -35,6 +38,7 @@ DOMAIN_MATRIX = {
     "SKILLS-HARD":        {"persona":"Master Craftsman","h1":"Step-by-Step Execution Sequence","h2":"Troubleshooting & Critical Failure Points","h3":"Process Blueprint","artifact":"Process flowchart","l1":"fill_in","l2":"scenario","l3":"writing"},
     "SKILLS-FITNESS":     {"persona":"Kinesiologist","h1":"Biomechanical Execution & Metabolism","h2":"Overtraining Vectors & Injury","h3":"Kinematic Trace","artifact":"Kinematic sequence table","l1":"fill_in","l2":"scenario","l3":"writing"},
     "EDUCATION":          {"persona":"Pedagogical Expert","h1":"Learning Theory & Instructional Design","h2":"Cognitive Load & Knowledge Gaps","h3":"Curriculum Framework","artifact":"Learning objective hierarchy","l1":"fill_in","l2":"scenario","l3":"writing"},
+    "RESEARCH-METHODS":   {"persona":"Research Methodologist","h1":"Research Design & Data Collection","h2":"Validity Threats & Confounds","h3":"Research Framework","artifact":"Research design matrix","l1":"mcq","l2":"scenario","l3":"writing"},
 }
 
 VALID_MODES = set(DOMAIN_MATRIX.keys())
@@ -205,8 +209,9 @@ class WriterAgent:
             "MANDATORY: wrap 3-5 related technical terms in [[Wikilinks]])\n\n"
             "RULES:\n"
             "- No intro filler. Start immediately with # 1.\n"
-            "- Code terms use `backticks`.\n"
+            "- Code terms use `backticks`. For Math/Physics/Chemistry, wrap inline math in `$` (NO spaces inside, e.g. `$x^2$`) and block math in `$$` on their own lines.\n"
             "- Wikilinks use [[Underscore_Title_Case]] format.\n"
+            f"- MANDATORY LANGUAGE: If code is required, you MUST use '{primary_language}'. Do not default to Python unless explicitly asked.\n"
             "- Every factual claim must be technically accurate for the specific concept title above.\n"
             f"- The concept is '{title_readable}' — stay 100% on this topic.\n"
         )
@@ -307,10 +312,12 @@ class WriterAgent:
             f"- Q2: type={domain['l2']}, difficulty=L2 (Theory Application)\n"
             f"- Q3: type={domain['l3']}, difficulty=L3 (In-Action / Execution)\n"
             "- Exactly 3 questions in a valid JSON array.\n"
-            "- CRITICAL for debug type: The `content` field must contain buggy code/logic ONLY. "
-            "NEVER put the answer or the word 'bug' in the content field. The student finds the bug.\n"
+            "- CRITICAL for debug type: Step 1: Think of correct code/logic. Step 2: Introduce ONE realistic bug that breaks functionality. Step 3: Put ONLY the buggy code in the `content` field. Never put the answer or the word 'bug' in `content`.\n"
             "- CRITICAL for fill_in: `textWithBlanks` must use [[blank1]], [[blank2]] markers. "
             "`answer` must be a list of strings.\n"
+            f"- CRITICAL LANGUAGE RULE: ALL code examples/artifacts MUST be written in '{primary_language}'. No exceptions.\n"
+            "- Wrap inline math in `$` (NO spaces inside, e.g. `$x=1$`) and block math in `$$` on their own lines.\n"
+            "- JSON ESCAPING: Inside the JSON block, you MUST double-escape all LaTeX commands (e.g. `\\\\frac`, `\\\\rightarrow`, `\\\\ldots`) or the JSON parser will fail.\n"
             "- Every question must test knowledge of '{title_readable}' specifically.\n"
             "- L1: tests definition/recall. L2: tests application to a new scenario. "
             "L3: tests debugging or execution in a complex realistic case.\n"
@@ -382,19 +389,20 @@ class WriterAgent:
                     continue
 
                 quiz_str = quiz_match.group(1).strip()
-                quiz_str = re.sub(r",\s*([\]\}])", r"\1", quiz_str)  # trailing commas
+                quiz_str = re.sub(r",\s*([\]\}])", r"\1", quiz_str)  # remove trailing commas
 
                 try:
                     quiz_data = json.loads(quiz_str, strict=False)
                 except json.JSONDecodeError as e:
-                    # Attempt ast fallback
+                    # Attempt ast fallback for single quotes or unquoted keys
                     try:
                         import ast
                         py_str = quiz_str.replace("true", "True").replace("false", "False").replace("null", "None")
                         quiz_data = ast.literal_eval(py_str)
+                        # Re-dump to canonical strict JSON
                         quiz_str = json.dumps(quiz_data, indent=2, ensure_ascii=False)
-                    except Exception:
-                        last_error = f"JSON parse failed: {e}"
+                    except Exception as ast_e:
+                        last_error = f"JSON parse failed: {e}. Auto-repair failed: {ast_e}"
                         continue
 
                 if not isinstance(quiz_data, list) or len(quiz_data) != 3:

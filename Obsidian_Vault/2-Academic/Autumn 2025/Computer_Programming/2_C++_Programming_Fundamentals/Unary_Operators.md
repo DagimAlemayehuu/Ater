@@ -14,57 +14,59 @@ generated: true
 ---
 
 # 1. Mental Model
-Imagine you have a single switch that can either turn something on or off, like a light switch. A unary operator works similarly, taking one piece of information and flipping or changing it in some way, like changing a light's state from on to off or vice versa. Just as the light switch only needs one action to change the light's state, a unary operator only needs one input to produce an output.
+Imagine you're at a store with a "reverse" discount sign. A unary operator is like a single-action button that takes one value and changes it in some way, like flipping a switch to turn something on or off. For example, if you have a sign that says "-10%" and you apply it to one price, that's like a unary operator.
 
 # 2. Execution Logic & Data Flow
-Unary operators work by taking a single operand and applying a specific operation to it, resulting in a new value. This process involves [[Type_Coercion]] to ensure the operand can be processed by the operator. The operator then performs the operation, such as [[Bitwise_Not]] or [[Logical_Not]], and the result is returned. In programming languages, unary operators are often implemented using [[Stack_Frame]] operations, where the operand is pushed onto the stack, and then the operator is applied, resulting in a new value being pushed onto the stack. The [[Operator_Precedence]] rules dictate the order in which unary operators are evaluated when multiple operators are present in an expression.
+Unary operators work by taking a single operand and applying a specific operation to it. In C++, when a unary operator is encountered, the compiler generates code that performs the operation and returns the result. The [[Operator_Precedence]] rules dictate the order in which unary operators are evaluated when there are multiple operators in an expression. The [[Stack_Frame]] is used to store the temporary results of the operation. For example, in the expression `x = -5`, the unary minus operator is applied to the literal `5`, and the result is stored in `x`. The [[Type Promotion]] rules also come into play when the operand is promoted to a compatible type.
 
 # 3. Edge Cases & Failure States
-When dealing with unary operators, edge cases can arise when the operand is not a valid type for the operator, such as attempting to apply a `~` operator to a non-numeric value. This can result in a [[Type_Error]] being thrown. Additionally, unary operators can also lead to [[Overflow]] or [[Underflow]] conditions when working with numeric values, particularly when using operators like `+` or `-` on very large or very small numbers. The [[Short_Circuit_Evaluation]] rules can also come into play when unary operators are used in combination with other logical operators, affecting the overall evaluation of the expression.
+When dealing with unary operators, edge cases arise when the operand is not a numeric type or when the operator is not defined for the operand's type. For instance, applying the unary minus operator to a non-numeric type, such as a `std::string`, results in a [[Compiler_Error]]. Additionally, when working with [[Pointer]] types, unary operators like `*` and `&` must be used carefully to avoid [[Dereferencing]] issues. The [[Overflow]] behavior also needs to be considered when applying unary operators to large values. In C++, the `++` and `--` operators can lead to [[Undefined Behavior]] if applied to invalid or non-modifiable lvalues.
 # 4. Implementation Mechanics
-```python
-# Annotated AST snippet for Unary Operator implementation
-class UnaryOperator:
-    def __init__(self, operator, operand):
-        self.operator = operator
-        self.operand = operand
-
-    def evaluate(self):
-        # Perform type coercion if necessary
-        if self.operator == "~":  # Bitwise NOT
-            if not isinstance(self.operand, int):
-                raise TypeError("Operand must be an integer")
-            return ~self.operand
-        elif self.operator == "!":  # Logical NOT
-            if not isinstance(self.operand, bool):
-                raise TypeError("Operand must be a boolean")
-            return not self.operand
-        elif self.operator == "+":  # Unary Plus
-            if not isinstance(self.operand, (int, float)):
-                raise TypeError("Operand must be a number")
-            return +self.operand
-        elif self.operator == "-":  # Unary Minus
-            if not isinstance(self.operand, (int, float)):
-                raise TypeError("Operand must be a number")
-            return -self.operand
-
-# Example usage:
-operand = 5
-operator = "~"
-unary_op = UnaryOperator(operator, operand)
-result = unary_op.evaluate()
-print(result)  # Output: -6
+```cpp
+int x = 5;
+int y = -x;  // Unary minus operator
 ```
-To read this code, note that we define a `UnaryOperator` class that takes an operator and an operand as input. The `evaluate` method performs the actual operation based on the operator, applying type coercion and error checking as needed.
+The above code block demonstrates the use of the unary minus operator in C++. The operator takes the value of `x` and negates it, storing the result in `y`. 
+
+To read this: The variable `x` is initialized with the value `5`. The unary minus operator is then applied to `x`, and the result is stored in `y`. Therefore, `y` will have the value `-5`.
+
+```
+  +---------------+
+  |  Stack Frame  |
+  +---------------+
+  |  x = 5       |
+  |  y = -x      |
+  |  y = -5      |
+  +---------------+
+           |
+           |
+           v
+  +---------------+
+  |  Memory      |
+  +---------------+
+  |  x:  5       |
+  |  y: -5       |
+  +---------------+
+```
 
 ## 5. Walkthrough
-Here's a step-by-step walkthrough of applying the unary `~` operator to the operand `5`:
+Consider the following scenario:
 
-1. Create a `UnaryOperator` instance with the `~` operator and the operand `5`.
-2. In the `evaluate` method, check if the operand is an integer. Since `5` is an integer, proceed with the operation.
-3. Apply the bitwise NOT operation to the operand `5`. This involves flipping all the bits in the binary representation of `5`, which is `00000101`. The result is `-6` (in two's complement representation).
-4. Return the result `-6`.
-5. Print the result to the console.
+1. We have an integer variable `a` initialized to `10`.
+2. We apply the unary plus operator to `a` and store the result in `b`. The expression is `b = +a;`.
+3. The value of `b` is then printed to the console.
+4. Next, we apply the unary minus operator to `a` and store the result in `c`. The expression is `c = -a;`.
+5. Finally, the values of `b` and `c` are printed to the console.
+
+Intermediate calculations:
+
+* `b = +a` => `b = +10` => `b = 10`
+* `c = -a` => `c = -10`
+
+The final values are:
+
+* `b = 10`
+* `c = -10`
 
 ---
 
@@ -76,29 +78,29 @@ Here's a step-by-step walkthrough of applying the unary `~` operator to the oper
     "id": "q1",
     "type": "fill_in",
     "difficulty": "L1",
-    "question": "A unary operator takes [[Blank1]] operand(s) as input.",
-    "textWithBlanks": "A unary operator takes [[Blank1]] operand(s) as input.",
+    "question": "The unary operator that changes the sign of a number is [[Blank1]].",
+    "textWithBlanks": "The [[Blank1]] operator changes the sign of a number.",
     "answer": [
-      "one"
+      "minus"
     ],
-    "explanation": "Unary operators, by definition, take a single operand as input."
+    "explanation": "The unary minus operator changes the sign of a number."
   },
   {
     "id": "q2",
     "type": "true_false",
     "difficulty": "L2",
-    "question": "Applying the unary + operator to a non-numeric value will result in a TypeError.",
-    "answer": "True",
-    "explanation": "The unary + operator requires a numeric operand. If a non-numeric value is provided, a TypeError will be raised."
+    "question": "Applying the unary minus operator to a non-numeric type results in a compiler warning.",
+    "answer": "False",
+    "explanation": "Applying the unary minus operator to a non-numeric type results in a compiler error."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the implementation of the unary NOT operator.",
-    "content": "def unary_not(operand):\n  if isinstance(operand, int):\n    return ~operand\n  elif isinstance(operand, bool):\n    return operand",
-    "answer": "The bug is in the return statement for the boolean case. It should return 'not operand' instead of 'operand'.",
-    "explanation": "The corrected implementation should return the logical NOT of the operand for boolean values."
+    "question": "Find the bug in the code.",
+    "content": "int x = 5; int y = -x++;",
+    "answer": "The bug is that the code is trying to modify a variable in a way that results in undefined behavior. The correct code should be either 'int x = 5; int y = -x; x++;' or 'int x = 5; x++; int y = -x;'.",
+    "explanation": "The bug is due to the post-increment operator being applied to 'x' after it has been negated and assigned to 'y', resulting in undefined behavior."
   }
 ]
 ```

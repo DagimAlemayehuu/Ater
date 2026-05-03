@@ -55,6 +55,7 @@ import {toast} from 'sonner'
 import {cn} from '@/lib/utils'
 
 import {AdvancedPracticeConfig, Question} from '@/types/practice'
+import { MarkdownBlock } from '@/components/MiniPracticeUI'
 
 interface Hub {
  id: string
@@ -645,7 +646,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/30">
  <span>{(currentQuestion.type || '').replace('_', ' ')}</span> // Level {currentQuestion.difficulty || '1'}
  </div>
- <h2 className="text-2xl font-black tracking-tight leading-tight">{currentQuestion.question}</h2>
+ <div className="text-2xl font-black tracking-tight leading-tight"><MarkdownBlock content={currentQuestion.question} /></div>
  </div>
 
  <div className="space-y-4">
@@ -657,7 +658,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const isWrong = isRevealed && isSelected && !isCorrect;
  return (
  <button key={key} disabled={isRevealed} onClick={() => handleSelectAnswer(key)} className={cn("p-5 border border-border/10 rounded-md text-left transition-all text-[13px] font-black uppercase tracking-tight", isCorrect ? "bg-primary/5 border-primary" : isWrong ? "bg-destructive/5 border-destructive" : isSelected && !isRevealed ? "bg-muted/30 border-foreground" : "hover:bg-muted/10")}>
- <span className="mr-4 text-muted-foreground/20">{key}</span> {String(val)}
+ <span className="text-muted-foreground/20 shrink-0 mt-0.5 mr-4">{key}</span> <div className="flex-1 overflow-x-auto"><MarkdownBlock content={String(val)} /></div>
  </button>
  );
 })}
@@ -666,9 +667,9 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 
  {(currentQuestion.type === 'writing' || currentQuestion.type === 'synthesis' || currentQuestion.type === 'debug') && (
  <div className="space-y-6">
- {currentQuestion.type === 'debug' && <pre className="p-6 bg-muted/10 rounded-md text-xs font-mono text-foreground/60 overflow-x-auto"><code>{currentQuestion.content}</code></pre>}
+ {currentQuestion.type === 'debug' && <div className="p-6 bg-muted/10 rounded-md text-xs font-mono text-foreground/60 overflow-x-auto"><MarkdownBlock content={`\`\`\`${currentQuestion.language || 'text'}\n${currentQuestion.content}\n\`\`\``} /></div>}
  <textarea rows={8} disabled={isRevealed} className="w-full p-6 bg-muted/5 border border-border/10 rounded-md text-sm font-medium focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="Your answer..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
- {isRevealed && <div className="p-6 bg-muted/5 border-l border-primary rounded-r-md text-sm font-medium text-foreground/60 whitespace-pre-wrap">{String(currentQuestion.answer)}</div>}
+ {isRevealed && <div className="p-6 bg-muted/5 border-l border-primary rounded-r-md text-sm font-medium text-foreground/60 whitespace-pre-wrap"><MarkdownBlock content={String(currentQuestion.answer)} /></div>}
  </div>
  )}
 
@@ -686,14 +687,14 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  )}
 
  {currentQuestion.type === 'fill_in' && (
- <div className="p-8 bg-muted/5 border border-border/10 rounded-lg text-lg font-medium leading-relaxed">
+ <div className="p-8 bg-muted/5 border border-border/10 rounded-lg text-lg font-medium leading-relaxed flex flex-wrap items-center gap-y-4">
  {(() => {
  const parts = (currentQuestion.textWithBlanks || '').split(/\[\[.*?\]\]/);
  return parts.map((part: string, i: number) => (
  <React.Fragment key={i}>
- {part}
+ <MarkdownBlock content={part} />
  {i < parts.length - 1 && (
- <input type="text" disabled={isRevealed} value={(userAnswers[currentQuestion.id] || [])[i] || ''} onChange={(e) => {const newAns = [...(userAnswers[currentQuestion.id] || [])]; newAns[i] = e.target.value; handleSelectAnswer(newAns);}} className={cn("mx-2 border-b-2 bg-transparent outline-none w-32 text-center text-sm font-black uppercase", isRevealed ? (String((userAnswers[currentQuestion.id] || [])[i] || '').toLowerCase() === String((currentQuestion.answer || [])[i] || '').toLowerCase() ? "border-primary text-primary" : "border-destructive text-destructive") : "border-muted/30 focus:border-primary")} />
+ <input type="text" disabled={isRevealed} value={(userAnswers[currentQuestion.id] || [])[i] || ''} onChange={(e) => {const newAns = [...(userAnswers[currentQuestion.id] || [])]; newAns[i] = e.target.value; handleSelectAnswer(newAns);}} className={cn("mx-2 border-b-2 bg-transparent outline-none w-32 text-center text-sm font-black uppercase shrink-0 self-center", isRevealed ? (String((userAnswers[currentQuestion.id] || [])[i] || '').toLowerCase() === String((currentQuestion.answer || [])[i] || '').toLowerCase() ? "border-primary text-primary" : "border-destructive text-destructive") : "border-muted/30 focus:border-primary")} />
  )}
  </React.Fragment>
  ));
@@ -701,7 +702,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
  )}
 
- {isRevealed && currentQuestion.explanation && <div className="p-6 bg-muted/5 border border-border/10 rounded-md text-xs font-medium text-muted-foreground italic leading-relaxed">{currentQuestion.explanation}</div>}
+ {isRevealed && currentQuestion.explanation && <div className="p-6 bg-muted/5 border border-border/10 rounded-md text-xs font-medium text-muted-foreground italic leading-relaxed"><MarkdownBlock content={currentQuestion.explanation} /></div>}
  </div>
  </div>
  </div>

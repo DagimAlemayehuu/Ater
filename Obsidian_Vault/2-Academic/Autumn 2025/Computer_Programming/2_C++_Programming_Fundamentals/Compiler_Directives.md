@@ -14,45 +14,38 @@ generated: true
 ---
 
 # 1. Mental Model
-Imagine you're working on a big construction project, and you need to include a specialized team of engineers to help with a specific part of the project. You send a directive to the project manager, who then arranges for the team to be brought in. Similarly, compiler directives are like instructions to the compiler to bring in specialized code or libraries to help with the compilation process.
+Imagine you're working on a big construction project, and you need to include instructions for the construction team to follow. Compiler directives are like special notes you leave for the construction team (the compiler) to read and follow before starting the build. They tell the compiler to include extra files or change how it builds the project.
 
 # 2. Execution Logic & Data Flow
-Compiler directives, often starting with the `#` symbol, are processed by the compiler before the actual compilation of the code begins. When the compiler encounters a directive like `#include`, it [[Tokenization|Tokenizes]] the directive and then performs the specified action, such as loading the contents of a file into the current program. This process happens during the [[Preprocessing|Preprocessing]] phase, before the compiler generates [[Abstract_Syntax_Tree|Abstract Syntax Trees]]. The directives can affect the compilation process by adding or modifying code, controlling [[Optimization_Level|Optimization Levels]], or specifying [[Debugging_Information|Debugging Information]].
+Compiler directives, often starting with `#`, are preprocessor commands that instruct the compiler to perform specific actions before compiling the code. When the preprocessor encounters a directive, it [[Tokenization|Tokenizes]] the directive and performs the specified action, such as including a file with `#include`, defining a macro with `#define`, or conditionally including code with `#ifdef`. The preprocessor then [[Text_Replacement|Replaces]] the directive with the corresponding code or actions, and the modified code is passed to the compiler for [[Compilation_Unit|Compilation]]. The compiler then processes the modified code, taking into account the directives' effects.
 
 # 3. Edge Cases & Failure States
-When dealing with compiler directives, edge cases can arise from incorrect or missing files specified in `#include` directives, leading to [[Compiler_Errors|Compiler Errors]]. If a directive is malformed or not supported by the compiler, it may cause the compilation process to fail or produce unexpected results. Additionally, [[Macro_Expansion|Macro Expansions]] can sometimes lead to surprising behavior if not properly understood. For instance, a misplaced or incorrectly defined macro can cause a directive to be interpreted incorrectly, resulting in a cascade of errors. Furthermore, [[Header_Guard|Header Guards]] are often used to prevent multiple inclusions of the same file, but if not implemented correctly, they can lead to issues with [[Symbol_Redefinition|Symbol Redefinition]].
+When dealing with compiler directives, edge cases can arise from incorrect or missing files, causing the preprocessor to fail. For example, if a file specified in an `#include` directive does not exist, the preprocessor will report an error. Similarly, if a macro defined with `#define` has the same name as an existing macro or variable, it can lead to [[Name_Lookup|Name Lookup]] issues. Additionally, improper use of conditional directives like `#ifdef` can result in [[Dead_Code|Dead Code]] or unexpected behavior. If the preprocessor encounters an unknown directive, it may [[Diagnostic_Message|Emit A Diagnostic Message]] or ignore the directive, depending on the compiler's behavior.
 # 4. Implementation Mechanics
-```c
-// Annotated AST snippet for #include directive
-#include <stdio.h>
+```cpp
+// example.cpp
+#include <iostream>
 
-// Tokenization: The compiler breaks the directive into tokens
-// 1. "#" symbol indicates a preprocessor directive
-// 2. "include" keyword specifies the directive type
-// 3. <stdio.h> is the file to be included
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-// Preprocessing phase:
-// The compiler loads the contents of stdio.h into the current program
-// The contents of stdio.h are inserted at this point
-// int printf(const char *format, ...);
+int main() {
+    int x = 5;
+    int y = 10;
+    int max_val = MAX(x, y);
+    std::cout << "Max value: " << max_val << std::endl;
+    return 0;
+}
 ```
-
-To read this: The code snippet shows a simple `#include` directive, which is broken down into tokens by the compiler. The directive is then processed during the preprocessing phase, where the contents of the specified file (`stdio.h`) are loaded into the current program.
+This C++ code demonstrates the use of compiler directives, specifically the `#include` and `#define` directives. The `#include` directive includes the iostream file, which provides input/output functions, while the `#define` directive defines a macro `MAX` that calculates the maximum of two values.
 
 ## 5. Walkthrough
-Here's a step-by-step walkthrough of how the compiler handles a `#define` directive:
+Here's a step-by-step walkthrough of how the preprocessor and compiler process the code:
 
-1. **Encountering the directive**: The compiler encounters the following line of code: `#define MAX_SIZE 100`.
-2. **Tokenization**: The compiler breaks the directive into tokens:
-	* `#` symbol
-	* `define` keyword
-	* `MAX_SIZE` identifier
-	* `100` value
-3. **Macro definition**: The compiler defines a macro named `MAX_SIZE` with the value `100`.
-4. **Macro expansion**: When the compiler encounters `MAX_SIZE` later in the code, it replaces it with `100`.
-5. **Compilation**: The compiler continues compiling the code, using the defined macro value.
-
-For example, if the code contains the line `int array[MAX_SIZE];`, the compiler will interpret it as `int array[100];`.
+1. The preprocessor encounters the `#include <iostream>` directive and includes the contents of the iostream file into the code.
+2. The preprocessor encounters the `#define MAX(a, b) ((a) > (b) ? (a) : (b))` directive and defines a macro `MAX` that takes two arguments `a` and `b`.
+3. The preprocessor replaces the `MAX(x, y)` macro invocation with the defined macro expansion `((x) > (y) ? (x) : (y))`.
+4. The modified code is passed to the compiler for compilation.
+5. The compiler processes the modified code, evaluating the expression `((x) > (y) ? (x) : (y))` and storing the result in `max_val`.
 
 ---
 
@@ -64,29 +57,29 @@ For example, if the code contains the line `int array[MAX_SIZE];`, the compiler 
     "id": "q1",
     "type": "fill_in",
     "difficulty": "L1",
-    "question": "Compiler directives are processed during the [[Phase]] phase, before the actual compilation of the code begins.",
-    "textWithBlanks": "Compiler directives are processed during the [[Phase]] phase.",
+    "question": "The [[Blank1]] directive is used to include files in C++.",
+    "textWithBlanks": "The [[Blank1]] directive is used to include files in C++.",
     "answer": [
-      "preprocessing"
+      "#include"
     ],
-    "explanation": "The preprocessing phase is where compiler directives are processed."
+    "explanation": "The #include directive is used to include files in C++."
   },
   {
     "id": "q2",
     "type": "true_false",
     "difficulty": "L2",
-    "question": "A malformed compiler directive can cause the compilation process to fail or produce unexpected results.",
+    "question": "The #define directive can be used to define a macro that takes arguments.",
     "answer": "True",
-    "explanation": "Malformed directives can indeed cause compilation issues."
+    "explanation": "The #define directive can be used to define a macro that takes arguments, as shown in the example code."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following code snippet.",
-    "content": "#define MAX_SIZE\nint array[MAX_SIZE];",
-    "answer": "The bug is that the #define directive is missing a value for MAX_SIZE. The fix is to provide a value, e.g., #define MAX_SIZE 100.",
-    "explanation": "The #define directive requires a value for the macro."
+    "question": "Find the bug in the code.",
+    "content": "#define MAX(a, b) (a > b ? a : b)\nint main() {\n    int x = 5;\n    int y = 10;\n    int max_val = MAX(x, y);\n    return 0;\n}",
+    "answer": "The bug is that the macro expansion is missing parentheses around the arguments, which can lead to incorrect operator precedence. The correct code is: #define MAX(a, b) ((a) > (b) ? (a) : (b))",
+    "explanation": "The bug is due to the missing parentheses around the arguments in the macro expansion."
   }
 ]
 ```

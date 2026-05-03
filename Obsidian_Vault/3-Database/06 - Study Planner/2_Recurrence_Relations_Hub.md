@@ -2,7 +2,7 @@
 title: 2_Recurrence_Relations_Hub
 type: Hub
 course: Discrete Mathematics
-semester: 2024/25
+semester: Autumn 2025
 unit: '2'
 source: "[[2_Recurrence_Relations.Pdf]]"
 source_pages: []
@@ -24,16 +24,15 @@ Hub note for Discrete Mathematics - 2 Recurrence Relations Hub
 - [ ] Complete all Socratic Probes and verify with the Answer Key.
 
 ## Connections
-- [ ] [[Sequence]]
+- [ ] [[Sequence_Definition]]
+    - [ ] [[Sequence_Notation]]
 - [ ] [[Recursive_Definition]]
-- [ ] [[Recurrence_Relation]]
-    - [ ] [[Solution_Of_Recurrence_Relation]]
+- [ ] [[Recurrence_Relation_Definition]]
     - [ ] [[Linear_Recurrence_Relation]]
-    - [ ] [[Homogeneous_Recurrence_Relation]]
-    - [ ] [[Non_Homogeneous_Recurrence_Relation]]
-    - [ ] [[Order_Of_Recurrence_Relation]]
-    - [ ] [[General_Solution]]
+        - [ ] [[Homogeneous_Recurrence_Relation]]
+        - [ ] [[First_Order_Linear_Homogeneous_Recurrence_Relation]]
+        - [ ] [[Second_Order_Linear_Homogeneous_Recurrence_Relation]]
+        - [ ] [[Non_Homogeneous_Recurrence_Relation]]
+- [ ] [[Characteristic_Equation]]
+- [ ] [[General_Solution]]
     - [ ] [[Unique_Solution]]
-    - [ ] [[Characteristic_Equation]]
-    - [ ] [[Method_Of_Undetermined_Coefficients]]
-- [ ] [[Initial_Condition]]

@@ -3,6 +3,7 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
+import katex from 'katex'
 import { cn } from '@/lib/utils'
 import React, { useState, useEffect, useMemo, useRef, memo } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
@@ -162,6 +163,31 @@ const CodeRenderer = memo((props: any) => {
     }
 
     if (language === 'mermaid') return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />
+
+    // Render ```latex blocks as actual Markdown documents to support mixed text and equations
+    if (language === 'latex') {
+        const src = String(children).replace(/\n$/, '');
+        // Strip LaTeX document boilerplate and convert equation environments to $$ blocks
+        const mathContent = src
+            .replace(/\\documentclass\{.*?\}/g, '')
+            .replace(/\\usepackage\{.*?\}/g, '')
+            .replace(/\\begin\{document\}|\\end\{document\}/g, '')
+            .replace(/\\section\{.*?\}|\\subsection\{.*?\}/g, '')
+            .replace(/\\begin\{equation\}/g, () => '\n$$\n')
+            .replace(/\\end\{equation\}/g, () => '\n$$\n')
+            .replace(/\\\[/g, () => '\n$$\n')
+            .replace(/\\\]/g, () => '\n$$\n')
+            .trim();
+        return (
+            <div className="my-6 p-6 bg-muted/10 border border-border/30 rounded-xl">
+                <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-2">
+                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]}>
+                        {mathContent}
+                    </ReactMarkdown>
+                </div>
+            </div>
+        );
+    }
     
     const content = String(children).replace(/\n$/, '');
     const isBlock = !!match || content.includes('\n') || (node?.position && node.position.start.line !== node.position.end.line);
@@ -470,7 +496,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                     </div>
                 )}
                 <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 text-foreground">
-                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]} components={markdownComponents}>{content}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]} components={markdownComponents}>{content}</ReactMarkdown>
                 </div>
             </div>
             {showSidebar && <AiSidecar selection={explanationSelection || selection} path={path || ""} onClose={() => setShowSidebar(false)} initialMode={isQuizMode ? 'quiz' : 'explain'} />}

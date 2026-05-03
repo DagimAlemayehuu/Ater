@@ -3,6 +3,45 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Check, BrainCircuit, ArrowRight, RotateCcw } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+export const MarkdownBlock = ({ content }: { content: string }) => {
+  return (
+    <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none text-foreground/90 prose-p:my-0 prose-pre:my-2 prose-pre:bg-muted/10 prose-pre:border prose-pre:border-border/50">
+      <ReactMarkdown 
+        remarkPlugins={[remarkMath]} 
+        rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]}
+        components={{
+          code({ node, className, children, ...props }: any) {
+            const match = /language-([a-zA-Z0-9_-]+)/.exec(className || '')
+            const isInline = !match && !String(children).includes('\n');
+            if (!isInline && match) {
+              return (
+                <SyntaxHighlighter
+                  style={vscDarkPlus as any}
+                  language={match[1]}
+                  PreTag="div"
+                  customStyle={{ background: 'transparent', margin: 0, padding: '1rem', fontSize: '12px' }}
+                  {...props}
+                >
+                  {String(children).replace(/\n$/, '')}
+                </SyntaxHighlighter>
+              )
+            }
+            return <code className={cn("bg-muted/30 px-1 py-0.5 rounded text-[11px] font-mono", className)} {...props}>{children}</code>
+          }
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+};
 
 interface MiniPracticeUIProps {
   question: any;
@@ -95,9 +134,9 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
             <div className="w-1 h-1 rounded-full bg-border/50"/>
             <span>{(currentQ.type || 'Application Challenge').replace('_', ' ')}</span>
             </div>
-            <h2 className="text-base lg:text-lg font-bold tracking-tight leading-snug text-foreground">
-            {currentQ.question}
-            </h2>
+            <div className="text-base lg:text-lg font-bold tracking-tight leading-snug text-foreground">
+              <MarkdownBlock content={currentQ.question} />
+            </div>
         </div>
 
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-1000 delay-200" key={`body-${currentQ.id}`}>
@@ -132,9 +171,9 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                     )}>
                         {key}
                     </div>
-                    <span className="text-xs font-semibold tracking-tight text-foreground/80 group-hover:text-foreground">
-                        {String(val)}
-                    </span>
+                    <div className="text-xs font-semibold tracking-tight text-foreground/80 group-hover:text-foreground">
+                        <MarkdownBlock content={String(val)} />
+                    </div>
                     </button>
                 );
                 })}
@@ -152,8 +191,8 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
             {(!currentQ.type || ['debug', 'writing', 'scenario', 'code', 'synthesis'].includes(currentQ.type)) && (
             <div className="space-y-3">
                 {(currentQ.content || currentQ.codeSnippet) && (
-                <div className="p-4 bg-muted/5 border border-border/50 rounded-lg font-mono text-xs overflow-auto shadow-inner whitespace-pre-wrap">
-                    {currentQ.content || currentQ.codeSnippet}
+                <div className="p-4 bg-muted/5 border border-border/50 rounded-lg shadow-inner">
+                    <MarkdownBlock content={currentQ.content || currentQ.codeSnippet} />
                 </div>
                 )}
                 <textarea
@@ -183,9 +222,9 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                     <Check size={14} />
                     <span>Explanation & Solution</span>
                     </div>
-                    <p className="text-xs font-medium leading-relaxed text-foreground/80">
-                    {currentQ.explanation || "No explanation provided."}
-                    </p>
+                    <div className="text-xs font-medium leading-relaxed text-foreground/80">
+                      <MarkdownBlock content={currentQ.explanation || "No explanation provided."} />
+                    </div>
                 </div>
                 
                 {currentIdx < questions.length - 1 ? (

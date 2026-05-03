@@ -14,43 +14,43 @@ generated: true
 ---
 
 # 1. Mental Model
-Imagine you're writing a letter to a friend and you want to add a note in the margin to remind yourself of something. You can either write a short note in the margin (single-line comment) or write a longer note on a sticky note that spans multiple lines (multi-line comment). Similarly, in programming, comments are notes added to the code to explain what it does, and there are two types: single-line comments and multi-line comments.
+Imagine you're writing a letter to a friend, but you want to add some notes that are only for your eyes. You can either write a short note on the same line as your sentence or take a piece of paper and write a longer note that spans multiple lines. This is similar to how comments work in programming, where `//` is like a short note on one line and `/* */` is like a longer note that can span multiple lines.
 
 # 2. Execution Logic & Data Flow
-In C++, single-line comments are denoted by `//` and everything following it on that line is ignored by the compiler. Multi-line comments, on the other hand, are denoted by `/*` and `*/`, and everything between these markers is ignored by the compiler. When the compiler encounters a [[Lexical_Analysis]] of the code, it checks for these comment markers and skips over the commented text. The [[Preprocessor]] does not execute or evaluate comments; it simply removes them from the [[Abstract_Syntax_Tree]] (AST) before the compiler performs [[Semantic_Analysis]].
+In C++, comments are used to add explanatory notes to the code. When the compiler encounters a `//`, it ignores everything from that point to the end of the line. This is because the [[Compiler]] treats `//` as a single-line comment delimiter. On the other hand, when the compiler encounters a `/*`, it starts ignoring code until it encounters a matching `*/`, which marks the end of the multi-line comment. This process is handled by the [[Lexical_Analysis]] phase, where the [[Preprocessor]] and [[Parser]] work together to identify and skip over comments. The comments themselves do not affect the [[Execution_Flow]] of the program.
 
 # 3. Edge Cases & Failure States
-Nested multi-line comments can be tricky, as `/*` inside a multi-line comment can cause the compiler to misinterpret the end of the comment. For example, `/* This is a /* multi-line */ comment */` can lead to [[Compiler_Errors]] if not written carefully. Additionally, single-line comments can span multiple lines if each line has a `//` marker. However, if a multi-line comment is not properly closed with `*/`, it can cause the compiler to [[Infinite_Loop]] on the comment section, effectively ignoring the rest of the code until the end of the file or a properly closed comment. [[Comment_Nesting]] is also a consideration to avoid [[Syntax_Errors]].
+When dealing with comments, there are some edge cases to consider. For example, if a developer forgets to close a multi-line comment with a `*/`, the [[Compiler]] will throw an error, treating the rest of the code as part of the comment. Similarly, if a developer uses `//` inside a `/* */` comment, the `//` will be treated as part of the comment text and will not affect the [[Syntax_Analysis]]. However, if a developer tries to nest `/* */` comments, the [[Parser]] may become confused and produce errors. Additionally, some [[Integrated_Development_Environment]]s (IDEs) may have issues with comment formatting, especially when dealing with multi-line comments and line wrapping.
 # 4. Implementation Mechanics
 ```cpp
-// Single-line comment example
-int x = 5;  // This is another single-line comment
+#include <iostream>
 
 /* 
-Multi-line comment example
-spanning multiple lines
-*/
-
+ * This is a multi-line comment
+ * that spans multiple lines
+ */
 int main() {
-    int y = 10;  // Single-line comment in a function
+    // This is a single-line comment
+    int x = 5;  // This is an inline comment
     /* 
-    Multi-line comment 
-    inside a function
-    */
+     * This is another multi-line comment
+     * with multiple lines
+     */
+    std::cout << "Hello, World!" << std::endl;
     return 0;
 }
 ```
-To read this code snippet: The code demonstrates the use of single-line comments (`//`) and multi-line comments (`/* */`) in C++. The comments are used to add notes to the code, explaining what it does or providing additional information.
+This C++ code demonstrates the use of single-line comments (`//`) and multi-line comments (`/* */`). The comments are ignored by the compiler and do not affect the execution of the program.
 
 ## 5. Walkthrough
-Here's a step-by-step walkthrough of how comments are processed in the given code:
+Here's a step-by-step walkthrough of how the compiler handles comments in the given code:
 
-1. The compiler begins lexical analysis of the code and encounters the first single-line comment `// Single-line comment example`. It ignores this line and moves on to the next line.
-2. The compiler encounters the line `int x = 5;  // This is another single-line comment`. It processes the code `int x = 5;` and ignores the rest of the line starting from `//`.
-3. The compiler then encounters the multi-line comment `/* Multi-line comment example spanning multiple lines */`. It ignores everything between `/*` and `*/`.
-4. In the `main()` function, the compiler encounters another single-line comment `// Single-line comment in a function` and ignores the rest of the line.
-5. The compiler then encounters a multi-line comment `/* Multi-line comment inside a function */` and ignores everything between `/*` and `*/`.
-6. Finally, the compiler processes the `return 0;` statement and completes the compilation.
+1. The compiler starts reading the code and encounters the multi-line comment `/* This is a multi-line comment that spans multiple lines */`. It ignores everything inside this comment.
+2. The compiler then encounters the `int main()` function and starts parsing the code inside it.
+3. Inside the `main()` function, the compiler encounters the single-line comment `// This is a single-line comment`. It ignores everything from this point to the end of the line.
+4. The compiler then encounters the line `int x = 5;  // This is an inline comment`. It ignores the inline comment `// This is an inline comment` and only parses the code `int x = 5;`.
+5. The compiler encounters another multi-line comment `/* This is another multi-line comment with multiple lines */` and ignores everything inside it.
+6. Finally, the compiler encounters the line `std::cout << "Hello, World!" << std::endl;` and parses it as normal code.
 
 ---
 
@@ -62,29 +62,29 @@ Here's a step-by-step walkthrough of how comments are processed in the given cod
     "id": "q1",
     "type": "fill_in",
     "difficulty": "L1",
-    "question": "What symbol is used to denote a single-line comment in C++?",
-    "textWithBlanks": "In C++, a single-line comment is denoted by [[Blank1]].",
+    "question": "The compiler treats [[Blank1]] as a single-line comment delimiter.",
+    "textWithBlanks": "The compiler treats [[Blank1]] as a single-line comment delimiter.",
     "answer": [
       "//"
     ],
-    "explanation": "Single-line comments in C++ are denoted by //."
+    "explanation": "The compiler treats // as a single-line comment delimiter."
   },
   {
     "id": "q2",
     "type": "true_false",
     "difficulty": "L2",
-    "question": "Can a multi-line comment be nested inside another multi-line comment?",
+    "question": "Nested /* */ comments are allowed in C++.",
     "answer": "False",
-    "explanation": "Nested multi-line comments can cause compiler errors if not written carefully."
+    "explanation": "Nested /* */ comments are not allowed in C++ and may cause the parser to produce errors."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following code:",
-    "content": "/* This is a /* multi-line comment */",
-    "answer": "The multi-line comment is not properly closed. The correct code should be: /* This is a /* multi-line */ comment */",
-    "explanation": "The bug is that the inner multi-line comment is not properly closed, which can cause compiler errors."
+    "question": "Find the bug in the code.",
+    "content": "/* This is a multi-line comment\nint x = 5;",
+    "answer": "The bug is that the multi-line comment is not closed with a */. The correct code should be: /* This is a multi-line comment */\nint x = 5;",
+    "explanation": "The bug is that the multi-line comment is not closed with a */."
   }
 ]
 ```

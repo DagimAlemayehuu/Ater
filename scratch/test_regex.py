@@ -1,66 +1,39 @@
-
 import re
+import json
 
-content = """---
-Course: "[[Database Systems]]"
-Unit: "[[7]]"
-Status: "[[Not Started]]"
-Confidence: ''
-Study Date: ''
----
-
-# 7 Relational Algebra and Calculus Hub
-
-## Overview
-Hub note for Database Systems - 7 Relational Algebra and Calculus Hub
-
-## Unit Objectives
-- [ ] Master all core technical definitions.
-- [ ] Internalize the mental models for each concept.
-- [ ] Trace and understand every worked example.
-- [ ] Complete all Socratic Probes and verify with the Answer Key.
-
-## Connections
-- [ ] [[Relational_Algebra]]
-    - [ ] [[Unary_Relational_Operations]]
-        - [ ] [[Select_Operation]]
-        - [ ] [[Project_Operation]]
-        - [ ] [[Rename_Operation]]
-    - [ ] [[Relational_Algebra_Operations_From_Set_Theory]]
-    - [ ] [[Union_Operation]]
-    - [ ] [[Intersection_Operation]]
-    - [ ] [[Difference_Operation]]
-    - [ ] [[Cartesian_Product_Operation]]
-    - [ ] [[Binary_Relational_Operations]]
-        - [ ] [[Join_Operation]]
-        - [ ] [[Theta_Join]]
-        - [ ] [[Equijoin_Operation]]
-        - [ ] [[Natural_Join_Operation]]
-        - [ ] [[Division_Operation]]
-    - [ ] [[Additional_Relational_Operations]]
-- [ ] [[Relational_Calculus]]
-    - [ ] [[Tuple_Relational_Calculus]]
-    - [ ] [[Domain_Relational_Calculus]]
-- [ ] [[Aggregate_Functions]]
-    - [ ] [[Grouping_With_Aggregation]]
-- [ ] [[Outer_Join_Operation]]
-- [ ] [[Outer_Union_Operation]]
-- [ ] [[Complete_Set_Of_Relational_Operations]]
-- [ ] [[Query_Tree]]
+quiz_str = r"""
+{
+  "q": "What is \frac{1}{2} \rightarrow \n \t \begin{equation} x \end{equation}?"
+}
 """
+print("Original:")
+print(quiz_str)
 
-def extract_section(content):
-    if not content: return None
-    # Strip YAML
-    clean_content = re.sub(r'^\s*---[\s\S]*?---', '', content).strip()
-    if not clean_content: return None
+# We want to escape \frac, \rightarrow, \begin, \end, but NOT \n, \t
+# If we do r'\\(?=[a-zA-Z])', we escape \n and \t too!
+# Let's match \ followed by any letter EXCEPT n, t, r, f, b ?
+# No, \frac starts with f! \rightarrow starts with r!
+# How can we distinguish \frac from \f (form feed)?
+# \frac is followed by 'rac'. \rightarrow is followed by 'ightarrow'.
+# \f is usually just \f. Wait, JSON doesn't use \f anyway. The LLM never generates \f.
+# What if we just match \ followed by 2 or more letters? LaTeX macros are usually >1 letter!
+# e.g. \frac, \rightarrow, \begin.
+# EXCEPT \a, \b, \c... wait, \n is 1 letter. \t is 1 letter.
+# So if we match \ followed by TWO OR MORE letters:
+# r'\\(?=[a-zA-Z]{2,})'
+# This matches \frac, \rightarrow, \begin, \ldots
+# But it does NOT match \n, \t, \r!
+# Wait! Does \n followed by a letter match?
+# "word\nnext" -> \n is followed by 'n', 'e', 'x', 't'. So it IS followed by 2 or more letters!
+# Ah! \n is just a backslash and an 'n'. The next character is 'e'. So it's \ followed by 'n', 'e', 'x', 't'.
 
-    # Strategy 1: Specific Headers
-    section_regex = r'#+\s*(?:Connections|Core Topologies|Structure|Nav|Outline|Course Map|Curriculum|Roadmap|Units|Topics|Concepts|Plan|Map|Index|Table of Contents|TOC)[^\n]*\n+([\s\S]*?)(?=\r?\n#+|$)'
-    match = re.search(section_regex, clean_content, re.IGNORECASE)
-    if match:
-        return match.group(1).strip()
-    
-    return None
+# Let's test r'\\(?=[a-zA-Z]{2,})'
+quiz_str2 = re.sub(r'\\(?=[a-zA-Z]{2,})', r'\\\\', quiz_str)
+print("Replaced:")
+print(quiz_str2)
 
-print(f"Extracted: '{extract_section(content)}'")
+try:
+    print("Parsed:")
+    print(json.loads(quiz_str2))
+except Exception as e:
+    print("Error:", e)

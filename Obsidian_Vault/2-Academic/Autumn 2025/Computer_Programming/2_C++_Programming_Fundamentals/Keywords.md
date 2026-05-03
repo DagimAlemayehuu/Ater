@@ -14,62 +14,79 @@ generated: true
 ---
 
 # 1. Mental Model
-Imagine you're trying to have a conversation with a robot, and there are certain words that the robot understands in a very specific way. These words are like secret commands that the robot responds to differently than regular conversation. In programming, these special words are called "keywords" and they're used to give instructions to the computer.
+Imagine you're playing a game where certain words are like magic commands that the game understands in a special way. These words, called keywords, tell the game (or in this case, the compiler) to do specific things that can't be changed, like "if" to make a decision or "while" to repeat an action. Just like how the game has its own set of magic commands, a programming language has its own set of keywords that the compiler understands in a special way.
 
 # 2. Execution Logic & Data Flow
-Keywords are [[Reserved_Words]] that have a specific meaning to the compiler, and they're used to define the structure and syntax of a programming language. When the compiler encounters a keyword, it [[Lexical_Analysis|Lexically Analyzes]] the word and checks its [[Symbol_Table]] to determine its meaning and validity in the current context. The compiler then uses this information to generate [[Machine_Code]] that the computer can execute. Keywords are typically used to define [[Control_Structures]], such as `if` statements and `while` loops, and to declare [[Data_Types]], such as `int` and `float`.
+Keywords are integral to the syntax and semantics of a programming language, dictating how the compiler interprets the code. When the compiler encounters a keyword, it triggers a specific [[Parsing]] action, altering the [[Abstract_Syntax_Tree]] (AST) construction. For instance, the `if` keyword in C++ initiates a conditional [[Control_Flow]] mechanism, prompting the compiler to expect a condition and a subsequent block of code. The compiler's [[Lexical_Analysis]] phase identifies keywords, distinguishing them from identifiers and literals. This process ensures that the compiler adheres to the language's syntax and semantics.
 
 # 3. Edge Cases & Failure States
-When using keywords, programmers must be careful to avoid [[Syntax_Errors]] by using keywords correctly and avoiding conflicts with [[Identifier_Names]]. If a keyword is misused or redefined, the compiler may generate an error or produce unexpected behavior. Additionally, some keywords may have [[Context-Dependent_Meaning]], meaning that their meaning changes depending on the context in which they're used. For example, the `this` keyword in object-oriented programming languages can refer to different objects depending on the current [[Scope]] and [[Execution_Context]].
+The misuse of keywords can lead to [[Syntax_Errors]], which the compiler must detect and report. For example, attempting to use a keyword as a variable name in C++ will result in a compilation error. The compiler must also handle cases where a keyword is used in a context where it's not applicable, such as using `return` in a [[Global_Scope]]. Furthermore, the compiler's [[Semantic_Analysis]] phase must ensure that keywords are used in accordance with their predefined meanings, preventing incorrect [[Type_Checking]] and [[Scope_Resolution]]. Failure to properly handle keywords can compromise the compiler's ability to generate correct machine code.
 # 4. Implementation Mechanics
-```python
-# Annotated AST snippet for a simple if statement
-IfStatement:
-  - condition: BinaryExpression
-    - left: Identifier (x)
-    - operator: >
-    - right: Literal (5)
-  - body: BlockStatement
-    - statements:
-      - PrintStatement: Literal ("x is greater than 5")
+```cpp
+#include <iostream>
+#include <string>
+#include <unordered_map>
 
-# Lexical analysis and symbol table lookup
-keywords = {"if": "IF_KEYWORD", "else": "ELSE_KEYWORD"}
-symbol_table = {"x": "IDENTIFIER"}
+// Define a simple lexer that identifies keywords
+class Lexer {
+public:
+    Lexer(const std::string& code) : code_(code) {}
 
-def lexical_analysis(token):
-  if token in keywords:
-    return keywords[token]
-  elif token in symbol_table:
-    return symbol_table[token]
-  else:
-    return "UNKNOWN"
+    // Simplified lexical analysis
+    void analyze() {
+        std::unordered_map<std::string, bool> keywords = {
+            {"if", true}, {"else", true}, {"while", true}, {"return", true}
+        };
 
-# Compiler execution
-def compile_if_statement(condition, body):
-  # Lexical analysis
-  condition_tokens = [lexical_analysis(token) for token in condition]
-  body_tokens = [lexical_analysis(token) for token in body]
+        size_t pos = 0;
+        while (pos < code_.size()) {
+            if (isspace(code_[pos])) {
+                pos++;
+                continue;
+            }
 
-  # Syntax analysis and code generation
-  if condition_tokens[0] == "IDENTIFIER" and condition_tokens[1] == ">":
-    # Generate machine code for if statement
-    machine_code = "CMP x, 5; JG body"
-  else:
-    raise SyntaxError("Invalid if statement")
+            size_t start = pos;
+            while (pos < code_.size() && !isspace(code_[pos])) {
+                pos++;
+            }
 
-  return machine_code
+            std::string token = code_.substr(start, pos - start);
+            if (keywords.find(token) != keywords.end()) {
+                std::cout << token << " is a keyword." << std::endl;
+            } else {
+                std::cout << token << " is not a keyword." << std::endl;
+            }
+        }
+    }
+
+private:
+    std::string code_;
+};
+
+int main() {
+    std::string code = "if (x > 5) return x; else while (y < 10) y++;";
+    Lexer lexer(code);
+    lexer.analyze();
+    return 0;
+}
 ```
-To read this code, note that it shows a simplified annotated Abstract Syntax Tree (AST) snippet for an `if` statement, followed by a lexical analysis and symbol table lookup implementation. The `lexical_analysis` function checks if a token is a keyword or an identifier, and the `compile_if_statement` function generates machine code for the `if` statement based on the lexical analysis.
+This C++ code demonstrates a basic lexer that identifies keywords in a given piece of code. It uses an unordered map to store known keywords and then scans the input code to match tokens against this list.
+
+To read this code block: The provided C++ code defines a simple lexer class that performs lexical analysis on a given string of code. It checks each token against a list of predefined keywords and outputs whether each token is a keyword or not.
 
 ## 5. Walkthrough
-Here's a rigorous, multi-step exam scenario applying the concept of keywords:
+Here's a step-by-step walkthrough of how the lexer works with the provided code:
 
-1. **Given code**: Suppose we have the following code snippet: `if (x > 5) { print("x is greater than 5"); }`
-2. **Lexical analysis**: The compiler performs lexical analysis on the code and identifies the tokens: `if`, `(`, `x`, `>`, `5`, `)`, `{`, `print`, `(`, `"x is greater than 5"`, `)`, `;`, `}`
-3. **Symbol table lookup**: The compiler looks up the tokens in the symbol table and determines that `x` is an identifier, `if` is a keyword, and `print` is a function.
-4. **Syntax analysis**: The compiler performs syntax analysis on the tokens and determines that the code is a valid `if` statement.
-5. **Code generation**: The compiler generates machine code for the `if` statement, which might look like: `CMP x, 5; JG body; body: PRINT "x is greater than 5"`
+1. **Initialization**: The lexer is initialized with a string of code: `if (x > 5) return x; else while (y < 10) y++;`.
+2. **Lexical Analysis**: The `analyze` method starts scanning the code from left to right. It skips whitespace characters and identifies tokens by finding sequences of non-whitespace characters.
+3. **Token Identification**: The first token identified is `if`. The lexer checks if `if` is in the list of keywords and finds that it is. It outputs: `if is a keyword.`.
+4. **Continued Analysis**: The lexer continues scanning and identifies the tokens `(`, `x`, `>`, `5`, `)`, `return`, `x`, `;`, `else`, `while`, `(`, `y`, `<`, `10`, `)`, `y`, `++`.
+5. **Keyword Check for Each Token**: For each token, the lexer checks if it's a keyword. It outputs:
+   - `if is a keyword.`
+   - `else is a keyword.`
+   - `while is a keyword.`
+   - `return is a keyword.`
+   For tokens that are not keywords (like `x`, `y`, `(`, `)`, etc.), it outputs that they are not keywords.
 
 ---
 
@@ -81,30 +98,29 @@ Here's a rigorous, multi-step exam scenario applying the concept of keywords:
     "id": "q1",
     "type": "fill_in",
     "difficulty": "L1",
-    "question": "Keywords are [[Reserved_Words]] that have a specific meaning to the [[Compiler]].",
-    "textWithBlanks": "Keywords are [[Blank1]] that have a specific meaning to the [[Blank2]].",
+    "question": "Keywords in programming languages are used to [[Blank1]] specific actions or control structures.",
+    "textWithBlanks": "Keywords in programming languages are used to [[Blank1]] specific actions or control structures.",
     "answer": [
-      "Reserved Words",
-      "compiler"
+      "define"
     ],
-    "explanation": "Keywords are reserved words that have a specific meaning to the compiler."
+    "explanation": "Keywords are used to define specific actions or control structures in programming languages."
   },
   {
     "id": "q2",
     "type": "true_false",
     "difficulty": "L2",
-    "question": "Keywords can be redefined by the programmer.",
+    "question": "Using a keyword as a variable name in C++ will result in a compilation warning.",
     "answer": "False",
-    "explanation": "Keywords typically cannot be redefined by the programmer, as they have a specific meaning to the compiler."
+    "explanation": "Using a keyword as a variable name in C++ will result in a compilation error, not a warning."
   },
   {
     "id": "q3",
     "type": "debug",
     "difficulty": "L3",
-    "question": "Find the bug in the following code: if (x > 5) { print(x); } else { }",
-    "content": "def if_statement(x):\n  if x > 5:\n    print(x)\n  else:\n    pass",
-    "answer": "The bug is that the 'else' clause is empty and does not handle the case where x <= 5. A fix could be to add a print statement or other logic to the else clause.",
-    "explanation": "The bug is that the else clause is empty and does not handle the case where x <= 5."
+    "question": "Find the bug in the given code snippet that attempts to use a keyword as a variable name.",
+    "content": "int if = 5;",
+    "answer": "The bug is using the keyword 'if' as a variable name. It should be changed to a valid identifier.",
+    "explanation": "The code attempts to declare an integer variable named 'if', which is a keyword in C++. This will cause a compilation error."
   }
 ]
 ```
