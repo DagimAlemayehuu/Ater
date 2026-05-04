@@ -177,13 +177,13 @@ class OkaValidator:
         if len(body.strip()) < 300:
             errors.append(f"BODY_TOO_SHORT: {len(body.strip())} chars. Minimum is 300.")
 
-        # ── 7. Walkthrough step count (soft warning handled by post-processing, but good to catch here too if needed, though we won't block deployment) ──
-        walkthrough_match = re.search(r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)', body, re.DOTALL)
+        # ── 7. Walkthrough step count — section is ## 4. Walkthrough in the template
+        walkthrough_match = re.search(r'## 4\. Walkthrough(.*?)(?=## 5\.|```interactive-quiz|$)', body, re.DOTALL)
         if walkthrough_match:
-            steps = re.findall(r'^\d+\.', walkthrough_match.group(1), re.MULTILINE)
-            if len(steps) < 5:
+            steps = re.findall(r'^[\-\*]|^\d+\.', walkthrough_match.group(1), re.MULTILINE)
+            if len(steps) < 3:
                 import logging
-                logging.getLogger("LifeOS").warning(f"[OkaValidator] WALKTHROUGH_TOO_SHORT: {len(steps)} steps, need 5+")
+                logging.getLogger("LifeOS").warning(f"[OkaValidator] WALKTHROUGH_TOO_SHORT: {len(steps)} steps, need 3+")
 
         # ── 8. Gutter law defense (No longer logged; fixed proactively in VaultManager)
         # We previously warned here, but now we silenty accept and fix during the write phase.
@@ -192,7 +192,9 @@ class OkaValidator:
 
     @staticmethod
     def validate_json_robust(raw_json: str) -> Tuple[bool, Any, Optional[str]]:
-        """Fault-tolerant JSON parser for weak model outputs."""
+        """Fault-tolerant JSON parser for weak model outputs.
+        Handles LaTeX backslashes, trailing commas, and malformed fences.
+        """
         if not raw_json:
             return False, {}, "EMPTY_INPUT"
 
@@ -204,11 +206,11 @@ class OkaValidator:
         # Find outermost JSON object or array
         start_dict = clean_json.find("{")
         start_array = clean_json.find("[")
-        
+
         is_array = False
         if start_array != -1 and (start_dict == -1 or start_array < start_dict):
             is_array = True
-            
+
         if is_array:
             start = start_array
             end = clean_json.rfind("]")
@@ -220,37 +222,57 @@ class OkaValidator:
             return False, {}, "NO_JSON_FOUND"
 
         clean_json = clean_json[start:end + 1]
-        # Remove trailing commas
+        # Remove trailing commas before closing braces/brackets
         clean_json = re.sub(r",\s*([\]\}])", r"\1", clean_json)
-        # Fix common weak-model escaping issues
-        clean_json = clean_json.replace("\\\\n", "\n").replace("\\n", "\n")
+        # Normalize double-escaped newlines from LLM outputs
+        clean_json = clean_json.replace("\\\\n", "\\n")
 
-        try:
-            data = json.loads(clean_json, strict=False)
-            return True, data, None
-        except Exception as e:
-            # Fallback to brace counting
-            brace_char = '[' if is_array else '{'
-            close_char = ']' if is_array else '}'
-            brace_count = 0
-            for i, char in enumerate(clean_json):
-                if char == brace_char: brace_count += 1
-                elif char == close_char: brace_count -= 1
-                if brace_count == 0 and i > 0:
-                    try:
-                        data = json.loads(clean_json[:i+1], strict=False)
-                        return True, data, None
-                    except Exception:
-                        pass
-            
-            # Try ast fallback
+        def _sanitize_backslashes(s: str) -> str:
+            """Escape lone backslashes that are not valid JSON escape sequences.
+            This handles LaTeX like \\frac, \\Delta, \\sigma etc. inside JSON strings.
+            Valid JSON escapes: \\ \" \/ \b \f \n \r \t \uXXXX
+            """
+            return re.sub(r'\\(?!["\\/ bfnrtu])', r'\\\\', s)
+
+        def _try_parse(s: str):
             try:
-                import ast
-                py_str = clean_json.replace("true", "True").replace("false", "False").replace("null", "None")
-                data = ast.literal_eval(py_str)
-                return True, data, None
-            except Exception:
-                return False, {}, f"JSON_PARSE_ERROR: {e}"
+                return json.loads(s, strict=False), None
+            except Exception as e:
+                return None, e
+
+        # Attempt 1: direct parse
+        data, err = _try_parse(clean_json)
+        if data is not None:
+            return True, data, None
+
+        # Attempt 2: sanitize backslashes then parse (handles LaTeX in JSON strings)
+        sanitized = _sanitize_backslashes(clean_json)
+        data, err = _try_parse(sanitized)
+        if data is not None:
+            return True, data, None
+
+        # Attempt 3: brace-counting fallback on sanitized string
+        brace_char = '[' if is_array else '{'
+        close_char = ']' if is_array else '}'
+        brace_count = 0
+        for i, char in enumerate(sanitized):
+            if char == brace_char:
+                brace_count += 1
+            elif char == close_char:
+                brace_count -= 1
+            if brace_count == 0 and i > 0:
+                data, _ = _try_parse(sanitized[:i + 1])
+                if data is not None:
+                    return True, data, None
+
+        # Attempt 4: ast.literal_eval
+        try:
+            import ast
+            py_str = sanitized.replace("true", "True").replace("false", "False").replace("null", "None")
+            data = ast.literal_eval(py_str)
+            return True, data, None
+        except Exception:
+            return False, {}, f"JSON_PARSE_ERROR: {err}"
 
     @staticmethod
     def sanitize_prerequisites(prereqs: list) -> list:

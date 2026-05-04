@@ -111,7 +111,6 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  className="text-xl font-black uppercase tracking-tight"
  onSave={(next) => {
  onUpdate('08 - Semesters', semester.id, {title: next})
- setSelectedSemesterId(next)
 }}
  />
  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{cleanTitle(activeProgram)} · {cleanTitle(selectedYear?.title || '')}</span>
@@ -209,8 +208,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  className="text-2xl font-black uppercase tracking-tighter mb-2"
  onSave={(next) => {
  onUpdate('09 - Years', selectedYear.id, {title: next})
- setSelectedYearId(next)
-}}
+ }}
  />
  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{cleanTitle(activeProgram)} · {cleanTitle(level)}</span>
  </div>

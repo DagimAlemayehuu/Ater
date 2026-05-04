@@ -1038,9 +1038,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             f"---\n"
                             f"title: {hub_filename[:-3]}\n"
                             f"type: Hub\n"
-                            f"course: {self.vm.wrap_wikilink(course)}\n"
-                            f"semester: {self.vm.wrap_wikilink(semester)}\n"
-                            f"year: {self.vm.wrap_wikilink(year)}\n"
+                            f"course: {course}\n"
+                            f"semester: {semester}\n"
+                            f"year: {year}\n"
                             f"unit: {unit_num}\n"
                             f"source: \n"
                             f"source_pages: []\n"
@@ -1390,10 +1390,15 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         # Apply overrides if provided (usually on Batch 1)
         if curriculum_override:
             print(f"[OKA Service] Applying Curriculum Overrides & Syncing to Vault: {curriculum_override}")
-            session["metadata"]["course"] = curriculum_override.get("course", session["metadata"].get("course"))
-            session["metadata"]["unit"] = curriculum_override.get("unit", session["metadata"].get("unit"))
-            session["metadata"]["semester"] = curriculum_override.get("semester")
-            session["metadata"]["hub_title"] = curriculum_override.get("hub_title")
+            # Guard: only overwrite if the override value is non-empty
+            if curriculum_override.get("course"):
+                session["metadata"]["course"] = curriculum_override["course"]
+            if curriculum_override.get("unit"):
+                session["metadata"]["unit"] = curriculum_override["unit"]
+            if curriculum_override.get("semester"):
+                session["metadata"]["semester"] = curriculum_override["semester"]
+            if curriculum_override.get("hub_title"):
+                session["metadata"]["hub_title"] = curriculum_override["hub_title"]
             
             # Sync back to the anchored hub file if it exists
             hub_to_update = session.get("target_hub")
@@ -1429,6 +1434,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         if anchored_hub_id:
             session["metadata"]["anchored_hub_id"] = anchored_hub_id
             session["target_hub"] = next((h for h in self.list_planner_hubs() if h["id"] == anchored_hub_id), None)
+        elif session.get("metadata", {}).get("anchored_hub_id"):
+            saved_id = session["metadata"]["anchored_hub_id"]
+            session["target_hub"] = next((h for h in self.list_planner_hubs() if h["id"] == saved_id), None)
         
         # THIN CONTEXT PROTOCOL
         initial_messages = session["messages"][:2]
@@ -1586,9 +1594,21 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                         is_valid = False
                                         struct_errors = [f"SEMANTIC: {fix_instructions}"]
                             if is_valid or is_last_attempt:
+                                # Check for unrecoverable HARD_FAILURE content — never deploy these
+                                has_hard_failure = any(
+                                    marker in final_output
+                                    for marker in ["Error generating question.", "Error generating content", "Error extracting"]
+                                )
+                                if is_last_attempt and has_hard_failure:
+                                    import logging
+                                    logging.getLogger("LifeOS").error(
+                                        f"[OKA Service] Dropping '{current_note_title}' — HARD_FAILURE_MARKER found in final output. "
+                                        "Note contains broken quiz or error content and will not be deployed."
+                                    )
+                                    break
                                 # Deploy — either clean pass or last-chance force-deploy
                                 if is_last_attempt and not is_valid and final_output:
-                                    print(f"[OKA Service] Force-deploying '{current_note_title}' on last attempt despite issues: {struct_errors}")
+                                    print(f"[OKA Service] Force-deploying '{current_note_title}' on last attempt despite structural issues: {struct_errors}")
                                 local_results = self.deployer.deploy_atomic_notes(
                                     session_id, [current_note_title], [final_output], plan_obj, session.get("path", "")
                                 )

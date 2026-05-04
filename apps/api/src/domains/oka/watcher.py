@@ -373,8 +373,12 @@ class OkaQueueManager:
                             if "tpd" in err_msg or "daily" in err_msg or "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg:
                                 import random
                                 jitter = random.randint(5, 30)
-                                watcher_logger.warning(f"Rate limit hit during deployment. Sleeping for {60 + jitter}s (jittered) and retrying...")
-                                await asyncio.sleep(60 + jitter)
+                                sleep_time = 60 + jitter
+                                watcher_logger.warning(f"Rate limit hit during deployment. Sleeping for {sleep_time}s (jittered) and retrying...")
+                                self.status = "cooling"
+                                self.last_action = f"Rate limited — sleeping {sleep_time}s"
+                                await asyncio.sleep(sleep_time)
+                                self.status = "processing"
                                 # Do NOT increment batch_retry for rate limits, just wait it out
                             else:
                                 batch_retry += 1

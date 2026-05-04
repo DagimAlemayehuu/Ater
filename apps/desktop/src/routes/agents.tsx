@@ -3,7 +3,7 @@ import {
  ShieldCheck, RefreshCw, 
  FileText, Activity, 
  Zap,
- User, BookOpen, DollarSign, Brain, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, Bot, CheckCircle
+ User, BookOpen, DollarSign, Brain, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, Bot, CheckCircle, CheckCircle2
 } from 'lucide-react'
 import {sidecarApi} from '@/lib/sidecarApi'
 import {cn} from '@/lib/utils'
@@ -352,12 +352,24 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
 }
 
  useEffect(() => {
- fetchStatus()
- fetchInbox()
- // Poll status frequently during active deployments
- const itv = setInterval(fetchStatus, queueStatus?.status !== 'idle' ? 1500 : 3000)
- return () => clearInterval(itv)
-}, [queueStatus?.status])
+  let active = true;
+  let timer: NodeJS.Timeout;
+
+  const poll = async () => {
+   if (!active) return;
+   await fetchStatus();
+   if (!active) return;
+   timer = setTimeout(poll, 2000);
+  };
+
+  fetchInbox();
+  poll();
+
+  return () => {
+   active = false;
+   clearTimeout(timer);
+  };
+ }, [])
 
  const toggleAutoDeploy = async () => {
  await saveConfig({autoDeploy: !config?.autoDeploy})
@@ -394,7 +406,13 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  file_path: selectedInboxFile.path,
  target_hub_id: manualHubId ? String(manualHubId) : undefined
 })
- 
+
+ if (res.status === 'error') {
+  setOkaError(res.message || 'Detection failed');
+  setProcessing(false);
+  return;
+ }
+
  setAnchoredHub(res.anchored_hub)
  setAvailableHubs(res.available_hubs || [])
  setAvailableOptions(res.available_options || {courses: [], semesters: [], units: []})
@@ -784,7 +802,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  {b.results.map((r: any, i: number) => (
  <div key={i} className="p-4 border border-border/10 rounded-xl bg-background flex items-center gap-3">
  <div className="p-2 bg-muted/5 rounded-lg border border-border/10 text-muted-foreground/40">
- 
+  <FileText size={14} />
  </div>
  <span className="text-[10px] font-black uppercase tracking-widest truncate text-foreground/80">{r.title}</span>
  </div>
@@ -796,7 +814,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  {isCompleted && (
  <div className="py-16 flex flex-col items-center justify-center text-center -95">
  <div className="w-16 h-16 rounded-2xl bg-muted/5 border border-border/10 text-foreground/40 flex items-center justify-center mb-6">
- 
+  <CheckCircle2 size={32} />
  </div>
  <h4 className="text-xl font-black uppercase tracking-tight mb-2 text-foreground">All Done</h4>
  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mb-8 max-w-sm">All files have been saved to your vault.</p>

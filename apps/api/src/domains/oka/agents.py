@@ -189,10 +189,6 @@ def _count_wikilinks(text: str) -> int:
 class ArchitectAgent:
     def __init__(self, llm: BaseChatModel):
         self.llm = llm
-        try:
-            self.llm_structured = llm.with_structured_output(PartialPlan)
-        except Exception:
-            self.llm_structured = None
 
     async def generate_partial_plan(self, document_text: str) -> PartialPlan:
         modes_str = ", ".join(DOMAIN_MATRIX.keys())
@@ -215,16 +211,8 @@ class ArchitectAgent:
         )
 
         last_error = None
-        for attempt in range(4):
+        for attempt in range(3):
             try:
-                if attempt == 0 and self.llm_structured:
-                    try:
-                        return await self.llm_structured.ainvoke([("system", system), ("human", document_text[:12000])])
-                    except Exception as e:
-                        last_error = e
-                        self.llm_structured = None  # Provider doesn't support tool_use — skip for all future calls
-                        print(f"[ArchitectAgent] Structured output failed (disabling): {e}. Falling back to plain JSON.")
-
                 retry_note = f"\nPREVIOUS ERROR: {last_error}\nReturn ONLY pure JSON, no markdown.\n" if last_error else ""
                 res = await self.llm.ainvoke([
                     ("system", system + retry_note),
@@ -238,10 +226,9 @@ class ArchitectAgent:
                     if note.get("mode") not in VALID_MODES:
                         note["mode"] = "CS-SOFTWARE"
                     raw_title = note.get("title", "Unknown").strip()
-                    # Enforce strict Title_Case where every word is capitalized
                     words = re.split(r'[\s_\-]+', raw_title)
                     note["title"] = "_".join(w.capitalize() for w in words if w)
-                    
+
                     pages = note.get("source_pages", [])
                     note["source_pages"] = [int(p) for p in pages if str(p).strip().isdigit()]
 
@@ -264,18 +251,27 @@ class ArchitectAgent:
         start = clean.find("{")
         end = clean.rfind("}")
         if start == -1 or end == -1: raise ValueError("No JSON object in response")
-        
+
         json_str = clean[start:end+1]
+        # Remove trailing commas
+        json_str = re.sub(r",\s*([\]\}])", r"\1", json_str)
         try:
             return json.loads(json_str, strict=False)
         except json.JSONDecodeError:
+            # Sanitize lone backslashes (LaTeX etc.) and retry
+            sanitized = re.sub(r'\\(?!["\\/ bfnrtu])', r'\\\\', json_str)
+            try:
+                return json.loads(sanitized, strict=False)
+            except json.JSONDecodeError:
+                pass
+            # Brace-counting fallback
             brace_count = 0
-            for i, char in enumerate(clean[start:], start=start):
+            for i, char in enumerate(sanitized[start:], start=start):
                 if char == '{': brace_count += 1
                 elif char == '}': brace_count -= 1
                 if brace_count == 0:
                     try:
-                        return json.loads(clean[start:i+1], strict=False)
+                        return json.loads(sanitized[start:i+1], strict=False)
                     except json.JSONDecodeError:
                         break
             raise
@@ -296,7 +292,7 @@ class TheoryAgent:
     async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str) -> str:
         title_readable = note_schema.title.replace("_", " ")
         prof_domain = get_professional_domain(note_schema.title)
-        domain_fix = get_domain_instruction(note_schema.get("mode", "ECON-MACRO"))
+        domain_fix = get_domain_instruction(note_schema.mode or "ECON-MACRO")
         
         sys_prompt = f"""You are a world-class {self.domain['persona']} and pedagogical expert.
 Your goal is to take a student from ZERO knowledge to TOTAL MASTERY of '{title_readable}'.
@@ -371,23 +367,22 @@ Theory context: {theory_body[:1000]}"""
 
     async def retry(self, note_title: str, theory_body: str, primary_language: str, diagnosis: str) -> str:
         title_readable = note_title.replace("_", " ")
+        prof_domain = get_professional_domain(note_title)
         sys_prompt = f"""You are a helpful {self.domain['persona']} tutor.
 
 PREVIOUS ATTEMPT FAILED. FIX: {diagnosis}
 
-Write EXACTLY 3 sections.
+Write EXACTLY 2 sections.
 
-# 3. {self.domain['artifact']}
-Create ONE artifact of type: **{self.domain['type']}**.
-
-## 4. Walkthrough
-Write 3-4 bullet points explaining it.
+## 4. Professional Walkthrough
+Provide 3-4 bullet points explaining the artifact from Section 3 in the context of **{prof_domain}**.
 
 ## 5. {self.domain['h2']}
-Write 2-3 sentences explaining pitfalls or edge cases.
+Write 2-3 sentences explaining the limitations, pitfalls, or edge cases.
 
-Concept: {title_readable}"""
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the corrected artifact, walkthrough, and pitfalls.")])
+Concept: {title_readable}
+Context: {theory_body[:800]}"""
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the corrected walkthrough and edge cases.")])
         return res.content.strip()
 
 class QuestionAgent:

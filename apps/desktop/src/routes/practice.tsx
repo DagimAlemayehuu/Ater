@@ -286,17 +286,15 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const userBool = userVal.toLowerCase() === 'true';
  const correctBool = typeof q.answer === 'boolean' ? q.answer : String(q.answer).toLowerCase() === 'true';
  isCorrect = userBool === correctBool;
-} else if (q.type === 'debug') {
- const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
- isCorrect = norm(userVal) === norm(correctVal);
-} else {
- isCorrect = userVal.toLowerCase() === correctVal.toLowerCase();
-}
- 
- if (q.type === 'mcq' && q.options) {
- const correctText = String(q.options[q.answer] || '').trim().toLowerCase();
- isCorrect = isCorrect || userVal.toLowerCase() === correctText;
-}
+ } else if (q.type === 'mcq') {
+  // Match only by key letter to avoid false positives from similar option text
+  isCorrect = userVal.trim().toUpperCase() === String(q.answer || '').trim().toUpperCase();
+ } else if (q.type === 'debug') {
+  const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+  isCorrect = norm(userVal) === norm(correctVal);
+ } else {
+  isCorrect = userVal.toLowerCase() === correctVal.toLowerCase();
+ }
 } else if (q.type === 'fill_in') {
  const answers = userAnswers[q.id] || [];
  const correctAnswers = q.answer || [];
@@ -317,9 +315,9 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  );
 }
 
- const isSelfGraded = ['writing', 'synthesis', 'debug'].includes(q.type);
+ const isSelfGraded = ['writing', 'synthesis', 'debug', 'trace'].includes(q.type);
  if (!isSelfGraded) {
- setGradedAnswers(prev => ({...prev, [q.id]: isCorrect}));
+  setGradedAnswers(prev => ({...prev, [q.id]: isCorrect}));
  }
 }
 
@@ -337,10 +335,21 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 }
 
  const calculateScore = () => {
- let correct = 0; 
- questions.forEach(q => {if (gradedAnswers[q.id]) correct++;});
- return {score: Math.round((correct / (questions.length || 1)) * 100), correct, total: questions.length};
-}
+  const selfGradedTypes = ['writing', 'synthesis', 'debug', 'trace'];
+  let correct = 0;
+  const total = questions.length;
+  questions.forEach(q => {
+   const isSG = selfGradedTypes.includes(q.type);
+   if (isSG) {
+    // Self-graded: only counted correct if user explicitly marked it correct
+    if (gradedAnswers[q.id] === true) correct++;
+   } else {
+    // Objective: graded[q.id] is true/false; undefined = unanswered = wrong
+    if (gradedAnswers[q.id] === true) correct++;
+   }
+  });
+  return {score: Math.round((correct / (total || 1)) * 100), correct, total};
+ }
 
  const resetSession = () => {setQuestions([]); setView('dashboard');}
  const handleSelectAnswer = (val: any) => {if (!isRevealed) setUserAnswers(prev => ({...prev, [questions[currentQuestionIdx].id]: val}));}

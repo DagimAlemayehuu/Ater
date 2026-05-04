@@ -51,11 +51,11 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  // Status filter
  if (statusFilter !== 'All') {
  hubs = hubs.filter(h => {
- const s = stripWL(getVal(h, 'status', 'Status')).toLowerCase()
- if (statusFilter === 'Not Started') return !s || s.includes('not') || s === ''
- if (statusFilter === 'In Progress') return s.includes('progress') || s.includes('progress')
- if (statusFilter === 'Reviewing') return s.includes('review')
- if (statusFilter === 'Completed') return s.includes('complet')
+  const s = stripWL(getVal(h, 'status', 'Status')).toLowerCase()
+  if (statusFilter === 'Not Started') return !s || s.includes('not') || s === ''
+  if (statusFilter === 'In Progress') return s.includes('progress')
+  if (statusFilter === 'Reviewing') return s.includes('review')
+  if (statusFilter === 'Completed') return s.includes('complet')
  return true
 })
 }
@@ -244,7 +244,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  {section.hubs.map((hub, idx) => (
  <HubCard key={idx} hub={hub}
  onOpen={() => onOpenNote(`3-Database/06 - Study Planner/${hub.id}.md`)}
- onPractice={() => navigateTo('PRACTICE')}
+ onPractice={() => navigateTo('PRACTICE', hub.id)}
  onSetStatus={handleSetStatus}
  onSetStudyDate={handleSetStudyDate}
  onDelete={() => onDelete('06 - Study Planner', hub.id)}
