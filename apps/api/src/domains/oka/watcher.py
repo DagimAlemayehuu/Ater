@@ -371,8 +371,10 @@ class OkaQueueManager:
                         except Exception as e:
                             err_msg = str(e).lower()
                             if "tpd" in err_msg or "daily" in err_msg or "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg:
-                                watcher_logger.warning("Rate limit hit during deployment. Sleeping for 60s and retrying...")
-                                await asyncio.sleep(60)
+                                import random
+                                jitter = random.randint(5, 30)
+                                watcher_logger.warning(f"Rate limit hit during deployment. Sleeping for {60 + jitter}s (jittered) and retrying...")
+                                await asyncio.sleep(60 + jitter)
                                 # Do NOT increment batch_retry for rate limits, just wait it out
                             else:
                                 batch_retry += 1
@@ -388,15 +390,24 @@ class OkaQueueManager:
                 # 4. Finalize (Only if fully successful)
                 if not deployment_failed and not has_more:
                     if path.exists():
-                        generated_dir = self.inbox_path.absolute() / "note generated"
-                        generated_dir.mkdir(parents=True, exist_ok=True)
-                        new_path = generated_dir / path.name
-                        if new_path.exists():
-                            new_path = generated_dir / f"{int(time.time())}_{path.name}"
+                        # Extract curriculum info for structured archiving
+                        meta = curriculum # This is available in the loop
+                        _sem = (meta.get("semester") or "General").strip()
+                        _crs = self.service.vm.get_canonical_title(meta.get("course") or "General_Knowledge")
+                        # Build mirroring path: 5-Pdf Store/note generated/Semester/Course
+                        archive_root = self.inbox_path.absolute() / "note generated"
+                        target_dir = archive_root / _sem / _crs
+                        target_dir.mkdir(parents=True, exist_ok=True)
+
+                        # Clean filename: replace spaces with underscores
+                        clean_name = path.name.replace(" ", "_")
+                        new_path = target_dir / clean_name
+                        
+                        watcher_logger.info(f"Archiving source to course-level path: {new_path}")
                         shutil.move(str(path.absolute()), str(new_path.absolute()))
                     
                     self._mark_done(file_path_str)
-                    watcher_logger.info(f"Successfully processed and moved {path.name}")
+                    watcher_logger.info(f"Successfully processed and archived {path.name}")
                 else:
                     self._mark_error(file_path_str)
                     self.status = "error"

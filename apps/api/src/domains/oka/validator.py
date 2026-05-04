@@ -185,11 +185,8 @@ class OkaValidator:
                 import logging
                 logging.getLogger("LifeOS").warning(f"[OkaValidator] WALKTHROUGH_TOO_SHORT: {len(steps)} steps, need 5+")
 
-        # ── 8. Gutter law violation (handled by post-processing script, soft warning only)
-        gutter_violations = re.findall(r'[^\n]\n(#{1,3} )', body)
-        if gutter_violations:
-            import logging
-            logging.getLogger("LifeOS").warning(f"[OkaValidator] GUTTER_LAW_VIOLATION: {len(gutter_violations)} headings missing blank line before them. (Will auto-fix)")
+        # ── 8. Gutter law defense (No longer logged; fixed proactively in VaultManager)
+        # We previously warned here, but now we silenty accept and fix during the write phase.
 
         return len(errors) == 0, errors
 

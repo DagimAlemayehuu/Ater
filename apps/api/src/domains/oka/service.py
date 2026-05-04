@@ -970,15 +970,51 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             # If no hub match, or if it matched but course seems wrong, use AI to detect
             detected_curriculum = await self._detect_metadata_with_ai(content_text)
             
-            # If target_hub exists, cross-check course
+            # --- SMART VAULT AWARENESS ---
+            # 1. If target_hub exists, trust its internal metadata above all else
             if target_hub:
-                hub_course = target_hub.get("course", "").lower()
-                ai_course = detected_curriculum.get("course", "").lower()
-                if hub_course and ai_course and hub_course != ai_course:
-                    print(f"[OKA Service] WARNING: Match found ({target_hub['title']}) but AI detected different course ({detected_curriculum['course']}). Preferring AI detection.")
-                    target_hub = None
+                h_course = target_hub.get("course")
+                h_semester = target_hub.get("semester")
+                h_year = target_hub.get("year")
+                
+                if h_course: detected_curriculum["course"] = h_course
+                if h_semester: detected_curriculum["semester"] = h_semester
+                if h_year: detected_curriculum["year"] = h_year
+                
+                print(f"[OKA Service] Smart-Anchor: Inherited metadata from Hub '{target_hub['id']}' -> {detected_curriculum['course']} | {detected_curriculum['semester']}")
 
-            # If no hub match, use AI-detected metadata to synthesize a virtual hub
+            # 2. If we have a course (from AI or Hub) but missing semester/year, look at the Course Master
+            if detected_curriculum.get("course"):
+                course_name = detected_curriculum["course"]
+                # Handle wiki-links in course name
+                clean_course_name = self.vm.super_clean(course_name)
+                course_file = Path(self.secrets.vault_path) / "3-Database" / "07 - Courses" / f"{clean_course_name}.md"
+                
+                if course_file.exists():
+                    try:
+                        with open(course_file, "r", encoding="utf-8") as f:
+                            c_data, _, c_err = self.vm.extract_yaml_and_content(f.read())
+                            if not c_err:
+                                # Update detected curriculum if vault has better info
+                                v_semester = self._clean_prop(c_data.get("semester") or c_data.get("Semester"))
+                                v_year = self._clean_prop(c_data.get("year") or c_data.get("Year"))
+                                
+                                if v_semester and (not detected_curriculum.get("semester") or detected_curriculum["semester"] == "Unknown"):
+                                    detected_curriculum["semester"] = v_semester
+                                if v_year and (not detected_curriculum.get("year") or detected_curriculum["year"] == "Unknown"):
+                                    detected_curriculum["year"] = v_year
+                                    
+                                print(f"[OKA Service] Smart-Aware: Synced Course '{clean_course_name}' settings from Vault.")
+                    except Exception as e:
+                        print(f"[OKA Service] Recursive course lookup failed: {e}")
+
+            # 3. Final Reconciliation: Ensure no 'Unknown' or empty values if we can help it
+            if not detected_curriculum.get("semester") or detected_curriculum["semester"] == "Unknown":
+                detected_curriculum["semester"] = "General"
+            if not detected_curriculum.get("year") or detected_curriculum["year"] == "Unknown":
+                detected_curriculum["year"] = "General"
+
+            # 4. If no target_hub was found initially, synthesize one using the finalized smart metadata
             if not target_hub:
                 dc = detected_curriculum
                 hub_title = dc.get("hub_title", "").strip()
@@ -997,16 +1033,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     
                     # Create stub hub in Study Planner if it doesn't already exist
                     if not hub_file_path.exists():
-                        print(f"[OKA Service] Creating stub hub: {hub_filename}")
-                        # course and semester MUST be plain text (not wikilinks)
-                        # Obsidian text-type properties link via Dataview automatically
+                        print(f"[OKA Service] Creating smart-synced stub hub: {hub_filename}")
                         stub_yaml = (
                             f"---\n"
                             f"title: {hub_filename[:-3]}\n"
                             f"type: Hub\n"
-                            f"course: {course}\n"
-                            f"semester: {semester}\n"
-                            f"year: {year}\n"
+                            f"course: {self.vm.wrap_wikilink(course)}\n"
+                            f"semester: {self.vm.wrap_wikilink(semester)}\n"
+                            f"year: {self.vm.wrap_wikilink(year)}\n"
                             f"unit: {unit_num}\n"
                             f"source: \n"
                             f"source_pages: []\n"
@@ -1016,21 +1050,21 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             f"generated: false\n"
                             f"---\n\n"
                             f"# {hub_title}\n\n"
-                            f"> Auto-created stub by OKA. Full content will be generated after plan confirmation.\n"
+                            f"> Auto-created smart-synced stub by OKA.\n"
                         )
                         with open(hub_file_path, "w", encoding="utf-8") as f:
                             f.write(stub_yaml)
                     
-                    # Synthesize a virtual hub metadata dict to pre-fill the frontend
                     target_hub = {
                         "id": hub_filename,
                         "title": f"{unit_num} {hub_title} Hub" if unit_num else f"{hub_title} Hub",
                         "path": str(hub_file_path.absolute()),
                         "course": course,
                         "unit": unit_num,
-                        "semester": semester
+                        "semester": semester,
+                        "year": year
                     }
-                    print(f"[OKA Service] Anchored to synthesized hub: {hub_filename}")
+                    print(f"[OKA Service] Anchored to smart-synced hub: {hub_filename}")
 
             return {
                 "anchored_hub": target_hub,
@@ -1619,9 +1653,27 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     ai_output = self._compile_hub_note(plan_obj, session_path=session.get("path", ""))
                     
                     if self.hub_agent:
-                        await self.governor.acquire(expected_tokens=1000)
-                        descriptions = [n.get("description", "") for n in session["metadata"]["atomic_notes"]]
-                        ai_output = await self.hub_agent.generate_hub(plan_obj.hub_title, descriptions, ai_output)
+                        hub_retry = 0
+                        hub_success = False
+                        while hub_retry < 5 and not hub_success:
+                            try:
+                                await self.governor.acquire(expected_tokens=1000)
+                                descriptions = [n.get("description", "") for n in session["metadata"]["atomic_notes"]]
+                                ai_output = await self.hub_agent.generate_hub(plan_obj.hub_title, descriptions, ai_output)
+                                hub_success = True
+                            except Exception as e:
+                                hub_retry += 1
+                                err_msg = str(e).lower()
+                                if "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg:
+                                    import logging
+                                    logging.getLogger("LifeOS").warning(f"[OKA Service] Hub generation rate limited. Attempt {hub_retry}/5. Sleeping 60s...")
+                                    await asyncio.sleep(60)
+                                else:
+                                    logging.getLogger("LifeOS").error(f"[OKA Service] Hub generation failed (Attempt {hub_retry}/5): {e}")
+                                    await asyncio.sleep(10)
+                        
+                        if not hub_success:
+                            raise ValueError(f"Hub generation exhausted all retries for session {session_id}")
                         
                     local_results = self.deployer.deploy_hub_note(session_id, ai_output, plan_obj, session.get("path", ""))
                     
@@ -1715,7 +1767,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         Constructs the Sovereign note with interleaved Socratic Probes.
         """
         from .validator import OkaValidator
-        source_link = f"[[{Path(session_path).name}]]" if session_path else f"[[{plan.hub_note.title}]]"
+        # Build Absolute Archive Source Link
+        if session_path:
+            clean_filename = Path(session_path).name.replace(" ", "_")
+            _sem = (plan.semester or "General").strip()
+            _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
+            source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
+        else:
+            source_link = f"[[{plan.hub_note.title}]]"
 
         # Sanitise prerequisites — spaces inside [[...]] break Obsidian resolution
         clean_prereqs = []
@@ -1759,7 +1818,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         [DETERMINISTIC COMPILER v21.5]
         Constructs a comprehensive Possible Questions note with coverage for ALL atomic notes.
         """
-        source_link = f"[[{Path(session_path).name}]]" if session_path else f"[[{plan.hub_note.title}]]"
+        # Build Absolute Archive Source Link
+        if session_path:
+            clean_filename = Path(session_path).name.replace(" ", "_")
+            _sem = (plan.semester or "General").strip()
+            _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
+            source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
+        else:
+            source_link = f"[[{plan.hub_note.title}]]"
 
         metadata = {
             "title": note_schema.title,
@@ -1798,7 +1864,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         [DETERMINISTIC COMPILER]
         Constructs the Unit Hub.
         """
-        source_link = f"[[{Path(session_path).name}]]" if session_path else f"[[{plan.hub_note.title}]]"
+        # Build Absolute Archive Source Link
+        if session_path:
+            clean_filename = Path(session_path).name.replace(" ", "_")
+            _sem = (plan.semester or "General").strip()
+            _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
+            source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
+        else:
+            source_link = f"[[{plan.hub_note.title}]]"
 
         metadata = {
             "title": plan.hub_note.title,

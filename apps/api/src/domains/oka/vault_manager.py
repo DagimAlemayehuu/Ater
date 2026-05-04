@@ -274,13 +274,14 @@ class VaultManager:
             
         content = re.sub(r'\[\[([^\]]+)\]\]', title_case_wikilink, content)
 
-        # 3. SETEXT HEADING DEFENSE: Ensure horizontal rules (---) have a blank line above them
+        # 3. PROACTIVE GUTTER DEFENSE: Ensure headings and rules have a blank line above them
         lines = content.split('\n')
         fixed_lines = []
         in_frontmatter = False
         
         for i, line in enumerate(lines):
             stripped = line.strip()
+            # Track frontmatter boundary
             if stripped == "---":
                 if i == 0:
                     in_frontmatter = True
@@ -290,6 +291,13 @@ class VaultManager:
                     # Horizontal rule outside frontmatter: ensure gutter above
                     if fixed_lines and fixed_lines[-1].strip() != "":
                         fixed_lines.append("")
+            
+            # Heading Defense (only outside frontmatter)
+            elif stripped.startswith("#") and not in_frontmatter:
+                # If the line is a heading (e.g., "## Title"), ensure it has a blank line above it
+                if fixed_lines and fixed_lines[-1].strip() != "":
+                    fixed_lines.append("")
+            
             fixed_lines.append(line)
         
         final_content = "\n".join(fixed_lines)

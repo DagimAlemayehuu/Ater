@@ -327,12 +327,12 @@ class QuestionAgent:
             "mcq": "Find a highly technical fact. Generate 1 correct answer and 3 highly plausible distractors. The explanation must define *why* the distractors are wrong and *why* the answer is correct.",
             "true_false": "Generate a definitive True/False statement about a core mechanism. The explanation must prove why.",
             "fill_in": "Take a core definitional sentence. Remove the absolute most critical technical term and replace it with `[[blank]]`. Every [[blank]] must represent EXACTLY ONE WORD. Do not blank out common English words.",
-            "writing": "Ask the user to explain a concept or mechanism deeply. The answer must be a model 3-5 sentence response.",
+            "writing": "Ask the user to explain a concept or mechanism deeply. The answer MUST be a definitive model 3-5 sentence response (NO RUBRICS).",
             "matching": "Extract exactly 4 technical terms and their definitions. Shuffle them. Output the correct pairs.",
             "order": "Identify a chronological process, algorithm step, or lifecycle. Break it into 4-5 distinct steps. Output the randomized steps and the correct order.",
             "debug": "Act as a Senior Code Reviewer. Provide a short, buggy code snippet, SQL query, or math formula with ONE common beginner mistake. Ask the user to find it. The 'required_keywords' MUST contain exactly the string syntax needed to fix it (e.g., ['=='] or ['GROUP BY']).",
             "trace": "Provide a perfectly valid code snippet or math formula. Ask the user 'What is the exact output of this execution?'.",
-            "synthesis": "Invent a complex real-world edge-case scenario combining multiple concepts to solve a problem. The answer should be a grading rubric."
+            "synthesis": "Invent a complex real-world edge-case scenario combining multiple concepts to solve a problem. The answer MUST be a definitive 'Perfect Response' demonstrating the solution (NO RUBRICS)."
         }
         
         schemas = {
@@ -358,7 +358,7 @@ MANDATORY SCHEMA:
 
 STRICT RULES:
 1. Output ONLY a valid JSON object matching the schema exactly. No markdown fences. No preamble.
-2. The 'answer' field is MANDATORY. Do not omit it.
+2. The 'answer' field is MANDATORY. It MUST contain a definitive correct answer or a full "Perfect Response" for writing/synthesis. NEVER use a grading rubric.
 3. For 'explanation', explain the underlying mechanism deeply.
 4. EXCLUSIVELY use the provided Context. Do not hallucinate outside features.
 5. ANTI-REDUNDANCY: You MUST use the SEED value at the top of the Context to randomly pick an obscure or minor detail to test. DO NOT pick the most obvious concept. A different SEED means you MUST pick a completely different fact than usual.
