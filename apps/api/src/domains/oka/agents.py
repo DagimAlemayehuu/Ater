@@ -8,39 +8,39 @@ from .schemas import PartialPlan
 
 # ── DOMAIN MATRIX v26.1 (UPGRADED) ───────────────────────────────────────────
 DOMAIN_MATRIX = {
-    "CS-SOFTWARE":        {"persona":"Software Engineer","h1":"How it Works","h2":"Common Pitfalls","artifact":"Code Example","type":"Executable code block (under 20 lines)","l1":"fill_in","l2":"true_false","l3":"debug"},
-    "CS-SYSTEMS":         {"persona":"Systems Architect","h1":"System Flow","h2":"Where it Breaks","artifact":"Architecture Diagram","type":"Basic Mermaid flowchart (graph TD/LR)","l1":"mcq","l2":"scenario","l3":"debug"},
-    "CS-DB":              {"persona":"Database Admin","h1":"Query Logic","h2":"Data Integrity","artifact":"Database Schema","type":"SQL code block or Markdown Table","l1":"true_false","l2":"scenario","l3":"debug"},
-    "CS-AI":              {"persona":"Machine Learning Eng.","h1":"Model Mechanics","h2":"Overfitting & Bias","artifact":"Data Pipeline","type":"Basic Mermaid flowchart or Python code","l1":"mcq","l2":"fill_in","l3":"scenario"},
-    "CS-TESTING":         {"persona":"QA Engineer","h1":"Test Strategy","h2":"Edge Cases","artifact":"Test Scenario","type":"Code block (assertions) or Markdown Table","l1":"true_false","l2":"scenario","l3":"debug"},
-    "CS-ARCH":            {"persona":"Software Architect","h1":"Design Pattern","h2":"Trade-offs","artifact":"Component Diagram","type":"Basic Mermaid flowchart or Markdown Table","l1":"mcq","l2":"scenario","l3":"writing"},
-    "CS-REQUIREMENTS":    {"persona":"Product Manager","h1":"Goal Definition","h2":"Scope Creep","artifact":"Requirements Table","type":"Markdown Table (max 3 columns)","l1":"true_false","l2":"scenario","l3":"writing"},
-    "MATH-PURE":          {"persona":"Mathematician","h1":"Formal Definition","h2":"Proof Strategy","artifact":"Mathematical Proof","type":"Block LaTeX ($$)","l1":"mcq","l2":"fill_in","l3":"debug"},
-    "MATH-STAT":          {"persona":"Statistician","h1":"Statistical Concept","h2":"Common Biases","artifact":"Data Distribution","type":"Block LaTeX ($$) or Markdown Table","l1":"true_false","l2":"scenario","l3":"writing"},
-    "MATH-CRYPTO":        {"persona":"Cryptographer","h1":"Encryption Logic","h2":"Vulnerabilities","artifact":"Cryptographic Flow","type":"Markdown Table or Code snippet","l1":"mcq","l2":"fill_in","l3":"scenario"},
-    "MATH-DISCRETE":      {"persona":"Logic Professor","h1":"Discrete Definition","h2":"Base Cases","artifact":"Logical Trace","type":"Truth Table (Markdown) or block LaTeX","l1":"fill_in","l2":"true_false","l3":"debug"},
-    "PHYSICS-KINEMATICS": {"persona":"Physicist","h1":"Physical Law","h2":"Boundaries & Limits","artifact":"Formula & Diagram","type":"Block LaTeX ($$) and ASCII Diagram","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "CHEMISTRY":          {"persona":"Chemist","h1":"Reaction Mechanism","h2":"Equilibrium","artifact":"Reaction Pathway","type":"Basic Mermaid flowchart or Block LaTeX","l1":"mcq","l2":"scenario","l3":"debug"},
-    "BIOLOGY":            {"persona":"Biologist","h1":"Biological Process","h2":"System Failures","artifact":"Pathway Diagram","type":"Basic Mermaid flowchart (graph TD)","l1":"true_false","l2":"scenario","l3":"writing"},
-    "ENG-MECH":           {"persona":"Mechanical Engineer","h1":"Mechanical Principle","h2":"Load & Fatigue","artifact":"Force Diagram","type":"ASCII Diagram or Markdown Table","l1":"fill_in","l2":"scenario","l3":"debug"},
-    "ENG-ELEC":           {"persona":"Circuit Designer","h1":"Circuit Logic","h2":"Resistance & Heat","artifact":"Circuit Schematic","type":"Truth Table (Markdown) or block LaTeX","l1":"true_false","l2":"scenario","l3":"debug"},
-    "MED-PHYSIO":         {"persona":"Surgeon","h1":"Bodily Function","h2":"Disease & Failure","artifact":"System Map","type":"Markdown Adjacency Matrix Table","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "MED-PHARMA":         {"persona":"Toxicologist","h1":"Drug Mechanism","h2":"Side Effects","artifact":"Interaction Pathway","type":"Markdown Table or Basic Mermaid flowchart","l1":"mcq","l2":"scenario","l3":"debug"},
-    "ECON-MACRO":         {"persona":"Macroeconomist","h1":"Economic Theory","h2":"Market Failures","artifact":"Economic Model","type":"Basic Mermaid flowchart (graph LR)","l1":"true_false","l2":"scenario","l3":"writing"},
-    "ECON-FINANCE":       {"persona":"Accountant","h1":"Financial Concept","h2":"Financial Risk","artifact":"Ledger Example","type":"Markdown T-Account/Ledger Table","l1":"true_false","l2":"scenario","l3":"debug"},
-    "BIZ-STRATEGY":       {"persona":"Business Strategist","h1":"Strategic Concept","h2":"Weaknesses","artifact":"Strategy Matrix","type":"Markdown Table (SWOT)","l1":"mcq","l2":"scenario","l3":"writing"},
-    "LAW-CASE":           {"persona":"Lawyer","h1":"Legal Principle","h2":"Exceptions & Limits","artifact":"Case Application","type":"IRAC Framework Markdown Table","l1":"mcq","l2":"scenario","l3":"writing"},
-    "LAW-CONTRACT":       {"persona":"Corporate Lawyer","h1":"Contract Rule","h2":"Breach Conditions","artifact":"Liability Map","type":"Markdown Dependency Table","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "HIST-CATALYST":      {"persona":"Historian","h1":"Historical Event","h2":"Long-term Impact","artifact":"Timeline","type":"Basic Mermaid flowchart (graph TD) or Table","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "PHILOSOPHY":         {"persona":"Philosopher","h1":"Core Argument","h2":"Counter-Arguments","artifact":"Logical Flow","type":"ASCII Logic Tree or Block quote","l1":"mcq","l2":"scenario","l3":"writing"},
-    "PSYCH-SOCIOLOGY":    {"persona":"Psychologist","h1":"Behavioral Concept","h2":"Cognitive Bias","artifact":"Behavior Map","type":"Markdown Matrix Table","l1":"true_false","l2":"scenario","l3":"writing"},
-    "LANG-LINGUISTICS":   {"persona":"Grammarian","h1":"Grammar Rule","h2":"Exceptions","artifact":"Syntax Tree","type":"ASCII Syntax Tree","l1":"mcq","l2":"fill_in","l3":"writing"},
-    "LANG-LIT":           {"persona":"Literary Critic","h1":"Literary Device","h2":"Thematic Impact","artifact":"Textual Analysis","type":"Markdown Quote/Motif Table","l1":"mcq","l2":"fill_in","l3":"writing"},
-    "ARTS-DESIGN":        {"persona":"Designer","h1":"Design Principle","h2":"Breaking the Rule","artifact":"Composition Matrix","type":"Markdown Table","l1":"mcq","l2":"scenario","l3":"writing"},
-    "SKILLS-HARD":        {"persona":"Master Craftsman","h1":"Core Technique","h2":"Troubleshooting","artifact":"Execution Steps","type":"Basic Mermaid flowchart or Numbered list","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "SKILLS-FITNESS":     {"persona":"Kinesiologist","h1":"Biomechanics","h2":"Injury Prevention","artifact":"Movement Trace","type":"Markdown Kinematic Table","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "EDUCATION":          {"persona":"Teacher","h1":"Learning Theory","h2":"Knowledge Gaps","artifact":"Curriculum Flow","type":"Markdown Table","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "RESEARCH-METHODS":   {"persona":"Researcher","h1":"Research Method","h2":"Validity Threats","artifact":"Methodology Setup","type":"Markdown Research Matrix","l1":"mcq","l2":"scenario","l3":"writing"},
+    "CS-SOFTWARE":        {"persona":"Software Engineer","h1":"How it Works","h2":"Common Pitfalls","artifact":"Code Example","type":"Executable code block (under 20 lines)","question_modes":["fill_in", "true_false", "debug", "trace"]},
+    "CS-SYSTEMS":         {"persona":"Systems Architect","h1":"System Flow","h2":"Where it Breaks","artifact":"Architecture Diagram","type":"Basic Mermaid flowchart (graph TD/LR)","question_modes":["mcq", "scenario", "debug", "order"]},
+    "CS-DB":              {"persona":"Database Admin","h1":"Query Logic","h2":"Data Integrity","artifact":"Database Schema","type":"SQL code block or Markdown Table","question_modes":["true_false", "scenario", "debug", "matching"]},
+    "CS-AI":              {"persona":"Machine Learning Eng.","h1":"Model Mechanics","h2":"Overfitting & Bias","artifact":"Data Pipeline","type":"Basic Mermaid flowchart or Python code","question_modes":["mcq", "fill_in", "scenario", "trace"]},
+    "CS-TESTING":         {"persona":"QA Engineer","h1":"Test Strategy","h2":"Edge Cases","artifact":"Test Scenario","type":"Code block (assertions) or Markdown Table","question_modes":["true_false", "scenario", "debug", "synthesis"]},
+    "CS-ARCH":            {"persona":"Software Architect","h1":"Design Pattern","h2":"Trade-offs","artifact":"Component Diagram","type":"Basic Mermaid flowchart or Markdown Table","question_modes":["mcq", "scenario", "writing", "order"]},
+    "CS-REQUIREMENTS":    {"persona":"Product Manager","h1":"Goal Definition","h2":"Scope Creep","artifact":"Requirements Table","type":"Markdown Table (max 3 columns)","question_modes":["true_false", "scenario", "writing", "matching"]},
+    "MATH-PURE":          {"persona":"Mathematician","h1":"Formal Definition","h2":"Proof Strategy","artifact":"Mathematical Proof","type":"Block LaTeX ($$)","question_modes":["mcq", "fill_in", "debug", "synthesis"]},
+    "MATH-STAT":          {"persona":"Statistician","h1":"Statistical Concept","h2":"Common Biases","artifact":"Data Distribution","type":"Block LaTeX ($$) or Markdown Table","question_modes":["true_false", "scenario", "writing", "trace"]},
+    "MATH-CRYPTO":        {"persona":"Cryptographer","h1":"Encryption Logic","h2":"Vulnerabilities","artifact":"Cryptographic Flow","type":"Markdown Table or Code snippet","question_modes":["mcq", "fill_in", "scenario", "trace"]},
+    "MATH-DISCRETE":      {"persona":"Logic Professor","h1":"Discrete Definition","h2":"Base Cases","artifact":"Logical Trace","type":"Truth Table (Markdown) or block LaTeX","question_modes":["fill_in", "true_false", "debug", "order"]},
+    "PHYSICS-KINEMATICS": {"persona":"Physicist","h1":"Physical Law","h2":"Boundaries & Limits","artifact":"Formula & Diagram","type":"Block LaTeX ($$) and ASCII Diagram","question_modes":["fill_in", "scenario", "writing", "trace"]},
+    "CHEMISTRY":          {"persona":"Chemist","h1":"Reaction Mechanism","h2":"Equilibrium","artifact":"Reaction Pathway","type":"Basic Mermaid flowchart or Block LaTeX","question_modes":["mcq", "scenario", "debug", "order"]},
+    "BIOLOGY":            {"persona":"Biologist","h1":"Biological Process","h2":"System Failures","artifact":"Pathway Diagram","type":"Basic Mermaid flowchart (graph TD)","question_modes":["true_false", "scenario", "writing", "matching"]},
+    "ENG-MECH":           {"persona":"Mechanical Engineer","h1":"Mechanical Principle","h2":"Load & Fatigue","artifact":"Force Diagram","type":"ASCII Diagram or Markdown Table","question_modes":["fill_in", "scenario", "debug", "order"]},
+    "ENG-ELEC":           {"persona":"Circuit Designer","h1":"Circuit Logic","h2":"Resistance & Heat","artifact":"Circuit Schematic","type":"Truth Table (Markdown) or block LaTeX","question_modes":["true_false", "scenario", "debug", "trace"]},
+    "MED-PHYSIO":         {"persona":"Surgeon","h1":"Bodily Function","h2":"Disease & Failure","artifact":"System Map","type":"Markdown Adjacency Matrix Table","question_modes":["fill_in", "scenario", "writing", "matching"]},
+    "MED-PHARMA":         {"persona":"Toxicologist","h1":"Drug Mechanism","h2":"Side Effects","artifact":"Interaction Pathway","type":"Markdown Table or Basic Mermaid flowchart","question_modes":["mcq", "scenario", "debug", "matching"]},
+    "ECON-MACRO":         {"persona":"Macroeconomist","h1":"Economic Theory","h2":"Market Failures","artifact":"Economic Model","type":"Basic Mermaid flowchart (graph LR)","question_modes":["true_false", "scenario", "writing", "order", "trace"]},
+    "ECON-FINANCE":       {"persona":"Accountant","h1":"Financial Concept","h2":"Financial Risk","artifact":"Ledger Example","type":"Markdown T-Account/Ledger Table","question_modes":["true_false", "scenario", "debug", "matching"]},
+    "BIZ-STRATEGY":       {"persona":"Business Strategist","h1":"Strategic Concept","h2":"Weaknesses","artifact":"Strategy Matrix","type":"Markdown Table (SWOT)","question_modes":["mcq", "scenario", "writing", "synthesis"]},
+    "LAW-CASE":           {"persona":"Lawyer","h1":"Legal Principle","h2":"Exceptions & Limits","artifact":"Case Application","type":"IRAC Framework Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
+    "LAW-CONTRACT":       {"persona":"Corporate Lawyer","h1":"Contract Rule","h2":"Breach Conditions","artifact":"Liability Map","type":"Markdown Dependency Table","question_modes":["fill_in", "scenario", "writing", "matching"]},
+    "HIST-CATALYST":      {"persona":"Historian","h1":"Historical Event","h2":"Long-term Impact","artifact":"Timeline","type":"Basic Mermaid flowchart (graph TD) or Table","question_modes":["fill_in", "scenario", "writing", "order"]},
+    "PHILOSOPHY":         {"persona":"Philosopher","h1":"Core Argument","h2":"Counter-Arguments","artifact":"Logical Flow","type":"ASCII Logic Tree or Block quote","question_modes":["mcq", "scenario", "writing", "synthesis"]},
+    "PSYCH-SOCIOLOGY":    {"persona":"Psychologist","h1":"Behavioral Concept","h2":"Cognitive Bias","artifact":"Behavior Map","type":"Markdown Matrix Table","question_modes":["true_false", "scenario", "writing", "matching"]},
+    "LANG-LINGUISTICS":   {"persona":"Grammarian","h1":"Grammar Rule","h2":"Exceptions","artifact":"Syntax Tree","type":"ASCII Syntax Tree","question_modes":["mcq", "fill_in", "writing", "order"]},
+    "LANG-LIT":           {"persona":"Literary Critic","h1":"Literary Device","h2":"Thematic Impact","artifact":"Textual Analysis","type":"Markdown Quote/Motif Table","question_modes":["mcq", "fill_in", "writing", "synthesis"]},
+    "ARTS-DESIGN":        {"persona":"Designer","h1":"Design Principle","h2":"Breaking the Rule","artifact":"Composition Matrix","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
+    "SKILLS-HARD":        {"persona":"Master Craftsman","h1":"Core Technique","h2":"Troubleshooting","artifact":"Execution Steps","type":"Basic Mermaid flowchart or Numbered list","question_modes":["fill_in", "scenario", "writing", "order"]},
+    "SKILLS-FITNESS":     {"persona":"Kinesiologist","h1":"Biomechanics","h2":"Injury Prevention","artifact":"Movement Trace","type":"Markdown Kinematic Table","question_modes":["fill_in", "scenario", "writing", "trace"]},
+    "EDUCATION":          {"persona":"Teacher","h1":"Learning Theory","h2":"Knowledge Gaps","artifact":"Curriculum Flow","type":"Markdown Table","question_modes":["fill_in", "scenario", "writing", "matching"]},
+    "RESEARCH-METHODS":   {"persona":"Researcher","h1":"Research Method","h2":"Validity Threats","artifact":"Methodology Setup","type":"Markdown Research Matrix","question_modes":["mcq", "scenario", "writing", "matching"]},
 }
 
 # ── GOLD STANDARD DOMAIN INSTRUCTIONS (v26.5) ───────────────────────────────────
@@ -408,19 +408,20 @@ class QuestionAgent:
         }
         self.canonical_type = mapping.get(self.q_type, "writing")
 
-    async def generate(self, note_title: str, context: str, difficulty: str = "L1") -> dict:
+    async def generate(self, note_title: str, context: str, difficulty: str = "L1", persona: str = "Expert Educator") -> dict:
         title_readable = note_title.replace("_", " ")
+        prof_domain = get_professional_domain(note_title + str(self.q_type))
         
         prompts = {
-            "mcq": "Find a highly technical fact. Generate 1 correct answer and 3 highly plausible distractors. The explanation must define *why* the distractors are wrong and *why* the answer is correct.",
-            "true_false": "Generate a definitive True/False statement about a core mechanism. The explanation must prove why.",
-            "fill_in": "Take a core definitional sentence. Remove the absolute most critical technical term and replace it with `[[blank]]`. Every [[blank]] must represent EXACTLY ONE WORD. Do not blank out common English words.",
-            "writing": "Ask the user to explain a concept or mechanism deeply. The answer MUST be a definitive model 3-5 sentence response (NO RUBRICS).",
-            "matching": "Extract exactly 4 technical terms and their definitions. Shuffle them. Output the correct pairs.",
-            "order": "Identify a chronological process, algorithm step, or lifecycle. Break it into 4-5 distinct steps. Output the randomized steps and the correct order.",
-            "debug": "Act as a Senior Code Reviewer. Provide a short, buggy code snippet, SQL query, or math formula with ONE common beginner mistake. Ask the user to find it. The 'required_keywords' MUST contain exactly the string syntax needed to fix it (e.g., ['=='] or ['GROUP BY']).",
-            "trace": "Provide a perfectly valid code snippet or math formula. Ask the user 'What is the exact output of this execution?'.",
-            "synthesis": "Invent a complex real-world edge-case scenario combining multiple concepts to solve a problem. The answer MUST be a definitive 'Perfect Response' demonstrating the solution (NO RUBRICS)."
+            "mcq": f"Find a technical nuance about '{title_readable}' in the context of {prof_domain}. Generate 1 correct answer and 3 distractors. Distractors must be technically plausible, not 'None of the above'.",
+            "true_false": f"Generate a high-stakes T/F statement regarding a critical failure point of '{title_readable}' within {prof_domain}.",
+            "fill_in": f"Extract a dense technical sentence about '{title_readable}'. Replace the most critical technical term with [[blank]]. REMOVE all other [[wikilinks]] from the sentence.",
+            "writing": f"Challenge the user to analyze '{title_readable}' in a {prof_domain} scenario. Provide a 3-5 sentence 'Perfect Response' demonstrating mastery. NO RUBRICS.",
+            "matching": f"Extract 4 distinct technical components of '{title_readable}' and their specific roles in {prof_domain}. Shuffle them.",
+            "order": f"Identify a 4-5 step technical process or causal chain for '{title_readable}'. Use REAL steps from the text. PROHIBITION: Never use 'step1', 'step2', or generic markers.",
+            "debug": f"Act as a Principal Engineer in {prof_domain}. Provide a code/formula snippet for '{title_readable}' with ONE subtle, realistic technical error.",
+            "trace": f"Provide a valid, complex technical execution trace for '{title_readable}' in {prof_domain}. Ask for the exact final state/output.",
+            "synthesis": f"Create an emergency scenario in {prof_domain} where '{title_readable}' must be applied to prevent system failure. Provide a definitive 'Mastery Solution'."
         }
         
         schemas = {
@@ -438,20 +439,20 @@ class QuestionAgent:
         prompt_logic = prompts.get(self.canonical_type, prompts["writing"])
         json_schema = schemas.get(self.canonical_type, schemas["writing"])
         
-        sys_prompt = f"""You are the Dedicated '{self.canonical_type.upper()}' Question Agent.
+        sys_prompt = f"""You are the Dedicated '{self.canonical_type.upper()}' Question Agent, operating as a **{persona}**.
 {prompt_logic}
 
 MANDATORY SCHEMA:
 {json_schema}
 
 STRICT RULES:
-1. Output ONLY a valid JSON object matching the schema exactly. No markdown fences.
+1. Output ONLY a valid JSON object. No markdown fences.
 2. The 'answer' field MUST be a definitive correct response. 
-   - FOR WRITING/SYNTHESIS: Provide a 3-5 sentence 'Perfect Response' that demonstrates total concept mastery.
-   - **PROHIBITION**: NEVER use the words 'rubric', 'grading', 'evaluate', or 'points'. Provide the answer itself.
-3. For 'explanation', explain the underlying mechanism deeply using LaTeX for any math.
-4. EXCLUSIVELY use the provided Context.
-5. ANTI-REDUNDANCY: Use the SEED value to pick a non-obvious, technical detail to test.
+   - **PROHIBITION**: NEVER use 'step1', 'step2', 'placeholder', or 'example_code'. Use REAL technical content.
+   - **PROHIBITION**: NEVER use rubrics/grading instructions.
+3. For 'explanation', explain the underlying mechanism deeply using LaTeX.
+4. Professional Context: You are currently operating in the **{prof_domain}** domain.
+5. ANTI-LAZINESS: If the question or answer is generic or uses placeholders, the generation will be REJECTED.
 
 Concept: {title_readable}
 Context: {context[:3000]}
@@ -536,11 +537,11 @@ class VerifierAgent:
 Return ONLY a valid JSON object — no markdown fences, no commentary.
 
 Check ALL 5 criteria and report true/false for each:
-1. domain_lock: Does section 3 (artifact) use the correct technical framework for mode='{mode}'? (MATH-PURE/MATH-DISCRETE must use discrete integer sequences, NEVER ODEs/integrals/dy/dx. CS must use code. ENG must use engineering notation.)
-2. quiz_topicality: Do ALL 3 quiz questions specifically test the concept named in the note title? (Must not test the mental model analogy, must not be generic algebra unrelated to the concept.)
-3. debug_validity: If a debug or flawed-step question exists, does 'content' ACTUALLY contain an error? ('No error is present' as the answer = FAIL. Content must be demonstrably wrong.)
-4. arithmetic_correct: Are ALL equations and computations in sections 3 and 4 arithmetically correct? (Check every = sign. A single wrong calculation = FAIL.)
-5. mental_model_maps: Is the mental model in section 1 simple enough for a 12-year-old, avoiding dense technical jargon?
+1. domain_lock: Does the content use the technical framework of '{mode}' and the professional domain rotation? (NO 'toy' examples or buying-groceries analogies).
+2. quiz_topicality: Are questions technical and specific? (FAIL if they use placeholders like 'step1', 'example', or if they are too generic).
+3. debug_validity: For debug types, is there a REAL error? (FAIL if 'no error' is the answer).
+4. mathematical_rigor: Does it use LaTeX for all formulas and is the arithmetic 100% correct?
+5. cognitive_ramp: Does the mental model explain the WHOLE concept jargon-free?
 
 Output format — use EXACTLY this structure:
 {{"domain_lock\":true,\"quiz_topicality\":true,\"debug_validity\":true,\"arithmetic_correct\":true,\"mental_model_maps\":true,\"failures\":[{{\"check\":\"domain_lock\",\"issue\":\"exact description\",\"fix_instruction\":\"exact fix\"}}]}}

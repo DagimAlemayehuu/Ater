@@ -1515,16 +1515,23 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
                             OkaService._status[session_id] = f"{phase_prefix} Examiner Pass: [[{current_note_title}]] (3/3)..."
 
-                            # Pass 3: Examiner (Dedicated Agents)
-                            await self.governor.acquire(expected_tokens=2500)
-                            theory_summary = theory[:600] # simple summary
+                            # Pass 3: Examiner (Dedicated Dynamic Agents)
+                            await self.governor.acquire(expected_tokens=3000)
+                            theory_summary = theory[:1000] # denser summary for specialized questioning
                             
-                            types = [domain.get('l1', 'mcq'), domain.get('l2', 'true_false'), domain.get('l3', 'debug')]
-                            diffs = ["L1", "L2", "L3"]
+                            # Dynamic cognitive modes based on sub-agent matrix
+                            q_modes = domain.get('question_modes', ['mcq', 'true_false', 'scenario'])
+                            
+                            # Algorithmic difficulty ramp
                             tasks = []
-                            for qt, diff in zip(types, diffs):
+                            for i, qt in enumerate(q_modes):
+                                # Difficulty ramps: first 2 are L1/L2, remaining are L2/L3
+                                if i == 0: diff = "L1"
+                                elif i == len(q_modes) - 1: diff = "L3"
+                                else: diff = "L2"
+                                
                                 agent = QuestionAgent(self.llm_creative, qt)
-                                tasks.append(agent.generate(note_schema.title, theory_summary, diff))
+                                tasks.append(agent.generate(note_schema.title, theory_summary, diff, domain.get('persona', 'Expert')))
                             
                             questions = await asyncio.gather(*tasks)
                             for i, q in enumerate(questions):

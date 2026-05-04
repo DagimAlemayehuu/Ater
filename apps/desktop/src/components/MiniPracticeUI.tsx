@@ -10,6 +10,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { MermaidWrapper } from './obsidian/MarkdownViewer';
 
 const CodeBlock = ({ language, value }: { language: string | null, value: string }) => {
     const [copied, setCopied] = useState(false);
@@ -83,9 +84,13 @@ export const MarkdownBlock = ({ content }: { content: string }) => {
         components={{
           code({ node, className, children, ...props }: any) {
             const match = /language-([a-zA-Z0-9_-]+)/.exec(className || '')
+            const language = match ? match[1] : null
             const isInline = !match && !String(children).includes('\n');
+            
+            if (language === 'mermaid') return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />
+            
             if (!isInline) {
-              return <CodeBlock language={match ? match[1] : null} value={String(children).replace(/\n$/, '')} />
+              return <CodeBlock language={language} value={String(children).replace(/\n$/, '')} />
             }
             return <code className={cn("bg-muted/30 px-1 py-0.5 rounded text-[11px] font-mono", className)} {...props}>{children}</code>
           }
@@ -135,8 +140,28 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
             isCorrect = userVal === correctText;
         }
         setScores({...scores, [currentIdx]: isCorrect});
+    } else if (currentQ.type === 'fill_in') {
+        const userAnswersArr = userAnswers[currentQ.id] || [];
+        const correctAnswersArr = currentQ.answer || [];
+        isCorrect = Array.isArray(correctAnswersArr) && correctAnswersArr.every((ans: string, idx: number) => 
+            String(userAnswersArr[idx] || '').trim().toLowerCase() === String(ans || '').trim().toLowerCase()
+        );
+        setScores({...scores, [currentIdx]: isCorrect});
+    } else if (currentQ.type === 'matching') {
+        const userPairs = userAnswers[currentQ.id] || {};
+        const correctPairs = currentQ.pairs || [];
+        isCorrect = Array.isArray(correctPairs) && correctPairs.every((p: any) => 
+            String(userPairs[p.left] || '').trim().toLowerCase() === String(p.right || '').trim().toLowerCase()
+        );
+        setScores({...scores, [currentIdx]: isCorrect});
+    } else if (currentQ.type === 'order') {
+        const userOrder = userAnswers[currentQ.id] || currentQ.steps || [];
+        const correctOrder = currentQ.answer || [];
+        isCorrect = Array.isArray(correctOrder) && correctOrder.every((step: string, idx: number) => 
+            String(userOrder[idx] || '').trim().toLowerCase() === String(step).trim().toLowerCase()
+        );
+        setScores({...scores, [currentIdx]: isCorrect});
     }
-    // fill_in, writing, debug, etc. will now be self-graded by the user via Correct/Wrong buttons.
     
     setRevealedStates({ ...revealedStates, [currentIdx]: true });
   };
@@ -214,28 +239,31 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
       </div>
       
       {showScore ? (
-        <div className="p-10 flex flex-col items-center justify-center space-y-6 text-center animate-in fade-in zoom-in duration-500">
-          <h2 className="text-xl font-black tracking-tight text-foreground/80">Challenge Complete</h2>
-          <div className="text-5xl font-black text-primary">
-            {Object.values(scores).filter(Boolean).length} <span className="text-2xl text-muted-foreground">/ {questions.length}</span>
+        <div className="p-12 flex flex-col items-center justify-center space-y-8 text-center animate-in fade-in zoom-in duration-500">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20">
+            <Check size={40} className="text-primary" />
           </div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Final Score</p>
-          <Button onClick={resetQuiz} className="mt-4 font-black uppercase tracking-widest text-[10px] h-10 px-8 rounded-lg">
-            <RotateCcw size={14} className="mr-2" /> Restart Challenge
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black tracking-tight text-foreground/90">Challenge Complete</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">You have completed the active recall sequence</p>
+          </div>
+          <div className="text-6xl font-black text-primary tabular-nums">
+            {Object.values(scores).filter(Boolean).length} <span className="text-3xl text-muted-foreground/30">/ {questions.length}</span>
+          </div>
+          <Button onClick={resetQuiz} className="mt-8 font-black uppercase tracking-[0.2em] text-[10px] h-12 px-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all active:scale-95">
+            <RotateCcw size={14} className="mr-3" /> Restart Challenge
           </Button>
         </div>
       ) : (
-        <div className="p-5 lg:p-6 flex flex-col justify-center space-y-6">
-          <div className="space-y-4 animate-in slide-in-from-top-4 fade-in duration-700" key={`header-${currentQ.id}`}>
-              <div className="flex items-center gap-3 text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
-              <Badge variant="outline" className="text-[7px] px-1.5 py-0 border-border/50 rounded-sm uppercase bg-muted/5">
-                  {currentQ.difficulty || 'L3'}
-              </Badge>
-              <div className="w-1 h-1 rounded-full bg-border/50"/>
-              <span>{(currentQ.type || 'Application Challenge').replace('_', ' ')}</span>
-              </div>
+        <div className="p-8 lg:p-10 flex flex-col justify-center space-y-10 min-h-[400px]">
+          <div className="space-y-6 animate-in slide-in-from-top-4 fade-in duration-700" key={`header-${currentQ.id}`}>
+              <div className="text-[10px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-3">
+    <Badge variant="outline" className="text-[8px] border-border/40 bg-muted/20 text-muted-foreground rounded-md px-2 py-0">{currentQ.difficulty || '1'}</Badge>
+    <div className="w-1 h-1 rounded-full bg-muted-foreground/20" />
+    <span>{(currentQ.type || '').replace('_', ' ')}</span>
+    </div>
               {currentQ.type !== 'fill_in' && (
-                <div className="text-base lg:text-lg font-bold tracking-tight leading-snug text-foreground">
+                <div className="text-xl lg:text-2xl font-black tracking-tight leading-tight text-foreground/90 max-w-3xl">
                   <MarkdownBlock content={currentQ.question} />
                 </div>
               )}
@@ -258,7 +286,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       className={cn(
                           "group flex items-center gap-4 p-3 border-2 rounded-lg text-left transition-all duration-300", 
                           isCorrectHighlight 
-                          ? "border-primary bg-primary/5 shadow-sm" 
+                          ? "border-foreground bg-muted/20 shadow-sm" 
                           : isSelected && !isRevealed 
                               ? "border-foreground bg-foreground/5 shadow-md scale-[1.01]" 
                               : "border-border/40 hover:border-foreground/20 hover:bg-muted/5", 
@@ -268,7 +296,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       <div className={cn(
                           "w-6 h-6 rounded flex items-center justify-center text-[10px] font-black border transition-all", 
                           isCorrectHighlight || (isSelected && !isRevealed) 
-                          ? "bg-primary text-primary-foreground border-primary" 
+                          ? "bg-foreground text-background border-foreground" 
                           : "bg-muted/10 border-border/50 text-muted-foreground/40 group-hover:border-foreground/40 group-hover:text-foreground/60"
                       )}>
                           {key}
@@ -285,19 +313,24 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
               {/* Fill In Blank */}
               
               {currentQ.type === 'order' && (
-              <div className="space-y-3">
+              <div className="space-y-2 max-w-2xl mx-auto">
               {(userAnswers[currentQ.id] || currentQ.steps || []).map((step: string, i: number) => {
                   const list = userAnswers[currentQ.id] || currentQ.steps || [];
                   const moveUp = () => { if(i>0) { const n = [...list]; [n[i-1], n[i]] = [n[i], n[i-1]]; handleSelectAnswer(n); } };
                   const moveDown = () => { if(i<list.length-1) { const n = [...list]; [n[i], n[i+1]] = [n[i+1], n[i]]; handleSelectAnswer(n); } };
                   const isCorrect = isRevealed && step === (currentQ.answer || [])[i];
                   return (
-                      <div key={i} className={`flex items-center gap-3 p-4 border rounded-lg ${isCorrect ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/40 hover:bg-muted/5'}`}>
-                          <div className="flex flex-col gap-1 border-r border-border/50 pr-3">
-                              <button disabled={isRevealed || i===0} onClick={moveUp} className="text-[10px] px-1 opacity-50 hover:opacity-100 hover:text-primary transition-colors">▲</button>
-                              <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-[10px] px-1 opacity-50 hover:opacity-100 hover:text-primary transition-colors">▼</button>
+                      <div key={i} className={cn(
+                          "group flex items-center gap-4 p-4 border rounded-xl transition-all",
+                          isCorrect 
+                            ? "border-foreground bg-muted/20" 
+                            : "border-border/40 bg-muted/5 hover:border-foreground/20"
+                      )}>
+                          <div className="flex flex-col gap-2 border-r border-border/10 pr-4">
+                              <button disabled={isRevealed || i===0} onClick={moveUp} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-foreground transition-all disabled:opacity-5">▲</button>
+                              <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-foreground transition-all disabled:opacity-5">▼</button>
                           </div>
-                          <div className="text-xs font-medium tracking-tight text-foreground/90 pl-1">{step}</div>
+                          <div className="text-sm font-bold tracking-tight text-foreground/80 pl-2">{step}</div>
                       </div>
                   )
               })}
@@ -305,21 +338,34 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
               )}
 
               {currentQ.type === 'matching' && currentQ.pairs && (
-              <div className="space-y-4">
+              <div className="space-y-3 max-w-3xl mx-auto">
               {currentQ.pairs.map((pair: any, i: number) => {
                   const rights = currentQ.pairs.map((p: any) => p.right).sort();
                   const selected = (userAnswers[currentQ.id] || {})[pair.left] || "";
                   const isCorrect = isRevealed && selected === pair.right;
                   return (
-                      <div key={i} className={`flex items-center gap-4 p-4 border rounded-lg ${isCorrect ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/40'}`}>
-                          <div className="flex-1 font-medium tracking-tight text-xs text-foreground/90">{pair.left}</div>
+                      <div key={i} className={cn(
+                          "flex items-center gap-6 p-5 border rounded-xl transition-all",
+                          isCorrect ? "border-foreground bg-muted/20" : "border-border/40 bg-muted/5"
+                      )}>
+                          <div className="flex-1 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60">{pair.left}</div>
                           <div className="flex-1">
-                              <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQ.id], [pair.left]: e.target.value})} className="w-full p-2.5 bg-background border border-border/50 rounded-md outline-none focus:border-foreground/50 text-xs font-medium text-foreground/80 transition-colors">
-                                  <option value="">Select match...</option>
+                              <select 
+                                disabled={isRevealed} 
+                                value={selected} 
+                                onChange={(e) => handleSelectAnswer({...userAnswers[currentQ.id], [pair.left]: e.target.value})} 
+                                className="w-full px-4 py-3 bg-background border border-border/10 rounded-lg outline-none focus:border-foreground/50 text-[10px] font-black uppercase tracking-widest transition-all appearance-none cursor-pointer hover:border-border/40"
+                              >
+                                  <option value="">Select Match...</option>
                                   {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
                               </select>
                           </div>
-                          {isRevealed && !isCorrect && <div className="text-[10px] uppercase tracking-widest text-primary font-bold w-1/3 break-words">{pair.right}</div>}
+                          {isRevealed && !isCorrect && (
+                            <div className="flex-1 animate-in slide-in-from-right-2 fade-in duration-500">
+                                <div className="text-[8px] font-black uppercase text-foreground/40 mb-1">Correct Match</div>
+                                <div className="text-[10px] font-black uppercase tracking-widest text-foreground">{pair.right}</div>
+                            </div>
+                          )}
                       </div>
                   )
               })}
@@ -350,8 +396,8 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       disabled={isRevealed}
                       value={userAnswers[currentQ.id] || ''}
                       onChange={(e) => handleSelectAnswer(e.target.value)}
-                      placeholder="Write your analysis here..."
-                      className="w-full min-h-[80px] p-4 bg-background border-2 border-border/40 rounded-lg focus:outline-none focus:border-foreground/50 text-xs font-medium tracking-tight text-foreground/80 transition-colors resize-y"
+                      placeholder="Synthesize your analysis here..."
+                      className="w-full min-h-[140px] p-6 bg-muted/5 border-2 border-border/10 rounded-xl focus:outline-none focus:border-foreground/40 text-sm font-medium tracking-tight text-foreground/80 transition-all resize-y placeholder:opacity-20"
                   />
               </div>
               )}
@@ -367,35 +413,39 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                   </Button>
               </div>
               ) : (
-              <div className="mt-4 space-y-4">
-                  <div className="p-6 border-2 border-primary/20 bg-primary/5 rounded-lg space-y-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm">
-                      <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest">
-                        <Check size={14} />
-                        <span>Explanation & Solution</span>
-                      </div>
-                      
-                      <div className="space-y-1">
-                        <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Correct Answer</div>
-                        <div className="text-xs font-bold text-foreground">
-                          {Array.isArray(currentQ.answer) ? currentQ.answer.join(', ') : currentQ.answer}
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Explanation</div>
-                        <div className="text-xs font-medium leading-relaxed text-foreground/80">
-                          <MarkdownBlock content={currentQ.explanation || "No explanation provided."} />
-                        </div>
-                      </div>
+              <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="p-8 border-2 border-border bg-muted/10 rounded-2xl space-y-6 shadow-xl shadow-foreground/5">
+                  <div className="flex items-center gap-3 text-foreground/80 font-black uppercase text-[11px] tracking-[0.2em]">
+                    <div className="w-5 h-5 rounded-full bg-foreground/10 flex items-center justify-center">
+                      <Check size={12} />
+                    </div>
+                    <span>Mastery Solution & Logic</span>
                   </div>
                   
-                  <div className="flex gap-3">
+                  <div className="space-y-2">
+                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Definitive Answer</div>
+                    <div className="text-sm font-bold text-foreground/90 leading-relaxed">
+                      {Array.isArray(currentQ.answer) ? currentQ.answer.join(', ') : currentQ.answer}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-4 border-t border-border/10">
+                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mechanism Explanation</div>
+                    <div className="text-sm font-medium leading-relaxed text-foreground/80">
+                      <MarkdownBlock content={currentQ.explanation || "No explanation provided."} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+                      )}
+              
+              <div className="flex gap-3">
                       {['fill_in', 'writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQ.type || 'writing') ? (
                           <>
-                              <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-10 rounded-lg transition-all border-destructive/20 text-destructive/60 hover:bg-destructive/5 hover:text-destructive">
+                              <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-12 rounded-xl transition-all border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 active:scale-95">
                                   Wrong
                               </Button>
-                              <Button onClick={() => handleSelfGrade(true)} className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-10 rounded-lg transition-all hover:bg-primary/90">
+                              <Button onClick={() => handleSelfGrade(true)} className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-12 rounded-xl transition-all hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 active:scale-95">
                                   Correct
                               </Button>
                           </>
@@ -420,10 +470,8 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       )}
                   </div>
               </div>
-              )}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
     </div>
   );
 }

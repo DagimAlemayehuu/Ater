@@ -17,16 +17,39 @@ import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 mermaid.initialize({
   startOnLoad: false,
-  theme: 'dark',
   securityLevel: 'loose',
-  fontFamily: 'Inter, sans-serif'
+  fontFamily: 'Inter, sans-serif',
+  themeVariables: {
+    primaryColor: '#27272a', // zinc-800
+    primaryTextColor: '#fafafa', // zinc-50
+    primaryBorderColor: '#3f3f46', // zinc-700
+    lineColor: '#52525b', // zinc-600
+    secondaryColor: '#18181b', // zinc-950
+    tertiaryColor: '#27272a'
+  }
 });
 
-const MermaidWrapper = ({ chart }: { chart: string }) => {
+export const MermaidWrapper = ({ chart }: { chart: string }) => {
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<boolean>(false);
 
   useEffect(() => {
+    const isDark = document.documentElement.classList.contains('dark');
+    const neutralThemeVars = {
+      primaryColor: isDark ? '#27272a' : '#f4f4f5',
+      primaryTextColor: isDark ? '#fafafa' : '#18181b',
+      primaryBorderColor: isDark ? '#3f3f46' : '#e4e4e7',
+      lineColor: isDark ? '#52525b' : '#a1a1aa',
+      secondaryColor: isDark ? '#18181b' : '#fafafa',
+      tertiaryColor: isDark ? '#27272a' : '#f4f4f5',
+      fontFamily: 'Inter, sans-serif'
+    };
+    
+    mermaid.initialize({ 
+      theme: isDark ? 'dark' : 'default',
+      themeVariables: neutralThemeVars
+    });
+    
     mermaid.render(`mermaid-${Math.random().toString(36).substring(7)}`, chart).then((result) => {
       setSvg(result.svg);
       setError(false);
@@ -204,7 +227,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
             
 
             return (
-                <p className="mb-4 leading-relaxed text-[13px] text-foreground/90 antialiased">
+                <p className="mb-4 leading-relaxed text-[13px] text-foreground/80 antialiased">
                     {React.Children.map(children, (child) => 
                         typeof child === 'string' ? renderWikiLinks(child, onNavigateRef.current) : child
                     )}
@@ -351,13 +374,13 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
             }
 
             if (isCallout) {
-                let colorClass = "primary";
+                let borderClass = "border-zinc-500 bg-zinc-500/5";
                 let Icon = "📝";
-                if (['note', 'info'].includes(calloutType)) { colorClass = "blue"; Icon = "ℹ️"; }
-                else if (['warning', 'caution'].includes(calloutType)) { colorClass = "orange"; Icon = "⚠️"; }
-                else if (['danger', 'error', 'bug'].includes(calloutType)) { colorClass = "red"; Icon = "🚨"; }
-                else if (['success', 'check', 'done'].includes(calloutType)) { colorClass = "green"; Icon = "✅"; }
-                else if (['question', 'help', 'faq'].includes(calloutType)) { colorClass = "yellow"; Icon = "❓"; }
+                if (['note', 'info'].includes(calloutType)) { borderClass = "border-zinc-400 bg-zinc-400/5"; Icon = "ℹ️"; }
+                else if (['warning', 'caution'].includes(calloutType)) { borderClass = "border-zinc-500 bg-zinc-500/10"; Icon = "⚠️"; }
+                else if (['danger', 'error', 'bug'].includes(calloutType)) { borderClass = "border-zinc-600 bg-zinc-600/10"; Icon = "🚨"; }
+                else if (['success', 'check', 'done'].includes(calloutType)) { borderClass = "border-zinc-300 bg-zinc-300/10"; Icon = "✅"; }
+                else if (['question', 'help', 'faq'].includes(calloutType)) { borderClass = "border-zinc-400 bg-zinc-400/10"; Icon = "❓"; }
 
                 const processedChildren = React.Children.map(children, (child: any, index) => {
                     if (index === 0 && child?.type === 'p') {
@@ -375,7 +398,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                         });
                         return (
                             <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-2 font-black uppercase tracking-wider text-[11px] text-foreground">
+                                <div className="flex items-center gap-2 font-black uppercase tracking-wider text-[11px] text-foreground/70">
                                     <span>{Icon}</span>
                                     <span>{title}</span>
                                 </div>
@@ -390,12 +413,8 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
 
                 return (
                     <div className={cn(
-                        "my-6 rounded-lg border-l-4 p-4 not-prose bg-muted/20 border-border",
-                        calloutType === 'note' && "border-blue-500 bg-blue-500/5",
-                        calloutType === 'warning' && "border-orange-500 bg-orange-500/5",
-                        calloutType === 'danger' && "border-red-500 bg-red-500/5",
-                        calloutType === 'success' && "border-green-500 bg-green-500/5",
-                        calloutType === 'question' && "border-yellow-500 bg-yellow-500/5"
+                        "my-6 rounded-lg border-l-2 p-5 not-prose border-border bg-muted/10",
+                        borderClass
                     )}>
                         {processedChildren}
                     </div>
@@ -410,7 +429,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
         },
         hr: () => <hr className="my-10 border-t border-border" />,
         a: ({ href, children }: any) => (
-            <a href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-4 decoration-primary/30 hover:decoration-primary transition-colors font-medium">
+            <a href={href} target="_blank" rel="noreferrer" className="text-foreground font-black underline underline-offset-4 decoration-border/40 hover:decoration-foreground/40 transition-all font-medium">
                 {children}
             </a>
         )
