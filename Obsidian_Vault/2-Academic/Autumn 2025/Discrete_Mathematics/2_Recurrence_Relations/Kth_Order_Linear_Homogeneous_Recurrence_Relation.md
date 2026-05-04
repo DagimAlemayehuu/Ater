@@ -1,22 +1,3 @@
----
-
-title: Kth_Order_Linear_Homogeneous_Recurrence_Relation
-type: Atomic Note
-course: Discrete Mathematics
-semester: Autumn 2025
-unit: '2'
-hub: "[[2_Recurrence_Relations_Hub]]"
-source: "[[2_Recurrence_Relations.pdf]]"
-source_pages:
-- 22
-mode: MATH-DISCRETE
-read: false
-generated: true
-prerequisites:
-- "[[Linear_Homogeneous_Recurrence_Relation]]"
-
----
-
 ## 1. Mental Model
 
 A Kth Order Linear Homogeneous Recurrence Relation can be thought of as a sequence of values where each term is determined by a linear combination of the previous k terms, similar to a [[Sequence_Definition]] where each element depends on a fixed number of preceding elements. This is analogous to a graph where each node has a fixed number of incoming edges from previous nodes, specifically a [[Kth_Order_Linear_Homogeneous_Recurrence_Relation]] can be visualized as a graph with a structure that repeats every k nodes. The coefficients of the linear combination can be seen as weights on these edges.

@@ -1,6 +1,5 @@
 import re
 import yaml
-import sqlite3
 from pathlib import Path
 from typing import List
 from difflib import SequenceMatcher

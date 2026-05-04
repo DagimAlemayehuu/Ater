@@ -1,26 +1,23 @@
 ---
-
-title: General_Solution
-type: Atomic Note
-course: Discrete Mathematics
-semester: Autumn 2025
-unit: '2'
-hub: '[[2_Recurrence_Relations_Hub]]'
-source: '[[2_Recurrence_Relations.pdf]]'
+title: "General_Solution"
+type: "Atomic Note"
+course: "Discrete Mathematics"
+semester: "Autumn 2025"
+unit: "2"
+hub: [[2_Recurrence_Relations_Hub]]
+source: [[2_Recurrence_Relations.pdf]]
 source_pages:
-- 15
-mode: MATH-DISCRETE
-read: false
+ - "15"
+mode: "MATH-DISCRETE"
+read: true
 generated: true
 prerequisites:
-- '[[Sequence_Definition]]'
-- '[[Sequence_Notation]]'
-- '[[Recursive_Definition]]'
-- '[[Recurrence_Relation_Definition]]'
-- '[[Characteristic_Equation]]'
-
+ - "[[Sequence_Definition]]"
+ - "[[Sequence_Notation]]"
+ - "[[Recursive_Definition]]"
+ - "[[Recurrence_Relation_Definition]]"
+ - "[[Characteristic_Equation]]"
 ---
-
 
 ## 1. Mental Model
 

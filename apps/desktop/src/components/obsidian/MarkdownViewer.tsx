@@ -7,7 +7,6 @@ import katex from 'katex'
 import { cn } from '@/lib/utils'
 import React, { useState, useEffect, useMemo, useRef, memo } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
-import ObsidianDatabaseView from '@/routes/obsidian-database-view'
 import { WikiLink, renderWikiLinks } from './WikiLink'
 import mermaid from 'mermaid'
 import { Sparkles, Zap, Copy, Check, RefreshCw, X, Quote } from 'lucide-react'
@@ -50,39 +49,7 @@ interface MarkdownViewerProps {
     components?: any
 }
 
-const InlineDatabaseResolver = ({ dbName, onNavigate }: { dbName: string, onNavigate: (p: string) => void }) => {
-    const [dbSchema, setDbSchema] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        sidecarApi.listVaultDatabases().then(res => {
-            const db = res.databases?.find((d: any) => d.id === dbName || d.name === dbName);
-            setDbSchema(db || null);
-        }).catch(console.error).finally(() => setLoading(false));
-    }, [dbName]);
-
-    if (loading) return <div className="p-8 text-center text-[10px] text-muted-foreground font-mono tracking-widest uppercase animate-pulse border border-dashed border-border bg-muted/20 rounded-lg">Syncing Database: {dbName}</div>;
-    if (!dbSchema) return <div className="p-8 text-center text-[10px] text-destructive font-mono tracking-widest uppercase border border-dashed border-destructive/20 bg-destructive/5 rounded-lg">Error: Database '{dbName}' Not Found</div>;
-
-    return (
-        <div className="my-10 rounded-xl border border-border shadow-sm overflow-hidden h-[500px] relative not-prose bg-background group/inline-db hover:ring-1 hover:ring-primary/20 transition-all">
-            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover/inline-db:opacity-100 transition-opacity">
-                <button 
-                    onClick={() => onNavigate(`DATABASE:${dbSchema.id}`)}
-                    className="p-1 px-3 bg-background border border-border rounded-md text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:border-primary transition-all shadow-sm"
-                >
-                    Expand to Full Page
-                </button>
-            </div>
-            <ObsidianDatabaseView 
-                database={{ id: dbSchema.id, name: dbSchema.name, schema: dbSchema.schema, views: dbSchema.views }} 
-                onBack={() => {}} 
-                onNavigate={onNavigate} 
-                onRefresh={() => {}} 
-            />
-        </div>
-    )
-}
 
 const CodeBlock = ({ language, value }: { language: string | null, value: string }) => {
     const [copied, setCopied] = useState(false);
@@ -236,13 +203,6 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
             const textContent = childrenArray.map(c => typeof c === 'string' ? c : '').join(' ');
             
 
-            if (React.Children.count(children) === 1 && typeof children === 'string') {
-                const str = children as string;
-                if (str.startsWith('/table ')) {
-                    const dbName = str.replace('/table ', '').trim();
-                    return <InlineDatabaseResolver dbName={dbName} onNavigate={onNavigateRef.current} />;
-                }
-            }
             return (
                 <p className="mb-4 leading-relaxed text-[13px] text-foreground/90 antialiased">
                     {React.Children.map(children, (child) => 

@@ -81,6 +81,105 @@ const renderInlineMarkdown = (text: string) => {
     });
 };
 
+function RollupCell({ safeType, row }: { safeType: any, row: any }) {
+    const [rollupVal, setRollupVal] = useState<any>("--");
+    const config = typeof safeType === 'object' ? safeType : {} as any;
+    const relationProp = config.relation;
+    const targetProp = config.target;
+    const calc = config.calc || 'sum';
+
+    useEffect(() => {
+        const compute = async () => {
+            const relationVal = row?.properties?.[relationProp];
+            if (!relationVal) return;
+            const links = Array.isArray(relationVal) ? relationVal : [relationVal];
+            const results: any[] = [];
+            for (const link of links) {
+                const cleanLink = String(link).replace(/\[\[|\]\]/g, '');
+                try {
+                    const search = await sidecarApi.findVaultPage(cleanLink);
+                    if (search.found && search.path) {
+                        const note = await sidecarApi.readObsidianNote(search.path);
+                        if (note.metadata?.[targetProp] !== undefined) {
+                            results.push(note.metadata[targetProp]);
+                        }
+                    }
+                } catch (e) {}
+            }
+            if (results.length === 0) {
+                setRollupVal("--");
+                return;
+            }
+            if (calc === 'sum') setRollupVal(results.reduce((a, b) => Number(a) + Number(b), 0));
+            else if (calc === 'avg') setRollupVal(results.reduce((a, b) => Number(a) + Number(b), 0) / results.length);
+            else if (calc === 'count') setRollupVal(results.length);
+            else setRollupVal(results[0]);
+        };
+        compute();
+    }, [row?.properties?.[relationProp], targetProp, calc]);
+
+    return (
+        <div className="flex items-center gap-2 w-full px-1.5 py-1 text-[10px] text-foreground font-black uppercase tracking-tighter">
+            <Sigma size={10} className="text-muted-foreground/40" />
+            <span className="truncate">{String(rollupVal)}</span>
+        </div>
+    );
+}
+
+function ButtonCell({ safeType, onSave }: { safeType: any, onSave: (v: any) => void }) {
+    const config = typeof safeType === 'object' ? safeType : {} as any;
+    const label = config.label || "Run";
+    const actionStr = config.source || "";
+    const [isRunning, setIsRunning] = useState(false);
+    const handleRunAction = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!actionStr || isRunning) return;
+        setIsRunning(true);
+        try {
+            const updates: Record<string, any> = {};
+            const commands = actionStr.split(';').map((s: string) => s.trim()).filter(Boolean);
+            commands.forEach((cmd: string) => {
+                if (cmd.startsWith('SET(') && cmd.endsWith(')')) {
+                    const inner = cmd.slice(4, -1);
+                    const [prop, ...rest] = inner.split(',').map(s => s.trim());
+                    const valStr = rest.join(',').trim();
+                    let val: any = valStr;
+                    if (valStr === 'NOW') val = new Date().toISOString();
+                    else if (valStr === 'TODAY') val = new Date().toISOString().split('T')[0];
+                    else if (valStr.startsWith("'") && valStr.endsWith("'")) val = valStr.slice(1, -1);
+                    else if (valStr === 'TRUE') val = true;
+                    else if (valStr === 'FALSE') val = false;
+                    else if (!isNaN(Number(valStr))) val = Number(valStr);
+                    updates[prop] = val;
+                }
+            });
+            if (Object.keys(updates).length > 0) {
+                for (const [p, v] of Object.entries(updates)) {
+                    onSave({ [p]: v, _bulk: true });
+                }
+            }
+        } catch (err) { console.error("Action failed", err); } 
+        finally { setTimeout(() => setIsRunning(false), 500); }
+    };
+
+    return (
+        <div className="flex items-center w-full px-1.5 py-0.5">
+            <button 
+                onClick={handleRunAction}
+                disabled={isRunning}
+                className={cn(
+                    "w-full h-7 px-3 flex items-center justify-center gap-2 rounded border border-border/40 bg-background hover:bg-muted text-[10px] font-black uppercase tracking-widest text-foreground shadow-sm active:scale-[0.98] transition-all",
+                    isRunning && "opacity-50 cursor-not-allowed"
+                )}
+            >
+                {isRunning ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />}
+                {label}
+            </button>
+        </div>
+    );
+}
+
+
 export function EditableCell({ initialValue, type, onSave, onNavigate, row, readonly }: EditableCellProps) {
     const [value, setValue] = useState<any>(initialValue)
     const [isFocused, setIsFocused] = useState(false)
@@ -118,7 +217,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
         try {
             setLoadingOptions(true)
             await sidecarApi.createVaultOption(source, searchQuery)
-            const newValue = `[[${searchQuery}]]`
+            const newValue = typeStr === 'relation' ? `[[${searchQuery}]]` : searchQuery
             setValue(newValue)
             onSave(newValue)
             setOpen(false)
@@ -159,48 +258,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
     }
 
     if (typeStr === 'rollup') {
-        const [rollupVal, setRollupVal] = useState<any>("--");
-        const config = typeof safeType === 'object' ? safeType : {} as any;
-        const relationProp = config.relation;
-        const targetProp = config.target;
-        const calc = config.calc || 'sum';
-
-        useEffect(() => {
-            const compute = async () => {
-                const relationVal = row?.properties?.[relationProp];
-                if (!relationVal) return;
-                const links = Array.isArray(relationVal) ? relationVal : [relationVal];
-                const results: any[] = [];
-                for (const link of links) {
-                    const cleanLink = String(link).replace(/\[\[|\]\]/g, '');
-                    try {
-                        const search = await sidecarApi.findVaultPage(cleanLink);
-                        if (search.found && search.path) {
-                            const note = await sidecarApi.readObsidianNote(search.path);
-                            if (note.metadata?.[targetProp] !== undefined) {
-                                results.push(note.metadata[targetProp]);
-                            }
-                        }
-                    } catch (e) {}
-                }
-                if (results.length === 0) {
-                    setRollupVal("--");
-                    return;
-                }
-                if (calc === 'sum') setRollupVal(results.reduce((a, b) => Number(a) + Number(b), 0));
-                else if (calc === 'avg') setRollupVal(results.reduce((a, b) => Number(a) + Number(b), 0) / results.length);
-                else if (calc === 'count') setRollupVal(results.length);
-                else setRollupVal(results[0]);
-            };
-            compute();
-        }, [row?.properties?.[relationProp], targetProp, calc]);
-
-        return (
-            <div className="flex items-center gap-2 w-full px-1.5 py-1 text-[10px] text-foreground font-black uppercase tracking-tighter">
-                <Sigma size={10} className="text-muted-foreground/40" />
-                <span className="truncate">{String(rollupVal)}</span>
-            </div>
-        );
+        return <RollupCell safeType={safeType} row={row} />;
     }
 
     if (['id', 'created_time', 'last_edited_time', 'created_by', 'last_edited_by'].includes(typeStr)) {
@@ -292,56 +350,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
     }
 
     if (typeStr === 'button') {
-        const config = typeof safeType === 'object' ? safeType : {} as any;
-        const label = config.label || "Run";
-        const actionStr = config.source || "";
-        const [isRunning, setIsRunning] = useState(false);
-        const handleRunAction = async (e: React.MouseEvent) => {
-            e.stopPropagation();
-            if (!actionStr || isRunning) return;
-            setIsRunning(true);
-            try {
-                const updates: Record<string, any> = {};
-                const commands = actionStr.split(';').map((s: string) => s.trim()).filter(Boolean);
-                commands.forEach((cmd: string) => {
-                    if (cmd.startsWith('SET(') && cmd.endsWith(')')) {
-                        const inner = cmd.slice(4, -1);
-                        const [prop, ...rest] = inner.split(',').map(s => s.trim());
-                        const valStr = rest.join(',').trim();
-                        let val: any = valStr;
-                        if (valStr === 'NOW') val = new Date().toISOString();
-                        else if (valStr === 'TODAY') val = new Date().toISOString().split('T')[0];
-                        else if (valStr.startsWith("'") && valStr.endsWith("'")) val = valStr.slice(1, -1);
-                        else if (valStr === 'TRUE') val = true;
-                        else if (valStr === 'FALSE') val = false;
-                        else if (!isNaN(Number(valStr))) val = Number(valStr);
-                        updates[prop] = val;
-                    }
-                });
-                if (Object.keys(updates).length > 0) {
-                    for (const [p, v] of Object.entries(updates)) {
-                        onSave({ [p]: v, _bulk: true });
-                    }
-                }
-            } catch (err) { console.error("Action failed", err); } 
-            finally { setTimeout(() => setIsRunning(false), 500); }
-        };
-
-        return (
-            <div className="flex items-center w-full px-1.5 py-0.5">
-                <button 
-                    onClick={handleRunAction}
-                    disabled={isRunning}
-                    className={cn(
-                        "w-full h-7 px-3 flex items-center justify-center gap-2 rounded border border-border/40 bg-background hover:bg-muted text-[10px] font-black uppercase tracking-widest text-foreground shadow-sm active:scale-[0.98] transition-all",
-                        isRunning && "opacity-50 cursor-not-allowed"
-                    )}
-                >
-                    {isRunning ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />}
-                    {label}
-                </button>
-            </div>
-        );
+        return <ButtonCell safeType={safeType} onSave={onSave} />;
     }
 
     if (typeStr === 'date') {
@@ -440,7 +449,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                                                 <CommandItem
                                                     key={opt}
                                                     onSelect={() => {
-                                                        const newValue = typeStr === 'status' ? opt : `[[${opt}]]`
+                                                        const newValue = typeStr === 'relation' ? `[[${opt}]]` : opt
                                                         setValue(newValue); onSave(newValue); setOpen(false); setSearchQuery("");
                                                     }}
                                                     className="text-xs py-2 px-3 cursor-pointer flex items-center justify-between hover:bg-muted"
@@ -508,7 +517,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                                                     const next = [...list, searchQuery]; setValue(next); onSave(next); setSearchQuery("");
                                                 } else {
                                                     await sidecarApi.createVaultOption(source, searchQuery);
-                                                    const next = [...list, `[[${searchQuery}]]`]; setValue(next); onSave(next); setSearchQuery(""); fetchOptions();
+                                                    const next = [...list, typeStr === 'relation' ? `[[${searchQuery}]]` : searchQuery]; setValue(next); onSave(next); setSearchQuery(""); fetchOptions();
                                                 }
                                             }} className="w-full flex items-center gap-2 px-3 py-3 text-xs hover:bg-muted transition-colors text-foreground font-bold uppercase tracking-wider border-t border-border">
                                                 <Plus className="h-3 w-3" /> Create "{searchQuery}"
@@ -528,7 +537,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                                     </CommandGroup>
                                     <CommandGroup heading="Available Options">
                                         {(options || []).filter(opt => !list.some(i => String(i).includes(opt))).map((opt) => (
-                                            <CommandItem key={opt} onSelect={() => { const val = source ? `[[${opt}]]` : opt; const next = [...list, val]; setValue(next); onSave(next); }} className="text-xs py-2 px-3 cursor-pointer flex items-center justify-between hover:bg-muted">
+                                            <CommandItem key={opt} onSelect={() => { const val = typeStr === 'relation' ? `[[${opt}]]` : opt; const next = [...list, val]; setValue(next); onSave(next); }} className="text-xs py-2 px-3 cursor-pointer flex items-center justify-between hover:bg-muted">
                                                 <div className={cn("px-2 py-0.5 rounded border text-[9px] font-bold", getBadgeColor(opt))}>{opt}</div>
                                                 <Check className="h-3 w-3 text-foreground opacity-0" />
                                             </CommandItem>

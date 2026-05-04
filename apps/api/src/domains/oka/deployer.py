@@ -104,7 +104,7 @@ class OkaDeployer:
             
             try:
                 display_path = str(target_path.relative_to(self.vm.vault_path))
-            except:
+            except Exception:
                 display_path = str(target_path)
                 
             results.append({"title": title, "path": display_path, "status": "deployed"})
@@ -131,7 +131,7 @@ class OkaDeployer:
         
         try:
             display_path = str(target_path.relative_to(self.vm.vault_path))
-        except:
+        except Exception:
             display_path = str(target_path)
             
         return [{"title": meta.get("title", "Hub"), "path": display_path, "status": "deployed"}]
@@ -309,7 +309,7 @@ class OkaDeployer:
 
             try:
                 display_path = str(target_path.relative_to(self.vm.vault_path))
-            except:
+            except Exception:
                 display_path = str(target_path)
 
             results.append({"title": title, "path": display_path})

@@ -3,7 +3,7 @@ import {AlertTriangle, Check, Clock, CalendarDays, ChevronDown, ChevronUp, Plus,
 import {format, parseISO, isSameDay, isAfter, isBefore, addDays, startOfDay, endOfDay} from 'date-fns'
 import {cn} from '@/lib/utils'
 import {toast} from 'sonner'
-import {stripWL, getVal, priorityColorClass, getDaysUntil, isOverdue, statusColorClass} from './utils'
+import {stripWL, getVal, priorityColorClass, getDaysUntil, isOverdue, statusColorClass, wrapWL, cleanTitle} from './utils'
 import {SectionHeader, EmptyState, BadgePill, EditableTitle} from './SharedComponents'
 import type {TabProps} from './types'
 
@@ -16,7 +16,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
 
  const filtered = useMemo(() => {
  if (courseFilter === 'All') return allAssignments
- const cName = courses.find(c => c.id === courseFilter)?.title || ''
+ const cName = cleanTitle(courses.find(c => c.id === courseFilter)?.title || '')
  return allAssignments.filter(a => {
  const assignmentCourse = getVal(a, 'Course', 'course').toLowerCase()
  return assignmentCourse === cName.toLowerCase() && assignmentCourse !== ''
@@ -70,7 +70,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  {/* Course filter pills */}
  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
  {['All', ...courses.map(c => c.id)].map(id => {
- const label = id === 'All' ? 'All' : courses.find(c => c.id === id)?.title || id
+ const label = id === 'All' ? 'All' : cleanTitle(courses.find(c => c.id === id)?.title || id)
  return (
  <button key={id} onClick={() => setCourseFilter(id)}
  className={cn(
@@ -81,13 +81,14 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
 })}
  </div>
  <button onClick={() => {
- const title = window.prompt('Enter Assignment Title', 'New Assignment') || 'New Assignment'
- const props = courseFilter !== 'All' ? {Course: `[[${courses.find(c => c.id === courseFilter)?.title}]]`} : {}
- onCreate('03 - Assignments', title, props)
+  const title = window.prompt('Enter Assignment Title', 'New Assignment') || 'New Assignment'
+  const cleanAsgnTitle = cleanTitle(title)
+  const props = courseFilter !== 'All' ? {Course: wrapWL(courses.find(c => c.id === courseFilter)?.title)} : {}
+  onCreate('03 - Assignments', cleanAsgnTitle, props)
 }}
- className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-lg hover:border-foreground/30 transition-all">
- <Plus size={10} /> Add
- </button>
+  className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-lg hover:border-foreground/30 transition-all">
+  <Plus size={10} /> Add
+  </button>
  </div>
 
  {/* ── Assignment list ── */}
@@ -217,11 +218,11 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  {/* Content */}
  <div className="flex-1 min-w-0">
  <EditableTitle
- value={a.title}
+ value={cleanTitle(a.title)}
  className={cn('text-[12px] font-black uppercase truncate block', isDone ? 'line-through text-muted-foreground/40' : 'text-foreground')}
  onSave={(next) => onUpdate('03 - Assignments', a.id, {title: next})}
  />
- {courseName && <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{courseName}</span>}
+ {courseName && <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{cleanTitle(courseName)}</span>}
  </div>
 
  {/* Badges & Actions */}
@@ -230,12 +231,12 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  <button onClick={e => {e.stopPropagation(); setShowStatusMenu(!showStatusMenu)}}
  className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border transition-all',
  statusColorClass(stripWL(getVal(a, 'Status', 'status'))) || 'text-muted-foreground/30 bg-muted/10 border-border/10')}>
- {stripWL(getVal(a, 'Status', 'status')) || 'Planned'}
+ {cleanTitle(stripWL(getVal(a, 'Status', 'status')) || 'Planned')}
  </button>
  {showStatusMenu && (
  <div className="absolute top-full right-0 mt-1 bg-background border border-border/20 rounded-lg shadow-xl z-50 p-1 min-w-[120px]">
  {['Planned', 'In Progress', 'Completed'].map(s => (
- <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('03 - Assignments', a.id, {Status: `[[${s}]]`}); setShowStatusMenu(false)}}
+ <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('03 - Assignments', a.id, {Status: wrapWL(s)}); setShowStatusMenu(false)}}
  className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase rounded hover:bg-muted/10 transition-all', statusColorClass(s))}>
  {s}
  </button>

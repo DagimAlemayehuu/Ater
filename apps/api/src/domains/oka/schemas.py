@@ -8,7 +8,7 @@ class AdvancedPracticeConfig(BaseModel):
     prioritizeWeaknesses: bool = False
     questionDistribution: Dict[str, int] = Field(default_factory=lambda: {
         "mcq": 0, "true_false": 0, "writing": 0, "fill_in": 0,
-        "matching": 0, "order": 0, "debug": 0, "synthesis": 0
+        "matching": 0, "order": 0, "debug": 0, "synthesis": 0, "trace": 0
     })
     difficulty: Literal["L0", "L1", "L2", "L3", "L4", "Mixed"] = "L1"
     distractorPlausibility: Literal["Low", "Medium", "High"] = "Medium"
@@ -32,6 +32,7 @@ class MCQQuestion(BaseQuestion):
     type: Literal["mcq"]
     options: Dict[str, str]
     answer: str
+    required_keywords: List[str] = Field(default_factory=list)
 
 class TrueFalseQuestion(BaseQuestion):
     type: Literal["true_false"]
@@ -40,15 +41,18 @@ class TrueFalseQuestion(BaseQuestion):
 class WritingQuestion(BaseQuestion):
     type: Literal["writing"]
     answer: str
+    required_keywords: List[str] = Field(default_factory=list)
 
 class ScenarioQuestion(BaseQuestion):
     type: Literal["scenario"]
     answer: str
+    required_keywords: List[str] = Field(default_factory=list)
 
 class CodeQuestion(BaseQuestion):
     type: Literal["code"]
     codeSnippet: str
     answer: str
+    required_keywords: List[str] = Field(default_factory=list)
     language: str
 
 class FillInQuestion(BaseQuestion):
@@ -60,6 +64,7 @@ class FindErrorQuestion(BaseQuestion):
     type: Literal["find_error"]
     buggyCode: str
     answer: str
+    required_keywords: List[str] = Field(default_factory=list)
 
 class MatchingPair(BaseModel):
     left: str
@@ -78,14 +83,22 @@ class DebugQuestion(BaseQuestion):
     type: Literal["debug"]
     content: str
     answer: str
+    required_keywords: List[str] = Field(default_factory=list)
 
 class SynthesisQuestion(BaseQuestion):
     type: Literal["synthesis"]
     answer: str
+    required_keywords: List[str] = Field(default_factory=list)
+
+class TraceQuestion(BaseQuestion):
+    type: Literal["trace"]
+    content: str
+    answer: str
 
 Question = Union[
     MCQQuestion, TrueFalseQuestion, WritingQuestion, FillInQuestion,
-    MatchingQuestion, OrderQuestion, DebugQuestion, SynthesisQuestion
+    MatchingQuestion, OrderQuestion, DebugQuestion, SynthesisQuestion,
+    TraceQuestion
 ]
 
 class PracticeBatch(BaseModel):

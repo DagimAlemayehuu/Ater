@@ -283,6 +283,49 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
               )}
 
               {/* Fill In Blank */}
+              
+              {currentQ.type === 'order' && (
+              <div className="space-y-3">
+              {(userAnswers[currentQ.id] || currentQ.steps || []).map((step: string, i: number) => {
+                  const list = userAnswers[currentQ.id] || currentQ.steps || [];
+                  const moveUp = () => { if(i>0) { const n = [...list]; [n[i-1], n[i]] = [n[i], n[i-1]]; handleSelectAnswer(n); } };
+                  const moveDown = () => { if(i<list.length-1) { const n = [...list]; [n[i], n[i+1]] = [n[i+1], n[i]]; handleSelectAnswer(n); } };
+                  const isCorrect = isRevealed && step === (currentQ.answer || [])[i];
+                  return (
+                      <div key={i} className={`flex items-center gap-3 p-4 border rounded-lg ${isCorrect ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/40 hover:bg-muted/5'}`}>
+                          <div className="flex flex-col gap-1 border-r border-border/50 pr-3">
+                              <button disabled={isRevealed || i===0} onClick={moveUp} className="text-[10px] px-1 opacity-50 hover:opacity-100 hover:text-primary transition-colors">▲</button>
+                              <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-[10px] px-1 opacity-50 hover:opacity-100 hover:text-primary transition-colors">▼</button>
+                          </div>
+                          <div className="text-xs font-medium tracking-tight text-foreground/90 pl-1">{step}</div>
+                      </div>
+                  )
+              })}
+              </div>
+              )}
+
+              {currentQ.type === 'matching' && currentQ.pairs && (
+              <div className="space-y-4">
+              {currentQ.pairs.map((pair: any, i: number) => {
+                  const rights = currentQ.pairs.map((p: any) => p.right).sort();
+                  const selected = (userAnswers[currentQ.id] || {})[pair.left] || "";
+                  const isCorrect = isRevealed && selected === pair.right;
+                  return (
+                      <div key={i} className={`flex items-center gap-4 p-4 border rounded-lg ${isCorrect ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/40'}`}>
+                          <div className="flex-1 font-medium tracking-tight text-xs text-foreground/90">{pair.left}</div>
+                          <div className="flex-1">
+                              <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQ.id], [pair.left]: e.target.value})} className="w-full p-2.5 bg-background border border-border/50 rounded-md outline-none focus:border-foreground/50 text-xs font-medium text-foreground/80 transition-colors">
+                                  <option value="">Select match...</option>
+                                  {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
+                              </select>
+                          </div>
+                          {isRevealed && !isCorrect && <div className="text-[10px] uppercase tracking-widest text-primary font-bold w-1/3 break-words">{pair.right}</div>}
+                      </div>
+                  )
+              })}
+              </div>
+              )}
+
               {currentQ.type === 'fill_in' && (
                 <div className="p-5 bg-muted/5 border border-border/50 rounded-lg leading-[2] text-xs font-medium tracking-tight text-foreground/70 shadow-inner">
                   {renderFillInBlanks()}
@@ -290,13 +333,13 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
               )}
 
               {/* Writing / Scenario / Code / Debug / Synthesis */}
-              {(!currentQ.type || ['debug', 'writing', 'scenario', 'code', 'synthesis'].includes(currentQ.type)) && (
+              {(!currentQ.type || ['debug', 'writing', 'scenario', 'code', 'synthesis', 'trace'].includes(currentQ.type)) && (
               <div className="space-y-3">
                   {(currentQ.content || currentQ.codeSnippet) && (
                   <div className="p-4 bg-muted/5 border border-border/50 rounded-lg shadow-inner">
                       <MarkdownBlock 
                         content={
-                          ['debug', 'code'].includes(currentQ.type) && !(currentQ.content || currentQ.codeSnippet).includes('```') 
+                          ['debug', 'code', 'trace'].includes(currentQ.type) && !(currentQ.content || currentQ.codeSnippet).includes('```') 
                             ? `\`\`\`${currentQ.language || 'text'}\n${currentQ.content || currentQ.codeSnippet}\n\`\`\``
                             : (currentQ.content || currentQ.codeSnippet)
                         } 
@@ -347,7 +390,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                   </div>
                   
                   <div className="flex gap-3">
-                      {['fill_in', 'writing', 'scenario', 'code', 'debug', 'synthesis'].includes(currentQ.type || 'writing') ? (
+                      {['fill_in', 'writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQ.type || 'writing') ? (
                           <>
                               <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-10 rounded-lg transition-all border-destructive/20 text-destructive/60 hover:bg-destructive/5 hover:text-destructive">
                                   Wrong

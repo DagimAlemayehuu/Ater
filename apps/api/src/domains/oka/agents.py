@@ -4,43 +4,43 @@ import asyncio
 import hashlib
 from typing import Any, Dict, List
 from langchain_core.language_models.chat_models import BaseChatModel
-from .schemas import NoteContent, PartialPlan, ProbeEnrichment
+from .schemas import PartialPlan
 
 # ── DOMAIN MATRIX v26.1 (UPGRADED) ───────────────────────────────────────────
 DOMAIN_MATRIX = {
-    "CS-SOFTWARE":        {"persona":"Principal Software Engineer","h1":"Execution Logic & Data Flow","h2":"Edge Cases & Failure States","h3":"Implementation Mechanics","artifact":"Executable code block (use primary_language) + Mermaid flowchart of state changes","l1":"fill_in","l2":"true_false","l3":"debug"},
-    "CS-SYSTEMS":         {"persona":"Systems Architect","h1":"Protocol & Signal Topology","h2":"Bottlenecks & Partition Failures","h3":"Architecture Topology","artifact":"Mermaid sequence diagram with actors and async messages","l1":"mcq","l2":"scenario","l3":"debug"},
-    "CS-DB":              {"persona":"Database Administrator","h1":"Schema & Query Mechanics","h2":"ACID Violations & Scaling Limits","h3":"Entity-Relationship Model","artifact":"Mermaid erDiagram showing 1:N and M:N entity relationships","l1":"true_false","l2":"scenario","l3":"debug"},
-    "CS-AI":              {"persona":"Machine Learning Engineer","h1":"Forward Pass & Backpropagation","h2":"Overfitting & Dimensionality","h3":"Model Architecture","artifact":"Mermaid flowchart (LR) or Markdown advanced matrix table of hyperparameters","l1":"mcq","l2":"fill_in","l3":"scenario"},
-    "CS-TESTING":         {"persona":"QA Lead Engineer","h1":"Test Strategy & Coverage Analysis","h2":"Defect Taxonomy & Regression Risk","h3":"Test Case Matrix","artifact":"Advanced Markdown table: Test ID | Inputs | Expected | Actual | Status","l1":"true_false","l2":"scenario","l3":"debug"},
-    "CS-ARCH":            {"persona":"Principal Architect","h1":"Architectural Pattern & Component Interaction","h2":"Coupling Failures & Scalability Walls","h3":"Component Diagram","artifact":"Mermaid classDiagram or component stateDiagram-v2","l1":"mcq","l2":"scenario","l3":"writing"},
-    "CS-REQUIREMENTS":    {"persona":"Requirements Engineer","h1":"Requirement Elicitation & Specification","h2":"Ambiguity Failures & Scope Creep","h3":"Requirements Traceability Matrix","artifact":"Requirements traceability Markdown matrix","l1":"true_false","l2":"scenario","l3":"writing"},
-    "MATH-PURE":          {"persona":"Formal Logician","h1":"Derivation & Logical Trace","h2":"Theorem Constraints & Incompleteness","h3":"Formal Proof Trace","artifact":"Block LaTeX ($$) step-by-step formal mathematical derivation","l1":"mcq","l2":"fill_in","l3":"debug"},
-    "MATH-STAT":          {"persona":"Data Scientist","h1":"Statistical Modeling & Inference","h2":"Confounding Variables & Bias","h3":"Probability Distribution","artifact":"Markdown probability table AND block LaTeX ($$) equation","l1":"true_false","l2":"scenario","l3":"writing"},
-    "MATH-CRYPTO":        {"persona":"Cryptographer","h1":"Cryptographic Operations","h2":"Collision Vulnerabilities & Brute Force","h3":"Hash Sequence Trace","artifact":"Hash sequence data structure table","l1":"mcq","l2":"fill_in","l3":"scenario"},
-    "PHYSICS-KINEMATICS": {"persona":"Theoretical Physicist","h1":"Kinematic & Quantum Dynamics","h2":"Entropy & Boundary Limits","h3":"Physical Force Model","artifact":"Block LaTeX equations ($$) + ASCII free-body diagram","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "CHEMISTRY":          {"persona":"Chemist","h1":"Reaction Mechanisms & Stoichiometry","h2":"Equilibrium Shifts & Catalytic Decay","h3":"Molecular Pathway","artifact":"Mermaid graph TD of reaction pathway + Inline LaTeX ($)","l1":"mcq","l2":"scenario","l3":"debug"},
-    "BIOLOGY":            {"persona":"Biologist","h1":"Biochemical Pathways","h2":"Genetic Drift & Environmental Collapse","h3":"Metabolic Map","artifact":"Mermaid flowchart (TD) of metabolic pathway","l1":"true_false","l2":"scenario","l3":"writing"},
-    "ENG-MECH":           {"persona":"Mechanical Engineer","h1":"Kinematic Linkages & Load Transfer","h2":"Yield Strengths & Fatigue Limits","h3":"Load Tolerance Specs","artifact":"Advanced Markdown load-bearing tolerance matrix","l1":"fill_in","l2":"scenario","l3":"debug"},
-    "ENG-ELEC":           {"persona":"Circuit Designer","h1":"Circuit Analysis & Signal Flow","h2":"Thermal Throttling & Impedance Mismatch","h3":"Logic Gate Trace","artifact":"Boolean logic truth table (Markdown) + Inline LaTeX","l1":"true_false","l2":"scenario","l3":"debug"},
-    "MED-PHYSIO":         {"persona":"Attending Surgeon","h1":"Systemic Function & Homeostasis","h2":"Pathological Failure & Necrosis","h3":"Spatial Adjacency Model","artifact":"Spatial adjacency matrix table","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "MED-PHARMA":         {"persona":"Toxicologist","h1":"Pharmacokinetics & Mechanism of Action","h2":"Toxicity Thresholds & Contraindications","h3":"Pharmacokinetic Pathway","artifact":"Mermaid stateDiagram-v2 of PK pathway","l1":"mcq","l2":"scenario","l3":"debug"},
-    "ECON-MACRO":         {"persona":"Macroeconomist","h1":"Market Dynamics & Capital Flow","h2":"Market Failures & Externalities","h3":"Macro Flowchart","artifact":"Mermaid graph LR of supply-demand or macro flow","l1":"true_false","l2":"scenario","l3":"writing"},
-    "ECON-FINANCE":       {"persona":"Comptroller","h1":"Cash Flow Mechanics & Valuation","h2":"Liquidity Crunches & Solvency Risk","h3":"Financial Ledger","artifact":"Advanced Markdown T-account ledger table","l1":"true_false","l2":"scenario","l3":"debug"},
-    "BIZ-STRATEGY":       {"persona":"Corporate Strategist","h1":"Go-to-Market Execution & Supply Chain","h2":"Strategic Moat Vulnerabilities","h3":"Value Chain Framework","artifact":"Mermaid mindmap or SWOT matrix table","l1":"mcq","l2":"scenario","l3":"writing"},
-    "LAW-CASE":           {"persona":"Appellate Litigator","h1":"Ratio Decidendi (Legal Trace)","h2":"Appellate Reversals & Jurisdictional Limits","h3":"Precedent Analysis","artifact":"Advanced IRAC (Issue, Rule, Application, Conclusion) mapping table","l1":"mcq","l2":"scenario","l3":"writing"},
-    "LAW-CONTRACT":       {"persona":"Corporate Lawyer","h1":"Obligation Mechanics & Fulfillment","h2":"Breach Conditions & Liability Triggers","h3":"Condition-Result Model","artifact":"Condition-result dependency matrix table","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "HIST-CATALYST":      {"persona":"Historical Archivist","h1":"Chronological Catalysts & Execution","h2":"Multi-Generational Fallout","h3":"Causality Timeline","artifact":"Mermaid gantt chart with precise temporal annotations","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "PHILOSOPHY":         {"persona":"Philosopher","h1":"Dialectical Progression","h2":"Logical Fallacies & Existential Paradoxes","h3":"Dialectical Map","artifact":"Mermaid flowchart (TD) of dialectical reasoning","l1":"mcq","l2":"scenario","l3":"writing"},
-    "PSYCH-SOCIOLOGY":    {"persona":"Behavioral Researcher","h1":"Behavioral Triggers & Societal Shift","h2":"Cognitive Bias & Systemic Erosion","h3":"Cognitive Map","artifact":"Advanced Markdown matrix of cognitive biases","l1":"true_false","l2":"scenario","l3":"writing"},
-    "LANG-LINGUISTICS":   {"persona":"Grammarian","h1":"Morphological Transformation","h2":"Semantic Ambiguity & Exceptions","h3":"Syntactical Tree","artifact":"Mermaid graph TD of syntactical parsing tree","l1":"mcq","l2":"fill_in","l3":"writing"},
-    "LANG-LIT":           {"persona":"Literary Critic","h1":"Narrative Arc & Rhetorical Execution","h2":"Thematic Subversion & Unreliable Narrators","h3":"Motif Matrix","artifact":"Thematic motif correlation matrix (Markdown)","l1":"mcq","l2":"fill_in","l3":"writing"},
-    "ARTS-DESIGN":        {"persona":"Creative Director","h1":"Medium Mechanics & Composition","h2":"Perceptual Dissonance & Rule Breaking","h3":"Design Primitives","artifact":"Design system component matrix table","l1":"mcq","l2":"scenario","l3":"writing"},
-    "SKILLS-HARD":        {"persona":"Master Craftsman","h1":"Step-by-Step Execution Sequence","h2":"Troubleshooting & Critical Failure Points","h3":"Process Blueprint","artifact":"Mermaid flowchart of standard operating procedure","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "SKILLS-FITNESS":     {"persona":"Kinesiologist","h1":"Biomechanical Execution & Metabolism","h2":"Overtraining Vectors & Injury","h3":"Kinematic Trace","artifact":"Kinematic sequence/force transfer table","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "EDUCATION":          {"persona":"Pedagogical Expert","h1":"Learning Theory & Instructional Design","h2":"Cognitive Load & Knowledge Gaps","h3":"Curriculum Framework","artifact":"Mermaid graph TD of learning objective hierarchy","l1":"fill_in","l2":"scenario","l3":"writing"},
-    "RESEARCH-METHODS":   {"persona":"Research Methodologist","h1":"Research Design & Data Collection","h2":"Validity Threats & Confounds","h3":"Research Framework","artifact":"Advanced research design validity matrix","l1":"mcq","l2":"scenario","l3":"writing"},
-    "MATH-DISCRETE":      {"persona":"Discrete Mathematician","h1":"Formal Definition & Structural Trace","h2":"Boundary Cases & Counterexamples","h3":"Discrete Proof Trace","artifact":"Block LaTeX ($$) step-by-step discrete proof, recurrence unrolling table, or truth table","l1":"fill_in","l2":"true_false","l3":"debug"},
+    "CS-SOFTWARE":        {"persona":"Software Engineer","h1":"How it Works","h2":"Common Pitfalls","artifact":"Code Example","type":"Executable code block (under 20 lines)","l1":"fill_in","l2":"true_false","l3":"debug"},
+    "CS-SYSTEMS":         {"persona":"Systems Architect","h1":"System Flow","h2":"Where it Breaks","artifact":"Architecture Diagram","type":"Basic Mermaid flowchart (graph TD/LR)","l1":"mcq","l2":"scenario","l3":"debug"},
+    "CS-DB":              {"persona":"Database Admin","h1":"Query Logic","h2":"Data Integrity","artifact":"Database Schema","type":"SQL code block or Markdown Table","l1":"true_false","l2":"scenario","l3":"debug"},
+    "CS-AI":              {"persona":"Machine Learning Eng.","h1":"Model Mechanics","h2":"Overfitting & Bias","artifact":"Data Pipeline","type":"Basic Mermaid flowchart or Python code","l1":"mcq","l2":"fill_in","l3":"scenario"},
+    "CS-TESTING":         {"persona":"QA Engineer","h1":"Test Strategy","h2":"Edge Cases","artifact":"Test Scenario","type":"Code block (assertions) or Markdown Table","l1":"true_false","l2":"scenario","l3":"debug"},
+    "CS-ARCH":            {"persona":"Software Architect","h1":"Design Pattern","h2":"Trade-offs","artifact":"Component Diagram","type":"Basic Mermaid flowchart or Markdown Table","l1":"mcq","l2":"scenario","l3":"writing"},
+    "CS-REQUIREMENTS":    {"persona":"Product Manager","h1":"Goal Definition","h2":"Scope Creep","artifact":"Requirements Table","type":"Markdown Table (max 3 columns)","l1":"true_false","l2":"scenario","l3":"writing"},
+    "MATH-PURE":          {"persona":"Mathematician","h1":"Formal Definition","h2":"Proof Strategy","artifact":"Mathematical Proof","type":"Block LaTeX ($$)","l1":"mcq","l2":"fill_in","l3":"debug"},
+    "MATH-STAT":          {"persona":"Statistician","h1":"Statistical Concept","h2":"Common Biases","artifact":"Data Distribution","type":"Block LaTeX ($$) or Markdown Table","l1":"true_false","l2":"scenario","l3":"writing"},
+    "MATH-CRYPTO":        {"persona":"Cryptographer","h1":"Encryption Logic","h2":"Vulnerabilities","artifact":"Cryptographic Flow","type":"Markdown Table or Code snippet","l1":"mcq","l2":"fill_in","l3":"scenario"},
+    "MATH-DISCRETE":      {"persona":"Logic Professor","h1":"Discrete Definition","h2":"Base Cases","artifact":"Logical Trace","type":"Truth Table (Markdown) or block LaTeX","l1":"fill_in","l2":"true_false","l3":"debug"},
+    "PHYSICS-KINEMATICS": {"persona":"Physicist","h1":"Physical Law","h2":"Boundaries & Limits","artifact":"Formula & Diagram","type":"Block LaTeX ($$) and ASCII Diagram","l1":"fill_in","l2":"scenario","l3":"writing"},
+    "CHEMISTRY":          {"persona":"Chemist","h1":"Reaction Mechanism","h2":"Equilibrium","artifact":"Reaction Pathway","type":"Basic Mermaid flowchart or Block LaTeX","l1":"mcq","l2":"scenario","l3":"debug"},
+    "BIOLOGY":            {"persona":"Biologist","h1":"Biological Process","h2":"System Failures","artifact":"Pathway Diagram","type":"Basic Mermaid flowchart (graph TD)","l1":"true_false","l2":"scenario","l3":"writing"},
+    "ENG-MECH":           {"persona":"Mechanical Engineer","h1":"Mechanical Principle","h2":"Load & Fatigue","artifact":"Force Diagram","type":"ASCII Diagram or Markdown Table","l1":"fill_in","l2":"scenario","l3":"debug"},
+    "ENG-ELEC":           {"persona":"Circuit Designer","h1":"Circuit Logic","h2":"Resistance & Heat","artifact":"Circuit Schematic","type":"Truth Table (Markdown) or block LaTeX","l1":"true_false","l2":"scenario","l3":"debug"},
+    "MED-PHYSIO":         {"persona":"Surgeon","h1":"Bodily Function","h2":"Disease & Failure","artifact":"System Map","type":"Markdown Adjacency Matrix Table","l1":"fill_in","l2":"scenario","l3":"writing"},
+    "MED-PHARMA":         {"persona":"Toxicologist","h1":"Drug Mechanism","h2":"Side Effects","artifact":"Interaction Pathway","type":"Markdown Table or Basic Mermaid flowchart","l1":"mcq","l2":"scenario","l3":"debug"},
+    "ECON-MACRO":         {"persona":"Macroeconomist","h1":"Economic Theory","h2":"Market Failures","artifact":"Economic Model","type":"Basic Mermaid flowchart (graph LR)","l1":"true_false","l2":"scenario","l3":"writing"},
+    "ECON-FINANCE":       {"persona":"Accountant","h1":"Financial Concept","h2":"Financial Risk","artifact":"Ledger Example","type":"Markdown T-Account/Ledger Table","l1":"true_false","l2":"scenario","l3":"debug"},
+    "BIZ-STRATEGY":       {"persona":"Business Strategist","h1":"Strategic Concept","h2":"Weaknesses","artifact":"Strategy Matrix","type":"Markdown Table (SWOT)","l1":"mcq","l2":"scenario","l3":"writing"},
+    "LAW-CASE":           {"persona":"Lawyer","h1":"Legal Principle","h2":"Exceptions & Limits","artifact":"Case Application","type":"IRAC Framework Markdown Table","l1":"mcq","l2":"scenario","l3":"writing"},
+    "LAW-CONTRACT":       {"persona":"Corporate Lawyer","h1":"Contract Rule","h2":"Breach Conditions","artifact":"Liability Map","type":"Markdown Dependency Table","l1":"fill_in","l2":"scenario","l3":"writing"},
+    "HIST-CATALYST":      {"persona":"Historian","h1":"Historical Event","h2":"Long-term Impact","artifact":"Timeline","type":"Basic Mermaid flowchart (graph TD) or Table","l1":"fill_in","l2":"scenario","l3":"writing"},
+    "PHILOSOPHY":         {"persona":"Philosopher","h1":"Core Argument","h2":"Counter-Arguments","artifact":"Logical Flow","type":"ASCII Logic Tree or Block quote","l1":"mcq","l2":"scenario","l3":"writing"},
+    "PSYCH-SOCIOLOGY":    {"persona":"Psychologist","h1":"Behavioral Concept","h2":"Cognitive Bias","artifact":"Behavior Map","type":"Markdown Matrix Table","l1":"true_false","l2":"scenario","l3":"writing"},
+    "LANG-LINGUISTICS":   {"persona":"Grammarian","h1":"Grammar Rule","h2":"Exceptions","artifact":"Syntax Tree","type":"ASCII Syntax Tree","l1":"mcq","l2":"fill_in","l3":"writing"},
+    "LANG-LIT":           {"persona":"Literary Critic","h1":"Literary Device","h2":"Thematic Impact","artifact":"Textual Analysis","type":"Markdown Quote/Motif Table","l1":"mcq","l2":"fill_in","l3":"writing"},
+    "ARTS-DESIGN":        {"persona":"Designer","h1":"Design Principle","h2":"Breaking the Rule","artifact":"Composition Matrix","type":"Markdown Table","l1":"mcq","l2":"scenario","l3":"writing"},
+    "SKILLS-HARD":        {"persona":"Master Craftsman","h1":"Core Technique","h2":"Troubleshooting","artifact":"Execution Steps","type":"Basic Mermaid flowchart or Numbered list","l1":"fill_in","l2":"scenario","l3":"writing"},
+    "SKILLS-FITNESS":     {"persona":"Kinesiologist","h1":"Biomechanics","h2":"Injury Prevention","artifact":"Movement Trace","type":"Markdown Kinematic Table","l1":"fill_in","l2":"scenario","l3":"writing"},
+    "EDUCATION":          {"persona":"Teacher","h1":"Learning Theory","h2":"Knowledge Gaps","artifact":"Curriculum Flow","type":"Markdown Table","l1":"fill_in","l2":"scenario","l3":"writing"},
+    "RESEARCH-METHODS":   {"persona":"Researcher","h1":"Research Method","h2":"Validity Threats","artifact":"Methodology Setup","type":"Markdown Research Matrix","l1":"mcq","l2":"scenario","l3":"writing"},
 }
 
 VALID_MODES = set(DOMAIN_MATRIX.keys())
@@ -218,49 +218,40 @@ class TheoryAgent:
 
     async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str) -> str:
         title_readable = note_schema.title.replace("_", " ")
-        mode = getattr(note_schema, "mode", "")
-        prohibition = DOMAIN_PROHIBITIONS.get(mode, "")
-        prohibition_block = f"\nHARD PROHIBITION ({mode}): {prohibition}\n" if prohibition else ""
-        sys_prompt = (
-            f"You are {self.domain['persona']}.\n"
-            "Write EXACTLY 3 sections. Nothing else.\n"
-            f"{prohibition_block}\n"
-            "# 1. Mental Model\n"
-            "Write 2-3 sentences. The analogy MUST map at least 2 structural components of the concept to 2 components of the analogy. DO NOT just say 'X is like Y' — explain HOW the mechanism matches.\n"
-            "CRITICAL: Do NOT use generic analogies like 'boxes', 'containers', 'blueprints', 'recipes', 'kitchens', 'keys', or 'doors'.\n\n"
-            f"# 2. {self.domain['h1']}\n"
-            "Write EXACTLY 5 sentences of continuous technical prose. NO BULLET POINTS.\n"
-            f"MANDATORY: Embed 4-6 wikilinks from this EXACT list, and NO OTHER CONCEPTS: {all_concepts}\n"
-            "CRITICAL: Do NOT invent or hallucinate links. If a concept is not in the list, do NOT put brackets around it.\n"
-            "Format: [[Exact_Match_From_List]] (zero spaces inside brackets).\n\n"
-            f"# 3. {self.domain['h2']}\n"
-            "Write EXACTLY 4 sentences of continuous technical prose. NO BULLET POINTS.\n"
-            "Cover boundary conditions, failure states, what breaks and why.\n"
-            f"{GLOBAL_FORMATTING_RULES}\n\n"
-            f"Concept: {title_readable}\n"
-            f"Source context: {source_text[:1500]}"
-        )
+        sys_prompt = f"""You are a helpful {self.domain['persona']} tutor.
+
+Write EXACTLY 2 sections. Keep language simple, direct, and conversational.
+
+# 1. Mental Model
+Explain this concept to a 12-year-old using a simple, everyday situation. Do not use technical jargon. Just make it intuitively click (2-3 sentences max).
+
+# 2. {self.domain['h1']}
+Provide the formal definition of this concept in exactly 2-3 sentences. No fluff. Get straight to the point.
+MANDATORY: Embed 3-5 wikilinks from this list ONLY, and no other concepts: {all_concepts}
+Format: [[Exact_Match_From_List]] (zero spaces inside brackets).
+
+Concept: {title_readable}
+Source context: {source_text[:1500]}"""
         res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the theory sections.")])
         return res.content.strip()
 
     async def retry(self, note_schema, source_text: str, primary_language: str, all_concepts: str, diagnosis: str) -> str:
         title_readable = note_schema.title.replace("_", " ")
-        sys_prompt = (
-            f"You are {self.domain['persona']}.\n"
-            f"PREVIOUS ATTEMPT FAILED. FIX INSTRUCTION: {diagnosis}\n\n"
-            "Write EXACTLY 3 sections. Nothing else. Ensure zero bullet points in sections 2 and 3.\n\n"
-            "# 1. Mental Model\n"
-            "Write 2-3 sentences. Vivid, specific professional analogy (No kitchens or boxes).\n\n"
-            f"# 2. {self.domain['h1']}\n"
-            "Write EXACTLY 5 sentences of continuous technical prose.\n"
-            f"MANDATORY: embed 4-6 [[Wikilinks]] from this STRICT list ONLY: {all_concepts}\n"
-            "Format: [[Exact_Match_From_List]]\n\n"
-            f"# 3. {self.domain['h2']}\n"
-            "Write EXACTLY 4 sentences. Cover boundary conditions.\n"
-            "MANDATORY: embed 3-5 [[Wikilinks]] from the list ONLY.\n\n"
-            f"Concept: {title_readable}\n"
-            f"Source context: {source_text[:1500]}"
-        )
+        sys_prompt = f"""You are a helpful {self.domain['persona']} tutor.
+
+PREVIOUS ATTEMPT FAILED. FIX INSTRUCTION: {diagnosis}
+
+Write EXACTLY 2 sections. Keep it simple and direct.
+
+# 1. Mental Model
+Explain to a 12-year-old using a simple everyday analogy.
+
+# 2. {self.domain['h1']}
+Provide the formal definition in 2-3 sentences.
+MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
+
+Concept: {title_readable}
+Source context: {source_text[:1500]}"""
         res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the corrected theory sections.")])
         return res.content.strip()
 
@@ -271,149 +262,132 @@ class PractitionerAgent:
 
     async def generate(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> str:
         title_readable = note_title.replace("_", " ")
-        prohibition = DOMAIN_PROHIBITIONS.get(mode, "")
-        prohibition_block = f"\nHARD PROHIBITION ({mode}): {prohibition}\n" if prohibition else ""
-        use_pro_domain = mode not in WALKTHROUGH_PURE
-        if use_pro_domain:
-            pro_domain = get_professional_domain(note_title)
-            walkthrough_instr = (
-                f"CRITICAL: Situate the walkthrough in this advanced professional domain: **{pro_domain}**.\n"
-                "Do NOT use trivial examples like 'x=5'. However, for fundamental syntax or basic concepts, seamlessly scale the complexity so the scenario doesn't feel overly contrived. Each step must show a concrete state change."
-            )
-        else:
-            walkthrough_instr = (
-                f"CRITICAL: Write a CLEAN STEP-BY-STEP {mode} DERIVATION. DO NOT wrap it in a business or logistics scenario.\n"
-                "Show the raw mathematical or logical work. Each step must show a concrete transformation.\n"
-                f"{prohibition}"
-            )
-        sys_prompt = (
-            f"You are {self.domain['persona']}.\n"
-            "Write EXACTLY 2 sections. Nothing else.\n"
-            f"{prohibition_block}\n"
-            f"# 4. {self.domain['h3']}\n"
-            f"Create the following SPECIFIC artifact: **{self.domain['artifact']}**.\n"
-            "If code is required, use proper markdown fences with language tag. If Mermaid, use ```mermaid.\n"
-            "PEDAGOGICAL CONSTRAINT: Match complexity to the concept level. Basic concepts must NOT use OOP/classes.\n"
-            "Below the artifact, write 2 sentences explaining what each part represents and how to read it.\n\n"
-            "## 5. Walkthrough\n"
-            "Write EXACTLY 6 numbered steps. No more. No fewer.\n"
-            f"{walkthrough_instr}\n\n"
-            f"Concept: {title_readable}\n"
-            f"Theory context: {theory_body[:600]}"
-        )
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the artifact and walkthrough.")])
+        sys_prompt = f"""You are a helpful {self.domain['persona']} tutor.
+
+Write EXACTLY 3 sections. Keep it minimal and highly focused.
+
+# 3. {self.domain['artifact']}
+Provide EXACTLY ONE clean, correct artifact of type: **{self.domain['type']}**.
+If code, keep it under 20 lines. If a diagram, use standard formats or basic Mermaid (graph TD/LR). Do not invent complex syntax. Do NOT write any explanatory text below it.
+
+## 4. Walkthrough
+Write 3-4 bullet points explaining exactly how the artifact works step-by-step. Use standard, recognizable examples. Do not invent complex business scenarios.
+
+## 5. {self.domain['h2']}
+Write 2-3 sentences explaining where this concept fails, common pitfalls, or edge cases to watch out for.
+
+Concept: {title_readable}
+Theory context: {theory_body[:600]}"""
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the artifact, walkthrough, and pitfalls.")])
         return res.content.strip()
 
     async def retry(self, note_title: str, theory_body: str, primary_language: str, diagnosis: str) -> str:
         title_readable = note_title.replace("_", " ")
-        pro_domain = get_professional_domain(note_title)
-        sys_prompt = (
-            f"You are {self.domain['persona']}.\n"
-            f"PREVIOUS ATTEMPT FAILED. FIX: {diagnosis}\n\n"
-            "Write EXACTLY 2 sections.\n\n"
-            f"# 4. {self.domain['h3']}\n"
-            f"Create: **{self.domain['artifact']}**. Use correct markdown fences.\n"
-            "CONSTRAINT: Match code complexity to the concept! No classes/OOP for basic concepts.\n"
-            "Below the artifact, write 2 sentences explaining it.\n\n"
-            "## 5. Walkthrough\n"
-            f"Write EXACTLY 6 numbered steps set in **{pro_domain}**. Show concrete state changes without overcomplicating the syntax.\n\n"
-            f"Concept: {title_readable}\n"
-            f"Theory context: {theory_body[:600]}"
-        )
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the corrected artifact and walkthrough.")])
+        sys_prompt = f"""You are a helpful {self.domain['persona']} tutor.
+
+PREVIOUS ATTEMPT FAILED. FIX: {diagnosis}
+
+Write EXACTLY 3 sections.
+
+# 3. {self.domain['artifact']}
+Create ONE artifact of type: **{self.domain['type']}**.
+
+## 4. Walkthrough
+Write 3-4 bullet points explaining it.
+
+## 5. {self.domain['h2']}
+Write 2-3 sentences explaining pitfalls or edge cases.
+
+Concept: {title_readable}"""
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the corrected artifact, walkthrough, and pitfalls.")])
         return res.content.strip()
 
-class ExaminerAgent:
-    def __init__(self, llm: BaseChatModel, domain: dict):
+class QuestionAgent:
+    def __init__(self, llm, q_type: str):
         self.llm = llm
-        self.domain = domain
+        self.q_type = q_type.lower().replace("_", "")
+        # Normalize types
+        mapping = {
+            "multiplechoice": "mcq", "mcq": "mcq",
+            "truefalse": "true_false", "true_false": "true_false",
+            "fillin": "fill_in", "fill_in": "fill_in",
+            "writing": "writing", "shortanswer": "writing",
+            "matching": "matching",
+            "order": "order", "sequencing": "order",
+            "debug": "debug", "diagnostic": "debug",
+            "synthesis": "synthesis", "scenario": "synthesis",
+            "trace": "trace"
+        }
+        self.canonical_type = mapping.get(self.q_type, "writing")
 
-    async def generate(self, note_title: str, theory_summary: str, primary_language: str) -> str:
+    async def generate(self, note_title: str, context: str, difficulty: str = "L1") -> dict:
         title_readable = note_title.replace("_", " ")
-        mode_h1 = self.domain.get("h1", "")
-        is_math_mode = mode_h1 in (
-            "Derivation & Logical Trace", "Formal Definition & Structural Trace",
-            "Statistical Modeling & Inference", "Kinematic & Quantum Dynamics",
-            "Cryptographic Operations", "Reaction Mechanisms & Stoichiometry",
-            "Circuit Analysis & Signal Flow"
-        )
-        is_code_mode = mode_h1 in (
-            "Execution Logic & Data Flow", "Protocol & Signal Topology",
-            "Schema & Query Mechanics", "Forward Pass & Backpropagation",
-            "Test Strategy & Coverage Analysis", "Architectural Pattern & Component Interaction"
-        )
-        is_writing_mode = self.domain.get("l3") == "writing"
+        
+        prompts = {
+            "mcq": "Find a highly technical fact. Generate 1 correct answer and 3 highly plausible distractors. The explanation must define *why* the distractors are wrong and *why* the answer is correct.",
+            "true_false": "Generate a definitive True/False statement about a core mechanism. The explanation must prove why.",
+            "fill_in": "Take a core definitional sentence. Remove the absolute most critical technical term and replace it with `[[blank]]`. Every [[blank]] must represent EXACTLY ONE WORD. Do not blank out common English words.",
+            "writing": "Ask the user to explain a concept or mechanism deeply. The answer must be a model 3-5 sentence response.",
+            "matching": "Extract exactly 4 technical terms and their definitions. Shuffle them. Output the correct pairs.",
+            "order": "Identify a chronological process, algorithm step, or lifecycle. Break it into 4-5 distinct steps. Output the randomized steps and the correct order.",
+            "debug": "Act as a Senior Code Reviewer. Provide a short, buggy code snippet, SQL query, or math formula with ONE common beginner mistake. Ask the user to find it. The 'required_keywords' MUST contain exactly the string syntax needed to fix it (e.g., ['=='] or ['GROUP BY']).",
+            "trace": "Provide a perfectly valid code snippet or math formula. Ask the user 'What is the exact output of this execution?'.",
+            "synthesis": "Invent a complex real-world edge-case scenario combining multiple concepts to solve a problem. The answer should be a grading rubric."
+        }
+        
+        schemas = {
+            "mcq": '{"id":"q1","type":"mcq","difficulty":"' + difficulty + '","question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"answer":"B","explanation":"..."}',
+            "true_false": '{"id":"q1","type":"true_false","difficulty":"' + difficulty + '","question":"...","answer":false,"explanation":"..."}',
+            "fill_in": '{"id":"q1","type":"fill_in","difficulty":"' + difficulty + '","question":"Fill in the blank.","textWithBlanks":"The [[blank]] is...","answer":["exactword"],"explanation":"..."}',
+            "writing": '{"id":"q1","type":"writing","difficulty":"' + difficulty + '","question":"Explain...","answer":"...","explanation":"..."}',
+            "matching": '{"id":"q1","type":"matching","difficulty":"' + difficulty + '","question":"Match terms.","pairs":[{"left":"...","right":"..."}]}',
+            "order": '{"id":"q1","type":"order","difficulty":"' + difficulty + '","question":"Order steps.","steps":["step2","step3","step1"],"answer":["step1","step2","step3"]}',
+            "debug": '{"id":"q1","type":"debug","difficulty":"' + difficulty + '","question":"Find the bug.","content":"...","answer":"...","required_keywords":["fix_syntax"],"explanation":"..."}',
+            "trace": '{"id":"q1","type":"trace","difficulty":"' + difficulty + '","question":"What is the exact output?","content":"...","answer":"...","explanation":"..."}',
+            "synthesis": '{"id":"q1","type":"synthesis","difficulty":"' + difficulty + '","question":"Complex scenario...","answer":"...","explanation":"..."}'
+        }
+        
+        prompt_logic = prompts.get(self.canonical_type, prompts["writing"])
+        json_schema = schemas.get(self.canonical_type, schemas["writing"])
+        
+        sys_prompt = f"""You are the Dedicated '{self.canonical_type.upper()}' Question Agent.
+{prompt_logic}
 
-        if is_math_mode:
-            l3_rule = (
-                "- Q3 debug: 'content' field = a FLAWED MATHEMATICAL STEP using block LaTeX — e.g., wrong sign in substitution, incorrect exponent, missing case in proof. "
-                "The 'answer' field names the exact error and corrects it. NEVER write 'no error is present'. VERIFY the flawed step is actually wrong."
-            )
-        elif is_code_mode:
-            db_rule = " For Database concepts, the buggy code MUST be SQL or flawed schema logic—NEVER JavaScript, Python, or generic languages." if mode_h1 == "Schema & Query Mechanics" else ""
-            l3_rule = (
-                "- Q3 debug: 'content' field = ONLY the buggy code snippet — no hints, no comments revealing the bug. "
-                "Bug must be NON-TRIVIAL: logic inversion, wrong operator, race condition, type coercion. NOT a syntax error or missing semicolon. "
-                f"The 'answer' names the exact bug and fix. NEVER write 'no error is present'.{db_rule}"
-            )
-        elif is_writing_mode:
-            l3_rule = (
-                "- Q3 writing: 'question' asks the student to construct an explanation, compare two concepts, or apply the concept to a novel scenario. "
-                "The 'answer' field contains a model answer (3-5 sentences)."
-            )
-        else:
-            l3_rule = (
-                "- Q3: Present a challenging scenario where the student must apply this concept to an edge case or failure condition. "
-                "The 'answer' must be definitive and correct."
-            )
+MANDATORY SCHEMA:
+{json_schema}
 
-        sys_prompt = (
-            "Output a VALID JSON array of exactly 3 quiz questions. No markdown fences. Just the raw array.\n\n"
-            "MANDATORY SCHEMA — copy these field names EXACTLY for each type:\n"
-            '  mcq:      {"id":"q1","type":"mcq","difficulty":"L1","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"B","explanation":"..."}\n'
-            '  fill_in:  {"id":"q1","type":"fill_in","difficulty":"L1","question":"...","textWithBlanks":"The [[Blank1]] is...","answer":["word"],"explanation":"..."}\n'
-            '  true_false:{"id":"q2","type":"true_false","difficulty":"L2","question":"...","answer":false,"explanation":"..."}\n'
-            '  debug:    {"id":"q3","type":"debug","difficulty":"L3","question":"Find the error.","content":"...only buggy code or flawed step...","answer":"The bug is...","explanation":"..."}\n'
-            '  scenario: {"id":"q2","type":"scenario","difficulty":"L2","question":"Given that... what happens?","answer":"...","explanation":"..."}\n'
-            '  writing:  {"id":"q3","type":"writing","difficulty":"L3","question":"Explain how...","answer":"...","explanation":"..."}\n\n'
-            f"Generate 3 questions using EXACTLY these types:\n"
-            f"Q1: type=\"{self.domain['l1']}\", difficulty=\"L1\" — Tests CORE CONCEPT DEFINITION only. Do NOT quiz the mental model analogy.\n"
-            f"Q2: type=\"{self.domain['l2']}\", difficulty=\"L2\" — Tests application to a non-obvious edge case.\n"
-            f"Q3: type=\"{self.domain['l3']}\", difficulty=\"L3\" — Hardest.\n"
-            f"{l3_rule}\n\n"
-            "CRITICAL — THE 'answer' FIELD IS REQUIRED IN EVERY QUESTION. NEVER OMIT IT:\n"
-            "  mcq → answer must be the exact letter ('A', 'B', 'C', or 'D') OR the exact option text.\n"
-            "  fill_in → answer must be a JSON array of strings, e.g. [\"word\"].\n"
-            "  true_false → answer must be bare boolean: true or false. NO QUOTES.\n"
-            "  debug/scenario/writing → answer must be a non-empty string.\n\n"
-            "JSON ESCAPING: double-escape LaTeX (\\\\frac not \\frac). No unescaped double-quotes inside string values.\n\n"
-            f"Concept: {title_readable}\n"
-            f"Key facts: {theory_summary[:500]}"
-        )
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Output the 3-question JSON array.")])
-        return res.content.strip()
+STRICT RULES:
+1. Output ONLY a valid JSON object matching the schema exactly. No markdown fences. No preamble.
+2. The 'answer' field is MANDATORY. Do not omit it.
+3. For 'explanation', explain the underlying mechanism deeply.
+4. EXCLUSIVELY use the provided Context. Do not hallucinate outside features.
+5. ANTI-REDUNDANCY: You MUST use the SEED value at the top of the Context to randomly pick an obscure or minor detail to test. DO NOT pick the most obvious concept. A different SEED means you MUST pick a completely different fact than usual.
 
-    async def retry(self, note_title: str, theory_summary: str, primary_language: str, diagnosis: str) -> str:
-        title_readable = note_title.replace("_", " ")
-        mode_h1 = self.domain.get("h1", "")
-        db_rule = " For Database concepts, ONLY use SQL or relational logic—NEVER JavaScript." if mode_h1 == "Schema & Query Mechanics" else ""
-        sys_prompt = (
-            "PREVIOUS JSON FAILED. Output a VALID JSON array of exactly 3 quiz questions. No fences. Just the array.\n"
-            f"FIX INSTRUCTION: {diagnosis}\n\n"
-            f"Q1: type=\"{self.domain['l1']}\" — MUST have 'answer' field.\n"
-            f"Q2: type=\"{self.domain['l2']}\" — MUST have 'answer' field.\n"
-            f"Q3: type=\"{self.domain['l3']}\" — MUST have 'answer' field.\n\n"
-            "SCHEMA REMINDERS (the 'answer' field is mandatory in ALL questions):\n"
-            "  mcq → needs 'options' (4-item array) AND 'answer' (letter like 'B').\n"
-            "  fill_in → needs 'textWithBlanks' AND 'answer' (list of strings, e.g. ['word']).\n"
-            "  true_false → 'answer' is bare boolean true or false. NO QUOTES.\n"
-            f"  debug/scenario/writing → 'answer' is a non-empty string.{db_rule}\n"
-            "Escape all LaTeX with double backslashes. Do not quiz the mental model analogy.\n\n"
-            f"Concept: {title_readable}\n"
-            f"Key facts: {theory_summary[:500]}"
-        )
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Output the corrected JSON quiz.")])
-        return res.content.strip()
+Concept: {title_readable}
+Context: {context[:3000]}
+"""
+        
+        import asyncio
+        max_retries = 4
+        for attempt in range(max_retries):
+            try:
+                res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Output the JSON object.")])
+                content = res.content.strip()
+                q_data = ArchitectAgent._parse_json(content)
+                q_data["type"] = self.canonical_type
+                q_data["difficulty"] = difficulty
+                return q_data
+            except Exception as e:
+                err_msg = str(e).lower()
+                if "429" in err_msg or "rate limit" in err_msg:
+                    if attempt == max_retries - 1:
+                        raise e
+                    # Backoff
+                    await asyncio.sleep(2.0 * (2 ** attempt))
+                else:
+                    print(f"[QuestionAgent] Parse failed for {self.canonical_type} (attempt {attempt}): {e}")
+                    if attempt == max_retries - 1:
+                        return {"id": "q1", "type": self.canonical_type, "difficulty": difficulty, "question": "Error generating question.", "answer": "N/A"}
 
 class CriticAgent:
     def __init__(self, llm: BaseChatModel):
@@ -435,7 +409,7 @@ class CriticAgent:
         try:
             data = ArchitectAgent._parse_json(res.content)
             return data.get("fix_instruction", "Follow instructions carefully.")
-        except:
+        except Exception:
             return "Follow instructions carefully and fix the previous errors."
 
 class HubAgent:
@@ -468,27 +442,21 @@ class VerifierAgent:
         self.llm = llm
 
     async def verify(self, note_title: str, mode: str, note_content: str, source_context: str) -> dict:
-        sys_prompt = (
-            "You are a rigorous academic quality auditor. Evaluate this atomic study note.\n"
-            "Return ONLY a valid JSON object — no markdown fences, no commentary.\n\n"
-            "Check ALL 5 criteria and report true/false for each:\n"
-            f"1. domain_lock: Does section 4 (artifact) use the correct technical framework for mode='{mode}'? "
-            "(MATH-PURE/MATH-DISCRETE must use discrete integer sequences, NEVER ODEs/integrals/dy/dx. CS must use code. ENG must use engineering notation.)\n"
-            "2. quiz_topicality: Do ALL 3 quiz questions specifically test the concept named in the note title? "
-            "(Must not test the mental model analogy, must not be generic algebra unrelated to the concept.)\n"
-            "3. debug_validity: If a debug or flawed-step question exists, does 'content' ACTUALLY contain an error? "
-            "('No error is present' as the answer = FAIL. Content must be demonstrably wrong.)\n"
-            "4. arithmetic_correct: Are ALL equations and computations in sections 4 and 5 arithmetically correct? "
-            "(Check every = sign. A single wrong calculation = FAIL.)\n"
-            "5. mental_model_maps: Does the mental model in section 1 map at least 2 structural components "
-            "of the concept to 2 components of the analogy (not just assert 'X is like Y')?\n\n"
-            "Output format — use EXACTLY this structure:\n"
-            "{\"domain_lock\":true,\"quiz_topicality\":true,\"debug_validity\":true,"
-            "\"arithmetic_correct\":true,\"mental_model_maps\":true,"
-            "\"failures\":[{\"check\":\"domain_lock\",\"issue\":\"exact description\",\"fix_instruction\":\"exact fix\"}]}\n\n"
-            "failures is an empty array [] if all checks pass.\n"
-            f"Source context (what the note should teach): {source_context[:400]}"
-        )
+        sys_prompt = f"""You are a rigorous academic quality auditor. Evaluate this atomic study note.
+Return ONLY a valid JSON object — no markdown fences, no commentary.
+
+Check ALL 5 criteria and report true/false for each:
+1. domain_lock: Does section 3 (artifact) use the correct technical framework for mode='{mode}'? (MATH-PURE/MATH-DISCRETE must use discrete integer sequences, NEVER ODEs/integrals/dy/dx. CS must use code. ENG must use engineering notation.)
+2. quiz_topicality: Do ALL 3 quiz questions specifically test the concept named in the note title? (Must not test the mental model analogy, must not be generic algebra unrelated to the concept.)
+3. debug_validity: If a debug or flawed-step question exists, does 'content' ACTUALLY contain an error? ('No error is present' as the answer = FAIL. Content must be demonstrably wrong.)
+4. arithmetic_correct: Are ALL equations and computations in sections 3 and 4 arithmetically correct? (Check every = sign. A single wrong calculation = FAIL.)
+5. mental_model_maps: Is the mental model in section 1 simple enough for a 12-year-old, avoiding dense technical jargon?
+
+Output format — use EXACTLY this structure:
+{{"domain_lock\":true,\"quiz_topicality\":true,\"debug_validity\":true,\"arithmetic_correct\":true,\"mental_model_maps\":true,\"failures\":[{{\"check\":\"domain_lock\",\"issue\":\"exact description\",\"fix_instruction\":\"exact fix\"}}]}}
+
+failures is an empty array [] if all checks pass.
+Source context (what the note should teach): {source_context[:400]}"""
         user_msg = f"Note title: {note_title}\nMode: {mode}\n\nContent:\n{note_content[:3000]}"
         try:
             res = await self.llm.ainvoke([("system", sys_prompt), ("human", user_msg)])
@@ -512,21 +480,22 @@ class QuizAuditorAgent:
 
     async def audit(self, note_title: str, quiz_json_str: str, theory_summary: str) -> dict:
         title_readable = note_title.replace("_", " ")
-        sys_prompt = (
-            "You are a quiz quality auditor. Check these 3 quiz questions.\n"
-            "Return ONLY a valid JSON object.\n\n"
-            f"The note's concept is: '{title_readable}'\n"
-            "For each question check:\n"
-            f"- Is the question DIRECTLY about '{title_readable}'? (Not a generic math fact, not the analogy)\n"
-            "- If type='debug': does 'content' actually contain a wrong step? (Answer='no error'=FAIL)\n"
-            "- Is the stated 'answer' definitively correct for the question asked?\n"
-            "- For fill_in: does 'textWithBlanks' use [[Blank1]] format (NOT wikilink names as blanks)?\n\n"
-            "Output:\n"
-            "{\"passed\":true,\"issues\":[],\"fix_instruction\":\"\"}\n"
-            "OR if problems:\n"
-            "{\"passed\":false,\"issues\":[\"Q1: ...\",\"Q3: ...\"],\"fix_instruction\":\"exact instruction\"}\n\n"
-            f"Key facts about '{title_readable}': {theory_summary[:400]}"
-        )
+        sys_prompt = f"""You are a quiz quality auditor. Check these 3 quiz questions.
+Return ONLY a valid JSON object.
+
+The note's concept is: '{title_readable}'
+For each question check:
+- Is the question DIRECTLY about '{title_readable}'? (Not a generic math fact, not the analogy)
+- If type='debug': does 'content' actually contain a wrong step? (Answer='no error'=FAIL)
+- Is the stated 'answer' definitively correct for the question asked?
+- For fill_in: does 'textWithBlanks' use [[Blank1]] format (NOT wikilink names as blanks)?
+
+Output:
+{{"passed":true,"issues":[],"fix_instruction":""}}
+OR if problems:
+{{"passed":false,"issues":["Q1: ...","Q3: ..."],"fix_instruction":"exact instruction"}}
+
+Key facts about '{title_readable}': {theory_summary[:400]}"""
         user_msg = f"Quiz JSON:\n{quiz_json_str[:2000]}"
         try:
             res = await self.llm.ainvoke([("system", sys_prompt), ("human", user_msg)])

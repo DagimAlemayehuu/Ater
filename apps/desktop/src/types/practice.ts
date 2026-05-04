@@ -42,6 +42,7 @@ export type QuestionType =
   | "order"
   | "debug"
   | "synthesis"
+  | "trace"
   | "scenario"
   | "code"
   | "find_error";

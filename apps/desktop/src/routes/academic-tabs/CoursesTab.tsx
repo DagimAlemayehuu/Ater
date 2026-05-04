@@ -2,7 +2,7 @@ import React, {useState, useMemo, useEffect} from 'react'
 import {Search, ChevronRight, Trash2, Check, BookOpen, Hash, GraduationCap, Plus} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {format, parseISO, differenceInDays, startOfDay} from 'date-fns'
-import {stripWL, getVal, gradeColorClass, getDaysUntil} from './utils'
+import {stripWL, getVal, gradeColorClass, getDaysUntil, wrapWL, cleanTitle} from './utils'
 import {SectionHeader, EmptyState, StatCard, BigPropertyCard, EditableTitle} from './SharedComponents'
 import type {TabProps} from './types'
 
@@ -58,7 +58,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  <div>
  <button onClick={() => setSelectedId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground mb-2 transition-all">← Courses</button>
  <EditableTitle
- value={course.title}
+ value={cleanTitle(course.title)}
  className="text-xl font-black uppercase tracking-tight"
  onSave={(next) => {
  onUpdate('07 - Courses', course.id, {title: next})
@@ -131,7 +131,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  <div key={idx} onClick={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)}
  className="flex items-center gap-3 p-3 border border-border/10 rounded-xl hover:border-foreground/10 cursor-pointer bg-background transition-all">
  <div className="w-3 h-3 rounded-full border border-border/30 shrink-0" />
- <span className="text-[11px] font-black uppercase flex-1">{a.title}</span>
+ <span className="text-[11px] font-black uppercase flex-1">{cleanTitle(a.title)}</span>
  {a.due_date && <span className="text-[8px] font-black text-muted-foreground/40">{a.due_date.split('T')[0]}</span>}
  </div>
  ))}
@@ -153,7 +153,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  isDone ? 'border-border/10 bg-muted/5 opacity-50' : 'border-border/10 bg-background')}>
  <div className={cn('w-3 h-3 rounded-full border shrink-0', isDone ? 'bg-primary border-primary' : 'border-border/30')} />
  <span className={cn('text-[10px] font-black uppercase truncate', isDone ? 'text-muted-foreground/30 line-through' : 'text-foreground')}>
- {hub.title?.replace(/_/g, ' ') || hub.id}
+ {cleanTitle(hub.title || hub.id)}
  </span>
  </div>
  )
@@ -185,7 +185,8 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  </div>
  <button onClick={() => {
  const title = window.prompt('Enter Course Title', 'New Course') || 'New Course'
- onCreate('07 - Courses', title, {status: '[[Active]]'})
+ const cleanCourseTitle = cleanTitle(title)
+ onCreate('07 - Courses', cleanCourseTitle, {status: wrapWL('Active')})
 }}
  className="flex items-center gap-1.5 px-3 py-2 text-foreground border border-border bg-background text-[8px] font-black uppercase rounded-lg hover:border-foreground/50 transition-all">
  <Plus size={10} /> Add
@@ -217,8 +218,11 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  onClick={(e) => {
  e.stopPropagation()
  const next = window.prompt('Rename Course', course.title || '')
- if (next && next !== course.title) onUpdate('07 - Courses', course.id, {title: next})
-}}>{course.title}</h3>
+ if (next && next !== course.title) {
+   const cleanNext = cleanTitle(next)
+   onUpdate('07 - Courses', course.id, {title: cleanNext})
+ }
+}}>{cleanTitle(course.title)}</h3>
  {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase rounded border shrink-0', gradeColorClass(grade))}>{grade}</span>}
  </div>
 

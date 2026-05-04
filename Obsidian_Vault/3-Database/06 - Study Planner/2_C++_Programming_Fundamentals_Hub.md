@@ -1,14 +1,15 @@
 ---
-title: 2_C++_Programming_Fundamentals_Hub
-type: Hub
-course: Computer Programming
-semester: Autumn 2025
-unit: '2'
-source: "[[Chapter 2.Pdf]]"
-source_pages: []
-status: Not Started
-confidence: null
-study_date: null
+title: "2_C++_Programming_Fundamentals_Hub"
+type: "Hub"
+course: "Computer Programming"
+semester: "Autumn 2025"
+unit: "2"
+source:
+ - "Chapter 2.Pdf"
+source_pages: ''
+status: "Not Started"
+confidence: ''
+study_date: ''
 generated: true
 ---
 
@@ -31,10 +32,10 @@ The language also features various operators and constructs that enable data man
 ## Connections
 
 - C++ Programming Fundamentals
-  - [ ] [[Arithmetic_Operators]]
-  - [ ] [[Assignment_Operator]]
+  - [x] [[Arithmetic_Operators]]
+  - [x] [[Assignment_Operator]]
   - [ ] [[Braces_In_C++]]
-  - [ ] [[C++_IS_Case_Sensitive]]
+  - [x] [[C++_IS_Case_Sensitive]]
   - [ ] [[C++_Programming_Language]]
     - [ ] [[Comments_In_C++]]
       - [ ] [[Comments_Types]]

@@ -65,6 +65,11 @@ interface Hub {
  path: string
 }
 
+const cleanTitle = (val: any): string => {
+  if (val === undefined || val === null) return ''
+  return String(val).replace(/\[\[(.*?)\]\]/g, '$1').replace(/_/g, ' ').trim()
+}
+
 const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  hubId: '',
  selectedAtomicNotes: [],
@@ -183,6 +188,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  if (!isRevealed) {
  handleSubmitAnswer(); // Reveal the answer first
  toast.warning("Question time expired! Marked as incorrect.");
+ setGradedAnswers(prev => ({...prev, [currentQuestion.id]: false}));
  // Add a small delay before moving to next so the user sees it's wrong
  setTimeout(() => {
  nextQuestion();
@@ -209,7 +215,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  try {
  const cleanDistribution = Object.fromEntries(
  Object.entries(advancedConfig.questionDistribution).filter(([k]) => 
- ['mcq', 'true_false', 'writing', 'fill_in', 'matching', 'order', 'debug', 'synthesis'].includes(k)
+ ['mcq', 'true_false', 'writing', 'fill_in', 'matching', 'order', 'debug', 'synthesis', 'trace'].includes(k)
  )
  );
 
@@ -311,14 +317,17 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  );
 }
 
+ const isSelfGraded = ['writing', 'synthesis', 'debug'].includes(q.type);
+ if (!isSelfGraded) {
  setGradedAnswers(prev => ({...prev, [q.id]: isCorrect}));
+ }
 }
 
  const nextQuestion = async () => {
  if (currentQuestionIdx < questions.length - 1) {
  setCurrentQuestionIdx(prev => prev + 1); 
  setIsRevealed(false); 
- if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
+ setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds || null);
 } else {
  setView('results'); 
  const {score} = calculateScore(); 
@@ -355,8 +364,8 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  // ──────────────────────────────────────────────────────────────────────────
  if (view === 'dashboard') {
  const safePractices = Array.isArray(pastPractices) ? pastPractices : [];
- const validPractices = safePractices.filter(p => p?.completed && p?.score);
- const totalPrecision = validPractices.length ? Math.round(validPractices.reduce((acc, p) => acc + parseInt(p.score), 0) / validPractices.length) : 0;
+ const validPractices = safePractices.filter(p => p?.completed && p?.score !== undefined);
+ const totalPrecision = validPractices.length ? Math.round(validPractices.reduce((acc, p) => acc + parseInt(p.score || 0), 0) / validPractices.length) : 0;
  const lastScores = validPractices.slice(-5).map(p => parseInt(p.score));
  let stability = "New";
  if (lastScores.length >= 3) {
@@ -410,7 +419,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Types</h3>
  <div className="space-y-4">
  {[
- {type: 'Multiple Choice', p: 88},
+ {type: 'Choice', p: 88},
  {type: 'Recall', p: 32},
  {type: 'Logic', p: 41},
  {type: 'Sequence', p: 65},
@@ -454,7 +463,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="flex items-center gap-4">
  <div className="text-[10px] font-black text-muted-foreground/40">{p.score}%</div>
  <div className="flex flex-col">
- <span className="text-xs font-black uppercase tracking-tight">{String(p.hub_title || 'Untitled').replace(/\[\[(.*?)\]\]/g, '$1')}</span>
+ <span className="text-xs font-black uppercase tracking-tight">{cleanTitle(p.hub_title || 'Untitled')}</span>
  <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">{new Date(p.date).toLocaleDateString()}</span>
  </div>
  </div>
@@ -489,7 +498,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
  <Select value={selectedHub} onValueChange={(val) => {setSelectedHub(val); loadHubNotes(val);}}>
  <SelectTrigger className="w-full h-10 bg-background border-border/10 rounded-md px-4 text-[10px] font-black uppercase tracking-tight"><SelectValue placeholder="Select Topic..." /></SelectTrigger>
- <SelectContent className="border-border/10">{hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{String(hub.title).replace(/\[\[(.*?)\]\]/g, '$1')}</SelectItem>))}</SelectContent>
+ <SelectContent className="border-border/10">{hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>))}</SelectContent>
  </Select>
  </div>
  <div className="space-y-2">
@@ -564,7 +573,12 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  {key: 'mcq', label: 'Choice'}, 
  {key: 'true_false', label: 'T/F'}, 
  {key: 'writing', label: 'Write'}, 
- {key: 'fill_in', label: 'Fill'}
+ {key: 'fill_in', label: 'Fill'},
+ {key: 'debug', label: 'Debug'},
+ {key: 'trace', label: 'Trace'},
+ {key: 'order', label: 'Order'},
+ {key: 'matching', label: 'Match'},
+ {key: 'synthesis', label: 'Synth'}
  ].map(type => (
  <div key={type.key} className="space-y-3">
  <div className="flex justify-between items-center">
@@ -610,7 +624,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-10 w-full sm:w-auto">
  <div className="flex flex-col gap-0.5">
  <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Practice</span>
- <div className="text-xs font-black uppercase tracking-tight truncate max-w-[200px]">{hubs.find(h => h.id === selectedHub)?.title.replace(/\[\[(.*?)\]\]/g, '$1')}</div>
+ <div className="text-xs font-black uppercase tracking-tight truncate max-w-[200px]">{cleanTitle(hubs.find(h => h.id === selectedHub)?.title || '')}</div>
  </div>
  <div className="flex-1 sm:w-64 h-1 bg-muted/20 rounded-full overflow-hidden">
  <div className="h-full bg-primary transition-all " style={{width: `${progress}%`}} />
@@ -643,8 +657,10 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center py-12 px-10">
  <div className="max-w-2xl w-full space-y-12">
  <div className="space-y-6">
- <div className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/30">
- <span>{(currentQuestion.type || '').replace('_', ' ')}</span> // Level {currentQuestion.difficulty || '1'}
+ <div className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/30 flex items-center gap-2">
+ <span>{(currentQuestion.type || '').replace('_', ' ')}</span>
+ <span className="opacity-20">/</span>
+ <span>Level {currentQuestion.difficulty || '1'}</span>
  </div>
  <div className="text-2xl font-black tracking-tight leading-tight"><MarkdownBlock content={currentQuestion.question} /></div>
  </div>
@@ -657,7 +673,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const isCorrect = isRevealed && (key === currentQuestion.answer || String(val).toLowerCase() === String(currentQuestion.answer).toLowerCase());
  const isWrong = isRevealed && isSelected && !isCorrect;
  return (
- <button key={key} disabled={isRevealed} onClick={() => handleSelectAnswer(key)} className={cn("p-5 border border-border/10 rounded-md text-left transition-all text-[13px] font-black uppercase tracking-tight", isCorrect ? "bg-primary/5 border-primary" : isWrong ? "bg-destructive/5 border-destructive" : isSelected && !isRevealed ? "bg-muted/30 border-foreground" : "hover:bg-muted/10")}>
+ <button key={key} disabled={isRevealed} onClick={() => handleSelectAnswer(key)} className={cn("p-5 border rounded-md text-left transition-all text-[13px] font-black uppercase tracking-tight", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border/10 opacity-40 grayscale" : isSelected ? "bg-muted/30 border-foreground" : "border-border/10 hover:bg-muted/10")}>
  <span className="text-muted-foreground/20 shrink-0 mt-0.5 mr-4">{key}</span> <div className="flex-1 overflow-x-auto"><MarkdownBlock content={String(val)} /></div>
  </button>
  );
@@ -665,9 +681,9 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
  )}
 
- {(currentQuestion.type === 'writing' || currentQuestion.type === 'synthesis' || currentQuestion.type === 'debug') && (
+ {(currentQuestion.type === 'writing' || currentQuestion.type === 'synthesis' || currentQuestion.type === 'debug' || currentQuestion.type === 'trace') && (
  <div className="space-y-6">
- {currentQuestion.type === 'debug' && <MarkdownBlock content={`\`\`\`${currentQuestion.language || 'text'}\n${currentQuestion.content}\n\`\`\``} />}
+ {currentQuestion.type === 'debug' && <MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${currentQuestion.content}\n\`\`\``} />}
  <textarea rows={8} disabled={isRevealed} className="w-full p-6 bg-muted/5 border border-border/10 rounded-md text-sm font-medium focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="Your answer..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
  {isRevealed && <div className="p-6 bg-muted/5 border-l border-primary rounded-r-md text-sm font-medium text-foreground/60 whitespace-pre-wrap"><MarkdownBlock content={String(currentQuestion.answer)} /></div>}
  </div>
@@ -680,9 +696,54 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const isCorrect = isRevealed && v.toLowerCase() === String(currentQuestion.answer).toLowerCase(); 
  const isWrong = isRevealed && isSelected && !isCorrect;
  return (
- <button key={v} disabled={isRevealed} onClick={() => handleSelectAnswer(v)} className={cn("h-32 border border-border/10 rounded-md text-[10px] font-black uppercase tracking-widest transition-all", isCorrect ? "bg-primary/10 border-primary text-primary" : isWrong ? "bg-destructive/10 border-destructive text-destructive" : isSelected && !isRevealed ? "bg-muted/30 border-foreground" : "hover:bg-muted/10 text-muted-foreground/40")}>{v}</button>
+ <button key={v} disabled={isRevealed} onClick={() => handleSelectAnswer(v)} className={cn("h-32 border rounded-md text-[10px] font-black uppercase tracking-widest transition-all", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border/10 opacity-40 grayscale text-muted-foreground/40" : isSelected ? "bg-muted/30 border-foreground" : "border-border/10 hover:bg-muted/10 text-muted-foreground/40")}>{v}</button>
  );
 })}
+ </div>
+ )}
+
+ 
+ {currentQuestion.type === 'order' && (
+ <div className="space-y-3">
+ {(userAnswers[currentQuestion.id] || currentQuestion.steps || []).map((step: string, i: number) => {
+    const list = userAnswers[currentQuestion.id] || currentQuestion.steps || [];
+    const moveUp = () => { if(i>0) { const n = [...list]; [n[i-1], n[i]] = [n[i], n[i-1]]; handleSelectAnswer(n); } };
+    const moveDown = () => { if(i<list.length-1) { const n = [...list]; [n[i], n[i+1]] = [n[i+1], n[i]]; handleSelectAnswer(n); } };
+    const isCorrect = isRevealed && step === (currentQuestion.answer || [])[i];
+    const isWrong = isRevealed && step !== (currentQuestion.answer || [])[i];
+    return (
+        <div key={i} className={`flex items-center gap-3 p-4 border rounded-lg ${isCorrect ? 'border-primary bg-primary/5 shadow-sm' : isWrong ? 'border-destructive bg-destructive/10' : 'border-border/40 hover:bg-muted/5'}`}>
+            <div className="flex flex-col gap-1 border-r border-border/50 pr-3">
+                <button disabled={isRevealed || i===0} onClick={moveUp} className="text-[10px] px-1 opacity-50 hover:opacity-100 hover:text-primary transition-colors">▲</button>
+                <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-[10px] px-1 opacity-50 hover:opacity-100 hover:text-primary transition-colors">▼</button>
+            </div>
+            <div className="text-xs font-medium tracking-tight text-foreground/90 pl-1">{step}</div>
+        </div>
+    )
+ })}
+ </div>
+ )}
+
+ {currentQuestion.type === 'matching' && currentQuestion.pairs && (
+ <div className="space-y-4">
+ {currentQuestion.pairs.map((pair: any, i: number) => {
+    const rights = currentQuestion.pairs.map((p: any) => p.right).sort();
+    const selected = (userAnswers[currentQuestion.id] || {})[pair.left] || "";
+    const isCorrect = isRevealed && selected === pair.right;
+    const isWrong = isRevealed && selected !== pair.right;
+    return (
+        <div key={i} className={`flex items-center gap-4 p-4 border rounded-lg ${isCorrect ? 'border-primary bg-primary/5 shadow-sm' : isWrong ? 'border-destructive bg-destructive/10' : 'border-border/40'}`}>
+            <div className="flex-1 font-medium tracking-tight text-xs text-foreground/90">{pair.left}</div>
+            <div className="flex-1">
+                <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-2.5 bg-background border border-border/50 rounded-md outline-none focus:border-foreground/50 text-xs font-medium text-foreground/80 transition-colors">
+                    <option value="">Select match...</option>
+                    {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
+                </select>
+            </div>
+            {isRevealed && isWrong && <div className="text-[10px] uppercase tracking-widest text-primary font-bold w-1/3 break-words">{pair.right}</div>}
+        </div>
+    )
+ })}
  </div>
  )}
 
@@ -715,13 +776,13 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <Button onClick={handleSubmitAnswer} disabled={!userAnswers[currentQuestion.id] && currentQuestion.type !== 'debug'} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md">Check</Button>
  ) : (
  <div className="flex gap-2">
- {!gradedAnswers[currentQuestion.id] && ['writing', 'synthesis', 'debug'].includes(currentQuestion.type) && (
+ {gradedAnswers[currentQuestion.id] === undefined && ['writing', 'synthesis', 'debug', 'trace'].includes(currentQuestion.type) && (
  <>
  <Button onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: false})); nextQuestion();}} variant="outline" className="h-10 px-6 text-[9px] font-black uppercase border-destructive/20 text-destructive/40">Wrong</Button>
  <Button onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: true})); nextQuestion();}} className="h-10 px-6 bg-primary text-primary-foreground text-[9px] font-black uppercase">Correct</Button>
  </>
  )} 
- {((!['writing', 'synthesis', 'debug'].includes(currentQuestion.type)) || gradedAnswers[currentQuestion.id] !== undefined) && (
+ {((!['writing', 'synthesis', 'debug', 'trace'].includes(currentQuestion.type)) || gradedAnswers[currentQuestion.id] !== undefined) && (
  <Button onClick={nextQuestion} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md">Next</Button>
  )}
  </div>

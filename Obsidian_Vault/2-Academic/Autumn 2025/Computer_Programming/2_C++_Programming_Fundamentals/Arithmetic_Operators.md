@@ -1,26 +1,23 @@
 ---
-
-title: Arithmetic_Operators
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '2'
-hub: '[[2_C++_Programming_Fundamentals_Hub]]'
-source: '[[Chapter_2.pdf]]'
+title: "Arithmetic_Operators"
+type: "Atomic Note"
+course: "Computer Programming"
+semester: "Autumn 2025"
+unit: "2"
+hub: [[2_C++_Programming_Fundamentals_Hub]]
+source: [[Chapter_2.pdf]]
 source_pages:
-- 40
-mode: CS-SOFTWARE
-read: false
+ - "40"
+mode: "CS-SOFTWARE"
+read: true
 generated: true
 prerequisites:
-- '[[Operator_Precedence]]'
-- '[[Compiler_Directives]]'
-- '[[Preprocessor_Directives]]'
-- '[[Main_Function]]'
-- '[[Stream_Insertion_Operator]]'
-
+ - "[[Operator_Precedence]]"
+ - "[[Compiler_Directives]]"
+ - "[[Preprocessor_Directives]]"
+ - "[[Main_Function]]"
+ - "[[Stream_Insertion_Operator]]"
 ---
-
 
 # 1. Mental Model
 

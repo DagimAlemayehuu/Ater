@@ -1,19 +1,18 @@
 ---
+title: "Linear_Homogeneous_Recurrence_Relation"
+type: "Atomic Note"
+course: "Discrete Mathematics"
+semester: "Autumn 2025"
+unit: "2"
+hub: [[2_Recurrence_Relations_Hub]]
+source: [[2_Recurrence_Relations.pdf]]
+source_pages:
 
-title: Linear_Homogeneous_Recurrence_Relation
-type: Atomic Note
-course: Discrete Mathematics
-semester: Autumn 2025
-unit: '2'
-hub: "[[2_Recurrence_Relations_Hub]]"
-source: "[[2_Recurrence_Relations.pdf]]"
-source_pages: []
-mode: MATH-DISCRETE
-read: false
+mode: "MATH-DISCRETE"
+read: true
 generated: true
 prerequisites:
-- "[[Homogeneous_Recurrence_Relation]]"
-
+ - "[[Homogeneous_Recurrence_Relation]]"
 ---
 
 ## 1. Mental Model

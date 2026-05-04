@@ -2,7 +2,7 @@ import React, {useState, useMemo} from 'react'
 import {Check, Zap, Trash2, Plus, ChevronRight} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {toast} from 'sonner'
-import {stripWL, getVal, getYearOrder, deriveStatus} from './utils'
+import {stripWL, getVal, getYearOrder, deriveStatus, wrapWL, cleanTitle} from './utils'
 import {SectionHeader, EmptyState, StatCard, AcademicRoadmap, ProgramSetupForm, BigPropertyCard, EditableTitle} from './SharedComponents'
 import type {TabProps} from './types'
 
@@ -20,7 +20,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
 
  const sorted = [...years].sort((a, b) => getYearOrder(a.title) - getYearOrder(b.title))
  const activeYear = sorted.find(y => y['Current Year'] === true || y['Current Year'] === 'true')
- const activeProgram = stripWL(getVal(activeYear, 'Program', 'program'))
+ const activeProgram = cleanTitle(stripWL(getVal(activeYear, 'Program', 'program')))
  const programYears = activeProgram
  ? sorted.filter(y => stripWL(getVal(y, 'Program', 'program')) === activeProgram)
  : sorted
@@ -42,47 +42,53 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
 })
 
  const handleScaffold = async (name: string, numYears: number, level: string, currentIdx: number) => {
- try {
- const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
- for (let i = 0; i < numYears; i++) {
- const title = `Year ${romans[i] || (i + 1)}`
- const status = i < currentIdx ? '[[Completed]]' : i === currentIdx ? '[[Active]]' : '[[Planned]]'
- await onCreate('09 - Years', title, {
- Program: `[[${name}]]`,
- 'Academic Level': `[[${level}]]`,
- Status: status,
- 'Current Year': i === currentIdx,
- 'Target Years': numYears,
- 'Earned Credits': 0,
- 'Target Credits': 0,
- 'Cumulative GPA': 0.00
-})
+  try {
+  const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
+  const cleanName = cleanTitle(name)
+  const promises = []
+  for (let i = 0; i < numYears; i++) {
+  const title = `Year ${romans[i] || (i + 1)}`
+  const status = i < currentIdx ? wrapWL('Completed') : i === currentIdx ? wrapWL('Active') : wrapWL('Planned')
+  promises.push(onCreate('09 - Years', title, {
+  Program: wrapWL(cleanName),
+  'Academic Level': wrapWL(level),
+  Status: status,
+  'Current Year': i === currentIdx,
+  'Target Years': numYears,
+  'Earned Credits': 0,
+  'Target Credits': 0,
+  'Cumulative GPA': 0.00
+}))
 }
- toast.success(`Program "${name}" deployed!`)
- onRefresh()
+  await Promise.all(promises)
+  toast.success(`Program "${cleanName}" deployed!`)
+  onRefresh()
 } catch {toast.error('Scaffolding failed')}
 }
 
  const handleUpdateProgram = async (oldName: string, newName: string, level: string, numYears: number) => {
- try {
- const toUpdate = years.filter(y => stripWL(getVal(y, 'Program', 'program')) === oldName)
- for (const y of toUpdate) {
- await onUpdate('09 - Years', y.id, {
- Program: `[[${newName}]]`,
- 'Academic Level': `[[${level}]]`,
- 'Target Years': numYears
+  try {
+  const toUpdate = years.filter(y => stripWL(getVal(y, 'Program', 'program')) === oldName)
+  const cleanNewName = cleanTitle(newName)
+  await Promise.all(toUpdate.map(y => 
+  onUpdate('09 - Years', y.id, {
+  Program: wrapWL(cleanNewName),
+  'Academic Level': wrapWL(level),
+  'Target Years': numYears
 })
-}
- toast.success('Program updated')
- onRefresh()
+  ))
+  toast.success('Program updated')
+  onRefresh()
 } catch {toast.error('Update failed')}
 }
 
  const handleSetCurrentYear = async (id: string) => {
- for (const y of years) {
- await onUpdate('09 - Years', y.id, {'Current Year': y.id === id})
-}
- toast.success('Active year set')
+  try {
+  await Promise.all(years.map(y => 
+  onUpdate('09 - Years', y.id, {'Current Year': y.id === id})
+  ))
+  toast.success('Active year set')
+} catch {toast.error('Failed to set active year')}
 }
 
  // ── Semester Detail ────────────────────────────────────────────────────────
@@ -108,7 +114,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  setSelectedSemesterId(next)
 }}
  />
- <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{activeProgram} · {selectedYear?.title}</span>
+ <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{cleanTitle(activeProgram)} · {cleanTitle(selectedYear?.title || '')}</span>
  </div>
  <div className="flex items-center gap-2">
  <button onClick={() => {onDelete('08 - Semesters', selectedSemesterId); setSelectedSemesterId(null)}}
@@ -174,7 +180,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Course</span>
  <span className="text-[9px] font-black text-muted-foreground/40">{getVal(c, 'Credits', 'credits')} CR</span>
  </div>
- <h3 className="text-xl font-black uppercase tracking-tight group-hover:text-primary transition-colors">{c.title}</h3>
+ <h3 className="text-xl font-black uppercase tracking-tight group-hover:text-primary transition-colors">{cleanTitle(c.title)}</h3>
  <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 mt-2">{stripWL(getVal(c, 'Status', 'status'))}</p>
  </div>
  ))}
@@ -206,7 +212,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  setSelectedYearId(next)
 }}
  />
- <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{activeProgram} · {level}</span>
+ <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{cleanTitle(activeProgram)} · {cleanTitle(level)}</span>
  </div>
  <div className="flex items-center gap-2 flex-wrap">
  {derived === 'Completed' && !currentStatus.toLowerCase().includes('complet') && (
@@ -285,7 +291,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  </div>
  <div className="roadmap-content p-4 border border-border/15 bg-muted/5 rounded-xl hover:border-foreground/10 hover:bg-muted/10 transition-all flex items-center justify-between">
  <div className="min-w-0">
- <span className="text-[12px] font-black uppercase group-hover/sem:text-primary transition-colors">{s.title}</span>
+ <span className="text-[12px] font-black uppercase group-hover/sem:text-primary transition-colors">{cleanTitle(s.title)}</span>
  <span className="ml-2 text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{statusRaw}</span>
  </div>
  <div className="flex items-center gap-2 shrink-0">
@@ -346,7 +352,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
 }}
  />
  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">
- {stripWL(getVal(activeYear, 'Academic Level', 'academic_level'))}
+ {cleanTitle(stripWL(getVal(activeYear, 'Academic Level', 'academic_level')))}
  </span>
  </div>
  </div>
@@ -355,8 +361,8 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  const activeSem = semesters.find(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase().includes('active'))
  return (
  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
- <StatCard label="Current Year" value={activeYear?.title?.split(' ').pop() || '--'} onClick={() => activeYear && setSelectedYearId(activeYear.id)} />
- <StatCard label="Current Semester" value={activeSem?.title || '--'} accent onClick={() => activeSem && setSelectedSemesterId(activeSem.id)} />
+ <StatCard label="Current Year" value={cleanTitle(activeYear?.title?.split(' ').pop() || '--')} onClick={() => activeYear && setSelectedYearId(activeYear.id)} />
+ <StatCard label="Current Semester" value={cleanTitle(activeSem?.title || '--')} accent onClick={() => activeSem && setSelectedSemesterId(activeSem.id)} />
  <StatCard label="CGPA" value={getVal(activeYear, 'Cumulative GPA', 'cumulative_gpa') || '0.00'} />
  </div>
  )
@@ -433,7 +439,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <div key={`course-${idx}`} className="p-4 border border-border/10 bg-muted/5 rounded-xl flex items-center justify-between cursor-pointer hover:bg-muted/10 transition-all"
  onClick={() => navigateTo('COURSES', c.id)}>
  <div>
- <span className="text-[13px] font-black uppercase">{c.title}</span>
+ <span className="text-[13px] font-black uppercase">{cleanTitle(c.title)}</span>
  <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{getVal(c, 'Credits', 'credits')} Credits</p>
  </div>
  <ChevronRight size={14} className="text-muted-foreground/20" />

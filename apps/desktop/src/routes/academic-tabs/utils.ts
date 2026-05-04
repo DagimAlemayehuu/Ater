@@ -5,6 +5,18 @@ export const stripWL = (val: any): string => {
     return String(val).replace(/\[\[(.*?)\]\]/g, '$1').trim()
 }
 
+export const wrapWL = (val: any): string => {
+    if (val === undefined || val === null || val === '') return ''
+    const s = String(val).trim()
+    if (s.startsWith('[[') && s.endsWith(']]')) return s
+    return `[[${s}]]`
+}
+
+export const cleanTitle = (val: string): string => {
+    if (!val) return ''
+    return val.replace(/_/g, ' ').trim()
+}
+
 export const getVal = (obj: any, ...keys: string[]): string => {
     for (const k of keys) {
         const v = obj?.[k]

@@ -126,7 +126,12 @@ export default function Settings() {
  await saveConfig({
  notionApiKey: '',
  aiApiKey: '',
+ plannerApiKey: '',
+ utilityApiKey: '',
  obsidianVaultPath: '',
+ academicFolderPath: '',
+ inboxPath: '',
+ autoDeploy: false
 })
  window.location.reload()
 }
@@ -255,7 +260,7 @@ export default function Settings() {
  {/* Tabs Header */}
  <div className="flex border-b border-border mb-4">
  <button 
- onClick={() => setAiTab('primary')}
+ onClick={() => { setAiTab('primary'); setEditingKey(null); }}
  className={cn(
  "px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2",
  aiTab === 'primary' ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
@@ -264,7 +269,7 @@ export default function Settings() {
  Synthesis
  </button>
  <button 
- onClick={() => setAiTab('planner')}
+ onClick={() => { setAiTab('planner'); setEditingKey(null); }}
  className={cn(
  "px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2",
  aiTab === 'planner' ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
@@ -273,7 +278,7 @@ export default function Settings() {
  Planning
  </button>
  <button 
- onClick={() => setAiTab('utility')}
+ onClick={() => { setAiTab('utility'); setEditingKey(null); }}
  className={cn(
  "px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2",
  aiTab === 'utility' ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"

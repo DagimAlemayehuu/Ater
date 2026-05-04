@@ -69,7 +69,7 @@ function NoteProperties({
 
  const getPropertyType = (key: string, value: any) => {
  const k = key.toLowerCase()
- if (['course', 'semester', 'hub', 'source'].includes(k)) return 'link'
+ if (['hub', 'source'].includes(k)) return 'link'
  if (['read', 'generated'].includes(k) || typeof value === 'boolean') return 'checkbox'
  if (k === 'type') return 'text'
  if (typeof value === 'number' || k.includes('unit')) return 'number'
@@ -95,7 +95,7 @@ function NoteProperties({
  
  const formatValue = (val: unknown): string => {
  if (val === null || val === undefined) return 'Empty'
- if (Array.isArray(val)) return val.map(v => formatValue(v)).join(', ')
+ if (Array.isArray(val)) return JSON.stringify(val)
  return String(val)
 }
 
@@ -104,8 +104,12 @@ function NoteProperties({
  let finalVal: any = editValue
  
  if (type === 'list') {
- // Convert comma-separated string back to array, trimming items
+ try {
+ finalVal = JSON.parse(editValue)
+ if (!Array.isArray(finalVal)) finalVal = [editValue]
+ } catch {
  finalVal = editValue.split(',').map(s => s.trim()).filter(s => s.length > 0)
+ }
 } else if (editValue.toLowerCase() === 'true') {
  finalVal = true
 } else if (editValue.toLowerCase() === 'false') {
@@ -656,7 +660,7 @@ export default function ObsidianVaultPage() {
 }
 
  // Expanded key list for hub detection
- const hubKeys = ['hub', 'Hub', 'HUB', 'concept_hub', 'course', 'Course', 'course_hub', 'semester', 'area', 'project']
+ const hubKeys = ['hub', 'Hub', 'HUB', 'concept_hub', 'course_hub', 'area', 'project']
  let rawHub: any = null
  for (const key of hubKeys) {
  if (noteMetadata[key]) {
@@ -685,8 +689,8 @@ export default function ObsidianVaultPage() {
  return content.trim()
 }
 
- if (isHubNote && noteContentRef.current) {
- topologies = extractSection(noteContentRef.current)
+ if (isHubNote && noteContent) {
+ topologies = extractSection(noteContent)
 }
 
  if (!topologies && rawHub) {
@@ -735,12 +739,11 @@ export default function ObsidianVaultPage() {
 } else {
  setHubConnections(null)
 }
-} catch (err) {
- console.error("Failed to fetch hub connections", err)
- setHubConnections(null)
+} catch (e) {
+  console.error("[HubConnections] fetchHubConnections failed:", e);
+  setHubConnections(null);
 }
-  // noteContentRef used instead of noteContent to avoid refetching on every edit
-}, [noteMetadata, selectedPath])
+}, [noteMetadata, selectedPath, noteContent])
 
  // ── Shared helper: surgically update ONE frontmatter key without touching anything else ──
  const updateFrontmatterProperty = async (
@@ -765,7 +768,7 @@ export default function ObsidianVaultPage() {
   return `${k}:\n${v.map((i: any) => ` - "${String(i)}"`).join('\n')}`;
 }
   const s = String(v);
-  if (s.startsWith('[[') || s === 'true' || s === 'false') return `${k}: ${s}`;
+  if (s === 'true' || s === 'false') return `${k}: ${s}`;
   return `${k}: "${s}"`;
 });
 
@@ -781,7 +784,7 @@ export default function ObsidianVaultPage() {
  if (!selectedPath) return;
  try {
  // 1. Update the Hub Note checkbox
- const rawHub = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course || noteMetadata?.semester;
+ const rawHub = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.concept_hub;
  let cleanHubName = '';
  if (rawHub) {
  const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub];
@@ -795,7 +798,7 @@ export default function ObsidianVaultPage() {
 
  if (cleanHubName) {
  const res = await sidecarApi.findVaultPage(cleanHubName);
- let hubPath = res.path || (files.find(f => f.name.toLowerCase().includes(cleanHubName.toLowerCase()))?.path);
+ const hubPath = res.path || (files.find(f => f.name.toLowerCase().includes(cleanHubName.toLowerCase()))?.path);
  
  if (hubPath) {
  const hubData = await sidecarApi.readObsidianNote(hubPath);
@@ -821,7 +824,7 @@ export default function ObsidianVaultPage() {
   if (typeof v === 'boolean' || typeof v === 'number') return `${k}: ${v}`;
   if (Array.isArray(v)) return `${k}:\n${v.map((i: any) => ` - "${String(i)}"`).join('\n')}`;
   const s = String(v);
-  if (s.startsWith('[[') || s === 'true' || s === 'false') return `${k}: ${s}`;
+  if (s === 'true' || s === 'false') return `${k}: ${s}`;
   return `${k}: "${s}"`;
   });
   const fullContent = hubYamlLines.length > 0
@@ -1036,6 +1039,8 @@ export default function ObsidianVaultPage() {
  setSelectedPath(null)
  setNoteMetadata({})
  setNoteContent('')
+ setEditedContent('')
+ setHubConnections(null)
 }
 } catch (err: any) {
  alert(`Delete failed: ${err.message}`)

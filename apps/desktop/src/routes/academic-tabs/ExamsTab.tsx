@@ -91,7 +91,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  setSelectedId(next)
 }}
  />
- <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{examCourse}</span>
+ <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{cleanTitle(examCourse)}</span>
  </div>
  <div className="flex items-center gap-2">
  <button onClick={() => {onDelete('04 - Exams', selectedId); setSelectedId(null)}}
@@ -152,7 +152,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  </div>
  <div className="flex-1 min-w-0">
  <span className={cn('text-[10px] font-black uppercase truncate block', isDone ? 'text-muted-foreground/40' : 'text-foreground')}>
- {hub.title?.replace(/_/g, ' ') || hub.id}
+ {cleanTitle(hub.title || hub.id)}
  </span>
  <span className="text-[7px] font-black text-muted-foreground/30 uppercase">Unit {getVal(hub, 'unit', 'Unit') || '?'}</span>
  </div>
@@ -174,9 +174,9 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  <div className="p-6 sm:p-8 border border-border/10 bg-muted/5 rounded-2xl flex items-center justify-between gap-6">
  <div className="space-y-1">
  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Next Exam</span>
- <h2 className="text-xl font-black uppercase tracking-tighter text-foreground">{nextExam.title}</h2>
+ <h2 className="text-xl font-black uppercase tracking-tighter text-foreground">{cleanTitle(nextExam.title)}</h2>
  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
- {stripWL(getVal(nextExam, 'Course', 'course'))} · {getVal(nextExam, 'date', 'Exam Date') ? format(parseISO(getVal(nextExam, 'date', 'Exam Date')), 'MMM dd, yyyy') : '--'}
+ {cleanTitle(stripWL(getVal(nextExam, 'Course', 'course')))} · {getVal(nextExam, 'date', 'Exam Date') ? format(parseISO(getVal(nextExam, 'date', 'Exam Date')), 'MMM dd, yyyy') : '--'}
  </p>
  </div>
  <div className="text-right shrink-0">
@@ -237,8 +237,8 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  className={cn('p-5 border rounded-xl cursor-pointer hover:border-foreground/20 bg-background transition-all', urgencyBorder)}>
  <div className="flex items-start justify-between gap-3 mb-3">
  <div className="flex-1 min-w-0">
- <span className="text-[13px] font-black uppercase block truncate">{exam.title}</span>
- <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{examCourse}</span>
+ <span className="text-[13px] font-black uppercase block truncate">{cleanTitle(exam.title)}</span>
+ <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{cleanTitle(examCourse)}</span>
  </div>
  <div className="text-right shrink-0">
  <div className={cn('text-xl font-black', urgencyText)}>{days}</div>
@@ -278,9 +278,9 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  className="p-5 border border-border/10 rounded-xl bg-background cursor-pointer hover:border-foreground/10 transition-all">
  <div className="flex items-start justify-between gap-3">
  <div className="flex-1 min-w-0">
- <span className="text-[13px] font-black uppercase block truncate">{exam.title}</span>
+ <span className="text-[13px] font-black uppercase block truncate">{cleanTitle(exam.title)}</span>
  <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">
- {stripWL(getVal(exam, 'Course', 'course'))} · {getVal(exam, 'date', 'Exam Date') ? format(parseISO(getVal(exam, 'date', 'Exam Date')), 'MMM dd') : '--'}
+ {cleanTitle(stripWL(getVal(exam, 'Course', 'course')))} · {getVal(exam, 'date', 'Exam Date') ? format(parseISO(getVal(exam, 'date', 'Exam Date')), 'MMM dd') : '--'}
  </span>
  </div>
  <div onClick={e => e.stopPropagation()}>

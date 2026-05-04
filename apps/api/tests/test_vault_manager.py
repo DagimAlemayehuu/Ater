@@ -1,6 +1,4 @@
-import pytest
 from src.domains.oka.vault_manager import VaultManager
-from pathlib import Path
 
 def test_vault_manager_dump_obsidian_yaml():
     vm = VaultManager("/tmp/mock_vault")

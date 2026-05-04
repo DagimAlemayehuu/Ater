@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from pathlib import Path
 import frontmatter
-import datetime
-import re
 
 from src.api.deps import AppSecrets, get_app_secrets
 

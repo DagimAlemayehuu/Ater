@@ -609,7 +609,7 @@ async def oka_list_generated(
                         with open(meta_file, "r") as mf:
                             meta = json.load(mf)
                             hub_path = meta.get("hub_path")
-                    except: pass
+                    except Exception: pass
                 
                 files.append({
                     "name": f.name,

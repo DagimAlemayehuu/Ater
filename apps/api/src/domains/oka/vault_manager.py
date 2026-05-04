@@ -56,28 +56,6 @@ class VaultManager:
 
         return '_'.join(words)
 
-    def get_note_path(self, meta: dict, session_metadata: Optional[dict] = None, anchored_hub_path: Optional[str] = None) -> Path:
-        """
-        Determines the hierarchical file path for a note with strict academic naming.
-        """
-        raw_title = meta.get("title", "Untitled_Note")
-        note_type = str(meta.get("type", "")).lower()
-        session_meta = session_metadata or {}
-        
-        # Use session data first, fallback to AI meta
-        unit_num = str(session_meta.get("unit") or meta.get("unit", "")).strip()
-        raw_course = str(session_meta.get("course") or meta.get("course") or "Unknown_Course")
-        raw_semester = str(session_meta.get("semester") or meta.get("semester") or "Unknown_Semester")
-        raw_hub = str(session_meta.get("hub_title") or raw_title)
-
-        # Clean unit_num: remove brackets or "Unknown"
-        unit_num = unit_num.replace("[[", "").replace("]]", "")
-        if not unit_num or unit_num.lower() == "unknown":
-            unit_num = ""
-
-        # Identify note categories
-        is_hub = "hub" in note_type or "hub" in raw_title.lower()
-        is_questions = "questions" in note_type or "possible_questions" in raw_title.lower()
 
     def deep_clean_scalar(self, v) -> str:
         """Recursively unwrap nested lists and strip all bracket/quote artifacts."""
@@ -432,5 +410,6 @@ class VaultManager:
                     if not err:
                         meta["_file_path"] = str(file)
                         all_meta.append(meta)
-            except: pass
+            except Exception:
+                pass
         return all_meta

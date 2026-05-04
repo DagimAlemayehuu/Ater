@@ -2,7 +2,7 @@ import React, {useState, useMemo} from 'react'
 import {Search, SortAsc, BookOpen, PlayCircle, Brain, Check, Plus, Trash2} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {toast} from 'sonner'
-import {stripWL, getVal, statusColorClass, confidenceColorClass, groupBy} from './utils'
+import {stripWL, getVal, statusColorClass, confidenceColorClass, groupBy, wrapWL, cleanTitle} from './utils'
 import {SectionHeader, EmptyState, ProgressRing, EditableTitle} from './SharedComponents'
 import type {TabProps} from './types'
 
@@ -118,7 +118,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
 
  const handleSetStatus = async (hub: any, status: string) => {
  try {
- await onUpdate('06 - Study Planner', hub.id, {status: `[[${status}]]`})
+ await onUpdate('06 - Study Planner', hub.id, {status: wrapWL(status)})
 } catch {toast.error('Update failed')}
 }
 
@@ -162,7 +162,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  selectedCourseId === course.id ? 'bg-foreground/5 text-foreground' : 'text-muted-foreground/40 hover:text-foreground hover:bg-muted/5'
  )}>
  <div className="min-w-0 pr-2">
- <p className="text-[10px] font-black uppercase truncate">{course.title}</p>
+ <p className="text-[10px] font-black uppercase truncate">{cleanTitle(course.title)}</p>
  <p className="text-[8px] font-black text-muted-foreground/30">{stats.done}/{stats.total} done</p>
  </div>
  <ProgressRing done={stats.done} total={stats.total} size={28} />
@@ -174,7 +174,8 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  <button
  onClick={() => {
  const title = window.prompt('Enter Hub Title', 'New Hub') || 'New Hub'
- onCreate('06 - Study Planner', title, selectedCourseId && selectedCourse ? {course: `[[${selectedCourse.title}]]`} : {})
+ const cleanHubTitle = cleanTitle(title)
+ onCreate('06 - Study Planner', cleanHubTitle, selectedCourseId && selectedCourse ? {course: wrapWL(selectedCourse.title)} : {})
 }}
  className="w-full py-2 bg-foreground/5 hover:bg-foreground/10 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all">
  + Add Hub
@@ -214,7 +215,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  {/* Stats strip for selected course */}
  {selectedCourse && (
  <div className="px-6 py-2.5 border-b border-border/5 flex items-center gap-5 shrink-0 bg-muted/[0.03]">
- <span className="text-[12px] font-black uppercase">{selectedCourse.title}</span>
+ <span className="text-[12px] font-black uppercase">{cleanTitle(selectedCourse.title)}</span>
  <div className="flex items-center gap-4 text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">
  <span>{visibleHubs.length} hubs</span>
  <span className="text-foreground/70">{visibleHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length} done</span>
@@ -274,7 +275,7 @@ function HubCard({hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete
  const confidence = stripWL(getVal(hub, 'confidence', 'Confidence'))
  const studyDate = getVal(hub, 'study date', 'study_date')
  const isCompleted = status.toLowerCase().includes('complet')
- const displayTitle = (hub.title || hub.id || '').replace(/_/g, ' ').replace(/_Hub$/i, '').replace(/Hub$/i, '').trim()
+ const displayTitle = cleanTitle(hub.title || hub.id || '').replace(/_Hub$/i, '').replace(/Hub$/i, '').trim()
 
  return (
  <div className={cn(
@@ -308,8 +309,8 @@ function HubCard({hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete
  </button>
  {showStatusMenu && (
  <div className="absolute top-full left-0 mt-1 bg-background border border-border/20 rounded-lg shadow-xl z-20 p-1 min-w-[150px]">
- {['Not Started', 'In Progress', 'Reviewing', 'Completed'].map(s => (
- <button key={s} onClick={() => {onSetStatus(hub, s); setShowStatusMenu(false)}}
+ {['Planned', 'In Progress', 'Completed'].map(s => (
+ <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('06 - Study Planner', hub.id, {Status: wrapWL(s)}); setShowStatusMenu(false)}}
  className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase rounded hover:bg-muted/10 transition-all', statusColorClass(s))}>
  {s}
  </button>

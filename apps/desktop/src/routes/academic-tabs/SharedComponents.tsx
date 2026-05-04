@@ -3,7 +3,7 @@ import {Check, Edit3, Plus, ChevronRight, X} from 'lucide-react'
 import {format, parseISO} from 'date-fns'
 import {cn} from '@/lib/utils'
 import {sidecarApi} from '@/lib/sidecarApi'
-import {stripWL, statusColorClass, getYearOrder} from './utils'
+import {stripWL, statusColorClass, getYearOrder, wrapWL, cleanTitle} from './utils'
 import type {VaultDatabase} from './types'
 
 // ─── Tab Button ────────────────────────────────────────────────────────────────
@@ -138,9 +138,9 @@ export function BigPropertyCard({label, value, schema, onUpdate}: {
  ) : (
  <span className={cn('text-xl font-black tracking-tighter truncate leading-none', isEmpty ? 'text-muted-foreground/10 italic' : 'text-foreground')}>
  {isEmpty ? 'None' : (
- type === 'select' || type === 'relation' ? stripWL(String(value)).split('/').pop() :
+ type === 'select' || type === 'relation' ? cleanTitle(stripWL(String(value)).split('/').pop() || '') :
  type === 'date' && value ? (() => {try {return format(parseISO(String(value)), 'MMM dd, yyyy')} catch {return String(value)}})() :
- String(value)
+ cleanTitle(String(value))
  )}
  </span>
  )}
@@ -266,7 +266,7 @@ export function AcademicRoadmap({items, activeId, onSelect}: {
  {isCompleted ? <Check size={10} strokeWidth={4} /> : (idx + 1)}
  </div>
  <div className="roadmap-content">
- <span className={cn('text-[11px] font-black uppercase', isActive ? 'text-foreground' : isCompleted ? 'text-muted-foreground/20' : 'text-muted-foreground/40 group-hover:text-foreground/60')}>{item.title}</span>
+ <span className={cn('text-[11px] font-black uppercase', isActive ? 'text-foreground' : isCompleted ? 'text-muted-foreground/20' : 'text-muted-foreground/40 group-hover:text-foreground/60')}>{cleanTitle(item.title)}</span>
  </div>
  </div>
  )
@@ -305,15 +305,15 @@ export function SelectPropertyEditor({value, source, onSave, onCancel, label: di
  className="w-full bg-muted/5 text-[10px] font-black uppercase px-3 py-2 rounded-lg mb-2 focus:outline-none" />
  <div className="max-h-44 overflow-y-auto flex flex-col gap-0.5">
  {filtered.map(opt => (
- <button key={opt} onClick={(e) => {e.stopPropagation(); onSave(`[[${opt}]]`)}} className={cn(
+ <button key={opt} onClick={(e) => {e.stopPropagation(); onSave(wrapWL(opt))}} className={cn(
  'px-3 py-1.5 rounded-md text-[10px] font-black uppercase text-left transition-all',
  rawValue === opt ? 'bg-primary/10 text-primary' : 'hover:bg-muted/10 text-foreground/70'
- )}>{opt}</button>
+ )}>{cleanTitle(opt)}</button>
  ))}
  </div>
  <button onClick={async (e) => {
  e.stopPropagation()
- const name = window.prompt(`Add new ${displayLabel} option`)
+ const name = window.prompt(`Add new ${cleanTitle(displayLabel || '')} option`)
  if (name && source) {
  try {
  await sidecarApi.createVaultOption(source, name)

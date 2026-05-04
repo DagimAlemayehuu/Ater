@@ -10,6 +10,12 @@ import {cn} from '@/lib/utils'
 import {useConfig} from '@/lib/ConfigContext'
 import {useNavigate} from 'react-router-dom'
 
+/* ─── Utilities ─── */
+const cleanTitle = (val: any): string => {
+  if (val === undefined || val === null) return ''
+  return String(val).replace(/\[\[(.*?)\]\]/g, '$1').replace(/_/g, ' ').trim()
+}
+
 /* ─── Plan UI Components ─── */
 function CurriculumPill({
  label, 
@@ -139,7 +145,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  const pqContent = extract('pq_note')
  const atomicContent = extract('atomic_notes')
 
- const cleanLink = (text: string) => text.replace(/\[\[(.*?)\]\]/g, '$1').replace(/\*\*/g, '').replace(/\*/g, '')
+ const cleanLink = (text: string) => cleanTitle(text).replace(/\*\*/g, '').replace(/\*/g, '')
 
  const parseAtomicTree = (text: string) => {
  // Strategy 1: Bulleted/numbered list lines (standard AI output)
@@ -192,7 +198,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
 
  return {
  level,
- title: titleMatch ? titleMatch[1] : cleanLink(rawContent.split('-')[0]),
+ title: titleMatch ? cleanLink(titleMatch[1]) : cleanLink(rawContent.split('-')[0]),
  mode: modeMatch ? modeMatch[1] : null,
  parent: parentMatch ? parentMatch[1] : null,
  pages: pagesMatch ? pagesMatch[1].split(',').map(p => p.trim()).filter(p => p) : [],
@@ -402,9 +408,9 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  course: anchor?.course || detected?.course || '',
  unit: String(anchor?.unit || detected?.unit || ''),
  semester: anchor?.semester || detected?.semester || '',
- hub_title: anchor?.title || (detected?.hub_title ? (
+ hub_title: cleanTitle(anchor?.title || (detected?.hub_title ? (
  (detected.unit ? detected.unit + ' ' : '') + detected.hub_title + ' Hub'
- ) : ''),
+ ) : '')),
 })
  setIsCurriculumReady(true)
 } catch (err: any) {
@@ -450,7 +456,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  course: hub.course || '',
  unit: String(hub.unit || ''),
  semester: hub.semester || '',
- hub_title: hub.title || ''
+ hub_title: cleanTitle(hub.title || '')
 })
 }
 

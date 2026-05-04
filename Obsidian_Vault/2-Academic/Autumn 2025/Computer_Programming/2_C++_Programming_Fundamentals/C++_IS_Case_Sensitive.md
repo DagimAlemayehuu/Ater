@@ -1,26 +1,23 @@
 ---
-
-title: C++_Is_Case_Sensitive
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '2'
-hub: '[[2_C++_Programming_Fundamentals_Hub]]'
-source: '[[Chapter_2.pdf]]'
+title: "C++_Is_Case_Sensitive"
+type: "Atomic Note"
+course: "Computer Programming"
+semester: "Autumn 2025"
+unit: "2"
+hub: [[2_C++_Programming_Fundamentals_Hub]]
+source: [[Chapter_2.pdf]]
 source_pages:
-- 9
-mode: CS-SOFTWARE
-read: false
+ - "9"
+mode: "CS-SOFTWARE"
+read: true
 generated: true
 prerequisites:
-- '[[C++_Programming_Language]]'
-- '[[Identifiers_In_C++]]'
-- '[[Compiler_Directives]]'
-- '[[Preprocessor_Directives]]'
-- '[[Main_Function]]'
-
+ - "[[C++_Programming_Language]]"
+ - "[[Identifiers_In_C++]]"
+ - "[[Compiler_Directives]]"
+ - "[[Preprocessor_Directives]]"
+ - "[[Main_Function]]"
 ---
-
 
 # 1. Mental Model
 

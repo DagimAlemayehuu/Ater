@@ -32,11 +32,11 @@ For a complete solution to a recurrence relation, a particular solution that sat
 ## Connections
 
 - Recurrence Relations
-  - [ ] [[Characteristic_Equation]]
-  - [ ] [[General_Solution]]
-    - [ ] [[Unique_Solution]]
-  - [ ] [[Homogeneous_Recurrence_Relation]]
-    - [ ] [[Linear_Homogeneous_Recurrence_Relation]]
+  - [x] [[Characteristic_Equation]]
+  - [x] [[General_Solution]]
+    - [x] [[Unique_Solution]]
+  - [x] [[Homogeneous_Recurrence_Relation]]
+    - [x] [[Linear_Homogeneous_Recurrence_Relation]]
       - [ ] [[Kth_Order_Linear_Homogeneous_Recurrence_Relation]]
       - [ ] [[Second_Order_Linear_Homogeneous_Recurrence_Relation]]
       - [ ] [[Solving_Linear_Homogeneous_Recurrence_Relations]]

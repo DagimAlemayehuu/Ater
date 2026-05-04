@@ -1,20 +1,18 @@
 ---
-
-title: Unique_Solution
-type: Atomic Note
-course: Discrete Mathematics
-semester: Autumn 2025
-unit: '2'
-hub: "[[2_Recurrence_Relations_Hub]]"
-source: "[[2_Recurrence_Relations.pdf]]"
+title: "Unique_Solution"
+type: "Atomic Note"
+course: "Discrete Mathematics"
+semester: "Autumn 2025"
+unit: "2"
+hub: [[2_Recurrence_Relations_Hub]]
+source: [[2_Recurrence_Relations.pdf]]
 source_pages:
-- 15
-mode: MATH-DISCRETE
-read: false
+ - "15"
+mode: "MATH-DISCRETE"
+read: true
 generated: true
 prerequisites:
-- "[[General_Solution]]"
-
+ - "[[General_Solution]]"
 ---
 
 ## 1. Mental Model

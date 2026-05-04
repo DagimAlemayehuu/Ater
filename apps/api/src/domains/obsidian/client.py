@@ -142,7 +142,7 @@ class ObsidianClient:
         try:
             full_path.resolve() # This might not work if it doesn't exist yet, but we can check the parent
             if full_path.exists(): return True
-        except: pass
+        except Exception: pass
 
         full_path.mkdir(parents=True, exist_ok=True)
         return True

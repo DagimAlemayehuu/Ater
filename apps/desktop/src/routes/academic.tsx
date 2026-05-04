@@ -12,6 +12,7 @@ import CoursesTab from './academic-tabs/CoursesTab'
 import StudyPlannerTab from './academic-tabs/StudyPlannerTab'
 import AssignmentsTab from './academic-tabs/AssignmentsTab'
 import ExamsTab from './academic-tabs/ExamsTab'
+import {cleanTitle} from './academic-tabs/utils'
 import type {AcademicTab, AcademicData, VaultDatabase, TabProps} from './academic-tabs/types'
 
 export default function AcademicDashboard() {
@@ -350,7 +351,7 @@ function MiniCalendar({events, onSelectEvent}: {events: any[]; onSelectEvent: (p
  <button key={idx} onClick={() => onSelectEvent(ev._type === 'Assignment' ? `3-Database/03 - Assignments/${ev.id}.md` : `3-Database/04 - Exams/${ev.id}.md`)}
  className={cn('text-[6px] font-black uppercase px-1 py-0.5 rounded truncate text-left transition-all',
  ev._type === 'Exam' ? 'text-foreground border border-foreground bg-muted/5 hover:bg-muted/10' : 'bg-muted/20 text-foreground/50 hover:bg-muted/40')}>
- {ev.title}
+ {cleanTitle(ev.title)}
  </button>
  ))}
  {dayEvents.length > 2 && <span className="text-[6px] text-muted-foreground/30 font-black">+{dayEvents.length - 2}</span>}
@@ -370,7 +371,7 @@ function MiniCalendar({events, onSelectEvent}: {events: any[]; onSelectEvent: (p
  <button key={idx} onClick={() => onSelectEvent(ev._type === 'Assignment' ? `3-Database/03 - Assignments/${ev.id}.md` : `3-Database/04 - Exams/${ev.id}.md`)}
  className="w-full flex items-center gap-2 text-left p-1.5 rounded-lg hover:bg-muted/10 transition-all group">
  <div className={cn('w-1.5 h-1.5 rounded-full shrink-0', ev._type === 'Exam' ? 'bg-foreground' : 'bg-muted-foreground/40')} />
- <span className="text-[8px] font-black uppercase truncate text-muted-foreground/50 group-hover:text-foreground transition-colors">{ev.title}</span>
+ <span className="text-[8px] font-black uppercase truncate text-muted-foreground/50 group-hover:text-foreground transition-colors">{cleanTitle(ev.title)}</span>
  <span className="text-[7px] font-black text-muted-foreground/30 ml-auto shrink-0">{ev._date ? format(parseISO(ev._date), 'MMM d') : ''}</span>
  </button>
  ))}

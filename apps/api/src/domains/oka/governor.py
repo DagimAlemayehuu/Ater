@@ -1,5 +1,4 @@
 import time
-import asyncio
 import sqlite3
 from pathlib import Path
 

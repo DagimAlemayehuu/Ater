@@ -1,26 +1,23 @@
 ---
-
-title: Assignment_Operator
-type: Atomic Note
-course: Computer Programming
-semester: Autumn 2025
-unit: '2'
-hub: '[[2_C++_Programming_Fundamentals_Hub]]'
-source: '[[Chapter_2.pdf]]'
+title: "Assignment_Operator"
+type: "Atomic Note"
+course: "Computer Programming"
+semester: "Autumn 2025"
+unit: "2"
+hub: [[2_C++_Programming_Fundamentals_Hub]]
+source: [[Chapter_2.pdf]]
 source_pages:
-- 45
-mode: CS-SOFTWARE
-read: false
+ - "45"
+mode: "CS-SOFTWARE"
+read: true
 generated: true
 prerequisites:
-- '[[Main_Function]]'
-- '[[Compiler_Directives]]'
-- '[[Preprocessor_Directives]]'
-- '[[Type_Conversion]]'
-- '[[Stream_Insertion_Operator]]'
-
+ - "[[Main_Function]]"
+ - "[[Compiler_Directives]]"
+ - "[[Preprocessor_Directives]]"
+ - "[[Type_Conversion]]"
+ - "[[Stream_Insertion_Operator]]"
 ---
-
 
 # 1. Mental Model
 

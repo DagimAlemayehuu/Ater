@@ -159,17 +159,51 @@ export default function Practice() {
   const handleSubmitAnswer = () => {
     setIsRevealed(true);
     const q = questions[currentQuestionIdx];
-    
-    // Grading logic
     let isCorrect = false;
-    if (q.type === 'mcq' || q.type === 'true_false') {
-      isCorrect = String(userAnswers[q.id]).toLowerCase() === String(q.answer).toLowerCase();
-    } else if (q.type === 'short_answer' || q.type === 'scenario' || q.type === 'code') {
-      // These are manually graded by default or we can do a rough match
-      isCorrect = false; // Will be set by user buttons
+
+    if (q.type === 'mcq' || q.type === 'true_false' || q.type === 'writing' || q.type === 'debug' || q.type === 'synthesis' || q.type === 'trace' || q.type === 'short_answer' || q.type === 'scenario') {
+        const userVal = String(userAnswers[q.id] || '').trim();
+        const correctVal = String(q.answer || '').trim();
+        
+        if (q.type === 'true_false') {
+            const userBool = userVal.toLowerCase() === 'true';
+            const correctBool = typeof q.answer === 'boolean' ? q.answer : String(q.answer).toLowerCase() === 'true';
+            isCorrect = userBool === correctBool;
+        } else if (q.type === 'debug') {
+            const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+            isCorrect = norm(userVal) === norm(correctVal);
+        } else {
+            isCorrect = userVal.toLowerCase() === correctVal.toLowerCase();
+        }
+        
+        if (q.type === 'mcq' && q.options) {
+            const correctText = String(q.options[q.answer as keyof typeof q.options] || '').trim().toLowerCase();
+            isCorrect = isCorrect || userVal.toLowerCase() === correctText;
+        }
+    } else if (q.type === 'fill_in') {
+        const answers = userAnswers[q.id] || [];
+        const correctAnswers = q.answer || [];
+        isCorrect = Array.isArray(correctAnswers) && correctAnswers.every((ans: string, idx: number) => 
+            String(answers[idx] || '').trim().toLowerCase() === String(ans || '').trim().toLowerCase()
+        );
+    } else if (q.type === 'matching') {
+        const userPairs = userAnswers[q.id] || {};
+        const correctPairs = q.pairs || [];
+        isCorrect = Array.isArray(correctPairs) && correctPairs.every((p: any) => 
+            String(userPairs[p.left] || '').trim().toLowerCase() === String(p.right || '').trim().toLowerCase()
+        );
+    } else if (q.type === 'order') {
+        const userOrder = userAnswers[q.id] || (q as any).steps || [];
+        const correctOrder = (q as any).answer || [];
+        isCorrect = Array.isArray(correctOrder) && correctOrder.every((step: string, idx: number) => 
+            String(userOrder[idx] || '').trim().toLowerCase() === String(step).trim().toLowerCase()
+        );
     }
-    
-    setGradedAnswers(prev => ({ ...prev, [q.id]: isCorrect }));
+
+    const isSelfGraded = ['short_answer', 'scenario', 'writing', 'synthesis', 'debug', 'trace'].includes(q.type);
+    if (!isSelfGraded) {
+        setGradedAnswers(prev => ({...prev, [q.id]: isCorrect}));
+    }
     if (timerRef.current && advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(null);
   }
 
@@ -586,7 +620,52 @@ export default function Practice() {
                                 })}
                             </div>
                         )}
-                        {['short_answer', 'scenario'].includes(currentQuestion.type) && (
+                        
+                         {currentQuestion.type === 'order' && (
+                         <div className="space-y-3">
+                         {(userAnswers[currentQuestion.id] || currentQuestion.steps || []).map((step: string, i: number) => {
+                            const list = userAnswers[currentQuestion.id] || currentQuestion.steps || [];
+                            const moveUp = () => { if(i>0) { const n = [...list]; [n[i-1], n[i]] = [n[i], n[i-1]]; handleSelectAnswer(n); } };
+                            const moveDown = () => { if(i<list.length-1) { const n = [...list]; [n[i], n[i+1]] = [n[i+1], n[i]]; handleSelectAnswer(n); } };
+                            const isCorrect = isRevealed && step === (currentQuestion.answer || [])[i];
+                            const isWrong = isRevealed && step !== (currentQuestion.answer || [])[i];
+                            return (
+                                <div key={i} className={`flex items-center gap-3 p-4 border rounded-lg ${isCorrect ? 'border-green-500 bg-green-500/10 shadow-sm' : isWrong ? 'border-red-500 bg-red-500/10' : 'border-border/40 hover:bg-muted/5'}`}>
+                                    <div className="flex flex-col gap-1 border-r border-border/50 pr-3">
+                                        <button disabled={isRevealed || i===0} onClick={moveUp} className="text-[10px] px-1 opacity-50 hover:opacity-100 hover:text-primary transition-colors">▲</button>
+                                        <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-[10px] px-1 opacity-50 hover:opacity-100 hover:text-primary transition-colors">▼</button>
+                                    </div>
+                                    <div className="text-xs font-medium tracking-tight text-foreground/90 pl-1">{step}</div>
+                                </div>
+                            )
+                         })}
+                         </div>
+                         )}
+
+                         {currentQuestion.type === 'matching' && currentQuestion.pairs && (
+                         <div className="space-y-4">
+                         {currentQuestion.pairs.map((pair: any, i: number) => {
+                            const rights = currentQuestion.pairs.map((p: any) => p.right).sort();
+                            const selected = (userAnswers[currentQuestion.id] || {})[pair.left] || "";
+                            const isCorrect = isRevealed && selected === pair.right;
+                            const isWrong = isRevealed && selected !== pair.right;
+                            return (
+                                <div key={i} className={`flex items-center gap-4 p-4 border rounded-lg ${isCorrect ? 'border-green-500 bg-green-500/10 shadow-sm' : isWrong ? 'border-red-500 bg-red-500/10' : 'border-border/40'}`}>
+                                    <div className="flex-1 font-medium tracking-tight text-xs text-foreground/90">{pair.left}</div>
+                                    <div className="flex-1">
+                                        <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-2.5 bg-background border border-border/50 rounded-md outline-none focus:border-foreground/50 text-xs font-medium text-foreground/80 transition-colors">
+                                            <option value="">Select match...</option>
+                                            {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
+                                        </select>
+                                    </div>
+                                    {isRevealed && isWrong && <div className="text-[10px] uppercase tracking-widest text-primary font-bold w-1/3 break-words">{pair.right}</div>}
+                                </div>
+                            )
+                         })}
+                         </div>
+                         )}
+
+                        {['short_answer', 'scenario', 'writing', 'synthesis', 'debug', 'trace'].includes(currentQuestion.type) && (
                             <div className="space-y-8">
                                 <textarea 
                                     rows={8} 
@@ -632,13 +711,13 @@ export default function Practice() {
                         <Button onClick={handleSubmitAnswer} disabled={!userAnswers[currentQuestion.id]} className="flex-1 py-7 font-black uppercase tracking-[0.4em] text-[10px] rounded-2xl shadow-xl">CHECK_LOGIC <Zap size={14} className="ml-2" /></Button>
                     ) : (
                         <div className="flex-1 flex gap-2">
-                             {['short_answer', 'scenario'].includes(currentQuestion.type) && (
+                             {['short_answer', 'scenario', 'writing', 'synthesis', 'debug', 'trace'].includes(currentQuestion.type) && (
                                  <>
                                     <Button onClick={() => { setGradedAnswers(p => ({...p, [currentQuestion.id]: false})); nextQuestion(); }} variant="outline" className="flex-1 py-7 border-red-500/20 text-red-500 font-black text-[9px] uppercase rounded-2xl">FAILED</Button>
                                     <Button onClick={() => { setGradedAnswers(p => ({...p, [currentQuestion.id]: true})); nextQuestion(); }} className="flex-1 py-7 bg-green-600 font-black text-[9px] uppercase rounded-2xl">SOLVED</Button>
                                  </>
                              )}
-                             {!['short_answer', 'scenario'].includes(currentQuestion.type) && (
+                             {!['short_answer', 'scenario', 'writing', 'synthesis', 'debug', 'trace'].includes(currentQuestion.type) && (
                                  <Button onClick={nextQuestion} className="w-full py-7 font-black uppercase tracking-[0.4em] text-[10px] rounded-2xl shadow-xl">CONTINUE_SCAN <ArrowRight size={14} className="ml-2" /></Button>
                              )}
                         </div>

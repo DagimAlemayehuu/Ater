@@ -1,6 +1,5 @@
 import re
 import json
-import os
 import asyncio
 import traceback
 import time
@@ -15,7 +14,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from .vault_manager import VaultManager
 from .deployer import OkaDeployer
 from src.domains.ai.factory import ModelFactory
-from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, ExaminerAgent, CriticAgent, HubAgent, VerifierAgent, QuizAuditorAgent, DOMAIN_MATRIX
+from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgent, CriticAgent, HubAgent, VerifierAgent, QuizAuditorAgent, DOMAIN_MATRIX
 from .governor import TokenGovernor
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
 import ruamel.yaml
@@ -141,7 +140,7 @@ class OkaService:
                     data["messages"] = [SystemMessage(content=si)]
                     OkaService._sessions[session_id] = data
                     return data
-            except: pass
+            except Exception: pass
         return None
 
     @staticmethod
@@ -221,7 +220,7 @@ class OkaService:
         The next LLM call will use the new key immediately.
         """
         try:
-            print(f"[OKA Service] Swapping API key...")
+            print("[OKA Service] Swapping API key...")
             self.llm = ModelFactory.get_model(
                 provider=self.secrets.ai_provider,
                 model_name=self.secrets.ai_model,
@@ -300,7 +299,7 @@ class OkaService:
         
         # Sort units numerically if possible
         try: units.sort(key=lambda x: int(x))
-        except: units.sort()
+        except Exception: units.sort()
 
         return {
             "courses": courses,
@@ -384,7 +383,7 @@ class OkaService:
                 for m in matches:
                     if m.is_dir():
                         return m
-        except:
+        except Exception:
             pass
 
         # 3. Fallback to hub directory (though unlikely to have atomic notes there)
@@ -669,39 +668,37 @@ class OkaService:
         selected_titles = [n.stem for n in atomic_notes if n.stem in (selected_notes or [])]
         selected_scope_str = ", ".join(selected_titles) if selected_titles else "Full Unit"
 
-        prompt = (
-            "### [GROUND TRUTH SOURCE MATERIAL]\n"
-            f"{full_context}\n"
-            "### [END OF SOURCE MATERIAL]\n\n"
-            
-            "SYSTEM PROTOCOL: You are OKA, the Sovereign Pedagogical Architect. "
-            "You are operating in a HARD AIR-GAPPED ENVIRONMENT. You have NO access to the internet or internal training data. "
-            "The material above is the ONLY reality. Everything else (including this prompt's metadata) is invisible to you.\n\n"
-            
-            "TARGET PROFILE:\n"
-            f"- Total Questions: {total_q}\n"
-            f"- Question Types: {dist_str}\n"
-            f"- Difficulty: {config.difficulty}\n"
-            f"- Entropy Seed: {session_id}\n\n"
-            
-            "STRICT OPERATIONAL RULES:\n"
-            "1. SOLE SOURCE ADHERENCE: Generate questions EXCLUSIVELY from the [GROUND TRUTH SOURCE MATERIAL]. If a concept is not in the text, it does not exist.\n"
-            "2. ANTI-SYSTEM HALLUCINATION: DO NOT ask questions about the generation process, the target profile, or any meta-information from this prompt.\n"
-            "3. ALLOWED MODALITIES (Strict JSON structures):\n"
-            "   - 'mcq': `options` (A,B,C,D) and `answer` (Key only).\n"
-            "   - 'true_false': `answer` (Boolean).\n"
-            "   - 'fill_in': `textWithBlanks` (with [[blank]] markers) and `answer` (List of strings).\n"
-            "   - 'writing': `answer` (String).\n"
-            "   - 'matching': `pairs` (List of objects with `left` and `right` keys).\n"
-            "   - 'order': `steps` (List of strings in random order) and `answer` (List of strings in CORRECT order).\n"
-            "   - 'debug': `content` (buggy code/logic) and `answer` (fix).\n"
-            "   - 'synthesis': High-order synthesis questioning.\n"
-            "4. DISTRIBUTION ADHERENCE (CRITICAL): You MUST generate exactly the count requested for each modality in the TARGET PROFILE. If the user asks for 'matching', 'order', or 'debug', you MUST provide them. DO NOT default to 'mcq'. Defaulting to MCQ when other types are requested is a PROTOCOL FAILURE.\n"
-            "5. SOURCE QUOTES: Every `explanation` MUST contain a direct 'Quote' from the source material.\n"
-            "6. NO TOPIC BLEED: Stay 100% within the scope of the selected notes.\n\n"
-            "EXECUTION: Generate the session now. Follow the distribution strictly."
-        )
-        
+        prompt = f"""### [GROUND TRUTH SOURCE MATERIAL]
+{full_context}
+### [END OF SOURCE MATERIAL]
+
+SYSTEM PROTOCOL: You are OKA, the Sovereign Pedagogical Architect. You are operating in a HARD AIR-GAPPED ENVIRONMENT. You have NO access to the internet or internal training data. The material above is the ONLY reality. Everything else (including this prompt's metadata) is invisible to you.
+
+TARGET PROFILE:
+- Total Questions: {total_q}
+- Question Types: {dist_str}
+- Difficulty: {config.difficulty}
+- Entropy Seed: {session_id}
+
+STRICT OPERATIONAL RULES:
+1. SOLE SOURCE ADHERENCE: Generate questions EXCLUSIVELY from the [GROUND TRUTH SOURCE MATERIAL]. If a concept is not in the text, it does not exist.
+2. NO ANALOGY TESTING (CRITICAL): NEVER test the user on the 'Mental Model' or analogies. Test ONLY technical definitions, code syntax, and real-world application.
+3. ALLOWED MODALITIES (Strict JSON structures):
+   - 'mcq': `question` (String), `options` (A,B,C,D), `answer` (Key only), `explanation` (Mechanism of the answer).
+   - 'true_false': `question` (String), `answer` (Boolean), `explanation` (Why it is true/false).
+   - 'fill_in': `question` (String: The prompt or instruction), `textWithBlanks` (with [[blank]] markers), `answer` (List of strings).
+   - 'writing': `question` (String: The prompt or question to answer), `answer` (Model answer).
+   - 'matching': `question` (String), `pairs` (List of objects with `left` and `right` keys).
+   - 'order': `question` (String), `steps` (List of strings in random order), `answer` (List of strings in CORRECT order).
+   - 'debug': `question` (String: 'Find the bug.'), `content` (buggy code/logic snippet), `answer` (fix and explanation).
+   - 'synthesis': `question` (String: Complex scenario), `answer` (Model response).
+4. EVERY QUESTION MUST HAVE A 'question' FIELD: You must include a `question` key for every single modality.
+5. EXPLANATIONS: Every `explanation` MUST explain the underlying mechanism. Do NOT just repeat the mental model. It must be technical.
+6. DISTRIBUTION ADHERENCE: Generate EXACTLY the counts requested.
+7. NO TOPIC BLEED: Stay 100% within the scope of the selected notes.
+
+EXECUTION: Generate the session now. Follow the distribution strictly."""
+
         # 3. Invoke LLM in Batches
         OkaService._status[session_id] = "Architecting Advanced Session..."
         
@@ -711,72 +708,67 @@ class OkaService:
         # We generate in small batches to avoid output token limits and aggressive TPM limits
         BATCH_SIZE = 5
         
-        while sum(target_distribution.values()) > 0:
-            # Cooldown to avoid hitting TPM limits (especially on Groq/Free tiers)
-            if all_questions:
-                OkaService._status[session_id] = f"Cooling down for Rate Limits (TPM)... ({len(all_questions)}/{total_q})"
-                await asyncio.sleep(25)
-
-            # Determine batch distribution
-            current_batch_count = 0
-            batch_dist = {}
-            for q_type, count in target_distribution.items():
-                take = min(count, BATCH_SIZE - current_batch_count)
-                if take > 0:
-                    batch_dist[q_type] = take
-                    current_batch_count += take
-                if current_batch_count >= BATCH_SIZE:
-                    break
-            
-            if current_batch_count == 0:
-                break
+        OkaService._status[session_id] = "Generating Practice Questions..."
+        
+        tasks = []
+        for q_type, count in target_distribution.items():
+            for _ in range(count):
+                agent = QuestionAgent(self.planner_llm, q_type)
+                import random
+                seed = random.random()
                 
-            batch_dist_str = ", ".join([f"{count} {t}" for t, count in batch_dist.items()])
-            OkaService._status[session_id] = f"Generating Batch ({len(all_questions)}/{total_q} complete)..."
-            
-            batch_prompt = prompt.replace(f"- Total Questions: {total_q}", f"- Total Questions: {current_batch_count}")
-            batch_prompt = batch_prompt.replace(f"- Question Types: {dist_str}", f"- Question Types: {batch_dist_str}")
-            # Ensure we don't repeat the same exact questions if we had a seed (though randomize helps)
-            batch_prompt += f"\n\nBATCH SEED: {random.random()}"
-
-            try:
-                # Attempt structured batch
+                # To prevent redundancy, physically shuffle the context for each agent
+                # and slice it so they literally see different text at the top,
+                # ensuring the 3000 character cutoff in agents.py grabs different facts.
+                shuffled_parts = list(context_parts)
+                random.shuffle(shuffled_parts)
+                tight_context = "\n\n".join(shuffled_parts)
+                
+                tasks.append(agent.generate(hub['title'], f"SEED: {seed}\n" + tight_context, config.difficulty))
+                
+        # Limit concurrency and rate to avoid groq/ollama rate limits
+        from aiolimiter import AsyncLimiter
+        import asyncio
+        
+        # Groq limits are often ~30 RPM on free tier, but TPM is easily hit. Limit to 5 per minute for wide safety.
+        rate_limiter = AsyncLimiter(5, 60)
+        
+        async def run_agent(agent_task):
+            max_retries = 5
+            base_delay = 3.0
+            for attempt in range(max_retries):
                 try:
-                    from .schemas import PracticeBatch
-                    structured_llm = self.planner_llm.with_structured_output(PracticeBatch)
-                    batch_res = await structured_llm.ainvoke(batch_prompt)
-                    batch_questions = [q.model_dump() for q in batch_res.questions]
-                except Exception:
-                    res = await self.planner_llm.ainvoke([HumanMessage(content=batch_prompt + "\n\nRETURN ONLY A JSON OBJECT with a 'questions' key containing the list of questions.")])
-                    content = res.content.strip()
-                    if "```json" in content:
-                        match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
-                        content = match.group(1) if match else content
-                    elif "```" in content:
-                        match = re.search(r"```\s*(.*?)\s*```", content, re.DOTALL)
-                        content = match.group(1) if match else content
-                    
-                    data = json.loads(content)
-                    batch_questions = data["questions"] if isinstance(data, dict) and "questions" in data else (data if isinstance(data, list) else [])
-
-                # Add to total and decrement target
-                for q in batch_questions:
-                    all_questions.append(q)
-                    q_type_raw = (q.get("type") or q.get("questionType") or "writing").lower().replace("_", "")
-                    # Try to find which target bucket this fits into
-                    # This is imprecise because LLM might return 'multiple_choice' instead of 'mcq'
-                    for t_key in target_distribution.keys():
-                        if t_key.replace("_", "") in q_type_raw or q_type_raw in t_key.replace("_", ""):
-                            target_distribution[t_key] = max(0, target_distribution[t_key] - 1)
-                            break
+                    async with rate_limiter:
+                        return await agent_task
+                except Exception as e:
+                    err_msg = str(e)
+                    if "429" in err_msg or "rate limit" in err_msg.lower():
+                        if attempt == max_retries - 1:
+                            logger.error(f"[OKA Service] Max retries reached for question generation: {e}")
+                            return {"error": "Rate limit exceeded after retries"}
+                        
+                        # Extract the required wait time from Groq error if available, else exponential backoff
+                        delay = base_delay * (2 ** attempt)
+                        import re
+                        match = re.search(r'Please try again in ([0-9.]+)s', err_msg)
+                        if match:
+                            delay = float(match.group(1)) + 1.0 # Add a buffer
+                        
+                        logger.warning(f"[OKA Service] Rate limit hit (Attempt {attempt+1}/{max_retries}). Retrying in {delay:.2f}s... Error: {err_msg[:100]}")
+                        await asyncio.sleep(delay)
+                    else:
+                        logger.error(f"[OKA Service] Non-retryable error during generation: {e}")
+                        return {"error": str(e)}
                 
-                # Safety break if LLM is looping or failing to decrement
-                if not batch_questions:
-                    break
-                    
-            except Exception as e:
-                print(f"[Practice Generation] Batch failed: {e}")
-                break
+        results = await asyncio.gather(*(run_agent(t) for t in tasks), return_exceptions=True)
+        
+        all_questions = []
+        for idx, res in enumerate(results):
+            if isinstance(res, dict) and "error" not in res and res.get("answer") != "N/A":
+                res["id"] = len(all_questions) + 1
+                all_questions.append(res)
+            else:
+                logger.error(f"[OKA Service] Failed to generate a question: {res}")
 
         questions = all_questions
         
@@ -868,7 +860,13 @@ class OkaService:
         # Create Readable Markdown
         md_content = f"# {quiz_title}\n\n"
         for idx, q in enumerate(questions, 1):
-            md_content += f"### Q{idx} [{q.get('type')}]: {q.get('question', '')}\n"
+            # Resolve question text
+            q_text = q.get('question', '')
+            if not q_text and q.get('type') == 'writing':
+                q_text = q.get('answer', 'Answer the following:')
+            
+            md_content += f"### Q{idx} [{q.get('type')}]: {q_text}\n"
+            
             if q.get('type') == 'mcq' and q.get('options'):
                 options = q.get('options')
                 if isinstance(options, dict):
@@ -878,8 +876,22 @@ class OkaService:
                     for i, v in enumerate(options):
                         label = chr(65 + i) # A, B, C...
                         md_content += f"- **{label})** {v}\n"
+            elif q.get('type') == 'fill_in':
+                md_content += f"\n{q.get('textWithBlanks', '')}\n"
+            elif q.get('type') == 'debug':
+                md_content += f"\n```\n{q.get('content', '')}\n```\n"
+            elif q.get('type') == 'order' and q.get('steps'):
+                for i, step in enumerate(q.get('steps')):
+                    md_content += f"- [ ] {step}\n"
+            elif q.get('type') == 'matching' and q.get('pairs'):
+                lefts = [p.get('left') for p in q.get('pairs') if p.get('left')]
+                rights = [p.get('right') for p in q.get('pairs') if p.get('right')]
+                import random
+                random.shuffle(rights)
+                for left, right in zip(lefts, rights):
+                    md_content += f"- {left}  <-->  {right}\n"
             elif q.get('type') == 'code':
-                md_content += f"```\n{q.get('codeSnippet', '')}\n```\n"
+                md_content += f"\n```\n{q.get('codeSnippet', '')}\n```\n"
             md_content += "\n***\n\n"
         
         md_content += "## Session Data\n"
@@ -1442,7 +1454,7 @@ class OkaService:
                             domain = DOMAIN_MATRIX.get(note_schema.mode, DOMAIN_MATRIX["CS-SOFTWARE"])
                             theory_agent = TheoryAgent(self.llm_creative, domain)
                             practitioner_agent = PractitionerAgent(self.llm_creative, domain)
-                            examiner_agent = ExaminerAgent(self.llm_creative, domain)
+                            # examiner removed, dynamic QuestionAgents used
                             verifier_agent = VerifierAgent(self.llm_creative)
                             quiz_auditor_agent = QuizAuditorAgent(self.llm_creative)
 
@@ -1466,15 +1478,22 @@ class OkaService:
 
                             OkaService._status[session_id] = f"{phase_prefix} Examiner Pass: [[{current_note_title}]] (3/3)..."
 
-                            # Pass 3: Examiner
+                            # Pass 3: Examiner (Dedicated Agents)
                             await self.governor.acquire(expected_tokens=2500)
                             theory_summary = theory[:600] # simple summary
-                            quiz_json_str = await examiner_agent.generate(note_schema.title, theory_summary, primary_language)
-
-                            # Repair Quiz JSON if needed
-                            quiz_json_str = quiz_json_str.strip()
-                            quiz_json_str = re.sub(r"^```[a-z]*\n?", "", quiz_json_str)
-                            quiz_json_str = re.sub(r"\n?```$", "", quiz_json_str).strip()
+                            
+                            types = [domain.get('l1', 'mcq'), domain.get('l2', 'true_false'), domain.get('l3', 'debug')]
+                            diffs = ["L1", "L2", "L3"]
+                            tasks = []
+                            for qt, diff in zip(types, diffs):
+                                agent = QuestionAgent(self.llm_creative, qt)
+                                tasks.append(agent.generate(note_schema.title, theory_summary, diff))
+                            
+                            questions = await asyncio.gather(*tasks)
+                            for i, q in enumerate(questions):
+                                q["id"] = f"q{i+1}"
+                                
+                            quiz_json_str = json.dumps(questions, indent=2)
 
                             # Quiz Audit — inject diagnosis as hint for next retry (no inline retry to avoid broken JSON)
                             if generation_attempts < max_attempts:

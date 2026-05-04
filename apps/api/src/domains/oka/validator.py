@@ -1,7 +1,7 @@
 import re
 import yaml
 import json
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Any, List, Tuple, Optional
 
 # Strings that indicate a generation failure — notes containing these must NEVER be deployed
 HARD_FAILURE_MARKERS = [
@@ -97,7 +97,7 @@ class OkaValidator:
         if note_type not in ("hub", "possible questions") and wikilink_count < 3:
             errors.append(
                 f"INSUFFICIENT_WIKILINKS: Found {wikilink_count}, need ≥ 3. "
-                "Sections 2 and 3 must wrap related concepts in [[Wikilinks]]."
+                "Section 2 must wrap related concepts in [[Wikilinks]]."
             )
 
         # Wikilink Format check: no spaces inside brackets

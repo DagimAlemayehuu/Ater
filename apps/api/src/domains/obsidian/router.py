@@ -3,7 +3,6 @@ from typing import Dict, Any, Optional
 import asyncio
 import ruamel.yaml
 import uuid
-import datetime
 from pathlib import Path
 from pydantic import BaseModel
 import shutil
@@ -611,7 +610,7 @@ async def find_vault_page(page_name: str, secrets: AppSecrets = Depends(get_app_
             for item in method("*"):
                 if item.is_file() and item.name.lower() == pattern.lower():
                     return item
-        except: pass
+        except Exception: pass
         return None
 
     # 1. Check for PDFs in common locations first (if it looks like a PDF)
@@ -948,7 +947,7 @@ async def get_pdf_viewer(
             parts = [int(p.strip()) for p in filter_pages.split(',') if p.strip()]
             if parts:
                 filter_list_json = json.dumps(parts)
-        except:
+        except Exception:
             pass
 
     # Theme-aware styles
