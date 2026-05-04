@@ -8,12 +8,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { load } from '@tauri-apps/plugin-store';
 
-import DEFAULT_PROFILE_PERSONAL from '@/templates/profiles/personal.md?raw';
-import DEFAULT_PROFILE_ACADEMIC from '@/templates/profiles/academic.md?raw';
-import DEFAULT_PROFILE_FINANCIAL from '@/templates/profiles/financial.md?raw';
-import DEFAULT_PROFILE_FITNESS from '@/templates/profiles/fitness.md?raw';
-import DEFAULT_PROFILE_MASTER_PLAN from '@/templates/profiles/master_plan.md?raw';
-
 import DEFAULT_SYSTEM_PROMPT_STRATEGIST from '@/templates/system-prompts/strategist.md?raw';
 import DEFAULT_SYSTEM_PROMPT_CREATOR from '@/templates/system-prompts/creator.md?raw';
 
@@ -60,11 +54,6 @@ export interface AppConfig {
     inboxPath: string;
     academicFolderPath: string;
     autoDeploy: boolean;
-    profilePersonal: string;
-    profileAcademic: string;
-    profileFinancial: string;
-    profileFitness: string;
-    profileMasterPlan: string;
     strategistPrompt: string;
     strategistSliders: string;
     creatorPrompt: string;
@@ -105,11 +94,6 @@ export const DEFAULT_CONFIG: AppConfig = {
     inboxPath: '',
     academicFolderPath: '1-Academic',
     autoDeploy: false,
-    profilePersonal: DEFAULT_PROFILE_PERSONAL,
-    profileAcademic: DEFAULT_PROFILE_ACADEMIC,
-    profileFinancial: DEFAULT_PROFILE_FINANCIAL,
-    profileFitness: DEFAULT_PROFILE_FITNESS,
-    profileMasterPlan: DEFAULT_PROFILE_MASTER_PLAN,
     strategistPrompt: DEFAULT_SYSTEM_PROMPT_STRATEGIST,
     strategistSliders: '',
     creatorPrompt: DEFAULT_SYSTEM_PROMPT_CREATOR,
@@ -150,11 +134,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const inboxPath = (await store.get<string>('inboxPath')) || '';
                 const academicFolderPath = (await store.get<string>('academicFolderPath')) || DEFAULT_CONFIG.academicFolderPath;
                 const autoDeploy = (await store.get<boolean>('autoDeploy')) ?? false;
-                const profilePersonal = (await store.get<string>('profilePersonal')) || DEFAULT_CONFIG.profilePersonal;
-                const profileAcademic = (await store.get<string>('profileAcademic')) || DEFAULT_CONFIG.profileAcademic;
-                const profileFinancial = (await store.get<string>('profileFinancial')) || DEFAULT_CONFIG.profileFinancial;
-                const profileFitness = (await store.get<string>('profileFitness')) || DEFAULT_CONFIG.profileFitness;
-                const profileMasterPlan = (await store.get<string>('profileMasterPlan')) || DEFAULT_CONFIG.profileMasterPlan;
                 const strategistPrompt = (await store.get<string>('strategistPrompt')) || DEFAULT_CONFIG.strategistPrompt;
                 const strategistSliders = (await store.get<string>('strategistSliders')) || '';
                 const creatorPrompt = (await store.get<string>('creatorPrompt')) || DEFAULT_CONFIG.creatorPrompt;
@@ -177,11 +156,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     inboxPath,
                     academicFolderPath,
                     autoDeploy,
-                    profilePersonal,
-                    profileAcademic,
-                    profileFinancial,
-                    profileFitness,
-                    profileMasterPlan,
                     strategistPrompt,
                     strategistSliders,
                     creatorPrompt,

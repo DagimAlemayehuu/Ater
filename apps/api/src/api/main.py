@@ -40,7 +40,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from src.api.deps import AppSecrets, get_app_secrets
-from src.domains.notion.client import NotionClient
 from src.domains.obsidian.client import ObsidianClient
 from src.domains.oka.service import OkaService
 from src.domains.oka.watcher import OkaQueueManager
@@ -50,7 +49,6 @@ from src.domains.rag.vector_store import ChromaManager
 from src.domains.ai.tracker import tracker
 from src.domains.ai.factory import ModelFactory
 
-from src.domains.notion.router import router as notion_router
 from src.domains.obsidian.router import router as obsidian_router
 from src.domains.academics.router import router as academics_router
 
@@ -130,7 +128,6 @@ async def validate_vault_path(vault_path: Optional[str] = None, secrets: AppSecr
     return effective_vault_path
 
 # Mount routers
-app.include_router(notion_router, prefix="/api")
 app.include_router(obsidian_router, prefix="/api", dependencies=[Depends(validate_vault_path)])
 app.include_router(academics_router, prefix="/api", dependencies=[Depends(validate_vault_path)])
 
@@ -146,55 +143,6 @@ async def health_check():
 async def get_rate_limits():
     """Returns the current captured rate limit state for all providers."""
     return tracker.get_all()
-
-@app.get("/api/notion/pages")
-async def list_notion_pages(secrets: AppSecrets = Depends(get_app_secrets)):
-    """
-    Lists pages from the connected Notion workspace.
-    """
-    if not secrets.notion_key:
-        raise HTTPException(status_code=401, detail="X-Notion-Key header missing")
-    
-    try:
-        client = NotionClient(secrets.notion_key)
-        pages = await client.list_pages()
-        return {"pages": pages}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/notion/databases")
-async def list_notion_databases(secrets: AppSecrets = Depends(get_app_secrets)):
-    """
-    Lists databases from the connected Notion workspace.
-    """
-    if not secrets.notion_key:
-        raise HTTPException(status_code=401, detail="X-Notion-Key header missing")
-    
-    try:
-        client = NotionClient(secrets.notion_key)
-        databases = await client.list_databases()
-        return {"databases": databases}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/notion/databases/{database_id}/query")
-async def query_notion_database(
-    database_id: str,
-    limit: int = 50,
-    secrets: AppSecrets = Depends(get_app_secrets)
-):
-    """
-    Queries a specific Notion database.
-    """
-    if not secrets.notion_key:
-        raise HTTPException(status_code=401, detail="X-Notion-Key header missing")
-    
-    try:
-        client = NotionClient(secrets.notion_key)
-        results = await client.query_database(database_id, limit=limit)
-        return {"results": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/obsidian/files")
 async def list_obsidian_files(secrets: AppSecrets = Depends(get_app_secrets)):

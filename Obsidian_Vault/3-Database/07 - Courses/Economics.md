@@ -1,8 +1,8 @@
 ---
 Semester: "[[Winter 2026]]"
 Status: "[[Active]]"
-Credits: '4'
-title: Web Dev
+title: Economics
+Credits: '3'
 Difficulty: "[[2 - Medium]]"
 ---
 

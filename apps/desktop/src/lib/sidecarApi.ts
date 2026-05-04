@@ -23,13 +23,6 @@ export interface VaultDatabase {
     type: 'obsidian';
 }
 
-export interface NotionPage {
-    id: string
-    object: string
-    properties: Record<string, any>
-    url: string
-}
-
 export interface ObsidianFile {
     name: string
     path: string
@@ -56,7 +49,6 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 
     // Fetch all config values into a single object
     const config = {
-        notionApiKey: (await store.get<string>('notionApiKey')) || '',
         geminiApiKey: (await store.get<string>('geminiApiKey')) || '',
         aiProvider: (await store.get<string>('aiProvider')) || 'google', 
         aiApiKey: (await store.get<string>('aiApiKey')) || '', 
@@ -133,54 +125,6 @@ export const sidecarApi = {
         if (!response.ok) throw new Error('Health check failed')
         return response.json()
     },
-
-    // ── Notion Headless Engine ──────────────────────────────
-    listNotionDatabases: () =>
-        request<any[]>('/api/notion/databases'),
-    
-    getNotionDatabaseData: (databaseId: string, forceSync: boolean = false) =>
-        request<{ metadata: any; rows: any[] }>(`/api/notion/databases/${databaseId}?force_sync=${forceSync}`),
-    
-    getNotionPage: (pageId: string) =>
-        request<any>(`/api/notion/pages/${pageId}`),
-    
-    syncNotionDatabase: (databaseId: string) =>
-        request<{ success: boolean; message: string }>(`/api/notion/databases/${databaseId}/sync`, {
-            method: 'POST'
-        }),
-    
-    updateNotionPage: (pageId: string, properties: any) =>
-        request<{ success: boolean; page: any }>(`/api/notion/pages/${pageId}`, {
-            method: 'PATCH',
-            body: JSON.stringify(properties)
-        }),
-
-    createNotionPage: (databaseId: string, properties: any) =>
-        request<{ success: boolean; page: any }>(`/api/notion/databases/${databaseId}/pages`, {
-            method: 'POST',
-            body: JSON.stringify({ properties })
-        }),
-
-    deleteNotionPage: (pageId: string) =>
-        request<{ success: boolean }>(`/api/notion/pages/${pageId}`, {
-            method: 'DELETE'
-        }),
-
-    getNotionPageContent: (pageId: string) =>
-        request<{ blocks: any[] }>(`/api/notion/pages/${pageId}/content`),
-
-    updateNotionPageContent: (pageId: string, markdown: string) =>
-        request<{ success: boolean }>(`/api/notion/pages/${pageId}/content`, {
-            method: 'PUT',
-            body: JSON.stringify({ markdown })
-        }),
-
-    // Keep legacy queryNotionDatabase for backwards compatibility with older routes
-    queryNotionDatabase: (databaseId: string) =>
-        request<{ results: any[] }>(`/api/notion/databases/${databaseId}`).then((res: any) => ({ results: res.rows || [] })),
-        
-    listNotionPages: () => 
-        request<{ pages: any[] }>('/api/notion/pages'),
 
     // ── Obsidian Local Headless CMS ─────────────────────────
     listVaultDatabases: () =>

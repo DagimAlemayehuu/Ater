@@ -137,7 +137,7 @@ export const sidecarApi = {
 
     // ── AI & Agents (Universal) ─────────────────────────────────────────
     testAiConnection: (target: 'primary' | 'planner' | 'utility' = 'primary') => 
-        sidecarApi.request<{ success: boolean; message: string }>('/api/test-ai', {
+        sidecarApi.request<{ success: boolean; message: string }>('/api/ai/test-connection', {
             method: 'POST',
             body: JSON.stringify({ target })
         }),

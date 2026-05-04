@@ -3,7 +3,6 @@ from typing import Optional
 from pydantic import BaseModel
 
 class AppSecrets(BaseModel):
-    notion_key: Optional[str] = None
     ai_provider: str = "google"
     ai_key: Optional[str] = None
     ai_model: str = "gemini-2.0-flash"
@@ -25,7 +24,6 @@ class AppSecrets(BaseModel):
     google_calendar_token: Optional[str] = None
 
 async def get_app_secrets(
-    x_notion_key: Optional[str] = Header(None),
     x_ai_provider: str = Header("google"),
     x_ai_key: Optional[str] = Header(None),
     x_ai_model: str = Header("gemini-2.0-flash"),
@@ -53,7 +51,6 @@ async def get_app_secrets(
     primary_provider = x_ai_provider.lower()
     
     return AppSecrets(
-        notion_key=x_notion_key,
         ai_provider=primary_provider,
         ai_key=x_ai_key,
         ai_model=x_ai_model,

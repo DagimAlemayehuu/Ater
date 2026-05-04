@@ -18,6 +18,9 @@ from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgen
 from .governor import TokenGovernor
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
 import ruamel.yaml
+import logging
+
+logger = logging.getLogger("LifeOS")
 
 # OKA-specific constants
 OKA_TIMEOUT = 600       # 10 minutes — headroom for large PDFs
