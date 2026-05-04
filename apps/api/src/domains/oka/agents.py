@@ -43,6 +43,83 @@ DOMAIN_MATRIX = {
     "RESEARCH-METHODS":   {"persona":"Researcher","h1":"Research Method","h2":"Validity Threats","artifact":"Methodology Setup","type":"Markdown Research Matrix","l1":"mcq","l2":"scenario","l3":"writing"},
 }
 
+# ── GOLD STANDARD DOMAIN INSTRUCTIONS (v26.5) ───────────────────────────────────
+# These are discipline-specific "Perfect Outcome" few-shot constraints.
+DOMAIN_SPECIFIC_INSTRUCTIONS = {
+    "ECON-MACRO": """
+EXAMPLE OF MASTER-LEVEL LOGIC (#2):
+"[[Aggregate_Demand]] is the total demand for final goods and services in an economy at a given time. It consists of consumption, investment, government spending, and net exports ($$AD = C + I + G + (X - M)$$). The underlying mechanism follows the wealth effect and interest rate effect, where price level changes shift real wealth and investment demand inversely."
+
+EXAMPLE OF MASTER-LEVEL EDGE (#5):
+"The model fails during stagflation (simultaneous high inflation and unemployment) where traditional demand-side interventions exacerbate the crisis. It also ignores the 'Paradox of Thrift' where individual saving reduces aggregate output during recessions."
+""",
+    "CS-SOFTWARE": """
+EXAMPLE OF MASTER-LEVEL LOGIC (#2):
+"[[Recursion]] is a programming technique where a function calls itself to solve a smaller instance of the same problem. The mechanism relies on a 'Stack Frame' to store local variables and return addresses, terminating only when the 'Base Case' is reached to prevent a StackOverflowError."
+
+EXAMPLE OF MASTER-LEVEL ARTIFACT (#3):
+```python
+def fibonacci(n):
+    # Professional Domain: Telecommunications (Network Hop Calculation)
+    if n <= 1: return n
+    return fibonacci(n-1) + fibonacci(n-2)
+```
+""",
+    "MATH-DISCRETE": """
+EXAMPLE OF MASTER-LEVEL LOGIC (#2):
+"[[Mathematical_Induction]] is a proof technique for proving a property $P(n)$ holds for all natural numbers. The mechanism involves two steps: the 'Base Case' proving $P(0)$ is true, and the 'Inductive Step' proving that if $P(k)$ is true, then $P(k+1)$ must also be true, creating a logical chain reaction."
+
+EXAMPLE OF MASTER-LEVEL EDGE (#5):
+"Induction fails if the base case is not properly established (e.g., trying to prove a property of primes starting at 1). It is also insufficient for proving properties of uncountable sets where cardinality exceeds the set of natural numbers."
+""",
+    "PHYSICS-KINEMATICS": """
+EXAMPLE OF MASTER-LEVEL LOGIC (#2):
+"[[Velocity]] is the rate of change of displacement with respect to time ($$v = \\frac{dx}{dt}$$). Unlike speed, it is a vector quantity, meaning it has both magnitude and direction. In a professional Aerospace context, velocity vectors are critical for orbital insertion calculations where a 1% error in magnitude results in mission failure."
+
+EXAMPLE OF MASTER-LEVEL ARTIFACT (#3):
+$$v_f = v_i + at$$
+$$x_f = x_i + v_i t + \\frac{1}{2}at^2$$
+""",
+    "ENG-ELEC": """
+EXAMPLE OF MASTER-LEVEL LOGIC (#2):
+"[[Ohms_Law]] states that the current through a conductor between two points is directly proportional to the voltage across the two points ($$V = IR$$). In high-frequency PCB design, this relationship is constrained by trace impedance and thermal dissipation limits, where excess current leads to 'thermal runaway'."
+
+EXAMPLE OF MASTER-LEVEL EDGE (#5):
+"Ohm's Law fails at high frequencies due to the skin effect, where current flows only on the surface of the conductor, significantly increasing effective resistance. It also breaks down in non-ohmic materials like semiconductors."
+""",
+    "CHEMISTRY": """
+EXAMPLE OF MASTER-LEVEL LOGIC (#2):
+"[[Enthalpy]] ($$H$$) is a measure of the total heat content of a system. The change in enthalpy ($$\\Delta H$$) during a reaction indicates whether it is exothermic (negative) or endothermic (positive) ($$\\Delta H = H_{products} - H_{reactants}$$)."
+""",
+    "PHILOSOPHY": """
+EXAMPLE OF MASTER-LEVEL LOGIC (#2):
+"[[Categorical_Imperative]] is the central philosophical concept in the deontological moral philosophy of Immanuel Kant. It represents an unconditional moral obligation that is binding in all circumstances and is not dependent on a person's inclination or purpose. The mechanism relies on 'Universalizability', where an action is only moral if its maxim could be willed as a universal law."
+""",
+    "LAW-CASE": """
+EXAMPLE OF MASTER-LEVEL LOGIC (#2):
+"[[Duty_Of_Care]] is a legal obligation which is imposed on an individual requiring adherence to a standard of reasonable care while performing any acts that could foreseeably harm others. Under the Donoghue v Stevenson (1932) precedent, the 'Neighbor Principle' establishes that one must take reasonable care to avoid acts or omissions which you can reasonably foresee would be likely to injure your neighbor."
+""",
+    "MED-PHYSIO": """
+EXAMPLE OF MASTER-LEVEL LOGIC (#2):
+"[[Homeostasis]] is the state of steady internal, physical, and chemical conditions maintained by living systems. This dynamic equilibrium is regulated by 'Negative Feedback Loops' (e.g., baroreceptor reflex for blood pressure), where a deviation from a set point triggers a compensatory response to restore balance."
+""",
+    "CS-SYSTEMS": """
+EXAMPLE OF MASTER-LEVEL LOGIC (#2):
+"[[Microservices]] is an architectural style that structures an application as a collection of services that are highly maintainable and testable, loosely coupled, independently deployable, and organized around business capabilities. The mechanism relies on 'API Gateways' to orchestrate requests and 'Service Discovery' to manage dynamic network locations."
+""",
+    "CS-DB": """
+EXAMPLE OF MASTER-LEVEL LOGIC (#2):
+"[[Normalization]] is the process of organizing data in a database to reduce redundancy and improve data integrity. The mechanism involves dividing large tables into smaller, related tables and defining relationships between them (e.g., 3rd Normal Form (3NF) requires that all non-key attributes are functionally dependent only on the primary key)."
+""",
+    "MATH-CRYPTO": """
+EXAMPLE OF MASTER-LEVEL LOGIC (#2):
+"[[RSA_Encryption]] is an asymmetric cryptographic algorithm based on the practical difficulty of factoring the product of two large prime numbers. The mechanism involves a public key $(n, e)$ and a private key $d$, where encryption is performed by $c = m^e \\pmod{n}$ and decryption by $m = c^d \\pmod{n}$."
+"""
+}
+
+def get_domain_instruction(mode: str) -> str:
+    return DOMAIN_SPECIFIC_INSTRUCTIONS.get(mode, "Explain the concept with high technical density and professional rigor.")
+
 VALID_MODES = set(DOMAIN_MATRIX.keys())
 
 PROFESSIONAL_DOMAINS = [
@@ -218,21 +295,32 @@ class TheoryAgent:
 
     async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str) -> str:
         title_readable = note_schema.title.replace("_", " ")
-        sys_prompt = f"""You are a helpful {self.domain['persona']} tutor.
+        prof_domain = get_professional_domain(note_schema.title)
+        domain_fix = get_domain_instruction(note_schema.get("mode", "ECON-MACRO"))
+        
+        sys_prompt = f"""You are a world-class {self.domain['persona']} and pedagogical expert.
+Your goal is to take a student from ZERO knowledge to TOTAL MASTERY of '{title_readable}'.
 
-Write EXACTLY 2 sections. Keep language simple, direct, and conversational.
+{domain_fix}
 
 # 1. Mental Model
-Explain this concept to a 12-year-old using a simple, everyday situation. Do not use technical jargon. Just make it intuitively click (2-3 sentences max).
+Explain the ENTIRE concept to a 12-year-old using a simple, everyday analogy. Do not use ANY technical jargon here. It must make the concept "click" intuitively in 2-4 sentences.
 
-# 2. {self.domain['h1']}
-Provide the formal definition of this concept in exactly 2-3 sentences. No fluff. Get straight to the point.
-MANDATORY: Embed 3-5 wikilinks from this list ONLY, and no other concepts: {all_concepts}
-Format: [[Exact_Match_From_List]] (zero spaces inside brackets).
+# 2. {self.domain['h1']} (The Logic)
+Provide a rigorous, technical definition and the underlying mechanism. Use formal terminology.
+MANDATORY: If this is a math/science concept, you MUST use LaTeX ($$ or $) for every formula.
+MANDATORY: Embed 2-3 wikilinks from this list ONLY: {all_concepts}
+Format: [[Exact_Match_From_List]] (no spaces).
+
+# 3. {self.domain['artifact']} (The Proof)
+Apply this concept to the professional domain: **{prof_domain}**.
+Provide EXACTLY ONE high-fidelity artifact of type: **{self.domain['type']}**. 
+If code, it must be production-grade and under 20 lines. If math, use block LaTeX ($$).
+Do NOT write any explanatory text inside this section; let the artifact speak.
 
 Concept: {title_readable}
-Source context: {source_text[:1500]}"""
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the theory sections.")])
+Source context: {source_text[:2000]}"""
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Mastery Note for {title_readable}")])
         return res.content.strip()
 
     async def retry(self, note_schema, source_text: str, primary_language: str, all_concepts: str, diagnosis: str) -> str:
@@ -262,23 +350,23 @@ class PractitionerAgent:
 
     async def generate(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> str:
         title_readable = note_title.replace("_", " ")
-        sys_prompt = f"""You are a helpful {self.domain['persona']} tutor.
+        prof_domain = get_professional_domain(note_title)
+        domain_fix = get_domain_instruction(mode)
+        
+        sys_prompt = f"""You are a helpful {self.domain['persona']} and technical writer.
+Complete the mastery note for '{title_readable}' by adding the final technical sections.
 
-Write EXACTLY 3 sections. Keep it minimal and highly focused.
+{domain_fix}
 
-# 3. {self.domain['artifact']}
-Provide EXACTLY ONE clean, correct artifact of type: **{self.domain['type']}**.
-If code, keep it under 20 lines. If a diagram, use standard formats or basic Mermaid (graph TD/LR). Do not invent complex syntax. Do NOT write any explanatory text below it.
+## 4. Professional Walkthrough (The Execution)
+Provide a 3-4 bullet point technical breakdown of how the previous artifact (Section 3) functions in the context of **{prof_domain}**. Each bullet must be dense with technical insight.
 
-## 4. Walkthrough
-Write 3-4 bullet points explaining exactly how the artifact works step-by-step. Use standard, recognizable examples. Do not invent complex business scenarios.
-
-## 5. {self.domain['h2']}
-Write 2-3 sentences explaining where this concept fails, common pitfalls, or edge cases to watch out for.
+## 5. {self.domain['h2']} (The Edge)
+Analyze the limitations, edge cases, or failure modes of this concept. Explain where it breaks or where the model fails to apply (2-3 sentences).
 
 Concept: {title_readable}
-Theory context: {theory_body[:600]}"""
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the artifact, walkthrough, and pitfalls.")])
+Theory context: {theory_body[:1000]}"""
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Finalize mastery for {title_readable}")])
         return res.content.strip()
 
     async def retry(self, note_title: str, theory_body: str, primary_language: str, diagnosis: str) -> str:
@@ -357,11 +445,13 @@ MANDATORY SCHEMA:
 {json_schema}
 
 STRICT RULES:
-1. Output ONLY a valid JSON object matching the schema exactly. No markdown fences. No preamble.
-2. The 'answer' field is MANDATORY. It MUST contain a definitive correct answer or a full "Perfect Response" for writing/synthesis. NEVER use a grading rubric.
-3. For 'explanation', explain the underlying mechanism deeply.
-4. EXCLUSIVELY use the provided Context. Do not hallucinate outside features.
-5. ANTI-REDUNDANCY: You MUST use the SEED value at the top of the Context to randomly pick an obscure or minor detail to test. DO NOT pick the most obvious concept. A different SEED means you MUST pick a completely different fact than usual.
+1. Output ONLY a valid JSON object matching the schema exactly. No markdown fences.
+2. The 'answer' field MUST be a definitive correct response. 
+   - FOR WRITING/SYNTHESIS: Provide a 3-5 sentence 'Perfect Response' that demonstrates total concept mastery.
+   - **PROHIBITION**: NEVER use the words 'rubric', 'grading', 'evaluate', or 'points'. Provide the answer itself.
+3. For 'explanation', explain the underlying mechanism deeply using LaTeX for any math.
+4. EXCLUSIVELY use the provided Context.
+5. ANTI-REDUNDANCY: Use the SEED value to pick a non-obvious, technical detail to test.
 
 Concept: {title_readable}
 Context: {context[:3000]}
