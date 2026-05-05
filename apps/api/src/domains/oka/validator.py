@@ -228,11 +228,11 @@ class OkaValidator:
         clean_json = clean_json.replace("\\\\n", "\\n")
 
         def _sanitize_backslashes(s: str) -> str:
-            """Escape lone backslashes that are not valid JSON escape sequences.
+            r"""Escape lone backslashes that are not valid JSON escape sequences.
             This handles LaTeX like \\frac, \\Delta, \\sigma etc. inside JSON strings.
             Valid JSON escapes: \\ \" \/ \b \f \n \r \t \uXXXX
             """
-            return re.sub(r'\\(?!["\\/ bfnrtu])', r'\\\\', s)
+            return re.sub(r'\\(?![\\"/bfnrtu])', r'\\\\', s)
 
         def _try_parse(s: str):
             try:

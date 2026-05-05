@@ -1799,7 +1799,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             clean_filename = Path(session_path).name.replace(" ", "_")
             _sem = (plan.semester or "General").strip()
             _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
-            source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
+            
+            # Determine relative path from vault root to inbox for mirroring
+            try:
+                rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path)
+                source_link = f"[[{rel_inbox}/_Generated/{_sem}/{_crs}/{clean_filename}]]"
+            except Exception:
+                # Fallback if inbox is outside vault
+                source_link = f"[[_Generated/{_sem}/{_crs}/{clean_filename}]]"
         else:
             source_link = f"[[{plan.hub_note.title}]]"
 
@@ -1850,7 +1857,12 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             clean_filename = Path(session_path).name.replace(" ", "_")
             _sem = (plan.semester or "General").strip()
             _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
-            source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
+            
+            try:
+                rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path)
+                source_link = f"[[{rel_inbox}/_Generated/{_sem}/{_crs}/{clean_filename}]]"
+            except Exception:
+                source_link = f"[[_Generated/{_sem}/{_crs}/{clean_filename}]]"
         else:
             source_link = f"[[{plan.hub_note.title}]]"
 
@@ -1896,7 +1908,12 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             clean_filename = Path(session_path).name.replace(" ", "_")
             _sem = (plan.semester or "General").strip()
             _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
-            source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
+            
+            try:
+                rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path)
+                source_link = f"[[{rel_inbox}/_Generated/{_sem}/{_crs}/{clean_filename}]]"
+            except Exception:
+                source_link = f"[[_Generated/{_sem}/{_crs}/{clean_filename}]]"
         else:
             source_link = f"[[{plan.hub_note.title}]]"
 

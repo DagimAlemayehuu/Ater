@@ -511,6 +511,7 @@ async def delete_vault_row(db_name: str, file_name: str, secrets: AppSecrets = D
 class CreateFileRequest(BaseModel):
     path: str
     content: Optional[str] = ""
+    overwrite: Optional[bool] = False
 
 @router.post("/vault/files")
 async def create_vault_file(req: CreateFileRequest, secrets: AppSecrets = Depends(get_app_secrets)):
@@ -518,7 +519,7 @@ async def create_vault_file(req: CreateFileRequest, secrets: AppSecrets = Depend
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
     
     full_path = Path(secrets.vault_path) / req.path
-    if full_path.exists():
+    if full_path.exists() and not req.overwrite:
         raise HTTPException(status_code=400, detail="File already exists")
     
     try:

@@ -169,7 +169,8 @@ async def read_obsidian_file(path: str, secrets: AppSecrets = Depends(get_app_se
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
     try:
         client = ObsidianClient(secrets.vault_path)
-        result = client.read_note(path)
+        decoded_path = unquote(path)
+        result = client.read_note(decoded_path)
         if result is None:
             raise HTTPException(status_code=404, detail="File not found")
         return result
@@ -189,7 +190,8 @@ async def write_obsidian_file(
     if content is None:
         raise HTTPException(status_code=400, detail="Content missing")
     try:
-        full_path = Path(secrets.vault_path) / path
+        decoded_path = unquote(path)
+        full_path = Path(secrets.vault_path) / decoded_path
         os.makedirs(full_path.parent, exist_ok=True)
         with open(full_path, "w", encoding="utf-8") as f:
             f.write(content)
@@ -373,11 +375,11 @@ async def oka_confirm_plan(
             anchored_hub_id=anchored_hub_id
         )
         
-        # Move file to note generated only when all batches are done
+        # Move file to _Generated only when all batches are done
         if not results.get("has_more") and not session_id.startswith("text_"):
             path = Path(session_id)
             if path.exists():
-                processed_dir = path.parent / "note generated"
+                processed_dir = path.parent / "_Generated"
                 processed_dir.mkdir(exist_ok=True)
                 new_path = processed_dir / path.name
                 if new_path.exists():
@@ -424,7 +426,7 @@ async def oka_resume_paused_session(
         if not result.get("has_more") and result.get("status") != "rate_limited" and not session_id.startswith("text_"):
             path = Path(session_id)
             if path.exists():
-                processed_dir = path.parent / "note generated"
+                processed_dir = path.parent / "_Generated"
                 processed_dir.mkdir(exist_ok=True)
                 new_path = processed_dir / path.name
                 if new_path.exists():
@@ -540,7 +542,7 @@ async def oka_list_generated(
     if not secrets.inbox_path:
         return {"files": []}
     
-    generated_dir = Path(secrets.inbox_path) / "note generated"
+    generated_dir = Path(secrets.inbox_path) / "_Generated"
     if not generated_dir.exists() or not generated_dir.is_dir():
         return {"files": []}
         
@@ -592,10 +594,10 @@ async def oka_list_inbox(
     files = []
     supported_extensions = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
     try:
-        generated_dir = inbox / "note generated"
+        generated_dir = inbox / "_Generated"
         for f in inbox.rglob("*"):
             if f.is_file() and not f.name.startswith('.') and f.suffix.lower() in supported_extensions:
-                # Ignore files in the note generated archive
+                # Ignore files in the _Generated archive
                 if generated_dir in f.parents or str(f.absolute()).startswith(str(generated_dir.absolute())):
                     continue
                     

@@ -266,10 +266,10 @@ export const sidecarApi = {
             method: 'DELETE'
         }),
 
-    createObsidianFile: (path: string, content: string = '') =>
+    createObsidianFile: (path: string, content: string = '', overwrite: boolean = false) =>
         request<{ success: boolean; path: string }>('/api/vault/files', {
             method: 'POST',
-            body: JSON.stringify({ path, content })
+            body: JSON.stringify({ path, content, overwrite })
         }),
 
     createObsidianFolder: (path: string) =>

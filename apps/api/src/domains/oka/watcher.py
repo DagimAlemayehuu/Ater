@@ -39,7 +39,7 @@ class InboxHandler(FileSystemEventHandler):
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
         
         # Absolute check to prevent re-processing generated files
-        generated_dir = self.manager.inbox_path.absolute() / "note generated"
+        generated_dir = self.manager.inbox_path.absolute() / "_Generated"
         if str(src_path.absolute()).startswith(str(generated_dir)):
             return
 
@@ -79,7 +79,7 @@ class OkaQueueManager:
         if not self.inbox_path.exists():
             self.inbox_path.mkdir(parents=True, exist_ok=True)
             
-        generated_dir = self.inbox_path / "note generated"
+        generated_dir = self.inbox_path / "_Generated"
         generated_dir.mkdir(exist_ok=True)
             
         self.loop = loop
@@ -143,8 +143,8 @@ class OkaQueueManager:
 
     def add_to_queue(self, file_path: Path):
         path_str = str(file_path.absolute())
-        # Don't queue files that are already in the "note generated" folder
-        if "note generated" in path_str:
+        # Don't queue files that are already in the "_Generated" folder
+        if "_Generated" in path_str:
             return
             
         conn = sqlite3.connect(self.db_path)
@@ -398,8 +398,8 @@ class OkaQueueManager:
                         meta = curriculum # This is available in the loop
                         _sem = (meta.get("semester") or "General").strip()
                         _crs = self.service.vm.get_canonical_title(meta.get("course") or "General_Knowledge")
-                        # Build mirroring path: 5-Pdf Store/note generated/Semester/Course
-                        archive_root = self.inbox_path.absolute() / "note generated"
+                        # Build mirroring path: {inbox}/_Generated/Semester/Course
+                        archive_root = self.inbox_path.absolute() / "_Generated"
                         target_dir = archive_root / _sem / _crs
                         target_dir.mkdir(parents=True, exist_ok=True)
 

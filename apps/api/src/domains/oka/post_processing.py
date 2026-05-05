@@ -10,17 +10,17 @@ def canonicalize_unit(unit_dir: Path):
         
         # Fix spaces inside brackets: [[ Title ]] → [[Title]]
         # Fix spaces in title: [[some title]] → [[Some_Title]]
+        # CRITICAL: Skip path-based links (containing slashes) to avoid destroying PDF store paths
         def fix(m):
             inner = m.group(1).strip()
+            if "/" in inner:
+                return f"[[{inner}]]"
+                
             # Replace spaces with underscores and split by underscore
             parts = inner.replace(" ", "_").split("_")
-            # For each part, we want to maintain C++ or capitalize normally
-            # Specifically, we want Title Case for every word part
             capitalized_parts = []
             for w in parts:
                 if not w: continue
-                # We need to capitalize the first letter, but keep things like C++ intact
-                # if we just do w.capitalize(), C++ becomes C++ which is fine, but it lowercases the rest
                 if w.lower() == "c++":
                     capitalized_parts.append("C++")
                 else:

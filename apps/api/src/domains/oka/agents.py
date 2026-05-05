@@ -259,7 +259,7 @@ class ArchitectAgent:
             return json.loads(json_str, strict=False)
         except json.JSONDecodeError:
             # Sanitize lone backslashes (LaTeX etc.) and retry
-            sanitized = re.sub(r'\\(?!["\\/ bfnrtu])', r'\\\\', json_str)
+            sanitized = re.sub(r'\\(?![\\"/bfnrtu])', r'\\\\', json_str)
             try:
                 return json.loads(sanitized, strict=False)
             except json.JSONDecodeError:

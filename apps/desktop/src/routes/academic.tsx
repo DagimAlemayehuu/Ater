@@ -65,7 +65,7 @@ export default function AcademicDashboard() {
  fetchData()
  fetchDatabases()
  // SSE for real-time vault changes
- const es = new EventSource(`${API_BASE}/vault/events`)
+ const es = new EventSource(`${API_BASE}/api/vault/events`)
  es.onerror = () => es.close() // don't crash if not available
  es.onmessage = (ev) => {
  try {

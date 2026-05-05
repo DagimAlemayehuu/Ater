@@ -1180,19 +1180,23 @@ export default function ObsidianVaultPage() {
 } else if (res.found && res.type === 'database') {
  selectFile(`3-Database/${res.db_id}/${res.file_name}`, pageNumber, false, filterPages);
 } else {
- // Not found. Create a new note in the same directory as the currently selected file OR in a default Inbox
- let folder = '0-Bases/Inbox'; // Default to Inbox for better organization
- if (selectedPath && selectedPath.includes('/')) {
- folder = selectedPath.substring(0, selectedPath.lastIndexOf('/'));
-}
- 
- const newPath = folder ? `${folder}/${pageName}.md` : `${pageName}.md`;
- const initialContent = `---\ntitle: ${pageName}\nread: false\n---\n\n# ${pageName}\n`;
- 
- // Use create if it's truly new
- await sidecarApi.createObsidianFile(newPath, initialContent);
- await fetchFiles(); 
- selectFile(newPath, 1, false, []);
+  // If the pageName looks like a path (contains slashes), resolve it from root instead of current folder.
+  let newPath = "";
+  if (pageName.includes('/')) {
+  newPath = pageName.endsWith('.md') ? pageName : `${pageName}.md`;
+  } else {
+  let folder = '0-Bases/Inbox'; 
+  if (selectedPath && selectedPath.includes('/')) {
+   folder = selectedPath.substring(0, selectedPath.lastIndexOf('/'));
+  }
+  newPath = folder ? `${folder}/${pageName}.md` : `${pageName}.md`;
+  }
+  
+  const initialContent = `---\ntitle: ${pageName.split('/').pop()?.replace('.md', '')}\nread: false\n---\n\n# ${pageName.split('/').pop()?.replace('.md', '')}\n`;
+  
+  await sidecarApi.createObsidianFile(newPath, initialContent);
+  await fetchFiles(); 
+  selectFile(newPath, 1, false, []);
 }
 } catch (e) {
  console.error(e);
