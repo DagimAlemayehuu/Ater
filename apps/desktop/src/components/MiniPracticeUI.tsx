@@ -77,7 +77,7 @@ const CodeBlock = ({ language, value }: { language: string | null, value: string
 
 export const MarkdownBlock = ({ content }: { content: string }) => {
   return (
-    <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none text-foreground/90 prose-p:my-0 prose-pre:my-0 prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-0">
+    <div className="prose prose-xs prose-zinc dark:prose-invert max-w-none text-foreground/90 prose-p:my-0 prose-pre:my-0 prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-0 prose-p:inline prose-div:inline">
       <ReactMarkdown 
         remarkPlugins={[remarkMath, remarkGfm]} 
         rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]}
@@ -225,7 +225,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
   if (!currentQ && !showScore) return null;
 
   return (
-    <div className="my-6 border border-border rounded-xl overflow-hidden bg-background shadow-sm not-prose">
+    <div className="my-4 border border-border rounded-xl overflow-hidden bg-background shadow-sm not-prose">
       {/* Header bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/5">
         <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
@@ -255,15 +255,15 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
           </Button>
         </div>
       ) : (
-        <div className="p-8 lg:p-10 flex flex-col justify-center space-y-10 min-h-[400px]">
-          <div className="space-y-6 animate-in slide-in-from-top-4 fade-in duration-700" key={`header-${currentQ.id}`}>
+        <div className="p-6 lg:p-8 flex flex-col justify-center space-y-6 min-h-[350px]">
+          <div className="space-y-4 animate-in slide-in-from-top-4 fade-in duration-700" key={`header-${currentQ.id}`}>
               <div className="text-[10px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-3">
     <Badge variant="outline" className="text-[8px] border-border/40 bg-muted/20 text-muted-foreground rounded-md px-2 py-0">{currentQ.difficulty || '1'}</Badge>
     <div className="w-1 h-1 rounded-full bg-muted-foreground/20" />
     <span>{(currentQ.type || '').replace('_', ' ')}</span>
     </div>
               {currentQ.type !== 'fill_in' && (
-                <div className="text-xl lg:text-2xl font-black tracking-tight leading-tight text-foreground/90 max-w-3xl">
+                <div className="text-lg lg:text-xl font-bold tracking-tight leading-tight text-foreground/90 max-w-3xl">
                   <MarkdownBlock content={currentQ.question} />
                 </div>
               )}
@@ -294,14 +294,14 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       )}
                       >
                       <div className={cn(
-                          "w-6 h-6 rounded flex items-center justify-center text-[10px] font-black border transition-all", 
+                          "flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-[10px] font-black border transition-all", 
                           isCorrectHighlight || (isSelected && !isRevealed) 
                           ? "bg-foreground text-background border-foreground" 
                           : "bg-muted/10 border-border/50 text-muted-foreground/40 group-hover:border-foreground/40 group-hover:text-foreground/60"
                       )}>
                           {key}
                       </div>
-                      <div className="text-xs font-semibold tracking-tight text-foreground/80 group-hover:text-foreground">
+                      <div className="text-[13px] font-medium tracking-tight text-foreground/80 group-hover:text-foreground flex-1">
                           <MarkdownBlock content={String(val)} />
                       </div>
                       </button>
@@ -321,7 +321,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                   const isCorrect = isRevealed && step === (currentQ.answer || [])[i];
                   return (
                       <div key={i} className={cn(
-                          "group flex items-center gap-4 p-4 border rounded-xl transition-all",
+                          "group flex items-center gap-3 p-3 border rounded-xl transition-all",
                           isCorrect 
                             ? "border-foreground bg-muted/20" 
                             : "border-border/40 bg-muted/5 hover:border-foreground/20"
@@ -345,7 +345,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                   const isCorrect = isRevealed && selected === pair.right;
                   return (
                       <div key={i} className={cn(
-                          "flex items-center gap-6 p-5 border rounded-xl transition-all",
+                          "flex items-center gap-4 p-4 border rounded-xl transition-all",
                           isCorrect ? "border-foreground bg-muted/20" : "border-border/40 bg-muted/5"
                       )}>
                           <div className="flex-1 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60">{pair.left}</div>

@@ -14,7 +14,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from .vault_manager import VaultManager
 from .deployer import OkaDeployer
 from src.domains.ai.factory import ModelFactory
-from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgent, CriticAgent, HubAgent, VerifierAgent, QuizAuditorAgent, DOMAIN_MATRIX
+from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgent, CriticAgent, HubAgent, VerifierAgent, QuizAuditorAgent, DOMAIN_MATRIX, get_professional_domain
 from .governor import TokenGovernor
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
 import ruamel.yaml
@@ -714,20 +714,50 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         OkaService._status[session_id] = "Generating Practice Questions..."
         
         tasks = []
+        
+        # Detect Dominant Mode for the Hub
+        hub_mode = "ECON-MACRO" # Default
+        hub_title_low = hub['title'].lower()
+        if any(kw in hub_title_low for kw in ["micro", "demand", "supply", "consumer", "elasticity", "firm", "market_structure"]):
+            hub_mode = "ECON-MICRO"
+        elif any(kw in hub_title_low for kw in ["macro", "gdp", "inflation", "monetary", "fiscal", "central_bank", "aggregate"]):
+            hub_mode = "ECON-MACRO"
+            
         for q_type, count in target_distribution.items():
-            for _ in range(count):
+            # Get common hints to prevent duplication within the same type
+            hints = [
+                "Focus on theoretical definitions and core mechanisms.",
+                "Focus on edge cases and common misconceptions.",
+                "Focus on real-world application in a specific industry scenario.",
+                "Focus on mathematical/quantitative relationships.",
+                "Focus on causal links and process flow."
+            ]
+            
+            for i in range(count):
                 agent = QuestionAgent(self.planner_llm, q_type)
                 import random
                 seed = random.random()
                 
                 # To prevent redundancy, physically shuffle the context for each agent
-                # and slice it so they literally see different text at the top,
-                # ensuring the 3000 character cutoff in agents.py grabs different facts.
                 shuffled_parts = list(context_parts)
                 random.shuffle(shuffled_parts)
                 tight_context = "\n\n".join(shuffled_parts)
                 
-                tasks.append(agent.generate(hub['title'], f"SEED: {seed}\n" + tight_context, config.difficulty))
+                hint = hints[i % len(hints)]
+                
+                # Assign professional domain dynamically
+                prof_domain = get_professional_domain(hub['title'] + str(q_type) + str(i), mode=hub_mode)
+                
+                tasks.append(agent.generate(
+                    hub['title'], 
+                    f"SEED: {seed}\n" + tight_context, 
+                    config.difficulty,
+                    mode=hub_mode,
+                    prof_domain=prof_domain,
+                    index=i+1,
+                    total=count,
+                    topic_hint=hint
+                ))
                 
         # Limit concurrency and rate to avoid groq/ollama rate limits
         from aiolimiter import AsyncLimiter

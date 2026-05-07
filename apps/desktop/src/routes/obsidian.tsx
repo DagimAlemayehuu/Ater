@@ -1346,70 +1346,104 @@ export default function ObsidianVaultPage() {
 
  const [draggedPath, setDraggedPath] = useState<string | null>(null)
  const [dragOverPath, setDragOverPath] = useState<string | null>(null)
+ const expandTimerRef = useRef<NodeJS.Timeout | null>(null)
 
  const handleDrop = async (e: React.DragEvent, targetPath: string | null) => {
- e.preventDefault()
- e.stopPropagation()
- setDragOverPath(null)
- 
- const sourcePath = draggedPath || e.dataTransfer.getData('text/plain')
- if (!sourcePath) return
- 
- // 1. Determine the target folder. If dropped on a file, use its parent folder.
- let targetFolderPath = targetPath
- if (targetPath) {
- // Check if target is a file in the existing files list
- const targetFile = files.find(f => f.path === targetPath)
- if (targetFile && !targetFile.is_dir) {
- targetFolderPath = targetPath.includes('/') ? targetPath.substring(0, targetPath.lastIndexOf('/')) : null
-}
-}
+  e.preventDefault()
+  e.stopPropagation()
+  setDragOverPath(null)
+  if (expandTimerRef.current) {
+   clearTimeout(expandTimerRef.current)
+   expandTimerRef.current = null
+  }
+  
+  const sourcePath = draggedPath || e.dataTransfer.getData('text/plain')
+  if (!sourcePath) return
+  
+  // 1. Determine the target folder. If dropped on a file, use its parent folder.
+  let targetFolderPath = targetPath
+  if (targetPath) {
+   // Check if target is a file in the existing files list
+   const targetFile = files.find(f => f.path === targetPath)
+   if (targetFile && !targetFile.is_dir) {
+    targetFolderPath = targetPath.includes('/') ? targetPath.substring(0, targetPath.lastIndexOf('/')) : null
+   }
+  }
 
- const fileName = sourcePath.split('/').pop()
- if (!fileName) return
- 
- const newPath = targetFolderPath ? `${targetFolderPath}/${fileName}` : fileName
- 
- // 2. Prevent dropping into self or into a subfolder of self
- if (sourcePath === newPath) return
- if (targetFolderPath && (targetFolderPath === sourcePath || targetFolderPath.startsWith(sourcePath + '/'))) {
- console.warn("Cannot move a folder into itself or its descendants")
- return
-}
+  const fileName = sourcePath.split('/').pop()
+  if (!fileName) return
+  
+  const newPath = targetFolderPath ? `${targetFolderPath}/${fileName}` : fileName
+  
+  // 2. Prevent dropping into self or into a subfolder of self
+  if (sourcePath === newPath) return
+  if (targetFolderPath && (targetFolderPath === sourcePath || targetFolderPath.startsWith(sourcePath + '/'))) {
+   console.warn("Cannot move a folder into itself or its descendants")
+   return
+  }
 
- try {
- await sidecarApi.moveObsidianItem(sourcePath, newPath)
- await fetchFiles()
- if (selectedPath === sourcePath) setSelectedPath(newPath)
-} catch (err: any) {
- console.error("Move failed:", err)
- alert(`Move failed: ${err.message}`)
-} finally {
- setDraggedPath(null)
-}
-}
+  try {
+   await sidecarApi.moveObsidianItem(sourcePath, newPath)
+   await fetchFiles()
+   if (selectedPath === sourcePath) setSelectedPath(newPath)
+  } catch (err: any) {
+   console.error("Move failed:", err)
+   alert(`Move failed: ${err.message}`)
+  } finally {
+   setDraggedPath(null)
+  }
+ }
 
  const renderTree = (nodes: FileNode[], level = 0) => {
- const result = nodes
- .filter(node => matchesSearch(node, searchQuery))
- .map(node => {
- const isExpanded = expandedFolders.has(node.path) || (searchQuery !== '' && matchesSearch(node, searchQuery))
- const isSelected = selectedPath === node.path
- const isRenaming = renamingPath === node.path
- 
- return (
- <div 
- key={node.path} 
- className="flex flex-col"
- onDragOver={(e) => {
- e.preventDefault()
- e.stopPropagation()
- e.dataTransfer.dropEffect = 'move'
- if (dragOverPath !== node.path) setDragOverPath(node.path)
-}}
- onDragEnd={() => {setDraggedPath(null); setDragOverPath(null);}}
- onDrop={(e) => handleDrop(e, node.path)}
- >
+  const result = nodes
+  .filter(node => matchesSearch(node, searchQuery))
+  .map(node => {
+   const isExpanded = expandedFolders.has(node.path) || (searchQuery !== '' && matchesSearch(node, searchQuery))
+   const isSelected = selectedPath === node.path
+   const isRenaming = renamingPath === node.path
+   
+   return (
+    <div 
+     key={node.path} 
+     className="flex flex-col"
+     onDragOver={(e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      e.dataTransfer.dropEffect = 'move'
+      
+      if (dragOverPath !== node.path) {
+       setDragOverPath(node.path)
+       
+       // VS Code Style Auto-expand
+       if (expandTimerRef.current) clearTimeout(expandTimerRef.current)
+       if (node.isFolder && !expandedFolders.has(node.path)) {
+        expandTimerRef.current = setTimeout(() => {
+         setExpandedFolders(prev => new Set(prev).add(node.path))
+        }, 700)
+       }
+      }
+     }}
+     onDragLeave={(e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (dragOverPath === node.path) {
+       setDragOverPath(null)
+       if (expandTimerRef.current) {
+        clearTimeout(expandTimerRef.current)
+        expandTimerRef.current = null
+       }
+      }
+     }}
+     onDragEnd={() => {
+      setDraggedPath(null)
+      setDragOverPath(null)
+      if (expandTimerRef.current) {
+       clearTimeout(expandTimerRef.current)
+       expandTimerRef.current = null
+      }
+     }}
+     onDrop={(e) => handleDrop(e, node.path)}
+    >
  <div 
  draggable
  onDragStart={(e) => {
@@ -1421,10 +1455,11 @@ export default function ObsidianVaultPage() {
 }}
  onClick={() => node.isFolder ? toggleFolder(node.path) : selectFile(node.path)}
  className={cn(
- "flex items-center gap-1.5 py-1 cursor-pointer transition-colors px-2 group relative",
- isSelected ? "bg-accent text-accent-foreground font-medium rounded-sm" : "hover:bg-accent/50 text-muted-foreground/90",
- dragOverPath === node.path && "bg-primary/20 ring-1 ring-primary/50"
- )}
+   "flex items-center gap-1.5 py-1 cursor-pointer transition-all px-2 group relative rounded-sm mx-1",
+   isSelected ? "bg-accent text-accent-foreground font-medium" : "hover:bg-accent/50 text-muted-foreground/90",
+   dragOverPath === node.path && "bg-primary/10 ring-2 ring-primary/40 ring-inset shadow-[0_0_15px_rgba(var(--primary),0.1)]",
+   draggedPath === node.path && "opacity-40 grayscale"
+  )}
  >
  <div className="w-4 h-4 shrink-0 flex items-center justify-center">
  {node.isFolder ? (

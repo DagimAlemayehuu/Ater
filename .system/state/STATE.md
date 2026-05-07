@@ -1,6 +1,6 @@
 # Project State
 ## 1. Status Summary
-**Current Status:** The system has reached **v26.0 (High-Density UI & Seamless Navigation)**. The Obsidian Knowledge Architect now features an integrated study navigation footer directly within the markdown flow, perfected nested list rendering for complex hub connections, and a hardened JSX structural architecture. Navigation between academic notes is now seamless, handling deep vault paths with robust wiki-link resolution.
+**Current Status:** The system has reached **v27.0 (Hardened Pedagogical Interface & Domain Matrix)**. The Obsidian Knowledge Architect has been hardened against macroeconomic drift in microeconomic notes, featuring enforced Sentence Case across all pedagogical content, stateful topic-hinting for non-redundant practice batches, and a compacted UI layout for the Proving Grounds.
 
 ## 2. Global Milestones
 *   [x] Initialization & Architecture
@@ -21,6 +21,7 @@
 *   [x] **OKA v25.0: Technical Pedagogy (27 Sovereign Domains + 3-Level Interactivity)**
 *   [x] **OKA v25.5: Perfection Overhaul (Hostile Persona + Graph Density + Accuracy Guardrails)**
 *   [x] **v26.0: High-Density UI & Seamless Navigation (Integrated Footer + Nested List Fix)**
+*   [x] **v27.0: Hardened Pedagogical Interface (Domain Splitting + Sentence Case Law + Stateful Entropy)**
 *   [x] Global E2E Tests Pass
 *   [ ] Production Deployment
 

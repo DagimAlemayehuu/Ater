@@ -27,6 +27,7 @@ DOMAIN_MATRIX = {
     "MED-PHYSIO":         {"persona":"Surgeon","h1":"Bodily Function","h2":"Disease & Failure","artifact":"System Map","type":"Markdown Adjacency Matrix Table","question_modes":["fill_in", "scenario", "writing", "matching"]},
     "MED-PHARMA":         {"persona":"Toxicologist","h1":"Drug Mechanism","h2":"Side Effects","artifact":"Interaction Pathway","type":"Markdown Table or Basic Mermaid flowchart","question_modes":["mcq", "scenario", "debug", "matching"]},
     "ECON-MACRO":         {"persona":"Macroeconomist","h1":"Economic Theory","h2":"Market Failures","artifact":"Economic Model","type":"Basic Mermaid flowchart (graph LR)","question_modes":["true_false", "scenario", "writing", "order", "trace"]},
+    "ECON-MICRO":         {"persona":"Microeconomist","h1":"Micro Theory","h2":"Efficiency & Distortions","artifact":"Market Graph","type":"Basic Mermaid flowchart (graph TD/LR) or LaTeX","question_modes":["mcq", "fill_in", "debug", "trace"]},
     "ECON-FINANCE":       {"persona":"Accountant","h1":"Financial Concept","h2":"Financial Risk","artifact":"Ledger Example","type":"Markdown T-Account/Ledger Table","question_modes":["true_false", "scenario", "debug", "matching"]},
     "BIZ-STRATEGY":       {"persona":"Business Strategist","h1":"Strategic Concept","h2":"Weaknesses","artifact":"Strategy Matrix","type":"Markdown Table (SWOT)","question_modes":["mcq", "scenario", "writing", "synthesis"]},
     "LAW-CASE":           {"persona":"Lawyer","h1":"Legal Principle","h2":"Exceptions & Limits","artifact":"Case Application","type":"IRAC Framework Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
@@ -52,6 +53,19 @@ EXAMPLE OF MASTER-LEVEL LOGIC (#2):
 
 EXAMPLE OF MASTER-LEVEL EDGE (#5):
 "The model fails during stagflation (simultaneous high inflation and unemployment) where traditional demand-side interventions exacerbate the crisis. It also ignores the 'Paradox of Thrift' where individual saving reduces aggregate output during recessions."
+""",
+    "ECON-MICRO": """
+EXAMPLE OF MASTER-LEVEL LOGIC (#2):
+"[[Price_Elasticity_Of_Demand]] measures the responsiveness of quantity demanded to a change in price ($$E_d = \\frac{\\%\\Delta Q_d}{\\%\\Delta P}$$). For normal goods, demand curves slope downward ($$\\frac{\\partial Q_d}{\\partial P} < 0$$) due to the substitution and income effects. A perfectly inelastic demand curve is vertical, meaning quantity demanded remains constant regardless of price."
+
+EXAMPLE OF MASTER-LEVEL ARTIFACT (#4):
+```mermaid
+graph TD
+    P[Price Increase] --> Q[Quantity Demanded Decrease]
+    Q --> TR[Total Revenue Effect]
+    TR -->|Elastic| D[Revenue Falls]
+    TR -->|Inelastic| I[Revenue Rises]
+```
 """,
     "CS-SOFTWARE": """
 EXAMPLE OF MASTER-LEVEL LOGIC (#2):
@@ -125,6 +139,7 @@ VALID_MODES = set(DOMAIN_MATRIX.keys())
 # ── MODE-AWARE PROFESSIONAL DOMAINS (v26.6) ───────────────────────────────────
 MODE_SPECIALITIES = {
     "ECON-MACRO": ["Central Banking & Monetary Policy", "International Trade Analysis", "Fiscal Policy Research", "Market Strategy", "Development Economics"],
+    "ECON-MICRO": ["Consumer Behavior Analysis", "Industrial Organization", "Labor Market Economics", "Game Theory Application", "Environmental Economics"],
     "ECON-FINANCE": ["Investment Banking", "Corporate Finance", "Asset Management", "Financial Audit"],
     "CS-SOFTWARE": ["DevOps & Site Reliability", "Backend Systems Architecture", "Cloud Infrastructure", "Embedded Systems", "Cybersecurity Audit"],
     "CS-SYSTEMS": ["Network Infrastructure", "Distributed Systems", "High-Performance Computing", "Cloud Architecture"],
@@ -155,9 +170,16 @@ DOMAIN_QUESTION_PROTOCOLS = {
     "ECON-MACRO": {
         "mcq": "Focus on the direction of shifts in curves (AD, AS, IS-LM). Ensure distractors reflect common student errors in directionality.",
         "true_false": "Test the 'Ceteris Paribus' boundary. Create a statement where a factor hidden in the assumption is changed.",
-        "synthesis": "Present a 'Macro Shock' (e.g., sudden currency devaluation) and require a 3-step policy response.",
-        "trace": "Trace a specific macroeconomic shock (e.g., a change in a Determinant like technology, taxes, or currency value) through 4 distinct interconnected economic sectors relevant to the shock. Provide numerical intermediate states.",
+        "synthesis": "Present a 'Macro Shock' (e.g., sudden currency devaluation) and require a 3-step policy response. PROHIBITION: Do not use the 'Azura' scenario if already used.",
+        "trace": "Trace a specific macroeconomic shock through 4 distinct interconnected sectors. Provide numerical intermediate states.",
         "order": "Order the sequence of events in a 'Multiplier Effect' or 'Liquidity Trap' chain."
+    },
+    "ECON-MICRO": {
+        "mcq": "Focus on the Law of Demand/Supply and elasticity calculations. PROHIBITION: Demand curves MUST NOT be described as positively sloped.",
+        "true_false": "Test the relationship between income and normal/inferior goods. Use tricky combinations of price and income changes.",
+        "synthesis": "Design a 'Market Entry' or 'Tax Impact' scenario for a specific commodity (e.g., Coffee, Smartphones). PROHIBITION: Never use currency devaluation for Micro notes.",
+        "trace": "Trace the impact of a cost increase (e.g., higher wages) through the supply curve to equilibrium price and total revenue.",
+        "order": "Order the causal steps of a market moving from a shortage/surplus back to equilibrium."
     },
     "CS-SOFTWARE": {
         "mcq": "Focus on memory management, scope, and side effects. Distractors must include potential runtime errors.",
@@ -218,6 +240,8 @@ DOMAIN_PROHIBITIONS: Dict[str, str] = {
     "MATH-DISCRETE":    "NEVER use differential equations, integrals, or continuous functions. Use ONLY discrete structures: integer sequences, recurrences, combinatorics, graphs, propositional logic. Verify every arithmetic step.",
     "MATH-STAT":        "NEVER drift into ODEs or deterministic mechanics. Keep all examples probabilistic with proper random variable notation.",
     "MATH-CRYPTO":      "Focus exclusively on discrete cryptographic operations. NEVER drift into continuous probability or calculus.",
+    "ECON-MICRO":       "NEVER use 'Central Banking', 'Exchange Rates', or 'Currency Devaluation'. Focus on individual markets, consumers, and firms. The Demand Curve for a normal good is ALWAYS downward-sloping (negative gradient).",
+    "ECON-MACRO":       "Focus on aggregate variables (GDP, Inflation, Interest Rates). Use only one currency devaluation scenario per session.",
     "CS-SOFTWARE":      "NEVER generate OAuth/JWT/UUID/distributed-system content unless the note title explicitly names those topics. Code MUST use the primary_language. Every code block must be syntactically correct and runnable.",
     "CS-DB":            "NEVER confuse relational schema with NoSQL document structure unless both are the note's topic. Avoid application-layer auth topics.",
     "CS-AI":            "NEVER confuse model training with inference, or supervised with unsupervised, unless that distinction IS the concept.",
@@ -274,6 +298,8 @@ class ArchitectAgent:
             "   - Discrete math (sequences, recurrences, combinatorics, graph theory, proofs by induction, logic) → `MATH-DISCRETE`\n"
             "   - Continuous math (analysis, calculus, real analysis, differential equations, integration) → `MATH-PURE`\n"
             "   - Statistics, probability, hypothesis testing → `MATH-STAT`\n"
+            "   - Microeconomics (Individual markets, supply/demand, consumer behavior, firms, elasticity, market structure) → `ECON-MICRO`\n"
+            "   - Macroeconomics (GDP, aggregate demand, inflation, unemployment, central banks, fiscal policy) → `ECON-MACRO`\n"
             "   - NEVER use `CS-SOFTWARE` for any mathematics topic.\n"
             "3. prerequisites: list EXACT titles of other concepts in THIS plan that must be known first.\n"
             "4. source_context: copy 1-2 most relevant sentences.\n"
@@ -522,7 +548,7 @@ class QuestionAgent:
         }
         self.canonical_type = mapping.get(self.q_type, "writing")
 
-    async def generate(self, note_title: str, context: str, difficulty: str = "L1", persona: str = "Expert Educator", mode: str = "ECON-MACRO", prof_domain: str = None) -> dict:
+    async def generate(self, note_title: str, context: str, difficulty: str = "L1", persona: str = "Expert Educator", mode: str = "ECON-MACRO", prof_domain: str = None, index: int = 1, total: int = 1, topic_hint: str = "") -> dict:
         title_readable = note_title.replace("_", " ")
         if not prof_domain:
             prof_domain = get_professional_domain(note_title + str(self.q_type), mode=mode)
@@ -537,7 +563,7 @@ class QuestionAgent:
             "fill_in": f"Extract a dense technical sentence about '{title_readable}'. Replace the most critical technical term with [[blank]]. REMOVE all other [[wikilinks]] from the sentence.",
             "writing": f"Challenge the user to analyze '{title_readable}' in a {prof_domain} scenario. {specialized_instruction} Provide a 3-5 sentence 'Perfect Response' demonstrating mastery. NO RUBRICS.",
             "matching": f"Extract 4 distinct technical components of '{title_readable}' and their specific roles in {prof_domain}. {specialized_instruction} Shuffle them.",
-            "order": f"Identify a 4-5 step technical process or causal chain for '{title_readable}'. {specialized_instruction} Use REAL steps from the text. SHUFFLE the 'steps' array so they are NOT in order. PROHIBITION: Never use 'step1', 'step2', or generic markers.",
+            "order": f"Identify a 4-5 step technical process or causal chain for '{title_readable}'. {specialized_instruction} Use REAL steps from the text. SHUFFLE the 'steps' array so they are NOT in order. PROHIBITION: Never use 'step1', 'step2', or generic markers. The steps must be logically sequential (A -> B -> C), not just a list of definitions.",
             "debug": f"Act as a Principal Specialist in {prof_domain}. {specialized_instruction} Provide a code/formula/scenario snippet for '{title_readable}' with ONE subtle, realistic technical error.",
             "trace": f"Provide a valid, complex technical execution trace for '{title_readable}' in {prof_domain}. {specialized_instruction} Ask for the exact final state/output.",
             "synthesis": f"Create an emergency scenario in {prof_domain} where '{title_readable}' must be applied to prevent system failure. {specialized_instruction} Provide a definitive 'Mastery Solution'."
@@ -561,17 +587,25 @@ class QuestionAgent:
         sys_prompt = f"""You are the Dedicated '{self.canonical_type.upper()}' Question Agent, operating as a **{persona}**.
 {prompt_logic}
 
+ENTROPY ENFORCEMENT:
+- You are generating question **{index} of {total}** for this concept.
+- FOCUS HINT: {topic_hint}
+- YOU MUST ENSURE this question is distinct in sub-topic and angle from other questions in this set.
+
 MANDATORY SCHEMA:
 {json_schema}
 
 STRICT RULES:
 1. Output ONLY a valid JSON object. No markdown fences.
 2. The 'answer' field MUST be a definitive correct response. 
+3. Do NOT use ALL-CAPS for questions, options, or explanations unless it is a specific technical constant/identifier. Use standard Sentence Case.
    - **PROHIBITION**: NEVER use 'step1', 'step2', 'placeholder', or 'example_code'. Use REAL technical content.
    - **PROHIBITION**: NEVER use rubrics/grading instructions.
+   - **PROHIBITION**: The 'answer' field MUST be a STRING or a STRING-LIST. It MUST NOT be a raw JSON object.
 3. For 'explanation', explain the underlying mechanism deeply using LaTeX.
 4. Professional Context: You are currently operating in the **{prof_domain}** domain.
 5. ANTI-LAZINESS: If the question or answer is generic or uses placeholders, the generation will be REJECTED.
+6. SCENARIO DIVERSITY: If this is a 'synthesis' or 'scenario' question, use a novel, specific industry context (e.g., Space Exploration, Deep Sea Mining, Medieval Guilds) to avoid repeating 'Azura' or common AI tropes.
 
 Concept: {title_readable}
 Context: {context[:3000]}
@@ -697,15 +731,13 @@ class VerifierAgent:
         sys_prompt = f"""You are a rigorous academic quality auditor. Evaluate this atomic study note.
 Return ONLY a valid JSON object — no markdown fences, no commentary.
 
-Check ALL 5 criteria and report true/false for each:
-1. domain_lock: Does the content use the technical framework of '{mode}' and the professional domain rotation? (NO 'toy' examples or buying-groceries analogies).
-2. quiz_topicality: Are questions technical and specific? (FAIL if they use placeholders like 'step1', 'example', or if they are too generic).
-3. debug_validity: For debug types, is there a REAL error? (FAIL if 'no error' is the answer).
-4. mathematical_rigor: Does it use LaTeX for all formulas and is the arithmetic 100% correct?
-5. cognitive_ramp: Does the mental model explain the WHOLE concept jargon-free?
+Check ALL criteria and report true/false for each.
+- `clean_output`: No "Wait", "Let me think", or "As an AI". No all-caps text unless technically necessary.
+- `economic_laws`: STRICT for ECON: Demand curves MUST slope DOWNWARD.
+- `unique_scenario`: Is the scenario/analogy fresh? (FAIL if it uses 'Azura' or currency devaluation for Microeconomics).
 
 Output format — use EXACTLY this structure:
-{{"domain_lock\":true,\"quiz_topicality\":true,\"debug_validity\":true,\"arithmetic_correct\":true,\"mental_model_maps\":true,\"failures\":[{{\"check\":\"domain_lock\",\"issue\":\"exact description\",\"fix_instruction\":\"exact fix\"}}]}}
+{{"domain_lock\":true,\"quiz_topicality\":true,\"debug_validity\":true,\"arithmetic_correct\":true,\"mental_model_maps\":true,\"clean_output\":true,\"economic_laws\":true,\"unique_scenario\":true,\"failures\":[{{\"check\":\"domain_lock\",\"issue\":\"exact description\",\"fix_instruction\":\"exact fix\"}}]}}
 
 failures is an empty array [] if all checks pass.
 Source context (what the note should teach): {source_context[:400]}"""
@@ -720,7 +752,8 @@ Source context (what the note should teach): {source_context[:400]}"""
                 passed = all([
                     data.get("domain_lock", True), data.get("quiz_topicality", True),
                     data.get("debug_validity", True), data.get("arithmetic_correct", True),
-                    data.get("mental_model_maps", True),
+                    data.get("mental_model_maps", True), data.get("clean_output", True),
+                    data.get("economic_laws", True), data.get("unique_scenario", True)
                 ])
                 return {"passed": passed, "failures": data.get("failures", [])}
             except Exception as e:
@@ -749,6 +782,7 @@ For each question check:
 - GROUNDING: Does the question require specific data (numbers, constants) NOT present in the theory summary? (Hallucinated facts = FAIL).
 - SHUFFLE CHECK: For type='order', are the 'steps' already in the correct order? (Identity ordering = FAIL).
 - DEBUG CHECK: If type='debug': does 'content' actually contain a wrong step? (Answer='no error'=FAIL).
+- SCAFFOLDING CHECK: Are there any 'internal monologues', 'AI signatures', or 'CoT leakage' in the explanation? (e.g. "Wait, let's correct that", "As an AI...", or "Let's simplify"). FAIL if found.
 - For fill_in: does 'textWithBlanks' use [[Blank1]] format (NOT wikilink names as blanks)?
 - Is the stated 'answer' definitively correct for the question asked?
 
