@@ -19,46 +19,47 @@ prerequisites:
 
 # 1. Mental Model
 
-Imagine you're a manager of a popular ice cream truck that operates on a beach. The number of ice cream cones you want to buy to sell at the beach depends on factors like the price of each cone, how much money your customers have to spend, the price of similar treats like snow cones, and even the weather forecast. If the price of cones goes up, you might buy fewer cones. If it's going to be a really hot day, you might buy more cones. This is similar to how the demand for a product is determined by various factors.
+Imagine you're a concert promoter trying to decide how many tickets to sell for a music festival. The number of tickets you sell depends on the ticket price, how much money the fans have to spend, and the popularity of the artists. If the ticket price is low, fans have more money to spend, and the artists are super popular, you'll sell more tickets. This scenario maps to the concept of demand determinants, where the ticket price, fans' income, and artists' popularity influence the number of tickets sold. The mechanical components that map are: ticket price to price of a good, fans' income to consumers' income, and artists' popularity to consumers' preferences.
 
 # 2. Economic Theory
 
-The [[Determinants_Of_Demand]] refer to the various factors that influence the quantity demanded of a good or service. According to the [[Theory_Of_Demand]], the demand for a product is determined by its price, as described by the [[Law_Of_Demand]], which states that, [[Ceteris_Paribus]], an increase in the price of a good leads to a decrease in the quantity demanded. The [[Demand_Function]] Qx,t = f(Px,t, Yt, Pr,t, Px,t+i, Yt+i, N, T) represents the relationship between the quantity demanded of a good (Qx,t) and its determinants, including the price of the good (Px,t), consumer income (Yt), the price of related goods (Pr,t), and other factors such as consumer expectations, number of buyers, and tastes and preferences. A change in any of these factors can lead to a [[Change_In_Demand]], which is represented by a shift in the [[Demand_Curve]]. The [[Market_Demand]] is the total demand for a good or service in a market, and it is influenced by the [[Number_Of_Buyers]], [[Taste_And_Preference]], [[Consumer_Expectations]], and the availability of [[Substitutes_And_Complements]].
+The [[Determinants_Of_Demand]] refer to the factors that influence the quantity demanded of a good or service. The [[Demand_Function]] can be represented as $Q_x = f(P_x, Y, P_r, P_e, N, T)$, where $Q_x$ is the quantity demanded of good $x$, $P_x$ is the price of good $x$, $Y$ is the consumers' income, $P_r$ is the price of related goods ( [[Substitutes_Goods]] or [[Complementary_Goods]]), $P_e$ is the expected price of the good, $N$ is the number of consumers, and $T$ is the consumers' taste or preferences. The [[Law_Of_Demand]] states that, ceteris paribus ( [[Ceteris_Paribus]] ), an increase in the price of a good leads to a decrease in the quantity demanded. The [[Demand_Schedule]] and [[Demand_Curve]] illustrate the relationship between the price of a good and the quantity demanded. Changes in the [[Determinants_Of_Demand]] lead to a [[Change_In_Demand]], which is a shift in the [[Demand_Curve]].
 
 # 3. Limitations & Edge Cases
 
-The [[Determinants_Of_Demand]] assume that consumers make rational decisions based on their preferences and budget constraints. However, in reality, consumers may not always have perfect information, and their decisions may be influenced by factors such as [[Consumer_Expectations]] and [[Taste_And_Preference]]. Additionally, the [[Ceteris_Paribus]] assumption may not always hold, as changes in other factors such as income or prices of related goods can affect the demand for a good. The [[Theory_Of_Demand]] also assumes that goods are [[Normal_And_Inferior_Goods]], which may not always be the case. Furthermore, the [[Market_Demand_Curve]] may not always be a smooth curve, as there may be [[Surplus_And_Shortage]] situations where the quantity demanded does not equal the quantity supplied. The [[Price_Elasticity_Of_Demand]] and [[Income_Elasticity_Of_Demand]] can also vary across different goods and markets, which can affect the responsiveness of demand to changes in price and income.
+The [[Determinants_Of_Demand]] assume that consumers' preferences and incomes are stable, and that the prices of related goods remain constant. However, in reality, consumers' preferences and incomes can change, and the prices of related goods can fluctuate. The [[Theory_Of_Demand]] also assumes that consumers have perfect information about the market, which is not always the case. In situations like [[Market_Equilibrium]] with [[Surplus_And_Shortage]], the [[Determinants_Of_Demand]] may not accurately predict the quantity demanded. Additionally, the [[Price_Elasticity_Of_Demand]] and [[Income_Elasticity_Of_Demand]] can vary across different goods and consumers, making it challenging to accurately estimate the [[Determinants_Of_Demand]]. The model also breaks down in cases of [[Inferior_Goods]] or [[Normal_Goods]], where changes in income have an opposite effect on demand.
 
 # 4. Economic Model
 
 ```mermaid
 
 graph LR
-    A[Price of Good (Px,t)] -->|Inversely Related| B[Quantity Demanded (Qx,t)]
-    C[Consumer Income (Yt)] -->|Directly Related| B
-    D[Price of Related Goods (Pr,t)] -->|Directly Related if Substitutes, Inversely Related if Complements| B
-    E[Consumer Preferences (T)] -->|Directly Related| B
-    F[Number of Buyers (N)] -->|Directly Related| B
-    G[Expectations of Future Prices (Px,t+i)] -->|Directly Related| B
-    H[Weather and Seasonal Factors] -->|Directly Related| B
+    A[Price of Good (Px)] -->|Inversely affects| B[Quantity Demanded (Qx)]
+    C[Consumers' Income (Y)] -->|Directly affects| B
+    D[Price of Related Goods (Pr)] -->|Inversely affects (Substitutes) or Directly affects (Complements)| B
+    E[Expected Price of Good (Pe)] -->|Inversely affects| B
+    F[Number of Consumers (N)] -->|Directly affects| B
+    G[Consumers' Preferences (T)] -->|Directly affects| B
 
 ```
 
-This Mermaid flowchart illustrates the various determinants of demand and their relationships with the quantity demanded of a good or service. The arrows indicate the direction of the relationship, with "Directly Related" meaning that an increase in the determinant leads to an increase in quantity demanded, and "Inversely Related" meaning that an increase in the determinant leads to a decrease in quantity demanded.
+This Mermaid flowchart illustrates the determinants of demand, showing how various factors influence the quantity demanded of a good or service. The arrows indicate the direction of the effect, with "Inversely affects" meaning that as the factor increases, the quantity demanded decreases, and vice versa.
 
 ## 5. Walkthrough
 
 Here's a 5-step technical walkthrough of how the concept of determinants of demand operates:
 
-1. **Initial State**: Suppose we are analyzing the demand for ice cream cones on a beach. The initial state is: Price of ice cream cones (Px,t) = $2, Consumer income (Yt) = $100, Price of similar treats (snow cones) (Pr,t) = $3, Consumer preferences (T) are normal, Number of buyers (N) = 100, Expectations of future prices (Px,t+i) are neutral, and Weather forecast is sunny.
+1. **Initial State**: Suppose we have a music festival with tickets priced at $50. The festival organizers expect 10,000 attendees, and the fans have an average income of $50,000. There are no related events happening around the same time, and the fans have a strong preference for this festival.
 
-2. **Change in Price**: If the price of ice cream cones (Px,t) increases to $3, while all other determinants remain constant, the quantity demanded (Qx,t) will decrease. For example, let's say the initial quantity demanded was 500 cones; it might decrease to 400 cones.
+2. **Change in Price of Good (Px)**: If the ticket price increases to $75, the quantity demanded decreases to 8,000 attendees. This is because higher prices make the festival less attractive to some fans.
 
-3. **Change in Consumer Income**: If consumer income (Yt) increases to $120, while all other determinants remain constant, the quantity demanded (Qx,t) will increase. For example, the quantity demanded might increase to 550 cones.
+3. **Change in Consumers' Income (Y)**: If the fans' average income increases to $60,000, the quantity demanded increases to 9,000 attendees. This is because fans have more disposable income to spend on tickets.
 
-4. **Change in Price of Related Goods**: If the price of snow cones (Pr,t) decreases to $2, while all other determinants remain constant, the quantity demanded of ice cream cones (Qx,t) might decrease to 450 cones, assuming snow cones are substitutes for ice cream cones.
+4. **Change in Price of Related Goods (Pr)**: Suppose a similar music festival is happening on the same day, and their tickets are priced at $40. The quantity demanded for our festival decreases to 7,500 attendees, as some fans prefer the cheaper alternative.
 
-5. **Final State**: After all these changes, the new equilibrium quantity demanded (Qx,t) is 450 cones, with a price of $3, consumer income of $120, and a price of snow cones of $2. The demand for ice cream cones has been influenced by various determinants, illustrating how these factors interact to determine the quantity demanded.
+5. **Final State**: If the festival organizers expect a higher demand due to the artists' increasing popularity, and the number of consumers (N) increases to 12,000, the quantity demanded increases to 10,500 attendees. This is because more fans are interested in attending the festival, and the organizers can adjust their pricing and marketing strategies accordingly.
+
+The intermediate state changes show how the determinants of demand influence the quantity demanded of a good or service. By analyzing these changes, businesses and policymakers can make informed decisions about pricing, production, and resource allocation.
 
 ---
 
@@ -71,54 +72,54 @@ Here's a 5-step technical walkthrough of how the concept of determinants of dema
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "If the price of ice cream cones increases, then, ceteris paribus, the quantity demanded of ice cream cones will increase.",
+    "question": "If consumers' income increases while the price of a good, prices of related goods, expected price, number of consumers, and consumers' taste remain constant, the quantity demanded of the good will decrease.",
     "answer": false,
-    "explanation": "The statement is false because, according to the Law of Demand, ceteris paribus, an increase in the price of a good leads to a decrease in the quantity demanded. The demand function $Q_{x,t} = f(P_{x,t}, Y_t, P_{r,t}, P_{x,t+i}, Y_{t+i}, N, T)$ implies that, holding all else constant (ceteris paribus), an increase in $P_{x,t}$ (the price of the good) results in a decrease in $Q_{x,t}$ (the quantity demanded)."
+    "explanation": "According to the [[Determinants_Of_Demand]], an increase in consumers' income, ceteris paribus, leads to an increase in the quantity demanded of a good. This is because consumers have more disposable income to spend on goods and services. The demand function $Q_x = f(P_x, Y, P_r, P_e, N, T)$ shows that an increase in $Y$ (consumers' income) results in an increase in $Q_x$ (quantity demanded), assuming all other factors remain constant. Therefore, the statement is false."
   },
   {
     "id": "q2",
     "type": "synthesis",
     "difficulty": "L2",
-    "question": "A sudden and significant devaluation of the currency has occurred in a small, export-driven economy. The Central Bank must act swiftly to prevent a systemic failure. Using the determinants of demand, craft a 3-step policy response to stabilize the economy.",
-    "answer": "To address the macroeconomic shock caused by the sudden currency devaluation, the Central Bank should implement the following 3-step policy response:\n\n1. **Increase the interest rate**: By increasing the interest rate, the Central Bank can reduce the money supply in circulation, which helps to curb inflationary pressures that may arise from the devaluation. This action influences the demand for money and, consequently, the demand for goods and services.\n\n2. **Sell foreign exchange reserves**: The Central Bank can sell its foreign exchange reserves to stabilize the exchange rate. This intervention directly affects the supply of foreign currency in the market, which can help to mitigate the impact of the devaluation on import prices and, by extension, on the domestic price level.\n\n3. **Implement capital controls**: To prevent a massive outflow of capital, which could exacerbate the devaluation, the Central Bank can impose capital controls. These controls limit the ability of investors to withdraw their funds from the country, thereby reducing the pressure on the exchange rate and giving the economy time to adjust to the new reality.",
-    "explanation": "The sudden devaluation of the currency can be understood through the lens of the demand function $Q_{x,t} = f(P_{x,t}, Y_t, P_{r,t}, P_{x,t+i}, Y_{t+i}, N, T)$. A devaluation increases the price of imports ($P_{r,t}$), which can lead to inflation. The Central Bank's actions aim to stabilize the economy by influencing the determinants of demand:\n\n- Increasing the interest rate affects $Y_t$ (income) and $P_{x,t}$ (price of the good), as higher rates reduce borrowing and spending, thus decreasing demand.\n- Selling foreign exchange reserves directly impacts $P_{r,t}$ (price of related goods) by stabilizing the exchange rate, which helps control inflation.\n- Implementing capital controls affects $N$ (number of buyers) and $T$ (tastes and preferences), as it limits capital flight and maintains confidence in the financial system.\n\nThese actions are designed to stabilize the macroeconomic environment by addressing the immediate consequences of the currency devaluation and preventing a systemic failure."
+    "question": "A sudden and unexpected 20% devaluation of the national currency has occurred, causing a sharp increase in the price of imported goods. The Central Bank must act quickly to prevent a system failure. Using the determinants of demand, design a 3-step policy response to mitigate the effects of this macro shock.",
+    "answer": "To address the macro shock caused by the sudden 20% devaluation of the national currency, the Central Bank should implement the following 3-step policy response:\n\n1. **Increase the interest rate**: By increasing the interest rate, the Central Bank can reduce the money supply and curb inflationary pressures caused by the devaluation. This will also make borrowing more expensive, which can help to reduce consumption and investment, thereby decreasing the demand for imported goods.\n\n2. **Implement import substitution policies**: The Central Bank can work with the government to implement policies that encourage import substitution, such as tariffs or quotas on imported goods. This will increase the price of imported goods, making domestic goods more competitive, and shift demand towards domestic products.\n\n3. **Communicate and manage expectations**: The Central Bank should communicate clearly with the public and markets about its policy actions and the expected effects of the devaluation. By managing expectations, the Central Bank can help to reduce uncertainty and prevent a sharp decline in confidence, which can exacerbate the effects of the devaluation.",
+    "explanation": "The sudden 20% devaluation of the national currency can be represented as a shock to the demand function $Q_x = f(P_x, Y, P_r, P_e, N, T)$. The devaluation leads to an increase in the price of imported goods, which can be represented as an increase in $P_x$. This will lead to a decrease in the quantity demanded of imported goods. The Central Bank's policy response aims to mitigate the effects of this shock by shifting the demand curve.\n\nThe increase in interest rates can be represented as a decrease in $Y$, the consumers' income, which will lead to a decrease in the quantity demanded of imported goods. The import substitution policies can be represented as an increase in $P_r$, the price of related goods, which will make domestic goods more competitive and shift demand towards domestic products. The communication and management of expectations can be represented as a change in $T$, the consumers' taste or preferences, which can help to reduce uncertainty and prevent a sharp decline in confidence.\n\nMathematically, the demand function can be represented as:\n\n$$Q_x = f(P_x, Y, P_r, P_e, N, T)$$\n\nThe policy response can be represented as:\n\n$$\\Delta Q_x = \\frac{\\partial Q_x}{\\partial P_x} \\Delta P_x + \\frac{\\partial Q_x}{\\partial Y} \\Delta Y + \\frac{\\partial Q_x}{\\partial P_r} \\Delta P_r + \\frac{\\partial Q_x}{\\partial T} \\Delta T$$\n\nBy implementing the 3-step policy response, the Central Bank can mitigate the effects of the macro shock and prevent a system failure."
   },
   {
     "id": "q3",
     "type": "writing",
     "difficulty": "L2",
-    "question": "Explain the determinants of demand in a market strategy scenario using the demand function.",
-    "answer": "The determinants of demand include the price of the good (Px,t), consumers' income (Yt), prices of related goods (Pr,t), prices of the good in the future (Px,t+i), consumers' income in the future (Yt+i), the number of consumers (N), and tastes and preferences (T). These factors influence the quantity demanded of a good or service, as expressed by the demand function Qx,t = f(Px,t, Yt, Pr,t, Px,t+i, Yt+i, N, T).",
-    "explanation": "The demand function $Q_{x,t} = f(P_{x,t}, Y_t, P_{r,t}, P_{x,t+i}, Y_{t+i}, N, T)$ illustrates that the quantity demanded of a good $x$ at time $t$ is a function of its own price $P_{x,t}$, consumers' income $Y_t$, prices of related goods $P_{r,t}$, expected future prices $P_{x,t+i}$, expected future income $Y_{t+i}$, the number of consumers $N$, and tastes and preferences $T$. The law of demand, ceteris paribus, states that an increase in $P_{x,t}$ leads to a decrease in $Q_{x,t}$. Additionally, an increase in $Y_t$ or a decrease in $P_{r,t}$ can lead to an increase in $Q_{x,t}$, while an increase in $N$ or a shift in $T$ towards the good can also increase $Q_{x,t}$."
+    "question": "Explain the determinants of demand in the context of Central Banking & Monetary Policy, and how they influence the quantity demanded of a good or service.",
+    "answer": "The determinants of demand, in the context of Central Banking & Monetary Policy, refer to the factors that influence the quantity demanded of a good or service. These determinants include the price of the good or service (Px), consumers' income (Y), the price of related goods (Pr), the expected price of the good (Pe), the number of consumers (N), and consumers' taste or preferences (T). The demand function can be represented as Qx = f(Px, Y, Pr, Pe, N, T).",
+    "explanation": "The demand function $Q_x = f(P_x, Y, P_r, P_e, N, T)$ illustrates the relationship between the quantity demanded of a good $x$ and its determinants. The law of demand states that, ceteris paribus, an increase in the price of a good leads to a decrease in the quantity demanded. Changes in the determinants of demand lead to a change in demand, which is a shift in the demand curve. The underlying mechanism can be understood using the LaTeX representation of the demand function, where $\frac{\\partial Q_x}{\\partial P_x} < 0$ and $\frac{\\partial Q_x}{\\partial Y} > 0$ for normal goods."
   },
   {
     "id": "q4",
     "type": "order",
     "difficulty": "L2",
-    "question": "Order the sequence of events in a 'Determinants Of Demand' causal chain.",
+    "question": "Order the sequence of events for Determinants Of Demand.",
     "steps": [
-      "The demand curve shifts in response to changes in consumer preferences (T) and population (N)",
-      "The quantity demanded responds to changes in consumer income, prices of related goods, and the price of the good itself",
-      "An increase in consumer income (Y) leads to an increase in the quantity demanded",
-      "An increase in the price of a related good (Pr) leads to a decrease in the quantity demanded",
-      "A decrease in the price of a good (Px) leads to an increase in the quantity demanded"
+      "expected price of the good",
+      "price of a good",
+      "consumers' taste or preferences",
+      "consumers' income",
+      "price of related goods"
     ],
     "answer": [
-      "An increase in consumer income (Y) leads to an increase in the quantity demanded",
-      "A decrease in the price of a good (Px) leads to an increase in the quantity demanded",
-      "An increase in the price of a related good (Pr) leads to a decrease in the quantity demanded",
-      "The quantity demanded responds to changes in consumer income, prices of related goods, and the price of the good itself",
-      "The demand curve shifts in response to changes in consumer preferences (T) and population (N)"
+      "consumers' taste or preferences",
+      "price of related goods",
+      "expected price of the good",
+      "consumers' income",
+      "price of a good"
     ]
   },
   {
     "id": "q5",
     "type": "trace",
     "difficulty": "L3",
-    "question": "What is the exact output of a 1% interest rate change through 4 distinct economic sectors (Housing, Investment, Forex, Consumption)?",
-    "content": "Assuming a 1% increase in interest rates, let's analyze the impact across different sectors:\n\n1. **Housing Sector**:\n   - A 1% increase in interest rates makes mortgages more expensive.\n   - This reduces demand for housing as higher mortgage rates increase the cost of homeownership.\n   - Assuming an initial housing demand of 1000 units, a 1% rate increase could decrease demand by 2% (ceteris paribus), resulting in 980 units.\n\n2. **Investment Sector**:\n   - Higher interest rates increase the cost of borrowing for businesses.\n   - This can decrease investment as projects may no longer meet the hurdle rate for profitability.\n   - Assuming an initial investment level of $100 million, a 1% rate increase could decrease investment by 1.5%, resulting in $98.5 million.\n\n3. **Forex Sector**:\n   - An increase in interest rates attracts foreign investors looking for higher returns on their capital.\n   - This can strengthen the domestic currency.\n   - Assuming an initial exchange rate of 1 USD = 0.85 EUR, a 1% rate increase could strengthen the USD by 0.5%, resulting in 1 USD = 0.845 EUR.\n\n4. **Consumption Sector**:\n   - Higher interest rates can reduce disposable income as consumers face higher borrowing costs.\n   - This can decrease consumption, especially for big-ticket items.\n   - Assuming an initial consumption level of $500 million, a 1% rate increase could decrease consumption by 0.8%, resulting in $496 million.\n\nThe overall impact across these sectors indicates a contractionary monetary policy effect.",
-    "answer": "{\"Housing\": 980, \"Investment\": 98.5, \"Forex\": 0.845, \"Consumption\": 496}",
-    "explanation": "The impact of a 1% interest rate change across different sectors can be understood through the lens of macroeconomic theory. The housing sector is affected as higher mortgage rates reduce demand (Qx,t = f(Px,t, ...)). Investment decreases as higher borrowing costs make projects less viable. The forex market sees a strengthening of the domestic currency due to higher returns for foreign investors. Consumption drops as higher interest rates reduce disposable income. These effects are summarized using the demand function and the concept of ceteris paribus. Mathematically, we can represent the changes as follows:\n\n- Housing: $Q_h = 1000 \\cdot (1 - 0.02) = 980$\n- Investment: $I = 100 \\cdot (1 - 0.015) = 98.5$\n- Forex: $S = 0.85 \\cdot (1 - 0.005) = 0.845$\n- Consumption: $C = 500 \\cdot (1 - 0.008) = 496$"
+    "question": "What is the exact output?",
+    "content": "Suppose a technological advancement in the production of smartphones leads to a decrease in their price. We will trace the effects of this shock through 4 distinct interconnected economic sectors: (1) the smartphone manufacturing sector, (2) the consumer electronics retail sector, (3) the household sector, and (4) the overall economy. Assume the initial price of smartphones is $800 and the initial quantity demanded is 10 million units.",
+    "answer": "The final output is a 12.5% increase in the quantity demanded of smartphones, a 10% decrease in the price of smartphones, a 5% increase in consumer spending on electronics, and a 2% increase in overall economic output.",
+    "explanation": "The technological advancement in smartphone production leads to a decrease in the price of smartphones. Using the demand function $Q_x = f(P_x, Y, P_r, P_e, N, T)$, where $Q_x$ is the quantity demanded, $P_x$ is the price of smartphones, $Y$ is consumers' income, $P_r$ is the price of related goods, $P_e$ is the expected price, $N$ is the number of consumers, and $T$ is consumers' taste or preferences, we can analyze the effects. Assuming a 10% decrease in $P_x$ to $720, and using the price elasticity of demand formula $E_d = \\frac{\\% \\Delta Q_d}{\\% \\Delta P}$, with $E_d = -1.25$, we get $\\% \\Delta Q_d = -1.25 \\times -10\\% = 12.5\\%$. Thus, the quantity demanded increases to 11.25 million units. This shock propagates through sectors as follows: (1) smartphone manufacturing sector: production costs decrease, (2) consumer electronics retail sector: lower prices increase sales, (3) household sector: increased consumer spending on electronics, and (4) overall economy: increased economic output due to increased consumption."
   }
 ]
 

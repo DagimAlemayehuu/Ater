@@ -13,51 +13,56 @@ mode: ECON-MACRO
 read: false
 generated: true
 prerequisites:
-- "[[Demand_Function]]"
+- "[[Demand_Curve]]"
 
 ---
 
 # 1. Mental Model
 
-Imagine you're a librarian in charge of ordering books for a school library. The number of books you order depends on the price of each book. If the books are very expensive, you might order fewer copies, but if they're cheaper, you might order more. This is similar to how the price of a product affects how much of it people want to buy. The price elasticity of demand measures how much the quantity demanded changes when the price changes.
+Imagine you're a hotel manager in a popular tourist area. The number of rooms you can rent out depends on the nightly rate you charge. If you charge a very high rate, fewer tourists will book rooms, but if you charge a low rate, more tourists will book. This is similar to how the price elasticity of demand works, where the demand for a product (like hotel rooms) changes in response to a change in its price. The mechanical components that map to the concept are: the nightly rate (price) and the number of rooms rented (demand).
 
 # 2. Economic Theory
 
-The [[Price_Elasticity_Of_Demand]] is a fundamental concept in economics that measures the responsiveness of the quantity demanded of a good to a change in its price, while holding all other factors constant, as per the [[Ceteris_Paribus]] assumption. It is calculated as the percentage change in quantity demanded divided by the percentage change in price, often represented by the formula: PED = (percentage change in quantity demanded) / (percentage change in price). This concept is closely related to the [[Law_Of_Demand]], which states that, ceteris paribus, an increase in the price of a good leads to a decrease in the quantity demanded. The [[Demand_Schedule]] and [[Demand_Curve]] graphically represent the relationship between the price of a good and the quantity demanded, which is a key component in understanding [[Price_Elasticity_Of_Demand]]. The [[Theory_Of_Demand]] provides the foundation for analyzing how consumers respond to changes in prices and other factors.
+The [[Price_Elasticity_Of_Demand]] is a measure of the responsiveness of the quantity demanded of a good to a change in its price, while keeping all other factors constant, as per the [[Ceteris_Paribus]] assumption. It is calculated as the percentage change in quantity demanded in response to a 1% change in price. The [[Demand_Schedule]] and [[Demand_Curve]] illustrate the relationship between the price of a good and the quantity demanded, which is a fundamental concept in the [[Theory_Of_Demand]]. The [[Law_Of_Demand]] states that, ceteris paribus, an increase in the price of a good leads to a decrease in the quantity demanded. The [[Demand_Function]] represents the relationship between the quantity demanded and various factors, including price, income, and prices of related goods, such as [[Substitutes_Goods]] and [[Complementary_Goods]]. 
 
 # 3. Limitations & Edge Cases
 
-The [[Price_Elasticity_Of_Demand]] concept assumes that all other factors affecting demand remain constant, as per [[Ceteris_Paribus]]. However, in reality, factors such as [[Consumer_Expectations]], [[Taste_And_Preference]], and [[Number_Of_Buyers]] can change, affecting the demand curve and the calculated elasticity. Additionally, the concept of [[Price_Elasticity_Of_Demand]] may not hold well for goods with [[Substitutes_And_Complements]], as changes in the price of one good can affect the demand for another. In cases of [[Market_Equilibrium]], the interaction between demand and supply can lead to changes in prices and quantities that may not be accurately captured by the PED measure. Furthermore, the calculation of PED assumes a linear [[Demand_Function]], which may not accurately represent real-world demand relationships. A common error in applying PED is ignoring the impact of [[Income_Elasticity_Of_Demand]] and other factors that can influence demand.
+The [[Price_Elasticity_Of_Demand]] measure has limitations, particularly when there are significant changes in income or prices of related goods, which can shift the [[Demand_Curve]]. For instance, if a good is an [[Inferior_Goods]], an increase in income may lead to a decrease in demand, while for a [[Normal_Goods]], an increase in income leads to an increase in demand. Additionally, the presence of [[Substitutes_Goods]] can make demand more elastic, as consumers can easily switch to alternative products in response to a price change. The [[Market_Equilibrium]] and [[Surplus_And_Shortage]] concepts are also affected by changes in demand and supply, which can be influenced by factors such as [[Change_In_Technology]] and [[Shift_In_Supply_Curve]].
 
 # 4. Economic Model
 
 ```mermaid
 
 graph LR
-    A[Initial Price P1] --> B[Quantity Demanded Q1]
-    A -->|Increase Price| C[New Price P2]
-    B -->|PED Formula| D[Calculate PED]
-    C -->|New Quantity Q2| D
-    D --> E[Interpret PED Value]
-    E -->|PED > 1| F[Elastic Demand]
-    E -->|PED < 1| G[Inelastic Demand]
-    E -->|PED = 1| H[Unit Elastic Demand]
+    A[Initial Price (P1)] --> B[Initial Quantity Demanded (Q1)]
+    A -->|Increase Price| C[New Price (P2)]
+    B -->|Decrease Quantity| D[New Quantity Demanded (Q2)]
+    C --> E[Calculate Percentage Change in Price]
+    D --> F[Calculate Percentage Change in Quantity Demanded]
+    E --> G[Calculate Price Elasticity of Demand (PED)]
+    F --> G
+    G --> H[Interpret PED: Elastic (PED > 1), Inelastic (PED < 1), or Unit Elastic (PED = 1)]
 
 ```
 
-This flowchart illustrates the steps involved in calculating and interpreting the Price Elasticity of Demand (PED). It starts with an initial price and quantity demanded, then applies a price change and calculates the new quantity demanded. The PED is calculated using the percentage changes in price and quantity demanded. Finally, the PED value is interpreted to determine if the demand is elastic, inelastic, or unit elastic.
+This flowchart illustrates the steps involved in calculating and interpreting the price elasticity of demand. It starts with an initial price and quantity demanded, then applies a price change and calculates the resulting change in quantity demanded. The percentage changes in price and quantity demanded are used to compute the price elasticity of demand, which is then interpreted to determine the responsiveness of demand to price changes.
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of Price Elasticity of Demand operates:
+Here's a 5-step technical walkthrough of how the concept of price elasticity of demand operates:
 
-1. **Initial State**: Suppose the initial price of a book is $10 (P1), and the quantity demanded is 100 copies (Q1).
-2. **Price Change**: The price of the book increases to $12 (P2), a 20% increase.
-3. **Quantity Change**: As a result, the quantity demanded decreases to 80 copies (Q2), a 20% decrease.
-4. **PED Calculation**: Using the PED formula: PED = (percentage change in quantity demanded) / (percentage change in price) = (-20%) / (20%) = -1.
-5. **Interpretation**: Since the absolute value of PED is 1, the demand is unit elastic. This means that a 1% price change leads to a 1% change in quantity demanded.
+1. **Initial State**: Suppose a hotel manager, initially charges $100 per night and rents out 200 rooms. The initial price (P1) is $100, and the initial quantity demanded (Q1) is 200 rooms.
 
-For example, if the price increase is 10% instead of 20%, the quantity demanded would decrease by 10%, resulting in a PED of -1. If the PED value is greater than 1 (e.g., -1.5), the demand is elastic, and a price increase would lead to a more than proportional decrease in quantity demanded. If the PED value is less than 1 (e.g., -0.5), the demand is inelastic, and a price increase would lead to a less than proportional decrease in quantity demanded.
+2. **Apply Price Change**: The hotel manager decides to increase the nightly rate to $120 (P2), a 20% increase. 
+
+3. **Calculate Quantity Change**: As a result, the number of rooms rented decreases to 160 (Q2), a 20% decrease.
+
+4. **Calculate PED**: 
+    - Percentage change in price = $\frac{P2 - P1}{P1} \times 100\% = \frac{120 - 100}{100} \times 100\% = 20\%$
+    - Percentage change in quantity demanded = $\frac{Q2 - Q1}{Q1} \times 100\% = \frac{160 - 200}{200} \times 100\% = -20\%$
+    - Price Elasticity of Demand (PED) = $\frac{\text{Percentage change in quantity demanded}}{\text{Percentage change in price}} = \frac{-20\%}{20\%} = -1$
+
+5. **Interpret PED**: Since the absolute value of PED is 1, the demand is unit elastic. This means that a 1% change in price leads to a 1% change in quantity demanded. The hotel manager understands that changing the nightly rate will proportionally affect the number of rooms rented, which guides pricing decisions.
 
 ---
 
@@ -70,59 +75,54 @@ For example, if the price increase is 10% instead of 20%, the quantity demanded 
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "The price elasticity of demand for a good remains constant even if the income of consumers increases, ceteris paribus.",
+    "question": "The price elasticity of demand for a good remains constant even if the price of a complementary good decreases, ceteris paribus.",
     "answer": false,
-    "explanation": "The price elasticity of demand (PED) is defined as the percentage change in quantity demanded divided by the percentage change in price, PED = (\\Delta Q/Q) / (\\Delta P/P). A critical assumption in this concept is \\textit{ceteris paribus}, which means all other factors are held constant. One of these factors is consumer income. If consumer income increases, it can lead to a change in the quantity demanded at any given price, thus potentially altering the PED. For normal goods, an increase in income would increase demand, making the PED more elastic (in absolute terms). Therefore, stating that PED remains constant if consumer income increases violates the \\textit{ceteris paribus} assumption and is incorrect."
+    "explanation": "The price elasticity of demand is defined as the percentage change in quantity demanded in response to a 1% change in price, assuming all other factors are constant (ceteris paribus). However, if the price of a complementary good decreases, it can lead to an increase in the demand for the original good, thus affecting its price elasticity of demand. Formally, this can be expressed using the demand function $Q_d = f(P, P_c, I)$, where $Q_d$ is the quantity demanded, $P$ is the price of the good, $P_c$ is the price of the complementary good, and $I$ is income. A decrease in $P_c$ can shift the demand curve for the original good to the right, changing the elasticity at any given price point. Therefore, the statement is false."
   },
   {
     "id": "q2",
     "type": "synthesis",
     "difficulty": "L2",
-    "question": "The country of Azura faces a sudden and significant devaluation of its currency, the Azuran Peso (AP), by 30% against major foreign currencies. This macroeconomic shock leads to an immediate increase in the price of imported goods, including essential pharmaceuticals, by 25%. The government is concerned about the impact on the healthcare sector. Using the concept of Price Elasticity Of Demand (PED), devise a 3-step policy response to mitigate the effects on the demand for pharmaceuticals and prevent a systemic failure in the healthcare sector.",
-    "answer": "To address the sudden increase in pharmaceutical prices due to the devaluation of the Azuran Peso, the government should implement the following 3-step policy response:\n\n1. **Short-term Subsidization**: Immediately increase subsidies for essential pharmaceuticals to offset the price increase, ensuring that the out-of-pocket costs for consumers do not rise. This will help maintain the quantity demanded at pre-devaluation levels.\n\n2. **Price Controls and Rationing**: Implement temporary price controls to prevent excessive price hikes by suppliers. Additionally, introduce rationing mechanisms to ensure equitable distribution of the limited supply of pharmaceuticals, preventing shortages and ensuring access for those in critical need.\n\n3. **Long-term Supply Diversification and PED Management**: Encourage and support local production of pharmaceuticals through incentives such as tax breaks, low-interest loans, and technical assistance. This strategy aims to reduce dependence on imports and enhance supply chain resilience. Simultaneously, public education campaigns and health promotion programs can be implemented to reduce demand for certain pharmaceuticals by promoting preventive care and healthy lifestyles, thereby reducing the overall quantity demanded and making the demand curve less elastic.",
-    "explanation": "The PED is given by the formula: $PED = \\frac{\\% \\Delta Q_d}{\\% \\Delta P}$, where $\\% \\Delta Q_d$ is the percentage change in quantity demanded and $\\% \\Delta P$ is the percentage change in price. A PED greater than 1 indicates elastic demand, meaning that a change in price leads to a proportionally larger change in quantity demanded. For essential pharmaceuticals, the PED is often inelastic (PED < 1) because people will continue to demand them even if prices rise, as they are crucial for health and well-being. However, the sudden 25% increase in price due to the 30% devaluation of the currency could lead to a significant reduction in the quantity demanded, especially among low-income households, threatening the healthcare sector's stability. The proposed policy response aims to mitigate these effects by making pharmaceuticals more affordable in the short term and enhancing supply and resilience in the long term, thus preventing systemic failure."
+    "question": "The country of Azura, a popular tourist destination, is facing an economic crisis. The government has devalued its currency, the Azuran Peso (AP), by 30% against major foreign currencies. This sudden devaluation has led to a sharp increase in the price of imported goods, including food and beverages, which are essential for the tourism industry. The demand for hotel rooms, a key component of Azura's tourism sector, is expected to decline drastically due to the increased costs. As a macroeconomist, you have been tasked with designing a 3-step policy response to mitigate the impact of this shock on the tourism industry and prevent a system failure.",
+    "answer": "To address the crisis, the following 3-step policy response is recommended:\n\n1. **Short-term Accommodation Price Control**: Implement a temporary price ceiling on hotel rooms to prevent excessive price hikes that could further reduce demand. This measure will ensure that hotel rooms remain affordable for tourists, thereby maintaining demand at a level that can sustain the industry.\n\n2. **Subsidy for Tourism-Related Imports**: Provide subsidies to local businesses in the tourism sector for importing essential goods and services. This will help mitigate the impact of the currency devaluation on the cost of imported inputs, allowing businesses to maintain supply chains without passing on the full cost increase to consumers.\n\n3. **Diversification and Elastic Demand Management**: Encourage hotel operators to offer flexible pricing strategies, including discounts for off-peak bookings and package deals that include local experiences. This approach leverages the concept of price elasticity of demand, where a decrease in price leads to an increase in the quantity demanded. By diversifying offerings and making them more price-sensitive, hotels can attract more tourists even in a challenging economic environment.",
+    "explanation": "The currency devaluation leads to an increase in the price of imported goods, which are essential for the tourism industry. This increase in costs can lead to a decrease in the supply of hotel rooms or an increase in their price, both of which can reduce demand. The price elasticity of demand (PED) measures the responsiveness of the quantity demanded of a good to a change in its price. PED is calculated as the percentage change in quantity demanded in response to a 1% change in price. Mathematically, PED is represented as:\n\n$$PED = \\frac{\\% \\Delta Q_d}{\\% \\Delta P}$$\n\nwhere $Q_d$ is the quantity demanded and $P$ is the price. For hotel rooms in Azura, if the PED is elastic (PED > 1), a decrease in price will lead to an increase in the quantity demanded, which can help mitigate the impact of the economic shock. The policy response aims to manage this elasticity by making hotel rooms and related services more affordable and attractive to tourists, thereby preventing a system failure in the tourism industry."
   },
   {
     "id": "q3",
     "type": "writing",
     "difficulty": "L2",
-    "question": "Explain the concept of Price Elasticity Of Demand and its application in a Market Strategy scenario.",
-    "answer": "The Price Elasticity Of Demand (PED) is a measure of the responsiveness of the quantity demanded of a good to a change in its price. It is calculated as PED = (percentage change in quantity demanded) / (percentage change in price). A high PED indicates that the quantity demanded is highly responsive to price changes, while a low PED indicates that the quantity demanded is relatively insensitive to price changes. In a Market Strategy scenario, understanding PED is crucial for businesses to make informed decisions about pricing and production. For instance, if a company has a product with a high PED, a small price reduction could lead to a significant increase in sales, while a price increase could lead to a substantial decrease in sales.",
-    "explanation": "The PED can be represented mathematically as $PED = \\frac{\\% \\Delta Q_d}{\\% \\Delta P}$, where $Q_d$ is the quantity demanded and $P$ is the price. Using the arc elasticity formula, $PED = \\frac{(Q_{d2} - Q_{d1}) / (Q_{d2} + Q_{d1}) \\cdot 2}{(P_2 - P_1) / (P_2 + P_1) \\cdot 2}$, we can calculate the PED. The PED is a crucial concept in microeconomics, as it helps businesses to understand how changes in price affect the quantity demanded of their products, and make informed decisions about pricing and production. Furthermore, the PED can be used to classify goods into different categories, such as elastic goods (PED > 1), inelastic goods (PED < 1), and unit elastic goods (PED = 1)."
+    "question": "Explain the concept of Price Elasticity Of Demand in a Development Economics scenario, focusing on its application and causal understanding.",
+    "answer": "The Price Elasticity Of Demand measures the responsiveness of the quantity demanded of a good to a change in its price. In a Development Economics scenario, for instance, if a government increases the tax on a good, making its price rise, the demand for the good may decrease significantly if there are close substitutes available, indicating high elasticity. Conversely, if the good is essential and lacks substitutes, the demand may remain relatively stable, indicating low elasticity.",
+    "explanation": "The Price Elasticity Of Demand (PED) is calculated as the percentage change in quantity demanded in response to a 1% change in price, expressed as $PED = \\frac{\\% \\Delta Q_d}{\\% \\Delta P}$. In Development Economics, understanding PED is crucial for policymakers to predict the impact of price changes on the demand for goods and services. For example, if the PED for a good is -2, a 1% increase in price will lead to a 2% decrease in the quantity demanded. The PED is influenced by factors such as the availability of substitutes, the income level of consumers, and the essentiality of the good. Mathematically, this can be represented as $Q_d = f(P, I, P_s, P_c)$, where $Q_d$ is the quantity demanded, $P$ is the price of the good, $I$ is the income level, $P_s$ is the price of substitutes, and $P_c$ is the price of complementary goods."
   },
   {
     "id": "q4",
     "type": "order",
     "difficulty": "L2",
-    "question": "Order steps for Price Elasticity Of Demand",
+    "question": "Order steps for Price Elasticity Of Demand causal chain.",
     "steps": [
-      "The price of a good changes",
-      "The responsiveness of the quantity demanded is measured",
-      "PED = (percentage change in quantity demanded) / (percentage change in price)",
-      "The percentage change in quantity demanded is calculated",
-      "The quantity demanded changes in response to a price change"
+      "Analysis of the law of demand implications",
+      "Calculation of percentage change in quantity demanded",
+      "Determination of the demand schedule and curve",
+      "Estimation of responsiveness to a 1% change in price",
+      "Application of the ceteris paribus assumption"
     ],
     "answer": [
-      "The percentage change in quantity demanded is calculated",
-      "PED = (percentage change in quantity demanded) / (percentage change in price)",
-      "The quantity demanded changes in response to a price change",
-      "The responsiveness of the quantity demanded is measured",
-      "The price of a good changes"
+      "Calculation of percentage change in quantity demanded",
+      "Determination of the demand schedule and curve",
+      "Estimation of responsiveness to a 1% change in price",
+      "Application of the ceteris paribus assumption",
+      "Analysis of the law of demand implications"
     ]
   },
   {
     "id": "q5",
     "type": "trace",
     "difficulty": "L3",
-    "question": "What is the exact output of the impact of a 1% interest rate change on the price elasticity of demand across 4 distinct economic sectors: Housing, Investment, Forex, and Consumption?",
-    "content": "To analyze the impact of a 1% interest rate change on the price elasticity of demand (PED) across different sectors, we use the PED formula: PED = (percentage change in quantity demanded) / (percentage change in price). A 1% change in interest rates can influence prices and quantities demanded across sectors through various channels.",
-    "answer": {
-      "Housing": 0.85,
-      "Investment": 0.65,
-      "Forex": 0.45,
-      "Consumption": 0.75
-    },
-    "explanation": "The price elasticity of demand (PED) is given by $PED = \\frac{\\% \\Delta Q_d}{\\% \\Delta P}$. A 1% interest rate change affects PED differently across sectors due to varying sensitivities to interest rate changes. For instance, in the housing sector, a 1% increase in interest rates (e.g., mortgage rates) can lead to a 0.85% change in the quantity demanded of housing due to increased borrowing costs. In investment, a 1% interest rate hike can decrease investment demand by 0.65% as higher rates increase the cost of capital. In forex, the impact on PED can be 0.45%, reflecting changes in exchange rates influencing import prices. For consumption, a 1% interest rate change may lead to a 0.75% change in quantity demanded, reflecting consumer sensitivity to price changes influenced by interest rates. These values are illustrative and based on theoretical impacts."
+    "question": "What is the exact output?",
+    "content": "Suppose we are analyzing the impact of a change in the nightly rate of a hotel on the quantity demanded of rooms. Initially, the nightly rate is $100 and the quantity demanded is 100 rooms. The price elasticity of demand is 1.5. If the nightly rate increases by 10%, what is the new quantity demanded?",
+    "answer": 90,
+    "explanation": "The price elasticity of demand (PED) is given by the formula: $PED = \\frac{\\% \\Delta Q_d}{\\% \\Delta P}$. Here, $\\% \\Delta P = 10\\%$. Rearranging the formula to solve for $\\% \\Delta Q_d$, we get: $\\% \\Delta Q_d = PED \\times \\% \\Delta P = 1.5 \\times 10\\% = 15\\%$. This means the quantity demanded decreases by 15%. Therefore, the new quantity demanded is: $100 - (0.15 \\times 100) = 100 - 15 = 85$. However, I made an error in my calculation - the correct calculation directly uses the elasticity formula in a proper manner: Given $PED = 1.5$, and $\\%\\Delta P = 10\\%$, $1.5 = \\frac{\\Delta Q/Q}{10\\%}$, implying $\\Delta Q/Q = 1.5 \\times 10\\% = 15\\%$. If $Q = 100$, then $\\Delta Q = 15$ and $Q_{new} = 100 - 15 = 85$. But let's correct and follow through accurately with provided and derived numbers without miscalculation: If the rate increases by 10% to $110, and assuming an initial quantity of 100, with PED = 1.5, the actual calculation directly for quantity change should reflect: New Quantity = Old Quantity * (1 - (PED * (\\Delta P / Old P))). So New Quantity = 100 * (1 - (1.5 * (10/100)) = 100 * (1 - 0.15) = 100 * 0.85 = 85."
   }
 ]
 

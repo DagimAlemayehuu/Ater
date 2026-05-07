@@ -13,10 +13,10 @@ mode: ECON-MACRO
 read: false
 generated: true
 prerequisites:
-- '[[Theory_Of_Demand]]'
 - '[[Law_Of_Demand]]'
-- '[[Taste_And_Preference]]'
-- '[[Number_Of_Buyers]]'
+- '[[Theory_Of_Demand]]'
+- '[[Demand_Curve]]'
+- '[[Demand_Function]]'
 - '[[Demand_Schedule]]'
 
 ---
@@ -24,53 +24,41 @@ prerequisites:
 
 # 1. Mental Model
 
-Imagine you're a gardener, and you're studying how the amount of sunlight affects the growth of a specific type of flower. You want to isolate the effect of sunlight, so you assume that everything else, like the amount of water, soil quality, and temperature, remains constant - 'ceteris paribus' or 'all other things being equal'. This allows you to focus on the relationship between sunlight and flower growth. The mechanical components that map to the concept are: (1) sunlight (variable being changed), and (2) flower growth (variable being measured), with (3) water, soil, and temperature (variables being held constant).
+Imagine you're a photographer at a wedding, and you're trying to capture the perfect shot of the bride and groom. The quality of the photo depends on many factors, such as the lighting, the pose, and the camera settings. If you want to see how the lighting affects the photo, you would assume that the pose and camera settings remain the same, so you can isolate the effect of the lighting. This is similar to 'Ceteris Paribus', which means "all things being equal" or "other things being unchanged". In economics, it helps us analyze how one thing affects another by assuming that everything else remains the same. For example, if you want to see how the price of a product affects its demand, you would assume that consumers' income, tastes, and other factors remain constant.
 
 # 2. Economic Theory
 
-[[Ceteris_Paribus]] is a fundamental concept in economics that enables the analysis of the relationship between two variables by assuming that all other factors remain constant. This assumption allows economists to isolate the effect of a single variable on a particular outcome. The underlying mechanism relies on the [[Theory_Of_Demand]] and [[Law_Of_Demand]], which state that the demand for a good or service is influenced by several factors, including its price, consumers' income, and preferences. By assuming [[Ceteris_Paribus]], economists can examine how a change in one variable, such as price, affects demand, while holding constant other variables like income, [[Taste_And_Preference]], and [[Number_Of_Buyers]]. This concept is essential in constructing [[Demand_Schedule]]s, [[Demand_Curve]]s, and [[Demand_Function]]s, which are used to analyze [[Market_Demand]] and [[Market_Demand_Curve]].
+[[Ceteris_Paribus]] is a fundamental concept in economics that allows us to analyze the relationship between two variables by assuming that all other factors remain constant. The [[Law_Of_Demand]] and [[Theory_Of_Demand]] rely heavily on [[Ceteris_Paribus]], as it enables us to derive the [[Demand_Curve]] and [[Demand_Function]]. The [[Demand_Schedule]] is also constructed under the assumption of [[Ceteris_Paribus]], where changes in price are analyzed while keeping [[Determinants_Of_Demand]] such as consumers' income, tastes, and prices of [[Substitutes_Goods]] and [[Complementary_Goods]] constant. By assuming [[Ceteris_Paribus]], economists can isolate the effect of a change in one variable on another, which is essential for understanding [[Market_Equilibrium]] and the [[Effects_Of_Shift_In_Demand_And_Supply]].
 
 # 3. Limitations & Edge Cases
 
-The [[Ceteris_Paribus]] assumption has limitations, as it may not always hold true in real-world scenarios. For instance, in the presence of [[Substitutes_And_Complements]], a change in the price of one good can affect the demand for another good. Additionally, [[Consumer_Expectations]] and [[Change_In_Technology]] can also influence demand, making it challenging to assume that all other factors remain constant. Furthermore, in situations where there are [[Surplus_And_Shortage]]s, the [[Market_Equilibrium]] may be disrupted, and the [[Ceteris_Paribus]] assumption may not be valid. Therefore, economists must carefully consider the context and potential edge cases when applying the [[Ceteris_Paribus]] assumption to ensure that their analysis accurately reflects real-world market dynamics.
+While [[Ceteris_Paribus]] is a powerful tool for economic analysis, it has its limitations. In reality, it is often difficult to assume that all other factors remain constant, as [[Change_In_Technology]], [[Shift_In_Supply_Curve]], and changes in [[Determinants_Of_Demand]] can occur simultaneously. The [[Theory_Of_Demand]] assumes that consumers' preferences and income remain constant, but in reality, these factors can change over time. Additionally, the concept of [[Ceteris_Paribus]] can be problematic in situations where there are [[Surplus_And_Shortage]] in the market, as it can lead to Market Failures. Furthermore, the assumption of [[Ceteris_Paribus]] can be challenged in the presence of [[Inferior_Goods]] and [[Normal_Goods]], where changes in income can affect demand.
 
 # 4. Economic Model
 
 ```mermaid
 
 graph LR
-    A[Ceteris Paribus Assumption] --> B[Isolate Variable of Interest]
-    B --> C[Analyze Relationship Between Variables]
-    C --> D[Hold All Other Factors Constant]
-    D --> E[Derive Causal Inference]
-    E --> F[Validate Economic Theory]
+    A[Ceteris Paribus Assumption] --> B[Change in One Variable]
+    B --> C[Isolate Effect on Outcome]
+    C --> D[Analyze Relationship]
+    D --> E[Hold All Else Constant]
 
 ```
 
-This Mermaid flowchart illustrates the process of applying the ceteris paribus assumption in economic analysis. It starts with making the assumption, then isolating the variable of interest, analyzing the relationship between variables, holding all other factors constant, deriving a causal inference, and finally validating an economic theory.
+This Mermaid flowchart illustrates the Ceteris Paribus concept, which assumes all else remains equal when analyzing the relationship between two variables. To read this artifact, start with the assumption that all other factors are held constant (A), then introduce a change in one variable (B), isolate its effect on the outcome (C), analyze the relationship (D), and maintain the assumption that all else remains constant (E).
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of ceteris paribus operates in International Trade Analysis:
+Here's a 5-step technical walkthrough of how the Ceteris Paribus concept operates in International Trade Analysis:
 
-1. **Initial Condition**: Suppose we want to analyze the effect of a tariff on the quantity of imported cars. The initial conditions are: 
-    - Price of imported cars: $P_0$
-    - Quantity of imported cars: $Q_0$
-    - Tariff rate: $t_0 = 0$ (no tariff)
+1. **Initial State**: Suppose we want to analyze the effect of a tariff on the demand for imported cars. Initially, the tariff rate is 0%, and 100,000 cars are imported.
+2. **Change in One Variable**: The government introduces a 10% tariff on imported cars. We assume that all other factors remain constant, such as consumers' income, tastes, and prices of domestic cars.
+3. **Isolate Effect on Outcome**: With the 10% tariff, the price of imported cars increases. Assuming all else remains equal, the demand for imported cars decreases to 80,000 units.
+4. **Analyze Relationship**: By comparing the initial and new demand levels, we can analyze the relationship between the tariff rate and the demand for imported cars. For example, we might find that a 10% tariff reduces demand by 20%.
+5. **Hold All Else Constant**: To ensure the validity of our analysis, we must hold all other factors constant. If, for instance, consumers' income increases during this period, we would need to adjust our analysis to account for this change, as it could also affect demand.
 
-2. **Apply Ceteris Paribus**: We assume that all other factors remain constant, such as consumers' income, preferences, and prices of domestic substitutes. We then introduce a tariff, increasing the tariff rate to $t_1 > 0$.
-
-3. **Intermediate State Change**: With the increased tariff rate, the price of imported cars rises to $P_1 > P_0$. As a result, the quantity of imported cars decreases to $Q_1 < Q_0$.
-
-4. **Data Transformation**: We collect data on the quantity of imported cars before and after the tariff change: 
-    - Initial quantity: $Q_0 = 1000$ units
-    - Final quantity: $Q_1 = 800$ units
-
-5. **Derive Causal Inference**: By holding all other factors constant (ceteris paribus), we infer that the decrease in the quantity of imported cars is caused by the increase in the tariff rate. This causal relationship can be represented as: 
-    $$ 
-    \frac{\partial Q}{\partial t} < 0 
-    $$
-    This means that, ceteris paribus, an increase in the tariff rate leads to a decrease in the quantity of imported cars.
+By following these steps and assuming Ceteris Paribus, we can isolate the effect of the tariff on the demand for imported cars and gain insights into the relationship between these variables.
 
 ---
 
@@ -83,25 +71,25 @@ Here's a 5-step technical walkthrough of how the concept of ceteris paribus oper
     "id": "q1",
     "type": "true_false",
     "difficulty": "L1",
-    "question": "The concept of ceteris paribus in international trade analysis assumes that changes in exchange rates have no impact on the terms of trade between two countries.",
+    "question": "Assuming ceteris paribus in international trade analysis, a 10% increase in the price of a country's exports will lead to a 10% decrease in the quantity demanded by foreign consumers.",
     "answer": false,
-    "explanation": "The ceteris paribus assumption in international trade analysis implies that all other factors remain constant, except for the one being studied. However, in reality, changes in exchange rates can significantly affect the terms of trade between two countries. For instance, if the exchange rate between two currencies changes, it can alter the price of imports and exports, thereby influencing the terms of trade. Therefore, assuming that changes in exchange rates have no impact on the terms of trade is incorrect. In mathematical terms, the terms of trade (TOT) can be expressed as $TOT = \frac{P_X}{P_M}$, where $P_X$ is the price of exports and $P_M$ is the price of imports. A change in exchange rates can affect both $P_X$ and $P_M$, thus impacting TOT."
+    "explanation": "The assumption of ceteris paribus, or 'all things being equal', is crucial in international trade analysis as it allows economists to isolate the effect of one variable on another. However, in reality, it is often difficult to assume that all other factors remain constant. In this statement, the ceteris paribus assumption is violated because a change in the price of a country's exports can be influenced by various factors such as changes in technology, shift in supply curve, and changes in determinants of demand. Furthermore, the law of demand states that, ceteris paribus, an increase in the price of a good will lead to a decrease in the quantity demanded, but the magnitude of the decrease depends on the price elasticity of demand. Therefore, a 10% increase in price will not necessarily lead to a 10% decrease in quantity demanded. The correct analysis would involve considering the price elasticity of demand, which is given by $e_p = \\frac{\\%\\Delta Q_d}{\\%\\Delta P}$. Without knowing the price elasticity of demand, we cannot conclude that a 10% increase in price will lead to a 10% decrease in quantity demanded."
   },
   {
     "id": "q2",
     "type": "synthesis",
     "difficulty": "L2",
-    "question": "A sudden and significant devaluation of the currency has occurred in a small open economy, causing a sharp increase in the price of imports. Assuming ceteris paribus, design a 3-step fiscal policy response to mitigate the effects of this macro shock.",
-    "answer": "To address the macro shock caused by the sudden currency devaluation, the following 3-step fiscal policy response is proposed:\n\n1. **Increase taxes on luxury goods**: Implement a targeted tax increase on luxury goods that are heavily imported. This will help reduce the demand for these goods, mitigate the inflationary pressures caused by the devaluation, and generate additional revenue for the government. The tax increase should be designed to minimize the impact on low-income households.\n\n2. **Implement a fiscal stimulus package for export-oriented sectors**: Introduce a fiscal stimulus package focused on supporting export-oriented sectors that can benefit from the devalued currency. This could include subsidies for exporters, investment in infrastructure that facilitates exports, and training programs for workers in these sectors. The goal is to boost exports and help the economy adjust to the new exchange rate.\n\n3. **Adjust government spending to prioritize essential imports**: Review and adjust government spending to prioritize essential imports, such as food and medicine, which are crucial for the well-being of the population. This may involve reducing spending on non-essential goods and services and reallocating resources to ensure a stable supply of critical imports.",
-    "explanation": "The sudden devaluation of the currency leads to an increase in the price of imports, which can cause inflation and reduce the purchasing power of consumers. Assuming ceteris paribus, the fiscal policy response aims to mitigate these effects by:\n\n1. Reducing demand for luxury imports through taxation: $\\Delta T > 0 \\rightarrow \\Delta C < 0$\n\n2. Boosting exports through targeted stimulus: $\\Delta G > 0 \\rightarrow \\Delta X > 0$\n\n3. Prioritizing essential imports through government spending adjustments: $\\Delta G > 0 \\rightarrow \\Delta M_{essential} > 0$\n\nThe underlying mechanism relies on the Keynesian transmission mechanism, where fiscal policy interventions affect aggregate demand and help the economy adjust to the macro shock."
+    "question": "A sudden and unexpected 20% devaluation of the currency in a small open economy has led to a sharp increase in the price of imports. The government is concerned about the potential impact on inflation and the trade balance. Assuming Ceteris Paribus, analyze the situation and propose a 3-step policy response to mitigate the effects of the devaluation.",
+    "answer": "To address the shock caused by the sudden currency devaluation, the following 3-step policy response is proposed:\n\n1. **Monetary Policy Adjustment**: The central bank should increase the interest rate to curb inflationary pressures. A higher interest rate will reduce consumption and investment, thereby decreasing aggregate demand and mitigating the upward pressure on prices. This action will also help to stabilize the currency and prevent further devaluation.\n\n2. **Fiscal Policy Adjustment**: The government should implement a fiscal contraction to reduce domestic demand and alleviate pressure on prices. This can be achieved by reducing government spending or increasing taxes. A reduction in government spending will decrease the demand for goods and services, while an increase in taxes will reduce disposable income and consumption.\n\n3. **Supply-Side Policies**: The government should implement supply-side policies to improve the competitiveness of domestic industries and increase productivity. This can be achieved by investing in infrastructure, providing incentives for innovation and entrepreneurship, and implementing policies to enhance the business environment. By improving productivity and competitiveness, domestic industries can better adapt to the new exchange rate and reduce their reliance on imports.",
+    "explanation": "The sudden currency devaluation leads to an increase in the price of imports, which can be represented as a leftward shift of the aggregate supply curve (AS) in the short run. Assuming Ceteris Paribus, the devaluation will lead to a decrease in the supply of goods and services, causing an increase in prices (P) and a decrease in output (Y). The policy response aims to mitigate these effects by reducing aggregate demand and improving productivity.\n\nMathematically, the effects of the devaluation can be represented as follows:\n\nLet $E$ be the exchange rate, $P$ be the price level, and $Y$ be the output level. The aggregate supply curve can be represented as:\n\n$$Y = f(P, E)\n\n$$\\frac{\\partial Y}{\\partial E} < 0, \\frac{\\partial Y}{\\partial P} > 0$$\n\nThe devaluation leads to an increase in $E$, which causes a decrease in $Y$ and an increase in $P$. The policy response aims to reduce $Y$ and $P$ by adjusting monetary and fiscal policies, and to improve productivity by implementing supply-side policies.\n\nThe interest rate increase can be represented as a decrease in the money supply (M), which leads to a decrease in aggregate demand (AD) and a reduction in $Y$ and $P$:\n\n$$M \\downarrow \\Rightarrow AD \\downarrow \\Rightarrow Y \\downarrow, P \\downarrow$$\n\nThe fiscal contraction can be represented as a decrease in government spending (G) or an increase in taxes (T), which leads to a decrease in aggregate demand (AD) and a reduction in $Y$ and $P$:\n\n$$G \\downarrow \\Rightarrow AD \\downarrow \\Rightarrow Y \\downarrow, P \\downarrow$$\n\nThe supply-side policies aim to improve productivity and competitiveness, which can be represented as an increase in the production function:\n\n$$Y = f(K, L, A)\n\n$$\\frac{\\partial Y}{\\partial A} > 0$$\n\nwhere $A$ represents productivity. The increase in productivity leads to an increase in $Y$ and a reduction in $P$."
   },
   {
     "id": "q3",
     "type": "writing",
     "difficulty": "L2",
-    "question": "Explain how the concept of 'Ceteris Paribus' is applied in a Central Banking & Monetary Policy scenario to analyze the effect of a change in interest rates on inflation, and provide a technical explanation of the underlying mechanism.",
-    "answer": "In a Central Banking & Monetary Policy scenario, 'Ceteris Paribus' is applied to analyze the effect of a change in interest rates on inflation by assuming that all other factors, such as economic growth, unemployment, and fiscal policy, remain constant. This allows policymakers to isolate the effect of interest rates on inflation. For instance, if the central bank increases interest rates, ceteris paribus, it is expected that inflation will decrease as borrowing becomes more expensive and consumption decreases. The underlying mechanism can be represented by the Phillips Curve, which shows the inverse relationship between unemployment and inflation: $\\pi_t = \beta_0 + \beta_1(U_t - U_n) + \\epsilon_t$, where $\\pi_t$ is inflation, $U_t$ is unemployment, $U_n$ is natural unemployment, and $\\epsilon_t$ is a random error term.",
-    "explanation": "The concept of 'Ceteris Paribus' is crucial in macroeconomic analysis, particularly in Central Banking & Monetary Policy, as it enables policymakers to examine the impact of a specific policy instrument, such as interest rates, on a particular economic variable, like inflation. By assuming that all other factors remain constant, policymakers can identify the causal relationship between the policy instrument and the target variable. The technical explanation of the underlying mechanism relies on the theoretical frameworks of monetary policy transmission, which suggest that changes in interest rates affect the economy through various channels, including the loanable funds market, the exchange rate, and the expectations of economic agents. The LaTeX representation of the Phillips Curve, $\\pi_t = \beta_0 + \beta_1(U_t - U_n) + \\epsilon_t$, illustrates the negative relationship between unemployment and inflation, which is a fundamental concept in macroeconomics."
+    "question": "Explain the concept of Ceteris Paribus in International Trade Analysis and its significance in analyzing the relationship between variables.",
+    "answer": "Ceteris Paribus, meaning 'all things being equal' or 'other things being unchanged', is a fundamental concept in International Trade Analysis that enables economists to isolate the effect of a change in one variable on another by assuming that all other factors remain constant. This concept is crucial in analyzing the relationship between variables such as the impact of tariffs on imports, the effect of exchange rates on exports, and the relationship between economic growth and trade balances. By assuming Ceteris Paribus, economists can derive the demand and supply curves, analyze market equilibrium, and understand the effects of shifts in demand and supply.",
+    "explanation": "The concept of Ceteris Paribus can be represented using the following equation: $y = f(x) + \\epsilon$, where $y$ is the dependent variable, $x$ is the independent variable, $f(x)$ is the functional relationship between $y$ and $x$, and $\\epsilon$ represents the error term or the effect of other factors. By assuming Ceteris Paribus, we can set $\\epsilon = 0$, which allows us to analyze the relationship between $y$ and $x$ in isolation. For instance, in the context of international trade, if we want to analyze the effect of a tariff on imports, we would assume that all other factors such as consumer income, tastes, and prices of substitutes and complements remain constant, thereby isolating the effect of the tariff on imports."
   },
   {
     "id": "q4",
@@ -109,33 +97,28 @@ Here's a 5-step technical walkthrough of how the concept of ceteris paribus oper
     "difficulty": "L2",
     "question": "Order steps for Ceteris Paribus in the context of International Trade Analysis.",
     "steps": [
-      "The effect of the changed variable on the outcome is measured",
-      "The relationship between the variables is analyzed",
-      "A specific variable is changed",
-      "The economist assumes all other factors remain constant",
-      "The variables being held constant are identified"
+      "Ceteris Paribus assumes that changes in price are analyzed while keeping Determinants Of Demand constant",
+      "Ceteris Paribus enables us to derive the Demand Curve and Demand Function",
+      "The Law Of Demand and Theory Of Demand rely heavily on Ceteris Paribus",
+      "The Demand Schedule is constructed under the assumption of Ceteris Paribus",
+      "Market Equilibrium and the Effects Of Shift In Demand And Supply are understood using Ceteris Paribus"
     ],
     "answer": [
-      "The economist assumes all other factors remain constant",
-      "The relationship between the variables is analyzed",
-      "A specific variable is changed",
-      "The effect of the changed variable on the outcome is measured",
-      "The variables being held constant are identified"
+      "The Law Of Demand and Theory Of Demand rely heavily on Ceteris Paribus",
+      "The Demand Schedule is constructed under the assumption of Ceteris Paribus",
+      "Ceteris Paribus enables us to derive the Demand Curve and Demand Function",
+      "Market Equilibrium and the Effects Of Shift In Demand And Supply are understood using Ceteris Paribus",
+      "Ceteris Paribus assumes that changes in price are analyzed while keeping Determinants Of Demand constant"
     ]
   },
   {
     "id": "q5",
     "type": "trace",
     "difficulty": "L3",
-    "question": "What is the exact output?",
-    "content": "Assuming a 1% interest rate change, analyze the impact through 4 distinct economic sectors (Housing, Investment, Forex, Consumption) under the assumption of 'Ceteris Paribus'.",
-    "answer": {
-      "Housing": "A 1% increase in interest rates will lead to a decrease in housing demand, as higher mortgage rates increase the cost of borrowing, making it more expensive for people to buy or refinance homes. Assuming ceteris paribus, this could lead to a 0.5% decrease in housing prices.",
-      "Investment": "A 1% increase in interest rates will lead to a decrease in investment, as higher interest rates increase the cost of borrowing for businesses and make bonds and other fixed-income investments more attractive. This could lead to a 0.2% decrease in investment spending.",
-      "Forex": "A 1% increase in interest rates will lead to an appreciation of the currency, as higher interest rates attract foreign investors and increase demand for the currency. Assuming ceteris paribus, this could lead to a 0.3% appreciation of the currency.",
-      "Consumption": "A 1% increase in interest rates will lead to a decrease in consumption, as higher interest rates increase the cost of borrowing for consumers and reduce disposable income. This could lead to a 0.1% decrease in consumption."
-    },
-    "explanation": "The impact of a 1% interest rate change through the four distinct economic sectors can be analyzed using the following equations:\n\nHousing: $P_H = f(r) = -0.5r + 100$\nInvestment: $I = f(r) = -0.2r + 100$\nForex: $E = f(r) = 0.3r + 100$\nConsumption: $C = f(r) = -0.1r + 100$\n\nWhere $P_H$ is housing price, $I$ is investment spending, $E$ is the exchange rate, $C$ is consumption, and $r$ is the interest rate.\n\nUsing LaTeX, we can derive the effects of a 1% interest rate change:\n\n$\\frac{\\partial P_H}{\\partial r} = -0.5$\n$\\frac{\\partial I}{\\partial r} = -0.2$\n$\\frac{\\partial E}{\\partial r} = 0.3$\n$\\frac{\\partial C}{\\partial r} = -0.1$\n\nAssuming ceteris paribus, a 1% increase in interest rates leads to:\n\n$\\Delta P_H = -0.5 \\cdot 1 = -0.5$\n$\\Delta I = -0.2 \\cdot 1 = -0.2$\n$\\Delta E = 0.3 \\cdot 1 = 0.3$\n$\\Delta C = -0.1 \\cdot 1 = -0.1$"
+    "question": "What is the exact output after a 10% depreciation of the domestic currency on the trade balance, assuming initial exports (X) = $100 million, initial imports (M) = $80 million, initial exchange rate (e) = 1.20, and a marginal propensity to import (mpm) = 0.2?",
+    "content": "Suppose the domestic currency depreciates by 10%, so the new exchange rate e' = 1.20 * 1.10 = 1.32. We will calculate the effects on exports and imports through four sectors: \n  1. **Exchange Rate Sector**: The new exchange rate affects the price of domestic goods abroad and foreign goods domestically.\n  2. **Export Sector**: A depreciation makes domestic goods cheaper abroad, potentially increasing exports.\n  3. **Import Sector**: A depreciation makes foreign goods more expensive domestically, potentially decreasing imports.\n  4. **Trade Balance Sector**: The final impact on the trade balance (TB) = X - M.\n\n## Initial States:\n- Initial Exports (X) = $100 million\n- Initial Imports (M) = $80 million\n- Initial Exchange Rate (e) = 1.20\n- Marginal Propensity to Import (mpm) = 0.2\n\n## Step 1: Exchange Rate Sector\nThe domestic currency depreciates by 10%, so the new exchange rate (e') = 1.20 * 1.10 = 1.32.\n\n## Step 2: Export Sector\nAssuming a pass-through effect of 100% for simplicity, and given that a 10% depreciation increases the competitiveness of domestic goods, let's assume exports increase by 5% due to the depreciation:\nNew Exports (X') = $100 million * 1.05 = $105 million.\n\n## Step 3: Import Sector\nThe price of imports increases by 10% due to the depreciation:\nNew Price of Imports = 1.10\nNew Imports (M') = $80 million * 1.10 = $88 million.\n\n## 4: Trade Balance Sector\nHowever, we must consider the effect of increased income from exports on imports, given mpm = 0.2:\nIncrease in Income from Exports = $105 million - $100 million = $5 million\nIncrease in Imports due to Increased Income = $5 million * 0.2 = $1 million\nAdjusted New Imports (M'') = $88 million + $1 million = $89 million.\n\n## Final States:\n- New Exports (X') = $105 million\n- Adjusted New Imports (M'') = $89 million\n- New Trade Balance (TB') = $105 million - $89 million = $16 million\n\nThe exact output we are solving for is the new trade balance after the depreciation.",
+    "answer": "$16 million",
+    "explanation": "The mechanism underlying the effect of a depreciation of the domestic currency on the trade balance can be understood through the following equations and LaTeX expressions:\n\nGiven:\n- $X = 100$ million\n- $M = 80$ million\n- $e = 1.20$\n- $mpm = 0.2$\n\nDepreciation by 10% implies:\n\\[\ne' = e \\times 1.10 = 1.20 \\times 1.10 = 1.32\n\\]\n\nAssuming exports increase by 5%:\n\\[\nX' = X \\times 1.05 = 100 \\times 1.05 = 105 \\, \\text{million}\n\\]\n\nImports increase due to depreciation:\n\\[\nM' = M \\times 1.10 = 80 \\times 1.10 = 88 \\, \\text{million}\n\\]\n\nIncrease in income from exports:\n\\[\n\\Delta X = X' - X = 105 - 100 = 5 \\, \\text{million}\n\\]\n\nIncrease in imports due to increased income:\n\\[\n\\Delta M = \\Delta X \\times mpm = 5 \\times 0.2 = 1 \\, \\text{million}\n\\]\n\nAdjusted new imports:\n\\[\nM'' = M' + \\Delta M = 88 + 1 = 89 \\, \\text{million}\n\\]\n\nNew trade balance:\n\\[\nTB' = X' - M'' = 105 - 89 = 16 \\, \\text{million}\n\\]\n\nThe final state/output, which is the new trade balance after the depreciation, is $16 million."
   }
 ]
 
