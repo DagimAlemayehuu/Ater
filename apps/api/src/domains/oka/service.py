@@ -1542,6 +1542,10 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         generation_attempts += 1
                         phase_prefix = f"(Attempt {generation_attempts}/{max_attempts})" if generation_attempts > 1 else ""
                         OkaService._status[session_id] = f"{phase_prefix} Surgical Pass: [[{current_note_title}]] (1/2)..."
+                        
+                        theory = None
+                        final_output = None
+                        probes = None
 
                         try:
                             # ── 3-PASS PIPELINE ──
@@ -1552,10 +1556,18 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             verifier_agent = VerifierAgent(self.llm_creative)
                             quiz_auditor_agent = QuizAuditorAgent(self.llm_creative)
 
+                            if "used_scenarios" not in session:
+                                session["used_scenarios"] = []
+
                             # Pass 1: Theory
                             await self.governor.acquire(expected_tokens=3500)
-                            theory = await theory_agent.generate(note_schema, note_schema.source_context or "No context", primary_language, all_concepts_list)
+                            theory = await theory_agent.generate(note_schema, note_schema.source_context or "No context", primary_language, all_concepts_list, session["used_scenarios"])
                             
+                            # Extract the used analogy to prevent reuse
+                            mm_match = re.search(r"# 1\. Mental Model\n+(.+?)(?=\n# 2\.)", theory, re.DOTALL)
+                            if mm_match:
+                                session["used_scenarios"].append(mm_match.group(1).strip()[:150])
+
                             # Small inter-pass sleep to stay under RPM/TPM
                             await asyncio.sleep(3.0)
 
@@ -1582,8 +1594,12 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
                             # Pass 3: Examiner (Dedicated Dynamic Agents)
                             await self.governor.acquire(expected_tokens=3000)
-                            theory_summary = theory[:1000] # denser summary for specialized questioning
+                            theory_summary = theory[:2500] # denser summary for specialized questioning
                             
+                            # Anchored Professional Domain for the ENTIRE note
+                            # We use the same seed as TheoryAgent to ensure consistency
+                            prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
+
                             # Dynamic cognitive modes based on sub-agent matrix
                             q_modes = domain.get('question_modes', ['mcq', 'true_false', 'scenario'])
                             
@@ -1596,7 +1612,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 else: diff = "L2"
                                 
                                 agent = QuestionAgent(self.llm_creative, qt)
-                                tasks.append(agent.generate(note_schema.title, theory_summary, diff, domain.get('persona', 'Expert'), mode=mode))
+                                # Anchor question to the SAME professional domain as the theory
+                                tasks.append(agent.generate(note_schema.title, theory_summary, diff, domain.get('persona', 'Expert'), mode=note_schema.mode, prof_domain=prof_domain))
                             
                             questions = await asyncio.gather(*tasks)
                             for i, q in enumerate(questions):
@@ -1606,7 +1623,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
                             # Quiz Audit — inject diagnosis as hint for next retry (no inline retry to avoid broken JSON)
                             if generation_attempts < max_attempts:
-                                audit_result = await quiz_auditor_agent.audit(note_schema.title, quiz_json_str, theory_summary)
+                                audit_result = await quiz_auditor_agent.audit(note_schema.title, quiz_json_str, theory_summary, prof_domain=prof_domain)
                                 if not audit_result["passed"]:
                                     print(f"[OKA Service] Quiz audit FAILED for '{current_note_title}': {audit_result['diagnosis']}")
                                     note_schema.source_context = (

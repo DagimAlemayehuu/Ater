@@ -321,18 +321,14 @@ class ArchitectAgent:
         if not content or not content.strip(): 
             raise ValueError("Empty response from LLM")
             
-        # 1. Clean markdown fences and any text outside them
-        # We look for the FIRST ```json or ``` and the LAST ```
+        # 1. Clean markdown fences
         clean = content.strip()
-        # Find all code blocks
         blocks = re.findall(r"```(?:json)?\s*([\s\S]*?)```", clean)
         if blocks:
-            # Use the largest block that looks like JSON
             json_blocks = [b.strip() for b in blocks if "{" in b and "}" in b]
             if json_blocks:
                 clean = max(json_blocks, key=len)
         
-        # 2. Find the first '{' and the last '}' in case of leading/trailing chatter
         start = clean.find("{")
         end = clean.rfind("}")
         if start == -1 or end == -1: 
@@ -340,38 +336,34 @@ class ArchitectAgent:
 
         json_str = clean[start:end+1]
         
-        # 3. Aggressive Sanitization
-        # Remove trailing commas in objects and arrays
+        # 2. Aggressive Sanitization
+        # Remove trailing commas
         json_str = re.sub(r",\s*([\]\}])", r"\1", json_str)
         
-        # Handle unescaped backslashes (extremely common in LaTeX sections)
-        # We only escape backslashes that are NOT part of a valid escape sequence
-        # Valid: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
+        # FIX: Missing commas between fields (e.g. "field1": "val" "field2": "val")
+        # This regex looks for: "key": value whitespace "key":
+        json_str = re.sub(r'("[\s\S]*?"\s*:\s*(?:".*?"|\d+|true|false|null|\[.*?\]|\{.*?\}))\s*(")', r'\1, \2', json_str)
+
+        # Handle unescaped backslashes in LaTeX
         def escape_invalid_slashes(match):
             s = match.group(0)
-            # If it's a valid escape sequence, leave it
             if re.match(r'\\[\\"/bfnrtu]|\\u[0-9a-fA-F]{4}', s):
                 return s
-            # Otherwise, double it
             return "\\\\" + s[1:]
             
-        # This regex looks for any backslash followed by something
         json_str = re.sub(r'\\.', escape_invalid_slashes, json_str)
 
         try:
             return json.loads(json_str, strict=False)
         except json.JSONDecodeError as e:
-            # 4. Final Fallback: Attempt to fix common structural errors
-            # Sometimes LLMs miss a closing brace or use single quotes
+            # Final Fallback: Lazy quote fix
             try:
-                # Try replacing single quotes if they are clearly used as delimiters
-                # This is risky but sometimes helps for "lazy" models
                 alt_json = json_str.replace("'", '"')
                 return json.loads(alt_json, strict=False)
             except Exception:
                 pass
             
-            # Brace-counting fallback: truncated JSON
+            # Brace counting for truncated output
             brace_count = 0
             for i, char in enumerate(json_str):
                 if char == '{': brace_count += 1
@@ -382,7 +374,7 @@ class ArchitectAgent:
                     except json.JSONDecodeError:
                         break
             
-            raise ValueError(f"Failed to parse JSON: {e}. Snippet: {json_str[:100]}...")
+            raise ValueError(f"Failed to parse JSON: {e}. Snippet: {json_str[:120]}...")
 
     @staticmethod
     def _is_rate_limit(e: Exception) -> bool:
@@ -397,11 +389,22 @@ class TheoryAgent:
         self.llm = llm
         self.domain = domain
 
-    async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str) -> str:
+    async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str, used_scenarios: list = None) -> str:
         title_readable = note_schema.title.replace("_", " ")
         prof_domain = get_professional_domain(note_schema.title)
         domain_fix = get_domain_instruction(note_schema.mode or "ECON-MACRO")
-        
+
+        # Scenario exclusion: prevent the same everyday analogy from being reused
+        # across notes in the same batch (e.g. bake sale appearing 4 times).
+        scenario_ban = ""
+        if used_scenarios:
+            banned = ", ".join(f"'{s}'" for s in used_scenarios[-8:])
+            scenario_ban = (
+                f"\nANALOGY PROHIBITION: The following everyday scenarios have ALREADY been used in "
+                f"this batch and MUST NOT be reused: {banned}. "
+                f"Pick a completely different, vivid real-world scenario instead."
+            )
+
         sys_prompt = f"""You are a world-class {self.domain['persona']} and pedagogical expert.
 Your goal is to take a student from ZERO knowledge to TOTAL MASTERY of '{title_readable}'.
 
@@ -410,15 +413,15 @@ Your goal is to take a student from ZERO knowledge to TOTAL MASTERY of '{title_r
 STRICT INSTRUCTION: Output ONLY the requested sections. NO introductory text, NO concluding remarks, NO "Here is your note". Start directly with '# 1. Mental Model'.
 
 # 1. Mental Model
-Explain the ENTIRE concept to a 10-year-old using a vivid everyday analogy. Mapping: Map at least 2 mechanical components of the analogy to the concept. 2-3 sentences. No technical jargon.
+Explain the ENTIRE concept to a 10-year-old using a vivid everyday analogy. Mapping: Map at least 2 mechanical components of the analogy to the concept. 2-3 sentences. No technical jargon.{scenario_ban}
 
 # 2. {self.domain['h1']}
 Provide a rigorous, technical definition and the underlying mechanism in continuous analytical prose. No bullet points.
 MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
 Format: [[Exact_Match_From_List]] (use underscores).
 
-# 3. {self.domain['h2']}
-Analyze the limitations, pitfalls, or edge cases of '{title_readable}' in continuous analytical prose. No bullet points.
+# 3. Limitations & Edge Cases
+Analyze the specific limitations, model assumptions that break down, and known edge cases of '{title_readable}' in continuous analytical prose. No bullet points. Do NOT use the heading 'Market Failures' unless this note is specifically about externalities, public goods, or information asymmetry.
 MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
 
 Concept: {title_readable}
@@ -441,8 +444,8 @@ Explain to a 10-year-old using a vivid everyday analogy.
 Provide the rigorous technical definition and mechanism. 
 MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
 
-# 3. {self.domain['h2']}
-Analyze the pitfalls and edge cases of '{title_readable}'.
+# 3. Limitations & Edge Cases
+Analyze the specific limitations and edge cases of '{title_readable}'. Do NOT use the heading 'Market Failures' unless this note is specifically about externalities or market imperfections.
 
 Concept: {title_readable}
 Source context: {source_text[:1500]}"""
@@ -518,9 +521,10 @@ class QuestionAgent:
         }
         self.canonical_type = mapping.get(self.q_type, "writing")
 
-    async def generate(self, note_title: str, context: str, difficulty: str = "L1", persona: str = "Expert Educator", mode: str = "ECON-MACRO") -> dict:
+    async def generate(self, note_title: str, context: str, difficulty: str = "L1", persona: str = "Expert Educator", mode: str = "ECON-MACRO", prof_domain: str = None) -> dict:
         title_readable = note_title.replace("_", " ")
-        prof_domain = get_professional_domain(note_title + str(self.q_type), mode=mode)
+        if not prof_domain:
+            prof_domain = get_professional_domain(note_title + str(self.q_type), mode=mode)
         
         # Load Specialized Sub-Agent Protocol
         protocol_map = DOMAIN_QUESTION_PROTOCOLS.get(mode, {})
@@ -607,8 +611,34 @@ Context: {context[:3000]}
                     await asyncio.sleep(2.0 * (2 ** attempt))
                 else:
                     print(f"[QuestionAgent] Parse failed for {self.canonical_type} (attempt {attempt}): {e}")
-                    if attempt == max_retries - 1:
-                        return {"id": "q1", "type": self.canonical_type, "difficulty": difficulty, "question": "Error generating question.", "answer": "N/A"}
+
+        # ── NUCLEAR FALLBACK: Weak LLM couldn't parse the full schema. ─────────
+        # Drop all complexity — ask for the absolute minimum valid MCQ.
+        # A guaranteed L1 MCQ is infinitely better than a dead error stub.
+        print(f"[QuestionAgent] NUCLEAR FALLBACK triggered for {self.canonical_type} on '{title_readable}'")
+        nuclear_prompt = (
+            f"You must output ONLY a raw JSON object. No markdown. No explanation. No extra text.\n"
+            f"Fill in ONLY the 4 fields marked with ??? below for the concept '{title_readable}'.\n\n"
+            f'{{"id":"q1","type":"mcq","difficulty":"L1",'
+            f'"question":"???Write a basic question about {title_readable}???","options":{{"A":"???correct answer???","B":"???wrong option???","C":"???wrong option???","D":"???wrong option???"}},"answer":"A","explanation":"???Why A is correct???"}}'
+        )
+        try:
+            res = await self.llm.ainvoke([("system", nuclear_prompt), ("human", "Output the completed JSON.")])
+            raw = res.content.strip()
+            raw = re.sub(r"^```[a-z]*\n?", "", raw)
+            raw = re.sub(r"\n?```$", "", raw).strip()
+            q_data = ArchitectAgent._parse_json(raw)
+            q_data["type"] = "mcq"
+            q_data["difficulty"] = "L1"
+            print(f"[QuestionAgent] Nuclear fallback succeeded for '{title_readable}'")
+            return q_data
+        except Exception as fallback_err:
+            # All attempts exhausted — raise so the service layer triggers full note regeneration
+            print(f"[QuestionAgent] FATAL: Nuclear fallback also failed for '{title_readable}': {fallback_err}")
+            raise RuntimeError(
+                f"QuestionAgent({self.canonical_type}) failed all attempts for '{title_readable}'. "
+                f"Last error: {last_error}. Fallback error: {fallback_err}"
+            )
 
 class CriticAgent:
     def __init__(self, llm: BaseChatModel):
@@ -705,7 +735,7 @@ class QuizAuditorAgent:
     def __init__(self, llm: BaseChatModel):
         self.llm = llm
 
-    async def audit(self, note_title: str, quiz_json_str: str, theory_summary: str) -> dict:
+    async def audit(self, note_title: str, quiz_json_str: str, theory_summary: str, prof_domain: str = "General") -> dict:
         max_retries = 2
         title_readable = note_title.replace("_", " ")
         sys_prompt = f"""You are a quiz quality auditor. Evaluate these technical questions for '{title_readable}'.
@@ -714,7 +744,7 @@ Return ONLY a valid JSON object.
 The note's concept is: '{title_readable}'
 For each question check:
 - Is the question DIRECTLY about '{title_readable}'? (Not a generic math fact, not the analogy)
-- CONTEXT LOCK: Does the question use a professional domain UNRELATED to the concept? (e.g., Bioinformatics in an Economics note = FAIL).
+- CONTEXT LOCK: Does the question use a professional domain UNRELATED to the concept or the intended domain '{prof_domain}'? (e.g., Bioinformatics in an Economics note = FAIL, but using '{prof_domain}' terminology is REQUIRED).
 - GROUNDING: Does the question require specific data (numbers, constants) NOT present in the theory summary? (Hallucinated facts = FAIL).
 - SHUFFLE CHECK: For type='order', are the 'steps' already in the correct order? (Identity ordering = FAIL).
 - DEBUG CHECK: If type='debug': does 'content' actually contain a wrong step? (Answer='no error'=FAIL).
@@ -726,7 +756,7 @@ Output:
 OR if problems:
 {{"passed":false,"issues":["Q1: Context Hallucination detected.","Q3: Identity ordering detected. Steps must be shuffled."],"fix_instruction":"exact instruction"}}
 
-Key facts about '{title_readable}': {theory_summary[:800]}"""
+Key facts about '{title_readable}': {theory_summary[:2500]}"""
         user_msg = f"Quiz JSON:\n{quiz_json_str[:2000]}"
         last_error = None
         for attempt in range(2):

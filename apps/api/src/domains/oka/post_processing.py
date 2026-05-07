@@ -1,13 +1,89 @@
 import re
 import yaml
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 from difflib import SequenceMatcher
+
+# ── AGENT SCAFFOLDING LABELS ──────────────────────────────────────────────────
+# These are PractitionerAgent/QuestionAgent internal labels that sometimes leak
+# into student-facing note body text. Strip them deterministically.
+_LEAKED_LABEL_PATTERNS = [
+    r'^Technical Question:\s*',
+    r'^Debug Section:\s*',
+    r'^Mathematical Formula:\s*',
+    r'^Example:\s*',
+    r'^Worked Example:\s*',
+    r'^Note:\s*(?=This|The|It|In|A)',   # generic "Note:" prefixes from chain-of-thought
+]
+_LEAKED_LABEL_RE = re.compile(
+    '|'.join(_LEAKED_LABEL_PATTERNS),
+    re.MULTILINE
+)
+
+def sanitize_body(text: str) -> Tuple[str, List[str]]:
+    """Deterministic content sanitizer for weak-LLM artifacts.
+
+    Fixes applied (in order):
+    1. Strip leaked agent scaffolding labels from prose.
+    2. Fix broken Mermaid arrow syntax: -->|label|> → -->|label|.
+    3. Deduplicate consecutive identical wikilinks: [[X]] [[X]] → [[X]].
+
+    Returns (cleaned_text, list_of_fixes_applied).
+    """
+    fixes: List[str] = []
+    original = text
+
+    # 1. Strip leaked scaffolding labels
+    cleaned = _LEAKED_LABEL_RE.sub('', text)
+    if cleaned != text:
+        fixes.append('stripped_agent_labels')
+    text = cleaned
+
+    # 2. Fix broken Mermaid syntax: -->|label|> and -->|label|>
+    #    LLMs sometimes emit -->|Complementary Goods|> B[Bread] with an extra >
+    mermaid_fixed = re.sub(r'(-->\s*\|[^|]*\|)(>)', r'\1', text)
+    if mermaid_fixed != text:
+        fixes.append('fixed_mermaid_arrow_syntax')
+    text = mermaid_fixed
+
+    # 3. Deduplicate consecutive identical wikilinks: [[X]] [[X]] → [[X]]
+    deduped = re.sub(r'(\[\[[^\]]+\]\])(\s+\1)+', r'\1', text)
+    if deduped != text:
+        fixes.append('deduped_consecutive_wikilinks')
+    text = deduped
+
+    return text, fixes
+
+
+def validate_quiz_stub_free(note_path: Path) -> List[str]:
+    """Scan a deployed note for dead quiz stubs that slipped past validation.
+    Returns list of stub markers found (empty = clean)."""
+    content = note_path.read_text(encoding='utf-8')
+    found = []
+    if '"question": "Error generating question."' in content:
+        found.append('ERROR_STUB_QUESTION')
+    if '"answer": "N/A"' in content:
+        found.append('ERROR_STUB_ANSWER')
+    return found
 
 def canonicalize_unit(unit_dir: Path):
     for note in unit_dir.glob("*.md"):
         text = note.read_text(encoding="utf-8")
+        changed = False
+
+        # ── Phase 0: Body sanitizer (agent artifact cleanup) ──────────────────
+        # Separate frontmatter from body so we don't corrupt YAML
+        parts = text.split("---", 2)
+        if len(parts) == 3:
+            fm_block = f"---{parts[1]}---"
+            body_block = parts[2]
+            sanitized_body, body_fixes = sanitize_body(body_block)
+            if body_fixes:
+                text = fm_block + sanitized_body
+                changed = True
+                print(f"[Sanitize] {note.name}: {body_fixes}")
         
+        # ── Phase 1: Wikilink canonicalization ────────────────────────────────
         # Fix spaces inside brackets: [[ Title ]] → [[Title]]
         # Fix spaces in title: [[some title]] → [[Some_Title]]
         # CRITICAL: Skip path-based links (containing slashes) to avoid destroying PDF store paths
@@ -30,7 +106,11 @@ def canonicalize_unit(unit_dir: Path):
         
         fixed = re.sub(r'\[\[\s*([^\]]+?)\s*\]\]', fix, text)
         if fixed != text:
-            note.write_text(fixed, encoding="utf-8")
+            changed = True
+        text = fixed
+
+        if changed:
+            note.write_text(text, encoding="utf-8")
             print(f"[CanonWikilinks] Fixed: {note.name}")
 
 def infer_unit_prerequisites(unit_dir: Path):
@@ -218,15 +298,22 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path):
             note_data[stem] = []
 
     children_map = {stem: [] for stem in deployed_stems}
+    has_parent = {stem: False for stem in deployed_stems}
     roots = []
     
     for stem in deployed_stems:
         prereqs = note_data[stem]
         local_prereqs = [p for p in prereqs if p in note_data]
-        if local_prereqs:
-            parent = local_prereqs[0]
-            children_map[parent].append(stem)
-        else:
+        
+        # If A links to B (A has B as a prereq), A is the broader concept (parent), B is the child.
+        for child in local_prereqs:
+            if child not in children_map[stem]:
+                children_map[stem].append(child)
+                has_parent[child] = True
+
+    # Roots are nodes that are not children of any other node
+    for stem in deployed_stems:
+        if not has_parent[stem]:
             roots.append(stem)
 
     lines = []

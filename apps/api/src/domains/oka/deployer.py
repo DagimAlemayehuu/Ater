@@ -286,6 +286,8 @@ class OkaDeployer:
                 if clean_hub_name:
                     meta["hub"] = f"[[{unit_str}{clean_hub_name}_Hub]]"
                 meta.setdefault("mode", "CS-SOFTWARE")
+                from datetime import datetime
+                meta.setdefault("study_date", datetime.now().strftime("%Y-%m-%d"))
                 # ── Sanitise prerequisites: spaces → underscores ──
                 if meta.get("prerequisites"):
                     meta["prerequisites"] = OkaValidator.sanitize_prerequisites(

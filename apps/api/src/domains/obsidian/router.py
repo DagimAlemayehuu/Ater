@@ -511,7 +511,7 @@ async def delete_vault_row(db_name: str, file_name: str, secrets: AppSecrets = D
 class CreateFileRequest(BaseModel):
     path: str
     content: Optional[str] = ""
-    overwrite: Optional[bool] = False
+    overwrite: Optional[bool] = True
 
 @router.post("/vault/files")
 async def create_vault_file(req: CreateFileRequest, secrets: AppSecrets = Depends(get_app_secrets)):

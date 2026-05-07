@@ -8,8 +8,15 @@ HARD_FAILURE_MARKERS = [
     "Error generating content",
     "Error extracting artifact",
     "Error generating interactive quiz",
+    "Error generating question.",
     "Error generating",
     "Error extracting",
+]
+
+# Quiz-specific stub patterns — a quiz block containing ONLY these is pedagogically dead
+QUIZ_STUB_MARKERS = [
+    '"question": "Error generating question."',
+    '"answer": "N/A"',
 ]
 
 
