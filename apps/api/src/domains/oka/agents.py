@@ -245,36 +245,71 @@ class ArchitectAgent:
 
     @staticmethod
     def _parse_json(content: str) -> Dict[str, Any]:
-        if not content or not content.strip(): raise ValueError("Empty response from LLM")
-        clean = re.sub(r"^```[a-z]*\n?", "", content.strip())
-        clean = re.sub(r"\n?```$", "", clean).strip()
+        if not content or not content.strip(): 
+            raise ValueError("Empty response from LLM")
+            
+        # 1. Clean markdown fences and any text outside them
+        # We look for the FIRST ```json or ``` and the LAST ```
+        clean = content.strip()
+        # Find all code blocks
+        blocks = re.findall(r"```(?:json)?\s*([\s\S]*?)```", clean)
+        if blocks:
+            # Use the largest block that looks like JSON
+            json_blocks = [b.strip() for b in blocks if "{" in b and "}" in b]
+            if json_blocks:
+                clean = max(json_blocks, key=len)
+        
+        # 2. Find the first '{' and the last '}' in case of leading/trailing chatter
         start = clean.find("{")
         end = clean.rfind("}")
-        if start == -1 or end == -1: raise ValueError("No JSON object in response")
+        if start == -1 or end == -1: 
+            raise ValueError(f"No JSON object found in LLM response. Content: {content[:100]}...")
 
         json_str = clean[start:end+1]
-        # Remove trailing commas
+        
+        # 3. Aggressive Sanitization
+        # Remove trailing commas in objects and arrays
         json_str = re.sub(r",\s*([\]\}])", r"\1", json_str)
+        
+        # Handle unescaped backslashes (extremely common in LaTeX sections)
+        # We only escape backslashes that are NOT part of a valid escape sequence
+        # Valid: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
+        def escape_invalid_slashes(match):
+            s = match.group(0)
+            # If it's a valid escape sequence, leave it
+            if re.match(r'\\[\\"/bfnrtu]|\\u[0-9a-fA-F]{4}', s):
+                return s
+            # Otherwise, double it
+            return "\\\\" + s[1:]
+            
+        # This regex looks for any backslash followed by something
+        json_str = re.sub(r'\\.', escape_invalid_slashes, json_str)
+
         try:
             return json.loads(json_str, strict=False)
-        except json.JSONDecodeError:
-            # Sanitize lone backslashes (LaTeX etc.) and retry
-            sanitized = re.sub(r'\\(?![\\"/bfnrtu])', r'\\\\', json_str)
+        except json.JSONDecodeError as e:
+            # 4. Final Fallback: Attempt to fix common structural errors
+            # Sometimes LLMs miss a closing brace or use single quotes
             try:
-                return json.loads(sanitized, strict=False)
-            except json.JSONDecodeError:
+                # Try replacing single quotes if they are clearly used as delimiters
+                # This is risky but sometimes helps for "lazy" models
+                alt_json = json_str.replace("'", '"')
+                return json.loads(alt_json, strict=False)
+            except Exception:
                 pass
-            # Brace-counting fallback
+            
+            # Brace-counting fallback: truncated JSON
             brace_count = 0
-            for i, char in enumerate(sanitized[start:], start=start):
+            for i, char in enumerate(json_str):
                 if char == '{': brace_count += 1
                 elif char == '}': brace_count -= 1
-                if brace_count == 0:
+                if brace_count == 0 and i > 0:
                     try:
-                        return json.loads(sanitized[start:i+1], strict=False)
+                        return json.loads(json_str[:i+1], strict=False)
                     except json.JSONDecodeError:
                         break
-            raise
+            
+            raise ValueError(f"Failed to parse JSON: {e}. Snippet: {json_str[:100]}...")
 
     @staticmethod
     def _is_rate_limit(e: Exception) -> bool:
@@ -299,24 +334,23 @@ Your goal is to take a student from ZERO knowledge to TOTAL MASTERY of '{title_r
 
 {domain_fix}
 
+STRICT INSTRUCTION: Output ONLY the requested sections. NO introductory text, NO concluding remarks, NO "Here is your note". Start directly with '# 1. Mental Model'.
+
 # 1. Mental Model
-Explain the ENTIRE concept to a 12-year-old using a simple, everyday analogy. Do not use ANY technical jargon here. It must make the concept "click" intuitively in 2-4 sentences.
+Explain the ENTIRE concept to a 10-year-old using a vivid everyday analogy. Mapping: Map at least 2 mechanical components of the analogy to the concept. 2-3 sentences. No technical jargon.
 
-# 2. {self.domain['h1']} (The Logic)
-Provide a rigorous, technical definition and the underlying mechanism. Use formal terminology.
-MANDATORY: If this is a math/science concept, you MUST use LaTeX ($$ or $) for every formula.
-MANDATORY: Embed 2-3 wikilinks from this list ONLY: {all_concepts}
-Format: [[Exact_Match_From_List]] (no spaces).
+# 2. {self.domain['h1']}
+Provide a rigorous, technical definition and the underlying mechanism in continuous analytical prose. No bullet points.
+MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
+Format: [[Exact_Match_From_List]] (use underscores).
 
-# 3. {self.domain['artifact']} (The Proof)
-Apply this concept to the professional domain: **{prof_domain}**.
-Provide EXACTLY ONE high-fidelity artifact of type: **{self.domain['type']}**. 
-If code, it must be production-grade and under 20 lines. If math, use block LaTeX ($$).
-Do NOT write any explanatory text inside this section; let the artifact speak.
+# 3. {self.domain['h2']}
+Analyze the limitations, pitfalls, or edge cases of '{title_readable}' in continuous analytical prose. No bullet points.
+MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
 
 Concept: {title_readable}
 Source context: {source_text[:2000]}"""
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Mastery Note for {title_readable}")])
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Theoretical Architecture for {title_readable}")])
         return res.content.strip()
 
     async def retry(self, note_schema, source_text: str, primary_language: str, all_concepts: str, diagnosis: str) -> str:
@@ -325,14 +359,17 @@ Source context: {source_text[:2000]}"""
 
 PREVIOUS ATTEMPT FAILED. FIX INSTRUCTION: {diagnosis}
 
-Write EXACTLY 2 sections. Keep it simple and direct.
+Write EXACTLY 3 sections.
 
 # 1. Mental Model
-Explain to a 12-year-old using a simple everyday analogy.
+Explain to a 10-year-old using a vivid everyday analogy.
 
 # 2. {self.domain['h1']}
-Provide the formal definition in 2-3 sentences.
+Provide the rigorous technical definition and mechanism. 
 MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
+
+# 3. {self.domain['h2']}
+Analyze the pitfalls and edge cases of '{title_readable}'.
 
 Concept: {title_readable}
 Source context: {source_text[:1500]}"""
@@ -350,19 +387,24 @@ class PractitionerAgent:
         domain_fix = get_domain_instruction(mode)
         
         sys_prompt = f"""You are a helpful {self.domain['persona']} and technical writer.
-Complete the mastery note for '{title_readable}' by adding the final technical sections.
+Complete the sovereign note for '{title_readable}' by adding the high-fidelity artifact and execution walkthrough.
 
 {domain_fix}
 
-## 4. Professional Walkthrough (The Execution)
-Provide a 3-4 bullet point technical breakdown of how the previous artifact (Section 3) functions in the context of **{prof_domain}**. Each bullet must be dense with technical insight.
+STRICT INSTRUCTION: Output ONLY the requested sections. NO introductory text like "Here's the rest of the note". Start directly with '# 4. {self.domain['artifact']}'.
 
-## 5. {self.domain['h2']} (The Edge)
-Analyze the limitations, edge cases, or failure modes of this concept. Explain where it breaks or where the model fails to apply (2-3 sentences).
+# 4. {self.domain['artifact']}
+Provide EXACTLY ONE high-fidelity artifact of type: **{self.domain['type']}** for the domain **{prof_domain}**.
+If code, use ```primary_language. If math, use block LaTeX ($$).
+Followed by 2-3 sentences of prose explaining HOW to read this artifact.
+
+## 5. Walkthrough
+Provide a strict, 5-step technical walkthrough of how the concept/artifact operates in **{prof_domain}**.
+Show intermediate state changes or data transformations. Use realistic data.
 
 Concept: {title_readable}
-Theory context: {theory_body[:1000]}"""
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Finalize mastery for {title_readable}")])
+Theory context: {theory_body[:1200]}"""
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Finalize execution for {title_readable}")])
         return res.content.strip()
 
     async def retry(self, note_title: str, theory_body: str, primary_language: str, diagnosis: str) -> str:
@@ -374,14 +416,14 @@ PREVIOUS ATTEMPT FAILED. FIX: {diagnosis}
 
 Write EXACTLY 2 sections.
 
-## 4. Professional Walkthrough
-Provide 3-4 bullet points explaining the artifact from Section 3 in the context of **{prof_domain}**.
+# 4. {self.domain['artifact']}
+Provide the high-fidelity artifact for **{prof_domain}**.
 
-## 5. {self.domain['h2']}
-Write 2-3 sentences explaining the limitations, pitfalls, or edge cases.
+## 5. Walkthrough
+Provide the 5-step technical walkthrough for **{prof_domain}**.
 
 Concept: {title_readable}
-Context: {theory_body[:800]}"""
+Theory context: {theory_body[:800]}"""
         res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the corrected walkthrough and edge cases.")])
         return res.content.strip()
 
@@ -453,17 +495,19 @@ Concept: {title_readable}
 Context: {context[:3000]}
 """
         
-        import asyncio
-        max_retries = 4
+        max_retries = 3
+        last_error = None
         for attempt in range(max_retries):
             try:
-                res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Output the JSON object.")])
+                retry_note = f"\n\nCRITICAL: PREVIOUS ATTEMPT FAILED TO PARSE.\nERROR: {last_error}\nEnsure the JSON is perfectly valid. Escape ALL backslashes in LaTeX as \\\\ (double backslash). NO chitchat.\n" if last_error else ""
+                res = await self.llm.ainvoke([("system", sys_prompt + retry_note), ("human", "Output the JSON object.")])
                 content = res.content.strip()
                 q_data = ArchitectAgent._parse_json(content)
                 q_data["type"] = self.canonical_type
                 q_data["difficulty"] = difficulty
                 return q_data
             except Exception as e:
+                last_error = e
                 err_msg = str(e).lower()
                 if "429" in err_msg or "rate limit" in err_msg:
                     if attempt == max_retries - 1:
@@ -544,18 +588,24 @@ Output format — use EXACTLY this structure:
 failures is an empty array [] if all checks pass.
 Source context (what the note should teach): {source_context[:400]}"""
         user_msg = f"Note title: {note_title}\nMode: {mode}\n\nContent:\n{note_content[:3000]}"
-        try:
-            res = await self.llm.ainvoke([("system", sys_prompt), ("human", user_msg)])
-            data = ArchitectAgent._parse_json(res.content)
-            passed = all([
-                data.get("domain_lock", True), data.get("quiz_topicality", True),
-                data.get("debug_validity", True), data.get("arithmetic_correct", True),
-                data.get("mental_model_maps", True),
-            ])
-            return {"passed": passed, "failures": data.get("failures", [])}
-        except Exception as e:
-            print(f"[VerifierAgent] Parse failed: {e}")
-            return {"passed": True, "failures": []}  # Fail open — never block on auditor crash
+        
+        last_error = None
+        for attempt in range(2):
+            try:
+                retry_note = f"\n\nFIX PREVIOUS ERROR: {last_error}\nReturn ONLY pure JSON.\n" if last_error else ""
+                res = await self.llm.ainvoke([("system", sys_prompt + retry_note), ("human", user_msg)])
+                data = ArchitectAgent._parse_json(res.content)
+                passed = all([
+                    data.get("domain_lock", True), data.get("quiz_topicality", True),
+                    data.get("debug_validity", True), data.get("arithmetic_correct", True),
+                    data.get("mental_model_maps", True),
+                ])
+                return {"passed": passed, "failures": data.get("failures", [])}
+            except Exception as e:
+                last_error = e
+                print(f"[VerifierAgent] Verification attempt {attempt+1} failed: {e}")
+                if attempt == 1:
+                    return {"passed": True, "failures": []}  # Fail open
 
 
 # ── QUIZ AUDITOR AGENT ─────────────────────────────────────────────────────────
@@ -565,8 +615,9 @@ class QuizAuditorAgent:
         self.llm = llm
 
     async def audit(self, note_title: str, quiz_json_str: str, theory_summary: str) -> dict:
+        max_retries = 2
         title_readable = note_title.replace("_", " ")
-        sys_prompt = f"""You are a quiz quality auditor. Check these 3 quiz questions.
+        sys_prompt = f"""You are a quiz quality auditor. Evaluate these technical questions for '{title_readable}'.
 Return ONLY a valid JSON object.
 
 The note's concept is: '{title_readable}'
@@ -583,15 +634,20 @@ OR if problems:
 
 Key facts about '{title_readable}': {theory_summary[:400]}"""
         user_msg = f"Quiz JSON:\n{quiz_json_str[:2000]}"
-        try:
-            res = await self.llm.ainvoke([("system", sys_prompt), ("human", user_msg)])
-            data = ArchitectAgent._parse_json(res.content)
-            issues = data.get("issues", [])
-            fix = data.get("fix_instruction", "Fix the identified issues.")
-            return {
-                "passed": data.get("passed", True),
-                "diagnosis": ("; ".join(issues) + ". " + fix).strip() if issues else ""
-            }
-        except Exception as e:
-            print(f"[QuizAuditorAgent] Parse failed: {e}")
-            return {"passed": True, "diagnosis": ""}
+        last_error = None
+        for attempt in range(2):
+            try:
+                retry_note = f"\n\nFIX PREVIOUS ERROR: {last_error}\nReturn ONLY pure JSON.\n" if last_error else ""
+                res = await self.llm.ainvoke([("system", sys_prompt + retry_note), ("human", user_msg)])
+                data = ArchitectAgent._parse_json(res.content)
+                issues = data.get("issues", [])
+                fix = data.get("fix_instruction", "Fix the identified issues.")
+                return {
+                    "passed": data.get("passed", True),
+                    "diagnosis": ("; ".join(issues) + ". " + fix).strip() if issues else ""
+                }
+            except Exception as e:
+                last_error = e
+                print(f"[QuizAuditorAgent] Audit attempt {attempt+1} failed: {e}")
+                if attempt == 1:
+                    return {"passed": True, "diagnosis": ""}

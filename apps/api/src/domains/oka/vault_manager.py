@@ -258,23 +258,7 @@ class VaultManager:
         # NUCLEAR WIKILINK SANITIZATION: applied to the entire file string before write.
         # Catches every form of quoted wikilinks regardless of where they appear.
         content = VaultManager._nuclear_wikilink_clean(content)
-        # Normalize casing for all wikilinks
-        def title_case_wikilink(match):
-            inner = match.group(1)
-            parts = re.split(r'([_\s]+)', inner)
-            new_parts = []
-            for p in parts:
-                if re.match(r'[_\s]+', p):
-                    new_parts.append(p)
-                elif p.upper() == "C++":
-                    new_parts.append("C++")
-                else:
-                    new_parts.append(p.title())
-            return "[[" + "".join(new_parts) + "]]"
-            
-        content = re.sub(r'\[\[([^\]]+)\]\]', title_case_wikilink, content)
-
-        # 3. PROACTIVE GUTTER DEFENSE: Ensure headings and rules have a blank line above them
+        # 2. PROACTIVE GUTTER DEFENSE: Ensure headings and rules have a blank line above them
         lines = content.split('\n')
         fixed_lines = []
         in_frontmatter = False

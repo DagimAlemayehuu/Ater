@@ -1,4 +1,5 @@
 import time
+import asyncio
 import sqlite3
 from pathlib import Path
 
@@ -32,10 +33,17 @@ class TokenGovernor:
 
     async def acquire(self, expected_tokens: int = 1500, expected_requests: int = 1):
         """
-        Wait until we have enough capacity to proceed.
+        Wait until we have enough capacity to proceed based on RPM and TPM.
         """
-        # Feature flag: Local token tracking disabled. 
-        # Relying entirely on natural pacing and upstream 429 handling.
+        while True:
+            tpm_used, rpm_used = self._get_last_minute_usage()
+            
+            if (tpm_used + expected_tokens) < self.max_tpm and (rpm_used + expected_requests) < self.max_rpm:
+                break
+            
+            # Pacing: wait 2 seconds before checking again
+            await asyncio.sleep(2)
+            
         self._record_usage(expected_tokens, expected_requests)
         return
 

@@ -140,8 +140,8 @@ class OkaValidator:
             else:
                 if not isinstance(quiz_data, list):
                     errors.append(f"QUIZ_NOT_ARRAY: got {type(quiz_data).__name__}")
-                elif len(quiz_data) != 3:
-                    errors.append(f"QUIZ_WRONG_LENGTH: expected 3 questions, got {len(quiz_data)}")
+                elif len(quiz_data) < 3 or len(quiz_data) > 6:
+                    errors.append(f"QUIZ_WRONG_LENGTH: expected 3-6 questions, got {len(quiz_data)}")
                 else:
                     # Validate each question has required fields
                     for i, q in enumerate(quiz_data):
@@ -177,8 +177,8 @@ class OkaValidator:
         if len(body.strip()) < 300:
             errors.append(f"BODY_TOO_SHORT: {len(body.strip())} chars. Minimum is 300.")
 
-        # ── 7. Walkthrough step count — section is ## 4. Walkthrough in the template
-        walkthrough_match = re.search(r'## 4\. Walkthrough(.*?)(?=## 5\.|```interactive-quiz|$)', body, re.DOTALL)
+        # ── 7. Walkthrough step count — section is ## 5. Walkthrough in the template
+        walkthrough_match = re.search(r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)', body, re.DOTALL)
         if walkthrough_match:
             steps = re.findall(r'^[\-\*]|^\d+\.', walkthrough_match.group(1), re.MULTILINE)
             if len(steps) < 3:

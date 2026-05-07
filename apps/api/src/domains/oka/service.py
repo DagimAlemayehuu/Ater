@@ -731,7 +731,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 
         # Limit concurrency and rate to avoid groq/ollama rate limits
         from aiolimiter import AsyncLimiter
-        import asyncio
+        # Scanned Active Context
         
         # Groq limits are often ~30 RPM on free tier, but TPM is easily hit. Limit to 5 per minute for wide safety.
         rate_limiter = AsyncLimiter(5, 60)
@@ -948,6 +948,39 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         # Require a minimum threshold of 15 points to avoid weak matches
         return best_match if highest_score >= 15 else None
 
+    def get_active_academic_context(self) -> Dict[str, str]:
+        """Reads the vault to find the currently active semester and year."""
+        try:
+            semesters_path = Path(self.secrets.vault_path) / "3-Database" / "08 - Semesters"
+            if not semesters_path.exists(): return {}
+            
+            active_sem = None
+            for f in semesters_path.glob("*.md"):
+                if f.name.startswith("_"): continue
+                with open(f, "r", encoding="utf-8") as file:
+                    content = file.read()
+                    data, _, err = self.vm.extract_yaml_and_content(content)
+                    if not err and str(data.get("Status", "")).lower() in ("[[active]]", "active"):
+                        active_sem = f.stem
+                        break
+            
+            years_path = Path(self.secrets.vault_path) / "3-Database" / "09 - Years"
+            active_year = None
+            if years_path.exists():
+                for f in years_path.glob("*.md"):
+                    if f.name.startswith("_"): continue
+                    with open(f, "r", encoding="utf-8") as file:
+                        content = file.read()
+                        data, _, err = self.vm.extract_yaml_and_content(content)
+                        if not err and (data.get("Current Year") is True or str(data.get("Current Year")).lower() == "true"):
+                            active_year = f.stem
+                            break
+            
+            return {"semester": active_sem or "", "year": active_year or ""}
+        except Exception as e:
+            print(f"[OKA Service] Failed to retrieve academic context: {e}")
+            return {}
+
     # ── Phase 1: Detection ──────────────────────────────────────
     async def detect_curriculum(self, file_path: str) -> Dict[str, Any]:
         """Phase 1: Pure detection + AI-assisted metadata extraction if no hub match."""
@@ -967,8 +1000,11 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             # Try to match an existing hub
             target_hub = self.find_best_hub_match(content_text)
             
+            # --- SMART ACADEMIC CONTEXT ---
+            academic_context = self.get_active_academic_context()
+            
             # If no hub match, or if it matched but course seems wrong, use AI to detect
-            detected_curriculum = await self._detect_metadata_with_ai(content_text)
+            detected_curriculum = await self._detect_metadata_with_ai(content_text, academic_context)
             
             # --- SMART VAULT AWARENESS ---
             # 1. If target_hub exists, trust its internal metadata above all else
@@ -995,16 +1031,16 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         with open(course_file, "r", encoding="utf-8") as f:
                             c_data, _, c_err = self.vm.extract_yaml_and_content(f.read())
                             if not c_err:
-                                # Update detected curriculum if vault has better info
+                                # Update detected curriculum - PRIORITIZE VAULT over AI detection for known courses
                                 v_semester = self._clean_prop(c_data.get("semester") or c_data.get("Semester"))
                                 v_year = self._clean_prop(c_data.get("year") or c_data.get("Year"))
                                 
-                                if v_semester and (not detected_curriculum.get("semester") or detected_curriculum["semester"] == "Unknown"):
+                                if v_semester:
                                     detected_curriculum["semester"] = v_semester
-                                if v_year and (not detected_curriculum.get("year") or detected_curriculum["year"] == "Unknown"):
+                                if v_year:
                                     detected_curriculum["year"] = v_year
                                     
-                                print(f"[OKA Service] Smart-Aware: Synced Course '{clean_course_name}' settings from Vault.")
+                                print(f"[OKA Service] Smart-Aware: Synced Course '{clean_course_name}' settings from Vault (Priority).")
                     except Exception as e:
                         print(f"[OKA Service] Recursive course lookup failed: {e}")
 
@@ -1082,7 +1118,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 "trace": err_trace
             }
 
-    async def _detect_metadata_with_ai(self, text: str) -> Dict[str, str]:
+    async def _detect_metadata_with_ai(self, text: str, academic_hint: Dict[str, str] = None) -> Dict[str, str]:
         """Uses AI to extract course, semester, year, unit, and hub_title from text.
         
         Critically important: year, course and semester must match EXACT stems from the vault
@@ -1097,8 +1133,16 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         year_list = "\n".join(f"  {i+1}. \"{y}\"" for i, y in enumerate(options.get('years', [])))
         hub_list = "\n".join(f"  {i+1}. \"{h}\"" for i, h in enumerate(options.get('hubs', [])))
         
+        hint_str = ""
+        if academic_hint:
+            h_sem = academic_hint.get("semester")
+            h_yr = academic_hint.get("year")
+            if h_sem or h_yr:
+                hint_str = f"ACTIVE ACADEMIC CONTEXT (High Priority Hint):\n- Active Semester: {h_sem}\n- Active Year: {h_yr}\n\n"
+
         prompt = (
             "You are a Senior Academic Librarian. Your task is to analyze the following document excerpt and categorize it into the most appropriate academic hierarchy.\n\n"
+            f"{hint_str}"
             "Extract these fields and return ONLY a JSON object:\n"
             "{\n"
             "  \"year\": \"<exact year name from the list below, or closest match>\",\n"
@@ -1131,13 +1175,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         
         try:
             res = await self.llm.ainvoke([HumanMessage(content=prompt)])
-            clean_content = res.content.strip()
-            if "```json" in clean_content:
-                clean_content = re.search(r"```json\s*(.*?)\s*```", clean_content, re.DOTALL).group(1)
-            elif "```" in clean_content:
-                clean_content = re.search(r"```\s*(.*?)\s*```", clean_content, re.DOTALL).group(1)
-            
-            data = json.loads(clean_content)
+            data = ArchitectAgent._parse_json(res.content)
             
             detected_year = str(data.get("year", "")).strip()
             detected_course = str(data.get("course", "")).strip()
@@ -1165,6 +1203,16 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             final_course = _snap_to_existing(detected_course, options['courses'])
             final_semester = _snap_to_existing(detected_semester, options['semesters'])
             
+            # --- SMART FALLBACK ---
+            # If AI is unsure, use the Active Academic Context (Dashboard)
+            if academic_hint:
+                if final_semester.lower() in ("unknown", "general", "") and academic_hint.get("semester"):
+                    final_semester = academic_hint["semester"]
+                    print(f"[OKA Service] Fallback: Using Dashboard Semester -> {final_semester}")
+                if final_year.lower() in ("unknown", "general", "") and academic_hint.get("year"):
+                    final_year = academic_hint["year"]
+                    print(f"[OKA Service] Fallback: Using Dashboard Year -> {final_year}")
+
             print(f"[OKA Service] AI detected: year='{final_year}', course='{final_course}', semester='{final_semester}', unit='{data.get('unit')}', hub='{data.get('hub_title')}', language='{data.get('primary_language', 'General')}'")
             
             return {
@@ -1383,6 +1431,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         curriculum_override: Optional[Dict[str, Any]] = None,
         anchored_hub_id: Optional[str] = None
     ) -> Dict[str, Any]:
+        import asyncio
         session = await self._get_or_restore_session(session_id)
         if not session:
             raise ValueError(f"No active session found for {session_id}. Please restart the file process.")
@@ -1483,8 +1532,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         note_schema = AtomicNoteSchema(**note_schema_dict)
 
                     if b_num > 1:
-                        # Natural pacing break between notes
-                        await asyncio.sleep(5.0)
+                        # Natural pacing break between notes (increased to 10s for TPM safety)
+                        await asyncio.sleep(10.0)
                     final_output = ""
                     generation_attempts = 0
                     max_attempts = 2
@@ -1506,12 +1555,17 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             # Pass 1: Theory
                             await self.governor.acquire(expected_tokens=3500)
                             theory = await theory_agent.generate(note_schema, note_schema.source_context or "No context", primary_language, all_concepts_list)
+                            
+                            # Small inter-pass sleep to stay under RPM/TPM
+                            await asyncio.sleep(3.0)
+
                             is_valid, errors = self.validator.validate_structure(theory + "\n```interactive-quiz\n[]\n```\n# 4. Artifact\n```text\n```\n## 5. Walkthrough\n1. \n2. \n3. \n4. \n5. ")
                             if "INSUFFICIENT_WIKILINKS" in str(errors):
                                 await self.governor.acquire(expected_tokens=300)
                                 diagnosis = await self.critic_agent.diagnose(theory, errors) if self.critic_agent else "Add more wikilinks."
                                 await self.governor.acquire(expected_tokens=1000)
                                 theory = await theory_agent.retry(note_schema, note_schema.source_context or "No context", primary_language, all_concepts_list, diagnosis)
+                                await asyncio.sleep(2.0)
 
                             note_content = NoteContent(markdown_body=theory, search_keywords=[])
 
@@ -1520,6 +1574,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             # Pass 2: Practitioner
                             await self.governor.acquire(expected_tokens=3500)
                             practice = await practitioner_agent.generate(note_schema.title, theory, primary_language, note_schema.mode)
+
+                            # Small inter-pass sleep
+                            await asyncio.sleep(3.0)
 
                             OkaService._status[session_id] = f"{phase_prefix} Examiner Pass: [[{current_note_title}]] (3/3)..."
 
@@ -1573,78 +1630,57 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             )
 
                             is_valid, struct_errors = self.validator.validate_structure(final_output)
-                            is_last_attempt = generation_attempts >= max_attempts
                             if is_valid:
-                                # Semantic verification gate — skip on last attempt to guarantee deployment
-                                if not is_last_attempt:
-                                    await self.governor.acquire(expected_tokens=2000)
-                                    verification = await verifier_agent.verify(
-                                        note_schema.title, note_schema.mode,
-                                        final_output, note_schema.source_context or ""
-                                    )
-                                    if not verification["passed"]:
-                                        fix_instructions = "; ".join(
-                                            f.get("fix_instruction", "") for f in verification["failures"]
-                                        )
-                                        print(f"[OKA Service] Semantic hint for '{current_note_title}': {fix_instructions}")
-                                        note_schema.source_context = (
-                                            f"{note_schema.source_context or ''}\n\n"
-                                            f"[SEMANTIC_HINT]: {fix_instructions}"
-                                        )
-                                        is_valid = False
-                                        struct_errors = [f"SEMANTIC: {fix_instructions}"]
-                            if is_valid or is_last_attempt:
-                                # Check for unrecoverable HARD_FAILURE content — never deploy these
-                                has_hard_failure = any(
-                                    marker in final_output
-                                    for marker in ["Error generating question.", "Error generating content", "Error extracting"]
+                                # Semantic verification gate
+                                await self.governor.acquire(expected_tokens=2000)
+                                verification = await verifier_agent.verify(
+                                    note_schema.title, note_schema.mode,
+                                    final_output, note_schema.source_context or ""
                                 )
-                                if is_last_attempt and has_hard_failure:
-                                    import logging
-                                    logging.getLogger("LifeOS").error(
-                                        f"[OKA Service] Dropping '{current_note_title}' — HARD_FAILURE_MARKER found in final output. "
-                                        "Note contains broken quiz or error content and will not be deployed."
+                                if generation_attempts < max_attempts:
+                                    fix_instructions = "; ".join(
+                                        f.get("fix_instruction", "") for f in verification["failures"]
+                                    )
+                                    print(f"[OKA Service] Semantic hint for '{current_note_title}': {fix_instructions}")
+                                    note_schema.source_context = (
+                                        f"{note_schema.source_context or ''}\n\n"
+                                        f"[SEMANTIC_HINT]: {fix_instructions}"
+                                    )
+                                    continue # Retry with new context
+                                else:
+                                    # FINAL ATTEMPT - Force deploy anyway (Zero-Drop)
+                                    print(f"[OKA Service] Semantic pass failed on final attempt for '{current_note_title}'. Force-deploying.")
+                                    local_results = self.deployer.deploy_atomic_notes(
+                                        session_id, [current_note_title], [final_output], plan_obj, session.get("path", "")
                                     )
                                     break
-                                # Deploy — either clean pass or last-chance force-deploy
-                                if is_last_attempt and not is_valid and final_output:
-                                    print(f"[OKA Service] Force-deploying '{current_note_title}' on last attempt despite structural issues: {struct_errors}")
+                                
+                                # Deploy successful pass
                                 local_results = self.deployer.deploy_atomic_notes(
                                     session_id, [current_note_title], [final_output], plan_obj, session.get("path", "")
                                 )
-                                # Per-note gutter enforcement
-                                if local_results:
-                                    try:
-                                        from .post_processing import enforce_gutter
-                                        _note_abs = self.deployer.vm.vault_path / local_results[0]["path"]
-                                        if _note_abs.parent.exists():
-                                            enforce_gutter(_note_abs.parent)
-                                    except Exception as _ge:
-                                        print(f"[OKA Service] Per-note gutter fix failed: {_ge}")
                                 break
                             else:
                                 print(f"[OKA Service] Validation errors on '{current_note_title}': {struct_errors}")
-                                note_schema.source_context = (
-                                    f"{note_schema.source_context or ''}\n\n"
-                                    f"[REGENERATION_HINT]: VALIDATION FAILED: {', '.join(struct_errors)}"
-                                )
+                                if generation_attempts < max_attempts:
+                                    note_schema.source_context = (
+                                        f"{note_schema.source_context or ''}\n\n"
+                                        f"[REGENERATION_HINT]: VALIDATION FAILED: {', '.join(struct_errors)}"
+                                    )
+                                else:
+                                    print(f"[OKA Service] Max attempts reached for '{current_note_title}' with structural errors. Force-deploying.")
+                                    local_results = self.deployer.deploy_atomic_notes(
+                                        session_id, [current_note_title], [final_output], plan_obj, session.get("path", "")
+                                    )
+                                    break
                         except Exception as e:
                             err_str = str(e)
-                            # Pause on rate limit — persist progress and surface to caller
                             if "429" in err_str or "rate_limit" in err_str.lower():
                                 OkaService._rate_limited[session_id] = time.time()
                                 self._persist_session(session_id, session)
-                                OkaService._status[session_id] = (
-                                    f"Rate limited at note '{current_note_title}'. "
-                                    "Progress saved. Resume when limit clears or swap API key."
-                                )
                                 return {
                                     "status": "rate_limited",
-                                    "message": (
-                                        f"Rate limit hit at note '{current_note_title}' "
-                                        f"(batch {batch_number}/{total_batches}). "
-                                        "Progress has been saved. Call resume_paused_session() to continue."
-                                    ),
+                                    "message": f"Rate limit hit at note '{current_note_title}'",
                                     "session_id": session_id,
                                     "current_batch": session.get("current_batch", 0),
                                     "total_batches": total_batches,
@@ -1652,7 +1688,12 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 }
                             if generation_attempts >= max_attempts:
                                 import logging
-                                logging.getLogger("LifeOS").error(f"[OKA Service] Max attempts reached due to error for '{current_note_title}'. Dropping note. Error: {e}")
+                                logging.getLogger("LifeOS").warning(f"[OKA Service] Error for '{current_note_title}': {e}. Force-deploying current output.")
+                                # If we have some output, try to deploy it
+                                if final_output:
+                                    local_results = self.deployer.deploy_atomic_notes(
+                                        session_id, [current_note_title], [final_output], plan_obj, session.get("path", "")
+                                    )
                                 break
                             await asyncio.sleep(5)
                     
@@ -1800,13 +1841,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             _sem = (plan.semester or "General").strip()
             _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
             
-            # Determine relative path from vault root to inbox for mirroring
-            try:
-                rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path)
-                source_link = f"[[{rel_inbox}/_Generated/{_sem}/{_crs}/{clean_filename}]]"
-            except Exception:
-                # Fallback if inbox is outside vault
-                source_link = f"[[_Generated/{_sem}/{_crs}/{clean_filename}]]"
+            # Standardized to 5-Pdf Store/note generated per user request
+            source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
         else:
             source_link = f"[[{plan.hub_note.title}]]"
 
@@ -1844,7 +1880,20 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 f"{probes.interactive_quiz.strip()}\n"
             )
 
-        full_body = note_content.markdown_body.strip() + probe_body
+        # INTERLEAVED COMPILATION
+        # Note content already has # 1, # 2, # 3 from TheoryAgent
+        # Probes.worked_example already has # 4, ## 5 from PractitionerAgent
+        # We only add frontmatter and ## 6
+        
+        full_body = note_content.markdown_body.strip() + "\n\n" + probes.worked_example.strip()
+        
+        # Add Section 6
+        full_body += (
+            "\n\n---\n\n"
+            "## 6. The Proving Grounds\n\n"
+            f"{probes.interactive_quiz.strip()}\n"
+        )
+        
         return f"---\n{yaml_frontmatter}---\n\n{full_body}\n"
 
     def _compile_pq_note(self, plan: SovereignPlan, note_schema: NoteSchema, note_content: NoteContent, all_note_probes: Dict[str, ProbeEnrichment], session_path: str = "") -> str:
@@ -1860,9 +1909,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             
             try:
                 rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path)
-                source_link = f"[[{rel_inbox}/_Generated/{_sem}/{_crs}/{clean_filename}]]"
+                source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
             except Exception:
-                source_link = f"[[_Generated/{_sem}/{_crs}/{clean_filename}]]"
+                source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
         else:
             source_link = f"[[{plan.hub_note.title}]]"
 
@@ -1911,9 +1960,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             
             try:
                 rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path)
-                source_link = f"[[{rel_inbox}/_Generated/{_sem}/{_crs}/{clean_filename}]]"
+                source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
             except Exception:
-                source_link = f"[[_Generated/{_sem}/{_crs}/{clean_filename}]]"
+                source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
         else:
             source_link = f"[[{plan.hub_note.title}]]"
 

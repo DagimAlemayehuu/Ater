@@ -39,8 +39,12 @@ class InboxHandler(FileSystemEventHandler):
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
         
         # Absolute check to prevent re-processing generated files
-        generated_dir = self.manager.inbox_path.absolute() / "_Generated"
-        if str(src_path.absolute()).startswith(str(generated_dir)):
+        # Standardized to 5-Pdf Store/note generated per user request
+        vault_root = Path(self.manager.service.secrets.vault_path).resolve()
+        generated_dir = (vault_root / "5-Pdf Store" / "note generated").resolve()
+        abs_src = src_path.resolve()
+
+        if str(abs_src).startswith(str(generated_dir)):
             return
 
         if src_path.suffix.lower() in supported and not src_path.name.startswith('.'):
@@ -70,24 +74,34 @@ class OkaQueueManager:
         self.worker_task: Optional[asyncio.Task] = None
         
         # v13.6 Persistence & Rate Limiting
+        if not self.inbox_path.exists():
+            self.inbox_path.mkdir(parents=True, exist_ok=True)
+            
         self.db_path = str(self.inbox_path.absolute() / "oka_queue.db")
         self.governor_cooldown = 30.0
         self._init_db()
         self._lock = asyncio.Lock()
 
+    def _init_db(self):
+        """Initializes the database schema."""
+        conn = self._get_conn()
+        conn.close()
+
     def start(self, loop: asyncio.AbstractEventLoop, auto_process: bool = False):
         if not self.inbox_path.exists():
             self.inbox_path.mkdir(parents=True, exist_ok=True)
             
-        generated_dir = self.inbox_path / "_Generated"
-        generated_dir.mkdir(exist_ok=True)
+        vault_root = self.service.secrets.vault_path
+        generated_dir = Path(vault_root) / "5-Pdf Store" / "note generated"
+        generated_dir.mkdir(parents=True, exist_ok=True)
             
         self.loop = loop
         self.auto_process = auto_process
         
         event_handler = InboxHandler(self)
         self.observer = Observer()
-        self.observer.schedule(event_handler, str(self.inbox_path), recursive=True)
+        # v13.7: Non-recursive to avoid loops when archiving to subdirectories
+        self.observer.schedule(event_handler, str(self.inbox_path), recursive=False)
         self.observer.start()
         
         print(f"[OKA Queue] Monitoring: {self.inbox_path} | Auto Process: {self.auto_process}")
@@ -118,8 +132,10 @@ class OkaQueueManager:
         except Exception as e:
             print(f"[OKA Queue] Error scanning files: {e}")
 
-    def _init_db(self):
+    def _get_conn(self):
+        """Returns a connection and ensures the schema exists."""
         conn = sqlite3.connect(self.db_path)
+        # Ensure table exists before any operation
         conn.execute("""
             CREATE TABLE IF NOT EXISTS queue (
                 file_path TEXT PRIMARY KEY,
@@ -131,15 +147,15 @@ class OkaQueueManager:
                 curriculum TEXT
             )
         """)
-        # Migrate existing tables that don't have the new columns
+        # Basic migration for missing columns
         for col, defval in [("session_id", "NULL"), ("current_batch", "0"),
                             ("total_batches", "0"), ("curriculum", "NULL")]:
             try:
                 conn.execute(f"ALTER TABLE queue ADD COLUMN {col} {'TEXT' if col in ('session_id','curriculum') else 'INTEGER'} DEFAULT {defval}")
             except Exception:
-                pass  # Column already exists
+                pass
         conn.commit()
-        conn.close()
+        return conn
 
     def add_to_queue(self, file_path: Path):
         path_str = str(file_path.absolute())
@@ -147,14 +163,14 @@ class OkaQueueManager:
         if "_Generated" in path_str:
             return
             
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_conn()
         conn.execute("INSERT OR IGNORE INTO queue (file_path, status, added_at) VALUES (?, ?, ?)", 
                      (path_str, "pending", datetime.now().isoformat()))
         conn.commit()
         conn.close()
 
     def _get_next_task(self):
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_conn()
         # Pick up 'deploying' first (crash-resume), then 'pending' (new files)
         row = conn.execute(
             "SELECT file_path FROM queue WHERE status IN ('deploying', 'pending') ORDER BY "
@@ -164,13 +180,13 @@ class OkaQueueManager:
         return row[0] if row else None
 
     def _mark_done(self, file_path: str):
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_conn()
         conn.execute("DELETE FROM queue WHERE file_path = ?", (file_path,))
         conn.commit()
         conn.close()
 
     def _mark_error(self, file_path: str):
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_conn()
         conn.execute("UPDATE queue SET status = 'error' WHERE file_path = ?", (file_path,))
         conn.commit()
         conn.close()
@@ -178,7 +194,7 @@ class OkaQueueManager:
     def _save_checkpoint(self, file_path: str, session_id: str, batch: int, total: int, curriculum: dict):
         """Persist deployment progress so a server restart can resume."""
         import json as _json
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_conn()
         conn.execute(
             "UPDATE queue SET status='deploying', session_id=?, current_batch=?, "
             "total_batches=?, curriculum=? WHERE file_path=?",
@@ -190,7 +206,7 @@ class OkaQueueManager:
     def _get_checkpoint(self, file_path: str):
         """Return (session_id, current_batch, total_batches, curriculum) if a checkpoint exists."""
         import json as _json
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_conn()
         row = conn.execute(
             "SELECT session_id, current_batch, total_batches, curriculum FROM queue WHERE file_path=?",
             (file_path,)
@@ -398,9 +414,9 @@ class OkaQueueManager:
                         meta = curriculum # This is available in the loop
                         _sem = (meta.get("semester") or "General").strip()
                         _crs = self.service.vm.get_canonical_title(meta.get("course") or "General_Knowledge")
-                        # Build mirroring path: {inbox}/_Generated/Semester/Course
-                        archive_root = self.inbox_path.absolute() / "_Generated"
-                        target_dir = archive_root / _sem / _crs
+                        # Build mirroring path: 5-Pdf Store/note generated/Semester/Course
+                        vault_root = Path(self.service.secrets.vault_path)
+                        target_dir = vault_root / "5-Pdf Store" / "note generated" / _sem / _crs
                         target_dir.mkdir(parents=True, exist_ok=True)
 
                         # Clean filename: replace spaces with underscores
@@ -435,7 +451,7 @@ class OkaQueueManager:
                 await asyncio.sleep(10)
 
     def get_status(self) -> Dict[str, Any]:
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_conn()
         pending_count = conn.execute("SELECT COUNT(*) FROM queue WHERE status = 'pending'").fetchone()[0]
         conn.close()
         
