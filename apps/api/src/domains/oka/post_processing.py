@@ -14,6 +14,14 @@ _LEAKED_LABEL_PATTERNS = [
     r'^Example:\s*',
     r'^Worked Example:\s*',
     r'^Note:\s*(?=This|The|It|In|A)',   # generic "Note:" prefixes from chain-of-thought
+    r'^Answer:\s*',                    # leaked from Q&A generation
+    r'^Explanation:\s*',               # leaked from explanation generation
+    r'^Mental Model:\s*',              # leaked from Section 1 headers
+    r'^Economic Theory:\s*',           # leaked from Section 2 headers
+    r'^Limitations & Edge Cases:\s*', # leaked from Section 3 headers
+    r'^Economic Model:\s*',            # leaked from Section 4 headers
+    r'^Walkthrough:\s*',               # leaked from Section 5 headers
+    r'^The Proving Grounds:\s*',       # leaked from Section 6 headers
 ]
 _LEAKED_LABEL_RE = re.compile(
     '|'.join(_LEAKED_LABEL_PATTERNS),
@@ -112,6 +120,9 @@ def canonicalize_unit(unit_dir: Path):
         if changed:
             note.write_text(text, encoding="utf-8")
             print(f"[CanonWikilinks] Fixed: {note.name}")
+
+    # ── Phase 2: Link Convergence (Ghost Link Cleanup) ──────────────────
+    reconcile_broken_links(unit_dir)
 
 def infer_unit_prerequisites(unit_dir: Path):
     all_stems = {f.stem for f in unit_dir.glob("*.md")}
@@ -361,3 +372,24 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path):
 
     hub_file.write_text(hub_text, encoding="utf-8")
     print(f"[HubSync] Rebuilt connections for {hub_file.name}: {len(deployed_stems)} notes linked in tree format.")
+
+def reconcile_broken_links(unit_dir: Path):
+    """
+    Scans all notes in unit_dir and removes wikilinks that don't point to 
+    an existing file in the same unit. Prevents 'Ghost Links' in Obsidian.
+    """
+    all_stems = {f.stem for f in unit_dir.glob("*.md")}
+    
+    for note_file in unit_dir.glob("*.md"):
+        content = note_file.read_text(encoding="utf-8")
+        
+        def link_fixer(match):
+            link = match.group(1).strip()
+            if link in all_stems or "/" in link or "Hub" in link:
+                return f"[[{link}]]"
+            return link.replace("_", " ")
+
+        fixed = re.sub(r'\[\[([^\]]+)\]\]', link_fixer, content)
+        if fixed != content:
+            note_file.write_text(fixed, encoding="utf-8")
+            print(f"[LinkReconcile] Cleaned ghost links in: {note_file.name}")

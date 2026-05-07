@@ -156,7 +156,7 @@ DOMAIN_QUESTION_PROTOCOLS = {
         "mcq": "Focus on the direction of shifts in curves (AD, AS, IS-LM). Ensure distractors reflect common student errors in directionality.",
         "true_false": "Test the 'Ceteris Paribus' boundary. Create a statement where a factor hidden in the assumption is changed.",
         "synthesis": "Present a 'Macro Shock' (e.g., sudden currency devaluation) and require a 3-step policy response.",
-        "trace": "Trace the impact of a 1% interest rate change through 4 distinct economic sectors (Housing, Investment, Forex, Consumption).",
+        "trace": "Trace a specific macroeconomic shock (e.g., a change in a Determinant like technology, taxes, or currency value) through 4 distinct interconnected economic sectors relevant to the shock. Provide numerical intermediate states.",
         "order": "Order the sequence of events in a 'Multiplier Effect' or 'Liquidity Trap' chain."
     },
     "CS-SOFTWARE": {
@@ -425,6 +425,7 @@ Analyze the specific limitations, model assumptions that break down, and known e
 MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
 
 Concept: {title_readable}
+MANDATORY: For the 'source_pages' metadata, use the ACTUAL TEXTBOOK PAGE NUMBERS visible on the PDF pages, not the PDF software's page index.
 Source context: {source_text[:2000]}"""
         res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Theoretical Architecture for {title_readable}")])
         return res.content.strip()
