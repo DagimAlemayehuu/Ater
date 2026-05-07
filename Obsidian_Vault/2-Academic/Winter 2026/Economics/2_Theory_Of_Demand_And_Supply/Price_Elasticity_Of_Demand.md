@@ -46,74 +46,81 @@ This flowchart illustrates the concept of Price Elasticity of Demand, showing ho
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of Price Elasticity of Demand operates:
+Here's a 5-step technical walkthrough of how **Price Elasticity of Demand** (PED) operates in the **Mobile App Market**:
 
-1. **Initial State**: Suppose the price of a good is $10 and the quantity demanded is 100 units. The PED is calculated as: PED = (percentage change in quantity demanded) / (percentage change in price).
+1. **Initial Price-Quantity State**: A productivity app is priced at $10.00. At this price, the developer sees 10,000 downloads per month.
 
-2. **Price Change**: The price of the good increases to $12, resulting in a 20% increase in price. The quantity demanded decreases to 80 units, resulting in a 20% decrease in quantity demanded.
+2. **Price Shock**: To test the market, the developer raises the price to $15.00 (a 50% increase).
 
-3. **PED Calculation**: Using the PED formula, we calculate: PED = (-20%) / (20%) = -1. This means that for every 1% change in price, the quantity demanded changes by 1%.
+3. **Observed Quantity Change**: Monthly downloads plummet to 2,000 (an 80% decrease). Consumers quickly switch to free alternatives.
 
-4. **Elasticity Interpretation**: Since the PED is equal to 1, the demand is said to be unit elastic. If the PED were greater than 1, the demand would be elastic, and if it were less than 1, the demand would be inelastic.
+4. **Coefficient Calculation**: 
+   - $\% \Delta Q_d = -80\%$
+   - $\% \Delta P = +50\%$
+   - $PED = |-80\% / 50\%| = 1.6$
 
-5. **Intermediate State Change**: Suppose the price increases to $15, resulting in a 50% increase in price from the original $10. The quantity demanded decreases to 60 units, resulting in a 40% decrease in quantity demanded. The PED is recalculated as: PED = (-40%) / (50%) = -0.8. This means that the demand is now inelastic, as the PED is less than 1.
+5. **Analytical Interpretation**: Since $PED > 1.0$, the demand for this app is **Elastic**. The developer concludes that a price increase is counterproductive, as the percentage drop in quantity (80%) outweighs the percentage gain in price (50%), leading to a **decrease in total revenue**.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "The price elasticity of demand for a life-saving medication is typically elastic, meaning that a small price increase leads to a large reduction in the quantity demanded.",
-    "answer": false,
-    "explanation": "The price elasticity of demand for a life-saving medication is typically inelastic. This is because the demand for such a medication is less responsive to price changes, as individuals will continue to purchase it even at a higher price due to its essential nature. Mathematically, this can be represented by the price elasticity of demand formula: $E_d = \\frac{\\% \\Delta Q_d}{\\% \\Delta P}$. For inelastic goods, $E_d < 1$, indicating that a 1% change in price leads to a less than 1% change in the quantity demanded. In the context of a life-saving medication, the demand is often characterized by $E_d < 1$, making it inelastic."
+    "question": "If a 10% increase in the price of a life-saving medicine leads to only a 1% decrease in quantity demanded, the demand is considered:",
+    "options": {
+      "A": "Elastic.",
+      "B": "Unit Elastic.",
+      "C": "Inelastic.",
+      "D": "Perfectly Elastic."
+    },
+    "answer": "C",
+    "explanation": "Demand is inelastic when the percentage change in quantity demanded is smaller than the percentage change in price ($PED < 1$)."
   },
   {
     "id": "q2",
-    "type": "synthesis",
+    "type": "true_false",
     "difficulty": "L2",
-    "question": "During a severe influenza outbreak, the demand for surgical masks increases drastically. The government is concerned that if the price of masks rises too high, it may limit access for those who need it most. Suppose the initial price of a surgical mask is $1, and the quantity demanded is 100,000 units per week. If the government imposes a price ceiling of $1.20, but due to shortages, black market prices rise to $1.50. At $1.50, the quantity demanded drops to 80,000 units per week. Calculate the price elasticity of demand for surgical masks in this scenario and provide a mastery solution to prevent system failure in the public health sector.",
-    "answer": "The price elasticity of demand (PED) can be calculated using the formula: PED = (\\% \\Delta Q_d) / (\\% \\Delta P). First, we need to calculate the percentage changes in quantity demanded and price. The quantity demanded changes from 100,000 to 80,000 units, which is a decrease of 20,000 units. The percentage change in quantity demanded is: (\\Delta Q_d / Q_d) * 100 = (-20,000 / 100,000) * 100 = -20%. The price changes from $1 to $1.50, which is an increase of $0.50. The percentage change in price is: (\\Delta P / P) * 100 = (0.50 / 1) * 100 = 50%. Therefore, PED = (-20%) / (50%) = -0.4. Since the PED is less than 1, the demand for surgical masks is inelastic. To prevent system failure in the public health sector, the government could implement a subsidy for surgical mask manufacturers to increase supply, or implement a rationing system to ensure equitable distribution.",
-    "explanation": "The underlying mechanism of PED is based on the Law of Demand, which states that as the price of a good increases, the quantity demanded decreases, and vice versa. Mathematically, this can be represented by the demand function: Q_d = f(P), where Q_d is the quantity demanded and P is the price. The PED formula is: PED = (\\% \\Delta Q_d) / (\\% \\Delta P) = ((\\Delta Q_d / Q_d) / (\\Delta P / P)). In this scenario, the PED is -0.4, indicating that for every 1% increase in price, the quantity demanded decreases by 0.4%. To derive the PED formula, we can use the demand function and the definition of elasticity: PED = (dQ_d / dP) * (P / Q_d). Using LaTeX, we can represent the PED formula as: $PED = \\frac{\\% \\Delta Q_d}{\\% \\Delta P} = \\frac{\\frac{\\Delta Q_d}{Q_d}}{\\frac{\\Delta P}{P}} = \\frac{dQ_d}{dP} \\cdot \\frac{P}{Q_d}$."
+    "question": "The Price Elasticity of Demand is typically higher (more elastic) for goods that have many close substitutes.",
+    "answer": true,
+    "explanation": "When substitutes are available, consumers can easily switch away from a good when its price rises, making the quantity demanded highly sensitive to price changes."
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the concept of Price Elasticity Of Demand in the context of Global Supply Chain & Maritime Logistics, and provide a scenario where it can be applied.",
-    "answer": "The Price Elasticity Of Demand measures the responsiveness of the quantity demanded of a good to a change in its price. In the context of Global Supply Chain & Maritime Logistics, it is crucial in determining the impact of price changes on the demand for shipping services or imported goods. For instance, if the price of shipping a container from Asia to Europe increases by 10%, and the quantity demanded decreases by 15%, the demand is elastic. This means that a small price change leads to a significant change in the quantity demanded, indicating that customers are highly sensitive to price changes.",
-    "explanation": "The Price Elasticity Of Demand can be represented mathematically as $E_d = \\frac{\\% \\Delta Q_d}{\\% \\Delta P}$, where $E_d$ is the price elasticity of demand, $\\% \\Delta Q_d$ is the percentage change in quantity demanded, and $\\% \\Delta P$ is the percentage change in price. In the context of Global Supply Chain & Maritime Logistics, the demand function can be represented as $Q_d = f(P, I, P_s)$, where $Q_d$ is the quantity demanded, $P$ is the price of the good or shipping service, $I$ is the income of the consumer, and $P_s$ is the price of substitutes. The demand schedule and demand curve illustrate the relationship between the price and quantity demanded, and the price elasticity of demand can be calculated using the demand function."
+    "type": "synthesis",
+    "difficulty": "L3",
+    "question": "A luxury brand wants to increase its total revenue. Should it raise prices if it knows the $PED$ for its handbags is 2.5? Explain why or why not.",
+    "answer": "No, it should not. A $PED$ of 2.5 indicates highly elastic demand. If they raise prices, the percentage decrease in quantity demanded will be 2.5 times larger than the price increase, causing total revenue ($P \times Q$) to fall.",
+    "explanation": "Synthesis requires linking the elasticity coefficient to the Total Revenue Test, a core strategic application of PED."
   },
   {
     "id": "q4",
-    "type": "order",
+    "type": "trace",
     "difficulty": "L2",
-    "question": "Order steps for calculating Price Elasticity Of Demand.",
-    "steps": [
-      "Calculate the percentage change in quantity demanded",
-      "Calculate the percentage change in price",
-      "Determine the price elasticity of demand using the formula"
-    ],
-    "answer": [
-      "Calculate the percentage change in price",
-      "Calculate the percentage change in quantity demanded",
-      "Determine the price elasticity of demand using the formula"
-    ]
+    "question": "Trace the movement on a graph for 'Gasoline' in the **short run** if prices rise by 20% (assume $PED = 0.2$).",
+    "answer": "1) Locate original point on a very steep demand curve. 2) Move upward along the curve by 20% on the P-axis. 3) The corresponding movement left on the Q-axis is only 4% (20% * 0.2). 4) The resulting equilibrium shows much higher price with almost no change in consumption.",
+    "explanation": "Tracing requires identifying the steepness of the curve (Inelastic = Steep) and the magnitude of the resulting shift along that curve."
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output for the price elasticity of demand calculation in telecommunications, given a 10% increase in price results in a 20% decrease in quantity demanded?",
-    "content": "The price elasticity of demand (PED) is calculated using the formula: PED = (Percentage Change in Quantity Demanded) / (Percentage Change in Price). Given a 10% increase in price and a 20% decrease in quantity demanded, we can substitute these values into the formula.",
-    "answer": "-2",
-    "explanation": "Using the PED formula: PED = (-20%) / (10%) = -2. The negative sign indicates that the relationship between price and quantity demanded is inverse, which is consistent with the Law of Demand. The absolute value of 2 indicates that demand is elastic, as a 1% change in price leads to a 2% change in quantity demanded. In LaTeX, the PED formula can be represented as: $PED = \\frac{\\% \\Delta Q_d}{\\% \\Delta P}$, where $\\% \\Delta Q_d$ is the percentage change in quantity demanded and $\\% \\Delta P$ is the percentage change in price. Substituting the given values: $PED = \\frac{-20}{10} = -2$."
+    "type": "order",
+    "difficulty": "L2",
+    "question": "Order these goods from **Most Inelastic** to **Most Elastic**.",
+    "steps": [
+      "Insulin for a Diabetic (Essential, no substitutes)",
+      "A specific brand of Vanilla Ice Cream (Many substitutes)",
+      "Daily Commuter Rail Pass (Few substitutes in the short run)"
+    ],
+    "answer": [
+      "Insulin for a Diabetic (Essential, no substitutes)",
+      "Daily Commuter Rail Pass (Few substitutes in the short run)",
+      "A specific brand of Vanilla Ice Cream (Many substitutes)"
+    ],
+    "explanation": "Elasticity increases as we move from essentials with no substitutes to luxury/discretionary items with many alternatives."
   }
 ]
-
 ```

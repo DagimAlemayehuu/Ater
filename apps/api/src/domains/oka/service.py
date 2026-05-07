@@ -1596,7 +1596,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 else: diff = "L2"
                                 
                                 agent = QuestionAgent(self.llm_creative, qt)
-                                tasks.append(agent.generate(note_schema.title, theory_summary, diff, domain.get('persona', 'Expert')))
+                                tasks.append(agent.generate(note_schema.title, theory_summary, diff, domain.get('persona', 'Expert'), mode=mode))
                             
                             questions = await asyncio.gather(*tasks)
                             for i, q in enumerate(questions):
@@ -1608,11 +1608,12 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             if generation_attempts < max_attempts:
                                 audit_result = await quiz_auditor_agent.audit(note_schema.title, quiz_json_str, theory_summary)
                                 if not audit_result["passed"]:
-                                    print(f"[OKA Service] Quiz audit hint for '{current_note_title}': {audit_result['diagnosis']}")
+                                    print(f"[OKA Service] Quiz audit FAILED for '{current_note_title}': {audit_result['diagnosis']}")
                                     note_schema.source_context = (
                                         f"{note_schema.source_context or ''}\n\n"
                                         f"[QUIZ_HINT]: {audit_result['diagnosis']}"
                                     )
+                                    continue # Force retry with hint
                             
                             probes = ProbeEnrichment(
                                 worked_example=practice,

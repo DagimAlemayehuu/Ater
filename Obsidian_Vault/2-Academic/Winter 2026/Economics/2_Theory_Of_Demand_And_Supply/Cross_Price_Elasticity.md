@@ -58,70 +58,82 @@ This Mermaid flowchart illustrates the concept of Cross Price Elasticity, showin
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of Cross Price Elasticity operates:
+Here's a 5-step technical walkthrough of how Cross-Price Elasticity operates in the Smartphone Ecosystem:
 
-1. **Initial State**: Suppose the price of lemonade (Good Y) is $1 per cup, and the quantity demanded of cookies (Good X) is 100 units per day.
-2. **Price Change**: The price of lemonade increases to $1.20 per cup, a 20% change (% ΔPY = 20%).
-3. **Demand Response**: As a result, the quantity demanded of cookies increases to 120 units per day, a 20% change (% ΔQX = 20%).
-4. **Elasticity Calculation**: The Cross Price Elasticity is calculated as: $$E_{XY} = \frac{\% \Delta Q_X}{\% \Delta P_Y} = \frac{20\%}{20\%} = 1$$.
-5. **Interpretation**: Since the elasticity coefficient is 1, which is positive, cookies and lemonade are substitute goods. This means that an increase in the price of lemonade leads to an increase in demand for cookies.
+1. **Initial State**: Consider the market for **iOS Devices (Good X)** and **Android Devices (Good Y)**. They are **Substitute Goods**. Initially, a standard Android flagship costs $800, and Apple sells 1 million iPhones per quarter.
+
+2. **Price Change**: A major Android manufacturer drops its flagship price to $600 (a 25% decrease, % ΔPY = -25%).
+
+3. **Demand Response**: Consumers perceive Android as a more attractive alternative. Consequently, iPhone sales drop to 800,000 units (a 20% decrease in quantity demanded for Good X, % ΔQX = -20%).
+
+4. **Elasticity Calculation**: The Cross-Price Elasticity is calculated as: $$E_{XY} = \frac{-20\%}{-25\%} = +0.8$$.
+
+5. **Interpretation**: Since $E_{XY}$ is positive (+0.8), the goods are confirmed as **Substitutes**. If the price of Good Y falls, the demand for Good X also falls (and vice versa).
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "The Cross Price Elasticity between two goods is always positive if they are substitutes.",
-    "answer": false,
-    "explanation": "The Cross Price Elasticity ($$E_{XY} = \\frac{\\% \\Delta Q_X}{\\% \\Delta P_Y}$$) measures the responsiveness of the demand for one good to a change in the price of another good. For substitute goods, an increase in the price of one good leads to an increase in demand for the other good, resulting in a positive Cross Price Elasticity. However, for complementary goods, an increase in the price of one good leads to a decrease in demand for the other good, resulting in a negative Cross Price Elasticity. Therefore, stating that the Cross Price Elasticity between two goods is always positive if they are substitutes overlooks the scenario of complementary goods but is technically correct in that context. However, the statement could be misleading because it implies an absolute condition ('always positive') without acknowledging that this positivity is a defining characteristic of substitutes, not a universal truth across all goods. The critical failure point here is assuming all goods with positive Cross Price Elasticity are substitutes without considering the broader implications of elasticity values."
+    "question": "If the Cross-Price Elasticity of Demand between Good A and Good B is -2.5, this indicates that the two goods are:",
+    "options": {
+      "A": "Strong substitutes.",
+      "B": "Weak substitutes.",
+      "C": "Strong complements.",
+      "D": "Independent goods with no relationship."
+    },
+    "answer": "C",
+    "explanation": "A negative cross-price elasticity indicates complements. The magnitude (2.5) suggests a strong relationship where a 1% price increase in one leads to a 2.5% demand drop in the other."
   },
   {
     "id": "q2",
-    "type": "synthesis",
+    "type": "true_false",
     "difficulty": "L2",
-    "question": "In an aerospace engineering project, the demand for titanium alloys (used in aircraft frames) is affected by the price of aluminum alloys (used in aircraft skin). Suppose the price of aluminum alloys increases by 10%, and as a result, the demand for titanium alloys increases by 15%. What is the cross price elasticity of titanium alloys with respect to aluminum alloys, and how should this inform the procurement strategy for titanium alloys to prevent system failure?",
-    "answer": "1.5",
-    "explanation": "The cross price elasticity of titanium alloys with respect to aluminum alloys can be calculated using the formula: $$E_{XY} = \\frac{\\% \\Delta Q_X}{\\% \\Delta P_Y}$$. Given that the demand for titanium alloys increases by 15% when the price of aluminum alloys increases by 10%, we can substitute these values into the formula: $$E_{XY} = \\frac{15\\%}{10\\%} = 1.5$$. This positive cross price elasticity indicates that titanium alloys and aluminum alloys are substitute goods in the context of aircraft manufacturing. A procurement strategy that takes this into account might involve stockpiling titanium alloys or negotiating flexible supply contracts to ensure a stable supply in case of price fluctuations in aluminum alloys, thereby preventing system failure due to material shortages."
+    "question": "A positive $E_{XY}$ coefficient between two goods implies that as the price of one good rises, consumers switch to the other good to maintain utility.",
+    "answer": true,
+    "explanation": "This is the definition of the substitution effect. When the price of your preferred good rises, the relative price of the substitute falls, making it more attractive."
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the concept of Cross Price Elasticity in a Quantitative Finance & High-Frequency Trading scenario, and provide a mathematical expression for it.",
-    "answer": "The Cross Price Elasticity measures the responsiveness of the demand for one good to a change in the price of another good. In a Quantitative Finance & High-Frequency Trading scenario, this concept can be applied to understand how changes in the price of one asset affect the demand for another asset. For instance, if we consider two assets, X and Y, the Cross Price Elasticity of asset X with respect to asset Y can be calculated as: $$E_{XY} = \frac{\\% \\Delta Q_X}{\\% \\Delta P_Y}$$. A high positive value indicates that the two assets are substitutes, while a high negative value indicates that they are complements.",
-    "explanation": "The Cross Price Elasticity is calculated as the percentage change in the quantity demanded of one good in response to a 1% change in the price of another good. Mathematically, it can be expressed as: $$E_{XY} = \frac{\\% \\Delta Q_X}{\\% \\Delta P_Y} = \frac{\\Delta Q_X / Q_X}{\\Delta P_Y / P_Y}$$. This concept is essential in Quantitative Finance & High-Frequency Trading as it helps traders and investors understand the relationships between different assets and make informed decisions. For instance, if the Cross Price Elasticity between two assets is high, it may indicate that a change in the price of one asset will have a significant impact on the demand for the other asset."
+    "type": "synthesis",
+    "difficulty": "L3",
+    "question": "A nation subsidizes Public Transit, effectively lowering the 'price' of commuting by bus. Analyze the impact on the Demand Curve for Private Automobiles. What does this suggest about the cross-price relationship?",
+    "answer": "Public transit and private cars are substitutes. A lower price for transit shifts the demand curve for private automobiles to the left. The Cross-Price Elasticity would be positive. Policymakers use this relationship to reduce urban congestion and carbon emissions.",
+    "explanation": "Synthesis requires applying elasticity theory to a macro-policy scenario (Public Transit vs. Private Cars)."
   },
   {
     "id": "q4",
-    "type": "order",
+    "type": "trace",
     "difficulty": "L2",
-    "question": "Order steps for Cross Price Elasticity",
-    "steps": [
-      "Calculate the percentage change in the quantity demanded of one good",
-      "Calculate the percentage change in the price of another good",
-      "Apply the Cross Price Elasticity formula"
-    ],
-    "answer": [
-      "Calculate the percentage change in the price of another good",
-      "Calculate the percentage change in the quantity demanded of one good",
-      "Apply the Cross Price Elasticity formula"
-    ]
+    "question": "Trace the impact of a 10% price increase in 'Cloud Computing Credits' on the demand for 'On-Premise Server Hardware', assuming $E_{XY} = 1.2$.",
+    "answer": "1) Price of Cloud increases by 10%. 2) Quantity demanded of Cloud decreases. 3) Demand for On-Premise Hardware shifts right by 12% (10% * 1.2). 4) Market price for servers likely increases due to the demand surge.",
+    "explanation": "Tracing the logic through the coefficient to calculate the specific percentage shift in the substitute market."
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output for Cross Price Elasticity in Global Supply Chain & Maritime Logistics?",
-    "content": "The cross price elasticity of demand measures the responsiveness of the quantity demanded of one good to a change in the price of another good. It is calculated using the formula: $E_{XY} = \\frac{\\% \\Delta Q_X}{\\% \\Delta P_Y}$. For instance, if the price of shipping containers from Asia to Europe increases by 10% and the demand for imported electronics decreases by 15%, the cross price elasticity would be $E_{XY} = \\frac{-15%}{10% } = -1.5$. A negative value indicates that the goods are complements, while a positive value suggests they are substitutes.",
-    "answer": "-1.5",
-    "explanation": "The cross price elasticity $E_{XY}$ is given by the formula: $E_{XY} = \\frac{\\% \\Delta Q_X}{\\% \\Delta P_Y}$. Assuming a 10% increase in $P_Y$ (price of shipping containers) leads to a 15% decrease in $Q_X$ (demand for imported electronics), we compute $E_{XY}$ as: $E_{XY} = \\frac{-15}{10} = -1.5$. The negative sign implies that the goods are complementary, meaning as the price of one good increases, the demand for the other decreases."
+    "type": "order",
+    "difficulty": "L2",
+    "question": "Order the steps for determining if two products in a portfolio are cannibalizing each other (substitutes).",
+    "steps": [
+      "Raise the price of Product B intentionally",
+      "Observe the resulting sales change in Product A",
+      "Calculate the percentage change in sales of Product A",
+      "Calculate the Cross-Price Elasticity coefficient",
+      "Verify if the coefficient is positive (substitutes) or negative (complements)"
+    ],
+    "answer": [
+      "Raise the price of Product B intentionally",
+      "Observe the resulting sales change in Product A",
+      "Calculate the percentage change in sales of Product A",
+      "Calculate the Cross-Price Elasticity coefficient",
+      "Verify if the coefficient is positive (substitutes) or negative (complements)"
+    ],
+    "explanation": "The empirical test starts with a price change (variable) and ends with the verification of the elasticity sign."
   }
 ]
-
 ```

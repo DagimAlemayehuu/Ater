@@ -48,72 +48,81 @@ This flowchart illustrates how the price elasticity of supply affects the quanti
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of Price Elasticity Of Supply operates:
+Here's a 5-step technical walkthrough of how **Price Elasticity of Supply** (PES) operates in the **Agricultural Market (Fresh Berries)**:
 
-1. **Initial State**: Suppose we have a lemonade stand with a initial price of $1 per cup and an initial quantity supplied of 100 cups per day. The price elasticity of supply is assumed to be 1.5, indicating an elastic supply.
+1. **Equilibrium State**: In a local market, organic berries are priced at $5.00 per basket. Farmers supply 1,000 baskets per week.
 
-2. **Price Increase**: The price of lemonade increases to $1.50 per cup. Using the price elasticity of supply formula, $PES = \frac{\% \Delta Qs}{\% \Delta P}$, we can calculate the percentage change in quantity supplied.
+2. **Price Variable Change**: Due to a sudden surge in health-trend popularity, the market price jumps to $10.00 (a 100% increase).
 
-3. **Calculate Percentage Change in Price**: The percentage change in price is $\% \Delta P = \frac{1.50 - 1}{1} \times 100\% = 50\%$.
+3. **Short-Run Constraint**: Farmers want to supply more, but the berries are already planted and ripening. They can only increase supply slightly by harvesting more intensively. The weekly quantity supplied rises to only 1,100 baskets (a 10% increase).
 
-4. **Calculate Percentage Change in Quantity Supplied**: Given that $PES = 1.5$, we can rearrange the formula to solve for $\% \Delta Qs = PES \times \% \Delta P = 1.5 \times 50\% = 75\%$. This means the quantity supplied increases by 75%.
+4. **Coefficient Calculation**: 
+   - $\% \Delta Q_s = +10\%$
+   - $\% \Delta P = +100\%$
+   - $PES = 10\% / 100\% = 0.1$
 
-5. **New Quantity Supplied**: The new quantity supplied is $100 + (100 \times 75\%) = 175$ cups per day. This walkthrough demonstrates how a price increase leads to a large increase in quantity supplied when the supply is elastic.
+5. **Analytical Interpretation**: Since $PES < 1.0$, the supply is **Inelastic** in the short run. Even a doubling of price results in only a marginal increase in supply due to biological and time-bound production constraints.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "A critical failure point of 'Price Elasticity Of Supply' in Industrial Manufacturing & Robotics is that a small increase in price will always lead to a large increase in the quantity supplied of robotic parts.",
-    "answer": false,
-    "explanation": "The concept of Price Elasticity Of Supply (PES) is given by the formula: $PES = \\frac{\\% \\Delta Q_s}{\\% \\Delta P}$, where $Q_s$ is the quantity supplied and $P$ is the price. A critical failure point occurs when the PES is inelastic, meaning that a large increase in price leads to a small increase in quantity supplied. This can happen in Industrial Manufacturing & Robotics when production capacity is limited, or when there are supply chain constraints. Therefore, the statement that a small increase in price will always lead to a large increase in the quantity supplied of robotic parts is false, as it ignores the possibility of inelastic supply."
+    "question": "Which of the following is the most likely $PES$ coefficient for a product that is highly automated and can be scaled instantly?",
+    "options": {
+      "A": "$0.2$ (Inelastic).",
+      "B": "$0.5$ (Inelastic).",
+      "C": "$1.0$ (Unit Elastic).",
+      "D": "$4.5$ (Highly Elastic)."
+    },
+    "answer": "D",
+    "explanation": "Supply is highly elastic ($PES > 1$) when firms can easily and quickly adjust their production levels in response to price changes."
   },
   {
     "id": "q2",
-    "type": "synthesis",
+    "type": "true_false",
     "difficulty": "L2",
-    "question": "The manufacturing plant of a leading robotics firm, Robotic Automation Inc., is facing a critical supply chain disruption. A key component, the 'Advanced Servo Motor' (ASM), used in the production of their flagship robot model, 'Automator X', has suddenly increased in price by 30% due to a supplier's production halt. The plant's production capacity is highly dependent on the timely delivery and cost of ASMs. The current production level is 1000 units of 'Automator X' per month. The management needs to decide whether to absorb the increased cost or pass it on to consumers by raising the price of 'Automator X'. If the price elasticity of supply for ASMs is 0.5, and assuming the plant's production function is highly inelastic in the short run, how should the management adjust the production level and price of 'Automator X' to minimize losses and maintain supply chain stability?",
-    "answer": "To minimize losses and maintain supply chain stability, Robotic Automation Inc. should consider the following strategy:\n\nGiven the price elasticity of supply for ASMs is 0.5, this indicates that for every 1% increase in price, the quantity supplied of ASMs increases by 0.5%. With a 30% increase in the price of ASMs, the quantity supplied would increase by 15% (0.5 * 30%). However, the plant's production function is highly inelastic in the short run, meaning that it cannot quickly adjust its production level of 'Automator X' in response to changes in the price of ASMs.\n\nThe management should first attempt to negotiate with the supplier to mitigate the price increase or secure alternative suppliers to reduce dependence on a single supplier. In the short term, given the inelasticity of their production function, the firm might consider absorbing the increased cost of ASMs to maintain current production levels and avoid losing market share. Passing the increased cost on to consumers by raising the price of 'Automator X' could lead to a significant decline in demand, given that the demand for 'Automator X' is likely to be elastic.\n\nMathematically, the impact of the price increase on the quantity supplied can be represented as:\n\n$E_s = \\frac{\\% \\Delta Q_s}{\\% \\Delta P}$\n\nWhere:\n- $E_s = 0.5$\n- $\\% \\Delta P = 30%$\n\nSolving for $\\% \\Delta Q_s$:\n\n$0.5 = \\frac{\\% \\Delta Q_s}{30}$\n\n$\\% \\Delta Q_s = 0.5 \\times 30 = 15%$\n\nThus, the quantity supplied of ASMs increases by 15%, but due to the production function's inelasticity, the immediate impact on 'Automator X' production is limited.\n\nThe management should focus on long-term strategies such as diversifying suppliers, investing in inventory management, and potentially redesigning 'Automator X' to use alternative components that are less prone to supply chain disruptions.",
-    "explanation": "The concept of Price Elasticity of Supply (PES) is crucial in understanding how the supply of a good responds to changes in its price. PES is defined as the ratio of the percentage change in quantity supplied to the percentage change in price, given by the formula:\n\n$PES = \\frac{\\% \\Delta Q_s}{\\% \\Delta P}$\n\nIn this scenario, the PES for ASMs is given as 0.5. This means that for every percentage point increase in the price of ASMs, the quantity supplied increases by 0.5 percentage points. When the price of ASMs increases by 30%, the quantity supplied increases by 15%, as calculated above.\n\nThe inelasticity of the plant's production function in the short run implies that the firm cannot quickly respond to changes in the price of inputs like ASMs by adjusting its output level. This situation can lead to supply chain instability if not managed properly.\n\nThe LaTeX representation of the PES formula highlights the direct relationship between the percentage changes in quantity supplied and price:\n\n$PES = \\frac{\\frac{Q_{s2} - Q_{s1}}{Q_{s1}}}{\\frac{P_2 - P_1}{P_1}}$\n\nWhere:\n- $Q_{s1}$ and $Q_{s2}$ are the initial and final quantity supplied,\n- $P_1$ and $P_2$ are the initial and final price.\n\nGiven the PES of 0.5, Robotic Automation Inc. must strategically manage its production and pricing to mitigate the effects of the ASM price increase, focusing on both short-term absorption of costs and long-term supply chain diversification and risk management."
+    "question": "The Price Elasticity of Supply is typically more elastic in the 'Long Run' than in the 'Short Run'.",
+    "answer": true,
+    "explanation": "In the long run, firms have more time to expand factory capacity, hire more labor, and overcome fixed production constraints, making them more responsive to price signals."
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the concept of Price Elasticity Of Supply in the context of Global Supply Chain & Maritime Logistics, and provide a scenario where it can be applied.",
-    "answer": "Price Elasticity Of Supply measures the responsiveness of the quantity supplied of a good to a change in its price, calculated as the percentage change in quantity supplied divided by the percentage change in price. In Global Supply Chain & Maritime Logistics, this concept is crucial for understanding how changes in shipping rates or transportation costs affect the supply of goods. For instance, if the price of shipping a container from Asia to Europe increases, a supplier may choose to supply fewer containers if they can easily redirect their goods to other markets or if they have limited capacity. However, if the supplier has a high degree of flexibility in their logistics operations, they might be more willing to absorb the increased cost and maintain supply levels.",
-    "explanation": "The price elasticity of supply can be expressed mathematically as $E_s = \\frac{\\% \\Delta Q_s}{\\% \\Delta P}$, where $E_s$ is the elasticity of supply, $\\% \\Delta Q_s$ is the percentage change in quantity supplied, and $\\% \\Delta P$ is the percentage change in price. In the context of global supply chain and maritime logistics, the elasticity of supply is influenced by factors such as the availability of shipping capacity, the lead time for transportation, and the supplier's ability to adjust production levels. A key concept related to price elasticity of supply is the idea of a supply curve, which can be represented as $Q_s = f(P)$, where $Q_s$ is the quantity supplied and $P$ is the price. The shape and position of the supply curve determine the price elasticity of supply, with steeper curves indicating lower elasticity and flatter curves indicating higher elasticity."
+    "type": "synthesis",
+    "difficulty": "L3",
+    "question": "Explain how the 'Availability of Input Substitutes' affects a firm's $PES$.",
+    "answer": "If a firm can easily switch between raw materials or labor types (high input substitutability), it can pivot its production process faster when prices rise. This increased flexibility leads to a higher (more elastic) $PES$ compared to a firm dependent on a single, rare resource.",
+    "explanation": "Synthesis requires linking production flexibility (inputs) to the resulting responsiveness of the supply curve."
   },
   {
     "id": "q4",
-    "type": "order",
+    "type": "trace",
     "difficulty": "L2",
-    "question": "Order steps for calculating Price Elasticity Of Supply.",
-    "steps": [
-      "Calculate the percentage change in quantity supplied",
-      "Calculate the percentage change in price",
-      "Divide the percentage change in quantity supplied by the percentage change in price"
-    ],
-    "answer": [
-      "Calculate the percentage change in quantity supplied",
-      "Calculate the percentage change in price",
-      "Divide the percentage change in quantity supplied by the percentage change in price"
-    ]
+    "question": "Trace the impact on the quantity supplied of 'Solar Panels' if the market price rises by 30% and the industry has a $PES$ of 2.0.",
+    "answer": "1) Market price increases by 30%. 2) The industry recognizes the price signal. 3) Given $PES = 2.0$, the percentage change in quantity is twice the price change. 4) Quantity supplied increases by 60% (30% * 2). 5) Producers likely add extra shifts or open mothballed facilities.",
+    "explanation": "Tracing requires using the $PES$ coefficient as a multiplier for the price signal to determine the output response."
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "Error generating question.",
-    "answer": "N/A"
+    "type": "order",
+    "difficulty": "L2",
+    "question": "Order these goods from **Most Inelastic Supply** to **Most Elastic Supply**.",
+    "steps": [
+      "Residential Real Estate in a crowded city (Land is fixed)",
+      "Digital Software Licenses (Zero marginal cost to produce more)",
+      "Custom-built Luxury Yachts (Long production time)"
+    ],
+    "answer": [
+      "Residential Real Estate in a crowded city (Land is fixed)",
+      "Custom-built Luxury Yachts (Long production time)",
+      "Digital Software Licenses (Zero marginal cost to produce more)"
+    ],
+    "explanation": "Inelasticity is driven by physical or time constraints. Real estate is limited by land; yachts by labor-intensive time; software has virtually infinite elasticity."
   }
 ]
-
 ```

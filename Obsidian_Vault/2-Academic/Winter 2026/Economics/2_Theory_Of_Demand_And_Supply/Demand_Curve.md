@@ -69,59 +69,41 @@ At a price of $2.50, the quantity demanded and supplied is 15 cookies.
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "The demand curve for industrial robots has a positive slope, indicating that as the price increases, the quantity demanded also increases.",
-    "answer": false,
-    "explanation": "The demand curve is a graphical representation of the Law of Demand, which states that as the price of a good increases, the quantity demanded decreases, ceteris paribus. This relationship can be expressed as $Q_d = f(P)$, where $Q_d$ is the quantity demanded and $P$ is the price. The demand curve typically has a negative slope, not a positive one, because as the price increases, the quantity demanded decreases. Therefore, the statement that the demand curve for industrial robots has a positive slope is false."
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q2",
-    "type": "synthesis",
-    "difficulty": "L2",
-    "question": "An aerospace engineering company is experiencing a critical shortage of specialized avionics chips, essential for the production of navigation systems in aircraft. The current supplier can only provide 1000 chips per month at $50 each. However, if the company is willing to pay $60 per chip, the supplier can increase the supply to 1200 chips per month. The demand for these chips is high, but the company needs to determine the optimal price to pay to ensure a steady supply without overpaying. Using the concept of the demand curve, derive a solution to prevent system failure due to chip shortage.",
-    "answer": "To solve this problem, we first need to understand the demand curve and how it applies to this scenario. The demand curve is a graphical representation of the relationship between the price of a good and the quantity demanded. In this case, we have two points on the demand curve: (1000, $50) and (1200, $60). We can use these points to derive the demand function and then determine the optimal price to pay for the chips.\n\nLet's assume a linear demand function: $Q_d = a - bP$, where $Q_d$ is the quantity demanded and $P$ is the price. Using the given points, we can set up two equations:\n\n$1000 = a - 50b$\n$1200 = a - 60b$\n\nSolving these equations simultaneously, we get:\n\n$200 = 10b$\n$b = 20$\n\nSubstituting $b = 20$ into one of the original equations, we get:\n\n$1000 = a - 50(20)$\n$a = 2000$\n\nSo, the demand function is: $Q_d = 2000 - 20P$\n\nTo prevent system failure, the company needs to ensure a steady supply of chips. Let's assume the company needs at least 1100 chips per month. We can set up the equation:\n\n$1100 = 2000 - 20P$\n\nSolving for $P$, we get:\n\n$20P = 900$\n$P = 45$\n\nHowever, this price may not be acceptable to the supplier. Let's check the quantity supplied at $50 and $60:\n\nAt $50: $Q_d = 2000 - 20(50) = 1000$\nAt $60: $Q_d = 2000 - 20(60) = 800$\n\nThe supplier can provide 1000 chips at $50 and 1200 chips at $60. To ensure a steady supply of at least 1100 chips, the company needs to pay at least $55, which can be calculated as:\n\n$1100 = 2000 - 20P$\n$20P = 900$\n$P = 45$\n\nBut we can also calculate it by interpolation between 1000 and 1200 chips:\n\n$P = 50 + (60-50)*(1100-1000)/(1200-1000) = 50 + 10*100/200 = 55$\n\nTherefore, the company needs to pay $55 per chip to ensure a steady supply of at least 1100 chips per month.",
-    "explanation": "The demand curve is a graphical representation of the Law of Demand, which states that as the price of a good increases, the quantity demanded decreases, ceteris paribus. The demand function can be expressed as $Q_d = f(P)$, where $Q_d$ is the quantity demanded and $P$ is the price. In this scenario, we used a linear demand function: $Q_d = a - bP$. The parameters $a$ and $b$ were estimated using two points on the demand curve. The company needs to ensure a steady supply of chips, and by using the demand function, we determined that the company needs to pay $55 per chip to ensure a steady supply of at least 1100 chips per month."
+    "type": "true_false",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the concept of a Demand Curve in the context of Global Supply Chain & Maritime Logistics, and provide a mathematical representation of the demand function.",
-    "answer": "The demand curve in Global Supply Chain & Maritime Logistics illustrates the inverse relationship between the price of a product and the quantity demanded by customers. As the price increases, the quantity demanded decreases, and vice versa. This relationship is crucial in determining the optimal price and quantity of goods to be transported and stored. For instance, a higher price for shipping containers may lead to a decrease in demand for container shipping services. \nThe demand function can be represented as $Q_d = f(P)$, where $Q_d$ is the quantity demanded and $P$ is the price. A simple linear demand function can be expressed as $Q_d = a - bP$, where $a$ and $b$ are constants.",
-    "explanation": "The demand curve is a graphical representation of the Law of Demand, which states that as the price of a good increases, the quantity demanded decreases, ceteris paribus. The demand function $Q_d = f(P)$ can be derived from the theory of consumer behavior, which assumes that consumers are rational and make optimal choices based on their preferences and budget constraints. The linear demand function $Q_d = a - bP$ can be used to estimate the demand for shipping services, where $a$ represents the intercept or the maximum quantity demanded when price is zero, and $b$ represents the slope of the demand curve, which measures the responsiveness of quantity demanded to changes in price. The demand curve is a downward-sloping curve, where the x-axis represents the quantity demanded and the y-axis represents the price. In the context of Global Supply Chain & Maritime Logistics, the demand curve plays a critical role in determining the optimal price and quantity of goods to be transported and stored."
+    "type": "synthesis",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q4",
-    "type": "order",
-    "difficulty": "L2",
-    "question": "Order steps for the Demand Curve technical process.",
-    "steps": [
-      "The price of a good increases",
-      "The quantity demanded decreases",
-      "A graphical representation is created",
-      "The demand function is expressed",
-      "The relationship is depicted as a downward-sloping curve"
-    ],
-    "answer": [
-      "The price of a good increases",
-      "The quantity demanded decreases",
-      "The demand function is expressed",
-      "A graphical representation is created",
-      "The relationship is depicted as a downward-sloping curve"
-    ]
+    "type": "trace",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
+    "type": "order",
+    "difficulty": "L1",
     "question": "Error generating question.",
     "answer": "N/A"
   }
 ]
-
 ```

@@ -67,61 +67,41 @@ Here's a 5-step technical walkthrough of how a shift in the supply curve operate
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "A shift in the supply curve of a vaccine in Epidemiology & Public Health Modeling occurs solely due to changes in the price of the vaccine itself.",
-    "answer": false,
-    "explanation": "The shift in the supply curve of a vaccine is influenced by various factors including changes in technology, production costs, prices of related goods, expectations, and the number of suppliers. Mathematically, this can be represented as a change in the supply function $Q_s = f(P, T, C, P_r, E, N)$, where $Q_s$ is the quantity supplied, $P$ is the price of the vaccine, $T$ is technology, $C$ is production cost, $P_r$ is the price of related goods, $E$ is expectations, and $N$ is the number of suppliers. A change in any of these factors, except for $P$, leads to a shift in the supply curve. Therefore, stating that a shift occurs solely due to changes in the price of the vaccine itself is incorrect."
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q2",
-    "type": "synthesis",
-    "difficulty": "L2",
-    "question": "An aerospace engineering firm is experiencing a critical shortage of a specialized avionics component due to a manufacturing glitch. The component is essential for the production of a new aircraft model, and without it, the entire production line will come to a halt. The firm has two suppliers, but one of them is facing a sudden increase in production costs due to a change in government regulations, causing their supply curve to shift to the left. How can the firm apply the concept of 'Shift In Supply Curve' to prevent system failure and ensure a steady supply of the component?",
-    "answer": "The firm should immediately analyze the impact of the changed government regulations on the supplier's production costs and adjust their procurement strategy accordingly. By understanding that the supply curve has shifted to the left, the firm can anticipate a decrease in the quantity supplied at each price level. To mitigate this, the firm can consider the following options: (1) negotiate with the affected supplier to explore alternative production methods or cost-saving measures, (2) increase the order quantity from the unaffected supplier, or (3) identify and partner with a new supplier to meet the demand. By adapting to the shift in the supply curve, the firm can prevent a system failure and ensure a steady supply of the essential component.",
-    "explanation": "The underlying mechanism of a shift in the supply curve can be represented by the equation: $Q_s = f(P, C, T, E, N)$, where $Q_s$ is the quantity supplied, $P$ is the price of the good, $C$ is the production cost, $T$ is the technology level, $E$ is the expectations of the suppliers, and $N$ is the number of suppliers. A change in any of these factors, such as the increase in production costs due to the change in government regulations, will cause the supply curve to shift. Mathematically, this can be represented as: $\frac{\\partial Q_s}{\\partial C} < 0$, indicating that an increase in production costs will lead to a decrease in the quantity supplied. By understanding this relationship, the firm can make informed decisions to adjust their procurement strategy and prevent a system failure."
+    "type": "true_false",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain how a shift in the supply curve applies to a Telecommunications & Core Network Routing scenario, specifically when a new undersea fiber optic cable is laid, increasing the capacity for international data transfer.",
-    "answer": "When a new undersea fiber optic cable is laid, increasing the capacity for international data transfer, it acts as a rightward shift in the supply curve for data transfer services. This is because the increased capacity allows for more data to be transferred at each price level, effectively increasing the supply of data transfer services. Conversely, if a critical undersea cable is damaged, reducing the capacity, the supply curve shifts to the left, indicating a decrease in the supply of data transfer services at each price level.",
-    "explanation": "The underlying mechanism can be represented by the supply function $Q_s = f(P, T, C)$, where $Q_s$ is the quantity supplied, $P$ is the price, $T$ is technology (in this case, the laying of a new undersea fiber optic cable), and $C$ is the cost of providing the service. When $T$ increases (new cable laid), the supply function shifts to the right, $\\Delta Q_s > 0$, indicating an increase in supply. Conversely, if $T$ decreases (cable damaged), $\\Delta Q_s < 0$, indicating a decrease in supply. This shift is a direct result of the change in technology ($T$) which alters the production decisions of firms providing data transfer services, thus changing the quantity supplied at each price level."
+    "type": "synthesis",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q4",
-    "type": "order",
-    "difficulty": "L2",
-    "question": "Order steps for Shift In Supply Curve",
-    "steps": [
-      "Change in production costs",
-      "Change in technology",
-      "Change in prices of related goods",
-      "Change in expectations",
-      "Change in number of suppliers"
-    ],
-    "answer": [
-      "Change in production costs",
-      "Change in technology",
-      "Change in prices of related goods",
-      "Change in expectations",
-      "Change in number of suppliers"
-    ]
+    "type": "trace",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output of a shift in the supply curve for aerospace engineering and avionics, assuming a significant reduction in production costs due to new technology?",
-    "content": "The supply curve for aerospace engineering and avionics products, such as aircraft and avionics systems, is affected by various factors including production costs, technology, and expectations. A significant reduction in production costs due to new technology would lead to an increase in supply.",
-    "answer": "The supply curve shifts to the right, indicating an increase in the quantity supplied at each price level.",
-    "explanation": "The reduction in production costs due to new technology can be represented by a decrease in the cost function $C(q)$, which leads to an increase in the profit-maximizing quantity supplied $q^*$. This can be expressed as: $\\max_{q} \\pi(q) = P \\cdot q - C(q) \\rightarrow \\max_{q} \\pi(q) = P \\cdot q - (C_0 - \\Delta C) \\cdot q$. As a result, the supply curve shifts to the right, indicating an increase in the quantity supplied at each price level, $Q_s = f(P, C_0 - \\Delta C) \\rightarrow Q_s' = f(P, C_0 - \\Delta C) > Q_s$."
+    "type": "order",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   }
 ]
-
 ```

@@ -122,20 +122,93 @@ def get_domain_instruction(mode: str) -> str:
 
 VALID_MODES = set(DOMAIN_MATRIX.keys())
 
-PROFESSIONAL_DOMAINS = [
-    "Aerospace Engineering & Avionics",
-    "Global Supply Chain & Maritime Logistics",
-    "Quantitative Finance & High-Frequency Trading",
-    "Bioinformatics & Genomic Sequencing",
-    "Telecommunications & Core Network Routing",
-    "Industrial Manufacturing & Robotics",
-    "Epidemiology & Public Health Modeling"
-]
+# ── MODE-AWARE PROFESSIONAL DOMAINS (v26.6) ───────────────────────────────────
+MODE_SPECIALITIES = {
+    "ECON-MACRO": ["Central Banking & Monetary Policy", "International Trade Analysis", "Fiscal Policy Research", "Market Strategy", "Development Economics"],
+    "ECON-FINANCE": ["Investment Banking", "Corporate Finance", "Asset Management", "Financial Audit"],
+    "CS-SOFTWARE": ["DevOps & Site Reliability", "Backend Systems Architecture", "Cloud Infrastructure", "Embedded Systems", "Cybersecurity Audit"],
+    "CS-SYSTEMS": ["Network Infrastructure", "Distributed Systems", "High-Performance Computing", "Cloud Architecture"],
+    "CS-DB": ["Data Engineering", "Database Administration", "Business Intelligence", "Large-scale Data Warehousing"],
+    "CS-AI": ["Machine Learning Operations (MLOps)", "Natural Language Processing", "Computer Vision Research", "AI Ethics & Safety"],
+    "MATH-PURE": ["Cryptographic Research", "Theoretical Physics", "Algorithmic Analysis", "Pure Math Research"],
+    "MATH-STAT": ["Actuarial Science", "Risk Management", "Biostatistics", "Data Science"],
+    "PHYSICS-KINEMATICS": ["Aerospace Engineering", "Automotive Design", "Robotics Kinematics", "Ballistics Analysis"],
+    "CHEMISTRY": ["Pharmaceutical Research", "Materials Science", "Chemical Engineering", "Forensic Toxicology"],
+    "BIOLOGY": ["Biomedical Research", "Genetics & Genomics", "Ecology & Conservation", "Neuroscience"],
+    "ENG-MECH": ["Structural Engineering", "Manufacturing Systems", "Aerospace Design", "Mechanical Reliability"],
+    "ENG-ELEC": ["Circuit Design", "Power Systems Engineering", "Telecommunications", "Semiconductor Mfg"],
+    "MED-PHYSIO": ["Clinical Physiology", "Emergency Medicine", "Internal Medicine", "Surgical Planning"],
+    "MED-PHARMA": ["Pharmacology", "Drug Development", "Clinical Trials", "Regulatory Affairs"],
+    "BIZ-STRATEGY": ["Management Consulting", "Corporate Strategy", "Venture Capital", "Market Research"],
+    "LAW-CASE": ["Litigation Strategy", "Judicial Review", "Constitutional Law", "Legal Analysis"],
+    "PHILOSOPHY": ["Ethics Advisory", "Logic & Argumentation", "Social Philosophy", "Political Theory"]
+}
 
-def get_professional_domain(seed: str) -> str:
-    """Pseudo-randomly selects a professional domain based on title."""
-    idx = int(hashlib.md5(seed.encode()).hexdigest(), 16) % len(PROFESSIONAL_DOMAINS)
-    return PROFESSIONAL_DOMAINS[idx]
+def get_professional_domain(seed: str, mode: str = "ECON-MACRO") -> str:
+    options = MODE_SPECIALITIES.get(mode, ["General Technical Research", "Professional Consulting", "Industry Analysis"])
+    idx = int(hashlib.md5(seed.encode()).hexdigest(), 16) % len(options)
+    return options[idx]
+
+# ── DOMAIN QUESTION PROTOCOLS (v27.0) ─────────────────────────────────────────
+# Specialized sub-agent instructions for each domain's cognitive modality.
+DOMAIN_QUESTION_PROTOCOLS = {
+    "ECON-MACRO": {
+        "mcq": "Focus on the direction of shifts in curves (AD, AS, IS-LM). Ensure distractors reflect common student errors in directionality.",
+        "true_false": "Test the 'Ceteris Paribus' boundary. Create a statement where a factor hidden in the assumption is changed.",
+        "synthesis": "Present a 'Macro Shock' (e.g., sudden currency devaluation) and require a 3-step policy response.",
+        "trace": "Trace the impact of a 1% interest rate change through 4 distinct economic sectors (Housing, Investment, Forex, Consumption).",
+        "order": "Order the sequence of events in a 'Multiplier Effect' or 'Liquidity Trap' chain."
+    },
+    "CS-SOFTWARE": {
+        "mcq": "Focus on memory management, scope, and side effects. Distractors must include potential runtime errors.",
+        "debug": "Provide a snippet with a subtle race condition, off-by-one, or memory leak. The answer must explain the fix.",
+        "trace": "Provide a recursive or complex loop structure. The user must provide the exact value of the accumulator at termination.",
+        "synthesis": "Design a migration strategy from Monolithic to Microservices for a specific stateful component.",
+        "order": "Order the steps of a CI/CD pipeline or a complex Git rebase conflict resolution."
+    },
+    "MATH-STAT": {
+        "mcq": "Focus on the difference between correlation and causation, and the misuse of P-values.",
+        "trace": "Provide a data set and require the exact calculation of a Z-score or Confidence Interval using LaTeX.",
+        "synthesis": "Design an A/B test for a high-traffic system that accounts for 'Survivor Bias'.",
+        "true_false": "Challenge the 'Law of Large Numbers' or 'Central Limit Theorem' with a small-sample counter-example."
+    },
+    "MED-PHYSIO": {
+        "mcq": "Focus on 'Differential Diagnosis'. Distractors should be pathologies with similar symptoms but different mechanisms.",
+        "synthesis": "Present a patient case with 3 conflicting vitals. Require a prioritized diagnostic pathway.",
+        "true_false": "Test the limits of 'Negative Feedback Loops'. What happens when the sensor fails versus the effector?",
+        "matching": "Match pathologies to their specific cellular-level trigger."
+    },
+    "LAW-CASE": {
+        "mcq": "Focus on the 'Ratio Decidendi'. Distractors should be 'Obiter Dicta' from the same case.",
+        "synthesis": "Present a novel fact pattern and require an application of a specific precedent (e.g. Donoghue v Stevenson).",
+        "writing": "Analyze the tension between two conflicting legal principles in the given context."
+    },
+    "BIOLOGY": {
+        "mcq": "Focus on the 'Why' of a biological pathway, not just the 'What'. Distractors should include plausible but incorrect regulatory feedback.",
+        "synthesis": "Design a CRISPR-based intervention for a specific genetic bottleneck discussed in the text.",
+        "matching": "Match specific ligands to their corresponding receptor subtypes and downstream effects."
+    },
+    "PHILOSOPHY": {
+        "mcq": "Focus on subtle logical fallacies in a given argument. Distractors must be common misinterpretations of the philosopher's work.",
+        "writing": "Construct a 3-sentence 'Counter-Argument' from the perspective of a rival school of thought.",
+        "synthesis": "Apply the core philosophical argument to a modern AI ethics dilemma."
+    },
+    "CHEMISTRY": {
+        "mcq": "Focus on rate-determining steps and transition states. Distractors should include incorrect stereochemistry or thermodynamic states.",
+        "debug": "Provide a balanced equation with ONE subtle error in oxidation states or stoichiometry.",
+        "trace": "Trace the movement of electrons in a mechanism (e.g., nucleophilic attack) and identify the exact final intermediate."
+    },
+    "PHYSICS-KINEMATICS": {
+        "mcq": "Focus on boundary conditions (e.g. t=0, v=0). Distractors should reflect sign errors or unit inconsistencies.",
+        "debug": "Provide a derivation with a single missing vector component or a misused fundamental constant.",
+        "trace": "Calculate the exact state (velocity/position) of a multi-body system after 5 seconds using LaTeX."
+    },
+    "HIST-CATALYST": {
+        "mcq": "Focus on the 'Catalytic Event'. Distractors should be events that were concurrent but not causal.",
+        "order": "Order the sequence of social and political shifts that led to the primary historical outcome.",
+        "synthesis": "Compare the 'Primary Catalyst' in this note to a similar historical event in a different era."
+    }
+}
 
 
 # ── DOMAIN PROHIBITIONS & WALKTHROUGH STYLE ───────────────────────────────────
@@ -383,7 +456,7 @@ class PractitionerAgent:
 
     async def generate(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> str:
         title_readable = note_title.replace("_", " ")
-        prof_domain = get_professional_domain(note_title)
+        prof_domain = get_professional_domain(note_title, mode=mode)
         domain_fix = get_domain_instruction(mode)
         
         sys_prompt = f"""You are a helpful {self.domain['persona']} and technical writer.
@@ -445,20 +518,24 @@ class QuestionAgent:
         }
         self.canonical_type = mapping.get(self.q_type, "writing")
 
-    async def generate(self, note_title: str, context: str, difficulty: str = "L1", persona: str = "Expert Educator") -> dict:
+    async def generate(self, note_title: str, context: str, difficulty: str = "L1", persona: str = "Expert Educator", mode: str = "ECON-MACRO") -> dict:
         title_readable = note_title.replace("_", " ")
-        prof_domain = get_professional_domain(note_title + str(self.q_type))
+        prof_domain = get_professional_domain(note_title + str(self.q_type), mode=mode)
         
+        # Load Specialized Sub-Agent Protocol
+        protocol_map = DOMAIN_QUESTION_PROTOCOLS.get(mode, {})
+        specialized_instruction = protocol_map.get(self.canonical_type, "Focus on high-fidelity technical application and deep causal understanding.")
+
         prompts = {
-            "mcq": f"Find a technical nuance about '{title_readable}' in the context of {prof_domain}. Generate 1 correct answer and 3 distractors. Distractors must be technically plausible, not 'None of the above'.",
-            "true_false": f"Generate a high-stakes T/F statement regarding a critical failure point of '{title_readable}' within {prof_domain}.",
+            "mcq": f"Find a technical nuance about '{title_readable}' within {prof_domain}. {specialized_instruction} Generate 1 correct answer and 3 distractors. Distractors must be technically plausible, not 'None of the above'.",
+            "true_false": f"Generate a high-stakes T/F statement regarding a critical failure point of '{title_readable}' within {prof_domain}. {specialized_instruction}",
             "fill_in": f"Extract a dense technical sentence about '{title_readable}'. Replace the most critical technical term with [[blank]]. REMOVE all other [[wikilinks]] from the sentence.",
-            "writing": f"Challenge the user to analyze '{title_readable}' in a {prof_domain} scenario. Provide a 3-5 sentence 'Perfect Response' demonstrating mastery. NO RUBRICS.",
-            "matching": f"Extract 4 distinct technical components of '{title_readable}' and their specific roles in {prof_domain}. Shuffle them.",
-            "order": f"Identify a 4-5 step technical process or causal chain for '{title_readable}'. Use REAL steps from the text. PROHIBITION: Never use 'step1', 'step2', or generic markers.",
-            "debug": f"Act as a Principal Engineer in {prof_domain}. Provide a code/formula snippet for '{title_readable}' with ONE subtle, realistic technical error.",
-            "trace": f"Provide a valid, complex technical execution trace for '{title_readable}' in {prof_domain}. Ask for the exact final state/output.",
-            "synthesis": f"Create an emergency scenario in {prof_domain} where '{title_readable}' must be applied to prevent system failure. Provide a definitive 'Mastery Solution'."
+            "writing": f"Challenge the user to analyze '{title_readable}' in a {prof_domain} scenario. {specialized_instruction} Provide a 3-5 sentence 'Perfect Response' demonstrating mastery. NO RUBRICS.",
+            "matching": f"Extract 4 distinct technical components of '{title_readable}' and their specific roles in {prof_domain}. {specialized_instruction} Shuffle them.",
+            "order": f"Identify a 4-5 step technical process or causal chain for '{title_readable}'. {specialized_instruction} Use REAL steps from the text. SHUFFLE the 'steps' array so they are NOT in order. PROHIBITION: Never use 'step1', 'step2', or generic markers.",
+            "debug": f"Act as a Principal Specialist in {prof_domain}. {specialized_instruction} Provide a code/formula/scenario snippet for '{title_readable}' with ONE subtle, realistic technical error.",
+            "trace": f"Provide a valid, complex technical execution trace for '{title_readable}' in {prof_domain}. {specialized_instruction} Ask for the exact final state/output.",
+            "synthesis": f"Create an emergency scenario in {prof_domain} where '{title_readable}' must be applied to prevent system failure. {specialized_instruction} Provide a definitive 'Mastery Solution'."
         }
         
         schemas = {
@@ -505,6 +582,20 @@ Context: {context[:3000]}
                 q_data = ArchitectAgent._parse_json(content)
                 q_data["type"] = self.canonical_type
                 q_data["difficulty"] = difficulty
+                
+                # PHYSICAL SHUFFLE for 'order' type to guarantee robustness
+                if self.canonical_type == "order" and "steps" in q_data:
+                    import random
+                    original_order = list(q_data["steps"])
+                    shuffled = list(original_order)
+                    # Attempt to shuffle up to 10 times to ensure it's different from original
+                    for _ in range(10):
+                        random.shuffle(shuffled)
+                        if shuffled != original_order:
+                            break
+                    q_data["steps"] = shuffled
+                    q_data["answer"] = original_order
+
                 return q_data
             except Exception as e:
                 last_error = e
@@ -623,16 +714,19 @@ Return ONLY a valid JSON object.
 The note's concept is: '{title_readable}'
 For each question check:
 - Is the question DIRECTLY about '{title_readable}'? (Not a generic math fact, not the analogy)
-- If type='debug': does 'content' actually contain a wrong step? (Answer='no error'=FAIL)
-- Is the stated 'answer' definitively correct for the question asked?
+- CONTEXT LOCK: Does the question use a professional domain UNRELATED to the concept? (e.g., Bioinformatics in an Economics note = FAIL).
+- GROUNDING: Does the question require specific data (numbers, constants) NOT present in the theory summary? (Hallucinated facts = FAIL).
+- SHUFFLE CHECK: For type='order', are the 'steps' already in the correct order? (Identity ordering = FAIL).
+- DEBUG CHECK: If type='debug': does 'content' actually contain a wrong step? (Answer='no error'=FAIL).
 - For fill_in: does 'textWithBlanks' use [[Blank1]] format (NOT wikilink names as blanks)?
+- Is the stated 'answer' definitively correct for the question asked?
 
 Output:
 {{"passed":true,"issues":[],"fix_instruction":""}}
 OR if problems:
-{{"passed":false,"issues":["Q1: ...","Q3: ..."],"fix_instruction":"exact instruction"}}
+{{"passed":false,"issues":["Q1: Context Hallucination detected.","Q3: Identity ordering detected. Steps must be shuffled."],"fix_instruction":"exact instruction"}}
 
-Key facts about '{title_readable}': {theory_summary[:400]}"""
+Key facts about '{title_readable}': {theory_summary[:800]}"""
         user_msg = f"Quiz JSON:\n{quiz_json_str[:2000]}"
         last_error = None
         for attempt in range(2):

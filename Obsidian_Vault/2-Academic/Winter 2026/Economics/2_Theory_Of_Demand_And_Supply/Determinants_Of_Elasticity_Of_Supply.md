@@ -58,86 +58,78 @@ This flowchart illustrates the various determinants that influence the elasticit
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of determinants of elasticity of supply operates:
+Here's a 5-step technical walkthrough of how the **Determinants of Elasticity of Supply** operate in the **Semiconductor Industry**:
 
-1. **Initial Condition**: Assume you are a lemonade stand owner and the price of lemonade increases. Your initial quantity supplied is 100 cups per day.
+1. **Market Trigger**: Global demand for AI chips surges, causing the market price per unit to triple.
 
-2. **Step 1 - Availability of Inputs**: You assess that you can easily obtain more lemons, sugar, and cups. This ease of access to inputs means you can quickly increase production. **State Change**: Your ability to get inputs quickly increases your flexibility.
+2. **Availability of Inputs**: Semiconductor fabrication requires high-purity silicon and specialized lithography machines. These inputs have extremely long lead times (12-18 months). This **limited availability** makes the supply highly **inelastic** in the short run.
 
-3. **Step 2 - Time**: You have a flexible schedule that allows you to operate longer hours and produce more lemonade if needed. The more time you have, the more you can adjust your output. **Data Transformation**: More time allows for a 20% increase in potential output.
+3. **Production Lag (Time)**: Building a new 'Fab' (factory) costs billions and takes years. In the **Market Period** (immediate), supply is perfectly inelastic (vertical). In the **Short Run**, existing factories can work overtime, slightly increasing supply. Only in the **Long Run** can new capacity be built to make supply elastic.
 
-4. **Step 3 - Substitutes in Production**: You also consider producing iced tea as a substitute. If the production costs and machinery for iced tea are similar to lemonade, you can easily switch between producing the two. **Intermediate State**: Having substitutes in production increases your elasticity of supply by 15%.
+4. **Resource Mobility**: The engineers and equipment used for making mobile chips are not easily pivoted to making high-end GPUs. This low **factor mobility** further restricts supply responsiveness.
 
-5. **Step 4 - Expectations**: You expect the price of lemonade to remain high in the future. This expectation encourages you to increase production now to capitalize on future high prices. **State Change**: Your expectation of future prices increases your current quantity supplied by 10%.
-
-Given these determinants, your final quantity supplied in response to the price increase could be significantly higher than the initial 100 cups per day, demonstrating a high elasticity of supply.
+5. **Inventory and Storage**: Unlike perishable goods, chips can be stored. However, during a shortage, inventories are depleted to zero. If inventory levels were high, supply would be more elastic as firms could release stock immediately in response to the price hike.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "The elasticity of supply for a good with a short production time is lower than for a good with a long production time.",
-    "answer": false,
-    "explanation": "The elasticity of supply is actually higher for goods with shorter production times. This is because producers can more quickly adjust their output in response to price changes when production times are shorter. The underlying mechanism can be represented as follows: $E_s = \\frac{\\% \\Delta Q_s}{\\% \\Delta P}$, where $E_s$ is the elasticity of supply, $\\% \\Delta Q_s$ is the percentage change in quantity supplied, and $\\% \\Delta P$ is the percentage change in price. With shorter production times, producers can more easily increase or decrease production in response to price changes, making $\\% \\Delta Q_s$ larger for a given $\\% \\Delta P$, and thus $E_s$ is higher."
+    "question": "Which time period is characterized by a **perfectly inelastic** supply curve where producers cannot adjust quantity at all?",
+    "options": {
+      "A": "The Long Run.",
+      "B": "The Short Run.",
+      "C": "The Market Period (Immediate Run).",
+      "D": "The Secular Trend."
+    },
+    "answer": "C",
+    "explanation": "In the Market Period, supply is fixed because production takes time. No matter how much the price rises, the quantity available for sale today cannot be increased instantly."
   },
   {
     "id": "q2",
-    "type": "synthesis",
+    "type": "true_false",
     "difficulty": "L2",
-    "question": "An aerospace engineering firm is facing a critical issue where a key component supplier has suddenly gone bankrupt, disrupting the production of a new aircraft model. The component in question is a specialized avionics system crucial for the aircraft's navigation and communication systems. The firm needs to quickly find an alternative supplier to prevent a system failure that could delay the entire project. However, the alternative suppliers have varying lead times and production costs. The firm must determine how to adjust its supply chain to meet the demand for the aircraft while minimizing costs and ensuring timely delivery. Apply the 'Determinants Of Elasticity Of Supply' to find a solution.",
-    "answer": "The firm should focus on finding an alternative supplier with a shorter lead time and flexible production capabilities. Given the urgency of the situation, the determinants of elasticity of supply such as the availability of inputs, technology, and the ability to store or adjust production levels become crucial. The firm should prioritize suppliers who have readily available inputs, advanced technology for quick production adjustments, and the capability to scale production up or down rapidly. Additionally, considering the high stakes of delaying the project, the firm may also consider suppliers who can provide just-in-time delivery to match the firm's production schedule.",
-    "explanation": "The elasticity of supply in this scenario can be understood through the lens of the determinants of elasticity of supply, which include: 1) **Availability of Inputs**: The supplier's ability to quickly source and procure necessary materials or components affects their ability to adjust supply. 2) **Technology and Production Flexibility**: Suppliers with advanced technology can more easily adjust their production levels. 3) **Time**: The longer the time frame considered, the more elastic supply tends to be, as suppliers can adjust production levels more significantly over time. Mathematically, the elasticity of supply can be represented as $E_S = \\frac{\\% \\Delta Q_S}{\\% \\Delta P}$, where $E_S$ is the elasticity of supply, $\\% \\Delta Q_S$ is the percentage change in quantity supplied, and $\\% \\Delta P$ is the percentage change in price. In this scenario, maximizing $\\% \\Delta Q_S$ while minimizing $\\% \\Delta P$ is crucial. By applying these principles, the firm can identify and partner with a supplier who can provide the necessary avionics systems in a timely and cost-effective manner, thus preventing system failure and project delays."
+    "question": "If a manufacturing process can easily switch between producing 'Good A' and 'Good B' (High Factor Mobility), the price elasticity of supply for Good A will be relatively elastic.",
+    "answer": true,
+    "explanation": "Factor mobility allows firms to respond quickly to price changes by reallocating resources from less profitable goods to more profitable ones."
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the determinants of elasticity of supply in the context of industrial manufacturing and robotics, and provide a detailed analysis of how these factors influence the responsiveness of quantity supplied to changes in price.",
-    "answer": "The determinants of elasticity of supply in industrial manufacturing and robotics include the availability and substitutability of inputs, production flexibility, technology and innovation, time, and storage capabilities. In industrial manufacturing, the elasticity of supply is influenced by the ease with which firms can adjust their production levels in response to price changes. For instance, if a firm has readily available spare capacity and can quickly scale up production, its supply will be more elastic. Conversely, if production requires specialized and scarce inputs, supply will be less elastic. In robotics, advancements in technology can significantly enhance production flexibility, making supply more elastic. The ability to store finished goods or inputs also plays a crucial role, as it allows firms to respond more effectively to price fluctuations.",
-    "explanation": "The elasticity of supply can be understood through the lens of microeconomic theory, specifically the supply function $Q_s = f(P, T, P_i, P_s, E)$, where $Q_s$ is the quantity supplied, $P$ is the price of the good, $T$ represents technology, $P_i$ is the price of inputs, $P_s$ is the price of substitutes, and $E$ encompasses expectations. The determinants of elasticity of supply affect the responsiveness of $Q_s$ to changes in $P$. Mathematically, this can be represented by the elasticity of supply formula: $E_s = \\frac{\\% \\Delta Q_s}{\\% \\Delta P}$. A key determinant is the availability and substitutability of inputs, which influences the production cost and flexibility. For instance, in industrial manufacturing, if a firm can easily substitute one input for another, it can maintain production levels despite price changes, enhancing supply elasticity. In robotics, technological advancements can lead to more efficient production processes, thereby increasing the elasticity of supply by allowing firms to quickly adjust output in response to price signals."
+    "type": "synthesis",
+    "difficulty": "L3",
+    "question": "Compare the elasticity of supply for Fresh Strawberries versus Stainless Steel. Which is more elastic and why, considering 'Perishability' and 'Storage'?",
+    "answer": "Stainless steel is more elastic. It can be stored indefinitely in warehouses and released to the market when prices rise. Fresh strawberries are highly perishable and cannot be stored easily; once harvested, they must be sold regardless of price, making supply relatively inelastic.",
+    "explanation": "Synthesis requires evaluating specific determinants (storage/perishability) across different industries."
   },
   {
     "id": "q4",
-    "type": "order",
+    "type": "trace",
     "difficulty": "L2",
-    "question": "Order steps for Determinants Of Elasticity Of Supply",
-    "steps": [
-      "Mobility of Factors of Production",
-      "Nature of Commodity",
-      "Time",
-      "Availability of Inputs",
-      "Production Flexibility"
-    ],
-    "answer": [
-      "Mobility of Factors of Production",
-      "Availability of Inputs",
-      "Production Flexibility",
-      "Nature of Commodity",
-      "Time"
-    ]
+    "question": "Trace the impact of an improvement in 'Production Technology' on the Price Elasticity of Supply ($E_s$).",
+    "answer": "1) New technology reduces production bottlenecks. 2) Marginal costs of increasing output fall. 3) Firms can now ramp up production more quickly in response to price signals. 4) The $E_s$ coefficient increases (Supply becomes more elastic).",
+    "explanation": "Tracing how technological efficiency translates into greater supply-side flexibility."
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output for the Determinants Of Elasticity Of Supply in Quantitative Finance & High-Frequency Trading?",
-    "content": "The Determinants Of Elasticity Of Supply include: \n1. Availability of Inputs: How easily can a supplier obtain the necessary inputs to produce more of the good or service? The easier it is to obtain inputs, the more elastic the supply.\n2. Time: Generally, the longer the time period considered, the more elastic the supply becomes, as suppliers have more time to adjust their production levels.\n3. Storage Facilities: If a good can be easily stored, suppliers can more easily adjust their supply in response to price changes, making supply more elastic.\n4. Mobility of Resources: If resources can be easily moved from one use to another, suppliers can more quickly respond to price changes, increasing elasticity.\n5. Flexibility of Production: The ability of a firm to change its output quickly in response to price changes affects supply elasticity. Firms with flexible production processes can adjust output more easily.",
-    "answer": [
-      "Availability of Inputs",
-      "Time",
-      "Storage Facilities",
-      "Mobility of Resources",
-      "Flexibility of Production"
+    "type": "order",
+    "difficulty": "L2",
+    "question": "Order the time periods from **Least Elastic** to **Most Elastic** supply.",
+    "steps": [
+      "Short Run (Fixed capital, variable labor)",
+      "Market Period (Immediate response)",
+      "Long Run (All factors are variable)"
     ],
-    "explanation": "The elasticity of supply can be understood through the lens of microeconomic theory, specifically through the supply function $Q = f(P)$, where $Q$ is the quantity supplied and $P$ is the price. The elasticity of supply is given by $E_S = \\frac{dQ/Q}{dP/P} = \\frac{P}{Q} \\cdot \\frac{dQ}{dP}$. The determinants of elasticity of supply influence $\\frac{dQ}{dP}$, which represents the responsiveness of quantity supplied to price changes. For instance, if inputs are readily available, a supplier can easily increase production in response to a price increase, thereby increasing $\\frac{dQ}{dP}$ and making supply more elastic. Similarly, with more time, suppliers can adjust their production levels more significantly, also increasing elasticity. Storage facilities allow for smoothing of production over time, mobility of resources allows for quick reallocation in response to price signals, and flexibility in production enables rapid adjustments to output levels."
+    "answer": [
+      "Market Period (Immediate response)",
+      "Short Run (Fixed capital, variable labor)",
+      "Long Run (All factors are variable)"
+    ],
+    "explanation": "Elasticity increases over time as firms gain more flexibility to adjust all factors of production (including factory size and technology)."
   }
 ]
-
 ```

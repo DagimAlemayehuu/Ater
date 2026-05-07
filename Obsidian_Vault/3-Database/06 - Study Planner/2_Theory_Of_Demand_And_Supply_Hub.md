@@ -5,8 +5,7 @@ course: "Economics"
 semester: "Winter 2026"
 unit: "2"
 source: "[[5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf]]"
-source_pages:
-
+source_pages: ''
 status: "Not Started"
 confidence: ''
 study_date: ''
@@ -32,7 +31,7 @@ Market equilibrium occurs when the market demand curve intersects with the marke
 ## Connections
 
 - Theory of Demand and Supply
-  - [x] [[Ceteris_Paribus]]
+  - [ ] [[Ceteris_Paribus]]
     - [ ] [[Elasticity_Of_Supply]]
       - [ ] [[Determinants_Of_Elasticity_Of_Supply]]
       - [ ] [[Price_Elasticity_Of_Supply]]

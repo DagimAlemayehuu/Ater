@@ -68,58 +68,41 @@ Here's a 5-step technical walkthrough of how a change in technology operates in 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "A critical failure point of 'Change In Technology' within Aerospace Engineering & Avionics is that it always leads to an immediate reduction in production costs.",
-    "answer": false,
-    "explanation": "The introduction of new technology in aerospace engineering and avionics can lead to increased efficiency and potentially lower production costs in the long run. However, the initial investment in new technology, including research, development, and implementation, can be substantial. The cost savings from new technology are not immediate and depend on various factors such as the scale of adoption, the learning curve of the workforce, and the integration with existing systems. Therefore, stating that 'Change In Technology' always leads to an immediate reduction in production costs is inaccurate. The relationship between technological change and production costs is more complex and can be represented by the production function $Q = f(L, K, T)$, where $Q$ is output, $L$ is labor, $K$ is capital, and $T$ is technology. An improvement in technology $T$ shifts the production function, but the impact on costs depends on how $L$ and $K$ adjust."
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q2",
-    "type": "synthesis",
-    "difficulty": "L2",
+    "type": "true_false",
+    "difficulty": "L1",
     "question": "Error generating question.",
     "answer": "N/A"
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain how a change in technology affects the production capacity of a firm in the context of Epidemiology & Public Health Modeling, and discuss its implications on the supply side of the market.",
-    "answer": "A change in technology, such as the introduction of a new machine, enables firms to produce goods and services more efficiently, thereby increasing their production capacity. In Epidemiology & Public Health Modeling, this could mean that a firm can produce more vaccines or medical supplies in less time, or with the same resources. This increase in efficiency can lead to a shift in the supply curve, as firms can now produce more at a lower cost, potentially leading to an increase in the quantity supplied and a decrease in the price.",
-    "explanation": "The impact of a change in technology on production capacity can be represented mathematically using the production function $Q = f(L,K)$, where $Q$ is the quantity produced, $L$ is labor, and $K$ is capital. With technological progress, the production function shifts to $Q' = f(L,K')$, where $K'$ represents the new, more efficient capital. This can be expressed as $Q' = A \\cdot f(L,K)$, where $A$ is the total factor productivity, which increases with technological progress. The increase in efficiency can lead to a decrease in marginal costs, $MC$, and a shift in the supply curve, $Q_s = f(P,MC)$, where $P$ is the price. As a result, the quantity supplied increases, and the price decreases, as represented by the shift from $Q_s$ to $Q_s'$."
+    "type": "synthesis",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q4",
-    "type": "order",
-    "difficulty": "L2",
-    "question": "Order steps for Change In Technology",
-    "steps": [
-      "Adoption of New Technology",
-      "Increased Efficiency in Production",
-      "Reduction in Production Costs",
-      "Shift in Supply Curve"
-    ],
-    "answer": [
-      "Adoption of New Technology",
-      "Increased Efficiency in Production",
-      "Reduction in Production Costs",
-      "Shift in Supply Curve"
-    ]
+    "type": "trace",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output of a change in technology in Aerospace Engineering & Avionics, specifically in the production of aircraft avionics systems?",
-    "content": "The introduction of a new technology, such as a more efficient automated testing system, can significantly impact the production process of aircraft avionics systems. Assuming the new technology reduces the testing time per unit by 30% and increases the overall production capacity by 25%, we can model the change in output as follows: Let Y be the original output, and Y' be the new output. If the original production rate is 100 units per month, and the new production rate is 125 units per month, what is the exact output in terms of units per month?",
-    "answer": "125",
-    "explanation": "The change in technology can be represented by a shift in the production function, from $Q = f(L,K)$ to $Q' = f(L,K')$, where $L$ is labor, $K$ is the original capital, and $K'$ is the new capital. The new technology increases the productivity of capital, allowing for a 25% increase in output. Mathematically, this can be represented as: $Y' = Y \\cdot (1 + \\frac{25}{100}) = 100 \\cdot 1.25 = 125$. Therefore, the exact output is 125 units per month."
+    "type": "order",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   }
 ]
-
 ```

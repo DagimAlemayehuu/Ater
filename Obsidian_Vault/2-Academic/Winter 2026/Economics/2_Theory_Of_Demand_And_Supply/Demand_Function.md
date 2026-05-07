@@ -59,59 +59,65 @@ Here's a 5-step technical walkthrough of how the Demand Function operates:
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "The demand function in global supply chain and maritime logistics assumes that changes in price have no effect on the quantity demanded of a good.",
-    "answer": false,
-    "explanation": "The demand function, represented as Qd = f(P), is based on the Law of Demand, which states that as the price of a good increases, the quantity demanded decreases, and vice versa, ceteris paribus. This relationship can be expressed using a simple linear equation: $Qd = a - bP$, where $a$ and $b$ are constants, and $b$ represents the change in quantity demanded in response to a one-unit change in price. Therefore, the statement that changes in price have no effect on the quantity demanded is false."
+    "question": "In the demand function $Q_d = a - bP$, the coefficient 'b' represents:",
+    "options": {
+      "A": "The quantity demanded when price is zero.",
+      "B": "The price level where demand becomes perfectly elastic.",
+      "C": "The responsiveness (slope) of quantity demanded to price changes.",
+      "D": "The percentage of income spent on the good."
+    },
+    "answer": "C",
+    "explanation": "In a linear demand function, 'b' represents the slope ($dQ/dP$), showing how many units of quantity are lost for every one-unit increase in price."
   },
   {
     "id": "q2",
-    "type": "synthesis",
+    "type": "true_false",
     "difficulty": "L2",
-    "question": "A sudden outbreak of a highly contagious disease has occurred in a densely populated urban area, leading to a surge in demand for medical supplies, particularly face masks. The local health authority is struggling to maintain a stable supply chain, and the demand for face masks is expected to increase exponentially. Using the demand function concept, how can the health authority optimize the allocation of face masks to prevent system failure?",
-    "answer": "The health authority can use the demand function Qd = f(P) to optimize the allocation of face masks. Assuming a linear demand function Qd = a - bP, where Qd is the quantity demanded, P is the price, and a and b are constants, the authority can estimate the demand for face masks based on their price. By setting a price ceiling, the authority can ensure that face masks are affordable and available to those who need them most. Additionally, the authority can use dynamic pricing strategies to adjust the price of face masks in real-time, based on changes in demand. This can help to prevent shortages and ensure a stable supply chain.",
-    "explanation": "The demand function can be represented mathematically as $Qd = a - bP$, where $Qd$ is the quantity demanded, $P$ is the price, and $a$ and $b$ are constants. The law of demand states that as the price of a good increases, the quantity demanded decreases, and vice versa. This can be represented graphically as a downward-sloping demand curve. By setting a price ceiling, the health authority can ensure that face masks are affordable and available to those who need them most. The price ceiling can be represented mathematically as $P \\leq P_{max}$, where $P_{max}$ is the maximum price. Using dynamic pricing strategies, the authority can adjust the price of face masks in real-time, based on changes in demand. This can be represented mathematically as $P = P(Qd)$, where $P$ is the price and $Qd$ is the quantity demanded. By optimizing the allocation of face masks using the demand function, the health authority can prevent system failure and ensure a stable supply chain."
+    "question": "A Demand Function like $Q_d = f(P, Y, P_s)$ is only valid if we assume $Y$ (Income) and $P_s$ (Price of substitutes) are constants.",
+    "answer": true,
+    "explanation": "To plot a 2D Demand Curve, we must hold all variables other than price constant (Ceteris Paribus). If $Y$ or $P_s$ change, the entire function shifts."
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the concept of a Demand Function in the context of Global Supply Chain & Maritime Logistics, and provide a mathematical representation of the relationship between the price of a good and the quantity demanded.",
-    "answer": "The demand function in global supply chain and maritime logistics is a mathematical representation of the relationship between the price of a good and the quantity demanded. It is often expressed as Qd = f(P), where Qd is the quantity demanded and P is the price. In the context of maritime logistics, the demand function can be used to analyze the impact of changes in shipping prices on the quantity of goods demanded by consumers. For instance, if shipping companies increase their prices due to rising fuel costs, the quantity demanded by consumers may decrease, ceteris paribus. The demand function helps logistics companies to understand this relationship and make informed decisions about pricing and supply chain management.",
-    "explanation": "The underlying mechanism of the demand function can be explained using the law of demand, which states that as the price of a good increases, the quantity demanded decreases, and vice versa. This can be represented mathematically as $Qd = f(P) = a - bP$, where $a$ and $b$ are constants, and $b$ represents the change in quantity demanded in response to a change in price. The demand function can be graphed as a downward-sloping curve, illustrating the inverse relationship between price and quantity demanded. In the context of global supply chain and maritime logistics, the demand function can be used to analyze the impact of changes in shipping prices on the quantity of goods demanded by consumers, and to make informed decisions about pricing and supply chain management."
+    "type": "synthesis",
+    "difficulty": "L3",
+    "question": "Suppose a market has a demand function $Q_d = 500 - 5P$. If the government imposes a price floor at $P=80$, calculate the quantity demanded and analyze the resulting market state.",
+    "answer": "$Q_d = 500 - 5(80) = 500 - 400 = 100$. If the equilibrium price was lower than $80$, this price floor would create a surplus, as quantity supplied would likely exceed 100 while quantity demanded is restricted to 100.",
+    "explanation": "Synthesis requires using the mathematical function to predict the outcome of a policy intervention (Price Floor)."
   },
   {
     "id": "q4",
-    "type": "order",
+    "type": "trace",
     "difficulty": "L2",
-    "question": "Order steps for Demand Function.",
-    "steps": [
-      "Determine the Quantity Demanded (Qd)",
-      "Specify the Price (P)",
-      "Apply the Law of Demand",
-      "Assume Ceteris Paribus"
-    ],
-    "answer": [
-      "Assume Ceteris Paribus",
-      "Specify the Price (P)",
-      "Apply the Law of Demand",
-      "Determine the Quantity Demanded (Qd)"
-    ]
+    "question": "Trace the change in $Q_d$ using the function $Q_d = 200 - 2P$ if the price rises from $20 to $30.",
+    "answer": "1) Initial $Q_d = 200 - 2(20) = 160$. 2) New $Q_d = 200 - 2(30) = 140$. 3) Resulting change is a decrease of 20 units.",
+    "explanation": "Tracing requires sequential calculation of the dependent variable ($Q_d$) based on the independent variable ($P$)."
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output of the demand function in Aerospace Engineering & Avionics, given a specific price point and assuming all other factors remain constant?",
-    "content": "The demand function in Aerospace Engineering & Avionics can be represented as Qd = f(P), where Qd is the quantity demanded and P is the price. For instance, let's assume the demand function for commercial airliners is Qd = 1000 - 2P, where Qd is the number of airliners demanded and P is the price per airliner.",
-    "answer": "Qd = 1000 - 2P",
-    "explanation": "The underlying mechanism of the demand function is based on the Law of Demand, which states that as the price of a good increases, the quantity demanded decreases, and vice versa, assuming ceteris paribus. This can be represented mathematically as $\\frac{\\partial Qd}{\\partial P} < 0$. For the given demand function Qd = 1000 - 2P, the derivative is $\\frac{\\partial Qd}{\\partial P} = -2$, indicating that for every unit increase in price, the quantity demanded decreases by 2 units."
+    "type": "order",
+    "difficulty": "L2",
+    "question": "Order the steps for estimating a demand function using market data.",
+    "steps": [
+      "Collect historical price and quantity data",
+      "Run a regression analysis to find the best-fit line",
+      "Identify the intercept 'a' and slope 'b'",
+      "Hold other determinants (income, etc.) constant for the period",
+      "Formulate the final equation $Q_d = a - bP$"
+    ],
+    "answer": [
+      "Collect historical price and quantity data",
+      "Hold other determinants (income, etc.) constant for the period",
+      "Run a regression analysis to find the best-fit line",
+      "Identify the intercept 'a' and slope 'b'",
+      "Formulate the final equation $Q_d = a - bP$"
+    ],
+    "explanation": "The process moves from data collection and control to mathematical estimation and final formulation."
   }
 ]
-
 ```

@@ -47,80 +47,78 @@ This Mermaid flowchart illustrates the step-by-step process to calculate and int
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of Income Elasticity of Demand operates:
+Here's a 5-step technical walkthrough of how **Income Elasticity of Demand** ($E_i$) operates in the **Aviation Market (Business Class Travel)**:
 
-1. **Initial State**: Suppose the initial income of a consumer is $50,000 per year, and they buy 200 cups of lemonade per year at $2 each.
+1. **Macro Environment**: A nation experiences a sustained GDP growth of 5%, resulting in a 10% increase in the average real disposable income of the professional class.
 
-2. **Step 1 - Change in Income**: The consumer gets a 10% raise, increasing their income to $55,000 per year.
+2. **Consumption Data**: Airlines observe that bookings for 'Premium Business Class' seats on long-haul flights surge from 5,000 to 7,500 per month (a 50% increase).
 
-3. **Step 2 - Calculate % Change in Income**: The percentage change in income is calculated as: 
-\[ \text{% Change in Income} = \frac{\text{New Income} - \text{Old Income}}{\text{Old Income}} \times 100\% = \frac{55,000 - 50,000}{50,000} \times 100\% = 10\% \]
+3. **Elasticity Calculation**: We calculate the coefficient as $E_i = \frac{50\%}{10\%} = +5.0$.
 
-4. **Step 3 - Calculate % Change in Quantity Demanded**: Assume that with the increased income, the consumer buys 220 cups of lemonade per year. The percentage change in quantity demanded is:
-\[ \text{% Change in Quantity Demanded} = \frac{\text{New Quantity} - \text{Old Quantity}}{\text{Old Quantity}} \times 100\% = \frac{220 - 200}{200} \times 100\% = 10\% \]
+4. **Economic Classification**: Since $E_i$ is positive and greater than 1.0, 'Premium Air Travel' is classified as a **Luxury Good**. Demand grows significantly faster than income.
 
-5. **Step 4 & 5 - Compute and Interpret Income Elasticity of Demand**: The Income Elasticity of Demand is:
-\[ \text{Income Elasticity of Demand} = \frac{\% \text{ Change in Quantity Demanded}}{\% \text{ Change in Income}} = \frac{10\%}{10\%} = 1 \]
-An elasticity coefficient of 1 indicates that the quantity demanded changes proportionally with income, suggesting that lemonade is a normal good with unit income elasticity.
+5. **Strategic Pivot**: In response, airlines reconfigure their fleet to add more business suites and reduce economy seating to capitalize on the high income-responsiveness of this demographic.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "A good with an income elasticity of demand greater than 1 is considered an inferior good.",
-    "answer": false,
-    "explanation": "A good with an income elasticity of demand greater than 1 is actually considered a luxury good, not an inferior good. This is because a 1% increase in income leads to more than a 1% increase in the quantity demanded of the good. Inferior goods, on the other hand, have an income elasticity of demand less than 0, meaning that as income increases, the quantity demanded of the good decreases. The income elasticity of demand can be represented by the formula: $E_I = \frac{\\% \\Delta Q_d}{\\% \\Delta I}$, where $E_I$ is the income elasticity of demand, $\\% \\Delta Q_d$ is the percentage change in quantity demanded, and $\\% \\Delta I$ is the percentage change in income. For luxury goods, $E_I > 1$, while for inferior goods, $E_I < 0$."
+    "question": "If the Income Elasticity of Demand for a good is **negative** (-0.8), the good is classified as:",
+    "options": {
+      "A": "A luxury good.",
+      "B": "A normal good.",
+      "C": "An inferior good.",
+      "D": "A complementary good."
+    },
+    "answer": "C",
+    "explanation": "A negative income elasticity means that as income rises, demand falls. This is the defining characteristic of 'Inferior Goods' (e.g., public transport in some regions or generic-brand staples)."
   },
   {
     "id": "q2",
-    "type": "synthesis",
+    "type": "true_false",
     "difficulty": "L2",
-    "question": "In a bioinformatics lab, the demand for advanced genomic sequencing equipment is highly dependent on the funding received by researchers. Suppose that the researchers receive a 10% increase in funding, and as a result, the demand for sequencing equipment increases by 15%. Calculate the income elasticity of demand for this equipment and interpret the result in the context of lab management.",
-    "answer": "1.5",
-    "explanation": "The income elasticity of demand is calculated as the percentage change in quantity demanded divided by the percentage change in income. Given that the quantity demanded increases by 15% in response to a 10% increase in income, the income elasticity of demand (IED) can be calculated as follows: $IED = \\frac{\\% \\Delta Q}{\\% \\Delta I} = \\frac{15}{10} = 1.5$. This result indicates that for every 1% increase in researchers' income (or funding), the demand for advanced genomic sequencing equipment increases by 1.5%. The fact that the IED is greater than 1 implies that the demand for sequencing equipment is income elastic, meaning that funding increases will lead to more than proportional increases in demand for the equipment."
+    "question": "Necessities like basic bread or salt typically have an Income Elasticity of Demand ($E_i$) that is positive but less than 1.0.",
+    "answer": true,
+    "explanation": "These are 'Normal Goods' but 'Necessities'. As you get richer, you buy slightly more or better quality, but the demand doesn't keep pace with the percentage increase in your income."
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the concept of Income Elasticity Of Demand in the context of Industrial Manufacturing & Robotics, and provide a scenario where it can be applied.",
-    "answer": "In the context of Industrial Manufacturing & Robotics, the Income Elasticity Of Demand measures how responsive the demand for industrial robots or automation solutions is to changes in consumers' or businesses' income. For instance, if a company producing industrial robots experiences a 10% increase in demand when the income of its target market increases by 5%, the Income Elasticity Of Demand would be 2, indicating that demand is highly responsive to income changes. This concept helps manufacturers and suppliers of industrial robots anticipate and adjust to fluctuations in demand based on broader economic trends.",
-    "explanation": "The Income Elasticity Of Demand can be mathematically represented as: $E_I = \\frac{\\% \\Delta Q_d}{\\% \\Delta I}$, where $E_I$ is the Income Elasticity Of Demand, $\\% \\Delta Q_d$ is the percentage change in quantity demanded, and $\\% \\Delta I$ is the percentage change in income. In Industrial Manufacturing & Robotics, if $E_I > 1$, the demand is considered income elastic, meaning that demand changes significantly with income fluctuations. Conversely, if $E_I < 1$, demand is income inelastic, indicating less responsiveness to income changes."
+    "type": "synthesis",
+    "difficulty": "L3",
+    "question": "During a recession, a luxury car manufacturer sees a 30% drop in sales despite only a 5% drop in national income. Calculate the $E_i$ and explain the firm's vulnerability compared to a discount grocery store ($E_i = -1.2$).",
+    "answer": "$E_i = -30\% / -5\% = +6.0$. This high positive coefficient means luxury cars are extremely sensitive to income cycles. Conversely, the discount store with $E_i = -1.2$ (Inferior Good) will actually see its sales *rise* during a recession, making it 'recession-proof'.",
+    "explanation": "Synthesis requires comparing two goods with opposite elasticity signs to determine business cycle resilience."
   },
   {
     "id": "q4",
-    "type": "order",
+    "type": "trace",
     "difficulty": "L2",
-    "question": "Order steps for Income Elasticity Of Demand",
-    "steps": [
-      "Calculate percentage change in quantity demanded",
-      "Calculate percentage change in income",
-      "Determine Income Elasticity Of Demand",
-      "Interpret the elasticity value"
-    ],
-    "answer": [
-      "Calculate percentage change in income",
-      "Calculate percentage change in quantity demanded",
-      "Determine Income Elasticity Of Demand",
-      "Interpret the elasticity value"
-    ]
+    "question": "Trace the impact on the demand for 'High-End Smart Home Systems' if a new tax policy reduces the disposable income of the top bracket by 5% (assume $E_i = 3.0$).",
+    "answer": "1) Disposable income falls by 5%. 2) The high $E_i$ (3.0) acts as a multiplier. 3) Demand for smart systems falls by 15% (5% * 3). 4) The smart-home market experiences a significant contraction.",
+    "explanation": "Tracing how the elasticity coefficient amplifies or dampens macro-economic income changes."
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output for Income Elasticity Of Demand in Global Supply Chain & Maritime Logistics?",
-    "content": "The Income Elasticity Of Demand is calculated using the formula: $E_I = \\frac{\\% \\Delta Q_d}{\\% \\Delta I}$, where $E_I$ is the income elasticity of demand, $\\% \\Delta Q_d$ is the percentage change in quantity demanded, and $\\% \\Delta I$ is the percentage change in income.",
-    "answer": "A numerical value representing the responsiveness of the quantity demanded of a good to a change in consumers' income, typically expressed as a coefficient.",
-    "explanation": "The Income Elasticity Of Demand is a measure of the responsiveness of the quantity demanded of a good to a change in consumers' income. It is calculated as the percentage change in quantity demanded in response to a 1% change in income. The formula for income elasticity of demand is: $E_I = \\frac{\\% \\Delta Q_d}{\\% \\Delta I} = \\frac{\\frac{Q_{d2} - Q_{d1}}{Q_{d1}}}{\\frac{I_2 - I_1}{I_1}}$. For example, if a 1% increase in income leads to a 2% increase in the quantity demanded of a good, the income elasticity of demand would be 2, indicating that the good is a normal good with an elastic demand."
+    "type": "order",
+    "difficulty": "L2",
+    "question": "Order these goods from **Most Negative $E_i$** to **Highest Positive $E_i$**.",
+    "steps": [
+      "Designer Jewelry ($E_i > 1$)",
+      "Instant Noodles (Inferior Good, $E_i < 0$)",
+      "Milk (Necessity, $0 < E_i < 1$)"
+    ],
+    "answer": [
+      "Instant Noodles (Inferior Good, $E_i < 0$)",
+      "Milk (Necessity, $0 < E_i < 1$)",
+      "Designer Jewelry ($E_i > 1$)"
+    ],
+    "explanation": "The order follows the economic spectrum from Inferior (-), to Necessity (0-1), to Luxury (>1)."
   }
 ]
-
 ```

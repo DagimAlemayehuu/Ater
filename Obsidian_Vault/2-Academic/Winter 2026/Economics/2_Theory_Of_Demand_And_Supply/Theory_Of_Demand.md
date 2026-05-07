@@ -69,59 +69,41 @@ Here's a 5-step technical walkthrough of how the Theory of Demand operates:
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "The Theory of Demand in Bioinformatics and Genomic Sequencing assumes that as the price of genomic sequencing decreases, the quantity demanded by researchers increases, ceteris paribus.",
-    "answer": true,
-    "explanation": "The Theory of Demand, a fundamental concept in economics, can be applied to various fields, including bioinformatics and genomic sequencing. In this context, the theory posits that as the price of genomic sequencing decreases, the quantity demanded by researchers increases, assuming all other factors remain constant (\\textit{ceteris paribus}). This relationship can be represented by the demand schedule and graphically depicted by the demand curve, which slopes downward. The underlying mechanism can be described using the law of demand, which states that as the price (\\textit{P}) of a good or service decreases, the quantity demanded (\\textit{Q}_d) increases, and vice versa. Mathematically, this can be represented as: $Q_d = f(P)$, where $f$ is a function that describes the relationship between the quantity demanded and the price. In the context of genomic sequencing, a decrease in price can lead to an increase in the quantity demanded, as researchers may be more likely to undertake sequencing projects, leading to an increase in the demand for sequencing services."
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q2",
-    "type": "synthesis",
-    "difficulty": "L2",
-    "question": "A sudden surge in internet traffic due to a viral video has caused a significant increase in demand for bandwidth on a core network router, threatening to overload the system. The network administrator must apply the Theory of Demand to manage the traffic and prevent system failure. The current price for bandwidth is $0.05 per Mbps, and at this price, the quantity demanded is 1000 Mbps. However, the system can only handle 800 Mbps. The administrator wants to reduce the quantity demanded to 800 Mbps to prevent overload. What price should the administrator set to achieve this reduction in demand, assuming a linear demand curve and that the quantity demanded is 1200 Mbps when the price is $0.03 per Mbps?",
-    "answer": "$0.07 per Mbps",
-    "explanation": "The demand curve can be represented as $Q = a - bP$, where $Q$ is the quantity demanded and $P$ is the price. Given that $Q = 1000$ when $P = 0.05$ and $Q = 1200$ when $P = 0.03$, we can solve for $a$ and $b$. \n\nFirst, we have:\n$1000 = a - 0.05b$ \n$1200 = a - 0.03b$\n\nSubtracting the first equation from the second gives:\n$200 = 0.02b$\n$b = 10000$\n\nSubstituting $b = 10000$ into the first equation:\n$1000 = a - 0.05(10000)$\n$1000 = a - 500$\n$a = 1500$\n\nSo, the demand curve is:\n$Q = 1500 - 10000P$\n\nTo find the price at which $Q = 800$:\n$800 = 1500 - 10000P$\n$10000P = 1500 - 800$\n$10000P = 700$\n$P = 0.07$\n\nTherefore, the administrator should set the price at $0.07 per Mbps to reduce the quantity demanded to 800 Mbps and prevent system overload."
+    "type": "true_false",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain how the Theory of Demand applies to Epidemiology & Public Health Modeling, particularly in understanding the demand for health services or interventions based on their 'price' or cost, and provide a graphical representation using LaTeX.",
-    "answer": "The Theory of Demand is crucial in Epidemiology & Public Health Modeling as it helps understand how the 'price' or cost of health services or interventions influences their utilization. The demand for health services is typically inversely related to their cost, implying that as the cost increases, the quantity demanded decreases, and vice versa. This relationship can be represented by the demand schedule and graphically depicted by the demand curve, which slopes downward. In mathematical terms, the demand curve can be expressed as $Q_d = f(P)$, where $Q_d$ is the quantity demanded and $P$ is the price. Using LaTeX, the demand curve can be graphically represented as: \begin{tikzpicture} \\draw[->] (0,0) -- (6,0) node[right] {$P$}; \\draw[->] (0,0) -- (0,6) node[above] {$Q_d$}; \\draw[domain=0:5, smooth, thick, color=blue] plot ({\\x}, {5-\\x}); \\end{tikzpicture}",
-    "explanation": "The underlying mechanism of the Theory of Demand in Epidemiology & Public Health Modeling can be explained using the law of demand, which states that as the price of a good or service increases, the quantity demanded decreases, ceteris paribus. This relationship is often influenced by factors such as income, prices of related goods, and consumer preferences. In the context of health services, the demand curve may be affected by factors such as health insurance, accessibility, and health literacy. The demand curve can be expressed as $Q_d = \\alpha - \beta P$, where $\\alpha$ is the intercept and $\beta$ is the slope of the demand curve. The elasticity of demand, which measures the responsiveness of the quantity demanded to changes in price, can be calculated using the formula: $E_d = \frac{\\% \\Delta Q_d}{\\% \\Delta P}$. Understanding the Theory of Demand in Epidemiology & Public Health Modeling is essential for policymakers and healthcare professionals to design and implement effective health interventions and allocate resources efficiently."
+    "type": "synthesis",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q4",
-    "type": "order",
-    "difficulty": "L2",
-    "question": "Order steps for the Theory Of Demand",
-    "steps": [
-      "Change in Price",
-      "Change in Quantity Demanded",
-      "Demand Schedule Construction",
-      "Demand Curve Analysis"
-    ],
-    "answer": [
-      "Change in Price",
-      "Change in Quantity Demanded",
-      "Demand Schedule Construction",
-      "Demand Curve Analysis"
-    ]
+    "type": "trace",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output of the demand curve equation in Quantitative Finance & High-Frequency Trading?",
-    "content": "The demand curve is typically represented by the equation Qd = f(P), where Qd is the quantity demanded and P is the price. Assuming a linear demand curve, the equation can be written as Qd = a - bP, where 'a' is the intercept and 'b' is the slope.",
-    "answer": "Qd = a - bP",
-    "explanation": "The demand curve equation Qd = a - bP represents the relationship between the quantity demanded (Qd) and the price (P) of a good. The intercept 'a' represents the quantity demanded when the price is zero, and the slope 'b' represents the change in quantity demanded in response to a one-unit change in price. The negative sign indicates that as the price increases, the quantity demanded decreases, and vice versa. This equation is a fundamental concept in microeconomics and is widely used in Quantitative Finance & High-Frequency Trading to model the behavior of market participants."
+    "type": "order",
+    "difficulty": "L1",
+    "question": "Error generating question.",
+    "answer": "N/A"
   }
 ]
-
 ```

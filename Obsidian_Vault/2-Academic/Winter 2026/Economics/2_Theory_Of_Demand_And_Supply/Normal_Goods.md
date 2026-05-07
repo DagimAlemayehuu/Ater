@@ -45,72 +45,78 @@ This Mermaid flowchart illustrates the relationship between income changes and d
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of Normal Goods operates:
+Here's a 5-step technical walkthrough of how **Normal Goods** operate in the **Organic Food Market**:
 
-1. **Initial State**: Assume an individual has an income of $100 and buys 10 units of a normal good (e.g., lemonade) per month at a price of $5 per unit.
-2. **Income Increase**: The individual's income increases to $150, representing a 50% increase.
-3. **Demand Response**: As a result of the increased income, the individual is willing to buy more lemonade, increasing demand to 15 units per month (a 50% increase).
-4. **Market Response**: The demand curve for lemonade shifts to the right, reflecting the higher quantity demanded at each price level. At the original price of $5, the quantity demanded increases from 10 units to 15 units.
-5. **Equilibrium**: The increased demand leads to an increase in consumption, with the individual buying 15 units of lemonade per month. The higher income has resulted in a higher quantity demanded, illustrating the characteristics of a normal good.
+1. **Initial Consumption**: A household earns $4,000 per month and spends $200 on organic groceries. Organic food is a **Normal Good** for them.
+
+2. **Exogenous Income Increase**: The household's income rises to $6,000 per month (a 50% increase) due to a salary adjustment.
+
+3. **Demand Shift**: With higher disposable income, the household's budget constraint shifts outward. They increase their organic grocery spending to $400 per month (a 100% increase).
+
+4. **Graphical Representation**: This behavior causes a **rightward shift** of their demand curve for organic food. At every price point, they now demand a higher quantity than before.
+
+5. **Classification Verification**: Since the Income Elasticity is positive ($E_i = 100\% / 50\% = +2.0$), organic food is confirmed as a **Normal Good** (specifically a Luxury/Superior good in this case).
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "A critical failure point of 'Normal Goods' within Global Supply Chain & Maritime Logistics is that their demand remains constant regardless of changes in consumer income.",
-    "answer": false,
-    "explanation": "The concept of normal goods is deeply rooted in the theory of demand, which states that as consumer income increases, the demand for normal goods also increases, and vice versa. This relationship can be expressed using the demand function: $Q_d = f(P, I, P_s, T)$, where $Q_d$ is the quantity demanded, $P$ is the price of the good, $I$ is consumer income, $P_s$ is the price of substitutes, and $T$ is consumer taste. For normal goods, $\frac{\\partial Q_d}{\\partial I} > 0$, indicating that demand is positively related to income. Therefore, a critical failure point of normal goods is not that their demand remains constant, but rather that their demand is sensitive to changes in consumer income. If the supply chain and maritime logistics fail to adjust to these changes in demand, it could lead to inefficiencies and losses."
+    "question": "For a **Normal Good**, the Income Elasticity of Demand ($E_i$) must be:",
+    "options": {
+      "A": "Negative.",
+      "B": "Zero.",
+      "C": "Positive.",
+      "D": "Infinite."
+    },
+    "answer": "C",
+    "explanation": "Normal goods have a direct relationship with income. When income goes up, demand goes up, resulting in a positive elasticity coefficient."
   },
   {
     "id": "q2",
-    "type": "synthesis",
+    "type": "true_false",
     "difficulty": "L2",
-    "question": "In a high-frequency trading system, a critical algorithm relies on real-time data feeds from various exchanges. However, due to a sudden surge in trading activity, the system's infrastructure is overwhelmed, causing data feeds to be delayed. This delay is causing the algorithm to make incorrect trading decisions, resulting in significant financial losses. The team must quickly apply the concept of 'Normal Goods' to prevent system failure. How can the team use 'Normal Goods' to stabilize the system and prevent further losses?",
-    "answer": "The team can model the demand for data feeds as a function of income (or trading volume). Assuming data feeds are a 'Normal Good', when trading volume increases (income increases), the demand for data feeds also increases. However, due to the system's current limitations, the supply of data feeds is constrained. To stabilize the system, the team can temporarily reduce the demand for data feeds by rationing access to the algorithm or by increasing the 'price' of data feeds (e.g., by introducing a latency fee). This reduction in demand will help alleviate the pressure on the system, allowing it to recover and prevent further losses. Mathematically, this can be represented by the demand function: $Q_d = f(I, P)$, where $Q_d$ is the quantity demanded of data feeds, $I$ is the trading volume (income), and $P$ is the price of data feeds. For 'Normal Goods', $\frac{\\partial Q_d}{\\partial I} > 0$, indicating that as income increases, demand also increases.",
-    "explanation": "The concept of 'Normal Goods' can be applied to the high-frequency trading system by modeling the demand for data feeds as a function of income (or trading volume). The demand function for 'Normal Goods' is given by $Q_d = f(I, P)$, where $Q_d$ is the quantity demanded of data feeds, $I$ is the trading volume (income), and $P$ is the price of data feeds. The partial derivative of $Q_d$ with respect to $I$ is greater than zero, indicating that as income increases, demand also increases. This relationship can be used to stabilize the system by reducing the demand for data feeds when trading volume increases. By rationing access to the algorithm or introducing a latency fee, the team can increase the 'price' of data feeds, reducing the quantity demanded and alleviating pressure on the system. This application of 'Normal Goods' allows the team to make informed decisions about managing demand and preventing system failure."
+    "question": "A good with an Income Elasticity ($E_i$) of 0.5 is classified as both a Normal Good and a Necessity.",
+    "answer": true,
+    "explanation": "Any positive $E_i$ is a 'Normal Good'. If it is between 0 and 1, it is further classified as a 'Necessity' because demand grows more slowly than income."
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain how the concept of Normal Goods applies to bioinformatics and genomic sequencing, particularly in relation to research funding and demand for sequencing services.",
-    "answer": "In bioinformatics and genomic sequencing, Normal Goods refer to services or technologies for which demand increases with an increase in research funding, and decreases with a decrease in funding. For instance, when research funding is plentiful, laboratories can afford to sequence more genomes, leading to a higher demand for sequencing services and related bioinformatics tools. Conversely, when funding is scarce, the demand for these services decreases as researchers are forced to scale back their projects. This relationship between funding and demand is a direct reflection of the definition of Normal Goods in economics.",
-    "explanation": "The concept of Normal Goods in bioinformatics and genomic sequencing can be understood through the lens of economic theory, specifically the Theory of Demand. The demand function for Normal Goods is given by $Q_d = f(P, I)$, where $Q_d$ is the quantity demanded, $P$ is the price of the good, and $I$ is the income (or research funding in this context). For Normal Goods, $\frac{\\partial Q_d}{\\partial I} > 0$, indicating that as income increases, the quantity demanded also increases. In the context of genomic sequencing, an increase in research funding ($I$) leads to an increase in the demand for sequencing services ($Q_d$), assuming that the price of these services remains constant. This can be represented graphically by a rightward shift of the demand curve, illustrating that at each price level, a higher quantity of sequencing services is demanded when funding is increased."
+    "type": "synthesis",
+    "difficulty": "L3",
+    "question": "Compare the impact of a booming economy on a manufacturer of 'Premium Organic Juice' ($E_i = 1.8$) versus a manufacturer of 'Tap Water Filters' ($E_i = 0.1$).",
+    "answer": "The organic juice manufacturer will see rapid revenue growth exceeding the rate of GDP growth, as it is a luxury normal good. The filter manufacturer will see stable, but slow growth, as filters are a necessity normal good and less responsive to income surges.",
+    "explanation": "Synthesis requires evaluating different categories of normal goods based on their specific elasticity coefficients."
   },
   {
     "id": "q4",
-    "type": "order",
+    "type": "trace",
     "difficulty": "L2",
-    "question": "What is the causal chain for Normal Goods?",
-    "steps": [
-      "An increase in income occurs",
-      "The demand curve shifts to the right",
-      "Quantity demanded increases at each price level",
-      "Ceteris Paribus, demand increases"
-    ],
-    "answer": [
-      "An increase in income occurs",
-      "The demand curve shifts to the right",
-      "Quantity demanded increases at each price level",
-      "Ceteris Paribus, demand increases"
-    ]
+    "question": "Trace the movement on a graph for 'Laptops' if the government issues a universal basic income (UBI) check to all citizens.",
+    "answer": "1) UBI increases disposable income for all consumers. 2) Laptops are a normal good for most people. 3) The market demand curve for laptops shifts to the right. 4) The equilibrium price and quantity both increase (assuming supply is not perfectly elastic).",
+    "explanation": "Tracing the macro-economic effect of an income policy on the market equilibrium of a normal good."
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output for Normal Goods in Aerospace Engineering & Avionics?",
-    "content": "In the context of Aerospace Engineering & Avionics, normal goods refer to products or services for which demand increases with an increase in consumer income. Examples include commercial airliners, private jets, and high-end avionics systems. As income rises, airlines and individuals are more likely to purchase or upgrade these goods.",
-    "answer": "The demand curve for normal goods in Aerospace Engineering & Avionics shifts to the right with an increase in income, indicating a higher quantity demanded at each price level.",
-    "explanation": "Mathematically, this can be represented by the demand function: $Q_d = f(P, I)$, where $Q_d$ is the quantity demanded, $P$ is the price of the good, and $I$ is the consumer income. For normal goods, $\frac{\\partial Q_d}{\\partial I} > 0$. LaTeX representation of the demand curve shift: $$Q_d = \\alpha - \\beta P + \\gamma I$$ where $\\alpha$, $\\beta$, and $\\gamma$ are constants, and $\\gamma > 0$ for normal goods."
+    "type": "order",
+    "difficulty": "L2",
+    "question": "Order these goods from **Highest Income Sensitivity** to **Lowest (but still positive)**.",
+    "steps": [
+      "Fine Dining / Luxury Travel ($E_i > 1$)",
+      "Electricity / Utilities ($E_i \\approx 0.2$)",
+      "Clothing / Apparel ($E_i \\approx 1.0$)"
+    ],
+    "answer": [
+      "Fine Dining / Luxury Travel ($E_i > 1$)",
+      "Clothing / Apparel ($E_i \\approx 1.0$)",
+      "Electricity / Utilities ($E_i \\approx 0.2$)"
+    ],
+    "explanation": "Sensitivity is determined by the magnitude of the positive elasticity coefficient, moving from luxury to unit-elastic to necessity."
   }
 ]
-
 ```

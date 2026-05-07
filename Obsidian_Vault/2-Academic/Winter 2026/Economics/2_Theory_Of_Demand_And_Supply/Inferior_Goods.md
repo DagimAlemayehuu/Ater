@@ -46,73 +46,82 @@ This flowchart illustrates the relationship between consumer income and demand f
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of inferior goods operates:
+Here's a 5-step technical walkthrough of how **Inferior Goods** operate in the **Commuter Transport Market**:
 
-1. **Initial State**: A consumer has a weekly income of $500 and buys 10 packs of ramen noodles (inferior good) and 5 pizzas (normal good) per month.
-2. **Increase in Income**: The consumer's income increases to $750 per week. As a result, their purchasing power increases, and they can afford to buy more goods.
-3. **Change in Demand**: With the increased income, the consumer decides to buy only 5 packs of ramen noodles (inferior good) per month, but increases their pizza purchases to 8 per month (normal good). This shows that as income rises, demand for inferior goods (ramen noodles) falls.
-4. **Market Adjustment**: The market adjusts to the new demand levels. Ramen noodle manufacturers may see a decrease in sales, while pizza manufacturers see an increase in demand.
-5. **New Equilibrium**: The consumer reaches a new equilibrium, where they buy 5 packs of ramen noodles and 8 pizzas per month, reflecting their changed preferences in response to increased income.
+1. **Initial Context**: A consumer earns $30,000 per year. For their daily commute, they use the **Public Bus System** (the inferior good), purchasing 40 tickets per month.
+
+2. **Income Growth**: The consumer receives a major promotion, and their income rises to $80,000 per year.
+
+3. **Behavioral Shift**: With higher purchasing power, the consumer values their time and comfort more. They decide to lease a **Luxury Sedan** (the normal/luxury good).
+
+4. **Demand Contraction**: Consequently, the consumer's demand for bus tickets drops from 40 to 0 per month. Even though the bus service hasn't changed, the increase in income has shifted their demand curve for bus travel sharply to the left.
+
+5. **Coefficient Calculation**: Since $\Delta Y > 0$ and $\Delta Q_d < 0$, the Income Elasticity is negative. This empirical result confirms that the 'Public Bus' is an **Inferior Good** for this demographic.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "In the context of bioinformatics and genomic sequencing, the demand for inferior goods such as low-cost DNA sequencing technologies increases as researcher income or funding increases.",
-    "answer": false,
-    "explanation": "The concept of inferior goods in economics suggests that as consumer income increases, the demand for these goods decreases. In the context of bioinformatics and genomic sequencing, if low-cost DNA sequencing technologies are considered inferior goods, then as researcher income or funding increases, the demand for these low-cost technologies would actually decrease, not increase. This is because researchers with more funding would likely opt for more advanced, higher-quality sequencing technologies. Therefore, the statement is false. Mathematically, this can be represented using the income elasticity of demand formula: $E_I = \frac{\\% \\Delta Q_d}{\\% \\Delta I}$, where $E_I < 0$ for inferior goods, indicating that as income $I$ increases, the quantity demanded $Q_d$ decreases."
+    "question": "Which of the following is the defining mathematical characteristic of an **Inferior Good**?",
+    "options": {
+      "A": "Positive Price Elasticity ($E_p > 0$).",
+      "B": "Negative Income Elasticity ($E_i < 0$).",
+      "C": "Perfectly Inelastic Supply ($E_s = 0$).",
+      "D": "Unit Elasticity of Demand ($E_p = 1$)."
+    },
+    "answer": "B",
+    "explanation": "Inferior goods are defined by an inverse relationship between income and demand. If your income goes up and you buy less of it, the elasticity coefficient is negative."
   },
   {
     "id": "q2",
-    "type": "synthesis",
+    "type": "true_false",
     "difficulty": "L2",
-    "question": "In a bioinformatics lab, a critical genomic sequencing pipeline is on the verge of failure due to a sudden shortage of high-quality sequencing reagents. The lab has limited budget and can't afford to purchase more expensive, high-quality reagents. What type of goods should the lab consider using as a temporary substitute to prevent system failure, and how would the demand for these goods change if the lab's budget increases in the future?",
-    "answer": "The lab should consider using inferior goods, specifically lower-quality sequencing reagents that are cheaper but still functional. These could be reagents with slightly lower purity or older batches that have not been used yet. As the lab's budget increases in the future, the demand for these inferior goods would decrease, as they would be able to afford better quality reagents.",
-    "explanation": "In the context of microeconomics, inferior goods are those for which demand decreases as consumer income increases. In this scenario, the lab is facing a shortage of high-quality sequencing reagents and has a limited budget. By using lower-quality reagents as a temporary substitute, the lab can prevent system failure. The demand for these inferior goods is expected to decrease as the lab's budget increases in the future, allowing them to switch to higher-quality reagents. This relationship can be represented by the income elasticity of demand, which is negative for inferior goods: $E_I = \\frac{\\% \\Delta Q_d}{\\% \\Delta I} < 0$, where $E_I$ is the income elasticity of demand, $\\% \\Delta Q_d$ is the percentage change in quantity demanded, and $\\% \\Delta I$ is the percentage change in income. As income increases, the quantity demanded of inferior goods decreases, illustrating the concept of inferior goods in the context of bioinformatics and genomic sequencing."
+    "question": "A good can be an 'Inferior Good' for a high-income consumer but a 'Normal Good' for a low-income consumer.",
+    "answer": true,
+    "explanation": "Elasticity is not an inherent property of the good, but a description of consumer behavior. At very low income levels, increasing income might lead to more consumption of a staple (Normal), but at higher levels, the consumer might switch to a premium alternative (Inferior)."
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the concept of inferior goods in the context of bioinformatics and genomic sequencing, and provide an example.",
-    "answer": "In bioinformatics and genomic sequencing, inferior goods refer to services or products for which demand decreases as funding or income increases. For instance, a researcher may rely on free, open-source bioinformatics tools when funding is limited. However, as funding increases, they may switch to more advanced, commercial software, reducing demand for the free tools. This concept is closely related to the income elasticity of demand, which measures how much the quantity demanded of a good responds to a change in consumers' income.",
-    "explanation": "The relationship between inferior goods and income can be represented by the income elasticity of demand, which is mathematically expressed as $E_I = \\frac{\\% \\Delta Q_d}{\\% \\Delta I}$. For inferior goods, $E_I < 0$, indicating that as income $I$ rises, demand $Q_d$ for the good falls. In the context of bioinformatics and genomic sequencing, this means that as funding increases, the demand for inferior goods, such as free but limited bioinformatics tools, decreases."
+    "type": "synthesis",
+    "difficulty": "L3",
+    "question": "Analyze why a manufacturer of 'Store-Brand Canned Soup' might actually increase its marketing budget during a national economic recession.",
+    "answer": "During a recession, national income ($Y$) falls. Since store-brand soup is often an 'Inferior Good', its demand rises when income falls ($E_i < 0$). The manufacturer increases marketing to capture the surge of consumers switching away from premium brands to save money.",
+    "explanation": "Synthesis requires applying the $E_i < 0$ logic to a specific business strategy during a macro-economic downturn."
   },
   {
     "id": "q4",
-    "type": "order",
+    "type": "trace",
     "difficulty": "L2",
-    "question": "What is the causal chain for Inferior Goods?",
-    "steps": [
-      "Consumers' income increases",
-      "Demand for inferior goods decreases",
-      "Income elasticity of demand is negative",
-      "Quantity demanded of inferior goods falls",
-      "Consumers substitute inferior goods with superior goods"
-    ],
-    "answer": [
-      "Consumers' income increases",
-      "Demand for inferior goods decreases",
-      "Income elasticity of demand is negative",
-      "Quantity demanded of inferior goods falls"
-    ]
+    "question": "Trace the impact of a 10% income tax cut on the 'Interstate Greyhound Bus' market, assuming it is a strongly inferior good ($E_i = -2.0$).",
+    "answer": "1) Disposable income rises by 10%. 2) The negative $E_i$ triggers an inverse response. 3) Demand for bus travel falls by 20% (10% * -2.0). 4) Greyhound likely faces a revenue contraction and may need to reduce its fleet size.",
+    "explanation": "Tracing how a policy-driven income boost affects the demand volume of inferior goods."
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output for Inferior Goods in Telecommunications & Core Network Routing?",
-    "content": "In the context of Telecommunications & Core Network Routing, inferior goods refer to services or products for which demand decreases as consumer income increases. For instance, consider a scenario where a telecommunications company offers a basic, low-cost internet plan. As consumers' incomes rise, they may opt for more premium, high-speed plans, reducing the demand for the basic plan. This situation can be modeled using the income elasticity of demand formula: $E_I = \\frac{\\% \\Delta Q_d}{\\% \\Delta I}$, where $E_I$ is the income elasticity, $\\% \\Delta Q_d$ is the percentage change in quantity demanded, and $\\% \\Delta I$ is the percentage change in income. For inferior goods, $E_I < 0$.",
-    "answer": "The demand for inferior goods in Telecommunications & Core Network Routing decreases as consumer income increases. A classic example is the shift from basic, low-cost internet plans to more premium services as income rises.",
-    "explanation": "Mathematically, the concept of inferior goods in telecommunications can be represented by the income elasticity of demand formula: $E_I = \\frac{\\% \\Delta Q_d}{\\% \\Delta I}$. For inferior goods, $E_I < 0$, indicating that as income ($I$) increases, the quantity demanded ($Q_d$) of the inferior good decreases. In the context of core network routing, this might imply that as network users' incomes rise, they may opt for more advanced, premium routing services, thereby reducing the demand for basic routing services."
+    "type": "order",
+    "difficulty": "L2",
+    "question": "Order these events occurring for an individual who receives a massive lottery win (Income Shock).",
+    "steps": [
+      "Income Elasticity for the local diner becomes negative",
+      "The individual stops eating at the cheap local diner",
+      "Purchasing power increases dramatically",
+      "The individual starts eating at a 5-star Michelin restaurant",
+      "Diner meals are re-classified as Inferior Goods for this individual"
+    ],
+    "answer": [
+      "Purchasing power increases dramatically",
+      "The individual starts eating at a 5-star Michelin restaurant",
+      "The individual stops eating at the cheap local diner",
+      "Diner meals are re-classified as Inferior Goods for this individual",
+      "Income Elasticity for the local diner becomes negative"
+    ],
+    "explanation": "The behavioral change (substitution) occurs first, which then allows for the economic re-classification based on the observed data."
   }
 ]
-
 ```

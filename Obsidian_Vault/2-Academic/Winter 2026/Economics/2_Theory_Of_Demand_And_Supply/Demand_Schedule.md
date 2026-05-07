@@ -48,89 +48,82 @@ This Mermaid flowchart illustrates the relationship between the price per slice 
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the Demand Schedule operates:
+Here's a 5-step technical walkthrough of how a Demand Schedule operates in the **Natural Gas Market**:
 
-1. **Initial State**: The cafeteria sets a price of $3 per pizza slice. At this price, you demand 2 slices.
-2. **Price Change**: The cafeteria lowers the price to $2 per slice. Your quantity demanded increases to 4 slices.
-3. **Data Transformation**: The demand schedule records the price and quantity demanded: ($3, 2 slices) and ($2, 4 slices).
-4. **Demand Curve Shift**: As the price decreases, the quantity demanded increases, causing the demand curve to shift downward.
-5. **Law of Demand**: The data shows that as the price per slice decreases, the quantity demanded increases, illustrating the law of demand with a downward-sloping demand curve.
+1. **Price Discovery**: A regional utility company monitors the wholesale price of Natural Gas. Initially, the price is $5.00 per MMBtu.
 
-For example, if the price per slice is $3, the quantity demanded is 2 slices, and the total expenditure is $6. If the price per slice decreases to $2, the quantity demanded increases to 4 slices, and the total expenditure becomes $8.
+2. **Quantity Mapping**: At $5.00/MMBtu, industrial consumers and power plants demand 500 million cubic feet (mmcf) per day.
+
+3. **Price Fluctuation**: Due to a seasonal warming trend, the market price drops to $3.50/MMBtu.
+
+4. **Observation of Response**: The utility records that at the lower price of $3.50, the quantity demanded increases to 750 mmcf per day, as power plants switch from coal to gas.
+
+5. **Schedule Construction**: These data points are organized into a tabular **Demand Schedule**. This table is the empirical foundation used to plot the downward-sloping Demand Curve for the energy sector.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "The demand schedule in telecommunications and core network routing assumes that as the price of a service increases, the quantity demanded of that service also increases.",
-    "answer": false,
-    "explanation": "The demand schedule, based on the Law of Demand in economics, assumes that as the price of a service increases, the quantity demanded of that service decreases, not increases. This relationship is often represented by a downward-sloping demand curve. Mathematically, this can be expressed as $Q_d = f(P)$, where $Q_d$ is the quantity demanded and $P$ is the price. The function $f(P)$ typically exhibits a negative relationship between $Q_d$ and $P$, implying that $\frac{\\partial Q_d}{\\partial P} < 0$. Therefore, the statement that the quantity demanded increases with price is incorrect."
+    "question": "A Demand Schedule provides the numerical data used to construct which graphical model?",
+    "options": {
+      "A": "The Supply Curve.",
+      "B": "The Demand Curve.",
+      "C": "The Production Possibilities Frontier.",
+      "D": "The Income Elasticity Map."
+    },
+    "answer": "B",
+    "explanation": "A demand schedule is a table showing the relationship between the price of a good and the quantity demanded. Plotting these points on a graph results in the demand curve."
   },
   {
     "id": "q2",
-    "type": "synthesis",
+    "type": "true_false",
     "difficulty": "L2",
-    "question": "An aerospace engineering firm is experiencing a critical shortage of specialized avionics chips, essential for the production of navigation systems. The demand for these chips is high, but the supply is limited. The firm's inventory manager has compiled a demand schedule for the chips, which shows that at a price of $100, the quantity demanded is 500 units, at $120, the quantity demanded is 400 units, and at $150, the quantity demanded is 300 units. If the firm wants to allocate the available chips to maximize revenue while ensuring that the most critical systems receive priority, how should the chips be allocated based on the demand schedule?",
-    "answer": "To maximize revenue while ensuring the most critical systems receive priority, the firm should allocate the chips based on the demand schedule, taking into account the inverse relationship between price and quantity demanded. Given the demand schedule, the firm can calculate the total revenue at each price point. At $100, the total revenue is $100 * 500 = $50,000. At $120, the total revenue is $120 * 400 = $48,000. At $150, the total revenue is $150 * 300 = $45,000. The highest revenue is achieved at a price of $100, where 500 units are demanded. Therefore, the firm should allocate 500 chips at a price of $100 to maximize revenue, prioritizing the most critical systems first.",
-    "explanation": "The relationship between the price of the avionics chips and the quantity demanded can be represented by the demand function $Q = f(P)$, where $Q$ is the quantity demanded and $P$ is the price. The demand schedule provides a discrete representation of this function. Assuming a linear relationship for simplicity, the demand function can be expressed as $Q = a - bP$, where $a$ and $b$ are constants. Using the given data points: at $P = 100$, $Q = 500$, and at $P = 120$, $Q = 400$, we can solve for $a$ and $b$. Substituting the first data point gives $500 = a - 100b$, and the second gives $400 = a - 120b$. Solving this system of equations yields $a = 500 + 100b$ and $100b = 100$, so $b = 1$. Substituting $b = 1$ back into one of the equations gives $a = 600$. Therefore, the demand function is $Q = 600 - P$. The revenue $R$ is given by $R = PQ = P(600 - P) = 600P - P^2$. To maximize revenue, we take the derivative of $R$ with respect to $P$ and set it equal to zero: $\\frac{dR}{dP} = 600 - 2P = 0$. Solving for $P$ yields $P = 300$. However, this price is not in the given demand schedule, and the firm must choose among the provided options. Calculating revenue at each given price point confirms that the highest revenue is at $P = 100$."
+    "question": "In a standard Demand Schedule, as you move down the 'Price' column to lower values, the 'Quantity Demanded' values must always increase.",
+    "answer": true,
+    "explanation": "This follows the Law of Demand. An inverse relationship means lower prices correlate with higher quantities demanded, assuming Ceteris Paribus."
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the concept of a Demand Schedule in the context of Global Supply Chain & Maritime Logistics, and provide a detailed analysis of its significance in understanding the behavior of consumers.",
-    "answer": "A Demand Schedule is a table that illustrates the relationship between the price of a good and the quantity demanded of that good. In the context of Global Supply Chain & Maritime Logistics, understanding the Demand Schedule is crucial for businesses to forecast and manage demand, optimize inventory levels, and adjust pricing strategies accordingly. For instance, a shipping company can use the Demand Schedule to determine the optimal price for shipping containers based on demand fluctuations. By analyzing the Demand Schedule, businesses can make informed decisions about production, pricing, and inventory management, ultimately improving their supply chain efficiency.",
-    "explanation": "The Demand Schedule is based on the Law of Demand, which states that as the price of a good increases, the quantity demanded decreases, assuming ceteris paribus (all other factors remain constant). This relationship can be represented mathematically using the Demand Function: $Q_d = f(P)$, where $Q_d$ is the quantity demanded and $P$ is the price. The Demand Schedule can be graphically represented as a Demand Curve, which slopes downward. In the context of Global Supply Chain & Maritime Logistics, the Demand Schedule can be used to analyze the impact of price changes on demand for shipping services, allowing businesses to adjust their strategies to maximize revenue and minimize costs."
+    "type": "synthesis",
+    "difficulty": "L3",
+    "question": "Explain how an analyst would use a 'Market Demand Schedule' to identify a potential 'Shortage' if the current price is set below the equilibrium level.",
+    "answer": "The analyst compares the Quantity Demanded in the schedule at that price to the Quantity Supplied. If the schedule shows a significantly higher demand at the low price than producers are willing to offer, the numerical gap identifies a shortage, which usually signals that prices will soon rise.",
+    "explanation": "Synthesis requires using the schedule data as a diagnostic tool for market imbalances."
   },
   {
     "id": "q4",
-    "type": "order",
+    "type": "trace",
     "difficulty": "L2",
-    "question": "Order steps for constructing a Demand Schedule.",
-    "steps": [
-      "Determine the good or service",
-      "Set a range of prices",
-      "Estimate quantity demanded at each price",
-      "Plot the data",
-      "Analyze the results"
-    ],
-    "answer": [
-      "Determine the good or service",
-      "Set a range of prices",
-      "Estimate quantity demanded at each price",
-      "Plot the data",
-      "Analyze the results"
-    ]
+    "question": "Trace the process of converting a series of Individual Demand Schedules into a single 'Market Demand Schedule'.",
+    "answer": "1) List specific price points. 2) Record the quantity demanded by each individual at each price. 3) Sum the individual quantities horizontally for each price level. 4) Create a new table with the original prices and the total summed quantities.",
+    "explanation": "Tracing the aggregation process (horizontal summation) from micro-data to macro-market data."
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output of the demand schedule for pizza slices given the following prices and quantities: at $3 per slice, 2 slices are demanded; at $2 per slice, 4 slices are demanded; at $1 per slice, 6 slices are demanded?",
-    "content": "To derive the demand schedule, we need to understand the relationship between the price of pizza slices and the quantity demanded. The demand schedule is a table that shows this relationship.",
-    "answer": [
-      {
-        "Price": 3,
-        "Quantity Demanded": 2
-      },
-      {
-        "Price": 2,
-        "Quantity Demanded": 4
-      },
-      {
-        "Price": 1,
-        "Quantity Demanded": 6
-      }
+    "type": "order",
+    "difficulty": "L2",
+    "question": "Order the steps for creating a demand-side market analysis.",
+    "steps": [
+      "Define the specific good and market period",
+      "Construct the Demand Schedule table",
+      "Survey consumers for quantity responses at various prices",
+      "Plot the Demand Curve from the schedule",
+      "Validate the Law of Demand (inverse slope)"
     ],
-    "explanation": "The demand schedule illustrates the inverse relationship between the price of a good and the quantity demanded, as described by the Law of Demand. This relationship can be represented mathematically using a demand function, $Q_d = f(P)$, where $Q_d$ is the quantity demanded and $P$ is the price. For simplicity, let's assume a linear demand function: $Q_d = a - bP$, where $a$ and $b$ are constants. Using the given data points: at $P=3$, $Q_d=2$ and at $P=2$, $Q_d=4$, we can solve for $a$ and $b$. From the first point, $2 = a - 3b$, and from the second, $4 = a - 2b$. Solving these equations simultaneously gives us $a$ and $b$. Subtracting the first equation from the second gives $2 = b$. Substituting $b=2$ into the first equation yields $2 = a - 6$, so $a = 8$. Therefore, the demand function is $Q_d = 8 - 2P$. This function can be used to generate the demand schedule."
+    "answer": [
+      "Define the specific good and market period",
+      "Survey consumers for quantity responses at various prices",
+      "Construct the Demand Schedule table",
+      "Plot the Demand Curve from the schedule",
+      "Validate the Law of Demand (inverse slope)"
+    ],
+    "explanation": "Data collection must precede table construction, which then enables graphical plotting and final verification."
   }
 ]
-
 ```

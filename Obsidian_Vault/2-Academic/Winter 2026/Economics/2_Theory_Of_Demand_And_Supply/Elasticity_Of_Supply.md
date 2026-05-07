@@ -51,77 +51,78 @@ This Mermaid flowchart illustrates the elasticity of supply concept. It shows ho
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of elasticity of supply operates:
+Here's a 5-step technical walkthrough of how the **Elasticity of Supply** operates in the **EV Battery Market**:
 
-1. **Initial State**: Suppose a lemonade stand initially supplies 100 cups of lemonade per day at a price of $1 per cup. The producer's cost of production is $0.50 per cup.
+1. **Market Signal**: The price of Lithium-Ion batteries rises from $100/kWh to $150/kWh (a 50% increase) due to a global supply shortage.
 
-2. **Price Increase**: The price of lemonade increases to $1.50 per cup. This 50% price increase gives the producer an incentive to produce more.
+2. **Short-Run Constraints**: Manufacturers want to supply more, but their factories are already at 95% capacity. They can only increase output by 10% through overtime.
 
-3. **Producer's Decision**: With the higher price, the producer decides to increase production. Assuming technological advancements allow for more efficient production, the cost per cup decreases to $0.40.
+3. **Elasticity Calculation (SR)**: The Price Elasticity of Supply in the short run is $E_s = \frac{10\%}{50\%} = 0.2$. This indicates that supply is **inelastic** ($E_s < 1$).
 
-4. **Increased Quantity Supplied**: The producer increases the quantity supplied to 150 cups per day, taking advantage of the higher price and improved production efficiency.
+4. **Long-Run Response**: Over the next 24 months, manufacturers invest in new 'Gigafactories'. Once these are operational, they can increase total output by 200% at the new $150 price level.
 
-5. **Elasticity Calculation**: The percentage change in quantity supplied is 50% (($$\frac{150-100}{100}$$ * 100), and the percentage change in price is 50% (($$\frac{1.50-1}{1}$$ * 100). Using the elasticity of supply formula: $$E_S = \frac{\% \Delta Q_S}{\% \Delta P} = \frac{50}{50} = 1$$, which indicates unit elasticity.
-
-The elasticity of supply measures how responsive the quantity supplied is to a change in price, influenced by factors such as production costs, technology, and input availability.
+5. **Elasticity Calculation (LR)**: The long-run elasticity is $E_s = \frac{200\%}{50\%} = 4.0$. This indicates that supply has become highly **elastic** ($E_s > 1$) once the time-determinant allowed for capital expansion.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "A supply chain disruption that causes a significant delay in the delivery of raw materials will increase the elasticity of supply for a manufacturer that relies on those materials.",
-    "answer": false,
-    "explanation": "When a supply chain disruption causes a significant delay in the delivery of raw materials, it reduces the ability of a manufacturer to quickly respond to changes in price by increasing the quantity supplied. This situation leads to a decrease in the elasticity of supply. The elasticity of supply $$E_S = \frac{\\% \\Delta Q_S}{\\% \\Delta P}$$ measures how responsive the quantity supplied is to a change in price. If a manufacturer cannot easily increase production due to delays in receiving raw materials, the percentage change in quantity supplied $$\\% \\Delta Q_S$$ will be smaller for any given percentage change in price $$\\% \\Delta P$$. Therefore, the elasticity of supply decreases, making the supply less elastic, not more elastic."
+    "question": "If the Price Elasticity of Supply ($E_s$) is exactly 1.0, the supply is classified as:",
+    "options": {
+      "A": "Perfectly Elastic.",
+      "B": "Inelastic.",
+      "C": "Unit Elastic.",
+      "D": "Perfectly Inelastic."
+    },
+    "answer": "C",
+    "explanation": "Unit elasticity occurs when the percentage change in quantity supplied exactly equals the percentage change in price, resulting in a coefficient of 1.0."
   },
   {
     "id": "q2",
-    "type": "synthesis",
+    "type": "true_false",
     "difficulty": "L2",
-    "question": "The bioinformatics lab is facing a critical shortage of genomic sequencing machines, leading to a backlog of samples to be processed. The lab receives a large grant to increase its capacity, but the suppliers of sequencing machines can't deliver them quickly enough. The lab director wants to know how responsive the suppliers are to changes in price. If the price of sequencing machines increases by 10%, and the suppliers increase their production by 15%, what is the elasticity of supply?",
-    "answer": "1.5",
-    "explanation": "The elasticity of supply is calculated using the formula: $$E_S = \\frac{\\% \\Delta Q_S}{\\% \\Delta P}$$. Given that the percentage change in quantity supplied ($\\% \\Delta Q_S$) is 15% and the percentage change in price ($\\% \\Delta P$) is 10%, we can substitute these values into the formula: $$E_S = \\frac{15}{10} = 1.5$$. This means that for every 1% change in price, the quantity supplied changes by 1.5%. Since the elasticity of supply is greater than 1, the supply is elastic."
+    "question": "A vertical supply curve represents a Price Elasticity of Supply that is equal to infinity.",
+    "answer": false,
+    "explanation": "A vertical curve represents 'Perfectly Inelastic' supply ($E_s = 0$). An elasticity of infinity is represented by a horizontal supply curve ('Perfectly Elastic')."
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the concept of Elasticity Of Supply in a Quantitative Finance & High-Frequency Trading scenario, and provide a precise definition using the formula.",
-    "answer": "The elasticity of supply measures the responsiveness of the quantity supplied of a financial instrument to a change in its price. In Quantitative Finance & High-Frequency Trading, this concept is crucial in understanding how quickly suppliers can adjust their quantities in response to price fluctuations. The elasticity of supply is defined as the percentage change in quantity supplied in response to a 1% change in price, calculated using the formula: $$E_S = \frac{\\% \\Delta Q_S}{\\% \\Delta P}$$.",
-    "explanation": "The elasticity of supply, denoted as $E_S$, is a dimensionless quantity that gauges the sensitivity of the quantity supplied, $Q_S$, to changes in the price, $P$, of a financial instrument. Mathematically, it is expressed as: $$E_S = \frac{\\% \\Delta Q_S}{\\% \\Delta P} = \frac{\\Delta Q_S / Q_S}{\\Delta P / P} = \frac{P}{Q_S} \\cdot \frac{\\Delta Q_S}{\\Delta P}$$. In the context of Quantitative Finance & High-Frequency Trading, a high elasticity of supply indicates that suppliers can quickly adjust their quantities in response to price changes, whereas a low elasticity of supply implies that suppliers are less responsive to price fluctuations."
+    "type": "synthesis",
+    "difficulty": "L3",
+    "question": "An economy faces a sudden hyper-inflation where all prices double. If the quantity supplied of a good remains unchanged despite the price doubling, what can you conclude about the supply's elasticity and the production environment?",
+    "answer": "The supply is perfectly inelastic ($E_s = 0$). This suggests an absolute physical constraint on production (e.g., land, rare resources, or reached maximum capacity) where price incentives cannot stimulate further output in the current period.",
+    "explanation": "Synthesis requires interpreting a zero-response to a massive price signal as a structural capacity limit."
   },
   {
     "id": "q4",
-    "type": "order",
+    "type": "trace",
     "difficulty": "L2",
-    "question": "Order steps for Elasticity Of Supply",
-    "steps": [
-      "Calculate the percentage change in quantity supplied",
-      "Calculate the percentage change in price",
-      "Apply the elasticity of supply formula"
-    ],
-    "answer": [
-      "Calculate the percentage change in price",
-      "Calculate the percentage change in quantity supplied",
-      "Apply the elasticity of supply formula"
-    ]
+    "question": "Trace the impact on $E_s$ if the government provides a subsidy that reduces the 'Lead Time' for importing key manufacturing equipment.",
+    "answer": "1) Lead time for capital expansion falls. 2) Producers can adjust capacity more quickly to price changes. 3) The time-determinant of elasticity is shortened. 4) The supply curve rotates to become flatter (more elastic).",
+    "explanation": "Tracing how a policy change (subsidy/deregulation) affects the technical determinants of supply responsiveness."
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output for the elasticity of supply given a 10% increase in price and a resulting 20% increase in quantity supplied?",
-    "content": "The elasticity of supply is a measure of how responsive the quantity supplied of a good is to changes in its price. It is calculated using the formula: $E_S = \\frac{\\% \\Delta Q_S}{\\% \\Delta P}$.",
-    "answer": "2",
-    "explanation": "Given a 10% increase in price ($\\% \\Delta P = 10$) and a resulting 20% increase in quantity supplied ($\\% \\Delta Q_S = 20$), we can substitute these values into the elasticity of supply formula: $E_S = \\frac{20}{10} = 2$. This means that for every 1% change in price, the quantity supplied changes by 2%.",
-    "explanation_latex": "The elasticity of supply can be expressed as $E_S = \\frac{\\frac{Q_{S2} - Q_{S1}}{Q_{S1}}}{\\frac{P_2 - P_1}{P_1}}$. For a 10% increase in price and a 20% increase in quantity supplied, $E_S = \\frac{0.20}{0.10} = 2$."
+    "type": "order",
+    "difficulty": "L2",
+    "question": "Order these goods from **Lowest $E_s$ (Most Inelastic)** to **Highest $E_s$ (Most Elastic)**.",
+    "steps": [
+      "Custom-built Supercomputers (High tech, specialized labor)",
+      "Digital Software Copies (Infinite replicability, low cost)",
+      "Raw Agricultural Land (Fixed total supply)"
+    ],
+    "answer": [
+      "Raw Agricultural Land (Fixed total supply)",
+      "Custom-built Supercomputers (High tech, specialized labor)",
+      "Digital Software Copies (Infinite replicability, low cost)"
+    ],
+    "explanation": "Land is perfectly inelastic ($E_s=0$). Supercomputers have lags. Software has nearly infinite elasticity as quantity can be increased at near-zero marginal cost."
   }
 ]
-
 ```

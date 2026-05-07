@@ -53,78 +53,82 @@ This Mermaid flowchart illustrates the various determinants of demand and how th
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of determinants of demand operates:
+Here's a 5-step technical walkthrough of how the **Determinants of Demand** operate in the Global Energy Market:
 
-1. **Initial State**: Suppose we have an amusement park with an initial ticket price of $50, and 1000 customers visit the park per week. The consumer income is $1000 per week, and the price of tickets at a competing park is $40.
+1. **Price Variable**: A sudden spike in the price of Crude Oil occurs. Following the Law of Demand, we see a movement along the demand curve as industrial consumers reduce quantity demanded.
 
-2. **Change in Price**: If the amusement park increases its ticket price to $60, the quantity demanded decreases to 800 customers per week. This is because the higher price makes the tickets less attractive to some potential customers.
+2. **Income Determinant ($Y$)**: A global economic boom increases average household income. This is a change in a determinant, causing the *entire* demand curve for energy to shift to the right, even if prices stay high.
 
-3. **Change in Consumer Income**: If consumer income increases to $1200 per week, the quantity demanded increases to 1200 customers per week, assuming the ticket price remains at $50. This is because people have more disposable income to spend on leisure activities.
+3. **Related Goods ($P_r$)**: The price of Natural Gas (a substitute) falls significantly. Industrial plants switch from oil to gas, causing the demand curve for oil to shift leftward.
 
-4. **Change in Price of Related Goods**: If the competing park lowers its ticket price to $30, the quantity demanded at our amusement park decreases to 900 customers per week, assuming our ticket price remains at $50. This is because some customers switch to the competing park.
+4. **Expectations ($P_{x,t+i}$)**: Market analysts predict a supply shortage next year. In anticipation, firms increase their current demand to build up strategic reserves, shifting the curve right today.
 
-5. **Final State**: After considering all the determinants of demand, the amusement park manager can adjust the ticket price, marketing strategies, and attractions to maximize revenue and customer satisfaction. For example, if the park manager expects an increase in population size and consumer income, they may consider adding new rides and attractions to increase demand.
+5. **Demographics ($N$)**: Rapid urbanization in emerging economies increases the total number of energy consumers ($N$). This provides a long-term rightward structural shift in the energy demand curve.
 
 ---
 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "The demand for a good or service is not affected by changes in consumer income.",
-    "answer": false,
-    "explanation": "The demand for a good or service is indeed affected by changes in consumer income. This relationship can be expressed through the demand function $Q_{x,t} = f(P_{x,t}, Y_t, P_{r,t}, P_{x,t+i}, Y_{t+i}, N, T)$, where $Y_t$ represents consumer income. An increase in consumer income, $Y_t$, typically leads to an increase in the quantity demanded of a good, $Q_{x,t}$, assuming the good is a normal good. Conversely, a decrease in consumer income leads to a decrease in the quantity demanded. This is because higher income levels increase the purchasing power of consumers, allowing them to buy more goods and services. Therefore, stating that demand is not affected by changes in consumer income is incorrect."
+    "question": "Which of the following would cause a **shift** in the Demand Curve rather than a movement along it?",
+    "options": {
+      "A": "A decrease in the price of the good.",
+      "B": "An increase in the price of the good.",
+      "C": "A change in the price of a substitute good.",
+      "D": "A temporary discount offered by the seller."
+    },
+    "answer": "C",
+    "explanation": "A change in the good's own price (A, B, D) only moves the market along the existing curve. A change in a determinant (like the price of a substitute) shifts the entire curve to a new position."
   },
   {
     "id": "q2",
-    "type": "synthesis",
+    "type": "true_false",
     "difficulty": "L2",
-    "question": "An outbreak of a highly contagious disease has occurred in a densely populated urban area, leading to a sudden surge in demand for hospital services. However, the hospital's capacity is limited, and the management must make decisions to prevent system failure. The demand for hospital services is influenced by several factors, including the severity of the disease, the population's health awareness, the availability of alternative healthcare providers, and the hospital's service quality. Using the determinants of demand, derive a strategy to manage the demand for hospital services and prevent system failure.",
-    "answer": "To manage the demand for hospital services and prevent system failure, the hospital management should consider the following strategy: (1) adjust the price of services (e.g., offer priority access for severe cases), (2) increase public awareness of the disease and its prevention, (3) establish partnerships with alternative healthcare providers to redirect non-emergency cases, and (4) enhance service quality to increase patient satisfaction. The demand function can be expressed as $Q_{h,t} = f(P_{h,t}, A_t, P_{a,t}, S_t, Y_t)$, where $Q_{h,t}$ is the quantity demanded of hospital services at time $t$, $P_{h,t}$ is the price of hospital services, $A_t$ is the level of public awareness, $P_{a,t}$ is the price of alternative healthcare services, $S_t$ is the service quality, and $Y_t$ is the population's income. By analyzing the determinants of demand, the hospital management can make informed decisions to manage demand and prevent system failure.",
-    "explanation": "The demand for hospital services can be modeled using the demand function $Q_{h,t} = f(P_{h,t}, A_t, P_{a,t}, S_t, Y_t)$. The hospital management can use this function to analyze the impact of each determinant on demand. For instance, a higher price of hospital services ($P_{h,t}$) may reduce demand, while increased public awareness ($A_t$) may increase demand. By adjusting these determinants, the hospital management can manage demand and prevent system failure. Using LaTeX, the demand function can be represented as: $$Q_{h,t} = \\alpha - \beta P_{h,t} + \\gamma A_t - \\delta P_{a,t} + \\epsilon S_t + \\zeta Y_t$$ where $\\alpha$, $\beta$, $\\gamma$, $\\delta$, $\\epsilon$, and $\\zeta$ are parameters that can be estimated using data. By analyzing the parameters and the determinants of demand, the hospital management can develop an effective strategy to manage demand and prevent system failure."
+    "question": "For a 'Normal Good', an increase in consumer income ($Y$) will shift the Demand Curve to the left.",
+    "answer": false,
+    "explanation": "For normal goods, income and demand are positively correlated. Higher income shifts the curve to the *right*. A leftward shift with higher income occurs only for 'Inferior Goods'."
   },
   {
     "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the determinants of demand in the context of Epidemiology & Public Health Modeling, specifically how factors such as price, income, and related goods influence the demand for health services or interventions.",
-    "answer": "The demand for health services or interventions in Epidemiology & Public Health Modeling is influenced by several key determinants. The price of the service or intervention is a primary factor; as the price increases, the quantity demanded typically decreases. Consumer income also plays a crucial role; higher incomes generally lead to increased demand for health services. Additionally, the prices of related goods or services, such as alternative treatments or preventive measures, can impact demand. Lastly, factors like population size, demographics, and technological advancements in healthcare can also shift the demand curve.",
-    "explanation": "The demand function for health services can be represented as $Q_{h,t} = f(P_{h,t}, Y_t, P_{r,t}, T)$, where $Q_{h,t}$ is the quantity demanded of health services at time $t$, $P_{h,t}$ is the price of health services, $Y_t$ is consumer income, $P_{r,t}$ is the price of related goods or services, and $T$ represents technological advancements. The demand for health services is often inelastic, meaning that changes in price have a relatively small effect on the quantity demanded. This is because health services are often essential, and consumers are willing to pay a premium for necessary treatments. However, the demand for health services can be influenced by changes in income, as higher incomes may lead to increased demand for preventive care or elective procedures. Furthermore, the prices of related goods or services, such as alternative treatments or health insurance, can also impact demand. For instance, if the price of alternative treatments decreases, the demand for traditional health services may decrease. LaTeX representation of the demand function: $Q_{h,t} = \\beta_0 + \\beta_1 P_{h,t} + \\beta_2 Y_t + \\beta_3 P_{r,t} + \\beta_4 T + \\epsilon_t$."
+    "type": "synthesis",
+    "difficulty": "L3",
+    "question": "Analyze the simultaneous impact of a rise in consumer income and a breakthrough in the technology of a substitute good. What is the net effect on the original good's Demand Curve?",
+    "answer": "The rise in income shifts demand right, while the cheaper substitute shifts demand left. The net effect is indeterminate without knowing the magnitude of each shift. If the substitute effect is stronger, the curve moves left; if the income effect dominates, it moves right.",
+    "explanation": "Synthesis requires evaluating the interaction of two opposing determinants to identify an 'Indeterminate' outcome."
   },
   {
     "id": "q4",
-    "type": "order",
+    "type": "trace",
     "difficulty": "L2",
-    "question": "Order steps for Determinants Of Demand",
-    "steps": [
-      "Change in Price of the Good",
-      "Change in Consumer Income",
-      "Change in Price of Related Goods",
-      "Change in Technology",
-      "Change in Population and Demographics"
-    ],
-    "answer": [
-      "Change in Price of the Good",
-      "Change in Consumer Income",
-      "Change in Price of Related Goods",
-      "Change in Technology",
-      "Change in Population and Demographics"
-    ]
+    "question": "Trace the impact of a 10% increase in the price of Electric Vehicles (EVs) on the demand for Lithium-Ion Batteries (a complement).",
+    "answer": "1) EV price rises. 2) Quantity demanded of EVs falls. 3) Since batteries are complements, the Demand Curve for Lithium-Ion batteries shifts left. 4) The equilibrium price of batteries likely falls.",
+    "explanation": "Tracing the determinant effect from the primary market (EVs) to the secondary complementary market (Batteries)."
   },
   {
     "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output for the determinants of demand in telecommunications & core network routing?",
-    "content": "The demand function for telecommunications services can be expressed as $Q_{x,t} = f(P_{x,t}, Y_t, P_{r,t}, T_t, N_t)$, where $Q_{x,t}$ is the quantity demanded of telecommunications services at time $t$, $P_{x,t}$ is the price of telecommunications services, $Y_t$ is consumer income, $P_{r,t}$ is the price of related services (e.g., alternative modes of communication), $T_t$ represents technological advancements, and $N_t$ represents the number of potential customers.",
-    "answer": "The exact output is the demand curve for telecommunications services, which can be represented as $Q_{x,t} = \beta_0 - \beta_1 P_{x,t} + \beta_2 Y_t - \beta_3 P_{r,t} + \beta_4 T_t + \beta_5 N_t$, where $\beta_0$ is the intercept, and $\beta_1, \beta_2, \beta_3, \beta_4, \beta_5$ are the coefficients representing the impact of each determinant on demand.",
-    "explanation": "The demand for telecommunications services is influenced by several factors, including the price of services ($P_{x,t}$), consumer income ($Y_t$), prices of related services ($P_{r,t}$), technological advancements ($T_t$), and the number of potential customers ($N_t$). The demand function can be expressed as $Q_{x,t} = f(P_{x,t}, Y_t, P_{r,t}, T_t, N_t)$. Using LaTeX, the linear demand function can be written as: $Q_{x,t} = \beta_0 - \beta_1 P_{x,t} + \beta_2 Y_t - \beta_3 P_{r,t} + \beta_4 T_t + \beta_5 N_t$. The coefficients $\beta_1, \beta_2, \beta_3, \beta_4, \beta_5$ represent the change in demand for a one-unit change in each determinant, ceteris paribus. For instance, $\beta_1$ represents the price elasticity of demand, which is typically negative, indicating that an increase in price leads to a decrease in demand."
+    "type": "order",
+    "difficulty": "L2",
+    "question": "Order the steps for analyzing how 'Expected Future Price Hikes' affect current market demand.",
+    "steps": [
+      "Consumers anticipate a 50% price increase next month",
+      "Demand curve shifts to the right in the current period",
+      "Current equilibrium price rises due to the demand surge",
+      "Current quantity demanded increases at the original price",
+      "Consumers increase purchases today to avoid future costs"
+    ],
+    "answer": [
+      "Consumers anticipate a 50% price increase next month",
+      "Consumers increase purchases today to avoid future costs",
+      "Current quantity demanded increases at the original price",
+      "Demand curve shifts to the right in the current period",
+      "Current equilibrium price rises due to the demand surge"
+    ],
+    "explanation": "Expectations drive behavior changes today, which then manifest as a shift in the market model."
   }
 ]
-
 ```
