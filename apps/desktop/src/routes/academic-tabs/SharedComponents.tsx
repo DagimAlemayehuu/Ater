@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useMemo, useCallback} from 'react'
-import {Check, Edit3, Plus, ChevronRight, X} from 'lucide-react'
+import {Check, Edit3, Plus, X} from 'lucide-react'
 import {format, parseISO} from 'date-fns'
 import {cn} from '@/lib/utils'
 import {sidecarApi} from '@/lib/sidecarApi'
@@ -12,7 +12,7 @@ export function TabButton({active, onClick, icon, label}: {
 }) {
  return (
  <button onClick={onClick} className={cn(
- 'relative flex-none flex items-center gap-1.5 pb-2.5 pt-2 px-4 text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2',
+ 'relative flex-none flex items-center gap-1.5 pb-2.5 pt-2 px-4 text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2 focus-visible:ring-1 focus-visible:ring-primary outline-none',
  active
  ? 'text-foreground border-foreground'
  : 'text-muted-foreground/40 border-transparent hover:text-foreground hover:border-border'
@@ -377,4 +377,4 @@ export function ProgramSetupForm({onScaffold}: {
  </div>
  </div>
  )
-}
+ }

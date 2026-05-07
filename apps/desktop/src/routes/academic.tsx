@@ -22,28 +22,8 @@ export default function AcademicDashboard() {
  const [activeTab, setActiveTab] = useState<AcademicTab>('PROGRAM')
  const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
  const [showCalendar, setShowCalendar] = useState(false)
- const [sidebarWidth, setSidebarWidth] = useState(32)
- const [isResizing, setIsResizing] = useState(false)
  const nav = useNavigate()
  const API_BASE = 'http://127.0.0.1:8765'
-
- // ── Resizable sidebar ──────────────────────────────────────────────────────
- const handleMouseMove = useCallback((e: MouseEvent) => {
- if (!isResizing) return
- const pct = (e.clientX / window.innerWidth) * 100
- if (pct > 18 && pct < 60) setSidebarWidth(pct)
-}, [isResizing])
-
- const handleMouseUp = useCallback(() => setIsResizing(false), [])
-
- useEffect(() => {
- window.addEventListener('mousemove', handleMouseMove)
- window.addEventListener('mouseup', handleMouseUp)
- return () => {
- window.removeEventListener('mousemove', handleMouseMove)
- window.removeEventListener('mouseup', handleMouseUp)
-}
-}, [handleMouseMove, handleMouseUp])
 
  // ── Data fetching ──────────────────────────────────────────────────────────
  const fetchData = useCallback(async () => {
@@ -260,12 +240,13 @@ export default function AcademicDashboard() {
   </h1>
   </div>
  <div className="flex items-center gap-2">
- <button onClick={handleSync} className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm" title="Sync Vault Databases">
+ <button aria-label="Sync Vault Databases" onClick={handleSync} className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm focus-visible:ring-1 focus-visible:ring-primary outline-none" title="Sync Vault Databases">
  <RefreshCw size={12} />
  </button>
  <button onClick={() => setActiveTab(activeTab === 'CALENDAR' ? 'PROGRAM' : 'CALENDAR')}
  title={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar (Cmd+C)'}
- className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all',
+ aria-label={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar'}
+ className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all focus-visible:ring-1 focus-visible:ring-primary outline-none',
  activeTab === 'CALENDAR' ? 'bg-primary text-primary-foreground' : 'bg-background border border-border text-muted-foreground hover:text-foreground hover:border-primary shadow-sm')}>
  <CalendarDays size={11} />
  {activeTab === 'CALENDAR' ? 'Close' : 'Calendar'}
@@ -310,8 +291,6 @@ export default function AcademicDashboard() {
  </div>
  )
  }
-// ─── Shared Editable UI Components ───────────────────────────────────────────
-// (Moved to SharedComponents.tsx)
 
 // ─── Mini Calendar (for sidebar) ──────────────────────────────────────────────
 function MiniCalendar({events, onSelectEvent}: {events: any[]; onSelectEvent: (path: string) => void}) {
@@ -328,15 +307,28 @@ function MiniCalendar({events, onSelectEvent}: {events: any[]; onSelectEvent: (p
  let d = startDate
  while (d <= endDate) {cells.push(d); d = addDays(d, 1)}
 
+ const eventsByDate = React.useMemo(() => {
+  const map = new Map<string, any[]>()
+  events.forEach(e => {
+   if (!e._date) return
+   try {
+    const dateStr = format(parseISO(e._date), 'yyyy-MM-dd')
+    if (!map.has(dateStr)) map.set(dateStr, [])
+    map.get(dateStr)!.push(e)
+   } catch {}
+  })
+  return map
+ }, [events])
+
  return (
  <div className="flex flex-col h-full">
  {/* Header */}
  <div className="flex items-center justify-between mb-4">
  <h3 className="text-[11px] font-black uppercase tracking-widest">{format(currentMonth, 'MMMM yyyy')}</h3>
  <div className="flex items-center gap-1">
- <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1 hover:bg-muted/10 rounded transition-all text-muted-foreground/40 hover:text-foreground"><ChevronLeft size={12} /></button>
- <button onClick={() => setCurrentMonth(new Date())} className="px-2 py-0.5 text-[8px] font-black uppercase rounded border border-border/20 hover:bg-muted/20 transition-all text-muted-foreground/40">Now</button>
- <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1 hover:bg-muted/10 rounded transition-all text-muted-foreground/40 hover:text-foreground"><ChevronRight size={12} /></button>
+ <button aria-label="Previous month" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1 hover:bg-muted/10 rounded transition-all text-muted-foreground/40 hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary outline-none"><ChevronLeft size={12} /></button>
+ <button onClick={() => setCurrentMonth(new Date())} className="px-2 py-0.5 text-[8px] font-black uppercase rounded border border-border/20 hover:bg-muted/20 transition-all text-muted-foreground/40 focus-visible:ring-1 focus-visible:ring-primary outline-none">Now</button>
+ <button aria-label="Next month" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1 hover:bg-muted/10 rounded transition-all text-muted-foreground/40 hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary outline-none"><ChevronRight size={12} /></button>
  </div>
  </div>
 
@@ -348,17 +340,15 @@ function MiniCalendar({events, onSelectEvent}: {events: any[]; onSelectEvent: (p
  {/* Cell grid */}
  <div className="grid grid-cols-7 gap-px border border-border/10 rounded-xl overflow-hidden flex-1 bg-border/5">
  {cells.map((cell, i) => {
- const dayEvents = events.filter(e => {
- if (!e._date) return false
- try {return isSameDay(parseISO(e._date), cell)} catch {return false}
-})
+ const cellDateStr = format(cell, 'yyyy-MM-dd')
+ const dayEvents = eventsByDate.get(cellDateStr) || []
  const inMonth = isSameMonth(cell, currentMonth)
  return (
  <div key={i} className={cn('min-h-[64px] p-2 flex flex-col gap-1 transition-all', !inMonth ? 'opacity-20 bg-muted/5' : 'bg-background', isToday(cell) && 'bg-primary/[0.03]')}>
  <span className={cn('text-[10px] font-black', isToday(cell) ? 'text-primary' : 'text-muted-foreground/50')}>{format(cell, 'd')}</span>
  {dayEvents.slice(0, 2).map((ev, idx) => (
  <button key={idx} onClick={() => onSelectEvent(ev._type === 'Assignment' ? `3-Database/03 - Assignments/${ev.id}.md` : `3-Database/04 - Exams/${ev.id}.md`)}
- className={cn('text-[8px] font-black uppercase px-1.5 py-1 rounded-md truncate text-left transition-all',
+ className={cn('text-[8px] font-black uppercase px-1.5 py-1 rounded-md truncate text-left transition-all focus-visible:ring-1 focus-visible:ring-primary outline-none',
  ev._type === 'Exam' ? 'text-foreground border border-border bg-muted/20 hover:bg-muted/40' : 'bg-muted/10 text-muted-foreground hover:text-foreground hover:bg-muted/20')}>
  {cleanTitle(ev.title)}
  </button>
@@ -378,7 +368,7 @@ function MiniCalendar({events, onSelectEvent}: {events: any[]; onSelectEvent: (p
  .slice(0, 5)
  .map((ev, idx) => (
  <button key={idx} onClick={() => onSelectEvent(ev._type === 'Assignment' ? `3-Database/03 - Assignments/${ev.id}.md` : `3-Database/04 - Exams/${ev.id}.md`)}
- className="w-full flex items-center gap-3 text-left p-2 rounded-xl hover:bg-muted/20 transition-all group border border-transparent hover:border-border/10">
+ className="w-full flex items-center gap-3 text-left p-2 rounded-xl hover:bg-muted/20 transition-all group border border-transparent hover:border-border/10 focus-visible:ring-1 focus-visible:ring-primary outline-none">
  <div className={cn('w-2 h-2 rounded-full shrink-0', ev._type === 'Exam' ? 'bg-primary' : 'bg-muted-foreground/20')} />
  <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground/70 group-hover:text-foreground transition-colors">{cleanTitle(ev.title)}</span>
  <span className="text-[9px] font-black text-muted-foreground/30 ml-auto shrink-0 uppercase tracking-widest">{ev._date ? format(parseISO(ev._date), 'MMM d') : ''}</span>
