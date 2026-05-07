@@ -3,7 +3,7 @@ import {Hash, ChevronRight, Plus, Check, BookOpen, Trash2} from 'lucide-react'
 import {format, parseISO, differenceInDays, isBefore, startOfDay} from 'date-fns'
 import {cn} from '@/lib/utils'
 import {toast} from 'sonner'
-import {stripWL, getVal} from './utils'
+import {stripWL, getVal, cleanTitle} from './utils'
 import {SectionHeader, EmptyState, StatCard, BigPropertyCard, EditableTitle} from './SharedComponents'
 import type {TabProps} from './types'
 
