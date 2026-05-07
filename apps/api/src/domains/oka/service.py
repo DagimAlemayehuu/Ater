@@ -15,6 +15,9 @@ from .vault_manager import VaultManager
 from .deployer import OkaDeployer
 from src.domains.ai.factory import ModelFactory
 from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgent, CriticAgent, HubAgent, VerifierAgent, QuizAuditorAgent, DOMAIN_MATRIX, get_professional_domain
+from .router import router
+from .templates import render_atomic_note
+from .healer import LogicHealer
 from .governor import TokenGovernor
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
 import ruamel.yaml
@@ -891,7 +894,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         yaml_frontmatter = f"---\n{yaml.dump(yaml_data, sort_keys=False)}---\n"
         
         # Create Readable Markdown
-        md_content = f"# {quiz_title}\n\n"
+        md_content = ""
         for idx, q in enumerate(questions, 1):
             # Resolve question text
             q_text = q.get('question', '')
@@ -1115,7 +1118,6 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             f"study_date: null\n"
                             f"generated: false\n"
                             f"---\n\n"
-                            f"# {hub_title}\n\n"
                             f"> Auto-created smart-synced stub by OKA.\n"
                         )
                         with open(hub_file_path, "w", encoding="utf-8") as f:
@@ -1302,6 +1304,11 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         if unit_dir.exists():
             existing_notes = [f.stem for f in unit_dir.glob("*.md")]
 
+        # Phase 1.5: Deterministic Domain Routing
+        OkaService._status[session_id] = "Detecting Domain Discipline..."
+        detected_mode = router.route(full_text)
+        print(f"[OKA Service] Deterministic Router Detected: {detected_mode}")
+
         # Invoke Architect Agent
         OkaService._status[session_id] = "Architecting Sovereign Plan..."
         
@@ -1328,7 +1335,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             print(f"[OKA Service] Processing chunk {idx+1}/{len(text_chunks)}")
             try:
                 partial_plan = await self.architect_agent.generate_partial_plan(
-                    f"{context_enrichment}\n\nSOURCE TEXT CHUNK:\n{chunk}"
+                    f"{context_enrichment}\n\nSOURCE TEXT CHUNK:\n{chunk}",
+                    forced_mode=detected_mode
                 )
                 
                 if not partial_plan.atomic_notes:
@@ -1543,6 +1551,10 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             all_note_titles = [n["title"] for n in session["metadata"].get("atomic_notes", [])]
             all_concepts_list = ", ".join([f"[[{t}]]" for t in all_note_titles])
             plan_obj = SovereignPlan(**session["metadata"])
+            course = plan_obj.course
+            semester = plan_obj.semester
+            unit_num = plan_obj.unit
+            hub_title = plan_obj.hub_title
             
             if "all_note_probes" not in session:
                 session["all_note_probes"] = {}
@@ -1565,162 +1577,109 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         # Natural pacing break between notes (increased to 10s for TPM safety)
                         await asyncio.sleep(10.0)
                     final_output = ""
+                    
                     generation_attempts = 0
                     max_attempts = 2
                     
                     while generation_attempts < max_attempts:
                         generation_attempts += 1
                         phase_prefix = f"(Attempt {generation_attempts}/{max_attempts})" if generation_attempts > 1 else ""
-                        OkaService._status[session_id] = f"{phase_prefix} Surgical Pass: [[{current_note_title}]] (1/2)..."
-                        
-                        theory = None
-                        final_output = None
-                        probes = None
-
                         try:
-                            # ── 3-PASS PIPELINE ──
-                            domain = DOMAIN_MATRIX.get(note_schema.mode, DOMAIN_MATRIX["CS-SOFTWARE"])
+                            # ── EXOSKELETON ASSEMBLER v27.0 ──
+                            domain = DOMAIN_MATRIX.get(note_schema.mode, DOMAIN_MATRIX["ACADEMIC-GENERAL"])
                             theory_agent = TheoryAgent(self.llm_creative, domain)
                             practitioner_agent = PractitionerAgent(self.llm_creative, domain)
-                            # examiner removed, dynamic QuestionAgents used
-                            verifier_agent = VerifierAgent(self.llm_creative)
-                            quiz_auditor_agent = QuizAuditorAgent(self.llm_creative)
-
-                            if "used_scenarios" not in session:
-                                session["used_scenarios"] = []
-
-                            # Pass 1: Theory
-                            await self.governor.acquire(expected_tokens=3500)
-                            theory = await theory_agent.generate(note_schema, note_schema.source_context or "No context", primary_language, all_concepts_list, session["used_scenarios"])
                             
-                            # Extract the used analogy to prevent reuse
-                            mm_match = re.search(r"# 1\. Mental Model\n+(.+?)(?=\n# 2\.)", theory, re.DOTALL)
-                            if mm_match:
-                                session["used_scenarios"].append(mm_match.group(1).strip()[:150])
+                            note_data = {
+                                "title": note_schema.title,
+                                "course": course,
+                                "unit": unit_num,
+                                "semester": semester,
+                                "mode": note_schema.mode,
+                                "date": datetime.now().strftime("%Y-%m-%d"),
+                                "prerequisites": note_schema.prerequisites,
+                                "source_pages": note_schema.source_pages,
+                                "h1_title": domain["h1"],
+                                "artifact_title": domain["artifact"],
+                                "hub": f"[[{plan_obj.hub_note.title}]]",
+                                "source": self._get_source_link(plan_obj, session.get("path", ""))
+                            }
 
-                            # Small inter-pass sleep to stay under RPM/TPM
-                            await asyncio.sleep(3.0)
+                            # 1. Micro-Theory Pass
+                            OkaService._status[session_id] = f"{phase_prefix} Theory: [[{current_note_title}]]..."
+                            await self.governor.acquire(expected_tokens=4000)
+                            theory_parts = await theory_agent.generate_micro(
+                                note_schema, 
+                                note_schema.source_context or "No context", 
+                                all_concepts_list
+                            )
+                            note_data.update(theory_parts)
+                            await asyncio.sleep(2.0)
 
-                            is_valid, errors = self.validator.validate_structure(theory + "\n```interactive-quiz\n[]\n```\n# 4. Artifact\n```text\n```\n## 5. Walkthrough\n1. \n2. \n3. \n4. \n5. ")
-                            if "INSUFFICIENT_WIKILINKS" in str(errors):
-                                await self.governor.acquire(expected_tokens=300)
-                                diagnosis = await self.critic_agent.diagnose(theory, errors) if self.critic_agent else "Add more wikilinks."
-                                await self.governor.acquire(expected_tokens=1000)
-                                theory = await theory_agent.retry(note_schema, note_schema.source_context or "No context", primary_language, all_concepts_list, diagnosis)
-                                await asyncio.sleep(2.0)
-
-                            note_content = NoteContent(markdown_body=theory, search_keywords=[])
-
-                            OkaService._status[session_id] = f"{phase_prefix} Socratic Pass: [[{current_note_title}]] (2/3)..."
-                            
-                            # Pass 2: Practitioner
-                            await self.governor.acquire(expected_tokens=3500)
-                            practice = await practitioner_agent.generate(note_schema.title, theory, primary_language, note_schema.mode)
-
-                            # Small inter-pass sleep
-                            await asyncio.sleep(3.0)
-
-                            OkaService._status[session_id] = f"{phase_prefix} Examiner Pass: [[{current_note_title}]] (3/3)..."
-
-                            # Pass 3: Examiner (Dedicated Dynamic Agents)
+                            # 2. Micro-Practitioner Pass
+                            OkaService._status[session_id] = f"{phase_prefix} Execution: [[{current_note_title}]]..."
                             await self.governor.acquire(expected_tokens=3000)
-                            theory_summary = theory[:2500] # denser summary for specialized questioning
-                            
-                            # Anchored Professional Domain for the ENTIRE note
-                            # We use the same seed as TheoryAgent to ensure consistency
-                            prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
+                            prac_parts = await practitioner_agent.generate_micro(
+                                note_schema.title, 
+                                note_data["technical_definition"], 
+                                primary_language, 
+                                note_schema.mode
+                            )
+                            note_data.update(prac_parts)
+                            await asyncio.sleep(2.0)
 
-                            # Dynamic cognitive modes based on sub-agent matrix
-                            q_modes = domain.get('question_modes', ['mcq', 'true_false', 'scenario'])
+                            # 3. Micro-Question Pass (Dynamic Assessment)
+                            OkaService._status[session_id] = f"{phase_prefix} Assessment: [[{current_note_title}]]..."
+                            await self.governor.acquire(expected_tokens=3000)
                             
-                            # Algorithmic difficulty ramp
+                            prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
+                            q_modes = domain.get('question_modes', ['mcq', 'true_false', 'scenario'])
                             tasks = []
                             for i, qt in enumerate(q_modes):
-                                # Difficulty ramps: first 2 are L1/L2, remaining are L2/L3
-                                if i == 0: diff = "L1"
-                                elif i == len(q_modes) - 1: diff = "L3"
-                                else: diff = "L2"
-                                
-                                agent = QuestionAgent(self.llm_creative, qt)
-                                # Anchor question to the SAME professional domain as the theory
-                                tasks.append(agent.generate(note_schema.title, theory_summary, diff, domain.get('persona', 'Expert'), mode=note_schema.mode, prof_domain=prof_domain))
+                                diff = "L2" if i > 0 else "L1"
+                                q_agent = QuestionAgent(self.planner_llm, qt)
+                                tasks.append(q_agent.generate(
+                                    note_schema.title, 
+                                    note_data["technical_definition"], 
+                                    diff, 
+                                    mode=note_schema.mode, 
+                                    prof_domain=prof_domain
+                                ))
                             
-                            questions = await asyncio.gather(*tasks)
-                            for i, q in enumerate(questions):
-                                q["id"] = f"q{i+1}"
-                                
-                            quiz_json_str = json.dumps(questions, indent=2)
-
-                            # Quiz Audit — inject diagnosis as hint for next retry (no inline retry to avoid broken JSON)
-                            if generation_attempts < max_attempts:
-                                audit_result = await quiz_auditor_agent.audit(note_schema.title, quiz_json_str, theory_summary, prof_domain=prof_domain)
-                                if not audit_result["passed"]:
-                                    print(f"[OKA Service] Quiz audit FAILED for '{current_note_title}': {audit_result['diagnosis']}")
-                                    note_schema.source_context = (
-                                        f"{note_schema.source_context or ''}\n\n"
-                                        f"[QUIZ_HINT]: {audit_result['diagnosis']}"
-                                    )
-                                    continue # Force retry with hint
+                            q_results = await asyncio.gather(*tasks)
+                            valid_qs = [q for q in q_results if isinstance(q, dict) and "error" not in q]
                             
-                            probes = ProbeEnrichment(
-                                worked_example=practice,
-                                interactive_quiz=f"```interactive-quiz\n{quiz_json_str}\n```"
-                            )
-                            if probes:
-                                session["all_note_probes"][note_schema.title] = probes
+                            note_data["possible_questions"] = "\n```interactive-quiz\n" + json.dumps(valid_qs, indent=2) + "\n```"
 
-                            final_output = self._compile_atomic_note(
-                                plan=plan_obj,
-                                note_schema=note_schema,
-                                note_content=note_content,
-                                probes=probes,
-                                session_path=session.get("path", "")
+                            # 4. Deterministic Assembly & Self-Healing
+                            healer = LogicHealer(canonical_titles=set(all_note_titles))
+                            body_content = render_atomic_note(note_data, healer=healer)
+                            
+                            # Standardize metadata for YAML dumper
+                            metadata = {
+                                "title": note_data["title"],
+                                "course": note_data["course"],
+                                "unit": str(note_data["unit"]),
+                                "semester": note_data["semester"],
+                                "mode": note_data["mode"],
+                                "type": "atomic_note",
+                                "hub": note_data["hub"],
+                                "source": note_data["source"],
+                                "date": note_data["date"],
+                                "prerequisites": note_data["prerequisites"],
+                                "source_pages": note_data["source_pages"],
+                                "generated": True
+                            }
+                            yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
+                            final_markdown = f"---\n{yaml_frontmatter}---\n{body_content}"
+                            
+                            # 5. Deployment
+                            local_results = self.deployer.deploy_atomic_notes(
+                                session_id, [current_note_title], [final_markdown], plan_obj, session.get("path", "")
                             )
+                            break # Success, exit generation loop
 
-                            is_valid, struct_errors = self.validator.validate_structure(final_output)
-                            if is_valid:
-                                # Semantic verification gate
-                                await self.governor.acquire(expected_tokens=2000)
-                                verification = await verifier_agent.verify(
-                                    note_schema.title, note_schema.mode,
-                                    final_output, note_schema.source_context or ""
-                                )
-                                if generation_attempts < max_attempts:
-                                    fix_instructions = "; ".join(
-                                        f.get("fix_instruction", "") for f in verification["failures"]
-                                    )
-                                    print(f"[OKA Service] Semantic hint for '{current_note_title}': {fix_instructions}")
-                                    note_schema.source_context = (
-                                        f"{note_schema.source_context or ''}\n\n"
-                                        f"[SEMANTIC_HINT]: {fix_instructions}"
-                                    )
-                                    continue # Retry with new context
-                                else:
-                                    # FINAL ATTEMPT - Force deploy anyway (Zero-Drop)
-                                    print(f"[OKA Service] Semantic pass failed on final attempt for '{current_note_title}'. Force-deploying.")
-                                    local_results = self.deployer.deploy_atomic_notes(
-                                        session_id, [current_note_title], [final_output], plan_obj, session.get("path", "")
-                                    )
-                                    break
-                                
-                                # Deploy successful pass
-                                local_results = self.deployer.deploy_atomic_notes(
-                                    session_id, [current_note_title], [final_output], plan_obj, session.get("path", "")
-                                )
-                                break
-                            else:
-                                print(f"[OKA Service] Validation errors on '{current_note_title}': {struct_errors}")
-                                if generation_attempts < max_attempts:
-                                    note_schema.source_context = (
-                                        f"{note_schema.source_context or ''}\n\n"
-                                        f"[REGENERATION_HINT]: VALIDATION FAILED: {', '.join(struct_errors)}"
-                                    )
-                                else:
-                                    print(f"[OKA Service] Max attempts reached for '{current_note_title}' with structural errors. Force-deploying.")
-                                    local_results = self.deployer.deploy_atomic_notes(
-                                        session_id, [current_note_title], [final_output], plan_obj, session.get("path", "")
-                                    )
-                                    break
+
                         except Exception as e:
                             err_str = str(e)
                             if "429" in err_str or "rate_limit" in err_str.lower():
@@ -1736,12 +1695,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 }
                             if generation_attempts >= max_attempts:
                                 import logging
-                                logging.getLogger("LifeOS").warning(f"[OKA Service] Error for '{current_note_title}': {e}. Force-deploying current output.")
-                                # If we have some output, try to deploy it
-                                if final_output:
-                                    local_results = self.deployer.deploy_atomic_notes(
-                                        session_id, [current_note_title], [final_output], plan_obj, session.get("path", "")
-                                    )
+                                logging.getLogger("LifeOS").warning(f"[OKA Service] Error for '{current_note_title}': {e}.")
+                                # If we failed but reached max attempts, ensure we don't block the next note
                                 break
                             await asyncio.sleep(5)
                     
@@ -1929,8 +1884,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             )
 
         # INTERLEAVED COMPILATION
-        # Note content already has # 1, # 2, # 3 from TheoryAgent
-        # Probes.worked_example already has # 4, ## 5 from PractitionerAgent
+        # Note content already has ## 1, ## 2, ## 3 from TheoryAgent
+        # Probes.worked_example already has ## 4, ## 5 from PractitionerAgent
         # We only add frontmatter and ## 6
         
         full_body = note_content.markdown_body.strip() + "\n\n" + probes.worked_example.strip()
@@ -1943,6 +1898,15 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         )
         
         return f"---\n{yaml_frontmatter}---\n\n{full_body}\n"
+
+    def _get_source_link(self, plan: SovereignPlan, session_path: str = "") -> str:
+        """Determines the canonical PDF source link for a note."""
+        if session_path:
+            clean_filename = Path(session_path).name.replace(" ", "_")
+            _sem = (plan.semester or "General").strip()
+            _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
+            return f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
+        return f"[[{plan.hub_note.title}]]"
 
     def _compile_pq_note(self, plan: SovereignPlan, note_schema: NoteSchema, note_content: NoteContent, all_note_probes: Dict[str, ProbeEnrichment], session_path: str = "") -> str:
         """
@@ -1979,7 +1943,6 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
         # Build comprehensive question body
         body_parts = [
-            f"# {note_schema.title.replace('_', ' ')}\n",
             "> [!ABSTRACT] Exam Readiness Protocol\n> This note aggregates retrieval probes from all atomic nodes in this unit to ensure total coverage.\n",
             "## Master Question Bank\n"
         ]
@@ -2032,8 +1995,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
 
         # Build Markdown Body
-        body = f"# {plan.hub_note.title.replace('_', ' ')}\n\n"
-        body += "## Overview\n"
+        body = "## Overview\n"
         body += f"{plan.hub_note.description}\n\n"
         
         body += "## Unit Objectives\n"

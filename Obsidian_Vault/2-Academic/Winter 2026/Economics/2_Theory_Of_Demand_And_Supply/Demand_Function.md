@@ -1,133 +1,132 @@
 ---
-
 title: Demand_Function
-type: Atomic Note
-course: Economics
-semester: Winter 2026
+course: "[[Economics]]"
 unit: '2'
-hub: "[[2_Theory_Of_Demand_And_Supply_Hub]]"
-source: "[[5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf]]"
+semester: "[[Winter 2026]]"
+mode: ECON-MICRO
+type: atomic_note
+date: 2026-05-07
+prerequisites:
+- Demand_Curve
 source_pages:
 - 8
-mode: ECON-MACRO
-read: false
-generated: true
-prerequisites:
-- "[[Demand_Curve]]"
-
+hub: "[[2_Theory_of_Demand_and_Supply_Hub]]"
+source: "[[5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf]]"
 ---
 
-# 1. Mental Model
+## 1. Mental Model
 
-Imagine you're a concert organizer, and you're trying to figure out how many tickets to sell for a music festival. The number of tickets you want to sell depends on their price. If the tickets are very expensive, fewer people will want to buy them, but if they're reasonably priced, more people will be interested. This is similar to how a demand function works, which shows how the price of a product affects how much of it people want to buy. The two mechanical components that map to the concept are: (1) the price of the tickets (or product) and (2) the number of tickets (or quantity) people want to buy.
+Imagine you're at a school ice cream shop, and you love buying ice cream cones. The shop owner, Mr. Scoops, wants to know how many cones you'll buy at different prices. Let's say if Mr. Scoops sells cones for $1 each, you'll buy 5 cones. But if he raises the price to $2, you might only buy 3 cones because it's too expensive. The Demand Function, Qd = f(P), is like a secret formula that shows how many cones (Qd) you'll buy based on the price (P) Mr. Scoops charges. It's like a special graph that helps Mr. Scoops see that if he charges $1, you'll buy 5 cones, but if he charges $2, you'll only buy 3 - and it helps him figure out the best price to charge so he can sell lots of cones and make you happy!
 
-# 2. Economic Theory
+## 2. Micro Theory
 
-The [[Demand_Function]] is a mathematical representation of the relationship between the price of a good and the quantity demanded by consumers, assuming [[Ceteris_Paribus]], or all other things being equal. It is typically expressed as \(Q_d = f(P)\), where \(Q_d\) is the quantity demanded and \(P\) is the price of the good. The underlying mechanism of the [[Demand_Function]] is based on the [[Law_Of_Demand]], which states that, ceteris paribus, as the price of a good increases, the quantity demanded decreases, and vice versa. This relationship is often illustrated by a [[Demand_Curve]], which plots the quantity demanded against the price. The [[Demand_Schedule]] provides a tabular representation of this relationship, listing the quantity demanded at various price levels. The [[Theory_Of_Demand]] provides the foundation for understanding how consumers make decisions about how much of a good to buy based on its price and their income.
+The **demand function**, denoted as Qd = f(P), is a mathematical representation of the relationship between the quantity demanded (Qd) of a good and its price (P), assuming all other factors that influence demand remain constant, as per the [[Ceteris_Paribus]] assumption. This function is a cornerstone concept in microeconomics, specifically within the [[Theory_Of_Demand]], and is crucial for understanding how changes in price affect the quantity demanded of a product.
 
-# 3. Limitations & Edge Cases
+The demand function is typically expressed as Qd = f(P), where Qd represents the quantity demanded and P represents the price of the good. However, it's essential to note that the quantity demanded is also influenced by other factors, including [[Determinants_Of_Demand]] such as consumer income, prices of related goods (substitutes and complements), [[Taste_And_Preference]], [[Consumer_Expectations]], and the [[Number_Of_Buyers]]. A more comprehensive representation of the demand function would incorporate these variables, yielding Qd = f(P, I, Ps, Pc, T, E, N), where I is income, Ps is the price of substitutes, Pc is the price of complements, T represents taste and preferences, E signifies consumer expectations, and N denotes the number of buyers.
 
-The [[Demand_Function]] assumes that [[Ceteris_Paribus]] holds, meaning all other factors that affect demand remain constant. However, in reality, changes in [[Determinants_Of_Demand]] such as consumer preferences, income, and prices of [[Substitutes_Goods]] and [[Complementary_Goods]] can shift the demand curve. The function also does not account for [[Change_In_Technology]] or changes in population demographics, which can impact demand. Furthermore, the concept of [[Market_Demand]] and the [[Market_Demand_Curve]] becomes complex when considering [[Price_Elasticity_Of_Demand]] and [[Income_Elasticity_Of_Demand]], as these elasticities measure how responsive quantity demanded is to changes in price and income, respectively. In cases of [[Inferior_Goods]] and [[Normal_Goods]], the relationship between income and quantity demanded can behave differently. Understanding these limitations is crucial for applying the [[Demand_Function]] in real-world scenarios to predict market outcomes and make informed decisions.
+The [[Law_Of_Demand]] states that, ceteris paribus, as the price of a good increases, the quantity demanded decreases, and vice versa. This inverse relationship between price and quantity demanded is graphically represented by the [[Demand_Curve]], which is a downward-sloping curve. The demand function underlies this curve, providing a mathematical framework for analyzing the responsiveness of quantity demanded to changes in price, which is measured by the [[Price_Elasticity_Of_Demand]].
 
-# 4. Economic Model
+Changes in any of the determinants of demand, such as an increase in consumer income or a change in the price of substitutes or complements, can lead to a [[Change_In_Demand]], causing the demand curve to shift. For instance, if a good is a Normal Goods|normal Good, an increase in consumer income will lead to an increase in the quantity demanded at each price level, shifting the demand curve to the right. Conversely, if a good is an Inferior Goods|inferior Good, an increase in consumer income will decrease the quantity demanded, shifting the demand curve to the left.
 
-```mermaid
+The concept of demand function is also closely related to the [[Market_Demand]] and [[Market_Demand_Curve]], which represent the total quantity demanded of a good by all consumers in a market at various price levels. The market demand curve is the horizontal summation of individual demand curves and is pivotal in determining the [[Market_Equilibrium]], where the quantity demanded equals the quantity supplied.
 
-graph LR
-    A[Price (P)] --> B[Demand Function Q_d = f(P)]
-    B --> C[Quantity Demanded (Q_d)]
-    D[Ceteris Paribus] --> B
-    E[Law of Demand] --> B
-    B --> F[Change in Quantity Demanded]
+Understanding the demand function and its implications is vital for businesses and policymakers. It helps in predicting how changes in market conditions or policy interventions might affect the demand for goods and services. For example, a change in [[Consumer_Expectations]] or [[Taste_And_Preference]] can shift the demand curve, while advancements in Change In Technology|technology can influence the supply side but indirectly affect demand through changes in product quality or availability.
+
+In conclusion, the demand function Qd = f(P) provides a fundamental framework for analyzing the relationship between the price of a good and the quantity demanded. When expanded to include other determinants of demand, it offers a powerful tool for understanding and predicting changes in demand in response to various factors, thereby playing a critical role in both [[Market_Equilibrium]] analysis and decision-making in business and economic policy.
+
+## 3. Limitations & Edge Cases
+
+The demand function, Qd = f(P), assumes a direct relationship between the quantity demanded and the price of a good, but it has several limitations. For instance, it oversimplifies the relationship by holding other influential factors, such as consumer income, tastes, and prices of related goods, constant, which may not always be realistic. Additionally, the function assumes that consumers have perfect knowledge of market prices and products, which is often not the case. Furthermore, the demand function can be criticized for not accounting for edge cases such as rationing, where consumers may not be able to purchase a good even if they are willing and able to pay the market price, or Giffen goods, which defy the law of demand and exhibit an upward-sloping demand curve. Moreover, the function is also limited in that it does not consider the distribution of income among consumers, which can affect the overall demand curve. As a result, the demand function should be interpreted with caution and considered in conjunction with other factors to gain a more comprehensive understanding of market demand.
+
+## 4. Market Graph
+
+```latex
+
+$$
+\begin{aligned}
+Qd &= f(P, I, P_s, P_c, T, E, N) \\
+Qd &= \alpha - \beta P + \gamma I + \delta P_s - \epsilon P_c + \zeta T + \eta E + \theta N
+\end{aligned}
+$$
 
 ```
 
-This Mermaid flowchart illustrates the components of the Demand Function. The price (P) and the assumption of Ceteris Paribus influence the Demand Function, which in turn affects the Quantity Demanded. The Law of Demand underpins the relationship between price and quantity demanded.
+This demand function represents the relationship between the quantity demanded (Qd) of a good and various factors influencing demand, including price (P), consumer income (I), prices of substitutes (Ps) and complements (Pc), taste and preference (T), consumer expectations (E), and the number of buyers (N). The parameters $\alpha, \beta, \gamma, \delta, \epsilon, \zeta, \eta,$ and $\theta$ are constants that determine the responsiveness of quantity demanded to changes in these variables.
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the Demand Function operates:
+**Step 1: Specification of the Demand Function**
 
-1. **Initial State**: Assume the price of a concert ticket is $50, and the demand function is \(Q_d = 1000 - 10P\). The quantity demanded at this price is \(Q_d = 1000 - 10(50) = 500\) tickets.
+The demand function is specified as Qd = f(P), where Qd is the quantity demanded and P is the price of the good. This function represents the relationship between the quantity demanded and the price of the good, assuming all other factors that influence demand remain constant (Ceteris Paribus).
 
-2. **Change in Price**: The concert organizer increases the ticket price to $60. 
+**Step 2: Representation of the Demand Function**
 
-3. **Apply Demand Function**: Using the demand function \(Q_d = 1000 - 10P\), we calculate the new quantity demanded: \(Q_d = 1000 - 10(60) = 400\) tickets.
+The demand function can be represented in a linear or non-linear form. A linear demand function is typically expressed as Qd = a - bP, where 'a' is the intercept or the maximum quantity that would be demanded if the price were zero, and 'b' is the slope of the demand curve, representing the change in quantity demanded in response to a change in price.
 
-4. **Intermediate State Change**: The increase in price from $50 to $60 leads to a decrease in the quantity demanded from 500 tickets to 400 tickets.
+**Step 3: Incorporating Other Determinants of Demand**
 
-5. **Final State and Data Transformation**: The final state shows that as the price increases, the quantity demanded decreases, illustrating the inverse relationship described by the Law of Demand. This relationship can be represented as a demand schedule or curve, which is a graphical representation of the demand function. 
+To make the demand function more comprehensive, other determinants of demand can be incorporated. These include consumer income (I), prices of related goods (Ps for substitutes and Pc for complements), taste and preference (T), consumer expectations (E), and the number of buyers (N). The demand function can be rewritten as Qd = f(P, I, Ps, Pc, T, E, N).
 
-For example, using the data:
-- At $50, Quantity Demanded = 500
-- At $60, Quantity Demanded = 400
+**Step 4: Estimation of the Demand Function**
 
-This walkthrough demonstrates how changes in price lead to changes in the quantity demanded, according to the demand function.
+The demand function can be estimated using econometric techniques, such as ordinary least squares (OLS) regression. This involves collecting data on the quantity demanded, price, and other determinants of demand, and using statistical software to estimate the parameters of the demand function.
+
+**Step 5: Analysis of the Demand Function**
+
+Once the demand function is estimated, it can be used to analyze the relationship between the quantity demanded and the price of the good. This includes calculating the price elasticity of demand, which measures the responsiveness of the quantity demanded to a change in price. The demand function can also be used to predict the impact of changes in other determinants of demand on the quantity demanded.
 
 ---
 
-## 6. The Proving Grounds
+## Review & Practice
 
 ```interactive-quiz
 
 [
   {
-    "id": "q1",
-    "type": "true_false",
+    "id": "Q1234",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "The demand function for a good in international trade remains unchanged if the price of a substitute good increases, ceteris paribus.",
-    "answer": false,
-    "explanation": "The demand function \\(Q_d = f(P)\\) assumes that all other factors affecting demand remain constant, as per the ceteris paribus assumption. However, if the price of a substitute good increases, it will affect the demand for the original good. Specifically, an increase in the price of a substitute good will increase the demand for the original good, as consumers switch to the original good. Therefore, the demand function does not remain unchanged; it shifts. This can be represented as a change in the demand schedule or a shift of the demand curve. In mathematical terms, if \\(Q_d = f(P, P_s)\\), where \\(P_s\\) is the price of the substitute good, an increase in \\(P_s\\) leads to an increase in \\(Q_d\\) for any given \\(P$, thus \\(\frac{\\partial Q_d}{\\partial P_s} > 0\\)."
-  },
-  {
-    "id": "q2",
-    "type": "synthesis",
-    "difficulty": "L2",
-    "question": "The country of Azuria is facing a macro shock: a sudden 20% devaluation of its currency, the Azurian Peso (AP). This devaluation has made imports more expensive, threatening the stability of the country's trade balance. The demand function for Azuria's main import, electronics, is given by \\(Q_d = 1000 - 2P\\), where \\(Q_d\\) is the quantity demanded and \\(P\\) is the price in AP. With the devaluation, the new price of electronics in AP increases by 20%. If the original price was 200 AP, the new price is 240 AP. The government needs to intervene to prevent a system failure in the electronics market. Using the demand function, apply a 3-step policy response to mitigate the effects of the devaluation on the electronics market.",
-    "answer": "To mitigate the effects of the 20% devaluation of the Azurian Peso on the electronics market, the government of Azuria can implement the following 3-step policy response:\n\n1. **Subsidize Imports**: The government can provide a subsidy to importers to offset the increased cost due to the devaluation. Originally, the price was 200 AP, and the quantity demanded was \\(Q_d = 1000 - 2(200) = 600\\). After the devaluation, the price increases to 240 AP, leading to a new quantity demanded of \\(Q_d = 1000 - 2(240) = 520\\). By subsidizing the importers, the government can reduce the price back to 200 AP or a price that encourages a quantity demanded closer to the original 600 units.\n\n2. **Implement Price Controls**: Temporarily implement price controls to prevent the price of electronics from rising above a certain level, ensuring affordability for consumers. If the government sets a price ceiling at 220 AP, the quantity demanded would be \\(Q_d = 1000 - 2(220) = 560\\), which is closer to the original quantity demanded.\n\n3. **Increase Domestic Production**: Encourage or invest in domestic production of electronics to reduce reliance on imports. If Azuria can produce electronics domestically at a lower cost (or at a cost that doesn't increase with devaluation), it can help meet the demand at a stable price. For instance, if domestic production can supply 80 units (to make up for the 600 - 520 = 80 unit shortfall), the market can stabilize with a total supply of 600 units (520 imported + 80 domestic).",
-    "explanation": "The devaluation of the Azurian Peso leads to an increase in the price of imported electronics from 200 AP to 240 AP. Using the demand function \\(Q_d = 1000 - 2P\\), we can calculate the quantity demanded before and after the devaluation. Initially, \\(Q_d = 1000 - 2(200) = 600\\). After devaluation, \\(Q_d = 1000 - 2(240) = 520\\). This represents a decrease in quantity demanded by 80 units.\n\nThe policy responses aim to mitigate this effect:\n\n1. **Subsidy Impact**: If the government subsidizes imports to bring the price back down to 200 AP, \\(Q_d = 1000 - 2(200) = 600\\), effectively reversing the quantity demanded decrease.\n\n2. **Price Control Impact**: Setting a price ceiling at 220 AP results in \\(Q_d = 1000 - 2(220) = 560\\), which is a partial mitigation.\n\n3. **Domestic Production Impact**: Increasing domestic production to make up for the shortfall can stabilize the market. For example, producing 80 more units domestically can bring the total supply to 600 units, stabilizing the market.\n\nThe underlying mechanism can be represented as follows: Given \\(Q_d = f(P)\\), and the law of demand \\(\\frac{dQ_d}{dP} < 0\\), the government's interventions aim to shift the supply curve or adjust prices to achieve a desired \\(Q_d$. LaTeX representation of demand function: $Q_d = 1000 - 2P$. The effect of devaluation on price and quantity demanded can be shown as: $\\Delta P = 40$, $\\Delta Q_d = -80$. The subsidy or price control can be represented as a shift in the effective price $P_{effective} = P - subsidy$ or $P_{ceiling}$, respectively."
-  },
-  {
-    "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the concept of a Demand Function in the context of International Trade Analysis, and discuss its underlying mechanism and implications.",
-    "answer": "The Demand Function is a mathematical representation of the relationship between the price of a good and the quantity demanded by consumers, assuming ceteris paribus. It is typically expressed as $Q_d = f(P)$, where $Q_d$ is the quantity demanded and $P$ is the price of the good. The underlying mechanism of the Demand Function is based on the Law of Demand, which states that, ceteris paribus, as the price of a good increases, the quantity demanded decreases, and vice versa. This relationship is often illustrated by a demand curve, which plots the quantity demanded against the price.",
-    "explanation": "The Demand Function can be represented as $Q_d = f(P) = a - bP$, where $a$ and $b$ are constants that depend on the specific market and product. The demand curve is a graphical representation of this function, showing how the quantity demanded changes in response to changes in price. The Law of Demand is based on the assumption that consumers will buy more of a good at a lower price than at a higher price, ceteris paribus. This is because as the price of a good increases, the opportunity cost of purchasing it also increases, making it less attractive to consumers. Conversely, as the price of a good decreases, the opportunity cost of purchasing it decreases, making it more attractive to consumers. The Demand Function has important implications for International Trade Analysis, as it helps to explain how changes in prices and income affect the quantity demanded of imported and exported goods."
-  },
-  {
-    "id": "q4",
-    "type": "order",
-    "difficulty": "L2",
-    "question": "Order steps for Demand Function.",
-    "steps": [
-      "The Law of Demand states that, ceteris paribus, as the price of a good increases, the quantity demanded decreases.",
-      "The demand curve illustrates the relationship between price and quantity demanded.",
-      "The demand function is typically expressed as $Q_d = f(P)$.",
-      "The demand schedule lists the quantity demanded at various price levels.",
-      "As the price of a good increases, the quantity demanded decreases."
-    ],
-    "answer": [
-      "The demand curve illustrates the relationship between price and quantity demanded.",
-      "As the price of a good increases, the quantity demanded decreases.",
-      "The demand function is typically expressed as $Q_d = f(P)$.",
-      "The Law of Demand states that, ceteris paribus, as the price of a good increases, the quantity demanded decreases.",
-      "The demand schedule lists the quantity demanded at various price levels."
-    ]
-  },
-  {
-    "id": "q5",
-    "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output?",
-    "content": "Suppose we are analyzing the impact of a change in the exchange rate on the demand for a country's exports. The initial exchange rate is 1 USD = 0.8 EUR. The demand function for the exports is given by $Q_d = 1000 - 50P$, where $Q_d$ is the quantity demanded and $P$ is the price in USD. A depreciation of the USD causes the exchange rate to change to 1 USD = 0.7 EUR. Assuming the price of the exports in EUR remains constant at 100 EUR, we need to trace the effect of this change through the following sectors: (1) the exporter's revenue in USD, (2) the quantity demanded of the exports, (3) the exporter's profit, and (4) the country's GDP.",
-    "answer": {
-      "exporter_revenue_usd": 1250,
-      "quantity_demanded": 750,
-      "exporter_profit": 93750,
-      "country_gdp": 1000000
+    "question": "What is the correct interpretation of the price elasticity of demand (PED) for a good, given that the PED is -2.5?",
+    "options": {
+      "A": "A 1% increase in price leads to a 2.5% decrease in quantity demanded.",
+      "B": "A 1% increase in price leads to a 2.5% decrease in quantity demanded, and demand is elastic.",
+      "C": "A 1% increase in price leads to a 0.4% decrease in quantity demanded.",
+      "D": "A 1% increase in price leads to a 2.5% increase in quantity demanded."
     },
-    "explanation": "The exchange rate change affects the price of exports in USD. Initially, at 1 USD = 0.8 EUR, the price in USD is $P = 100 / 0.8 = 125$ USD. After depreciation, at 1 USD = 0.7 EUR, the price in USD is $P = 100 / 0.7 \\approx 142.86$ USD. Using the demand function $Q_d = 1000 - 50P$, we find $Q_d = 1000 - 50 \\times 142.86 = 750$. The exporter's revenue in USD is $142.86 \\times 750 = 107142.86$ USD, but we made an error in calculation - correct approach: If price in EUR is 100, and initially 1USD=0.8EUR, then price in USD is 100/0.8=125. With depreciation to 1USD=0.7EUR, new price in USD is 100/0.7=142.86. Using $Q_d=1000-50P$, $Q_d=1000-50*142.86=285.7$. If we assume a constant marginal cost of 50 USD per unit, the profit is $(142.86-50)*285.7= 26214285.7- 14285.7 = 24785714.29$. Given a large export sector, let's assume this profit contributes significantly to GDP, e.g.,  $\\Delta GDP = 1000000$."
+    "answer": "B",
+    "explanation": "The price elasticity of demand (PED) measures the responsiveness of the quantity demanded of a good to a change in its price, ceteris paribus. It is calculated as the percentage change in quantity demanded in response to a 1% change in price. The PED is given by the formula: $PED = \\frac{\\% \\Delta Q_d}{\\% \\Delta P}$. Given that the PED is -2.5, this implies that for every 1% increase in price, the quantity demanded decreases by 2.5%. The negative sign indicates that the relationship between price and quantity demanded is inverse, which is consistent with the law of demand. Furthermore, since the absolute value of the PED is greater than 1 (|PED| > 1), demand is considered elastic, meaning that changes in price have a significant effect on the quantity demanded. Therefore, option B is correct as it accurately describes both the magnitude of the response and the elasticity of demand."
+  },
+  {
+    "id": "DF_001",
+    "type": "fill_in",
+    "difficulty": "L2",
+    "question": "Fill in the blank.",
+    "textWithBlanks": "The Blank is a mathematical representation of the relationship between the quantity demanded of a good and its price, assuming all other factors that influence demand remain constant.",
+    "answer": [
+      "demand function"
+    ],
+    "explanation": "The demand function, denoted as Qd = f(P), is a mathematical representation of the relationship between the quantity demanded (Qd) of a good and its price (P), assuming all other factors that influence demand remain constant, as per the ceteris paribus assumption. This function is a cornerstone concept in microeconomics, specifically within the theory of demand, and is crucial for understanding how changes in price affect the quantity demanded of a product."
+  },
+  {
+    "id": "DF_001",
+    "type": "debug",
+    "difficulty": "L2",
+    "question": "Find the bug in the demand function: Qd = 100 - 2P + 3I - 4Ps, where Qd is the quantity demanded, P is the price of the good, I is the consumer income, and Ps is the price of substitutes.",
+    "content": "The given demand function is Qd = 100 - 2P + 3I - 4Ps. However, the function seems to be missing the price of complements (Pc).",
+    "answer": "The bug is that the demand function is missing the price of complements (Pc). A more comprehensive representation of the demand function should include Pc.",
+    "required_keywords": [
+      "fix_syntax"
+    ],
+    "explanation": "The demand function is typically expressed as Qd = f(P, I, Ps, Pc, T, E, N). The given function Qd = 100 - 2P + 3I - 4Ps is missing the term for the price of complements (Pc). The correct demand function should be Qd = 100 - 2P + 3I - 4Ps + 5Pc, where 5 is a coefficient representing the effect of Pc on Qd. The omission of Pc can lead to incorrect predictions of quantity demanded, especially if the good has close complements."
+  },
+  {
+    "id": "Demand_Function_Trace_1",
+    "type": "trace",
+    "difficulty": "L2",
+    "question": "What is the exact output on total revenue when a cost increase, such as higher wages, impacts the supply curve, leading to a new equilibrium price and quantity demanded for a specific industrial product, assuming a demand function Qd = 100 - 2P and an initial supply function Qs = 50 + 3P, if wages increase by 20% and the new supply function becomes Qs = 40 + 3P?",
+    "content": "The demand function is Qd = 100 - 2P and the initial supply function is Qs = 50 + 3P. To find the initial equilibrium price and quantity, we equate Qd and Qs: 100 - 2P = 50 + 3P. Solving for P gives 5P = 50, so P = 10. Substituting P = 10 into Qd = 100 - 2P yields Qd = 100 - 2*10 = 80. Thus, the initial equilibrium price is $10 and the initial equilibrium quantity is 80 units.",
+    "answer": "$800",
+    "explanation": "When wages increase by 20%, the new supply function becomes Qs = 40 + 3P. To find the new equilibrium price and quantity, we equate Qd and the new Qs: 100 - 2P = 40 + 3P. Solving for P gives 5P = 60, so P = 12. Substituting P = 12 into Qd = 100 - 2P yields Qd = 100 - 2*12 = 76. Thus, the new equilibrium price is $12 and the new equilibrium quantity is 76 units. The total revenue (TR) is given by TR = P * Qd. Initially, TR = $10 * 80 = $800. After the change, TR = $12 * 76 = $912. Therefore, the exact output on total revenue after the cost increase is $912."
   }
 ]
 

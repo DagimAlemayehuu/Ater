@@ -1,126 +1,136 @@
 ---
-
 title: Change_In_Technology
-type: Atomic Note
-course: Economics
-semester: Winter 2026
+course: "[[Economics]]"
 unit: '2'
-hub: '[[2_Theory_Of_Demand_And_Supply_Hub]]'
-source: '[[5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf]]'
+semester: "[[Winter 2026]]"
+mode: ECON-MICRO
+type: atomic_note
+date: 2026-05-07
+prerequisites:
+- "[[Theory_Of_Demand]]"
+- "[[Law_Of_Demand]]"
+- "[[Ceteris_Paribus]]"
+- "[[Demand_Schedule]]"
+- "[[Demand_Curve]]"
 source_pages:
 - 46
-mode: ECON-MACRO
-read: false
-generated: true
-prerequisites:
-- '[[Theory_Of_Demand]]'
-- '[[Market_Demand_Curve]]'
-- '[[Market_Equilibrium]]'
-- '[[Ceteris_Paribus]]'
-- '[[Demand_Schedule]]'
-
+hub: "[[2_Theory_of_Demand_and_Supply_Hub]]"
+source: "[[5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf]]"
 ---
 
 
-# 1. Mental Model
+## 1. Mental Model
 
-Imagine you're a skilled baker who owns a small bakery. One day, you invent a new machine that can produce twice as many loaves of bread per hour as your old machine. This new machine is like a super-efficient helper that allows you to make more bread with the same amount of ingredients and labor. In economics, this improvement in your bakery's ability to produce bread is like a "Change In Technology". The mechanical components that map to this concept are: (1) the old machine (initial production technology) and (2) the new machine (improved production technology). With the new machine, you can supply more bread to the market, which is like a shift in the supply curve outward.
+Imagine you have a lemonade stand, and you're using a manual juicer to squeeze lemons. You can only make 10 cups of lemonade per hour. One day, your friend gives you an electric juicer that's super fast and efficient. Now, you can make 20 cups of lemonade per hour! With this new electric juicer, you can supply more lemonade to your customers, and you might even start selling to more people who live nearby. This is like a "change in technology" - the electric juicer is like a new tool that helps you make more lemonade (or produce more goods) with the same amount of effort. This means you can supply more lemonade to the market, and that's like shifting your supply curve outward, making more lemonade available to everyone!
 
-# 2. Economic Theory
+## 2. Micro Theory
 
-A [[Change_In_Technology]] refers to an improvement or advancement in the production process that enables firms to produce goods and services more efficiently, leading to an increase in supply. This concept is closely related to the [[Theory_Of_Demand]] and [[Market_Demand_Curve]], as changes in technology can affect the [[Market_Equilibrium]]. The underlying mechanism of a [[Change_In_Technology]] involves a reduction in production costs or an increase in productivity, which allows firms to supply more goods and services at each price level, thus shifting the Supply Curve outward. This shift is a direct result of the [[Ceteris_Paribus]] assumption, which holds that all other factors remain constant. The [[Demand_Schedule]] and [[Demand_Function]] remain unaffected, but the [[Market_Demand_Curve]] may shift if the [[Change_In_Technology]] leads to a change in the price of the good or service. The [[Price_Elasticity_Of_Demand]] and [[Income_Elasticity_Of_Demand]] may also be affected, as the [[Change_In_Technology]] can influence consumer behavior.
+In the context of microeconomics, a **Change In Technology** refers to an improvement or advancement in the production process that enables firms to produce goods and services more efficiently, leading to an increase in supply. This concept is intricately linked with the [[Theory_Of_Demand]] and [[Law_Of_Demand]], as changes in technology can have a ripple effect on the demand side of the market.
 
-# 3. Limitations & Edge Cases
+A change in technology can be defined as a shift in the production function, which represents the technical relationship between inputs and outputs. When a firm experiences a technological advancement, its production function changes, allowing it to produce more output with the same quantity of inputs or the same output with fewer inputs. This increased efficiency leads to a reduction in production costs, making it possible for the firm to supply more goods and services at a lower price.
 
-The concept of [[Change_In_Technology]] assumes that the improvement in production technology is exogenous, meaning it comes from outside the economic system. However, in reality, [[Change_In_Technology]] often results from investments in research and development, which can be influenced by [[Determinants_Of_Demand]] and [[Market_Demand]]. Additionally, the [[Change_In_Technology]] may not always lead to an outward shift in the Supply Curve, as it may also lead to the adoption of new technologies that make certain products obsolete. Furthermore, the [[Change_In_Technology]] can have distributional effects, as some firms or workers may be displaced by the new technology. The [[Effects_Of_Shift_In_Demand_And_Supply]] of a [[Change_In_Technology]] can be complex and depend on various factors, including the [[Elasticity_Of_Supply]] and [[Price_Elasticity_Of_Demand]].
+The [[Ceteris_Paribus]] assumption, which holds that all other factors remain constant, is crucial in analyzing the impact of a change in technology on the supply curve. When a technological advancement occurs, the [[Demand_Schedule]] and [[Demand_Curve]] remain unchanged, as the change in technology affects the supply side of the market. The [[Demand_Function]], which represents the relationship between the quantity demanded and the price of a good, also remains unaffected.
 
-# 4. Economic Model
+However, the [[Market_Demand]] and [[Market_Demand_Curve]] may be indirectly affected by a change in technology, as increased supply can lead to a decrease in market price, which in turn can influence the quantity demanded. The [[Price_Elasticity_Of_Demand]] and [[Income_Elasticity_Of_Demand]] may also be impacted, as changes in market price and consumer income can affect the responsiveness of consumers to changes in price and income.
+
+The [[Determinants_Of_Demand]], such as [[Substitutes_And_Complements]], [[Normal_And_Inferior_Goods]], [[Consumer_Expectations]], [[Number_Of_Buyers]], and [[Taste_And_Preference]], remain unchanged, as a change in technology does not directly affect these factors. However, a change in technology can lead to a [[Change_In_Demand]], as increased supply and lower prices can influence consumer behavior.
+
+The impact of a change in technology on the supply side of the market is more direct. A technological advancement leads to a [[Shift_In_Supply_Curve]], where the supply curve shifts outward, indicating that firms are willing to supply more goods and services at each price level. This shift is associated with an increase in the [[Elasticity_Of_Supply]], as firms become more responsive to changes in price.
+
+The [[Price_Elasticity_Of_Supply_Formula]] and [[Determinants_Of_Elasticity_Of_Supply]] can be used to analyze the impact of a change in technology on the elasticity of supply. A technological advancement can lead to an increase in the elasticity of supply, as firms become more responsive to changes in price.
+
+The [[Market_Equilibrium]] is also affected by a change in technology, as the shift in the supply curve leads to a new equilibrium price and quantity. The [[Surplus_And_Shortage]] that may arise due to the change in technology will be resolved through market forces, leading to a new [[Market_Equilibrium_Example]].
+
+In conclusion, a change in technology h
+
+## 3. Limitations & Edge Cases
+
+The concept of Change in Technology assumes that technological advancements lead to increased productivity and a subsequent outward shift of the supply curve. However, this notion has limitations, particularly in cases where technological changes may not necessarily lead to increased output, such as when a firm adopts a technology that primarily improves product quality rather than quantity. Additionally, the assumption of cost-reducing technological advancements may not hold in cases where the new technology requires significant upfront investments, rendering it inaccessible to firms with limited resources. Furthermore, the pace of technological progress can be slow in certain industries, and the benefits of technological change may not be immediately realized, potentially limiting its impact on supply. Moreover, the presence of diminishing returns to scale may also limit the extent to which technological advancements can increase output, as the marginal productivity of additional inputs may decline. Overall, these edge cases highlight the need for a nuanced understanding of the relationship between technological change and supply.
+
+## 4. Market Graph
 
 ```mermaid
 
-graph LR
-    A[Initial Technology] -->|Improvement in Production Efficiency| B(New Technology)
-    B -->|Increase in Productivity| C(Reduction in Production Costs)
-    C -->|Shift in Supply Curve| D(Increase in Market Supply)
-    D -->|Change in Market Equilibrium| E(New Market Equilibrium)
+graph TD
+    A[Initial Technology] -->|Technological Advancement| B[New Technology]
+    B -->|Increased Efficiency| C[Reduced Production Costs]
+    C -->|Increased Supply| D[Shift in Supply Curve to the Right]
+    D -->|Lower Market Price| E[Increased Consumer Welfare]
+    E -->|Potential Increase in Demand| F[New Equilibrium]
 
 ```
 
-This Mermaid flowchart illustrates the process of a Change In Technology, from the initial technology to the new market equilibrium. The flowchart shows how an improvement in production efficiency leads to an increase in productivity, reduction in production costs, and a shift in the supply curve, ultimately resulting in a new market equilibrium.
+A change in technology leads to increased efficiency, reduced production costs, and a shift in the supply curve to the right, resulting in a lower market price and potentially increased consumer welfare. The overall effect of a technological advancement in the labor market is an increase in the supply of goods and services, which can lead to a new equilibrium.
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of Change In Technology operates in Fiscal Policy Research:
+**Step 1: Initial Equilibrium and Production Function**
+The production function of a firm is represented as Q = f(L, K), where Q is the quantity of output, L is labor, and K is capital. Initially, the firm's production function is Q1 = f(L, K). The labor market is in equilibrium, where the labor supply curve (Ls) intersects the labor demand curve (Ld), determining the equilibrium wage (W1) and quantity of labor employed (L1).
 
-1. **Initial State**: Suppose the initial production technology in a economy allows for the production of 100 units of a good per hour, with a production cost of $10 per unit. The initial supply curve is represented by $Q_S = 100P$, where $Q_S$ is the quantity supplied and $P$ is the price.
+**Step 2: Technological Advancement and Shift in Production Function**
+A change in technology occurs, allowing the firm to produce more output with the same inputs. The production function shifts to Q2 = f(L, K), where Q2 > Q1 for the same L and K. This technological advancement can be represented as a decrease in the marginal rate of technical substitution (MRTS) between labor and capital, making labor more productive.
 
-2. **Introduction of New Technology**: A new technology is introduced that increases production efficiency, allowing for the production of 150 units of the good per hour, with a reduced production cost of $8 per unit.
+**Step 3: Impact on Labor Demand**
+With the new production function Q2 = f(L, K), the firm's labor demand curve shifts to the right, from Ld to Ld'. This is because the firm can now produce more output with the same quantity of labor, making labor more valuable. At the initial wage W1, the firm now demands more labor, L2, which is greater than L1.
 
-3. **Intermediate State**: With the new technology, the supply curve shifts outward to $Q_S = 150P$, representing an increase in market supply. At a given price of $10, the quantity supplied increases from 100 units to 150 units.
+**Step 4: Adjustment in Labor Market**
+The increase in labor demand causes the labor market to move out of equilibrium. The labor supply curve (Ls) remains unchanged, but the labor demand curve has shifted to Ld'. The new equilibrium is established where Ls intersects Ld', determining a new equilibrium wage (W2) and quantity of labor employed (L3). The new equilibrium wage W2 may be higher or lower than W1, depending on the elasticity of the labor supply and demand curves.
 
-4. **Data Transformation**: The reduction in production costs and increase in productivity lead to a change in market equilibrium. Assuming a demand curve of $Q_D = 200 - 10P$, the new market equilibrium is found by equating $Q_S$ and $Q_D$: $150P = 200 - 10P$. Solving for $P$, we get $P = 8$. The new quantity supplied and demanded is $Q = 120$ units.
-
-5. **Final State**: The new market equilibrium is characterized by a lower price ($8) and a higher quantity (120 units) compared to the initial state. The Change In Technology has led to an increase in market supply, a reduction in price, and an increase in the quantity of goods traded in the market.
+**Step 5: Comparative Statics and Welfare Analysis**
+Comparing the initial and final equilibria, we can see that the technological advancement has led to an increase in the quantity of labor employed (from L1 to L3) and a change in the equilibrium wage (from W1 to W2). The impact on welfare can be analyzed by examining the changes in consumer and producer surplus. The reduction in production costs due to technological advancement can lead to lower prices, increasing consumer surplus. The firm's profit may increase due to the increased efficiency, which can lead to an increase in producer surplus.
 
 ---
 
-## 6. The Proving Grounds
+## Review & Practice
 
 ```interactive-quiz
 
 [
   {
-    "id": "q1",
-    "type": "true_false",
+    "id": "Q1",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "A Change In Technology that leads to a reduction in production costs will always result in an outward shift of the Supply Curve, ceteris paribus.",
-    "answer": false,
-    "explanation": "The statement is false because, although a Change In Technology that leads to a reduction in production costs will typically result in an outward shift of the Supply Curve, ceteris paribus, it is not a universal rule. The ceteris paribus assumption implies that all other factors remain constant. However, if the Change In Technology is accompanied by an increase in the price of a key input or a decrease in consumer income, the Supply Curve may not shift outward. Furthermore, the impact of the Change In Technology on the Supply Curve can be influenced by factors such as the elasticity of substitution between inputs, the degree of competition in the market, and the presence of externalities. In the context of Fiscal Policy Research, it is essential to consider these complexities when evaluating the effects of a Change In Technology on the economy. Mathematically, this can be represented as: $Q_s = f(P, T, C)$, where $Q_s$ is the quantity supplied, $P$ is the price of the good, $T$ is the technology level, and $C$ is the cost of production. A Change In Technology that reduces $C$ will increase $Q_s$ at each price level, shifting the Supply Curve outward, but this effect can be mitigated or exacerbated by changes in other factors, such as $P$ or $C$."
+    "question": "A technological advancement in the production of a good leads to a decrease in its market price. What is the effect on the price elasticity of demand for the good, assuming the demand curve remains unchanged?",
+    "options": {
+      "A": "The price elasticity of demand increases.",
+      "B": "The price elasticity of demand decreases.",
+      "C": "The price elasticity of demand remains unchanged.",
+      "D": "The price elasticity of demand becomes perfectly elastic."
+    },
+    "answer": "C",
+    "explanation": "A technological advancement leads to a decrease in production costs, allowing firms to supply more goods at a lower price. This results in a movement along the demand curve. The price elasticity of demand measures how responsive the quantity demanded is to a change in price. It is calculated using the formula: $E_d = \\frac{\\% \\Delta Q_d}{\\% \\Delta P}$. Since the demand curve remains unchanged, the responsiveness of consumers to a change in price does not change. Therefore, the price elasticity of demand remains unchanged."
   },
   {
-    "id": "q2",
-    "type": "synthesis",
+    "id": "tech_change_1",
+    "type": "fill_in",
     "difficulty": "L2",
-    "question": "A sudden and unexpected change in technology has caused a significant increase in productivity in the manufacturing sector, leading to a surge in supply. However, this has also led to a sharp decline in the value of the currency, causing a macro shock. The government must respond with a 3-step fiscal policy to prevent system failure.",
-    "answer": "To address the macro shock caused by the sudden change in technology, the government should implement the following 3-step fiscal policy response:\n\n1. **Monetary Policy Accommodation**: The central bank should adjust interest rates to stabilize the currency and prevent further devaluation. This can be achieved by increasing interest rates to attract foreign investors and strengthen the currency.\n2. **Fiscal Stimulus Package**: The government should implement a targeted fiscal stimulus package to support industries that are negatively affected by the sudden change in technology. This can include investments in retraining programs, subsidies for affected businesses, and infrastructure spending to boost aggregate demand.\n3. **Supply-Side Policies**: The government should implement supply-side policies to encourage the adoption of new technologies and support the growth of emerging industries. This can include investments in research and development, tax incentives for innovation, and deregulation to promote entrepreneurship.",
-    "explanation": "The sudden change in technology has led to a rightward shift in the supply curve, resulting in a surge in supply and a sharp decline in the value of the currency. This can be represented by the following equation:\n\n$$Y = C + I + G + (X - M)$$\n\nwhere $Y$ is the gross domestic product, $C$ is consumption, $I$ is investment, $G$ is government spending, $X$ is exports, and $M$ is imports. The sudden increase in supply has led to an increase in $X$ and a decrease in $M$, resulting in a trade surplus. However, the sharp decline in the value of the currency has led to an increase in $M$ and a decrease in $X$, resulting in a trade deficit.\n\nThe government's 3-step fiscal policy response aims to stabilize the currency, support affected industries, and promote the growth of emerging industries. The monetary policy accommodation aims to stabilize the currency by adjusting interest rates, while the fiscal stimulus package aims to support aggregate demand. The supply-side policies aim to promote the adoption of new technologies and support the growth of emerging industries, which can be represented by the following equation:\n\n$$Q = f(K, L, A)$$\n\nwhere $Q$ is the quantity of output, $K$ is capital, $L$ is labor, and $A$ is technology. The improvement in technology has led to an increase in $A$, resulting in an increase in $Q$. The government's policies aim to promote further increases in $A$ and support the growth of emerging industries."
-  },
-  {
-    "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the impact of a Change In Technology on the supply curve in a Fiscal Policy Research scenario.",
-    "answer": "A Change In Technology leads to an outward shift in the supply curve, as firms can produce goods and services more efficiently, resulting in an increase in supply. This is because the improvement in production technology reduces production costs or increases productivity, allowing firms to supply more goods and services at each price level.",
-    "explanation": "The underlying mechanism of a Change In Technology involves a reduction in production costs or an increase in productivity, which can be represented by the following equation: $Q = f(K, L, A)$, where $Q$ is the quantity of output, $K$ is the capital, $L$ is the labor, and $A$ is the technology level. An improvement in technology, $A$, leads to an increase in output, $Q$, for a given level of $K$ and $L$. This can be expressed as: $\frac{\\partial Q}{\\partial A} > 0$. As a result, the supply curve shifts outward, from $S_1$ to $S_2$, indicating that firms are willing to supply more goods and services at each price level."
-  },
-  {
-    "id": "q4",
-    "type": "order",
-    "difficulty": "L2",
-    "question": "Order steps for Change In Technology causal chain.",
-    "steps": [
-      "Increased productivity due to new machine",
-      "Shift in Market Equilibrium",
-      "Outward shift of the Supply Curve",
-      "Reduction in production costs",
-      "Increased supply of goods and services"
-    ],
+    "question": "Fill in the blank.",
+    "textWithBlanks": "A change in technology can be defined as a shift in the Blank, which represents the technical relationship between inputs and outputs.",
     "answer": [
-      "Increased productivity due to new machine",
-      "Outward shift of the Supply Curve",
-      "Reduction in production costs",
-      "Increased supply of goods and services",
-      "Shift in Market Equilibrium"
-    ]
+      "production function"
+    ],
+    "explanation": "In the context of microeconomics, a change in technology refers to an improvement or advancement in the production process. This change can be represented as a shift in the production function, which is a mathematical expression that describes the technical relationship between inputs (such as labor and capital) and outputs (such as goods and services). The production function is often represented as $Q = f(L, K)$, where $Q$ is the quantity of output, $L$ is the quantity of labor, and $K$ is the quantity of capital. When a firm experiences a technological advancement, its production function changes, allowing it to produce more output with the same quantity of inputs or the same output with fewer inputs. This can be represented as a new production function $Q' = f'(L, K)$, where $f'$ represents the new technology. The change in technology leads to an increase in efficiency, which in turn leads to a reduction in production costs and an increase in supply."
   },
   {
-    "id": "q5",
+    "id": "tech_change_bug",
+    "type": "debug",
+    "difficulty": "L2",
+    "question": "Find the bug in the formula for the change in supply due to a technological advancement: $\\Delta Q_s = \\beta \\cdot Q_s \\cdot (P - MC)$",
+    "content": "The formula for the change in supply due to a technological advancement is given by $\\Delta Q_s = \\beta \\cdot Q_s \\cdot (P - MC)$. However, this formula seems to be incorrect. Identify the bug.",
+    "answer": "The bug is that the formula should be $\\Delta Q_s = \\beta \\cdot Q_s \\cdot (P - MC) / P$ or more accurately $\\Delta Q_s = \\frac{\\partial Q_s}{\\partial \\beta} \\cdot \\Delta \\beta$",
+    "required_keywords": [
+      "fix_syntax"
+    ],
+    "explanation": "The correct formula for the change in supply due to a technological advancement involves the derivative of the supply function with respect to the technological parameter. Assuming a supply function $Q_s = f(P, \\beta)$, where $\\beta$ represents the technological parameter, the change in supply can be represented as $\\Delta Q_s = \\frac{\\partial Q_s}{\\partial \\beta} \\cdot \\Delta \\beta$. The given formula $\\Delta Q_s = \\beta \\cdot Q_s \\cdot (P - MC)$ seems to incorrectly relate the change in supply to the price, marginal cost, and a technological parameter $\\beta$. A more accurate representation would involve the specific functional form of $Q_s = f(P, \\beta)$."
+  },
+  {
+    "id": "generate_unique_id",
     "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output?",
-    "content": "Suppose a technological advancement in the manufacturing sector leads to a 20% increase in productivity. We will trace the effects through four distinct interconnected economic sectors: Manufacturing, Wholesale, Retail, and Consumption.",
-    "answer": "The exact output is 12.96.",
-    "explanation": "Assuming the initial output in the Manufacturing sector is 100 units, a 20% increase in productivity due to technological advancement results in a new output of 120 units. This increase in output affects the Wholesale sector, which experiences a 10% increase in inventory, from 110 units to 121 units. The Retail sector then sees a 5% increase in sales, from 115 units to 120.75 units. Finally, the Consumption sector experiences a 7% increase in demand, resulting in a final output of 12.96 (calculated as 120.75 * 0.1075). The underlying mechanism can be represented by the following LaTeX equations:\n\nLet $Q_M$ be the output in the Manufacturing sector, $Q_W$ be the output in the Wholesale sector, $Q_R$ be the output in the Retail sector, and $Q_C$ be the output in the Consumption sector.\n\nThe initial output in the Manufacturing sector is $Q_M = 100$. A 20% increase in productivity results in:\n\n$$Q_M' = Q_M \\cdot 1.2 = 100 \\cdot 1.2 = 120$$\n\nThe Wholesale sector experiences a 10% increase in inventory:\n\n$$Q_W' = Q_M' \\cdot 1.01 = 120 \\cdot 1.01 = 121.2$$\n\nThe Retail sector sees a 5% increase in sales:\n\n$$Q_R' = Q_W' \\cdot 1.05 = 121.2 \\cdot 1.05 = 127.26$$\n\nThe Consumption sector experiences a 7% increase in demand, but with a correction to reflect a realistic calculation:\n\n$$Q_C' = Q_R' \\cdot 1.02 = 127.26 \\cdot 1.02 = 129.8092$$\n\nHowever, to reflect a more accurate and lower increase as per the question's implication:\n\n$$Q_C' = 120.75 \\cdot 1.075 = 12.96 (per unit increase scaled properly) $$"
+    "difficulty": "L2",
+    "question": "What is the exact output of the change in technology on the labor market equilibrium, given a cost increase of 10% in wages, through the supply curve to equilibrium price and total revenue, assuming an initial supply curve of Qs = 100 + 5P and an initial demand curve of Qd = 200 - 3P?",
+    "content": "The change in technology in the labor market can be represented by a shift in the supply curve. Given a cost increase of 10% in wages, we first need to understand how this affects the supply curve. Assuming the initial supply curve is Qs = 100 + 5P, a 10% increase in wages would increase the costs of production. This would lead to a decrease in the quantity supplied at each price level, causing the supply curve to shift leftward. The new supply curve can be represented as Qs' = 90 + 5P (assuming the 10% increase in wages reduces the quantity supplied by 10 units at each price level). The demand curve remains unchanged at Qd = 200 - 3P. To find the new equilibrium price and quantity, we equate Qs' and Qd: 90 + 5P = 200 - 3P. Solving for P, we get 8P = 110, so P = 13.75. Substituting P back into the demand curve to find Q: Q = 200 - 3(13.75) = 200 - 41.25 = 158.75. The total revenue (TR) is given by TR = P * Q = 13.75 * 158.75 = 2180.3125.",
+    "answer": "The exact output is a new equilibrium price of 13.75 and a new equilibrium quantity of 158.75, with a total revenue of 2180.3125.",
+    "explanation": "The change in technology, represented by a 10% increase in wages, leads to a leftward shift in the supply curve from Qs = 100 + 5P to Qs' = 90 + 5P. The demand curve remains Qd = 200 - 3P. Equating Qs' and Qd to find the new equilibrium: $90 + 5P = 200 - 3P$. Solving for $P$: $8P = 110$, so $P = 13.75$. Substituting $P$ into $Qd$: $Q = 200 - 3(13.75) = 158.75$. The total revenue $TR = P \\cdot Q = 13.75 \\cdot 158.75 = 2180.3125$. The LaTeX representation of the equilibrium condition is: $Q_s' = Q_d \\Rightarrow 90 + 5P = 200 - 3P$. Solving for $P$: $5P + 3P = 200 - 90 \\Rightarrow 8P = 110 \\Rightarrow P = \\frac{110}{8} = 13.75$. Therefore, $TR = P \\cdot Q = 13.75 \\cdot (200 - 3 \\cdot 13.75) = 13.75 \\cdot 158.75 = 2180.3125$."
   }
 ]
 

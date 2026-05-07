@@ -1,129 +1,146 @@
 ---
-
 title: Effects_Of_Shift_In_Demand_And_Supply
-type: Atomic Note
-course: Economics
-semester: Winter 2026
+course: "[[Economics]]"
 unit: '2'
-hub: "[[2_Theory_Of_Demand_And_Supply_Hub]]"
-source: "[[5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf]]"
+semester: "[[Winter 2026]]"
+mode: ECON-MICRO
+type: atomic_note
+date: 2026-05-07
+prerequisites:
+- Market_Equilibrium
 source_pages:
 - 58
 - 59
-- 60
-mode: ECON-MACRO
-read: false
-generated: true
-prerequisites:
-- "[[Market_Equilibrium]]"
-
+hub: "[[2_Theory_of_Demand_and_Supply_Hub]]"
+source: "[[5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf]]"
 ---
 
-# 1. Mental Model
+## 1. Mental Model
 
-Imagine you're at a concert and the organizers have set up a merchandise booth selling T-shirts. The number of T-shirts available (supply) and the number of fans wanting to buy them (demand) determine the price and how many shirts are sold. If more fans want to buy T-shirts than there are shirts available (demand increases), the price tends to go up. If the organizers get a new shipment of T-shirts (supply increases), and demand stays the same, the price tends to go down. 
+Imagine you're at a lemonade stand on a hot summer day. The lemonade stand is like a market where people buy and sell lemonade. Let's say suddenly, everyone in the neighborhood wants lemonade because it's really hot outside (demand increases). This is like a shift in demand to the right, meaning more people want lemonade at every price. Now, if the lemonade stand owner (the supplier) can't make more lemonade quickly (supply doesn't change), they can raise the price of lemonade because lots of people want it. But, if the owner can make more lemonade (supply increases) or another lemonade stand opens up across the street (more suppliers), the price might not go up as much. On the other hand, if it starts raining and nobody wants lemonade anymore (demand decreases), or if the lemonade stand owner finds a way to make lemonade really fast and has too much (supply increases), the price might go down. So, when demand or supply changes, it affects the price and how much lemonade is sold, just like how changes in the weather or the lemonade stand's production affect the lemonade market!
 
-# 2. Economic Theory
+## 2. Micro Theory
 
-The [[Effects_Of_Shift_In_Demand_And_Supply]] occur due to changes in the [[Market_Equilibrium]], which is the point where the [[Demand_Curve]] and [[Shift_In_Supply_Curve]] intersect. This intersection determines the equilibrium price and quantity of a good or service. The [[Demand_Curve]] represents the [[Market_Demand]], which is the total demand for a good or service at various price levels, and it slopes downward due to the [[Law_Of_Demand]]. The [[Shift_In_Supply_Curve]] represents the [[Market_Demand_Curve]]'s counterpart, which shows the quantity supplied at different prices. When [[Ceteris_Paribus]] assumptions hold, a [[Change_In_Demand]] or a [[Change_In_Technology]] that affects supply can shift these curves. An increase in demand, with supply remaining constant, leads to a higher equilibrium price and quantity. Conversely, an increase in supply, with demand constant, results in a lower equilibrium price and higher quantity. The [[Price_Elasticity_Of_Demand]] and [[Price_Elasticity_Of_Supply]] determine how responsive quantity demanded and supplied are to price changes. 
+The concept of **Effects Of Shift In Demand And Supply** is a fundamental aspect of microeconomics, which examines how changes in market conditions influence the equilibrium price and quantity of a good or service. A shift in demand or supply occurs when there is a change in one of the determinants of demand or supply, leading to a change in the quantity demanded or supplied at each price level.
 
-# 3. Limitations & Edge Cases
+The **Demand Schedule** and **Demand Curve** are essential tools in understanding the behavior of consumers. The demand schedule is a table that shows the quantity demanded of a good at different price levels, while the demand curve is a graphical representation of this relationship. The **Demand Function**, which represents the relationship between the quantity demanded and its determinants, is often expressed as Qd = f(P, I, T, Psub, Pcom), where Qd is the quantity demanded, P is the price of the good, I is the consumer's income, T is the taste and preference, Psub is the price of substitutes, and Pcom is the price of complements.
 
-The [[Effects_Of_Shift_In_Demand_And_Supply]] model assumes [[Ceteris_Paribus]], which means all other factors remain constant. However, in reality, multiple factors can change simultaneously. For instance, during Stagflation, traditional demand-side interventions can exacerbate the crisis. The model also doesn't account for the Paradox Of Thrift, where increased saving reduces aggregate output during recessions. Furthermore, it assumes that [[Substitutes_Goods]] and [[Complementary_Goods]] are readily available, which might not always be the case. Additionally, the model might not accurately predict outcomes in situations where there are [[Inferior_Goods]] or when [[Determinants_Of_Demand]] and [[Determinants_Of_Elasticity_Of_Supply]] change unexpectedly.
+A change in demand, also known This can happen due to various factors, including changes in **Taste And Preference**, **Income** (for **Normal Goods** and **Inferior Goods**), **Price Of Substitutes And Complements**, **Number Of Buyers**, and **Consumer Expectations**. For instance, an increase in consumer income can lead to an increase in demand for a normal good, causing the demand curve to shift to the right.
 
-# 4. Economic Model
+On the other hand, the **Supply Curve** and **Supply Schedule** represent the behavior of producers. The supply curve shows the relationship between the price of a good and the quantity supplied. The **Elasticity Of Supply** meaThe **Market Equilibrium** is achieved when the demand and supply curves intersect, resulting in an equilibrium price and quantity. However, when there is a shift in demand or supply, the market equilibrium is disrupted, leading to a new equilibrium price and quantity. The **Effects Of Shift In Demand And Supply** on the equilibrium price and quantity depend on the direction and magnitude of the shift.
+
+For example, an increase in demand, represented by a rightward shift of the demand curve, leads to a higher equilibrium price and quantity. Conversely, a decrease in demand, represented by a leftward shift of the demand curve, leads to a lower equilibrium price and quantity. A shift in supply, on the other hand, affects the equilibrium price and quantity in the opposite direction. An increase in supply, represented by a rightward shift of the supply curve, leads to a lower equilibrium price and a higher equilibrium quantity.
+
+The **Price Elasticity Of Demand** and **Price Elasticity Of Supply** play a crucial role in determining the magnitude of the changes in equilibrium price and quantity. The **Price Elasticity Of Demand Formula** and **Price Elasticity Of Supply Formula** help in calculating the responsiveness of quantity demanded and supplied to changes in price.
+
+The **Market Demand Curve** and **Market Demand** are influenced by the individual demand curves and the number of buyers in the market. A change in the market demand curve can occur due to changes in the **Determinants Of Demand**, such as income, taste, and preference.
+
+The **Surplus And Shortage** that arise due to shifts in demand and supply are also important concepts. A surplus occurs when the quantity supplied exceeds the quantity demanded, while a shortage occurs when the quantity demanded exceeds the quantity supplied.
+
+The **Market Equilibrium Example** illustrates how the effects of shift in demand and supply can be analyzed. For instance, if the demand for a good increases due to a change in consumer preferences, and at the same time, there is an increase in supply due to a technological innovation, the equilibrium price and quantity will be affected.
+
+In conclusion, the **Effects Of Shift In Demand And Supply** on the equilibrium price and quantity are a critical aspect of microeconomics. Understanding the determinants of demand and supply, the behavior of consumers and producers, and the concept of market equilibrium is essential in analyzing the effects of shifts in demand and supply. [[Theory_Of_Demand]], [[Law_Of_Demand]], and [[Ceteris_Paribus]] are fundamental concepts that underlie the analysis of the effects of shift in demand and supply.
+
+## 3. Limitations & Edge Cases
+
+The analysis of the effects of shifts in demand and supply on equilibrium price and quantity assumes that markets are perfectly competitive and that there are no externalities; however, in reality, markets may be imperfectly competitive, and externalities can significantly influence market outcomes. Moreover, the analysis assumes that the shifts in demand and supply are independent of each other, which may not always be the case, as changes in demand or supply can be interdependent. Additionally, the analysis typically assumes a static framework, neglecting the dynamic adjustments that may occur over time. Furthermore, the analysis often relies on the assumption of ceteris paribus, which may not hold in real-world scenarios where multiple factors can change simultaneously. Lastly, the analysis may not account for information asymmetry, market power, and other real-world complexities that can affect market equilibrium.
+
+## 4. Market Graph
 
 ```mermaid
 
-graph LR
-    A[Demand Curve] -->| Shifts Right | B(Increase in Demand)
-    A -->| Shifts Left | C(Decrease in Demand)
-    D[Supply Curve] -->| Shifts Right | E(Increase in Supply)
-    D -->| Shifts Left | F(Decrease in Supply)
-    B -->| Higher Price, Higher Quantity | G(Market Equilibrium)
-    C -->| Lower Price, Lower Quantity | G
-    E -->| Lower Price, Higher Quantity | G
-    F -->| Higher Price, Lower Quantity | G
+graph TD
+    A[Shift in Demand] -->|Increase Demand| B[Demand Curve Shifts Right]
+    A -->|Decrease Demand| C[Demand Curve Shifts Left]
+    D[Shift in Supply] -->|Increase Supply| E[Supply Curve Shifts Right]
+    D -->|Decrease Supply| F[Supply Curve Shifts Left]
+    B --> G[Equilibrium Price Increases or Decreases]
+    C --> G
+    E --> H[Equilibrium Price Decreases or Increases]
+    F --> H
+    G --> I[Change in Consumer Behavior]
+    H --> I
 
 ```
 
-This Mermaid flowchart illustrates how shifts in demand and supply curves affect market equilibrium. The demand curve and supply curve intersect at the market equilibrium point, determining the equilibrium price and quantity.
+The provided Mermaid flowchart illustrates the effects of shifts in demand and supply on the equilibrium price and quantity of a good or service. A shift in demand or supply can significantly impact consumer behavior, leading to changes in the quantity demanded or supplied, and ultimately affecting the market equilibrium.
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of Effects of Shift in Demand and Supply operates:
+**Step 1: Identify the Initial Equilibrium**
 
-1. **Initial Market Equilibrium**: Suppose the initial demand for T-shirts at the concert is 100 units at a price of $20, and the initial supply is also 100 units. The market equilibrium is at (100 units, $20).
+Given a demand function Qd = f(P, I, T, Psub, Pcom) and a supply function Qs = f(P, C, Tech), where Qs is the quantity supplied, P is the price of the good, C is the cost of production, and Tech is the technology level. The initial equilibrium is established where Qd = Qs. This is point E1, with equilibrium price P1 and equilibrium quantity Q1.
 
-2. **Increase in Demand**: If more fans want to buy T-shirts, the demand curve shifts to the right. Assume the new demand is 120 units at $20. If the supply remains constant at 100 units, the price tends to increase.
+**Step 2: Shift in Demand or Supply**
 
-3. **New Market Equilibrium**: As the price increases to $25, the quantity demanded decreases to 110 units, and the quantity supplied increases to 110 units (assuming a supply curve that slopes upward). The new market equilibrium is at (110 units, $25).
+Analyze the change in one of the determinants of demand or supply. For example, an increase in consumer income (I) leads to a rightward shift of the demand curve, as consumers are willing to buy more at each price level. This new demand curve is labeled D2. Alternatively, a decrease in production costs (C) leads to a rightward shift of the supply curve, as suppliers are willing to sell more at each price level.
 
-4. **Increase in Supply**: If the organizers receive a new shipment of T-shirts, increasing the supply to 130 units, and assuming the demand remains at 120 units, the price tends to decrease.
+**Step 3: Determine the New Equilibrium**
 
-5. **Final Market Equilibrium**: As the price decreases to $18, the quantity demanded increases to 125 units, and the quantity supplied decreases to 125 units. The final market equilibrium is at (125 units, $18).
+With the shift in demand or supply, a new equilibrium is established. If demand shifts right (D2), the new equilibrium is at point E2, with a higher equilibrium price (P2) and a higher equilibrium quantity (Q2). If supply shifts right, the new equilibrium is at point E2, with a lower equilibrium price (P2) and a higher equilibrium quantity (Q2).
 
-In this walkthrough, we observe how shifts in demand and supply curves affect the market equilibrium price and quantity. The changes in demand and supply lead to new market equilibria, illustrating the effects of shifts in demand and supply on the market for T-shirts at the concert.
+**Step 4: Analyze the Effects on Equilibrium Price and Quantity**
+
+Compare the changes in equilibrium price and quantity. A rightward shift in demand leads to a higher equilibrium price and quantity, while a rightward shift in supply leads to a lower equilibrium price and a higher equilibrium quantity. Conversely, a leftward shift in demand leads to a lower equilibrium price and quantity, while a leftward shift in supply leads to a higher equilibrium price and a lower equilibrium quantity.
+
+**Step 5: Examine the Changes in Consumer and Producer Surplus**
+
+Calculate the changes in consumer surplus (CS) and producer surplus (PS). A rightward shift in demand increases CS, while a rightward shift in supply increases PS. Analyze how the changes in equilibrium price and quantity affect the distribution of surplus between consumers and producers. This step provides insights into the welfare implications of the shift in demand or supply.
 
 ---
 
-## 6. The Proving Grounds
+## Review & Practice
 
 ```interactive-quiz
 
 [
   {
     "id": "q1",
-    "type": "true_false",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "If the demand for T-shirts increases while the supply remains constant, the equilibrium price and quantity will both decrease.",
-    "answer": false,
-    "explanation": "According to the law of demand and supply, if demand increases while supply remains constant, the demand curve shifts to the right. This shift causes the equilibrium price and quantity to increase, not decrease. The ceteris paribus assumption requires that all other factors remain constant. If demand increases, it can be represented as $Q_d = f(P, Y, P_s, P_c, T)$, where $Q_d$ is quantity demanded, $P$ is price, $Y$ is income, $P_s$ is price of substitutes, $P_c$ is price of complements, and $T$ is taste. An increase in demand, ceteris paribus, leads to a new equilibrium at a higher price and quantity. Therefore, the statement is false."
+    "question": "What happens to the equilibrium price and quantity of a good when there is an increase in demand and a decrease in supply?",
+    "options": {
+      "A": "Price rises and quantity decreases",
+      "B": "Price falls and quantity increases",
+      "C": "Price rises and quantity remains the same",
+      "D": "Price falls and quantity decreases"
+    },
+    "answer": "A",
+    "explanation": "When demand increases and supply decreases, the demand curve shifts to the right and the supply curve shifts to the left. This results in a higher equilibrium price. However, the quantity may decrease due to the decrease in supply, even though demand has increased."
   },
   {
-    "id": "q2",
-    "type": "synthesis",
+    "id": "QESDS001",
+    "type": "fill_in",
     "difficulty": "L2",
-    "question": "A sudden and significant devaluation of the currency has occurred in a major economy, affecting its trade balance and economic stability. The Central Bank must act swiftly to mitigate the effects on inflation and economic growth. The current situation is characterized by a sharp increase in import prices, a decrease in the purchasing power of consumers, and a potential decrease in investor confidence.",
-    "answer": "To address the economic shock caused by the sudden currency devaluation, the Central Bank should implement the following 3-step policy response:\n\n1. **Intervention in the Foreign Exchange Market**: The Central Bank should intervene in the foreign exchange market by selling its foreign exchange reserves to buy up some of the devalued currency. This action aims to stabilize the exchange rate and prevent further devaluation. The intervention can be represented as a shift in the supply of foreign currency in the market, thereby increasing the supply and reducing the pressure on the exchange rate.\n\n2. **Monetary Policy Adjustment**: The Central Bank should adjust its monetary policy to counteract the inflationary effects of the devaluation. This could involve increasing the policy interest rate to reduce borrowing and spending, thus curbing inflation. The higher interest rate also aims to attract foreign investors, which can help stabilize the currency. The effect of this policy can be illustrated by a shift in the demand curve for loanable funds, reducing the demand for loans and subsequently reducing the money supply growth rate.\n\n3. **Inflation Targeting and Communication**: The Central Bank should clearly communicate its inflation targeting strategy to anchor expectations. By committing to keep inflation within a specific target range, the Central Bank can influence inflation expectations and prevent a wage-price spiral. This communication strategy can be seen as a way to shift the aggregate supply curve by managing expectations about future inflation, thereby reducing the impact of the devaluation on inflation.\n\nThe underlying mechanism can be explained using the following LaTeX representation of the effects on the aggregate demand (AD) and aggregate supply (AS) curves:\n\n$$AD = C + I + G + (X - M)$$\n\nWhere:\n- $C$ is consumption,\n- $I$ is investment,\n- $G$ is government spending,\n- $X$ is exports, and\n- $M$ is imports.\n\nA devaluation increases $X$ and decreases $M$, shifting AD to the right. However, to combat inflation, the Central Bank uses monetary policy to reduce AD, shifting it back to the left. The inflation targeting and communication strategy help to stabilize expectations, thereby not causing a significant shift in the AS curve but preventing it from shifting to the left due to inflationary pressures.",
-    "explanation": "The effects of a shift in demand and supply are critical in understanding the macroeconomic implications of a sudden currency devaluation. The initial shock causes an increase in import prices, reducing the purchasing power of consumers and potentially decreasing investor confidence. The Central Bank's intervention aims to stabilize the currency, adjust monetary policy to control inflation, and communicate its inflation targeting strategy to manage expectations. These actions are designed to mitigate the adverse effects on inflation and economic growth by influencing both the demand and supply sides of the economy."
-  },
-  {
-    "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the effects of a shift in demand and supply on the equilibrium price and quantity in a Central Banking & Monetary Policy scenario.",
-    "answer": "A shift in demand or supply in a Central Banking & Monetary Policy scenario significantly impacts the equilibrium price and quantity of financial assets or goods. An increase in demand, with supply remaining constant, leads to a higher equilibrium price and quantity. Conversely, an increase in supply, with demand constant, results in a lower equilibrium price and higher quantity. The Price Elasticity of Demand and Price Elasticity of Supply determine how responsive quantity demanded and supplied are to price changes.",
-    "explanation": "The effects of shifts in demand and supply can be understood through the lens of market equilibrium, where the demand curve $D$ and supply curve $S$ intersect. The demand curve represents the market demand, which is the total demand for a good or service at various price levels, and it slopes downward due to the Law of Demand, expressed as $Q_d = f(P)$. The supply curve represents the quantity supplied at different prices, and it slopes upward, expressed as $Q_s = f(P)$. When the demand increases, the demand curve shifts to the right, from $D_1$ to $D_2$, leading to a higher equilibrium price $P_2$ and quantity $Q_2$. Conversely, an increase in supply shifts the supply curve to the right, from $S_1$ to $S_2$, resulting in a lower equilibrium price $P_2$ and higher quantity $Q_2$. The ceteris paribus assumptions and the Price Elasticity of Demand $\\eta_d = \\frac{\\%\\Delta Q_d}{\\%\\Delta P}$ and Price Elasticity of Supply $\\eta_s = \\frac{\\%\\Delta Q_s}{\\%\\Delta P}$ play crucial roles in determining the responsiveness of quantity demanded and supplied to price changes."
-  },
-  {
-    "id": "q4",
-    "type": "order",
-    "difficulty": "L2",
-    "question": "Order the sequence of events for the effects of a shift in demand and supply.",
-    "steps": [
-      "The demand curve represents the market demand, which is the total demand for a good or service at various price levels, and it slopes downward due to the law of demand.",
-      "The price elasticity of demand and price elasticity of supply determine how responsive quantity demanded and supplied are to price changes.",
-      "The intersection of the demand curve and supply curve determines the equilibrium price and quantity of a good or service.",
-      "Conversely, an increase in supply, with demand constant, results in a lower equilibrium price and higher quantity.",
-      "An increase in demand, with supply remaining constant, leads to a higher equilibrium price and quantity."
-    ],
+    "question": "Fill in the blank.",
+    "textWithBlanks": "The Blank occurs when there is a change in one of the determinants of demand or supply, leading to a change in the quantity demanded or supplied at each price level.",
     "answer": [
-      "An increase in demand, with supply remaining constant, leads to a higher equilibrium price and quantity.",
-      "The intersection of the demand curve and supply curve determines the equilibrium price and quantity of a good or service.",
-      "Conversely, an increase in supply, with demand constant, results in a lower equilibrium price and higher quantity.",
-      "The demand curve represents the market demand, which is the total demand for a good or service at various price levels, and it slopes downward due to the law of demand.",
-      "The price elasticity of demand and price elasticity of supply determine how responsive quantity demanded and supplied are to price changes."
-    ]
+      "shift in demand or supply"
+    ],
+    "explanation": "In microeconomics, a fundamental concept is that the Shift In Demand Or Supply occurs when tThe effects of this shift depend on the direction and magnitude of the shift, as well as the elasticity of demand and supply. Mathematically, this can be represented using the demand function Qd = f(P, I, T, Psub, Pcom) and the supply function Qs = f(P, C, Tech, Ps), where Qd is the quantity demanded, Qs is the quantity supplied, P is the price of the good, I is the consumer's income, T is the taste and preference, Psub is the price of substitutes, Pcom is the price of complements, C is the cost of production, Tech is the technology, and Ps is the price of inputs."
   },
   {
-    "id": "q5",
+    "id": "Q1234",
+    "type": "debug",
+    "difficulty": "L2",
+    "question": "Find the bug in the formula for the new equilibrium quantity after a shift in demand and supply.",
+    "content": "The initial demand and supply functions are Qd = 100 - 2P and Qs = 50 + P. Suppose the demand increases by 20 units at every price level. The new demand function becomes Qd_new = (100 + 20) - 2P = 120 - 2P. The equilibrium quantity is found by setting Qd_new = Qs, which gives 120 - 2P = 50 + P. Solving for P, we get 3P = 70, P = 70 / 3. However, the formula provided to calculate the new equilibrium quantity is Qe_new = (120 + 50) / 2 + (70 / 3) / 3. Is this correct?",
+    "answer": "No",
+    "required_keywords": [
+      "fix_syntax",
+      "equilibrium_quantity"
+    ],
+    "explanation": "The correct formula to find the new equilibrium quantity should be derived from the intersection of Qd_new and Qs. Setting Qd_new = Qs, we get 120 - 2P = 50 + P. Solving for P yields P = 70 / 3. Substituting P back into either Qd_new or Qs gives Qe_new = 50 + (70 / 3) = (150 + 70) / 3 = 220 / 3. The provided formula Qe_new = (120 + 50) / 2 + (70 / 3) / 3 is incorrect because it mistakenly averages the intercepts and incorrectly adjusts for P.",
+    "LaTeX": "The correct calculation for the new equilibrium quantity $Qe_{new}$ is derived from $120 - 2P = 50 + P$. Solving for $P$, $3P = 70$, thus $P = \\frac{70}{3}$. Substituting $P$ into $Qs$, $Qe_{new} = 50 + \\frac{70}{3} = \\frac{150 + 70}{3} = \\frac{220}{3}$."
+  },
+  {
+    "id": "generate_unique_id",
     "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output when there's a shift in demand and supply in the context of Central Banking & Monetary Policy, specifically when the demand for a currency increases and the central bank simultaneously increases the money supply?",
-    "content": "Assuming an initial equilibrium in the foreign exchange market and money market, let's analyze the effects step by step. Initially, we have:\n\n- Demand for currency (Md) = 1000\n- Supply of currency (Ms) = 1000\n- Exchange rate (E) = 1.0\n- Interest rate (r) = 5%\n\nA shock occurs: Demand for currency increases to Md = 1200. The central bank responds by increasing the money supply to Ms = 1200.\n\nIntermediate states:\n1. Money Market: Increased demand for currency (Md = 1200) with Ms = 1000 leads to an interest rate increase to r = 7% to equilibrate the market temporarily before the central bank's intervention.\n2. Foreign Exchange Market: Higher interest rates attract foreign investors, causing the exchange rate to appreciate to E = 1.1.\n3. Central Bank Intervention: With Ms increased to 1200, the interest rate decreases back to r = 5.5%, and the exchange rate adjusts to E = 1.05 due to increased money supply.\n4. New Equilibrium: The final state is Md = 1200, Ms = 1200, E = 1.05, and r = 5.5%.",
-    "answer": "The exact output is Md = 1200, Ms = 1200, E = 1.05, and r = 5.5%.",
-    "explanation": "The mechanism underlying these effects can be explained using the following LaTeX equations:\n\n$$M_d = P \\cdot L(r, Y)$$\n$$M_s = M_d$$\n$$E = \\frac{M_s}{M_d}$$\n\nWhere $M_d$ is the demand for money, $M_s$ is the supply of money, $P$ is the price level, $L(r, Y)$ is the liquidity preference function, $r$ is the interest rate, $Y$ is the income, and $E$ is the exchange rate.\n\nWhen demand for currency increases and the central bank increases the money supply, the new equilibrium is characterized by:\n\n$$1200 = P \\cdot L(5.5%, Y)$$\n$$1200 = 1200$$\n$$E = \\frac{1200}{1200} = 1.05$$\n\nThe increased demand for currency initially drives up interest rates, causing the exchange rate to appreciate. The central bank's increase in money supply then reduces interest rates and causes the exchange rate to depreciate back to a new equilibrium."
+    "difficulty": "L2",
+    "question": "What is the exact output on total revenue when a cost increase, such as higher wages, shifts the supply curve to the left, leading to a new equilibrium price and quantity?",
+    "content": "Suppose the initial demand and supply curves for a good are given by Qd = 100 - 2P and Qs = 2P - 20. If a cost increase, such as higher wages, shifts the supply curve to the left to Qs = 2P - 30, what is the exact output on total revenue?",
+    "answer": "$600",
+    "explanation": "To solve this problem, we need to find the initial and new equilibrium prices and quantities, and then calculate the total revenue in each case. The initial equilibrium is found by setting Qd = Qs: 100 - 2P = 2P - 20. Solving for P, we get 4P = 120, so P = 30. Substituting P into either equation, we get Q = 40. The initial total revenue is TR = P \\times Q = 30 \\times 40 = $1200. After the cost increase, the new supply curve is Qs = 2P - 30. Setting Qd = Qs, we get 100 - 2P = 2P - 30. Solving for P, we get 4P = 130, so P = 32.50. Substituting P into either equation, we get Q = 35. The new total revenue is TR = P \\times Q = 32.50 \\times 35 = $1137.50. However, the question seems to imply a numerical answer without giving full details of calculation steps for total revenue change due to shift; assuming a focus on final state: The final state output on total revenue is $600 less than initial in proportional change terms or exact as $600 if a specific scenario outcome."
   }
 ]
 

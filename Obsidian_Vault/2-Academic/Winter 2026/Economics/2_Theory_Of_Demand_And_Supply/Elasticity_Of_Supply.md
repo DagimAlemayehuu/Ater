@@ -1,137 +1,168 @@
 ---
-
 title: Elasticity_Of_Supply
-type: Atomic Note
-course: Economics
-semester: Winter 2026
+course: "[[Economics]]"
 unit: '2'
-hub: '[[2_Theory_Of_Demand_And_Supply_Hub]]'
-source: '[[5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf]]'
+semester: "[[Winter 2026]]"
+mode: ECON-MICRO
+type: atomic_note
+date: 2026-05-07
+prerequisites:
+- "[[Ceteris_Paribus]]"
+- "[[Price_Elasticity_Of_Supply_Formula]]"
+- "[[Determinants_Of_Elasticity_Of_Supply]]"
+- "[[Shift_In_Supply_Curve]]"
+- "[[Change_In_Technology]]"
 source_pages:
 - 47
-- 48
-mode: ECON-MACRO
-read: false
-generated: true
-prerequisites:
-- '[[Ceteris_Paribus]]'
-- '[[Price_Elasticity_Of_Supply]]'
-- '[[Determinants_Of_Elasticity_Of_Supply]]'
-- '[[Shift_In_Supply_Curve]]'
-- '[[Market_Equilibrium]]'
-
+hub: "[[2_Theory_of_Demand_and_Supply_Hub]]"
+source: "[[5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf]]"
 ---
 
 
-# 1. Mental Model
+## 1. Mental Model
 
-Imagine you're a manager of a music studio that offers recording services. When the price of studio time increases, you can easily adjust the number of studios you open or the hours of operation to accommodate more clients, but only if you have the necessary equipment and staff. If the price increase is significant, you might also consider investing in more efficient recording technology to increase supply. This scenario illustrates how the elasticity of supply works, where the responsiveness of the quantity supplied of a good (studio time) to a change in its price depends on factors like the availability of resources (equipment, staff) and technology.
+Imagine you're a lemonade stand owner, and you have a big pitcher of lemonade that you can sell to thirsty people walking by. If someone offers you a lot of money for your lemonade, you can easily pour more lemonade into a new pitcher and sell it to them, because you have all the lemons, sugar, and cups at home to make more. This means you can quickly make more lemonade when the price is high, and that's like having an "elastic" supply. But, if you only had a tiny bit of lemonade left and someone offered you a lot of money for it, you can't just magically make more, so you're stuck with what you have - that's like having an "inelastic" supply. Elasticity of supply is like how easily you can make more lemonade (or any product) when the price changes - if it's easy, it's elastic, and if it's hard, it's inelastic!
 
-# 2. Economic Theory
+## 2. Micro Theory
 
-The [[Elasticity_Of_Supply]] measures the responsiveness of the quantity supplied of a good to a change in its price, given [[Ceteris_Paribus]]. It is defined as the percentage change in quantity supplied in response to a 1% change in price, and can be calculated using the [[Price_Elasticity_Of_Supply]] formula. The underlying mechanism follows the Law Of Supply, which states that as the price of a good increases, the quantity supplied also increases, [[Ceteris_Paribus]]. The [[Determinants_Of_Elasticity_Of_Supply]], such as the availability of resources, technology, and the time period considered, influence the elasticity of supply. A [[Shift_In_Supply_Curve]] can occur due to changes in these determinants, leading to a change in the quantity supplied at a given price. The [[Market_Equilibrium]] is achieved when the quantity supplied equals the quantity demanded, and changes in [[Market_Demand]] or Supply can lead to [[Surplus_And_Shortage]].
+The elasticity of supply is a fundamental concept in microeconomics that measures the responsiveness of the quantity supplied of a good to a change in its price, while holding all other influential factors constant, as per the [[Ceteris_Paribus]] assumption. It provides a quantitative assessment of the degree to which suppliers adjust their production levels in response to price fluctuations.
 
-# 3. Limitations & Edge Cases
+The elasticity of supply is typically expressed as a numerical value, calculated using the [[Price_Elasticity_Of_Supply_Formula]], which is given by the percentage change in quantity supplied divided by the percentage change in price. This formula yields a positive value, as both the price and quantity supplied are directly related. A higher elasticity of supply indicates that suppliers are more responsive to price changes, while a lower elasticity implies that suppliers are less responsive.
 
-The [[Elasticity_Of_Supply]] concept assumes that firms can easily adjust their production levels in response to price changes, which may not always be the case. In reality, firms may face [[Change_In_Technology]] constraints or limitations in their ability to [[Shift_In_Supply_Curve]] quickly. Additionally, the concept assumes [[Ceteris_Paribus]], which may not hold in real-world scenarios where other factors, such as changes in [[Market_Demand]] or [[Effects_Of_Shift_In_Demand_And_Supply]], can influence the supply curve. The [[Price_Elasticity_Of_Supply]] can also be affected by the time period considered, with supply being more elastic in the long run than in the short run.
+The elasticity of supply is influenced by several factors, collectively referred to as the [[Determinants_Of_Elasticity_Of_Supply]]. These determinants include the availability of inputs, production technology, and the time period being considered. For instance, if a firm has idle capacity and can easily increase production, the elasticity of supply is likely to be high. Conversely, if production is subject to diminishing returns, the elasticity of supply may be lower.
 
-# 4. Economic Model
+The concept of elasticity of supply is closely related to the [[Shift_In_Supply_Curve]], which occurs when there is a change in one of the determinants of supply, leading to an increase or decrease in the quantity supplied at each price level. A shift in the supply curve can result from various factors, such as a [[Change_In_Technology]] or a change in the prices of inputs.
 
-```mermaid
+Understanding the elasticity of supply is essential in analyzing [[Market_Equilibrium]], as it helps determine the price and quantity of a good that prevail in a market. When the demand for a good increases, causing a shift in the [[Market_Demand_Curve]], the elasticity of supply influences the extent to which the price rises and the quantity supplied increases. This, in turn, affects the [[Surplus_And_Shortage]] in the market.
 
-graph LR
-    A[Price Increase] --> B{Elasticity of Supply}
-    B -->|High Elasticity| C[Large Increase in Quantity Supplied]
-    B -->|Low Elasticity| D[Small Increase in Quantity Supplied]
-    E[Determinants of Elasticity] --> B
-    E --> F[Availability of Resources]
-    E --> G[Technology]
-    E --> H[Time]
+The elasticity of supply also has implications for [[Effects_Of_Shift_In_Demand_And_Supply]], as it determines how changes in demand are absorbed by suppliers. For example, if the elasticity of supply is high, a shift in demand may lead to a relatively small price increase and a large quantity increase. Conversely, if the elasticity of supply is low, a shift in demand may result in a large price increase and a small quantity increase.
+
+To illustrate these concepts, consider a [[Market_Equilibrium_Example]], where the demand and supply curves intersect to determine the market price and quantity. If the elasticity of supply is high, suppliers can quickly respond to changes in demand, maintaining market equilibrium. However, if the elasticity of supply is low, market equilibrium may be disrupted, leading to surpluses or shortages.
+
+In conclusion, the elasticity of supply is a crucial concept in microeconomics that measures the responsiveness of suppliers to price changes. Understanding its technical definition and mechanisms, as well as its relationship to other economic concepts, such as [[Theory_Of_Demand]], [[Law_Of_Demand]], and [[Market_Demand]], is essential for analyzing market behavior and making informed decisions.
+
+## 3. Limitations & Edge Cases
+
+The elasticity of supply meaAdditionally, the concept struggles to account for external shocks, technological advancements, or policy interventions that can abruptly shift supply curves, rendering elasticity estimates obsolete. Furthermore, accurately measuring elasticity of supply can be challenging due to difficulties in isolating the effect of a specific variable on quantity supplied, especially in markets with numerous interacting factors.
+
+## 4. Market Graph
+
+```latex
+
+$$
+\begin{aligned}
+E_s &= \frac{\% \Delta Q_s}{\% \Delta P} \\
+&= \frac{\frac{\Delta Q_s}{Q_s}}{\frac{\Delta P}{P}} \\
+&= \frac{\Delta Q_s}{\Delta P} \cdot \frac{P}{Q_s}
+\end{aligned}
+$$
 
 ```
 
-This flowchart illustrates how the elasticity of supply responds to a price increase, influenced by determinants such as availability of resources, technology, and time. The elasticity of supply determines the magnitude of the change in quantity supplied.
+This equation represents the price elasticity of supply formula, which calculates the percentage change in quantity supplied in response to a 1% change in price. A higher value of $E_s$ indicates that suppliers are more responsive to price changes, while a lower value implies that suppliers are less responsive.
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the concept of Elasticity of Supply operates in Market Strategy:
+**Step 1: Define the Price Elasticity of Supply Formula**
 
-1. **Initial State**: Suppose the music studio is operating at a price of $100 per hour and supplies 10 hours of studio time per week. The quantity supplied is 10 hours.
+The price elasticity of supply (PES) is calculated using PES = (Percentage Change in Quantity Supplied) / (Percentage Change in Price)
 
-2. **Price Increase**: The price of studio time increases by 10% to $110 per hour. 
+PES = (∆Qs / Qs) / (∆P / P)
 
-3. **Determinants Assessment**: The manager assesses the determinants of elasticity:
-   - **Availability of Resources**: There are spare studios and staff available to increase production.
-   - **Technology**: The studio uses efficient recording technology that allows for easy scaling.
-   - **Time**: The increase in price is anticipated to be long-term.
+where:
+- PES = Price Elasticity of Supply
+- ∆Qs = Change in Quantity Supplied
+- Qs = Original Quantity Supplied
+- ∆P = Change in Price
+- P = Original Price
 
-4. **Elasticity Calculation**: Given the high elasticity due to the availability of resources, technology, and sufficient time to adjust, a 10% price increase leads to a 20% increase in quantity supplied (from 10 hours to 12 hours).
+**Step 2: Interpret the Elasticity of Supply Values**
 
-5. **Outcome**: The elasticity of supply is calculated as: 
-   $$
-   E_S = \frac{\% \Delta Q_S}{\% \Delta P} = \frac{20\%}{10\%} = 2
-   $$
-   This indicates that for every 1% change in price, the quantity supplied changes by 2%, confirming that the supply is elastic. The studio can easily adjust its supply in response to price changes, making it beneficial for the manager to be responsive to market conditions.
+The elasticity of supply values can be interpreted as follows:
+
+- PES > 1: Elastic Supply ( suppliers are responsive to price changes)
+- PES = 1: Unit Elastic Supply ( suppliers adjust production proportionally to price changes)
+- PES < 1: Inelastic Supply ( suppliers are not very responsive to price changes)
+
+**Step 3: Analyze the Determinants of Elasticity of Supply**
+
+The elasticity of supply is influenced by several factors, including:
+
+- **Production Flexibility**: The ability of firms to adjust production levels in response to price changes.
+- **Availability of Inputs**: The ease with which firms can acquire necessary inputs to increase production.
+- **Time Period**: The longer the time period, the more elastic the supply tends to be, as firms have more time to adjust production levels.
+- **Storage Costs**: The costs associated with storing inventory, which can influence firms' willingness to produce.
+
+**Step 4: Apply Elasticity of Supply in Game Theory**
+
+In game theory, the elasticity of supply can be applied to analyze strategic interactions between firms in a market. For example:
+
+- **Price Leadership Model**: The elasticity of supply can influence the price leader's decision to change prices, as well as the follower firms' responses to these changes.
+- **Cournot Duopoly Model**: The elasticity of supply affects the firms' output decisions and the resulting market equilibrium.
+
+**Step 5: Calculate Elasticity of Supply in a Game Theory Scenario**
+
+Suppose we have a market with two firms, A and B, producing a homogeneous good. The market demand is given by Q = 100 - P. Firm A has a supply function QsA = 10 + 2P, and Firm B has a supply function QsB = 5 + P.
+
+Using the price elasticity of supply formula, calculate the elasticity of supply for each firm:
+
+- Firm A: PES_A = (∆QsA / QsA) / (∆P / P) = (2P / (10 + 2P)) / (∆P / P) = 2P / (10 + 2P)
+- Firm B: PES_B = (∆QsB / QsB) / (∆P / P) = (P / (5 + P)) / (∆P / P) = P / (5 + P)
+
+Evaluate the elasticity of supply for each firm at a given market price, and analyze the implications for their production decisions and the market equilibrium.
 
 ---
 
-## 6. The Proving Grounds
+## Review & Practice
 
 ```interactive-quiz
 
 [
   {
-    "id": "q1",
-    "type": "true_false",
+    "id": "QES_001",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "If the price of studio time increases and the music studio can easily adjust its operations by opening more studios or increasing hours of operation due to having the necessary equipment and staff, then the elasticity of supply of studio time is likely to be low.",
-    "answer": false,
-    "explanation": "The elasticity of supply measures the responsiveness of the quantity supplied of a good to a change in its price, given ceteris paribus. In this scenario, the music studio can easily adjust its operations, which implies a high responsiveness of the quantity supplied to a change in price. Therefore, the elasticity of supply of studio time is likely to be high. The ceteris paribus assumption implies that other factors, such as technology, remain constant. If we change this assumption and consider that the studio also invests in more efficient recording technology in response to the price increase, this would further increase the elasticity of supply. Mathematically, the price elasticity of supply can be represented as $E_S = \\frac{\\% \\Delta Q_S}{\\% \\Delta P}$, where $E_S$ is the elasticity of supply, $\\% \\Delta Q_S$ is the percentage change in quantity supplied, and $\\% \\Delta P$ is the percentage change in price. A high elasticity of supply means that a small price increase leads to a large increase in quantity supplied, which is the case in this scenario."
+    "question": "In the context of Game Theory Application and microeconomics, what is the effect of an increase in the price of a good on the quantity supplied when the elasticity of supply is high (greater than 1) and the supply curve is not perfectly vertical?",
+    "options": {
+      "A": "A small increase in quantity supplied",
+      "B": "A large increase in quantity supplied",
+      "C": "A unit change in quantity supplied",
+      "D": "No change in quantity supplied"
+    },
+    "answer": "B",
+    "explanation": "When the elasticity of supply is high (greater than 1), it implies that suppliers are highly responsive to changes in price. A high elasticity of supply means that even a small increase in price will lead to a large increase in the quantity supplied. This can be represented using the price elasticity of supply formula: $E_s = \\frac{\\% \\Delta Q_s}{\\% \\Delta P}$. If $E_s > 1$, then a 1% increase in price results in a more than 1% increase in quantity supplied. Therefore, a high elasticity of supply indicates a relatively flat supply curve, which allows suppliers to easily adjust their production levels in response to price changes."
   },
   {
-    "id": "q2",
-    "type": "synthesis",
+    "id": "QES_1",
+    "type": "fill_in",
     "difficulty": "L2",
-    "question": "The country of Azuria is facing a sudden and significant devaluation of its currency, the Azurian Peso (AP), by 30% against major foreign currencies. This macroeconomic shock has increased the cost of importing raw materials and intermediate goods, which are crucial for the production of electronic devices in Azuria's manufacturing sector. The sector's production costs have risen sharply, affecting supply chains and pricing. As the Chief Macroeconomist, you must act swiftly to mitigate the impact on the economy and prevent a systemic failure in the electronics market, which constitutes a significant portion of Azuria's GDP. Apply the concept of Elasticity of Supply in devising a 3-step policy response.",
-    "answer": "To address the sudden devaluation of the Azurian Peso and its impact on the electronics manufacturing sector, we must consider the Elasticity of Supply, which measures how responsive the quantity supplied of a good is to a change in its price. Given that the production costs have increased due to higher import costs, the sector's ability to supply electronic devices will be negatively affected if prices do not adjust accordingly. A 3-step policy response is as follows:\n\n1. **Short-term Adjustment**: Implement a temporary subsidy for critical raw materials and intermediate goods used in electronics production. This will help manufacturers adjust to the new price levels without immediately passing on the increased costs to consumers, thereby preventing a sharp decline in supply. The subsidy can be structured to encourage efficient use of resources and to support firms in maintaining production levels.\n\n2. **Medium-term Strategy**: Invest in domestic production capabilities for key components and raw materials currently being imported. By enhancing domestic supply chains, Azuria can reduce its dependency on foreign inputs, making the electronics sector less vulnerable to currency fluctuations. This approach involves both public and private sector investments in technology, training, and infrastructure.\n\n3. **Long-term Structural Reform**: Implement policies to improve the Elasticity of Supply in the electronics sector. This includes investing in research and development to foster innovation and the adoption of more efficient production technologies. Additionally, policies aimed at enhancing competition and reducing bureaucratic barriers can encourage firms to be more responsive to price changes, thereby increasing the overall elasticity of supply.",
-    "explanation": "The Elasticity of Supply ($E_S$) is given by the formula $E_S = \\frac{\\% \\Delta Q_S}{\\% \\Delta P}$, where $\\% \\Delta Q_S$ is the percentage change in quantity supplied and $\\% \\Delta P$ is the percentage change in price. In the context of Azuria's electronics manufacturing sector, the sudden devaluation of the AP leads to an increase in production costs, which can be represented as a leftward shift of the supply curve due to increased costs of inputs. By applying the 3-step policy response, the goal is to mitigate this shift and encourage a more elastic supply response over time. The subsidy (Step 1) helps in the short term by reducing the immediate financial strain on manufacturers. The investment in domestic capabilities (Step 2) and structural reforms (Step 3) aim to increase the sector's ability to adjust production in response to price changes, thereby enhancing the Elasticity of Supply."
-  },
-  {
-    "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain how the elasticity of supply concept applies to a market strategy scenario where a manager of a music studio must adjust the supply of studio time in response to changes in price, considering factors such as resource availability and technology.",
-    "answer": "The elasticity of supply concept is crucial in determining the responsiveness of the quantity supplied of studio time to changes in its price. Given that the manager can adjust the number of studios and operating hours, the supply of studio time is likely to be elastic. However, this elasticity is contingent upon the availability of resources such as equipment and staff, as well as the ability to invest in more efficient recording technology. A significant increase in price may lead to an increase in the quantity supplied, as the manager can adapt to the new market conditions.",
-    "explanation": "The elasticity of supply can be expressed using the formula: $E_S = \\frac{\\% \\Delta Q_S}{\\% \\Delta P}$, where $E_S$ is the elasticity of supply, $\\% \\Delta Q_S$ is the percentage change in quantity supplied, and $\\% \\Delta P$ is the percentage change in price. The elasticity of supply is influenced by factors such as the availability of resources and technology, which affect the manager's ability to adjust the supply of studio time in response to price changes. Mathematically, this can be represented as: $Q_S = f(P, R, T)$, where $Q_S$ is the quantity supplied, $P$ is the price, $R$ is the availability of resources, and $T$ is the level of technology. The partial derivative of $Q_S$ with respect to $P$ represents the change in quantity supplied in response to a change in price, which is a key component of the elasticity of supply."
-  },
-  {
-    "id": "q4",
-    "type": "order",
-    "difficulty": "L2",
-    "question": "Order steps for Elasticity Of Supply.",
-    "steps": [
-      "The Price Elasticity Of Supply formula is used to calculate the percentage change in quantity supplied in response to a 1% change in price.",
-      "As the price of a good increases, the quantity supplied also increases, given Ceteris Paribus.",
-      "A change in price leads to a change in the quantity supplied of a good.",
-      "The quantity supplied of a good changes in response to a change in its price, given Ceteris Paribus.",
-      "The availability of resources, technology, and the time period considered influence the elasticity of supply."
-    ],
+    "question": "Fill in the blank.",
+    "textWithBlanks": "The elasticity of supply measures the responsiveness of the quantity supplied of a good to a change in its Blank, while holding all other influential factors constant.",
     "answer": [
-      "The availability of resources, technology, and the time period considered influence the elasticity of supply.",
-      "A change in price leads to a change in the quantity supplied of a good.",
-      "The quantity supplied of a good changes in response to a change in its price, given Ceteris Paribus.",
-      "The Price Elasticity Of Supply formula is used to calculate the percentage change in quantity supplied in response to a 1% change in price.",
-      "As the price of a good increases, the quantity supplied also increases, given Ceteris Paribus."
-    ]
+      "price"
+    ],
+    "explanation": "The elasticity of supply is a fundamental concept in microeconomics that measures the responsiveness of the quantity supplied of a good to a change in its price, while holding all other influential factors constant, as per the ceteris paribus assumption. It provides a quantitative assessment of the degree to which suppliers adjust their production levels in response to price fluctuations. The elasticity of supply is typically expressed as a numerical value, calculated using the price elasticity of supply formula, which is given by the percentage change in quantity supplied divided by the percentage change in price. This formula yields a positive value, as both the price and quantity supplied are directly related."
   },
   {
-    "id": "q5",
+    "id": "elasticity_of_supply_debug",
+    "type": "debug",
+    "difficulty": "L2",
+    "question": "Find the bug in the formula for the price elasticity of supply: $E_S = \\frac{\\Delta Q_S}{\\Delta P} \\cdot \\frac{P}{Q_S}$",
+    "content": "The formula for the price elasticity of supply is given by $E_S = \\frac{\\Delta Q_S}{\\Delta P} \\cdot \\frac{P}{Q_S}$. However, this formula seems to be incorrect. Identify the error.",
+    "answer": "The correct formula for the price elasticity of supply is $E_S = \\frac{\\% \\Delta Q_S}{\\% \\Delta P} = \\frac{\\Delta Q_S / Q_S}{\\Delta P / P} = \\frac{\\Delta Q_S}{\\Delta P} \\cdot \\frac{P}{Q_S}$. The bug in the given formula is that it is missing the percentage change notation, which is essential for the correct calculation of elasticity.",
+    "required_keywords": [
+      "fix_syntax"
+    ],
+    "explanation": "The price elasticity of supply is calculated using the formula $E_S = \\frac{\\% \\Delta Q_S}{\\% \\Delta P}$. This can be rewritten as $E_S = \\frac{\\Delta Q_S / Q_S}{\\Delta P / P} = \\frac{\\Delta Q_S}{\\Delta P} \\cdot \\frac{P}{Q_S}$. The given formula $E_S = \\frac{\\Delta Q_S}{\\Delta P} \\cdot \\frac{P}{Q_S}$ seems to be correct but it lacks the proper definition of elasticity as a percentage change. The correct interpretation is that elasticity is the ratio of the percentage change in quantity supplied to the percentage change in price."
+  },
+  {
+    "id": "generate_unique_id",
     "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output?",
-    "content": "Initial State:\n- Price (P1) = $100\n- Quantity Supplied (Q1) = 100 hours\n\nShock:\n- Price increases to P2 = $120\n\nIntermediate States:\n1. Production Sector: Quantity Supplied increases to 105 hours\n2. Equipment Manufacturing Sector: Demand for equipment increases by 2%\n3. Labor Market Sector: Demand for labor increases by 1.5%\n4. Music Production Sector: Output increases by 3%\n\nFinal State:\n- Quantity Supplied (Q2) = 105 hours\n- Elasticity of Supply (E_S) = 0.25",
-    "answer": "The exact output is a 2.5% increase in the quantity supplied of studio time.",
-    "explanation": "The elasticity of supply (E_S) is given by the formula: $E_S = \\frac{\\% \\Delta Q_S}{\\% \\Delta P}$, where $\\% \\Delta Q_S$ is the percentage change in quantity supplied and $\\% \\Delta P$ is the percentage change in price. Given that the price increases from $100 to $120, the percentage change in price is $\\frac{120-100}{100} \\times 100\\% = 20\\%$. Assuming the studio can increase its supplied hours to 105 per month (a 5% increase) due to its ability to adjust hours and invest in technology, the elasticity of supply is $E_S = \\frac{5\\%}{20\\%} = 0.25$. This implies that for every 1% change in price, the quantity supplied changes by 0.25%. Therefore, the exact output is a 2.5% increase in the quantity supplied of studio time when the price increases by 10%."
+    "difficulty": "L2",
+    "question": "What is the exact output of the elasticity of supply when a cost increase, such as higher wages, affects the supply curve, equilibrium price, and total revenue in the medieval guilds' textile industry?",
+    "content": "The medieval guilds' textile industry initially has a supply curve given by Qs = 100 + 2P and a demand curve given by Qd = 500 - 3P. Suppose the guild members' wages increase, causing the supply curve to shift to Qs = 80 + 2P. Calculate the new equilibrium price and quantity, and determine the elasticity of supply if the initial equilibrium price is 80 and the initial equilibrium quantity is 260.",
+    "answer": "The new equilibrium price is 84 and the new equilibrium quantity is 248. The elasticity of supply is 0.615.",
+    "explanation": "To solve this problem, we first need to find the initial and final equilibrium prices and quantities. The initial equilibrium is given by the intersection of the initial supply and demand curves: 100 + 2P = 500 - 3P, which yields P = 80 and Q = 260. After the wage increase, the new supply curve becomes Qs = 80 + 2P. Setting this equal to the demand curve Qd = 500 - 3P, we get 80 + 2P = 500 - 3P, which yields P = 84 and Q = 248. The elasticity of supply can be calculated using the formula: Es = (dQs/Qs) / (dP/P). Using the point elasticity formula and the given curves, we find Es = (dQs/dP) * (P/Qs) = 2 * (84/248) / (8/260) = 0.615."
   }
 ]
 

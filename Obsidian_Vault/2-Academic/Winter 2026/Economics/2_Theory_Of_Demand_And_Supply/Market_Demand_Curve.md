@@ -1,122 +1,147 @@
 ---
-
 title: Market_Demand_Curve
-type: Atomic Note
-course: Economics
-semester: Winter 2026
+course: "[[Economics]]"
 unit: '2'
-hub: "[[2_Theory_Of_Demand_And_Supply_Hub]]"
-source: "[[5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf]]"
+semester: "[[Winter 2026]]"
+mode: ECON-MICRO
+type: atomic_note
+date: 2026-05-07
+prerequisites:
+- Market_Demand
 source_pages:
 - 10
-mode: ECON-MACRO
-read: false
-generated: true
-prerequisites:
-- "[[Market_Demand]]"
-
+hub: "[[2_Theory_of_Demand_and_Supply_Hub]]"
+source: "[[5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf]]"
 ---
 
-# 1. Mental Model
+## 1. Mental Model
 
-Imagine you're the captain of a ferry that crosses a busy river. The number of passengers you can transport depends on the ticket price. If you charge too much, fewer people will travel, but if you charge just the right amount, more people will board. The ferry's passenger capacity represents the quantity of a product that consumers are willing to buy, and the ticket price represents the product's price. As the ticket price changes, so does the number of passengers (or quantity demanded), creating a curve that shows how demand changes with price.
+Imagine you're at a school ice cream shop, and they sell yummy cones for $3 each. You and your friends really love ice cream, and if it's $3, you might buy 2 cones. Your friend Emma might buy 3 cones at that price, and your friend Max might buy 1 cone. If we add all those up, the shop sells 2 + 3 + 1 = 4 cones. Now, if the price goes up to $4, you might only buy 1 cone, Emma might buy 2, and Max might not buy any. So, the shop sells 1 + 2 + 0 = 2 cones. The market demand curve shows how many cones the whole school (all the customers) will buy at different prices. When the price is low, like $3, people buy more cones (6 cones), and when the price is high, like $4, people buy fewer cones (3 cones). The curve slopes downward, meaning as the price goes up, the number of cones people want to buy goes down!
 
-# 2. Economic Theory
+## 2. Micro Theory
 
-The [[Market_Demand_Curve]] is a graphical representation of the [[Market_Demand]] for a product, which is the total quantity of the product that all consumers are willing and able to buy at various price levels, [[Ceteris_Paribus]]. It is derived from the [[Demand_Schedule]] of individual consumers and is typically downward sloping, illustrating the [[Law_Of_Demand]], which states that as the price of a product decreases, the quantity demanded increases, and vice versa. The underlying mechanism of the [[Market_Demand_Curve]] is based on the [[Theory_Of_Demand]], which assumes that consumers make rational decisions to maximize their utility. The curve is a function of various [[Determinants_Of_Demand]], including changes in consumer preferences, income, and prices of [[Substitutes_Goods]] and [[Complementary_Goods]]. 
+The market demand curve is a fundamental concept in microeconomics that represents the total quantity of a good or service that all consumers are willing and able to buy at various price levels, ceteris paribus. It is a graphical representation of the market demand schedule, which is a table that shows the quantity demanded at different prices. The market demand curve is derived by horizontally summing the individual demand curves of all consumers in the market.
 
-# 3. Limitations & Edge Cases
+The market demand curve is typically downward-sloping, illustrating the [[Law_Of_Demand]], which states that as the price of a good increases, the quantity demanded decreases, [[Ceteris_Paribus]]. This is because as the price rises, some consumers become less willing or able to buy the good, leading to a decrease in the overall quantity demanded.
 
-The [[Market_Demand_Curve]] has several limitations and edge cases. For instance, it assumes [[Ceteris_Paribus]], which means that all other factors affecting demand are held constant, which may not always be the case in reality. The curve also fails to account for [[Inferior_Goods]] and [[Normal_Goods]], which have different demand responses to changes in consumer income. Additionally, the curve may shift due to changes in [[Determinants_Of_Demand]], such as [[Change_In_Technology]] or changes in consumer preferences. Furthermore, the curve may not accurately represent [[Market_Equilibrium]] in situations where there are [[Surplus_And_Shortage]] or when there are external factors affecting demand, such as [[Effects_Of_Shift_In_Demand_And_Supply]].
+The market demand curve can be expressed as a [[Demand_Function]], which represents the relationship between the quantity demanded and the price of the good, as well as other factors that influence demand, such as consumer income, tastes, and preferences. The demand function can be written as Qd = f(P, I, T, Psub, Pcom), where Qd is the quantity demanded, P is the price of the good, I is consumer income, T is a measure of consumer tastes and preferences, Psub is the price of substitutes, and Pcom is the price of complements.
 
-# 4. Economic Model
+Changes in the market demand curve can occur due to various factors, including changes in consumer income, [[Taste_And_Preference]], [[Number_Of_Buyers]], [[Substitutes_And_Complements]], and [[Consumer_Expectations]]. For example, an increase in consumer income can lead to an increase in the quantity demanded at each price level, resulting in a rightward shift of the market demand curve. Similarly, an increase in the price of substitutes can also lead to an increase in the quantity demanded, as consumers switch to the good from the more expensive substitute.
+
+The market demand curve is also related to the concept of [[Price_Elasticity_Of_Demand]], which measures the responsiveness of the quantity demanded to changes in the price of the good. The price elasticity of demand can be calculated using the formula: Ed = (dQd / dP) \* (P / Qd), where Ed is the price elasticity of demand, dQd is the change in quantity demanded, dP is the change in price, P is the initial price, and Qd is the initial quantity demanded.
+
+The market demand curve plays a crucial role in determining the [[Market_Equilibrium]], which occurs when the quantity demanded equals the quantity supplied. The market equilibrium price and quantity can be found by solving the system of equations formed by the market demand curve and the [[Market_Demand_Curve]] and the supply curve.
+
+To illustrate, consider a market with two consumers, A and B, with individual demand curves QdA = 10 - 2P and QdB = 5 - P. The market demand curve can be derived by horizontally summing the individual demand curves: Qd = QdA + QdB = (10 - 2P) + (5 - P) = 15 - 3P. At a price equal to 3, the quantity demanded is Qd = 15 - 3(3) = 6. This point (P=3, Qd=6) lies on the market demand curve.
+
+In conclusion, the market demand curve is a graphical representation of the total quantity of a good or service that all consumers are willing and able to buy at various price levels, ceteris paribus. It is a fundamental concept in microeconomics that helps to understand the behavior of consumers and the determination of market equilibrium. The market demand curve can shift due to various factors, including changes in consumer income, tastes, and preferences, and is related to the concept of price elasticity of demand.
+
+## 3. Limitations & Edge Cases
+
+The market demand curve, a graphical representation of the total quantity of a good or service demanded by all consumers at various price levels, has specific limitations. For instance, when analyzing individual and market demand curves at a price equal to 3, it becomes apparent that the curve assumes a linear relationship between price and quantity demanded, which may not hold true in cases of non-linear demand or when consumers exhibit heterogeneous preferences. Moreover, the market demand curve also assumes that consumers' purchasing decisions are independent of one another, which may not account for social influences, bandwagon effects, or other externalities that can impact demand; furthermore, it relies on the ceteris paribus assumption, which may not accurately reflect real-world scenarios where multiple factors influencing demand often change simultaneously, and lastly, the curve's construction also hinges on the availability of perfect information about consumer preferences and market conditions, which rarely exists in reality.
+
+## 4. Market Graph
 
 ```mermaid
 
 graph LR
-    A[Price] --> B[Quantity Demanded]
-    B --> C[Market Demand Curve]
-    C --> D[Law of Demand]
-    D --> E[Inverse Relationship]
-    E --> F[Increased Quantity Demanded]
-    F --> G[Decreased Price]
-    G --> H[Ceteris Paribus]
+    P[Price] -->|influences| QD[Quantity Demanded]
+    QD -->| Market Demand Curve | QDM[Market Quantity Demanded]
+    QDM -->| summation of | QDI[Individual Quantity Demanded]
+    QDI -->|from all consumers| N[Number of Consumers]
+    style QDM fill:#f9f,stroke:#333,stroke-width:4px
+    style QD fill:#f9f,stroke:#333,stroke-width:4px
 
 ```
 
-This Mermaid flowchart illustrates the relationship between the price of a product and the quantity demanded, which is the foundation of the Market Demand Curve. The curve shows that as the price decreases, the quantity demanded increases, and vice versa.
+The market demand curve illustrates the total quantity of a good or service that all consumers are willing and able to buy at various price levels, assuming all other factors remain constant. The curve is typically downward-sloping, reflecting the law of demand, which states that as the price of a good increases, the quantity demanded decreases, ceteris paribus.
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the Market Demand Curve operates:
+**Step 1: Define Individual Demand Curves**
 
-1. **Initial State**: Suppose the price of a product is $10, and the quantity demanded is 100 units. The demand schedule of individual consumers is aggregated to form the market demand.
-2. **Price Change**: The price of the product decreases to $8. This change in price affects the quantity demanded.
-3. **Quantity Demanded Update**: As the price decreases to $8, the quantity demanded increases to 120 units, assuming ceteris paribus (all other factors remain constant).
-4. **Curve Formation**: By plotting the price and quantity demanded points (e.g., $10, 100 units and $8, 120 units), we can form the Market Demand Curve, which shows the inverse relationship between price and quantity demanded.
-5. **Resulting State**: The Market Demand Curve illustrates that as the price decreases, the quantity demanded increases, and vice versa. For example, if the price decreases to $6, the quantity demanded might increase to 150 units, further reinforcing the downward-sloping nature of the curve.
+* Each consumer's demand curve is a graphical representation of their willingness to pay for a good or service at various price levels.
+* The individual demand curve is typically downward-sloping, showing that as the price increases, the quantity demanded decreases.
+* Mathematically, the individual demand curve can be represented as: Q<sub>i</sub> = f(P<sub>i</sub>, Y<sub>i</sub>, P<sub>j</sub>, T<sub>i</sub>), where Q<sub>i</sub> is the quantity demanded by consumer i, P<sub>i</sub> is the price of the good, Y<sub>i</sub> is consumer i's income, P<sub>j</sub> is the price of related goods, and T<sub>i</sub> is consumer i's tastes and preferences.
 
-The Market Demand Curve provides valuable insights into consumer behavior and helps businesses and policymakers make informed decisions about pricing and production.
+**Step 2: Derive Market Demand Schedule**
+
+* Create a table that shows the quantity demanded by each consumer at different prices.
+* For each price level, sum up the quantities demanded by all consumers to obtain the total market quantity demanded.
+* The market demand schedule is a table that shows the quantity demanded at different prices.
+
+**Step 3: Construct Market Demand Curve**
+
+* Plot the market demand schedule on a graph, with the price on the vertical axis and the quantity demanded on the horizontal axis.
+* The resulting curve is the market demand curve, which represents the total quantity of the good or service that all consumers are willing and able to buy at various price levels.
+* The market demand curve is typically downward-sloping, illustrating the Law of Demand.
+
+**Step 4: Express Market Demand Curve as Demand Function**
+
+* The market demand curve can be expressed as a demand function, which represents the relationship between the quantity demanded and the price of the good, as well as other factors.
+* Mathematically, the market demand function can be represented as: Q<sub>D</sub> = f(P, Y, P<sub>j</sub>, T), where Q<sub>D</sub> is the total quantity demanded, P is the price of the good, Y is aggregate income, P<sub>j</sub> is the price of related goods, and T is aggregate tastes and preferences.
+
+**Step 5: Analyze Shifts in Market Demand Curve**
+
+* Changes in factors other than price, such as income, prices of related goods, and tastes and preferences, can cause the market demand curve to shift.
+* An increase in income, for example, can lead to an increase in the quantity demanded at each price level, causing the market demand curve to shift to the right.
+* A decrease in the price of a related good can also lead to an increase in the quantity demanded, causing the market demand curve to shift to the right.
 
 ---
 
-## 6. The Proving Grounds
+## Review & Practice
 
 ```interactive-quiz
 
 [
   {
-    "id": "q1",
-    "type": "true_false",
+    "id": "generate_unique_id",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "The Market Demand Curve remains unchanged if consumer preferences shift in favor of a product while its price and all other determinants of demand remain constant.",
-    "answer": false,
-    "explanation": "The Market Demand Curve is typically downward sloping, illustrating the Law of Demand, which states that as the price of a product decreases, the quantity demanded increases, and vice versa. The curve is based on the Theory of Demand, assuming consumers make rational decisions to maximize their utility. It is a function of various Determinants of Demand, including changes in consumer preferences, income, and prices of Substitutes Goods and Complementary Goods. The ceteris paribus assumption implies that all other factors affecting demand are held constant. However, if consumer preferences shift in favor of a product, this change would increase demand at each price level, effectively shifting the Market Demand Curve to the right. Therefore, the statement is false because a shift in consumer preferences in favor of a product would change the Market Demand Curve, not leave it unchanged. LaTeX representation of the demand curve: $Q_d = f(P, P_s, P_c, I, T)$, where $Q_d$ is the quantity demanded, $P$ is the price of the product, $P_s$ and $P_c$ are the prices of substitutes and complements, $I$ is consumer income, and $T$ represents consumer tastes or preferences."
+    "question": "What is the effect on the market demand curve for a good when the price of its complement decreases, according to the Law of Demand and elasticity calculations in Environmental Economics?",
+    "options": {
+      "A": "The market demand curve shifts to the left because the good becomes less attractive.",
+      "B": "The market demand curve shifts to the right because the good becomes more attractive.",
+      "C": "The market demand curve remains unchanged as the decrease in the complement's price does not affect the good's demand.",
+      "D": "The market demand curve becomes less elastic, leading to a decrease in the quantity demanded."
+    },
+    "answer": "B",
+    "explanation": "When the price of a complement decreases, it becomes cheaper for consumers to buy the complement along with the good in question. This decrease in the price of the complement increases the overall utility or satisfaction consumers derive from consuming the good, making the good more attractive. Mathematically, if $Q_d = f(P, P_c)$, where $P_c$ is the price of the complement, a decrease in $P_c$ leads to an increase in $Q_d$ for any given $P$, or $\frac{\\partial Q_d}{\\partial P_c} < 0$. Therefore, a decrease in the price of the complement leads to a rightward shift of the market demand curve."
   },
   {
-    "id": "q2",
-    "type": "synthesis",
+    "id": "Q1",
+    "type": "fill_in",
     "difficulty": "L2",
-    "question": "A sudden and significant devaluation of the local currency has occurred in a developing country, drastically increasing the cost of imports. This macro shock has led to a sharp increase in the prices of essential goods, causing widespread concern among consumers and policymakers. The government needs to act quickly to prevent a systemic failure in the food market. Using the Market Demand Curve, design a 3-step policy response to mitigate the effects of this shock.",
-    "answer": "To address the crisis, the government should implement the following 3-step policy response:\n\n1. **Price Subsidy**: Implement a targeted subsidy program to reduce the prices of essential goods for low-income households. This can be achieved by providing financial assistance to suppliers or directly to consumers, effectively shifting the demand curve to the right and increasing the quantity demanded at the lower price point.\n2. **Import Tariff Reduction**: Temporarily reduce or eliminate tariffs on imported goods to increase the supply of essential products and reduce prices. This policy would shift the supply curve to the right, leading to a decrease in prices and an increase in the quantity supplied.\n3. **Income Support**: Introduce an income support program for vulnerable populations, such as cash transfers or employment schemes, to increase their purchasing power. This would shift the demand curve to the right, as households would have more disposable income to spend on essential goods, thereby mitigating the effects of the price increase.",
-    "explanation": "The sudden devaluation of the local currency has led to a sharp increase in the prices of essential goods, causing a leftward shift of the demand curve. To mitigate this effect, the government can use the Market Demand Curve to inform its policy response. By applying the concepts of demand and supply, the government can implement policies that shift the demand curve to the right or increase the supply of essential goods.\n\nThe Market Demand Curve is given by the equation: $Q_d = f(P, I, P_s, P_c, T)$, where $Q_d$ is the quantity demanded, $P$ is the price of the good, $I$ is the consumer's income, $P_s$ is the price of substitutes, $P_c$ is the price of complementary goods, and $T$ is the consumer's taste and preferences.\n\nThe policy response outlined above aims to affect the demand and supply curves by:\n- Increasing the disposable income of low-income households through price subsidies and income support, thereby shifting the demand curve to the right.\n- Increasing the supply of essential goods through import tariff reductions, thereby shifting the supply curve to the right.\n\nBy applying these policies, the government can mitigate the effects of the macro shock and prevent a systemic failure in the food market."
-  },
-  {
-    "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the concept of the Market Demand Curve in a Development Economics scenario, focusing on its underlying mechanism and how it relates to the Law of Demand.",
-    "answer": "The Market Demand Curve is a graphical representation of the total quantity of a product that all consumers are willing and able to buy at various price levels, ceteris paribus. It is typically downward sloping, illustrating the Law of Demand, which states that as the price of a product decreases, the quantity demanded increases, and vice versa. This curve is derived from the demand schedule of individual consumers and is a function of various determinants of demand, including changes in consumer preferences, income, and prices of substitutes and complementary goods.",
-    "explanation": "The Market Demand Curve can be represented by the equation $Q_d = f(P, I, P_s, P_c, T)$, where $Q_d$ is the quantity demanded, $P$ is the price of the product, $I$ is consumer income, $P_s$ is the price of substitutes, $P_c$ is the price of complementary goods, and $T$ represents consumer tastes and preferences. The curve is downward sloping due to the Law of Demand, which can be expressed as $\frac{\\partial Q_d}{\\partial P} < 0$. This means that as the price of a product increases, the quantity demanded decreases, and vice versa, ceteris paribus."
-  },
-  {
-    "id": "q4",
-    "type": "order",
-    "difficulty": "L2",
-    "question": "Order steps for Market Demand Curve",
-    "steps": [
-      "It is derived from the Demand Schedule of individual consumers and is typically downward sloping, illustrating the Law Of Demand, which states that as the price of a product decreases, the quantity demanded increases, and vice versa.",
-      "The underlying mechanism of the Market Demand Curve is based on the Theory Of Demand, which assumes that consumers make rational decisions to maximize their utility.",
-      "The Market Demand Curve is a graphical representation of the Market Demand for a product, which is the total quantity of the product that all consumers are willing and able to buy at various price levels, Ceteris Paribus.",
-      "The curve is a function of various Determinants Of Demand, including changes in consumer preferences, income, and prices of Substitutes Goods and Complementary Goods.",
-      "As the ticket price changes, so does the number of passengers (or quantity demanded), creating a curve that shows how demand changes with price."
-    ],
+    "question": "Fill in the blank.",
+    "textWithBlanks": "The market demand curve is typically downward-sloping, illustrating the Blank , which states that as the price of a good increases, the quantity demanded decreases, ceteris paribus.",
     "answer": [
-      "The curve is a function of various Determinants Of Demand, including changes in consumer preferences, income, and prices of Substitutes Goods and Complementary Goods.",
-      "The Market Demand Curve is a graphical representation of the Market Demand for a product, which is the total quantity of the product that all consumers are willing and able to buy at various price levels, Ceteris Paribus.",
-      "As the ticket price changes, so does the number of passengers (or quantity demanded), creating a curve that shows how demand changes with price.",
-      "The underlying mechanism of the Market Demand Curve is based on the Theory Of Demand, which assumes that consumers make rational decisions to maximize their utility.",
-      "It is derived from the Demand Schedule of individual consumers and is typically downward sloping, illustrating the Law Of Demand, which states that as the price of a product decreases, the quantity demanded increases, and vice versa."
+      "Law of Demand"
+    ],
+    "explanation": "The Law of Demand is a fundamental principle in economics that describes the inverse relationship between the price of a good and the quantity demanded. It is often represented graphically as a downward-sloping demand curve. The mathematical representation of this relationship can be expressed as $Q_d = f(P)$, where $Q_d$ is the quantity demanded and $P$ is the price of the good. The Law of Demand is based on the ceteris paribus assumption, which means that all other factors that affect demand are held constant. This can be represented as $Q_d = \\alpha - \\beta P$, where $\\alpha$ and $\\beta$ are constants, and $\\beta > 0$. The downward slope of the demand curve indicates that as the price of the good increases, the quantity demanded decreases, and vice versa."
+  },
+  {
+    "id": "Q1234",
+    "type": "debug",
+    "difficulty": "L2",
+    "question": "Find the bug in the market demand curve derivation for a specific industry.",
+    "content": "Consider a market with two consumers, A and B, with individual demand curves QdA = 10 - 2P and QdB = 5 - P. The market demand curve can be derived by horizontally summing the individual demand curves: Qd = QdA + QdB = (10 - 2P) + (5 - P) = 15 - 3P. At a price equal to 3, what is the total quantity demanded?",
+    "answer": "The total quantity demanded at a price equal to 3 is 6.",
+    "required_keywords": [
+      "fix_syntax"
+    ],
+    "explanation": "The market demand curve is derived by horizontally summing the individual demand curves of all consumers in the market. Given QdA = 10 - 2P and QdB = 5 - P, the market demand curve is Qd = (10 - 2P) + (5 - P) = 15 - 3P. At P = 3, Qd = 15 - 3(3) = 15 - 9 = 6. However, a subtle error can occur if the demand curves are not properly defined for the specific industry context. For instance, if consumer A's demand curve is incorrectly specified as QdA = 10 - P (instead of QdA = 10 - 2P), the market demand curve would be incorrectly derived as Qd = (10 - P) + (5 - P) = 15 - 2P, leading to an incorrect quantity demanded at P = 3, which would be Qd = 15 - 2(3) = 15 - 6 = 9. The bug is in the coefficient of P in consumer A's demand curve.",
+    "fix_syntax": [
+      "Correct the coefficient of P in QdA to -2."
     ]
   },
   {
-    "id": "q5",
+    "id": "generate_unique_id",
     "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output when a technological shock increases the efficiency of production, leading to a decrease in the price of a good, and subsequently affecting the market demand curve?",
-    "content": "Suppose we have a market demand curve for a good, Q = 100 - 2P, where Q is the quantity demanded and P is the price. Initially, the price is $20, and the quantity demanded is 60 units. A technological shock decreases the marginal cost of production by 20%, leading to a new price of $16. We need to trace the effect of this shock through 4 distinct interconnected economic sectors: \n  1. The production sector, \n  2. The supply chain sector, \n  3. The distribution sector, \n  4. The consumer sector.\n\n  Initially:\n  - Production sector: 100 units produced at $20/unit\n  - Supply chain sector: $5/unit transportation cost\n  - Distribution sector: 10% markup\n  - Consumer sector: 60 units demanded at $22/unit (10% markup from $20)\n\n  After the technological shock:\n  - New price = $16/unit\n  - Production sector: 100 * 1.25 = 125 units produced (increased efficiency)\n  - Supply chain sector: $5 * 0.9 = $4.5/unit (5% decrease in transportation cost due to efficiency)\n  - Distribution sector: New markup = 12% (increased efficiency leads to lower costs)\n  - Consumer sector: Quantity demanded at new price $16/unit\n\n  Intermediate states:\n  - Quantity demanded at $20/unit: 60 units\n  - Quantity demanded at $16/unit: Q = 100 - 2*16 = 68 units\n  - New consumer price = $16 * 1.12 = $17.92/unit\n\n  Final state/output: \n  - Quantity demanded: 68 units\n  - Final price to consumer: $17.92/unit\n  ",
-    "answer": "68 units",
-    "explanation": "The technological shock leads to a decrease in production costs, allowing for an increase in supply. This is represented by a rightward shift in the supply curve. As the price decreases to $16, the quantity demanded increases to 68 units, as per the market demand curve Q = 100 - 2P. The LaTeX representation of the market demand curve is $Q = 100 - 2P$. When $P = 16$, $Q = 100 - 2*16 = 68$. The final output is 68 units."
+    "difficulty": "L2",
+    "question": "What is the exact output for the total revenue and new equilibrium price if a cost increase, such as higher wages, leads to a supply curve shift for a good with an initial demand curve of Qd = 100 - 2P and an initial supply curve of Qs = 2P - 20, assuming a cost increase causes the supply curve to shift to Qs = 2P - 40?",
+    "content": "The initial demand curve is Qd = 100 - 2P and the initial supply curve is Qs = 2P - 20. To find the initial equilibrium price and quantity, we equate Qd and Qs: 100 - 2P = 2P - 20. Solving for P, we get 4P = 120, P = 30. Substituting P back into either equation, we find Q = 40. The total revenue (TR) is given by TR = P * Q = 30 * 40 = 1200. If the supply curve shifts to Qs = 2P - 40 due to increased costs, we equate this with Qd: 100 - 2P = 2P - 40. Solving for P, we get 4P = 140, P = 35. Substituting P back into either equation, we find Q = 30. The new total revenue (TR) is TR = P * Q = 35 * 30 = 1050.",
+    "answer": "1050",
+    "explanation": "The initial equilibrium is found where $Q_d = Q_s$. Given $Q_d = 100 - 2P$ and $Q_s = 2P - 20$, setting them equal yields $100 - 2P = 2P - 20$. Solving for $P$ gives $4P = 120 \\Rightarrow P = 30$. Substituting $P = 30$ into $Q_d$ or $Q_s$ gives $Q = 40$. The total revenue $TR = P \\cdot Q = 30 \\cdot 40 = 1200$. With a supply curve shift to $Q_s = 2P - 40$, setting $Q_d = Q_s$ gives $100 - 2P = 2P - 40$. Solving for $P$ yields $4P = 140 \\Rightarrow P = 35$. Substituting $P = 35$ into $Q_d$ or $Q_s$ gives $Q = 30$. The new total revenue $TR = 35 \\cdot 30 = 1050$."
   }
 ]
 

@@ -8,6 +8,7 @@ from .schemas import PartialPlan
 
 # ── DOMAIN MATRIX v26.1 (UPGRADED) ───────────────────────────────────────────
 DOMAIN_MATRIX = {
+    "ACADEMIC-GENERAL":   {"persona":"Subject Matter Expert","h1":"Core Concept","h2":"Context & Limitations","artifact":"Concept Map","type":"Markdown Table","question_modes":["mcq", "true_false", "writing", "fill_in"]},
     "CS-SOFTWARE":        {"persona":"Software Engineer","h1":"How it Works","h2":"Common Pitfalls","artifact":"Code Example","type":"Executable code block (under 20 lines)","question_modes":["fill_in", "true_false", "debug", "trace"]},
     "CS-SYSTEMS":         {"persona":"Systems Architect","h1":"System Flow","h2":"Where it Breaks","artifact":"Architecture Diagram","type":"Basic Mermaid flowchart (graph TD/LR)","question_modes":["mcq", "scenario", "debug", "order"]},
     "CS-DB":              {"persona":"Database Admin","h1":"Query Logic","h2":"Data Integrity","artifact":"Database Schema","type":"SQL code block or Markdown Table","question_modes":["true_false", "scenario", "debug", "matching"]},
@@ -20,21 +21,47 @@ DOMAIN_MATRIX = {
     "MATH-CRYPTO":        {"persona":"Cryptographer","h1":"Encryption Logic","h2":"Vulnerabilities","artifact":"Cryptographic Flow","type":"Markdown Table or Code snippet","question_modes":["mcq", "fill_in", "scenario", "trace"]},
     "MATH-DISCRETE":      {"persona":"Logic Professor","h1":"Discrete Definition","h2":"Base Cases","artifact":"Logical Trace","type":"Truth Table (Markdown) or block LaTeX","question_modes":["fill_in", "true_false", "debug", "order"]},
     "PHYSICS-KINEMATICS": {"persona":"Physicist","h1":"Physical Law","h2":"Boundaries & Limits","artifact":"Formula & Diagram","type":"Block LaTeX ($$) and ASCII Diagram","question_modes":["fill_in", "scenario", "writing", "trace"]},
+    "PHYSICS-ELECTRO":    {"persona":"Physicist","h1":"Electromagnetic Law","h2":"Boundary Conditions","artifact":"Field Diagram","type":"ASCII Diagram or block LaTeX","question_modes":["mcq", "fill_in", "scenario", "trace"]},
+    "PHYSICS-THERMO":     {"persona":"Thermodynamicist","h1":"Thermodynamic Principle","h2":"Entropy & Irreversibility","artifact":"Energy Flow","type":"Basic Mermaid flowchart","question_modes":["mcq", "fill_in", "scenario", "trace"]},
+    "PHYSICS-QUANTUM":    {"persona":"Quantum Physicist","h1":"Quantum State","h2":"Decoherence","artifact":"Probability Distribution","type":"Block LaTeX ($$)","question_modes":["mcq", "fill_in", "writing", "trace"]},
     "CHEMISTRY":          {"persona":"Chemist","h1":"Reaction Mechanism","h2":"Equilibrium","artifact":"Reaction Pathway","type":"Basic Mermaid flowchart or Block LaTeX","question_modes":["mcq", "scenario", "debug", "order"]},
+    "CHEM-ORGANIC":       {"persona":"Organic Chemist","h1":"Reaction Mechanism","h2":"Steric Hindrance","artifact":"Synthesis Pathway","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "debug", "order"]},
+    "CHEM-PHYSICAL":      {"persona":"Physical Chemist","h1":"Chemical Kinetics","h2":"Thermodynamic Limits","artifact":"Rate Equation","type":"Block LaTeX ($$)","question_modes":["mcq", "fill_in", "debug", "trace"]},
     "BIOLOGY":            {"persona":"Biologist","h1":"Biological Process","h2":"System Failures","artifact":"Pathway Diagram","type":"Basic Mermaid flowchart (graph TD)","question_modes":["true_false", "scenario", "writing", "matching"]},
+    "BIO-ECOLOGY":        {"persona":"Ecologist","h1":"Ecological Interaction","h2":"System Disruption","artifact":"Food Web","type":"Basic Mermaid flowchart","question_modes":["true_false", "scenario", "writing", "matching"]},
+    "BIO-GENETICS":       {"persona":"Geneticist","h1":"Genetic Pathway","h2":"Mutations","artifact":"Inheritance Tree","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "trace", "matching"]},
+    "EARTH-GEOLOGY":      {"persona":"Geologist","h1":"Geological Process","h2":"Erosional Limits","artifact":"Stratigraphic Column","type":"Markdown Table","question_modes":["mcq", "fill_in", "writing", "order"]},
+    "SPACE-ASTRO":        {"persona":"Astrophysicist","h1":"Cosmic Phenomenon","h2":"Observational Limits","artifact":"Stellar Evolution","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "writing", "trace"]},
     "ENG-MECH":           {"persona":"Mechanical Engineer","h1":"Mechanical Principle","h2":"Load & Fatigue","artifact":"Force Diagram","type":"ASCII Diagram or Markdown Table","question_modes":["fill_in", "scenario", "debug", "order"]},
     "ENG-ELEC":           {"persona":"Circuit Designer","h1":"Circuit Logic","h2":"Resistance & Heat","artifact":"Circuit Schematic","type":"Truth Table (Markdown) or block LaTeX","question_modes":["true_false", "scenario", "debug", "trace"]},
+    "ENG-CIVIL":          {"persona":"Civil Engineer","h1":"Structural Principle","h2":"Failure Modes","artifact":"Load Distribution","type":"Markdown Table or ASCII Diagram","question_modes":["mcq", "scenario", "debug", "trace"]},
+    "ENG-CHEM":           {"persona":"Chemical Engineer","h1":"Process Flow","h2":"Yield Losses","artifact":"Process Flow Diagram","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "debug", "order"]},
+    "ENG-AERO":           {"persona":"Aerospace Engineer","h1":"Aerodynamic Principle","h2":"Drag & Turbulence","artifact":"Flight Dynamics","type":"Block LaTeX or Table","question_modes":["mcq", "scenario", "debug", "trace"]},
+    "ENG-BIOMED":         {"persona":"Biomedical Engineer","h1":"Biomechanical System","h2":"Biocompatibility Issues","artifact":"Device Interface","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
     "MED-PHYSIO":         {"persona":"Surgeon","h1":"Bodily Function","h2":"Disease & Failure","artifact":"System Map","type":"Markdown Adjacency Matrix Table","question_modes":["fill_in", "scenario", "writing", "matching"]},
     "MED-PHARMA":         {"persona":"Toxicologist","h1":"Drug Mechanism","h2":"Side Effects","artifact":"Interaction Pathway","type":"Markdown Table or Basic Mermaid flowchart","question_modes":["mcq", "scenario", "debug", "matching"]},
+    "MED-ANATOMY":        {"persona":"Anatomist","h1":"Structural Component","h2":"Anatomical Anomalies","artifact":"Morphological Map","type":"Markdown Table","question_modes":["mcq", "fill_in", "writing", "matching"]},
+    "MED-PATHOLOGY":      {"persona":"Pathologist","h1":"Disease Mechanism","h2":"Diagnostic Pitfalls","artifact":"Pathogenesis Flow","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "writing", "matching"]},
     "ECON-MACRO":         {"persona":"Macroeconomist","h1":"Economic Theory","h2":"Market Failures","artifact":"Economic Model","type":"Basic Mermaid flowchart (graph LR)","question_modes":["true_false", "scenario", "writing", "order", "trace"]},
     "ECON-MICRO":         {"persona":"Microeconomist","h1":"Micro Theory","h2":"Efficiency & Distortions","artifact":"Market Graph","type":"Basic Mermaid flowchart (graph TD/LR) or LaTeX","question_modes":["mcq", "fill_in", "debug", "trace"]},
+    "ECON-METRICS":       {"persona":"Econometrician","h1":"Statistical Model","h2":"Endogeneity","artifact":"Regression Output","type":"Markdown Table or LaTeX","question_modes":["mcq", "fill_in", "debug", "trace"]},
+    "ECON-BEHAVIORAL":    {"persona":"Behavioral Economist","h1":"Cognitive Bias","h2":"Market Anomalies","artifact":"Decision Matrix","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
     "ECON-FINANCE":       {"persona":"Accountant","h1":"Financial Concept","h2":"Financial Risk","artifact":"Ledger Example","type":"Markdown T-Account/Ledger Table","question_modes":["true_false", "scenario", "debug", "matching"]},
     "BIZ-STRATEGY":       {"persona":"Business Strategist","h1":"Strategic Concept","h2":"Weaknesses","artifact":"Strategy Matrix","type":"Markdown Table (SWOT)","question_modes":["mcq", "scenario", "writing", "synthesis"]},
+    "BIZ-MARKETING":      {"persona":"Marketing Executive","h1":"Market Principle","h2":"Consumer Churn","artifact":"Campaign Funnel","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "writing", "order"]},
+    "BIZ-OPERATIONS":     {"persona":"Operations Manager","h1":"Process Optimization","h2":"Supply Chain Bottlenecks","artifact":"Process Map","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "debug", "trace"]},
     "LAW-CASE":           {"persona":"Lawyer","h1":"Legal Principle","h2":"Exceptions & Limits","artifact":"Case Application","type":"IRAC Framework Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
     "LAW-CONTRACT":       {"persona":"Corporate Lawyer","h1":"Contract Rule","h2":"Breach Conditions","artifact":"Liability Map","type":"Markdown Dependency Table","question_modes":["fill_in", "scenario", "writing", "matching"]},
+    "LAW-CRIMINAL":       {"persona":"Criminal Defense Attorney","h1":"Criminal Statute","h2":"Defenses & Exceptions","artifact":"Burden of Proof","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
+    "LAW-CONSTITUTIONAL": {"persona":"Constitutional Scholar","h1":"Constitutional Principle","h2":"Rights Limitations","artifact":"Precedent Map","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "writing", "matching"]},
     "HIST-CATALYST":      {"persona":"Historian","h1":"Historical Event","h2":"Long-term Impact","artifact":"Timeline","type":"Basic Mermaid flowchart (graph TD) or Table","question_modes":["fill_in", "scenario", "writing", "order"]},
     "PHILOSOPHY":         {"persona":"Philosopher","h1":"Core Argument","h2":"Counter-Arguments","artifact":"Logical Flow","type":"ASCII Logic Tree or Block quote","question_modes":["mcq", "scenario", "writing", "synthesis"]},
+    "SOC-POLITICAL":      {"persona":"Political Scientist","h1":"Political Theory","h2":"Institutional Failure","artifact":"Power Dynamics","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
+    "SOC-ANTHRO":         {"persona":"Anthropologist","h1":"Cultural Phenomenon","h2":"Ethnocentrism","artifact":"Cultural Framework","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
     "PSYCH-SOCIOLOGY":    {"persona":"Psychologist","h1":"Behavioral Concept","h2":"Cognitive Bias","artifact":"Behavior Map","type":"Markdown Matrix Table","question_modes":["true_false", "scenario", "writing", "matching"]},
+    "HUM-RELIGION":       {"persona":"Theologian","h1":"Theological Concept","h2":"Sectarian Differences","artifact":"Doctrinal Map","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
+    "HUM-MUSIC":          {"persona":"Musicologist","h1":"Musical Theory","h2":"Stylistic Deviations","artifact":"Harmonic Structure","type":"Markdown Table or ASCII","question_modes":["mcq", "fill_in", "writing", "order"]},
+    "HUM-ART_HIST":       {"persona":"Art Historian","h1":"Artistic Movement","h2":"Critical Reception","artifact":"Visual Analysis","type":"Markdown Table","question_modes":["mcq", "fill_in", "writing", "matching"]},
     "LANG-LINGUISTICS":   {"persona":"Grammarian","h1":"Grammar Rule","h2":"Exceptions","artifact":"Syntax Tree","type":"ASCII Syntax Tree","question_modes":["mcq", "fill_in", "writing", "order"]},
     "LANG-LIT":           {"persona":"Literary Critic","h1":"Literary Device","h2":"Thematic Impact","artifact":"Textual Analysis","type":"Markdown Quote/Motif Table","question_modes":["mcq", "fill_in", "writing", "synthesis"]},
     "ARTS-DESIGN":        {"persona":"Designer","h1":"Design Principle","h2":"Breaking the Rule","artifact":"Composition Matrix","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
@@ -42,6 +69,16 @@ DOMAIN_MATRIX = {
     "SKILLS-FITNESS":     {"persona":"Kinesiologist","h1":"Biomechanics","h2":"Injury Prevention","artifact":"Movement Trace","type":"Markdown Kinematic Table","question_modes":["fill_in", "scenario", "writing", "trace"]},
     "EDUCATION":          {"persona":"Teacher","h1":"Learning Theory","h2":"Knowledge Gaps","artifact":"Curriculum Flow","type":"Markdown Table","question_modes":["fill_in", "scenario", "writing", "matching"]},
     "RESEARCH-METHODS":   {"persona":"Researcher","h1":"Research Method","h2":"Validity Threats","artifact":"Methodology Setup","type":"Markdown Research Matrix","question_modes":["mcq", "scenario", "writing", "matching"]},
+    "MATH-CALCULUS":      {"persona":"Mathematician","h1":"Limit & Rate","h2":"Boundary Conditions","artifact":"Function Trace","type":"Block LaTeX ($$)","question_modes":["mcq", "fill_in", "debug", "trace"]},
+    "MATH-ALGEBRA":       {"persona":"Algebraist","h1":"Algebraic Structure","h2":"Edge Cases","artifact":"Matrix / Function","type":"Block LaTeX ($$)","question_modes":["mcq", "fill_in", "debug", "synthesis"]},
+    "CS-CYBERSECURITY":   {"persona":"Security Researcher","h1":"Attack Vector","h2":"Vulnerabilities","artifact":"Threat Model","type":"Basic Mermaid flowchart","question_modes":["true_false", "scenario", "debug", "trace"]},
+    "CS-NETWORKING":      {"persona":"Network Engineer","h1":"Protocol Logic","h2":"Packet Loss & Failure","artifact":"Network Topology","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "debug", "trace"]},
+    "MED-NEUROLOGY":      {"persona":"Neuroscientist","h1":"Neural Pathway","h2":"Neurological Deficits","artifact":"Synaptic Diagram","type":"Basic Mermaid flowchart","question_modes":["mcq", "fill_in", "writing", "matching"]},
+    "MED-IMMUNOLOGY":     {"persona":"Immunologist","h1":"Immune Response","h2":"Autoimmune Failure","artifact":"Cellular Interaction","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "order"]},
+    "LANG-FOREIGN":       {"persona":"Linguist","h1":"Syntactic Structure","h2":"False Friends & Idioms","artifact":"Conjugation/Declension","type":"Markdown Table","question_modes":["mcq", "fill_in", "matching", "writing"]},
+    "ARTS-FILM":          {"persona":"Film Theorist","h1":"Cinematic Technique","h2":"Narrative Impact","artifact":"Scene Breakdown","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "synthesis"]},
+    "BIZ-ENTREPRENEURSHIP":{"persona":"Startup Founder","h1":"Value Proposition","h2":"Market Risks","artifact":"Business Canvas","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "synthesis"]},
+    "SOC-CRIMINOLOGY":    {"persona":"Criminologist","h1":"Criminological Theory","h2":"Systemic Bias","artifact":"Behavioral Matrix","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
 }
 
 # ── GOLD STANDARD DOMAIN INSTRUCTIONS (v26.5) ───────────────────────────────────
@@ -138,8 +175,11 @@ VALID_MODES = set(DOMAIN_MATRIX.keys())
 
 # ── MODE-AWARE PROFESSIONAL DOMAINS (v26.6) ───────────────────────────────────
 MODE_SPECIALITIES = {
+    "ACADEMIC-GENERAL": ["Interdisciplinary Research", "General Pedagogy", "Foundational Principles"],
     "ECON-MACRO": ["Central Banking & Monetary Policy", "International Trade Analysis", "Fiscal Policy Research", "Market Strategy", "Development Economics"],
     "ECON-MICRO": ["Consumer Behavior Analysis", "Industrial Organization", "Labor Market Economics", "Game Theory Application", "Environmental Economics"],
+    "ECON-METRICS": ["Causal Inference", "Time Series Forecasting", "Panel Data Analysis", "Policy Evaluation"],
+    "ECON-BEHAVIORAL": ["Nudge Theory", "Decision Heuristics", "Neuroeconomics", "Consumer Psychology"],
     "ECON-FINANCE": ["Investment Banking", "Corporate Finance", "Asset Management", "Financial Audit"],
     "CS-SOFTWARE": ["DevOps & Site Reliability", "Backend Systems Architecture", "Cloud Infrastructure", "Embedded Systems", "Cybersecurity Audit"],
     "CS-SYSTEMS": ["Network Infrastructure", "Distributed Systems", "High-Performance Computing", "Cloud Architecture"],
@@ -148,15 +188,41 @@ MODE_SPECIALITIES = {
     "MATH-PURE": ["Cryptographic Research", "Theoretical Physics", "Algorithmic Analysis", "Pure Math Research"],
     "MATH-STAT": ["Actuarial Science", "Risk Management", "Biostatistics", "Data Science"],
     "PHYSICS-KINEMATICS": ["Aerospace Engineering", "Automotive Design", "Robotics Kinematics", "Ballistics Analysis"],
+    "PHYSICS-ELECTRO": ["Antenna Design", "Power Grid Analytics", "Photonics", "Plasma Physics"],
+    "PHYSICS-THERMO": ["HVAC Engineering", "Energy Policy", "Cryogenics", "Jet Propulsion"],
+    "PHYSICS-QUANTUM": ["Quantum Computing", "Condensed Matter", "Particle Accelerator Operations", "Nanotechnology"],
     "CHEMISTRY": ["Pharmaceutical Research", "Materials Science", "Chemical Engineering", "Forensic Toxicology"],
+    "CHEM-ORGANIC": ["Drug Synthesis", "Polymer Science", "Petrochemicals", "Agrochemicals"],
+    "CHEM-PHYSICAL": ["Spectroscopy", "Surface Chemistry", "Computational Chemistry", "Catalysis"],
     "BIOLOGY": ["Biomedical Research", "Genetics & Genomics", "Ecology & Conservation", "Neuroscience"],
+    "BIO-ECOLOGY": ["Conservation Biology", "Marine Biology", "Wildlife Management", "Climate Adaptation"],
+    "BIO-GENETICS": ["CRISPR Engineering", "Epigenetics", "Evolutionary Biology", "Genetic Counseling"],
+    "EARTH-GEOLOGY": ["Seismology", "Petroleum Exploration", "Volcanology", "Hydrogeology"],
+    "SPACE-ASTRO": ["Planetary Science", "Cosmology", "Telescope Operations", "Astrobiology"],
     "ENG-MECH": ["Structural Engineering", "Manufacturing Systems", "Aerospace Design", "Mechanical Reliability"],
     "ENG-ELEC": ["Circuit Design", "Power Systems Engineering", "Telecommunications", "Semiconductor Mfg"],
+    "ENG-CIVIL": ["Urban Planning", "Bridge Design", "Hydraulic Engineering", "Transportation Infrastructure"],
+    "ENG-CHEM": ["Process Engineering", "Refining Operations", "Food Technology", "Biochemical Processing"],
+    "ENG-AERO": ["Avionics", "Rocketry", "Orbital Mechanics", "Flight Testing"],
+    "ENG-BIOMED": ["Prosthetics", "Medical Imaging", "Tissue Engineering", "Clinical Engineering"],
     "MED-PHYSIO": ["Clinical Physiology", "Emergency Medicine", "Internal Medicine", "Surgical Planning"],
     "MED-PHARMA": ["Pharmacology", "Drug Development", "Clinical Trials", "Regulatory Affairs"],
+    "MED-ANATOMY": ["Surgical Anatomy", "Histology", "Forensic Anthropology", "Medical Imaging"],
+    "MED-PATHOLOGY": ["Oncology Diagnostics", "Infectious Disease", "Immunopathology", "Toxicology"],
     "BIZ-STRATEGY": ["Management Consulting", "Corporate Strategy", "Venture Capital", "Market Research"],
+    "BIZ-MARKETING": ["Brand Strategy", "Digital Advertising", "Consumer Analytics", "Public Relations"],
+    "BIZ-OPERATIONS": ["Supply Chain Management", "Logistics", "Quality Assurance", "Lean Manufacturing"],
     "LAW-CASE": ["Litigation Strategy", "Judicial Review", "Constitutional Law", "Legal Analysis"],
-    "PHILOSOPHY": ["Ethics Advisory", "Logic & Argumentation", "Social Philosophy", "Political Theory"]
+    "LAW-CONTRACT": ["Mergers & Acquisitions", "Intellectual Property", "Employment Law", "Real Estate Law"],
+    "LAW-CRIMINAL": ["Prosecution", "Criminal Defense", "Forensic Law", "White-Collar Crime"],
+    "LAW-CONSTITUTIONAL": ["Civil Rights", "Appellate Law", "Government Policy", "Electoral Law"],
+    "PHILOSOPHY": ["Ethics Advisory", "Logic & Argumentation", "Social Philosophy", "Political Theory"],
+    "SOC-POLITICAL": ["International Relations", "Public Policy", "Comparative Politics", "Political Campaigns"],
+    "SOC-ANTHRO": ["Cultural Anthropology", "Archaeology", "Ethnography", "Linguistic Anthropology"],
+    "PSYCH-SOCIOLOGY": ["Clinical Psychology", "Urban Sociology", "Organizational Behavior", "Demography"],
+    "HUM-RELIGION": ["Comparative Religion", "Theological Studies", "Ethics", "Religious History"],
+    "HUM-MUSIC": ["Music Theory", "Ethnomusicology", "Composition", "Acoustics"],
+    "HUM-ART_HIST": ["Curating", "Art Conservation", "Visual Culture", "Museum Studies"],
 }
 
 def get_professional_domain(seed: str, mode: str = "ECON-MACRO") -> str:
@@ -287,20 +353,21 @@ class ArchitectAgent:
     def __init__(self, llm: BaseChatModel):
         self.llm = llm
 
-    async def generate_partial_plan(self, document_text: str) -> PartialPlan:
+    async def generate_partial_plan(self, document_text: str, forced_mode: str = None) -> PartialPlan:
         modes_str = ", ".join(DOMAIN_MATRIX.keys())
+        
+        mode_instruction = f"mode: EXACTLY one code from this list: {modes_str}"
+        if forced_mode and forced_mode in DOMAIN_MATRIX:
+            mode_instruction = f"mode: You MUST use `{forced_mode}` for all notes in this plan. This has been pre-verified by a domain specialist."
+
         system = (
             "You are the OKA Curriculum Architect. Extract 15-25 atomic concepts from the text.\n"
             "RULES:\n"
             "1. Titles: 1-3 words, Title_Case_With_Underscores, never a question.\n"
-            "2. mode: EXACTLY one code from this list: " + modes_str + "\n"
+            "2. " + mode_instruction + "\n"
             "   **CRITICAL MODE RULES**:\n"
-            "   - Discrete math (sequences, recurrences, combinatorics, graph theory, proofs by induction, logic) → `MATH-DISCRETE`\n"
-            "   - Continuous math (analysis, calculus, real analysis, differential equations, integration) → `MATH-PURE`\n"
-            "   - Statistics, probability, hypothesis testing → `MATH-STAT`\n"
-            "   - Microeconomics (Individual markets, supply/demand, consumer behavior, firms, elasticity, market structure) → `ECON-MICRO`\n"
-            "   - Macroeconomics (GDP, aggregate demand, inflation, unemployment, central banks, fiscal policy) → `ECON-MACRO`\n"
-            "   - NEVER use `CS-SOFTWARE` for any mathematics topic.\n"
+            "   - If confident in a discipline, pick the specific code (e.g. `ECON-MICRO`, `PHYSICS-QUANTUM`, `LAW-CRIMINAL`).\n"
+            "   - If confidence is <90% or the topic spans many fields, you MUST fall back to `ACADEMIC-GENERAL`.\n"
             "3. prerequisites: list EXACT titles of other concepts in THIS plan that must be known first.\n"
             "4. source_context: copy 1-2 most relevant sentences.\n"
             "5. source_pages: list page numbers mentioned (integers only).\n"
@@ -323,7 +390,7 @@ class ArchitectAgent:
                 data.setdefault("possible_questions", [])
                 for note in data["atomic_notes"]:
                     if note.get("mode") not in VALID_MODES:
-                        note["mode"] = "CS-SOFTWARE"
+                        note["mode"] = "ACADEMIC-GENERAL"
                     raw_title = note.get("title", "Unknown").strip()
                     words = re.split(r'[\s_\-]+', raw_title)
                     note["title"] = "_".join(w.capitalize() for w in words if w)
@@ -415,6 +482,27 @@ class TheoryAgent:
         self.llm = llm
         self.domain = domain
 
+    async def generate_micro(self, note_schema, source_text: str, all_concepts: str) -> Dict[str, str]:
+        title_readable = note_schema.title.replace("_", " ")
+        
+        # 1. Analogy Call
+        analogy_prompt = f"As a {self.domain['persona']}, explain '{title_readable}' using a vivid everyday analogy for a 10-year-old. ONE paragraph only."
+        analogy_res = await self.llm.ainvoke([("system", analogy_prompt), ("human", f"Analogy for {title_readable} based on: {source_text[:1000]}")])
+        
+        # 2. Technical Call
+        tech_prompt = f"As a {self.domain['persona']}, provide a rigorous technical definition and mechanism for '{title_readable}'. Use continuous prose, no bullets. Embed 2-3 wikilinks from: {all_concepts}."
+        tech_res = await self.llm.ainvoke([("system", tech_prompt), ("human", f"Technical analysis for {title_readable} based on: {source_text[:2000]}")])
+        
+        # 3. Limitations Call
+        limit_prompt = f"As a {self.domain['persona']}, analyze the specific limitations and edge cases of '{title_readable}'. ONE paragraph only. No bullets."
+        limit_res = await self.llm.ainvoke([("system", limit_prompt), ("human", f"Limitations of {title_readable} based on: {source_text[:1000]}")])
+        
+        return {
+            "mental_model": analogy_res.content.strip(),
+            "technical_definition": tech_res.content.strip(),
+            "limitations": limit_res.content.strip()
+        }
+
     async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str, used_scenarios: list = None) -> str:
         title_readable = note_schema.title.replace("_", " ")
         prof_domain = get_professional_domain(note_schema.title)
@@ -436,17 +524,17 @@ Your goal is to take a student from ZERO knowledge to TOTAL MASTERY of '{title_r
 
 {domain_fix}
 
-STRICT INSTRUCTION: Output ONLY the requested sections. NO introductory text, NO concluding remarks, NO "Here is your note". Start directly with '# 1. Mental Model'.
+STRICT INSTRUCTION: Output ONLY the requested sections. NO introductory text, NO concluding remarks, NO "Here is your note". Start directly with '## 1. Mental Model'.
 
-# 1. Mental Model
+## 1. Mental Model
 Explain the ENTIRE concept to a 10-year-old using a vivid everyday analogy. Mapping: Map at least 2 mechanical components of the analogy to the concept. 2-3 sentences. No technical jargon.{scenario_ban}
 
-# 2. {self.domain['h1']}
+## 2. {self.domain['h1']}
 Provide a rigorous, technical definition and the underlying mechanism in continuous analytical prose. No bullet points.
 MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
 Format: [[Exact_Match_From_List]] (use underscores).
 
-# 3. Limitations & Edge Cases
+## 3. Limitations & Edge Cases
 Analyze the specific limitations, model assumptions that break down, and known edge cases of '{title_readable}' in continuous analytical prose. No bullet points. Do NOT use the heading 'Market Failures' unless this note is specifically about externalities, public goods, or information asymmetry.
 MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
 
@@ -464,14 +552,14 @@ PREVIOUS ATTEMPT FAILED. FIX INSTRUCTION: {diagnosis}
 
 Write EXACTLY 3 sections.
 
-# 1. Mental Model
+## 1. Mental Model
 Explain to a 10-year-old using a vivid everyday analogy.
 
-# 2. {self.domain['h1']}
+## 2. {self.domain['h1']}
 Provide the rigorous technical definition and mechanism. 
 MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
 
-# 3. Limitations & Edge Cases
+## 3. Limitations & Edge Cases
 Analyze the specific limitations and edge cases of '{title_readable}'. Do NOT use the heading 'Market Failures' unless this note is specifically about externalities or market imperfections.
 
 Concept: {title_readable}
@@ -484,6 +572,23 @@ class PractitionerAgent:
         self.llm = llm
         self.domain = domain
 
+    async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> Dict[str, str]:
+        title_readable = note_title.replace("_", " ")
+        prof_domain = get_professional_domain(note_title, mode=mode)
+        
+        # 1. Artifact Call
+        art_prompt = f"As a {self.domain['persona']}, provide EXACTLY ONE high-fidelity artifact (type: {self.domain['type']}) for '{title_readable}' in {prof_domain}. If code, use {primary_language}. If math, use LaTeX ($$). Follow with 2 sentences of explanation."
+        art_res = await self.llm.ainvoke([("system", art_prompt), ("human", f"Artifact for {title_readable} based on: {theory_body[:1000]}")])
+        
+        # 2. Walkthrough Call
+        walk_prompt = f"As a {self.domain['persona']}, provide a strict 5-step technical walkthrough of how '{title_readable}' operates in {prof_domain}. No intro."
+        walk_res = await self.llm.ainvoke([("system", walk_prompt), ("human", f"Walkthrough for {title_readable} based on: {theory_body[:1000]}")])
+        
+        return {
+            "artifact_content": art_res.content.strip(),
+            "walkthrough": walk_res.content.strip()
+        }
+
     async def generate(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> str:
         title_readable = note_title.replace("_", " ")
         prof_domain = get_professional_domain(note_title, mode=mode)
@@ -494,9 +599,9 @@ Complete the sovereign note for '{title_readable}' by adding the high-fidelity a
 
 {domain_fix}
 
-STRICT INSTRUCTION: Output ONLY the requested sections. NO introductory text like "Here's the rest of the note". Start directly with '# 4. {self.domain['artifact']}'.
+STRICT INSTRUCTION: Output ONLY the requested sections. NO introductory text like "Here's the rest of the note". Start directly with '## 4. {self.domain['artifact']}'.
 
-# 4. {self.domain['artifact']}
+## 4. {self.domain['artifact']}
 Provide EXACTLY ONE high-fidelity artifact of type: **{self.domain['type']}** for the domain **{prof_domain}**.
 If code, use ```primary_language. If math, use block LaTeX ($$).
 Followed by 2-3 sentences of prose explaining HOW to read this artifact.
@@ -519,7 +624,7 @@ PREVIOUS ATTEMPT FAILED. FIX: {diagnosis}
 
 Write EXACTLY 2 sections.
 
-# 4. {self.domain['artifact']}
+## 4. {self.domain['artifact']}
 Provide the high-fidelity artifact for **{prof_domain}**.
 
 ## 5. Walkthrough
@@ -570,15 +675,15 @@ class QuestionAgent:
         }
         
         schemas = {
-            "mcq": '{"id":"q1","type":"mcq","difficulty":"' + difficulty + '","question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"answer":"B","explanation":"..."}',
-            "true_false": '{"id":"q1","type":"true_false","difficulty":"' + difficulty + '","question":"...","answer":false,"explanation":"..."}',
-            "fill_in": '{"id":"q1","type":"fill_in","difficulty":"' + difficulty + '","question":"Fill in the blank.","textWithBlanks":"The [[blank]] is...","answer":["exactword"],"explanation":"..."}',
-            "writing": '{"id":"q1","type":"writing","difficulty":"' + difficulty + '","question":"Explain...","answer":"...","explanation":"..."}',
-            "matching": '{"id":"q1","type":"matching","difficulty":"' + difficulty + '","question":"Match terms.","pairs":[{"left":"...","right":"..."}]}',
-            "order": '{"id":"q1","type":"order","difficulty":"' + difficulty + '","question":"Order steps.","steps":["step2","step3","step1"],"answer":["step1","step2","step3"]}',
-            "debug": '{"id":"q1","type":"debug","difficulty":"' + difficulty + '","question":"Find the bug.","content":"...","answer":"...","required_keywords":["fix_syntax"],"explanation":"..."}',
-            "trace": '{"id":"q1","type":"trace","difficulty":"' + difficulty + '","question":"What is the exact output?","content":"...","answer":"...","explanation":"..."}',
-            "synthesis": '{"id":"q1","type":"synthesis","difficulty":"' + difficulty + '","question":"Complex scenario...","answer":"...","explanation":"..."}'
+            "mcq": '{"id":"generate_unique_id","type":"mcq","difficulty":"' + difficulty + '","question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"answer":"B","explanation":"..."}',
+            "true_false": '{"id":"generate_unique_id","type":"true_false","difficulty":"' + difficulty + '","question":"...","answer":false,"explanation":"..."}',
+            "fill_in": '{"id":"generate_unique_id","type":"fill_in","difficulty":"' + difficulty + '","question":"Fill in the blank.","textWithBlanks":"The [[blank]] is...","answer":["exactword"],"explanation":"..."}',
+            "writing": '{"id":"generate_unique_id","type":"writing","difficulty":"' + difficulty + '","question":"Explain...","answer":"...","explanation":"..."}',
+            "matching": '{"id":"generate_unique_id","type":"matching","difficulty":"' + difficulty + '","question":"Match terms.","pairs":[{"left":"...","right":"..."}]}',
+            "order": '{"id":"generate_unique_id","type":"order","difficulty":"' + difficulty + '","question":"Order steps.","steps":["step2","step3","step1"],"answer":["step1","step2","step3"]}',
+            "debug": '{"id":"generate_unique_id","type":"debug","difficulty":"' + difficulty + '","question":"Find the bug.","content":"...","answer":"...","required_keywords":["fix_syntax"],"explanation":"..."}',
+            "trace": '{"id":"generate_unique_id","type":"trace","difficulty":"' + difficulty + '","question":"What is the exact output?","content":"...","answer":"...","explanation":"..."}',
+            "synthesis": '{"id":"generate_unique_id","type":"synthesis","difficulty":"' + difficulty + '","question":"Complex scenario...","answer":"...","explanation":"..."}'
         }
         
         prompt_logic = prompts.get(self.canonical_type, prompts["writing"])

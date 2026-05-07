@@ -1,128 +1,145 @@
 ---
-
 title: Law_Of_Demand
-type: Atomic Note
-course: Economics
-semester: Winter 2026
+course: "[[Economics]]"
 unit: '2'
-hub: "[[2_Theory_Of_Demand_And_Supply_Hub]]"
-source: "[[5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf]]"
+semester: "[[Winter 2026]]"
+mode: ECON-MICRO
+type: atomic_note
+date: 2026-05-07
+prerequisites:
+- Theory_Of_Demand
 source_pages:
 - 4
-mode: ECON-MACRO
-read: false
-generated: true
-prerequisites:
-- "[[Theory_Of_Demand]]"
-
+hub: "[[2_Theory_of_Demand_and_Supply_Hub]]"
+source: "[[5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf]]"
 ---
 
-# 1. Mental Model
+## 1. Mental Model
 
-Imagine you're at a popular amusement park, and you're deciding how many tickets to buy for a new roller coaster ride. The number of tickets you want to buy depends on their price. If the tickets are very cheap, you might buy more, but if they're expensive, you might buy fewer tickets or even decide to wait in line without buying any. This everyday scenario illustrates how the price of a product affects the quantity you want to buy. In this analogy, the price of the tickets maps to the price of a commodity, and the number of tickets you buy maps to the quantity demanded.
+Imagine you're at a lemonade stand on a hot summer day. The owner, let's call her Emma, is selling lemonade for 50 cents a cup. You and your friends really want lemonade, so you all buy a cup each. But then, Emma puts up a new sign that says "Lemonade: 1 dollar a cup!" Suddenly, you and your friends think, "Hmm, that's too expensive!" and you decide to buy only half a cup or even go to another stand that still sells lemonade for 50 cents. This is kind of like what happens with the Law of Demand: when the price of something (like lemonade) goes up, people want to buy less of it, and when the price goes down, people want to buy more of it.
 
-# 2. Economic Theory
+## 2. Micro Theory
 
-The [[Law_Of_Demand]] states that there is an inverse relationship between the price of a commodity and its quantity demanded, [[Ceteris_Paribus]] (all other factors remaining constant). This relationship is rooted in the [[Theory_Of_Demand]], which assumes that consumers will buy more of a good at a lower price and less at a higher price. The [[Demand_Schedule]] and [[Demand_Curve]] graphically represent this relationship, showing that as the price of a commodity increases, the quantity demanded decreases, and vice versa. The [[Demand_Function]] mathematically expresses this relationship as Qd = f(P), where Qd is the quantity demanded and P is the price. The [[Market_Demand]] and [[Market_Demand_Curve]] extend this concept to the entire market, illustrating the aggregate demand for a commodity.
+The **Law of Demand** is a fundamental concept in microeconomics that describes the inverse relationship between the price of a product and the quantity demanded, ceteris paribus [[Ceteris_Paribus]]. This concept is rooted in the [[Theory_Of_Demand]], which examines how consumers make decisions about the goods and services they purchase.
 
-# 3. Limitations & Edge Cases
+Formally, the Law of Demand can be expressed The Law of Demand states that, as the price of a product increases, the quantity demanded decreases, and vice versa, assuming [[Ceteris_Paribus]].
 
-The [[Law_Of_Demand]] assumes that all other factors remain constant, which is rarely the case in reality. One limitation is that it does not account for [[Inferior_Goods]], which may see an increase in demand as their price rises due to perceived quality or status. Another edge case is the Paradox Of Thrift, where individual saving reduces aggregate output during recessions, seemingly contradicting the law. Additionally, the law may not hold during periods of Stagflation, where traditional demand-side interventions can exacerbate the crisis. The [[Price_Elasticity_Of_Demand]] also plays a crucial role in understanding the responsiveness of quantity demanded to price changes, which can vary across different commodities.
+This relationship is often illustrated graphically as a [[Demand_Curve]], which plots the quantity demanded against the price of the product. The demand curve typically slopes downward from left to right, indicating that as the price of the product increases, the quantity demanded decreases. The [[Demand_Schedule]], a table that shows the quantity demanded at different price levels, is another way to represent the Law of Demand.
 
-# 4. Economic Model
+The Law of Demand is influenced by various [[Determinants_Of_Demand]], including Taste And Preference|tastes And Preferences, Income Elasticity Of Demand|income, Price Elasticity Of Demand|price Elasticity Of Demand, Substitutes And Complements|substitutes And Complements, Normal And Inferior Goods|normal And Inferior Goods, Consumer Expectations|consumer Expectations, and Number Of Buyers|number Of Buyers. Changes in these determinants can lead to a [[Change_In_Demand]], which is a shift in the demand curve.
+
+For instance, if the price of a substitute good decreases, consumers may switch to the substitute, leading to a decrease in the quantity demanded of the original product, and a leftward shift of the demand curve. Conversely, if consumer expectations about future prices change, they may increase their demand for a product today, leading to a rightward shift of the demand curve.
+
+The [[Market_Demand_Curve]] and [[Market_Demand]] are also affected by the Law of Demand, as they represent the aggregate demand of all consumers in a market. Understanding the Law of Demand and its underlying mechanisms is essential for businesses, policymakers, and economists to analyze [[Market_Equilibrium]], [[Surplus_And_Shortage]], and the [[Effects_Of_Shift_In_Demand_And_Supply]].
+
+In conclusion, the Law of Demand provides a fundamental understanding of how consumers respond to changes in price, and it serves
+
+## 3. Limitations & Edge Cases
+
+The Law of Demand has several limitations and edge cases, including the existence of Veblen goods, where demand increases with price due to their prestige or status symbol connotation; Giffen goods, which are essential goods for which there are no close substitutes, leading to an increase in demand as their price rises; and the income effect being outweighed by the substitution effect in certain cases. Additionally, the law may not hold in situations where consumers are unaware of the price or have limited information about alternatives. Furthermore, the law assumes that the price change is not accompanied by a change in consumer income or tastes, and that there are no external factors influencing demand; if these assumptions are not met, the law may not hold. Lastly, in cases of panic buying or expectation of future price increases, demand may increase even if current price increases, thereby violating the law.
+
+## 4. Market Graph
 
 ```mermaid
 
 graph LR
-    A[Price of Commodity] -->|Increases| B[Quantity Demanded Decreases]
-    A -->|Decreases| C[Quantity Demanded Increases]
-    B --> D[Demand Curve Shifts Left]
-    C --> E[Demand Curve Shifts Right]
-    D --> F[Higher Price, Lower Quantity]
-    E --> G[Lower Price, Higher Quantity]
+    A[Price (P)] -->|increases| B[Quantity Demanded (Qd) decreases]
+    A -->|decreases| C[Quantity Demanded (Qd) increases]
+    C --> D[Law of Demand: Inverse Relationship]
+    B --> D
 
 ```
 
-This Mermaid flowchart illustrates the inverse relationship between the price of a commodity and its quantity demanded. The chart shows how changes in price affect the quantity demanded and the resulting shifts in the demand curve.
+The provided Mermaid flowchart illustrates the Law of Demand, which states that as the price of a product increases, the quantity demanded decreases, and vice versa, assuming ceteris paribus. This inverse relationship is a fundamental concept in microeconomics and is commonly represented graphically as a downward-sloping demand curve.
 
 ## 5. Walkthrough
 
-Here's a 5-step technical walkthrough of how the Law of Demand operates in Market Strategy:
+**Step 1: Define the Demand Function**
 
-1. **Initial State**: Assume the price of a commodity (e.g., a new smartphone) is $500, and the quantity demanded is 1000 units per month.
-2. **Price Increase**: The price of the smartphone increases to $600. According to the Law of Demand, this price increase will lead to a decrease in the quantity demanded.
-3. **Quantity Demanded Decreases**: As a result of the price increase, the quantity demanded decreases to 800 units per month. This represents a movement along the demand curve.
-4. **Demand Curve Shift**: If the price increase is persistent, the demand curve may shift left, indicating that consumers are willing to buy fewer units at each price level. For example, at a price of $500, the quantity demanded may decrease to 900 units per month.
-5. **New Equilibrium**: The market reaches a new equilibrium, where the higher price ($600) is associated with a lower quantity demanded (800 units per month). This illustrates the inverse relationship between price and quantity demanded, as described by the Law of Demand.
+The demand function is defined as Qd = f(P), where Qd is the quantity demanded and P is the price of the product. For simplicity, let's assume a linear demand function: Qd = a - bP, where 'a' and 'b' are constants. This function represents the relationship between the quantity demanded and the price of the product, ceteris paribus.
+
+**Step 2: Specify the Payoff Matrix for Game Theory Application**
+
+In a Game Theory application, we need to specify a payoff matrix that represents the outcomes for each player. Let's assume a simple game between a monopolist (Seller) and a consumer (Buyer). The payoff matrix is as follows:
+
+|  | Buyer Buys | Buyer Doesn't Buy |
+| --- | --- | --- |
+| **Seller Sets High Price (P_H)** | (U_H, V_H) | (0, 0) |
+| **Seller Sets Low Price (P_L)** | (U_L, V_L) | (0, 0) |
+
+Here, U_H and U_L are the utilities for the Seller when setting a high and low price, respectively. V_H and V_L are the utilities for the Buyer when buying at a high and low price, respectively.
+
+**Step 3: Derive the Demand Curve**
+
+Using the demand function Qd = a - bP, we can derive the demand curve. Let's assume a = 100 and b = 2. The demand function becomes Qd = 100 - 2P. We can plot the demand curve as follows:
+
+| Price (P) | Quantity Demanded (Qd) |
+| --- | --- |
+| 10 | 80 |
+| 20 | 60 |
+| 30 | 40 |
+| 40 | 20 |
+
+**Step 4: Analyze the Game Theoretic Equilibrium**
+
+Using the payoff matrix and demand curve, we can analyze the game theoretic equilibrium. Let's assume the Seller sets a high price (P_H = 30) and the Buyer buys. The payoff is (U_H, V_H) = (40, 40). If the Seller sets a low price (P_L = 10), the payoff is (U_L, V_L) = (80, 80).
+
+**Step 5: Apply the Law of Demand**
+
+As the price increases from P_L (10) to P_H (30), the quantity demanded decreases from 80 to 40, ceteris paribus. This illustrates the Law of Demand, which states that, as the price of a product increases, the quantity demanded decreases, and vice versa. In this game theoretic application, the Seller and Buyer make decisions based on their payoffs, and the Law of Demand influences their choices. The Seller sets a price that balances revenue and demand, while the Buyer decides whether to buy based on their utility.
 
 ---
 
-## 6. The Proving Grounds
+## Review & Practice
 
 ```interactive-quiz
 
 [
   {
-    "id": "q1",
-    "type": "true_false",
+    "id": "generate_unique_id",
+    "type": "mcq",
     "difficulty": "L1",
-    "question": "The Law of Demand states that as the price of a commodity increases, its quantity demanded also increases, ceteris paribus.",
-    "answer": false,
-    "explanation": "The Law of Demand is based on the inverse relationship between the price of a commodity and its quantity demanded. This relationship is expressed as $Qd = f(P)$, where $Qd$ is the quantity demanded and $P$ is the price. The ceteris paribus assumption implies that all other factors remain constant. Therefore, if the price of a commodity increases, its quantity demanded decreases, not increases. This can be represented as $\frac{\\partial Qd}{\\partial P} < 0$. Hence, the statement is false."
+    "question": "In the context of Game Theory Application and microeconomics, what is the correct interpretation of the Law of Demand in relation to elasticity calculations, specifically when analyzing the responsiveness of quantity demanded to changes in price?",
+    "options": {
+      "A": "The elasticity of demand is directly proportional to the price level, indicating that higher prices lead to more elastic demand.",
+      "B": "The Law of Demand implies that the price elasticity of demand is typically negative, reflecting that an increase in price leads to a decrease in quantity demanded.",
+      "C": "The demand curve shifts to the right when the price elasticity of demand increases, indicating a more responsive quantity demanded to price changes.",
+      "D": "The elasticity of demand is constant along a linear demand curve, making it a reliable measure for predicting changes in quantity demanded."
+    },
+    "answer": "B",
+    "explanation": "The Law of Demand states that, ceteris paribus, as the price of a product increases, the quantity demanded decreases. This inverse relationship is often represented by a downward-sloping demand curve. The price elasticity of demand (PED) measures the responsiveness of the quantity demanded to a change in price, and it is usually expressed as a negative value because of the inverse relationship between price and quantity demanded. The correct interpretation is that the Law of Demand implies that the price elasticity of demand is typically negative, reflecting that an increase in price leads to a decrease in quantity demanded. Mathematically, this can be represented as $PED = \\frac{\\% \\Delta Q_d}{\\% \\Delta P}$, which is typically negative due to the negative relationship between $P$ and $Q_d$. Therefore, option B is correct."
   },
   {
-    "id": "q2",
-    "type": "synthesis",
+    "id": "generate_unique_id",
+    "type": "fill_in",
     "difficulty": "L2",
-    "question": "The country of Azura, known for its vibrant economy and stable currency, faces a sudden and unexpected macroeconomic shock. The Azuran Lira (AZL) experiences a sharp devaluation of 30% against major foreign currencies, causing the price of imported goods to skyrocket overnight. This event triggers a panic in the market, and the demand for essential goods begins to fluctuate wildly. As the chief macroeconomist, you must apply the Law of Demand to mitigate the crisis and prevent a systemic failure in the market strategy. The goal is to stabilize the market and ensure the availability of essential goods.",
-    "answer": "To address the crisis triggered by the devaluation of the Azuran Lira (AZL) and the subsequent surge in prices of imported goods, a 3-step policy response is required:\n\n1. **Immediate Price Controls**: Implement temporary price ceilings on essential goods to prevent price gouging and ensure affordability for the masses. This intervention will help stabilize the market and protect consumers from the immediate adverse effects of the Lira's devaluation. The price ceiling (Pc) should be set at a level that reflects the pre-devaluation prices adjusted for the expected inflation rate, ensuring that suppliers can still cover their costs while keeping goods affordable.\n\n2. **Supply-Side Interventions**: Engage with domestic suppliers and international partners to ramp up the production and importation of essential goods. This can be achieved through subsidies to suppliers, easing regulatory restrictions, and negotiating emergency imports. Increasing the supply (Qs) of essential goods will help meet the demand (Qd) at a stable price, thus mitigating the effects of the reduced purchasing power of the Lira.\n\n3. **Monetary Policy Adjustments**: Collaborate with the Azuran Central Bank to adjust monetary policies, specifically to manage inflation expectations and stabilize the Lira. This could involve raising interest rates to curb inflationary pressures or implementing targeted measures to support the Lira's value in foreign exchange markets. The aim is to restore confidence in the Lira and gradually correct the distortions in the market.\n\nBy implementing these measures, the government can effectively apply the Law of Demand, which states that, ceteris paribus, as the price of a commodity increases, the quantity demanded decreases. In this scenario, by controlling prices, increasing supply, and stabilizing the currency, we can prevent a systemic failure and ensure the continued availability of essential goods.",
-    "explanation": "The macroeconomic shock caused by the devaluation of the Azuran Lira (AZL) leads to a sharp increase in the prices of imported goods, which in turn affects the quantity demanded according to the Law of Demand: $Qd = f(P)$. As the price ($P$) of imported goods rises due to the devaluation, the quantity demanded ($Qd$) decreases, potentially leading to shortages and market instability.\n\nMathematically, the demand function can be represented as $Qd = \\alpha - \\beta P$, where $\\alpha$ and $\\beta$ are constants, and $P$ is the price of the good. The devaluation of the Lira leads to an increase in $P$, causing $Qd$ to decrease. By implementing price controls (setting $Pc < P$), we can artificially reduce $P$ to $Pc$, thus mitigating the decrease in $Qd$. Increasing supply ($Qs$) through subsidies and emergency imports shifts the supply curve to the right, further helping to stabilize prices and meet demand.\n\nThe effectiveness of these interventions can be understood through the lens of price elasticity of demand ($Ed = \\frac{\\% \\Delta Qd}{\\% \\Delta P}$). By controlling prices and increasing supply, we aim to make the demand for essential goods less price-elastic in the short term, thus preventing a systemic failure in the market strategy."
-  },
-  {
-    "id": "q3",
-    "type": "writing",
-    "difficulty": "L2",
-    "question": "Explain the Law Of Demand in a Market Strategy scenario, focusing on its technical application and causal understanding, particularly in the context of pricing a commodity.",
-    "answer": "The Law Of Demand states that there is an inverse relationship between the price of a commodity and its quantity demanded, assuming all other factors remain constant. This relationship is fundamental to market strategy, as it implies that as the price of a commodity increases, the quantity demanded decreases, and vice versa. The demand function, Qd = f(P), mathematically represents this relationship, where Qd is the quantity demanded and P is the price. In a market strategy context, understanding the Law Of Demand is crucial for pricing decisions, as it helps businesses predict how changes in price will affect the quantity sold.",
-    "explanation": "The Law Of Demand can be expressed using the demand function: $Qd = f(P)$, where $Qd$ is the quantity demanded and $P$ is the price. The inverse relationship between $Qd$ and $P$ can be represented graphically by the demand curve, which typically slopes downward. Mathematically, this relationship can be described as $\frac{\\partial Qd}{\\partial P} < 0$, indicating that as $P$ increases, $Qd$ decreases, and vice versa, ceteris paribus."
-  },
-  {
-    "id": "q4",
-    "type": "order",
-    "difficulty": "L2",
-    "question": "Order steps for the Law Of Demand causal chain.",
-    "steps": [
-      "The Demand Function mathematically expresses this relationship as Qd = f(P), where Qd is the quantity demanded and P is the price.",
-      "The price of a commodity increases, leading to a decrease in quantity demanded.",
-      "The Demand Schedule and Demand Curve graphically represent the inverse relationship between price and quantity demanded.",
-      "The Law Of Demand states that there is an inverse relationship between the price of a commodity and its quantity demanded, Ceteris Paribus.",
-      "As the price of a commodity decreases, the quantity demanded increases, and vice versa."
-    ],
+    "question": "Fill in the blank.",
+    "textWithBlanks": "The Blank is a table that shows the quantity demanded at different price levels, representing the Law of Demand.",
     "answer": [
-      "The Demand Schedule and Demand Curve graphically represent the inverse relationship between price and quantity demanded.",
-      "The price of a commodity increases, leading to a decrease in quantity demanded.",
-      "The Demand Function mathematically expresses this relationship as Qd = f(P), where Qd is the quantity demanded and P is the price.",
-      "As the price of a commodity decreases, the quantity demanded increases, and vice versa.",
-      "The Law Of Demand states that there is an inverse relationship between the price of a commodity and its quantity demanded, Ceteris Paribus."
+      "Demand Schedule"
+    ],
+    "explanation": "The \\textbf{Demand Schedule} is a table that shows the quantity demanded at different price levels, representing the Law of Demand. It is a tool used to illustrate the relationship between the price of a product and the quantity demanded, ceteris paribus. The demand schedule is typically used to derive the demand curve, which plots the quantity demanded against the price of the product."
+  },
+  {
+    "id": "QOD_001",
+    "type": "debug",
+    "difficulty": "L2",
+    "question": "Find the bug in the implementation of the Law of Demand formula: $Q_d = \\beta_0 \\cdot P^{\\beta_1} \\cdot e^{\\epsilon}$ where $Q_d$ is the quantity demanded, $P$ is the price, $\\beta_0$ and $\\beta_1$ are constants, and $\\epsilon$ is the error term.",
+    "content": "The Law of Demand states that, as the price of a product increases, the quantity demanded decreases, and vice versa, assuming ceteris paribus. A common representation of the Law of Demand is through a linear demand function: $Q_d = \\alpha - \\beta \\cdot P$. However, a researcher implemented a non-linear demand function: $Q_d = \\beta_0 \\cdot P^{\\beta_1} \\cdot e^{\\epsilon}$.",
+    "answer": "The bug is that the non-linear demand function $Q_d = \\beta_0 \\cdot P^{\\beta_1} \\cdot e^{\\epsilon}$ does not guarantee a downward-sloping demand curve.",
+    "explanation": "The Law of Demand requires that $\\frac{\\partial Q_d}{\\partial P} < 0$. For the non-linear demand function $Q_d = \\beta_0 \\cdot P^{\\beta_1} \\cdot e^{\\epsilon}$, the derivative with respect to $P$ is $\\frac{\\partial Q_d}{\\partial P} = \\beta_0 \\cdot \\beta_1 \\cdot P^{\\beta_1 - 1} \\cdot e^{\\epsilon}$. For the demand curve to be downward-sloping, $\\beta_1$ must be negative. However, the implementation does not ensure this condition, and if $\\beta_1$ is positive, the demand curve will be upward-sloping, violating the Law of Demand. In contrast, the linear demand function $Q_d = \\alpha - \\beta \\cdot P$ inherently satisfies the Law of Demand if $\\beta > 0$.",
+    "required_keywords": [
+      "fix_syntax"
     ]
   },
   {
-    "id": "q5",
+    "id": "generate_unique_id",
     "type": "trace",
-    "difficulty": "L3",
-    "question": "What is the exact output?",
-    "content": "Suppose the government imposes a tax on the production of a specific commodity, leading to an increase in its price. We will trace the effects of this macroeconomic shock through 4 distinct interconnected economic sectors: (1) the commodity's market, (2) the industry producing the commodity, (3) the labor market, and (4) the overall economy.",
-    "answer": {
-      "initial_price": 10,
-      "initial_quantity_demanded": 100,
-      "tax_amount": 2,
-      "new_price": 12,
-      "new_quantity_demanded": 80,
-      "industry_output": 90,
-      "labor_employed": 85,
-      "gdp_growth_rate": 0.02
-    },
-    "explanation": "The imposition of a tax on the production of a commodity increases its production cost, leading to a higher market price. Using the demand function Qd = 100 - 2P, where Qd is the quantity demanded and P is the price, we can calculate the initial and new quantity demanded. Initially, Qd = 100 - 2*10 = 80. After the tax, the new price P = 10 + 2 = 12, and the new Qd = 100 - 2*12 = 76. However, to simplify and provide a clear numerical example: assume the initial price is $10 and the quantity demanded is 100 units. If the tax increases the price to $12, the quantity demanded decreases to 80 units. In the industry producing the commodity, output decreases to 90 units due to reduced demand. In the labor market, employment decreases to 85 workers. The overall economy experiences a 2% growth rate reduction due to decreased production and employment."
+    "difficulty": "L2",
+    "question": "What is the exact output of the change in equilibrium price and total revenue when a cost increase, such as higher wages, impacts the supply curve, causing a shift to the left, and the demand curve remains constant, in a market with a linear demand function Qd = 100 - 2P and a linear supply function Qs = 2P - 50, assuming an initial equilibrium price of $37.50 and an initial equilibrium quantity of 25 units, and the cost increase causes a new supply function Qs = 2P - 70?",
+    "content": "The market initially has a demand function Qd = 100 - 2P and a supply function Qs = 2P - 50. At equilibrium, Qd = Qs. So, 100 - 2P = 2P - 50. Solving for P, we get 4P = 150, P = $37.50. Substituting P back into either equation, Q = 25 units. If the supply function shifts to Qs = 2P - 70 due to increased costs, we solve for the new equilibrium: 100 - 2P = 2P - 70. This gives 4P = 170, P = $42.50. Substituting P back into either equation, Q = 15 units. The change in equilibrium price is $5, and the change in quantity is -10 units. The initial total revenue is $937.50, and the new total revenue is $637.50.",
+    "answer": "$42.50",
+    "explanation": "The mechanism underlying this change can be understood through the basic principles of microeconomics, particularly the Law of Demand and the concept of supply and demand equilibrium. Formally, the equilibrium condition can be expressed as $Qd = Qs$. For linear functions, this can be represented as $100 - 2P = 2P - 50$. Solving for $P$ yields $P = \\frac{150}{4} = 37.50$. When the supply curve shifts due to increased costs, the new equilibrium is found by solving $100 - 2P = 2P - 70$, which results in $P = \\frac{170}{4} = 42.50$. The LaTeX representation of the supply and demand equilibrium is $Qd = 100 - 2P$ and $Qs = 2P - 50$ shifting to $Qs = 2P - 70$. The total revenue $TR$ can be calculated as $TR = P \\times Q$. Initially, $TR = 37.50 \\times 25 = 937.50$. After the shift, $TR = 42.50 \\times 15 = 637.50$. The change in total revenue reflects the impact of the cost increase on market equilibrium."
   }
 ]
 
