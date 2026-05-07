@@ -70,12 +70,16 @@ class ObsidianClient:
         import frontmatter
         full_path = self.vault_path / relative_path
         if full_path.exists() and full_path.is_file():
-            with open(full_path, "r", encoding="utf-8") as f:
-                post = frontmatter.load(f)
-                return {
-                    "metadata": post.metadata,
-                    "content": post.content
-                }
+            try:
+                with open(full_path, "r", encoding="utf-8") as f:
+                    post = frontmatter.load(f)
+                    return {
+                        "metadata": post.metadata,
+                        "content": post.content
+                    }
+            except Exception as e:
+                print(f"[ObsidianClient] Error reading {relative_path}: {e}")
+                return None
         return None
 
     def write_note(self, relative_path: str, content: str) -> bool:

@@ -849,6 +849,15 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 # Ensure answer is boolean or string representation of boolean
                 if isinstance(q.get("answer"), str):
                     q["answer"] = q["answer"].lower() == "true"
+                    
+            if q["type"] == "mcq" and isinstance(q.get("options"), dict):
+                ans = str(q.get("answer", "")).upper()
+                if ans not in q["options"]:
+                    q["answer"] = list(q["options"].keys())[0] if q["options"] else "A"
+                    
+            if q["type"] == "fill_in":
+                if "[[blank]]" not in str(q.get("textWithBlanks", "")).lower():
+                    q["type"] = "writing"
             
             if q["type"] == "fill_in" and not q.get("textWithBlanks"):
                 q["type"] = "writing"
@@ -978,8 +987,29 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 highest_score = score
                 best_match = hub
 
-        # Require a minimum threshold of 15 points to avoid weak matches
-        return best_match if highest_score >= 15 else None
+        # Require a minimum threshold to avoid weak matches
+        # If the course matches, we get 15. If unit also matches, 25.
+        # If course matches but unit MISMATCHES, we should stay at 15 or below.
+        # We increase threshold to 20 if we want to be strict about units, 
+        # or keep 15 but ensure unit mismatch is penalized.
+        
+        # Re-check for unit mismatch penalty
+        for hub in hubs:
+            unit_val = str(hub.get("unit", ""))
+            if unit_val:
+                # If we find a DIFFERENT unit in the sample, penalize this hub heavily
+                other_units = [u for u in ["1","2","3","4","5","6","7","8","9"] if u != unit_val]
+                for ou in other_units:
+                    if f"unit {ou}" in sample or f"chapter {ou}" in sample:
+                        # Find the match in the list and penalize it
+                        if hub == best_match:
+                            highest_score -= 20 # Knock it below threshold
+        
+        if highest_score >= 15:
+            print(f"[OKA Service] Best hub match: {best_match['id']} (Score: {highest_score})")
+            return best_match
+        
+        return None
 
     def get_active_academic_context(self) -> Dict[str, str]:
         """Reads the vault to find the currently active semester and year."""
@@ -1042,15 +1072,23 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             # --- SMART VAULT AWARENESS ---
             # 1. If target_hub exists, trust its internal metadata above all else
             if target_hub:
-                h_course = target_hub.get("course")
-                h_semester = target_hub.get("semester")
-                h_year = target_hub.get("year")
+                h_unit = str(target_hub.get("unit", "")).strip()
+                ai_unit = str(detected_curriculum.get("unit", "")).strip()
                 
-                if h_course: detected_curriculum["course"] = h_course
-                if h_semester: detected_curriculum["semester"] = h_semester
-                if h_year: detected_curriculum["year"] = h_year
-                
-                print(f"[OKA Service] Smart-Anchor: Inherited metadata from Hub '{target_hub['id']}' -> {detected_curriculum['course']} | {detected_curriculum['semester']}")
+                # If units explicitly mismatch, don't anchor to this hub
+                if h_unit and ai_unit and h_unit != ai_unit:
+                    print(f"[OKA Service] Unit mismatch detected (Hub: {h_unit}, AI: {ai_unit}). Dropping anchored hub.")
+                    target_hub = None
+                else:
+                    h_course = target_hub.get("course")
+                    h_semester = target_hub.get("semester")
+                    h_year = target_hub.get("year")
+                    
+                    if h_course: detected_curriculum["course"] = h_course
+                    if h_semester: detected_curriculum["semester"] = h_semester
+                    if h_year: detected_curriculum["year"] = h_year
+                    
+                    print(f"[OKA Service] Smart-Anchor: Inherited metadata from Hub '{target_hub['id']}' -> {detected_curriculum['course']} | {detected_curriculum['semester']}")
 
             # 2. If we have a course (from AI or Hub) but missing semester/year, look at the Course Master
             if detected_curriculum.get("course"):
@@ -1346,6 +1384,13 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 # Merge notes, avoiding duplicates
                 for note in partial_plan.atomic_notes:
                     if note.title not in seen_titles:
+                        # Re-evaluate mode based on note content to fix boundary issues (e.g., Macro inside Micro chapter)
+                        note_mode = router.route(f"{note.title} {note.description}")
+                        if note_mode != "ACADEMIC-GENERAL":
+                            note.mode = note_mode
+                        elif detected_mode != "ACADEMIC-GENERAL":
+                            note.mode = detected_mode
+
                         print(f"[OKA Service] Adding concept: {note.title} (Mode: {note.mode})")
                         all_atomic_notes.append(note.model_dump())
                         seen_titles.add(note.title)
@@ -1623,7 +1668,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 note_schema.title, 
                                 note_data["technical_definition"], 
                                 primary_language, 
-                                note_schema.mode
+                                note_schema.mode,
+                                note_schema.source_context or "No context"
                             )
                             note_data.update(prac_parts)
                             await asyncio.sleep(2.0)

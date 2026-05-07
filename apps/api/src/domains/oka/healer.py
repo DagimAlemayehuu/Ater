@@ -9,28 +9,53 @@ class LogicHealer:
     """
     
     def __init__(self, canonical_titles: Set[str]):
-        self.canonical_titles = canonical_titles
+        # Store both original and underscored versions for flexible matching
+        self.canonical_titles = {t.strip() for t in canonical_titles}
+        self.normalized_titles = {t.replace(" ", "_").strip(): t.strip() for t in canonical_titles}
         self.logger = logging.getLogger("LifeOS")
 
     def heal_wikilinks(self, text: str) -> str:
         """
         Fixes broken wikilinks by fuzzy matching against known titles in the current hub plan.
+        Handles aliases like [[Title|Alias]].
         """
         def _fix_link(match):
-            link = match.group(1).strip()
-            # If exact match or simple underscore/space mismatch, fix it
+            raw_content = match.group(1).strip()
+            
+            # Split into link and alias
+            if "|" in raw_content:
+                link, alias = raw_content.split("|", 1)
+                link = link.strip()
+                alias = alias.strip()
+            else:
+                link = raw_content
+                alias = None
+            
+            # Normalize and check link
             normalized_link = link.replace(" ", "_")
-            if normalized_link in self.canonical_titles:
-                return f"[[{normalized_link}]]"
+            fixed_link = normalized_link
             
-            # Case-insensitive match
-            for title in self.canonical_titles:
-                if title.lower() == normalized_link.lower():
-                    return f"[[{title}]]"
+            # 1. Exact match in canonical titles
+            if raw_content in self.canonical_titles:
+                fixed_link = raw_content
+            elif normalized_link in self.normalized_titles:
+                fixed_link = self.normalized_titles[normalized_link]
+            else:
+                # 2. Case-insensitive match
+                matched = False
+                for title in self.canonical_titles:
+                    if title.lower() == raw_content.lower() or title.lower().replace(" ", "_") == normalized_link.lower():
+                        fixed_link = title
+                        matched = True
+                        break
+                
+                if not matched:
+                    self.logger.warning(f"[Healer] Unresolved wikilink: {link}")
+                    fixed_link = link # Fallback to original
             
-            # If no match found, keep as is but log warning
-            self.logger.warning(f"[Healer] Unresolved wikilink: {link}")
-            return f"[[{link}]]"
+            if alias:
+                return f"[[{fixed_link}|{alias}]]"
+            return f"[[{fixed_link}]]"
 
         return re.sub(r"\[\[(.*?)\]\]", _fix_link, text)
 

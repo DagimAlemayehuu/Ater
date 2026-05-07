@@ -183,6 +183,12 @@ class OkaValidator:
         # ── 6. Minimum body length ──────────────────────────────────────────
         if len(body.strip()) < 300:
             errors.append(f"BODY_TOO_SHORT: {len(body.strip())} chars. Minimum is 300.")
+            
+        # ── 6.5. Truncation check ──────────────────────────────────────────
+        # If the body doesn't end with a closing backtick (quiz), or punctuation, it's likely truncated.
+        last_char = body.strip()[-1:] if body.strip() else ""
+        if last_char not in [".", "!", "?", "`", ">", "]", "}"] and not body.strip().endswith("```"):
+            errors.append("TRUNCATED_GENERATION: The note appears to be cut off mid-sentence without proper closing punctuation.")
 
         # ── 7. Walkthrough step count — section is ## 5. Walkthrough in the template
         walkthrough_match = re.search(r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)', body, re.DOTALL)
@@ -289,8 +295,9 @@ class OkaValidator:
             p_str = str(p).strip()
             # Extract inner text from [[...]]
             inner = re.sub(r"[\[\]]+", "", p_str).strip().strip("\"'")
-            # Convert spaces to underscores
-            inner = re.sub(r"\s+", "_", inner)
+            # Convert to Title Case and spaces to underscores
+            words = re.split(r'[\s_\-]+', inner)
+            inner = "_".join(w.capitalize() for w in words if w)
             # Ensure it's a proper wikilink
             result.append(f"[[{inner}]]")
         return result

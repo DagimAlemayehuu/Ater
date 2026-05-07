@@ -308,47 +308,9 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path):
         except Exception:
             note_data[stem] = []
 
-    children_map = {stem: [] for stem in deployed_stems}
-    has_parent = {stem: False for stem in deployed_stems}
-    roots = []
-    
-    for stem in deployed_stems:
-        prereqs = note_data[stem]
-        local_prereqs = [p for p in prereqs if p in note_data]
-        
-        # If A links to B (A has B as a prereq), A is the broader concept (parent), B is the child.
-        for child in local_prereqs:
-            if child not in children_map[stem]:
-                children_map[stem].append(child)
-                has_parent[child] = True
-
-    # Roots are nodes that are not children of any other node
-    for stem in deployed_stems:
-        if not has_parent[stem]:
-            roots.append(stem)
-
     lines = []
-    visited = set()
-    
-    def build_tree(node, current_depth):
-        if node in visited:
-            return
-        visited.add(node)
-        indent = min(current_depth, 3) * 2
-        prefix = " " * indent
-        lines.append(f"{prefix}- [ ] [[{node}]]")
-        
-        for child in sorted(children_map[node]):
-            if child not in visited:
-                build_tree(child, current_depth + 1)
-                
-    for root in sorted(roots):
-        build_tree(root, 1)
-        
-    # Catch any disconnected cycles
     for stem in deployed_stems:
-        if stem not in visited:
-            build_tree(stem, 1)
+        lines.append(f"  - [ ] [[{stem}]]")
 
     hub_text = hub_file.read_text(encoding="utf-8")
 

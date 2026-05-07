@@ -32,17 +32,32 @@ def test_logic_healer_arithmetic():
     assert "100.5 + 50.5 = 151" in healed2
 
 def test_logic_healer_wikilinks():
-    healer = LogicHealer(canonical_titles={"Supply_and_Demand", "Price_Elasticity"})
+    healer = LogicHealer(canonical_titles={"Supply and Demand", "Price_Elasticity"})
     
     # Exact match but spaces
     text = "The [[Supply and Demand]] model."
     healed = healer.heal_wikilinks(text)
-    assert "[[Supply_and_Demand]]" in healed
+    assert "[[Supply and Demand]]" in healed # Should keep original if matched
+    
+    # Normalization match
+    text2 = "The [[supply_and_demand]] is here."
+    healed2 = healer.heal_wikilinks(text2)
+    assert "[[Supply and Demand]]" in healed2
     
     # Case insensitive
-    text2 = "The [[price_elasticity]] is high."
-    healed2 = healer.heal_wikilinks(text2)
-    assert "[[Price_Elasticity]]" in healed2
+    text3 = "The [[price_elasticity]] is high."
+    healed3 = healer.heal_wikilinks(text3)
+    assert "[[Price_Elasticity]]" in healed3
+    
+    # Aliases
+    text4 = "The [[Supply and Demand|S&D]] curve."
+    healed4 = healer.heal_wikilinks(text4)
+    assert "[[Supply and Demand|S&D]]" in healed4
+    
+    # Aliases with case fix
+    text5 = "The [[supply_and_demand|S&D]] curve."
+    healed5 = healer.heal_wikilinks(text5)
+    assert "[[Supply and Demand|S&D]]" in healed5
 
 def test_logic_healer_sanitization():
     healer = LogicHealer(canonical_titles=set())
@@ -97,3 +112,22 @@ def test_render_atomic_note():
     assert "Sure, here is the note." not in result
     assert "[[Elasticity]]" in result
     assert "10 * 10 = 100" in result
+
+def test_oka_validator_truncation():
+    from src.domains.oka.validator import OkaValidator
+    
+    # Test valid ending (punctuation)
+    valid_content = "---\ntitle: Test\ntype: test\ncourse: test\n---\nHere is a complete sentence. It has three links [[Link1]], [[Link2]], [[Link3]]."
+    is_valid, errors = OkaValidator.validate_structure(valid_content)
+    assert not any("TRUNCATED_GENERATION" in e for e in errors)
+    
+    # Test valid ending (code block)
+    valid_code = "---\ntitle: Test\ntype: test\ncourse: test\n---\nHere is a complete sentence. [[Link1]], [[Link2]], [[Link3]].\n```interactive-quiz\n[{\"type\": \"mcq\", \"question\": \"q\", \"answer\": \"a\"}, {\"type\": \"mcq\", \"question\": \"q2\", \"answer\": \"a2\"}, {\"type\": \"mcq\", \"question\": \"q3\", \"answer\": \"a3\"}]\n```"
+    is_valid, errors = OkaValidator.validate_structure(valid_code)
+    assert not any("TRUNCATED_GENERATION" in e for e in errors)
+    
+    # Test truncated ending
+    truncated_content = "---\ntitle: Test\ntype: test\ncourse: test\n---\nHere is a complete sentence. [[Link1]], [[Link2]], [[Link3]]. But this one is cut of"
+    is_valid, errors = OkaValidator.validate_structure(truncated_content)
+    assert any("TRUNCATED_GENERATION" in e for e in errors)
+

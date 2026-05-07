@@ -241,10 +241,10 @@ DOMAIN_QUESTION_PROTOCOLS = {
         "order": "Order the sequence of events in a 'Multiplier Effect' or 'Liquidity Trap' chain."
     },
     "ECON-MICRO": {
-        "mcq": "Focus on the Law of Demand/Supply and elasticity calculations. PROHIBITION: Demand curves MUST NOT be described as positively sloped.",
+        "mcq": "Design the question strictly around the primary foundational concept of the note. Only use law of demand/elasticity calculations if explicitly supported by the source text.",
         "true_false": "Test the relationship between income and normal/inferior goods. Use tricky combinations of price and income changes.",
         "synthesis": "Design a 'Market Entry' or 'Tax Impact' scenario for a specific commodity (e.g., Coffee, Smartphones). PROHIBITION: Never use currency devaluation for Micro notes.",
-        "trace": "Trace the impact of a cost increase (e.g., higher wages) through the supply curve to equilibrium price and total revenue.",
+        "trace": "Design a multi-step analytical trace strictly relevant to the note's core concept. PROHIBITION: Do NOT reuse the 'supply curve cost-increase' scenario across different notes unless the topic is specifically about supply shocks.",
         "order": "Order the causal steps of a market moving from a shortage/surplus back to equilibrium."
     },
     "CS-SOFTWARE": {
@@ -572,17 +572,17 @@ class PractitionerAgent:
         self.llm = llm
         self.domain = domain
 
-    async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> Dict[str, str]:
+    async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "", source_text: str = "") -> Dict[str, str]:
         title_readable = note_title.replace("_", " ")
         prof_domain = get_professional_domain(note_title, mode=mode)
         
         # 1. Artifact Call
         art_prompt = f"As a {self.domain['persona']}, provide EXACTLY ONE high-fidelity artifact (type: {self.domain['type']}) for '{title_readable}' in {prof_domain}. If code, use {primary_language}. If math, use LaTeX ($$). Follow with 2 sentences of explanation."
-        art_res = await self.llm.ainvoke([("system", art_prompt), ("human", f"Artifact for {title_readable} based on: {theory_body[:1000]}")])
+        art_res = await self.llm.ainvoke([("system", art_prompt), ("human", f"Artifact for {title_readable} based on: {theory_body[:1000]}\n\nSource constraint: {source_text[:1000]}")])
         
         # 2. Walkthrough Call
-        walk_prompt = f"As a {self.domain['persona']}, provide a strict 5-step technical walkthrough of how '{title_readable}' operates in {prof_domain}. No intro."
-        walk_res = await self.llm.ainvoke([("system", walk_prompt), ("human", f"Walkthrough for {title_readable} based on: {theory_body[:1000]}")])
+        walk_prompt = f"As a {self.domain['persona']}, provide a strict 5-step technical walkthrough of how '{title_readable}' operates. GROUNDING RULE: Every scenario, number, and example MUST come directly from the source text excerpts. NEVER invent scenarios from outside the source. If the source shows a price of $5, use $5. Do NOT use medieval guilds, labor markets, or game theory unless those exact words appear. No intro."
+        walk_res = await self.llm.ainvoke([("system", walk_prompt), ("human", f"Walkthrough for {title_readable} based on: {theory_body[:1000]}\n\nSource text: {source_text[:1000]}")])
         
         return {
             "artifact_content": art_res.content.strip(),
@@ -675,15 +675,15 @@ class QuestionAgent:
         }
         
         schemas = {
-            "mcq": '{"id":"generate_unique_id","type":"mcq","difficulty":"' + difficulty + '","question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"answer":"B","explanation":"..."}',
-            "true_false": '{"id":"generate_unique_id","type":"true_false","difficulty":"' + difficulty + '","question":"...","answer":false,"explanation":"..."}',
-            "fill_in": '{"id":"generate_unique_id","type":"fill_in","difficulty":"' + difficulty + '","question":"Fill in the blank.","textWithBlanks":"The [[blank]] is...","answer":["exactword"],"explanation":"..."}',
-            "writing": '{"id":"generate_unique_id","type":"writing","difficulty":"' + difficulty + '","question":"Explain...","answer":"...","explanation":"..."}',
-            "matching": '{"id":"generate_unique_id","type":"matching","difficulty":"' + difficulty + '","question":"Match terms.","pairs":[{"left":"...","right":"..."}]}',
-            "order": '{"id":"generate_unique_id","type":"order","difficulty":"' + difficulty + '","question":"Order steps.","steps":["step2","step3","step1"],"answer":["step1","step2","step3"]}',
-            "debug": '{"id":"generate_unique_id","type":"debug","difficulty":"' + difficulty + '","question":"Find the bug.","content":"...","answer":"...","required_keywords":["fix_syntax"],"explanation":"..."}',
-            "trace": '{"id":"generate_unique_id","type":"trace","difficulty":"' + difficulty + '","question":"What is the exact output?","content":"...","answer":"...","explanation":"..."}',
-            "synthesis": '{"id":"generate_unique_id","type":"synthesis","difficulty":"' + difficulty + '","question":"Complex scenario...","answer":"...","explanation":"..."}'
+            "mcq": '{"type":"mcq","difficulty":"' + difficulty + '","question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"answer":"B","explanation":"..."}',
+            "true_false": '{"type":"true_false","difficulty":"' + difficulty + '","question":"...","answer":false,"explanation":"..."}',
+            "fill_in": '{"type":"fill_in","difficulty":"' + difficulty + '","question":"Fill in the blank.","textWithBlanks":"The [[blank]] is...","answer":["exactword"],"explanation":"..."}',
+            "writing": '{"type":"writing","difficulty":"' + difficulty + '","question":"Explain...","answer":"...","explanation":"..."}',
+            "matching": '{"type":"matching","difficulty":"' + difficulty + '","question":"Match terms.","pairs":[{"left":"...","right":"..."}]}',
+            "order": '{"type":"order","difficulty":"' + difficulty + '","question":"Order steps.","steps":["step2","step3","step1"],"answer":["step1","step2","step3"]}',
+            "debug": '{"type":"debug","difficulty":"' + difficulty + '","question":"Find the bug.","content":"...","answer":"...","required_keywords":["fix_this_keyword"],"explanation":"..."}',
+            "trace": '{"type":"trace","difficulty":"' + difficulty + '","question":"What is the exact output?","content":"...","answer":"...","explanation":"..."}',
+            "synthesis": '{"type":"synthesis","difficulty":"' + difficulty + '","question":"Complex scenario...","answer":"...","explanation":"..."}'
         }
         
         prompt_logic = prompts.get(self.canonical_type, prompts["writing"])
