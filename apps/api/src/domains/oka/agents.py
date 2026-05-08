@@ -371,6 +371,7 @@ class ArchitectAgent:
 
         system = (
             "You are the OKA Curriculum Architect. Extract 15-25 atomic concepts from the text.\n"
+            "First, evaluate the Domain and Academic Level of the entire document.\n"
             "RULES:\n"
             "1. Titles: 1-3 words, Title_Case_With_Underscores, never a question.\n"
             "2. " + mode_instruction + "\n"
@@ -381,7 +382,8 @@ class ArchitectAgent:
             "4. source_context: copy 1-2 most relevant sentences.\n"
             "5. source_pages: list page numbers mentioned (integers only).\n"
             "OUTPUT: pure JSON only — no markdown fences.\n"
-            '{"atomic_notes":[{"title":"...","description":"...","mode":"...","prerequisites":[],'
+            '{"course_title": "...", "academic_level": "...", "epistemic_stance": "...", '
+            '"atomic_notes":[{"title":"...","description":"...","mode":"...","prerequisites":[],'
             '"source_context":"...","source_pages":[]}],"possible_questions":[]}'
         )
 
@@ -491,8 +493,23 @@ class TheoryAgent:
         self.llm = llm
         self.domain = domain
 
-    async def generate_micro(self, note_schema, source_text: str, all_concepts: str, used_scenarios: list = None) -> Dict[str, str]:
+    async def generate_micro(self, note_schema, source_text: str, all_concepts: str, used_scenarios: list = None, academic_level: str = "Unknown", course_title: str = "Unknown") -> Dict[str, str]:
         title_readable = note_schema.title.replace("_", " ")
+        
+        if academic_level in ["High School", "Undergraduate 101"]:
+            scope_constraint = "Match the academic level of the source text. If the text is a 101-level introduction, DO NOT introduce advanced graduate-level concepts, external theories, or outside jargon (like Bounded Rationality or Industrial Organization) to sound smart. Strictly use the boundaries provided by the PDF. Use the exact terminology found in the text for limitations (e.g., use 'monopolies' or 'inefficiency' instead of translating them into advanced terms like 'imperfect competition' or 'information asymmetry')."
+        elif academic_level in ["Undergraduate 300/400", "Master's"]:
+            scope_constraint = "When writing the 'Limitations' section, critically evaluate the model. Introduce real-world friction, exceptions, and bridging concepts to higher-level theories."
+        elif academic_level in ["Doctoral / Post-Doc", "Research Paper"]:
+            scope_constraint = "When writing the 'Limitations' section, focus on epistemological boundaries, current gaps in the academic literature, and theoretical failures at the frontier of research. Assume the reader is a peer."
+        else:
+            scope_constraint = "Match the academic level of the source text. DO NOT introduce advanced graduate-level concepts to sound smart. Strictly use the boundaries provided by the PDF."
+
+        context_wrapper = f"You are generating material for a course titled exactly: **{course_title}**. When framing examples, writing graph captions, or designing quizzes, you MUST use this exact course title as your context. DO NOT hallucinate advanced sub-fields, unrelated academic disciplines, or outside context wrappers."
+        
+        source_examples_instruction = "Whenever the source text provides specific real-world examples (e.g., Japan's aging population, hand looms), you MUST prioritize using those exact examples in your walkthroughs before inventing your own (like Apple or Ford)."
+        
+        scope_constraint = f"{context_wrapper}\n\n{scope_constraint}\n\n{source_examples_instruction}"
         
         # Scenario exclusion: prevent the same everyday analogy from being reused
         scenario_ban = ""
@@ -506,20 +523,55 @@ class TheoryAgent:
 
         prof_domain = get_professional_domain(note_schema.title, note_schema.mode)
         # 1. Analogy Call
-        analogy_prompt = f"As a {self.domain['persona']}, explain '{title_readable}' using a professional real-world scenario (NOT a toy store or candy shop). Use a scenario from: {prof_domain}. Map TWO specific components explicitly. ONE paragraph only.{scenario_ban}"
-        analogy_res = await self.llm.ainvoke([("system", analogy_prompt), ("human", f"Analogy for {title_readable} based on: {source_text[:1000]}")])
+        analogy_prompt = f"As a {self.domain['persona']}, explain '{title_readable}' using a professional real-world scenario (NOT a toy store or candy shop). Use a scenario from: {prof_domain}. Map TWO specific components explicitly. When creating the Mental Model, you MUST explicitly integrate the exact subtypes or definitions found in the text. (e.g., If the text defines a concept as A, B, and C, your real-world analogy must feature A, B, and C). ONE paragraph only.{scenario_ban}\n\n{scope_constraint}"
+        analogy_res = await self.llm.ainvoke(
+            [("system", analogy_prompt), ("human", f"Analogy for {title_readable} based on: {source_text[:1000]}")],
+            max_tokens=512
+        )
         
         # 2. Technical Call
-        tech_prompt = f"As a {self.domain['persona']}, provide a rigorous technical definition and mechanism for '{title_readable}'. Use continuous prose, no bullets. Embed 2-3 wikilinks from: {all_concepts}.\nVERBATIM SOURCE ANCHOR: The following sentences from the textbook MUST be the foundation of your technical definition. Do not contradict them:\n\"{source_text[:400]}\""
+        tech_prompt = f"""You are a strict data-extraction parser operating as a {self.domain['persona']}.
+Your task is to provide a technical definition for '{title_readable}'.
+
+{scope_constraint}
+
+You are FORBIDDEN from outputting conversational text or markdown. You must output EXACTLY and ONLY valid JSON matching this schema:
+```json
+{{
+  "core_paragraph": "Write exactly ONE concise paragraph defining the concept and mechanism. Max 4 sentences. Embed 2-3 wikilinks from this list ONLY: {all_concepts}",
+  "key_takeaways": [
+    "First key takeaway based strictly on the text",
+    "Second key takeaway",
+    "Third key takeaway"
+  ]
+}}
+```
+
+VERBATIM SOURCE ANCHOR: The following sentences from the textbook MUST be the foundation of your technical definition. Do not contradict them:
+"{source_text[:400]}\""""
         tech_res = await self.llm.ainvoke([("system", tech_prompt), ("human", f"Technical analysis for {title_readable}")])
         
+        # Assemble Markdown from JSON
+        import json
+        raw_tech = tech_res.content.strip()
+        # Fix string stitching typo sometimes generated by local models
+        raw_tech = raw_tech.replace("enFor", "ensure. For")
+        clean_json = raw_tech.replace("```json", "").replace("```", "").strip()
+        try:
+            tech_data = json.loads(clean_json)
+            assembled_tech = f"{tech_data.get('core_paragraph', '')}\n\n### Key Takeaways:\n"
+            for tk in tech_data.get('key_takeaways', []):
+                assembled_tech += f"- {tk}\n"
+        except Exception:
+            assembled_tech = raw_tech # Fallback if model failed JSON formatting
+        
         # 3. Limitations Call
-        limit_prompt = f"As a {self.domain['persona']}, analyze the specific limitations and edge cases of '{title_readable}'. ONE paragraph only. No bullets."
+        limit_prompt = f"As a {self.domain['persona']}, analyze the specific limitations and edge cases of '{title_readable}'. ONE paragraph only. No bullets.\n\n{scope_constraint}"
         limit_res = await self.llm.ainvoke([("system", limit_prompt), ("human", f"Limitations of {title_readable} based on: {source_text[:1000]}")])
         
         return {
             "mental_model": analogy_res.content.strip(),
-            "technical_definition": tech_res.content.strip(),
+            "technical_definition": assembled_tech.strip(),
             "limitations": limit_res.content.strip()
         }
 
@@ -539,27 +591,28 @@ class TheoryAgent:
                 f"Pick a completely different, vivid real-world scenario instead."
             )
 
-        sys_prompt = f"""You are a world-class {self.domain['persona']} and pedagogical expert.
-Your goal is to take a student from ZERO knowledge to TOTAL MASTERY of '{title_readable}'.
+        sys_prompt = f"""You are a strict data-extraction parser operating as a world-class {self.domain['persona']}.
+Your goal is to extract theoretical knowledge about '{title_readable}' from the source text.
 
 {domain_fix}
+{scenario_ban}
 
-STRICT INSTRUCTION: Output ONLY the requested sections. NO introductory text, NO concluding remarks, NO "Here is your note". Start directly with '## 1. Mental Model'.
+You are FORBIDDEN from outputting conversational text or markdown. You must output EXACTLY and ONLY valid JSON matching this schema:
 
-## 1. Mental Model
-Explain the ENTIRE concept using a vivid, professional real-world scenario (NOT a toy store, candy shop, restaurant, or child's game). Use a scenario from: {prof_domain}. Mapping: Map at least 2 mechanical components of the analogy to the concept. 2-3 sentences. No technical jargon.{scenario_ban}
-
-## 2. {self.domain['h1']}
-Provide a rigorous, technical definition and the underlying mechanism in continuous analytical prose. No bullet points.
-MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
-Format: [[Exact_Match_From_List]] (use underscores).
-
-## 3. Limitations & Edge Cases
-Analyze the specific limitations, model assumptions that break down, and known edge cases of '{title_readable}' in continuous analytical prose. No bullet points. Do NOT use the heading 'Market Failures' unless this note is specifically about externalities, public goods, or information asymmetry.
-MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
+```json
+{{
+  "mental_model": "Explain the ENTIRE concept using a vivid, professional real-world scenario from: {prof_domain}. Map at least 2 mechanical components of the analogy to the concept. 2-3 sentences. No technical jargon.",
+  "core_paragraph": "Write exactly ONE concise paragraph defining the concept. Max 4 sentences. Embed 3-5 wikilinks from this list ONLY: {all_concepts}",
+  "key_takeaways": [
+    "First key takeaway based strictly on the text",
+    "Second key takeaway",
+    "Third key takeaway"
+  ],
+  "limitations": "Analyze the specific limitations, model assumptions that break down, and known edge cases of '{title_readable}' in 2-3 sentences. Embed 3-5 wikilinks from this list ONLY: {all_concepts}"
+}}
+```
 
 Concept: {title_readable}
-MANDATORY: For the 'source_pages' metadata, use the ACTUAL TEXTBOOK PAGE NUMBERS visible on the PDF pages, not the PDF software's page index.
 Source context: {source_text[:2000]}"""
         res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Theoretical Architecture for {title_readable}")])
         return res.content.strip()
@@ -592,21 +645,39 @@ class PractitionerAgent:
         self.llm = llm
         self.domain = domain
 
-    async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "", source_text: str = "") -> Dict[str, str]:
+    async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "", source_text: str = "", academic_level: str = "Unknown", course_title: str = "Unknown") -> Dict[str, str]:
         title_readable = note_title.replace("_", " ")
         prof_domain = get_professional_domain(note_title, mode=mode)
         
+        if academic_level in ["High School", "Undergraduate 101"]:
+            artifact_req = "Generate a 5-step logical walkthrough or simple arithmetic calculation."
+        elif academic_level in ["Doctoral / Post-Doc", "Research Paper"]:
+            artifact_req = "Generate a rigorous LaTeX block ($$) proving the theorem or deriving the equation step-by-step."
+        else:
+            artifact_req = "Generate a Python/C++ code block implementing this concept, or a complex Mermaid architecture diagram."
+
+        context_wrapper = f"You are generating material for a course titled exactly: **{course_title}**. When framing examples, writing graph captions, or designing quizzes, you MUST use this exact course title as your context. DO NOT hallucinate advanced sub-fields, unrelated academic disciplines, or outside context wrappers."
+        
+        source_examples_instruction = "Whenever the source text provides specific real-world examples (e.g., Japan's aging population, hand looms), you MUST prioritize using those exact examples in your walkthroughs before inventing your own (like Apple or Ford)."
+
         # 1. Artifact Call
-        art_prompt = f"As a {self.domain['persona']}, provide EXACTLY ONE high-fidelity artifact (type: {self.domain['type']}) for '{title_readable}' in {prof_domain}. If code, use {primary_language}. If math, use LaTeX ($$). Follow with 2 sentences of explanation."
+        art_prompt = f"As a {self.domain['persona']}, provide EXACTLY ONE high-fidelity artifact (type: {self.domain['type']}) for '{title_readable}' in {prof_domain}. If code, use {primary_language}. If math, use LaTeX ($$). Follow with 2 sentences of explanation.\n\n{context_wrapper}\n\nARTIFACT REQUIREMENT: {artifact_req}\n\n{source_examples_instruction}"
         art_res = await self.llm.ainvoke([("system", art_prompt), ("human", f"Artifact for {title_readable} based on: {theory_body[:1000]}\n\nSource constraint: {source_text[:1000]}")])
         
+        import re
+        has_math = bool(re.search(r'[\d%=$+*/-]', source_text))
+        
+        if has_math:
+            math_instruction = "Extract the exact equation from the text and solve it in 5 steps."
+        else:
+            math_instruction = "The text is purely theoretical. Write a 5-step logical breakdown. YOU ARE STRICTLY FORBIDDEN FROM USING NUMBERS OR INVENTING STATISTICS."
+
         # 2. Walkthrough Call
-        walk_prompt = f"""As a {self.domain['persona']}, provide a strict 5-step technical walkthrough of how '{title_readable}' operates.
-GROUNDING RULE: Every scenario, number, and technical constant MUST come directly from the provided source text.
-- IF SOURCE HAS NUMBERS: Use the exact numbers (e.g., $5, 10 units).
-- IF SOURCE IS CONCEPTUAL: Use actual real-world data from the provided {prof_domain} domain (e.g., 'In 2023, the US Inflation Rate was 3.4%'). 
+        walk_prompt = f"""As a {self.domain['persona']}, provide a strict technical walkthrough of how '{title_readable}' operates.
+GROUNDING RULE: Every scenario MUST come directly from the provided source text.
+{math_instruction}
 - PROHIBITION: NEVER invent names like 'Azura', 'Luminaria', or 'Company X'. Use real companies (e.g., Apple, Ford) or real commodities (e.g., WTI Crude Oil, Wheat).
-- PROHIBITION: Do NOT invent fictional variables or math unless the source text explicitly provides them.
+{context_wrapper}
 No intro."""
         walk_res = await self.llm.ainvoke([("system", walk_prompt), ("human", f"Walkthrough for {title_readable} based on: {theory_body[:1000]}\n\nSource text: {source_text[:1000]}")])
         
@@ -620,6 +691,14 @@ No intro."""
         prof_domain = get_professional_domain(note_title, mode=mode)
         domain_fix = get_domain_instruction(mode)
         
+        import re
+        has_math = bool(re.search(r'[\d%=$+*/-]', theory_body))
+        
+        if has_math:
+            math_instruction = "Extract the exact equation from the text and solve it in 5 steps."
+        else:
+            math_instruction = "The text is purely theoretical. Write a 5-step logical breakdown. YOU ARE STRICTLY FORBIDDEN FROM USING NUMBERS OR INVENTING STATISTICS."
+
         sys_prompt = f"""You are a helpful {self.domain['persona']} and technical writer.
 Complete the sovereign note for '{title_readable}' by adding the high-fidelity artifact and execution walkthrough.
 
@@ -637,7 +716,8 @@ Followed by 2-3 sentences of prose explaining HOW to read this artifact.
 ## 5. Walkthrough
 Provide a strict, 5-step technical walkthrough of how the concept/artifact operates in **{prof_domain}**.
 Show intermediate state changes or data transformations. 
-DATA LOCK: Use ONLY data found in the source text or verified real-world industry data. NEVER invent scenarios.
+You are a Practitioner. You must create a 5-step walkthrough based ONLY on the source text. 
+{math_instruction}
 
 Concept: {title_readable}
 Theory context: {theory_body[:1200]}"""
@@ -731,6 +811,11 @@ class QuestionAgent:
 {domain_fix}
 
 ### [STRICT CONCEPT SCOPE LOCK]
+Generate a 3-question quiz based strictly on the text provided. 
+**GOOD EXAMPLE:** If the text is about 'Scarcity', ask 'What happens when resources are limited?'
+**BAD EXAMPLE:** If the text is about 'Scarcity', do not ask about 'Game Theory' or 'Labor Markets' because they were not mentioned.
+Only test facts explicitly written in the text above.
+
 1. **NO EXTERNAL CONCEPTS**: Do NOT use concepts, scenarios, or professional domains outside of the provided context or the intended '{prof_domain}' domain.
 2. **GROUND TRUTH**: The question MUST test this specific fact: "{core_fact}"
 3. **NO ANALOGY DEPENDENCY**: If the theory uses an analogy (e.g., 'A factory is like a cell'), the question must be about the CELL, not the factory.
@@ -738,8 +823,9 @@ class QuestionAgent:
    - If mode='ECON-MACRO': scenarios MUST involve GDP, inflation, or central banks. No bioinformatics.
    - If mode='ECON-MICRO': scenarios MUST involve firms, consumers, or price elasticity. No generic software engineering.
 4. **FILL_IN PROTOCOL**:
-   - MUST use `[[Blank1]]`, `[[Blank2]]` syntax.
-   - Blanks must be CRITICAL TECHNICAL terms, not easy verbs or adjectives.
+   - You MUST replace the target technical term with the exact string `[[blank]]` in the `textWithBlanks` field.
+   - Blanks must be CRITICAL TECHNICAL terms found in the text.
+   - **STRICT PROHIBITION**: You MUST NOT leave any [[wikilinks]] or bracketed terms in the `textWithBlanks` string except for the `[[blank]]` marker.
 
 ENTROPY ENFORCEMENT:
 - You are generating question **{index} of {total}** for this concept.

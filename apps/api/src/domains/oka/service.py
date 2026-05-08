@@ -185,7 +185,21 @@ class OkaService:
             try:
                 attempt += 1
                 OkaService._status[session_id] = f"{phase} (Attempt {attempt}/{OKA_MAX_RETRIES})..."
-                return await self.llm.ainvoke(messages)
+                
+                # Length continuation loop for models that cut off
+                current_messages = list(messages)
+                final_content = ""
+                while True:
+                    res = await self.llm.ainvoke(current_messages)
+                    final_content += res.content
+                    
+                    finish_reason = res.response_metadata.get("finish_reason") if hasattr(res, "response_metadata") else None
+                    if finish_reason in ("length", "max_tokens"):
+                        current_messages.append(res)
+                        current_messages.append(HumanMessage(content="Your response was cut off due to length. Continue generating EXACTLY where you left off, starting with the next word."))
+                    else:
+                        res.content = final_content
+                        return res
             except Exception as e:
                 last_error = e
                 error_str = str(e)
@@ -1430,6 +1444,10 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         all_pq_notes = []
         seen_titles = set(existing_notes)
         
+        extracted_course_title = "Unknown"
+        extracted_academic_level = "Unknown"
+        extracted_epistemic_stance = "Unknown"
+        
         for idx, chunk in enumerate(text_chunks):
             OkaService._status[session_id] = f"Architecting Plan (Chunk {idx+1}/{len(text_chunks)})..."
             print(f"[OKA Service] Processing chunk {idx+1}/{len(text_chunks)}")
@@ -1438,6 +1456,12 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     f"{context_enrichment}\n\nSOURCE TEXT CHUNK:\n{chunk}",
                     forced_mode=detected_mode
                 )
+                
+                # Capture global curriculum meta from the first successful chunk
+                if idx == 0 or extracted_course_title == "Unknown":
+                    extracted_course_title = partial_plan.course_title or "Unknown"
+                    extracted_academic_level = partial_plan.academic_level or "Unknown"
+                    extracted_epistemic_stance = partial_plan.epistemic_stance or "Unknown"
                 
                 if not partial_plan.atomic_notes:
                     print(f"[OKA Service] Chunk {idx+1} returned zero notes. Context might be irrelevant.")
@@ -1515,6 +1539,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             "semester": semester,
             "unit": str(unit_num),
             "hub_title": hub_title,
+            "course_title": extracted_course_title,
+            "academic_level": extracted_academic_level,
+            "epistemic_stance": extracted_epistemic_stance,
             "primary_language": primary_language,
             "hub_note": hub_note,
             "atomic_notes": all_atomic_notes,
@@ -1742,7 +1769,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 note_schema, 
                                 source_snippet, 
                                 thin_concepts,
-                                used_scenarios=session.get("used_scenarios", [])
+                                used_scenarios=session.get("used_scenarios", []),
+                                academic_level=plan_obj.academic_level,
+                                course_title=plan_obj.course_title
                             )
                             note_data.update(theory_parts)
                             
@@ -1763,7 +1792,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 note_data["technical_definition"], 
                                 primary_language, 
                                 note_schema.mode,
-                                note_schema.source_context or "No context"
+                                note_schema.source_context or "No context",
+                                academic_level=plan_obj.academic_level,
+                                course_title=plan_obj.course_title
                             )
                             note_data.update(prac_parts)
                             await asyncio.sleep(2.0)

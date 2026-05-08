@@ -148,6 +148,9 @@ class SovereignPlan(BaseModel):
     semester: str
     unit: str
     hub_title: str
+    course_title: Optional[str] = "Unknown"
+    academic_level: Optional[str] = "Unknown"
+    epistemic_stance: Optional[str] = "Unknown"
     primary_language: str = Field(default="General")
     hub_note: NoteSchema
     atomic_notes: List[AtomicNoteSchema]
@@ -156,6 +159,9 @@ class SovereignPlan(BaseModel):
     anchored_hub_id: Optional[str] = None
 
 class PartialPlan(BaseModel):
+    course_title: Optional[str] = "Unknown"
+    academic_level: Optional[str] = "Unknown"
+    epistemic_stance: Optional[str] = "Unknown"
     atomic_notes: List[AtomicNoteSchema]
     possible_questions: List[NoteSchema]
 
