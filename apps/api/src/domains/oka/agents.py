@@ -241,11 +241,11 @@ DOMAIN_QUESTION_PROTOCOLS = {
         "order": "Order the sequence of events in a 'Multiplier Effect' or 'Liquidity Trap' chain."
     },
     "ECON-MICRO": {
-        "mcq": "Design the question strictly around the primary foundational concept of the note. Only use law of demand/elasticity calculations if explicitly supported by the source text.",
-        "true_false": "Test the relationship between income and normal/inferior goods. Use tricky combinations of price and income changes.",
-        "synthesis": "Design a 'Market Entry' or 'Tax Impact' scenario for a specific commodity (e.g., Coffee, Smartphones). PROHIBITION: Never use currency devaluation for Micro notes.",
-        "trace": "Design a multi-step analytical trace strictly relevant to the note's core concept. PROHIBITION: Do NOT reuse the 'supply curve cost-increase' scenario across different notes unless the topic is specifically about supply shocks.",
-        "order": "Order the causal steps of a market moving from a shortage/surplus back to equilibrium."
+        "mcq": "Design the question strictly around the primary foundational concept of the note. For consumer theory, focus on utility and budget constraints. For producer theory, focus on marginal costs and revenue. Only use law of demand/elasticity calculations if explicitly supported by the source text.",
+        "true_false": "Test the relationship between income and normal/inferior goods, or the definition of opportunity cost in the given context.",
+        "synthesis": "Design a 'Market Entry', 'Tax Impact', or 'Regulatory Shift' scenario for a specific commodity (e.g., Coffee, Smartphones, Housing). PROHIBITION: Never use currency devaluation or aggregate inflation for Micro notes.",
+        "trace": "Design a multi-step analytical trace strictly relevant to the note's core concept (e.g., how a change in input price affects marginal cost and then equilibrium price). PROHIBITION: Do NOT reuse the 'supply curve cost-increase' scenario across different notes unless the topic is specifically about supply shocks.",
+        "order": "Order the causal steps of a market moving from a shortage/surplus back to equilibrium, or the steps in a consumer's decision-making process."
     },
     "CS-SOFTWARE": {
         "mcq": "Focus on memory management, scope, and side effects. Distractors must include potential runtime errors.",
@@ -368,7 +368,7 @@ class ArchitectAgent:
             "   **CRITICAL MODE RULES**:\n"
             "   - If confident in a discipline, pick the specific code (e.g. `ECON-MICRO`, `PHYSICS-QUANTUM`, `LAW-CRIMINAL`).\n"
             "   - If confidence is <90% or the topic spans many fields, you MUST fall back to `ACADEMIC-GENERAL`.\n"
-            "3. prerequisites: list EXACT titles of other concepts in THIS plan that must be known first.\n"
+            "3. **PREREQUISITE DEPENDENCIES**: If a concept is 'compound' or 'derived' (e.g., 'GDP Deflator' depends on 'Nominal GDP'), you MUST list the prerequisites in the `prerequisites` array. NEVER leave it empty for non-atomic starting concepts.\n"
             "4. source_context: copy 1-2 most relevant sentences.\n"
             "5. source_pages: list page numbers mentioned (integers only).\n"
             "OUTPUT: pure JSON only — no markdown fences.\n"
@@ -581,7 +581,13 @@ class PractitionerAgent:
         art_res = await self.llm.ainvoke([("system", art_prompt), ("human", f"Artifact for {title_readable} based on: {theory_body[:1000]}\n\nSource constraint: {source_text[:1000]}")])
         
         # 2. Walkthrough Call
-        walk_prompt = f"As a {self.domain['persona']}, provide a strict 5-step technical walkthrough of how '{title_readable}' operates. GROUNDING RULE: Every scenario, number, and example MUST come directly from the source text excerpts. NEVER invent scenarios from outside the source. If the source shows a price of $5, use $5. Do NOT use medieval guilds, labor markets, or game theory unless those exact words appear. No intro."
+        walk_prompt = f"""As a {self.domain['persona']}, provide a strict 5-step technical walkthrough of how '{title_readable}' operates.
+GROUNDING RULE: Every scenario, number, and technical constant MUST come directly from the provided source text.
+- IF SOURCE HAS NUMBERS: Use the exact numbers (e.g., $5, 10 units).
+- IF SOURCE IS CONCEPTUAL: Use actual real-world data from the provided {prof_domain} domain (e.g., 'In 2023, the US Inflation Rate was 3.4%'). 
+- PROHIBITION: NEVER invent names like 'Azura', 'Luminaria', or 'Company X'. Use real companies (e.g., Apple, Ford) or real commodities (e.g., WTI Crude Oil, Wheat).
+- PROHIBITION: Do NOT invent fictional variables or math unless the source text explicitly provides them.
+No intro."""
         walk_res = await self.llm.ainvoke([("system", walk_prompt), ("human", f"Walkthrough for {title_readable} based on: {theory_body[:1000]}\n\nSource text: {source_text[:1000]}")])
         
         return {
@@ -603,12 +609,15 @@ STRICT INSTRUCTION: Output ONLY the requested sections. NO introductory text lik
 
 ## 4. {self.domain['artifact']}
 Provide EXACTLY ONE high-fidelity artifact of type: **{self.domain['type']}** for the domain **{prof_domain}**.
+GROUNDING: If the source text contains specific data, equations, or code, you MUST use it. If not, use real-world industry benchmarks (e.g., 'S&P 500 average return of 10%').
+PROHIBITION: No placeholders or generic 'Variable_A'.
 If code, use ```primary_language. If math, use block LaTeX ($$).
 Followed by 2-3 sentences of prose explaining HOW to read this artifact.
 
 ## 5. Walkthrough
 Provide a strict, 5-step technical walkthrough of how the concept/artifact operates in **{prof_domain}**.
-Show intermediate state changes or data transformations. Use realistic data.
+Show intermediate state changes or data transformations. 
+DATA LOCK: Use ONLY data found in the source text or verified real-world industry data. NEVER invent scenarios.
 
 Concept: {title_readable}
 Theory context: {theory_body[:1200]}"""
@@ -665,7 +674,7 @@ class QuestionAgent:
         prompts = {
             "mcq": f"Find a technical nuance about '{title_readable}' within {prof_domain}. {specialized_instruction} Generate 1 correct answer and 3 distractors. Distractors must be technically plausible, not 'None of the above'.",
             "true_false": f"Generate a high-stakes T/F statement regarding a critical failure point of '{title_readable}' within {prof_domain}. {specialized_instruction}",
-            "fill_in": f"Extract a dense technical sentence about '{title_readable}'. Replace the most critical technical term with [[blank]]. REMOVE all other [[wikilinks]] from the sentence.",
+            "fill_in": f"Extract a VERBATIM or near-verbatim sentence directly from the 'Context' section below that contains the single most important technical term for '{title_readable}'. Replace that term with [[blank]]. The sentence MUST come from the Context, not be invented. REMOVE all other [[wikilinks]] from the sentence.",
             "writing": f"Challenge the user to analyze '{title_readable}' in a {prof_domain} scenario. {specialized_instruction} Provide a 3-5 sentence 'Perfect Response' demonstrating mastery. NO RUBRICS.",
             "matching": f"Extract 4 distinct technical components of '{title_readable}' and their specific roles in {prof_domain}. {specialized_instruction} Shuffle them.",
             "order": f"Identify a 4-5 step technical process or causal chain for '{title_readable}'. {specialized_instruction} Use REAL steps from the text. SHUFFLE the 'steps' array so they are NOT in order. PROHIBITION: Never use 'step1', 'step2', or generic markers. The steps must be logically sequential (A -> B -> C), not just a list of definitions.",
@@ -692,10 +701,19 @@ class QuestionAgent:
         sys_prompt = f"""You are the Dedicated '{self.canonical_type.upper()}' Question Agent, operating as a **{persona}**.
 {prompt_logic}
 
+### [STRICT CONCEPT SCOPE LOCK]
+1. **NO EXTERNAL CONCEPTS**: Do NOT use concepts, scenarios, or professional domains outside of the provided context or the intended '{prof_domain}' domain.
+2. **NO ANALOGY DEPENDENCY**: If the theory uses an analogy (e.g., 'A factory is like a cell'), the question must be about the CELL, not the factory.
+3. **MODE ADHERENCE**:
+   - If mode='ECON-MACRO': scenarios MUST involve GDP, inflation, or central banks. No bioinformatics.
+   - If mode='ECON-MICRO': scenarios MUST involve firms, consumers, or price elasticity. No generic software engineering.
+4. **FILL_IN PROTOCOL**:
+   - MUST use `[[Blank1]]`, `[[Blank2]]` syntax.
+   - Blanks must be CRITICAL TECHNICAL terms, not easy verbs or adjectives.
+
 ENTROPY ENFORCEMENT:
 - You are generating question **{index} of {total}** for this concept.
 - FOCUS HINT: {topic_hint}
-- YOU MUST ENSURE this question is distinct in sub-topic and angle from other questions in this set.
 
 MANDATORY SCHEMA:
 {json_schema}
@@ -703,14 +721,8 @@ MANDATORY SCHEMA:
 STRICT RULES:
 1. Output ONLY a valid JSON object. No markdown fences.
 2. The 'answer' field MUST be a definitive correct response. 
-3. Do NOT use ALL-CAPS for questions, options, or explanations unless it is a specific technical constant/identifier. Use standard Sentence Case.
-   - **PROHIBITION**: NEVER use 'step1', 'step2', 'placeholder', or 'example_code'. Use REAL technical content.
-   - **PROHIBITION**: NEVER use rubrics/grading instructions.
-   - **PROHIBITION**: The 'answer' field MUST be a STRING or a STRING-LIST. It MUST NOT be a raw JSON object.
-3. For 'explanation', explain the underlying mechanism deeply using LaTeX.
-4. Professional Context: You are currently operating in the **{prof_domain}** domain.
-5. ANTI-LAZINESS: If the question or answer is generic or uses placeholders, the generation will be REJECTED.
-6. SCENARIO DIVERSITY: If this is a 'synthesis' or 'scenario' question, use a novel, specific industry context (e.g., Space Exploration, Deep Sea Mining, Medieval Guilds) to avoid repeating 'Azura' or common AI tropes.
+3. Professional Context: You are currently operating in the **{prof_domain}** domain.
+4. ANTI-LAZINESS: If the question or answer is generic or uses placeholders, it will be REJECTED.
 
 Concept: {title_readable}
 Context: {context[:3000]}
@@ -811,18 +823,25 @@ class HubAgent:
         sys_prompt = (
             "You are the OKA Curriculum Architect. Synthesize a unified Hub overview.\n"
             "Given the descriptions of the atomic notes in this unit, write a 3-paragraph executive summary "
-            "of how these concepts interlock to form the larger system.\n\n"
+            "of how these concepts interlock to form the larger system. Focus on the core pedagogical narrative.\n\n"
             "Output ONLY the text of the overview. Do not include markdown headers or greetings."
         )
         user_msg = f"Unit: {unit_title}\n\nConcepts in this unit:\n" + "\n".join(descriptions)
         res = await self.llm.ainvoke([("system", sys_prompt), ("human", user_msg)])
         
-        new_hub_text = re.sub(
-            r"(## Overview\n)(.*?)(?=\n## Unit Objectives)",
-            lambda m: f"{m.group(1)}{res.content.strip()}\n\n",
-            current_hub_text,
-            flags=re.DOTALL
-        )
+        # Robust regex: Find ## Overview and replace everything until the next ## header
+        pattern = r"(## Overview\n)(.*?)(?=\n##|$)"
+        if re.search(pattern, current_hub_text, flags=re.DOTALL):
+            new_hub_text = re.sub(
+                pattern,
+                lambda m: f"{m.group(1)}{res.content.strip()}\n\n",
+                current_hub_text,
+                flags=re.DOTALL
+            )
+        else:
+            # Fallback: if Overview is missing, prepend it
+            new_hub_text = f"## Overview\n{res.content.strip()}\n\n{current_hub_text}"
+            
         return new_hub_text
 
 
@@ -887,14 +906,16 @@ For each question check:
 - GROUNDING: Does the question require specific data (numbers, constants) NOT present in the theory summary? (Hallucinated facts = FAIL).
 - SHUFFLE CHECK: For type='order', are the 'steps' already in the correct order? (Identity ordering = FAIL).
 - DEBUG CHECK: If type='debug': does 'content' actually contain a wrong step? (Answer='no error'=FAIL).
+- DUPLICATE CHECK: Do any two questions test the same sub-topic using the same numerical setup? FAIL if duplicates found.
+- ANSWER CONSISTENCY: For trace/debug types, does the answer field value match the final computed value in the explanation? (e.g., if explanation says 'Price = 10', answer must be '10').
 - SCAFFOLDING CHECK: Are there any 'internal monologues', 'AI signatures', or 'CoT leakage' in the explanation? (e.g. "Wait, let's correct that", "As an AI...", or "Let's simplify"). FAIL if found.
 - For fill_in: does 'textWithBlanks' use [[Blank1]] format (NOT wikilink names as blanks)?
 - Is the stated 'answer' definitively correct for the question asked?
 
 Output:
-{{"passed":true,"issues":[],"fix_instruction":""}}
+{"passed":true,"issues":[],"fix_instruction":""}
 OR if problems:
-{{"passed":false,"issues":["Q1: Context Hallucination detected.","Q3: Identity ordering detected. Steps must be shuffled."],"fix_instruction":"exact instruction"}}
+{"passed":false,"issues":["Q1: Context Hallucination detected.","Q3: Duplicate question found.","Q4: Answer '10' diverges from explanation value '12'."],"fix_instruction":"exact instruction"}
 
 Key facts about '{title_readable}': {theory_summary[:2500]}"""
         user_msg = f"Quiz JSON:\n{quiz_json_str[:2000]}"

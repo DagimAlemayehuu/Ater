@@ -161,6 +161,24 @@ class OkaValidator:
                             errors.append(f"QUIZ_Q{i+1}_MISSING_QUESTION")
                         if "answer" not in q:
                             errors.append(f"QUIZ_Q{i+1}_MISSING_ANSWER")
+                        if "explanation" in q:
+                            # ── 5.1 Internal Truncation Check ──
+                            exp = str(q["explanation"])
+                            if exp.strip() and exp.strip()[-1] not in [".", "!", "?", "}", "]", ")", "`", "$"]:
+                                errors.append(f"QUIZ_Q{i+1}_TRUNCATED_EXPLANATION: Explanation ends mid-sentence.")
+                            
+                            # ── 5.2 Cross-Key Numeric Consistency ──
+                            # If the explanation contains a result (e.g., 'Price = 12') but answer is '10', fail.
+                            if "answer" in q:
+                                ans_str = str(q["answer"]).lower()
+                                nums_in_exp = re.findall(r"=\s*([\d\.]+)", exp)
+                                if nums_in_exp:
+                                    last_val = nums_in_exp[-1].rstrip(".")
+                                    if last_val not in ans_str:
+                                        # Only flag if both are numeric to avoid false positives on mcq keys
+                                        if any(char.isdigit() for char in ans_str):
+                                            errors.append(f"QUIZ_Q{i+1}_ANSWER_DIVERGENCE: Answer '{ans_str}' diverges from explanation result '{last_val}'.")
+
                         # Debug: content field must not contain the answer
                         if q.get("type") == "debug" and q.get("content") and q.get("answer"):
                             answer_words = set(str(q["answer"]).lower().split())
@@ -288,16 +306,24 @@ class OkaValidator:
             return False, {}, f"JSON_PARSE_ERROR: {err}"
 
     @staticmethod
+    def sanitize_title(title: str) -> str:
+        """Ensures a title is in canonical Title_Case_With_Underscores format."""
+        if not title:
+            return ""
+        # Remove wikilink brackets if present
+        title = re.sub(r"[\[\]]+", "", title).strip().strip("\"'")
+        # Normalize: replace spaces, hyphens, and repeated underscores with a single underscore
+        title = re.sub(r"[\s_\-]+", "_", title)
+        # Title case parts: capitalize every word
+        parts = title.split("_")
+        return "_".join(part.capitalize() for part in parts if part)
+
+    @staticmethod
     def sanitize_prerequisites(prereqs: list) -> list:
         """Normalise all prerequisite titles to [[Underscore_Title_Case]] format."""
         result = []
         for p in prereqs:
-            p_str = str(p).strip()
-            # Extract inner text from [[...]]
-            inner = re.sub(r"[\[\]]+", "", p_str).strip().strip("\"'")
-            # Convert to Title Case and spaces to underscores
-            words = re.split(r'[\s_\-]+', inner)
-            inner = "_".join(w.capitalize() for w in words if w)
-            # Ensure it's a proper wikilink
-            result.append(f"[[{inner}]]")
+            inner = OkaValidator.sanitize_title(str(p))
+            if inner:
+                result.append(f"[[{inner}]]")
         return result

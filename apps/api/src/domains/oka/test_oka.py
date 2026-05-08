@@ -131,3 +131,86 @@ def test_oka_validator_truncation():
     is_valid, errors = OkaValidator.validate_structure(truncated_content)
     assert any("TRUNCATED_GENERATION" in e for e in errors)
 
+def test_oka_validator_quiz_logic():
+    from src.domains.oka.validator import OkaValidator
+    
+    # Test Answer Divergence
+    divergent_quiz = """---
+title: Test
+type: test
+course: test
+---
+Body content. [[Link1]], [[Link2]], [[Link3]].
+```interactive-quiz
+[
+  {"type": "writing", "question": "Q1", "answer": "10", "explanation": "The result is X = 12."},
+  {"type": "writing", "question": "Q2", "answer": "10", "explanation": "The result is X = 10."},
+  {"type": "writing", "question": "Q3", "answer": "10", "explanation": "The result is X = 10."}
+]
+```"""
+    is_valid, errors = OkaValidator.validate_structure(divergent_quiz)
+    assert any("ANSWER_DIVERGENCE" in e for e in errors)
+
+    # Test Internal Truncation
+    truncated_quiz = """---
+title: Test
+type: test
+course: test
+---
+Body content. [[Link1]], [[Link2]], [[Link3]].
+```interactive-quiz
+[
+  {"type": "writing", "question": "Q1", "answer": "10", "explanation": "This explanation is cut of"},
+  {"type": "writing", "question": "Q2", "answer": "10", "explanation": "Correct."},
+  {"type": "writing", "question": "Q3", "answer": "10", "explanation": "Correct."}
+]
+```"""
+    is_valid, errors = OkaValidator.validate_structure(truncated_quiz)
+    assert any("TRUNCATED_EXPLANATION" in e for e in errors)
+
+def test_logic_healer_divergence_fix():
+    from src.domains.oka.healer import LogicHealer
+    import json
+    healer = LogicHealer(canonical_titles=set())
+    
+    # Mock a quiz json with divergence in writing type
+    quiz = [
+        {
+            "type": "writing",
+            "question": "Calculate X",
+            "answer": "10",
+            "explanation": "The final result is X = 12."
+        }
+    ]
+    raw_json = json.dumps(quiz)
+    healed_json_str = healer.heal_quiz_json(raw_json)
+    
+    # Check that answer was updated to 12
+    assert '"answer": "12"' in healed_json_str
+
+def test_logic_healer_math_precision():
+    from src.domains.oka.healer import LogicHealer
+    healer = LogicHealer(canonical_titles=set())
+    # Test precision
+    text = "0.1 + 0.2 = 0.4"
+    healed = healer.verify_arithmetic(text)
+    assert "0.3" in healed
+
+def test_router_parent_anchor():
+    from src.domains.oka.router import DomainRouter
+    router = DomainRouter()
+    # 'strategy' usually lands in BIZ-STRATEGY
+    text = "Market Equilibrium strategy"
+    # Without parent_mode
+    mode1 = router.route(text)
+    assert mode1 == "BIZ-STRATEGY"
+    # With parent_mode anchor
+    mode2 = router.route(text, parent_mode="ECON-MICRO")
+    assert mode2 == "ECON-MICRO"
+
+def test_router_economics_anchors():
+    from src.domains.oka.router import DomainRouter
+    router = DomainRouter()
+    assert router.route("National income and aggregate demand") == "ECON-MACRO"
+    assert router.route("Perfect competition and marginal cost") == "ECON-MICRO"
+

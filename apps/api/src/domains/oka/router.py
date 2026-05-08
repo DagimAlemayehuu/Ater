@@ -30,12 +30,20 @@ class DomainRouter:
             "supply": "ECON-MICRO",
             "demand": "ECON-MICRO",
             "elasticity": "ECON-MICRO",
+            "consumer surplus": "ECON-MICRO",
+            "producer surplus": "ECON-MICRO",
+            "utility": "ECON-MICRO",
             "macroeconomics": "ECON-MACRO",
             "macro": "ECON-MACRO",
             "gdp": "ECON-MACRO",
             "inflation": "ECON-MACRO",
             "unemployment": "ECON-MACRO",
             "central bank": "ECON-MACRO",
+            "monetary policy": "ECON-MACRO",
+            "fiscal policy": "ECON-MACRO",
+            "aggregate demand": "ECON-MACRO",
+            "aggregate supply": "ECON-MACRO",
+            "multiplier": "ECON-MACRO",
             "software": "CS-SOFTWARE",
             "programming": "CS-SOFTWARE",
             "algorithm": "CS-SOFTWARE",
@@ -56,14 +64,27 @@ class DomainRouter:
             "pathology": "MED-PATHOLOGY",
             "marketing": "BIZ-MARKETING",
             "strategy": "BIZ-STRATEGY",
+            "competitive advantage": "BIZ-STRATEGY",
+            "swot": "BIZ-STRATEGY",
+            "market equilibrium": "ECON-MICRO",
+            "consumer behavior": "ECON-MICRO",
+            "perfect competition": "ECON-MICRO",
+            "monopoly": "ECON-MICRO",
+            "oligopoly": "ECON-MICRO",
+            "externality": "ECON-MICRO",
+            "public good": "ECON-MICRO",
+            "national income": "ECON-MACRO",
+            "as-ad": "ECON-MACRO",
+            "phillips curve": "ECON-MACRO",
         }
         for kw, mode in anchors.items():
             self.keyword_map[kw.lower()] = mode
 
-    def route(self, text: str) -> str:
+    def route(self, text: str, parent_mode: str = None) -> str:
         """
         Analyzes text and returns the most likely DOMAIN_MATRIX key.
         Returns 'ACADEMIC-GENERAL' if no clear winner is found.
+        If parent_mode is provided, it acts as a 'gravitational anchor' for ties.
         """
         text_lower = text.lower()
         scores: Dict[str, int] = {}
@@ -83,10 +104,18 @@ class DomainRouter:
         
         # Confidence check: Winner must have at least 20% lead over runner-up
         sorted_scores = sorted(scores.values(), reverse=True)
+        
+        # If we have a parent_mode and it scored at all, give it a 2.0x weight boost to prevent jumping
+        if parent_mode and parent_mode in scores:
+            scores[parent_mode] = int(scores[parent_mode] * 2.0)
+            # Re-calculate winner after boost
+            winner = max(scores, key=scores.get)
+            sorted_scores = sorted(scores.values(), reverse=True)
+
         if len(sorted_scores) > 1:
             if sorted_scores[0] < sorted_scores[1] * 1.2:
-                # Too close to call, default to general to avoid contamination
-                return "ACADEMIC-GENERAL"
+                # Too close to call, default to parent_mode if available, else general
+                return parent_mode if parent_mode else "ACADEMIC-GENERAL"
 
         return winner
 

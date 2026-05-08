@@ -751,10 +751,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 # Assign professional domain dynamically
                 prof_domain = get_professional_domain(hub['title'] + str(q_type) + str(i), mode=hub_mode)
                 
+                # Bloom's Adaptive Schedule for Practice mode
+                diff_schedule = ["L1", "L2", "L3"]
+                current_diff = config.difficulty if config.difficulty != "Mixed" else diff_schedule[i % 3]
+
                 tasks.append(agent.generate(
                     hub['title'], 
                     f"SEED: {seed}\n" + tight_context, 
-                    config.difficulty,
+                    current_diff,
                     mode=hub_mode,
                     prof_domain=prof_domain,
                     index=i+1,
@@ -1385,7 +1389,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 for note in partial_plan.atomic_notes:
                     if note.title not in seen_titles:
                         # Re-evaluate mode based on note content to fix boundary issues (e.g., Macro inside Micro chapter)
-                        note_mode = router.route(f"{note.title} {note.description}")
+                        note_mode = router.route(f"{note.title} {note.description}", parent_mode=detected_mode)
                         if note_mode != "ACADEMIC-GENERAL":
                             note.mode = note_mode
                         elif detected_mode != "ACADEMIC-GENERAL":
@@ -1420,15 +1424,21 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         except Exception as e:
             print(f"[OKA Service] Deduplication failed: {e}")
 
-        # Synthesize the Hub Note
-        hub_base = hub_title.replace(" Hub", "").replace(" ", "_")
+        # Synthesize the Hub Note with strict Title_Case_With_Underscores
+        hub_base = self.validator.sanitize_title(hub_title.replace(" Hub", "").replace("_Hub", ""))
+        
         # Prevent redundant prefixing (e.g. 5_5_Modular_Programming)
-        if unit_num and (hub_base.startswith(f"{unit_num}_") or hub_base.startswith(f"{unit_num} ")):
+        unit_prefix = f"{unit_num}_" if unit_num else ""
+        if unit_num and (hub_base.startswith(unit_prefix) or hub_base.startswith(f"{unit_num} ")):
             canonical_hub_title = f"{hub_base}_Hub"
-            canonical_pq_title = f"{hub_base}_Possible_Questions"
         else:
-            canonical_hub_title = f"{unit_num}_{hub_base}_Hub" if unit_num else f"{hub_base}_Hub"
-            canonical_pq_title = f"{unit_num}_{hub_base}_Possible_Questions" if unit_num else f"{hub_base}_Possible_Questions"
+            canonical_hub_title = f"{unit_prefix}{hub_base}_Hub"
+
+        # Sanitize all atomic note titles in the plan
+        for note in all_atomic_notes:
+            note["title"] = self.validator.sanitize_title(note["title"])
+            if "prerequisites" in note:
+                note["prerequisites"] = self.validator.sanitize_prerequisites(note["prerequisites"])
         
         hub_note = {
             "title": canonical_hub_title,
@@ -1678,11 +1688,24 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             OkaService._status[session_id] = f"{phase_prefix} Assessment: [[{current_note_title}]]..."
                             await self.governor.acquire(expected_tokens=3000)
                             
-                            prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
+                            # Gap 3 Fix: Scale question count by prerequisite depth
+                            p_count = len(note_schema.prerequisites or [])
+                            q_limit = 3 if p_count <= 1 else (5 if p_count == 2 else 6)
+                            
                             q_modes = domain.get('question_modes', ['mcq', 'true_false', 'scenario'])
+                            # Rotate and extend modes to match q_limit
+                            extended_modes = []
+                            for i in range(q_limit):
+                                extended_modes.append(q_modes[i % len(q_modes)])
+                            
                             tasks = []
-                            for i, qt in enumerate(q_modes):
-                                diff = "L2" if i > 0 else "L1"
+                            for i, qt in enumerate(extended_modes):
+                                prof_domain = get_professional_domain(note_schema.title + str(i), mode=note_schema.mode)
+                                # Adaptive Bloom's Schedule: base difficulty on prerequisite depth
+                                depth_score = len(note_schema.prerequisites or [])
+                                _diff_schedule = ["L1", "L2", "L3"] if depth_score > 1 else ["L1", "L2", "L1"]
+                                diff = _diff_schedule[i % len(_diff_schedule)]
+                                
                                 q_agent = QuestionAgent(self.planner_llm, qt)
                                 tasks.append(q_agent.generate(
                                     note_schema.title, 
@@ -2023,6 +2046,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         else:
             source_link = f"[[{plan.hub_note.title}]]"
 
+        # Extract source page range from plan
+        all_pages = []
+        for n in plan.atomic_notes:
+            if n.source_pages:
+                all_pages.extend(n.source_pages)
+        
+        page_range = f"{min(all_pages)}-{max(all_pages)}" if all_pages else "Full Unit"
+
         metadata = {
             "title": plan.hub_note.title,
             "type": "Hub",
@@ -2030,7 +2061,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             "semester": plan.semester,
             "unit": str(plan.unit),
             "source": source_link,
-            "source_pages": [],
+            "source_pages": [page_range],
             "status": "Not Started",
             "confidence": None,
             "study_date": None,
@@ -2045,9 +2076,11 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         body += f"{plan.hub_note.description}\n\n"
         
         body += "## Unit Objectives\n"
-        body += "- [ ] Master all core technical definitions.\n"
-        body += "- [ ] Internalize the mental models for each concept.\n"
-        body += "- [ ] Trace and understand every worked example.\n"
+        # Gap 2 Fix: Dynamic Objectives referencing plan concepts
+        top_concepts = [f"[[{n.title}]]" for n in plan.atomic_notes[:3]]
+        body += f"- [ ] Master core technical definitions for {', '.join(top_concepts)}.\n"
+        body += "- [ ] Internalize the mental models and professional analogies for each unit concept.\n"
+        body += "- [ ] Trace and understand every source-anchored worked example and walkthrough.\n"
         body += "- [ ] Complete all Socratic Probes and verify with the Answer Key.\n\n"
         
         body += "## Connections\n"

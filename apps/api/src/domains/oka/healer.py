@@ -12,6 +12,8 @@ class LogicHealer:
         # Store both original and underscored versions for flexible matching
         self.canonical_titles = {t.strip() for t in canonical_titles}
         self.normalized_titles = {t.replace(" ", "_").strip(): t.strip() for t in canonical_titles}
+        from .validator import OkaValidator
+        self.validator = OkaValidator()
         self.logger = logging.getLogger("LifeOS")
 
     def heal_wikilinks(self, text: str) -> str:
@@ -31,27 +33,28 @@ class LogicHealer:
                 link = raw_content
                 alias = None
             
-            # Normalize and check link
-            normalized_link = link.replace(" ", "_")
-            fixed_link = normalized_link
+            # Normalize and check link using canonical sanitizer
+            sanitized_link = self.validator.sanitize_title(link)
+            fixed_link = sanitized_link
             
             # 1. Exact match in canonical titles
             if raw_content in self.canonical_titles:
                 fixed_link = raw_content
-            elif normalized_link in self.normalized_titles:
-                fixed_link = self.normalized_titles[normalized_link]
+            elif sanitized_link in self.normalized_titles:
+                fixed_link = self.normalized_titles[sanitized_link]
             else:
-                # 2. Case-insensitive match
+                # 2. Case-insensitive match against canonical set
                 matched = False
                 for title in self.canonical_titles:
-                    if title.lower() == raw_content.lower() or title.lower().replace(" ", "_") == normalized_link.lower():
+                    if title.lower() == raw_content.lower() or self.validator.sanitize_title(title).lower() == sanitized_link.lower():
                         fixed_link = title
                         matched = True
                         break
                 
                 if not matched:
-                    self.logger.warning(f"[Healer] Unresolved wikilink: {link}")
-                    fixed_link = link # Fallback to original
+                    # Final fallback: Use the sanitized version even if not in the current plan (might be a global note)
+                    fixed_link = sanitized_link
+                    self.logger.warning(f"[Healer] Unresolved wikilink: {link} -> Canonical: {fixed_link}")
             
             if alias:
                 return f"[[{fixed_link}|{alias}]]"
@@ -73,7 +76,11 @@ class LogicHealer:
             r"(?i)(?:Analysis|Explanation|Walkthrough|Summary):\s*",
             r"(?i)(?:Here's a|I have created).*?\.?$",
             r"(?i)Let me know if you need any further.*\.?$",
-            r"(?i)I hope this academic note meets your expectations.*?\.?$"
+            r"(?i)I hope this academic note meets your expectations.*?\.?$",
+            r"(?i)Wait, (?:let me check|let's correct|actually|let me rephrase).*?\.?$",
+            r"(?i)Thinking:.*?\.?$",
+            r"(?i)Let's break this down step-by-step.*?\.?$",
+            r"(?i)I'll focus on the core concept.*?\.?$"
         ]
         sanitized = text
         for pattern in patterns:
@@ -140,17 +147,25 @@ class LogicHealer:
                     # Match '... result is X' or '... equals X'
                     math_match = re.search(r"(\d+(?:\.\d+)?)\s*([\+\-\*\/])\s*(\d+(?:\.\d+)?)\s*=\s*(\d+(?:\.\d+)?)", text_to_scan)
                     if math_match:
-                        n1, op, n2, r = float(math_match.group(1)), math_match.group(2), float(math_match.group(3)), float(math_match.group(4))
-                        if op == '*': real = n1 * n2
-                        elif op == '+': real = n1 + n2
-                        elif op == '-': real = n1 - n2
-                        elif op == '/': real = n1 / n2 if n2 != 0 else 0
-                        
+                        a, op, b, r = float(math_match.group(1)), math_match.group(2), float(math_match.group(3)), float(math_match.group(4))
+                        real = a + b if op == "+" else (a - b if op == "-" else (a * b if op == "*" else a / b))
                         if abs(real - r) > 0.001:
                             # We found a math error that likely propagates to the 'answer' field
-                            # For now, we just log it and ensure the explanation is fixed.
-                            # Fixing MCQ options requires more complex logic, but healing the explanation is Step 1.
+                            # The verify_arithmetic call above line 141 handled the string, 
+                            # this block is for logic tracking.
                             pass
+                            
+                # ── 5.3 Cross-Key Numeric Consistency Heal ──
+                # If explanation says 'X = 12' and answer is '10', and type is not MCQ (where keys are A/B/C/D), heal it.
+                if q.get("type") not in ["mcq", "matching", "order"]:
+                    exp = q.get("explanation", "")
+                    ans = str(q.get("answer", ""))
+                    nums_in_exp = re.findall(r"=\s*([\d\.]+)", exp)
+                    if nums_in_exp:
+                        last_val = nums_in_exp[-1].rstrip(".")
+                        if any(char.isdigit() for char in ans) and last_val not in ans:
+                            self.logger.warning(f"[Healer] Answer Divergence Fix: [[{q.get('type')}]] Answer {ans} -> {last_val}")
+                            q["answer"] = last_val
 
             return "```interactive-quiz\n" + json.dumps(data, indent=2) + "\n```"
         except Exception as e:
