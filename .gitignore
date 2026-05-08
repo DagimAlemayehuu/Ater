@@ -58,3 +58,7 @@ graphify-out/.graphify_python
 
 # Scratch
 scratch/
+
+# LifeOS Volatile
+Obsidian_Vault/5-Pdf Store/oka_queue.db
+apps/api/mock_inbox/
