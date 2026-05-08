@@ -94,6 +94,7 @@ class TraceQuestion(BaseQuestion):
     type: Literal["trace"]
     content: str
     answer: str
+    required_keywords: List[str] = Field(default_factory=list)
 
 Question = Union[
     MCQQuestion, TrueFalseQuestion, WritingQuestion, FillInQuestion,

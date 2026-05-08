@@ -35,6 +35,9 @@ logger = logging.getLogger("LifeOS")
 
 from urllib.parse import unquote
 import uvicorn
+import uuid
+from datetime import datetime
+import sqlite3
 from fastapi import FastAPI, Depends, HTTPException, Body, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
@@ -754,6 +757,159 @@ async def delete_practice_session(
              
         p.unlink()
         return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/practice/log")
+async def log_practice(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Logs individual question practice attempts."""
+    if not secrets.inbox_path:
+        raise HTTPException(status_code=400, detail="Inbox Path not configured")
+    
+    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    if not db_path.exists():
+        return {"status": "ignored", "reason": "db not initialized"}
+    
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.execute(
+            "INSERT INTO practice_log (id, note_id, question_type, is_correct, time_taken_seconds, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                str(uuid.uuid4()),
+                payload.get("note_id", "unknown"),
+                payload.get("question_type", "unknown"),
+                bool(payload.get("is_correct", False)),
+                payload.get("time_taken_seconds", 0),
+                datetime.now().isoformat()
+            )
+        )
+        
+        # Also handle SRS logic here if requested
+        note_id = payload.get("note_id")
+        is_correct = bool(payload.get("is_correct", False))
+        if note_id:
+            from datetime import timedelta
+            srs_row = conn.execute("SELECT review_count, consecutive_correct, easiness_factor, interval_days FROM note_srs WHERE note_id = ?", (note_id,)).fetchone()
+            if not srs_row:
+                review_count, consec_correct, ef, interval = 0, 0, 2.5, 0
+            else:
+                review_count, consec_correct, ef, interval = srs_row
+                
+            q = 4 if is_correct else 1
+            
+            if q >= 3:
+                if review_count == 0:
+                    interval = 1
+                elif review_count == 1:
+                    interval = 6
+                else:
+                    interval = int(round(interval * ef))
+                review_count += 1
+                consec_correct += 1
+            else:
+                review_count = 0
+                interval = 1
+                consec_correct = 0
+                
+            ef = ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
+            if ef < 1.3:
+                ef = 1.3
+                
+            next_date = (datetime.now() + timedelta(days=interval)).isoformat()
+            
+            conn.execute("""
+                INSERT INTO note_srs (note_id, review_count, consecutive_correct, easiness_factor, interval_days, next_review_date)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(note_id) DO UPDATE SET
+                    review_count=excluded.review_count,
+                    consecutive_correct=excluded.consecutive_correct,
+                    easiness_factor=excluded.easiness_factor,
+                    interval_days=excluded.interval_days,
+                    next_review_date=excluded.next_review_date
+            """, (note_id, review_count, consec_correct, ef, interval, next_date))
+            
+        conn.commit()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/practice/analytics")
+async def get_practice_analytics(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Retrieves analytics for the dashboard based on real practice logs."""
+    if not secrets.inbox_path:
+        raise HTTPException(status_code=400, detail="Inbox Path not configured")
+    
+    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    if not db_path.exists():
+         return {"modalities": {}, "weakest_concepts": []}
+    
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        
+        # Weakest Modalities
+        modality_rows = conn.execute("""
+            SELECT question_type, COUNT(*) as attempts, SUM(CASE WHEN is_correct THEN 1 ELSE 0 END) as correct
+            FROM practice_log
+            GROUP BY question_type
+        """).fetchall()
+        
+        modalities = {}
+        for row in modality_rows:
+            q_type = row["question_type"]
+            accuracy = row["correct"] / row["attempts"] if row["attempts"] > 0 else 0
+            modalities[q_type] = accuracy
+            
+        # Weakest Concepts
+        concept_rows = conn.execute("""
+            SELECT note_id, COUNT(*) as attempts, SUM(CASE WHEN is_correct THEN 1 ELSE 0 END) as correct
+            FROM practice_log
+            GROUP BY note_id
+            HAVING attempts > 0
+            ORDER BY correct * 1.0 / attempts ASC
+            LIMIT 5
+        """).fetchall()
+        
+        weakest_concepts = []
+        for row in concept_rows:
+            weakest_concepts.append({
+                "note_id": row["note_id"],
+                "accuracy": row["correct"] / row["attempts"]
+            })
+            
+        conn.close()
+        return {
+            "modalities": modalities,
+            "weakest_concepts": weakest_concepts
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/practice/srs")
+async def get_srs_data(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Retrieves SRS review dates for notes."""
+    if not secrets.inbox_path:
+        raise HTTPException(status_code=400, detail="Inbox Path not configured")
+    
+    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    if not db_path.exists():
+         return {"srs": {}}
+    
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("SELECT note_id, next_review_date FROM note_srs").fetchall()
+        srs = {r["note_id"]: r["next_review_date"] for r in rows}
+        conn.close()
+        return {"srs": srs}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

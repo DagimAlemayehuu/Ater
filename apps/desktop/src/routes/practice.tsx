@@ -109,6 +109,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const [userAnswers, setUserAnswers] = useState<Record<number, any>>({})
  const [isRevealed, setIsRevealed] = useState(false)
  const [gradedAnswers, setGradedAnswers] = useState<Record<number, boolean>>({})
+ const [keywordChecks, setKeywordChecks] = useState<Record<string, boolean>>({})
  const [pastPractices, setPastPractices] = useState<any[]>([])
  const [currentPracticePath, setCurrentPracticePath] = useState<string | null>(null)
  const [genStatus, setGenStatus] = useState<string>('Initializing...')
@@ -325,6 +326,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  if (currentQuestionIdx < questions.length - 1) {
  setCurrentQuestionIdx(prev => prev + 1); 
  setIsRevealed(false); 
+ setKeywordChecks({});
  setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds || null);
 } else {
  setView('results'); 
@@ -799,6 +801,35 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
         <MarkdownBlock content={currentQuestion.explanation} />
     </div>
   )}
+
+  {isRevealed && ['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQuestion.type) && currentQuestion.required_keywords && currentQuestion.required_keywords.length > 0 && (
+    <div className="p-8 border border-border/10 rounded-2xl bg-muted/5 space-y-4 animate-in fade-in duration-1000">
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mandatory Concepts Checklist</div>
+        <div className="text-[10px] font-black tabular-nums text-muted-foreground/50">
+          {currentQuestion.required_keywords.filter((kw: string) => String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase())).length} / {currentQuestion.required_keywords.length} Found
+        </div>
+      </div>
+      
+      {currentQuestion.required_keywords.filter((kw: string) => !String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase())).length > 0 && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-sm font-bold text-destructive/90 mb-4">
+          Warning: Your answer is missing core concepts. Are you sure you mastered this?
+        </div>
+      )}
+      
+      <div className="grid grid-cols-1 gap-3">
+        {currentQuestion.required_keywords.map((kw: string, i: number) => {
+          const isFound = String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase());
+          return (
+            <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-xl cursor-pointer transition-all", isFound ? "border-primary/50 bg-primary/5" : "border-border/40 hover:bg-muted/10")}>
+              <input type="checkbox" checked={keywordChecks[kw] || false} onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} className="w-5 h-5 rounded border-border/50 text-primary focus:ring-primary" />
+              <span className={cn("text-sm font-bold", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[10px] uppercase tracking-widest text-primary ml-3">(Found in your answer)</span>}</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  )}
  </div>
  </div>
  </div>
@@ -814,7 +845,12 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  {gradedAnswers[currentQuestion.id] === undefined && ['writing', 'synthesis', 'debug', 'trace'].includes(currentQuestion.type) && (
  <>
  <Button onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: false})); nextQuestion();}} variant="outline" className="h-10 px-6 text-[9px] font-black uppercase border-destructive/20 text-destructive/40">Wrong</Button>
- <Button onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: true})); nextQuestion();}} className="h-10 px-6 bg-primary text-primary-foreground text-[9px] font-black uppercase">Correct</Button>
+ <Button 
+    onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: true})); nextQuestion();}} 
+    disabled={currentQuestion.required_keywords && currentQuestion.required_keywords.length > 0 && currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw])}
+    className="h-10 px-6 bg-primary text-primary-foreground text-[9px] font-black uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+    title={currentQuestion.required_keywords && currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
+ >Correct</Button>
  </>
  )} 
  {((!['writing', 'synthesis', 'debug', 'trace'].includes(currentQuestion.type)) || gradedAnswers[currentQuestion.id] !== undefined) && (

@@ -687,12 +687,12 @@ class QuestionAgent:
             "mcq": '{"type":"mcq","difficulty":"' + difficulty + '","question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"answer":"B","explanation":"..."}',
             "true_false": '{"type":"true_false","difficulty":"' + difficulty + '","question":"...","answer":false,"explanation":"..."}',
             "fill_in": '{"type":"fill_in","difficulty":"' + difficulty + '","question":"Fill in the blank.","textWithBlanks":"The [[blank]] is...","answer":["exactword"],"explanation":"..."}',
-            "writing": '{"type":"writing","difficulty":"' + difficulty + '","question":"Explain...","answer":"...","explanation":"..."}',
+            "writing": '{"type":"writing","difficulty":"' + difficulty + '","question":"Explain...","answer":"...","required_keywords":["keyword1", "keyword2"],"explanation":"..."}',
             "matching": '{"type":"matching","difficulty":"' + difficulty + '","question":"Match terms.","pairs":[{"left":"...","right":"..."}]}',
             "order": '{"type":"order","difficulty":"' + difficulty + '","question":"Order steps.","steps":["step2","step3","step1"],"answer":["step1","step2","step3"]}',
             "debug": '{"type":"debug","difficulty":"' + difficulty + '","question":"Find the bug.","content":"...","answer":"...","required_keywords":["fix_this_keyword"],"explanation":"..."}',
-            "trace": '{"type":"trace","difficulty":"' + difficulty + '","question":"What is the exact output?","content":"...","answer":"...","explanation":"..."}',
-            "synthesis": '{"type":"synthesis","difficulty":"' + difficulty + '","question":"Complex scenario...","answer":"...","explanation":"..."}'
+            "trace": '{"type":"trace","difficulty":"' + difficulty + '","question":"What is the exact output?","content":"...","answer":"...","required_keywords":["keyword1"],"explanation":"..."}',
+            "synthesis": '{"type":"synthesis","difficulty":"' + difficulty + '","question":"Complex scenario...","answer":"...","required_keywords":["concept1"],"explanation":"..."}'
         }
         
         prompt_logic = prompts.get(self.canonical_type, prompts["writing"])
@@ -723,6 +723,7 @@ STRICT RULES:
 2. The 'answer' field MUST be a definitive correct response. 
 3. Professional Context: You are currently operating in the **{prof_domain}** domain.
 4. ANTI-LAZINESS: If the question or answer is generic or uses placeholders, it will be REJECTED.
+5. OPEN-ENDED RUBRICS: For writing, synthesis, debug, and trace questions, you MUST include a 'required_keywords' array containing 2-4 mandatory technical keywords/phrases that MUST be present in a correct answer.
 
 Concept: {title_readable}
 Context: {context[:3000]}

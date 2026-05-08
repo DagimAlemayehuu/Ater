@@ -147,6 +147,26 @@ class OkaQueueManager:
                 curriculum TEXT
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS practice_log (
+                id TEXT PRIMARY KEY,
+                note_id TEXT NOT NULL,
+                question_type TEXT NOT NULL,
+                is_correct BOOLEAN NOT NULL,
+                time_taken_seconds INTEGER,
+                timestamp TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS note_srs (
+                note_id TEXT PRIMARY KEY,
+                review_count INTEGER DEFAULT 0,
+                consecutive_correct INTEGER DEFAULT 0,
+                easiness_factor REAL DEFAULT 2.5,
+                interval_days INTEGER DEFAULT 0,
+                next_review_date TEXT NOT NULL
+            )
+        """)
         # Basic migration for missing columns
         for col, defval in [("session_id", "NULL"), ("current_batch", "0"),
                             ("total_batches", "0"), ("curriculum", "NULL")]:

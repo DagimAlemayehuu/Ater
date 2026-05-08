@@ -58,7 +58,7 @@ Life OS is a local-first application built as a polyglot monorepo. It operates f
 - **Pedagogical Casing Law**: Enforced Sentence Case across all generated questions and options to ensure professional, non-aggressive UI content.
 - **Stateful Entropy**: Implemented batch-level topic hinting in `QuestionAgent` to guarantee 100% semantic diversity within practice sets.
 - **UI/UX Compaction**: Optimized `MiniPracticeUI.tsx` with reduced text sizes and inline MCQ option layouts for high-density screen fit.
-- **Graph Synchronization**: Updated the knowledge graph with `graphifyy` to reflect latest structural improvements.
+- **Graph Synchronization**: Updated the knowledge graph with `graphify` to reflect latest structural improvements.
 
 ### 2026-04-23 — UI/UX & Markdown High-Fidelity Overhaul
 - **Hardened Markdown Engine**: Implemented robust AST-based code block detection with blended UI, language tags, and "ghost" copy buttons.

@@ -113,6 +113,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
   const [revealedStates, setRevealedStates] = useState<Record<number, boolean>>({});
   const [scores, setScores] = useState<Record<number, boolean>>({});
   const [showScore, setShowScore] = useState(false);
+  const [keywordChecks, setKeywordChecks] = useState<Record<string, boolean>>({});
 
   const currentQ = questions[currentIdx];
 
@@ -178,6 +179,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
   const nextQuestion = () => {
     if (currentIdx < questions.length - 1) {
       setCurrentIdx(currentIdx + 1);
+      setKeywordChecks({});
     }
   };
 
@@ -435,6 +437,35 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       <MarkdownBlock content={currentQ.explanation || "No explanation provided."} />
                     </div>
                   </div>
+                  
+                  {['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQ.type) && currentQ.required_keywords && currentQ.required_keywords.length > 0 && (
+                    <div className="space-y-3 pt-4 border-t border-border/10">
+                      <div className="flex items-center justify-between">
+                        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mandatory Concepts Checklist</div>
+                        <div className="text-[10px] font-black tabular-nums text-muted-foreground/50">
+                          {currentQ.required_keywords.filter((kw: string) => String(userAnswers[currentQ.id] || '').toLowerCase().includes(kw.toLowerCase())).length} / {currentQ.required_keywords.length} Found
+                        </div>
+                      </div>
+                      
+                      {currentQ.required_keywords.filter((kw: string) => !String(userAnswers[currentQ.id] || '').toLowerCase().includes(kw.toLowerCase())).length > 0 && (
+                        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-xs font-bold text-destructive/90 mb-4">
+                          Warning: Your answer is missing core concepts. Are you sure you mastered this?
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-1 gap-2">
+                        {currentQ.required_keywords.map((kw: string, i: number) => {
+                          const isFound = String(userAnswers[currentQ.id] || '').toLowerCase().includes(kw.toLowerCase());
+                          return (
+                            <label key={i} className={cn("flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all", isFound ? "border-primary/50 bg-primary/5" : "border-border/40 hover:bg-muted/10")}>
+                              <input type="checkbox" checked={keywordChecks[kw] || false} onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} className="w-4 h-4 rounded border-border/50 text-primary focus:ring-primary" />
+                              <span className={cn("text-xs font-bold", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[9px] uppercase tracking-widest text-primary ml-2">(Found in your answer)</span>}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
                       )}
@@ -445,7 +476,12 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                               <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-12 rounded-xl transition-all border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 active:scale-95">
                                   Wrong
                               </Button>
-                              <Button onClick={() => handleSelfGrade(true)} className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-12 rounded-xl transition-all hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 active:scale-95">
+                              <Button 
+                                onClick={() => handleSelfGrade(true)} 
+                                disabled={currentQ.required_keywords && currentQ.required_keywords.length > 0 && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw])}
+                                className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-12 rounded-xl transition-all hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={currentQ.required_keywords && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
+                              >
                                   Correct
                               </Button>
                           </>
