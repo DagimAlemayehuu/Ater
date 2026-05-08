@@ -22,6 +22,11 @@ _LEAKED_LABEL_PATTERNS = [
     r'^Economic Model:\s*',            # leaked from Section 4 headers
     r'^Walkthrough:\s*',               # leaked from Section 5 headers
     r'^The Proving Grounds:\s*',       # leaked from Section 6 headers
+    r'^Technical Question:\s*',
+    r'^Debug Section:\s*',
+    r'^Note:\s*',
+    r'^All of the above\s*$',           # forbidden distractor
+    r'^None of the above\s*$',          # forbidden distractor
 ]
 _LEAKED_LABEL_RE = re.compile(
     '|'.join(_LEAKED_LABEL_PATTERNS),
@@ -59,6 +64,32 @@ def sanitize_body(text: str) -> Tuple[str, List[str]]:
     if deduped != text:
         fixes.append('deduped_consecutive_wikilinks')
     text = deduped
+
+    # 4. Normalize Walkthrough Headers deterministically
+    def rewrite_steps(match):
+        walkthrough_body = match.group(1)
+        step_count = [0]
+        def increment_step(m):
+            step_count[0] += 1
+            return f"## Step {step_count[0]}:"
+        
+        normalized = re.sub(
+            r'^(?:#{1,3}\s*)?(?:Step\s+)?(\d+)[\.:\s]',
+            increment_step,
+            walkthrough_body,
+            flags=re.MULTILINE
+        )
+        return f"## 5. Walkthrough{normalized}"
+    
+    walk_fixed = re.sub(
+        r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)',
+        rewrite_steps,
+        text,
+        flags=re.DOTALL
+    )
+    if walk_fixed != text:
+        fixes.append('normalized_walkthrough_steps')
+    text = walk_fixed
 
     return text, fixes
 
@@ -355,3 +386,48 @@ def reconcile_broken_links(unit_dir: Path):
         if fixed != content:
             note_file.write_text(fixed, encoding="utf-8")
             print(f"[LinkReconcile] Cleaned ghost links in: {note_file.name}")
+
+def purge_pedagogical_artifacts(unit_dir: Path):
+    """
+    Deterministic cleanup of TikZ artifacts, walkthrough normalization,
+    and conversion of bold-text concepts to proper wikilinks.
+    """
+    all_stems = {f.stem for f in unit_dir.glob("*.md")}
+    
+    for note_file in unit_dir.glob("*.md"):
+        text = note_file.read_text(encoding="utf-8")
+        changed = False
+        
+        # 1. Strip TikZ/PGFPlots
+        tikz_pattern = re.compile(r'\\begin\{tikzpicture\}.*?\\end\{tikzpicture\}', re.DOTALL)
+        if tikz_pattern.search(text):
+            text = tikz_pattern.sub('[Diagram omitted - Technical TikZ structure not renderable]', text)
+            changed = True
+
+        # 2. Convert **Bold_Concepts** to [[Wikilinks]] if they exist in the unit
+        def bold_to_wiki(match):
+            term = match.group(1).strip().replace(" ", "_")
+            if term in all_stems:
+                return f"[[{term}]]"
+            # Try title case
+            parts = term.split("_")
+            tc_term = "_".join([p.capitalize() for p in parts])
+            if tc_term in all_stems:
+                return f"[[{tc_term}]]"
+            return match.group(0)
+            
+        new_text = re.sub(r'\*\*([^*]+)\*\*', bold_to_wiki, text)
+        if new_text != text:
+            text = new_text
+            changed = True
+
+        # 3. Normalize Walkthrough Headers
+        normalized_walk = re.sub(r'## 5\.\s*(Technical\s*)?Walkthrough.*', '## 5. Walkthrough', text)
+        if normalized_walk != text:
+            text = normalized_walk
+            changed = True
+            
+        if changed:
+            note_file.write_text(text, encoding="utf-8")
+            print(f"[PedagogyPurge] Cleaned: {note_file.name}")
+

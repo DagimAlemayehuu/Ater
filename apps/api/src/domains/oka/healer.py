@@ -62,6 +62,34 @@ class LogicHealer:
 
         return re.sub(r"\[\[(.*?)\]\]", _fix_link, text)
 
+    def enforce_wikilink_density(self, text: str, min_links: int = 3, max_links: int = 5) -> str:
+        """Enforces wikilink density: removes excess links beyond max, keeping the most concept-rich ones."""
+        sections = re.split(r'(## \d+\..*?\n)', text)
+        result = []
+        for section in sections:
+            if section.startswith('## '):
+                result.append(section)
+                continue
+            # Find all wikilinks in this section
+            links = re.findall(r'\[\[([^\]]+)\]\]', section)
+            if len(links) > max_links:
+                # Keep only the first max_links unique link targets deterministically
+                kept_links = set(links[:max_links])
+                # Use a factory to capture a fresh `seen` dict per section (avoid closure issues)
+                def make_trimmer(kept: set) -> callable:
+                    _seen: dict = {}
+                    def _trim(m: re.Match) -> str:
+                        link = m.group(1)
+                        if link in kept:
+                            _seen[link] = _seen.get(link, 0) + 1
+                            if _seen[link] == 1:
+                                return f'[[{link}]]'
+                        return link.replace('_', ' ')
+                    return _trim
+                section = re.sub(r'\[\[([^\]]+)\]\]', make_trimmer(kept_links), section)
+            result.append(section)
+        return ''.join(result)
+
     def sanitize_prose(self, text: str) -> str:
         """
         Violently removes LLM conversational filler and metatalk.
@@ -178,5 +206,6 @@ class LogicHealer:
         
         text = self.sanitize_prose(text)
         text = self.heal_wikilinks(text)
+        text = self.enforce_wikilink_density(text)
         text = self.verify_arithmetic(text)
         return text

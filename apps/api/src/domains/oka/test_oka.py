@@ -214,3 +214,122 @@ def test_router_economics_anchors():
     assert router.route("National income and aggregate demand") == "ECON-MACRO"
     assert router.route("Perfect competition and marginal cost") == "ECON-MICRO"
 
+
+
+# ── NEW HARDENING TESTS ────────────────────────────────────────────────────────
+
+def test_wikilink_density_enforcement():
+    """enforce_wikilink_density must trim sections exceeding 5 wikilinks."""
+    import re
+    from src.domains.oka.healer import LogicHealer
+    healer = LogicHealer(canonical_titles=set())
+    body = (
+        "## 2. Economic Theory\n"
+        "[[A]] [[B]] [[C]] [[D]] [[E]] [[F]] [[G]] are related.\n"
+        "## 3. Limitations\n"
+        "Only [[X]] [[Y]] here.\n"
+    )
+    result = healer.enforce_wikilink_density(body, max_links=5)
+    sec2 = re.search(r'## 2\. Economic Theory\n(.*?)## 3\.', result, re.DOTALL)
+    assert sec2, "Section 2 not found"
+    links2 = re.findall(r'\[\[([^\]]+)\]\]', sec2.group(1))
+    assert len(links2) <= 5, f"Expected <=5 links in section 2, got {len(links2)}"
+    sec3 = re.search(r'## 3\. Limitations\n(.*?)$', result, re.DOTALL)
+    assert sec3
+    links3 = re.findall(r'\[\[([^\]]+)\]\]', sec3.group(1))
+    assert len(links3) == 2, "Section 3 should be untouched"
+
+
+def test_walkthrough_normalization():
+    """purge_pedagogical_artifacts must renumber walkthrough steps sequentially."""
+    import re
+    from src.domains.oka.post_processing import sanitize_body
+    body = (
+        "## 5. Walkthrough\n"
+        "## Step 3: Do the first thing.\n"
+        "## Step 1: Do the second thing.\n"
+        "## Step 5: Do the third thing.\n"
+        "```interactive-quiz\n[]\n```"
+    )
+    result, fixes = sanitize_body(body)
+    steps = re.findall(r'## Step (\d+):', result)
+    assert steps == ['1', '2', '3'], f"Expected [1,2,3] got {steps}"
+    assert 'normalized_walkthrough_steps' in fixes
+
+
+def test_section_truncation_guard():
+    """Validator must catch a section body that ends mid-word without punctuation."""
+    from src.domains.oka.validator import OkaValidator
+    truncated = (
+        "---\ntitle: Test\ntype: test\ncourse: econ\n---\n"
+        "## 1. Mental Model\n"
+        "This scenario is cut of\n"
+        "## 2. Economic Theory\n"
+        "Ends properly here. [[L1]], [[L2]], [[L3]].\n"
+        "```interactive-quiz\n"
+        '[{"type":"mcq","question":"Q","answer":"A","explanation":"E."},'
+        '{"type":"mcq","question":"Q2","answer":"A","explanation":"E."},'
+        '{"type":"mcq","question":"Q3","answer":"A","explanation":"E."}]\n'
+        "```"
+    )
+    _, errors = OkaValidator.validate_structure(truncated)
+    assert any("SECTION_TRUNCATION" in e or "TRUNCATED_GENERATION" in e for e in errors), \
+        f"Expected truncation error, got: {errors}"
+
+
+def _run_kahn(notes):
+    """Run Kahn's topo sort inline (no OkaService instantiation)."""
+    title_set = {n["title"] for n in notes}
+    note_map = {n["title"]: n for n in notes}
+    graph = {}
+    for note in notes:
+        raw = note.get("prerequisites") or []
+        valid = [p.replace("[[", "").replace("]]", "") for p in raw
+                 if p.replace("[[", "").replace("]]", "") in title_set]
+        graph[note["title"]] = valid[:2]
+    dependents = {t: [] for t in title_set}
+    in_degree = {t: 0 for t in title_set}
+    for title, prereqs in graph.items():
+        for prereq in prereqs:
+            in_degree[title] += 1
+            dependents[prereq].append(title)
+    queue = [note_map[t] for t in title_set if in_degree[t] == 0]
+    sorted_notes = []
+    while queue:
+        node = queue.pop(0)
+        sorted_notes.append(node)
+        for dep_title in dependents.get(node["title"], []):
+            in_degree[dep_title] -= 1
+            if in_degree[dep_title] == 0:
+                queue.append(note_map[dep_title])
+    sorted_titles = {n["title"] for n in sorted_notes}
+    remaining = [n for n in notes if n["title"] not in sorted_titles]
+    for r in remaining:
+        r["prerequisites"] = []
+    sorted_notes.extend(remaining)
+    return sorted_notes
+
+
+def test_topological_sort_linear():
+    """Topo sort should produce A -> B -> C ordering."""
+    notes = [
+        {"title": "C", "prerequisites": ["[[B]]"]},
+        {"title": "A", "prerequisites": []},
+        {"title": "B", "prerequisites": ["[[A]]"]},
+    ]
+    result = _run_kahn(notes)
+    order = [n["title"] for n in result]
+    assert order.index("A") < order.index("B"), "A must come before B"
+    assert order.index("B") < order.index("C"), "B must come before C"
+
+
+def test_topological_sort_circular_breaks():
+    """Circular prerequisites (X->Y->X) must resolve without infinite loop."""
+    notes = [
+        {"title": "X", "prerequisites": ["[[Y]]"]},
+        {"title": "Y", "prerequisites": ["[[X]]"]},
+    ]
+    result = _run_kahn(notes)
+    assert len(result) == 2, "Must return both notes"
+    stripped = [n for n in result if n.get("prerequisites") == []]
+    assert len(stripped) >= 1, "At least one circular node must have prereqs stripped"

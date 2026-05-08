@@ -43,7 +43,7 @@ DOMAIN_MATRIX = {
     "MED-ANATOMY":        {"persona":"Anatomist","h1":"Structural Component","h2":"Anatomical Anomalies","artifact":"Morphological Map","type":"Markdown Table","question_modes":["mcq", "fill_in", "writing", "matching"]},
     "MED-PATHOLOGY":      {"persona":"Pathologist","h1":"Disease Mechanism","h2":"Diagnostic Pitfalls","artifact":"Pathogenesis Flow","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "writing", "matching"]},
     "ECON-MACRO":         {"persona":"Macroeconomist","h1":"Economic Theory","h2":"Market Failures","artifact":"Economic Model","type":"Basic Mermaid flowchart (graph LR)","question_modes":["true_false", "scenario", "writing", "order", "trace"]},
-    "ECON-MICRO":         {"persona":"Microeconomist","h1":"Micro Theory","h2":"Efficiency & Distortions","artifact":"Market Graph","type":"Basic Mermaid flowchart (graph TD/LR) or LaTeX","question_modes":["mcq", "fill_in", "debug", "trace"]},
+    "ECON-MICRO":         {"persona":"Microeconomist","h1":"Micro Theory","h2":"Efficiency & Distortions","artifact":"Market Graph","type":"Basic Mermaid flowchart (graph TD/LR) or LaTeX","question_modes":["mcq", "fill_in", "true_false", "trace"]},
     "ECON-METRICS":       {"persona":"Econometrician","h1":"Statistical Model","h2":"Endogeneity","artifact":"Regression Output","type":"Markdown Table or LaTeX","question_modes":["mcq", "fill_in", "debug", "trace"]},
     "ECON-BEHAVIORAL":    {"persona":"Behavioral Economist","h1":"Cognitive Bias","h2":"Market Anomalies","artifact":"Decision Matrix","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
     "ECON-FINANCE":       {"persona":"Accountant","h1":"Financial Concept","h2":"Financial Risk","artifact":"Ledger Example","type":"Markdown T-Account/Ledger Table","question_modes":["true_false", "scenario", "debug", "matching"]},
@@ -168,8 +168,17 @@ EXAMPLE OF MASTER-LEVEL LOGIC (#2):
 """
 }
 
+DOMAIN_PROHIBITIONS = {
+    "ECON-MICRO": "NEVER use 'Central Banking', 'Exchange Rates', or 'Currency Devaluation'. Focus on individual markets, consumers, and firms. The Demand Curve for a normal good is ALWAYS downward-sloping. ANALOGY PROHIBITION: NEVER use lemonade stands, bake sales, ice cream shops, or toy stores. Use real-world scenarios: housing markets, smartphone pricing, gasoline demand, coffee shop competition.",
+    "ECON-MACRO": "NEVER use 'Lemonade Stands' or child-centric analogies. Focus on national aggregates. Use real-world scenarios: National budgets, unemployment cycles, international trade agreements, central bank interest rate decisions.",
+}
+
 def get_domain_instruction(mode: str) -> str:
-    return DOMAIN_SPECIFIC_INSTRUCTIONS.get(mode, "Explain the concept with high technical density and professional rigor.")
+    instr = DOMAIN_SPECIFIC_INSTRUCTIONS.get(mode, "Explain the concept with high technical density and professional rigor.")
+    prohibition = DOMAIN_PROHIBITIONS.get(mode, "")
+    if prohibition:
+        instr = f"{instr}\n\nSTRICT PROHIBITION: {prohibition}"
+    return instr
 
 VALID_MODES = set(DOMAIN_MATRIX.keys())
 
@@ -300,23 +309,23 @@ DOMAIN_QUESTION_PROTOCOLS = {
 
 
 # ── DOMAIN PROHIBITIONS & WALKTHROUGH STYLE ───────────────────────────────────
-# Hard constraints injected into every agent prompt per domain mode.
-DOMAIN_PROHIBITIONS: Dict[str, str] = {
-    "MATH-PURE":        "NEVER use ODEs, dy/dx, d²y, integrals (∫), ẋ(t), or any continuous calculus. ALL worked examples MUST use integer-indexed sequences (aₙ, f(n)). Verify every arithmetic step before writing it.",
-    "MATH-DISCRETE":    "NEVER use differential equations, integrals, or continuous functions. Use ONLY discrete structures: integer sequences, recurrences, combinatorics, graphs, propositional logic. Verify every arithmetic step.",
-    "MATH-STAT":        "NEVER drift into ODEs or deterministic mechanics. Keep all examples probabilistic with proper random variable notation.",
-    "MATH-CRYPTO":      "Focus exclusively on discrete cryptographic operations. NEVER drift into continuous probability or calculus.",
-    "ECON-MICRO":       "NEVER use 'Central Banking', 'Exchange Rates', or 'Currency Devaluation'. Focus on individual markets, consumers, and firms. The Demand Curve for a normal good is ALWAYS downward-sloping (negative gradient).",
-    "ECON-MACRO":       "Focus on aggregate variables (GDP, Inflation, Interest Rates). Use only one currency devaluation scenario per session.",
-    "CS-SOFTWARE":      "NEVER generate OAuth/JWT/UUID/distributed-system content unless the note title explicitly names those topics. Code MUST use the primary_language. Every code block must be syntactically correct and runnable.",
-    "CS-DB":            "NEVER confuse relational schema with NoSQL document structure unless both are the note's topic. Avoid application-layer auth topics.",
-    "CS-AI":            "NEVER confuse model training with inference, or supervised with unsupervised, unless that distinction IS the concept.",
-    "MED-PHYSIO":       "NEVER confuse physiology with pharmacology. Stay in the specific organ system or physiological mechanism relevant to the concept title.",
-    "MED-PHARMA":       "NEVER confuse pharmacokinetics (what the body does to the drug) with pharmacodynamics (what the drug does to the body) unless the concept explicitly covers both.",
+# NOTE: The primary DOMAIN_PROHIBITIONS dict is defined above at line ~171 and
+# merged into DOMAIN_SPECIFIC_INSTRUCTIONS by get_domain_instruction().
+# Additional mode-level prohibitions injected into ALL agent prompts:
+DOMAIN_EXTRA_PROHIBITIONS: Dict[str, str] = {
+    "MATH-PURE":          "NEVER use ODEs, dy/dx, d²y, integrals (∫), ẋ(t), or any continuous calculus. ALL worked examples MUST use integer-indexed sequences (aₙ, f(n)). Verify every arithmetic step before writing it.",
+    "MATH-DISCRETE":      "NEVER use differential equations, integrals, or continuous functions. Use ONLY discrete structures: integer sequences, recurrences, combinatorics, graphs, propositional logic. Verify every arithmetic step.",
+    "MATH-STAT":          "NEVER drift into ODEs or deterministic mechanics. Keep all examples probabilistic with proper random variable notation.",
+    "MATH-CRYPTO":        "Focus exclusively on discrete cryptographic operations. NEVER drift into continuous probability or calculus.",
+    "CS-SOFTWARE":        "NEVER generate OAuth/JWT/UUID/distributed-system content unless the note title explicitly names those topics. Code MUST use the primary_language. Every code block must be syntactically correct and runnable.",
+    "CS-DB":              "NEVER confuse relational schema with NoSQL document structure unless both are the note's topic. Avoid application-layer auth topics.",
+    "CS-AI":              "NEVER confuse model training with inference, or supervised with unsupervised, unless that distinction IS the concept.",
+    "MED-PHYSIO":         "NEVER confuse physiology with pharmacology. Stay in the specific organ system or physiological mechanism relevant to the concept title.",
+    "MED-PHARMA":         "NEVER confuse pharmacokinetics (what the body does to the drug) with pharmacodynamics (what the drug does to the body) unless the concept explicitly covers both.",
     "PHYSICS-KINEMATICS": "Use SI units throughout. NEVER confuse kinematics (motion) with dynamics (forces) unless the concept explicitly covers both.",
-    "ENG-ELEC":         "NEVER confuse AC and DC analysis unless the concept explicitly covers both. All circuit values must be physically plausible.",
-    "PHILOSOPHY":       "Ground every claim in a named philosophical tradition or argument. NEVER use vague 'some philosophers say' attributions.",
-    "LAW-CASE":         "NEVER generalize across jurisdictions. Specify the jurisdiction (common law / civil law / specific country) for every legal claim.",
+    "ENG-ELEC":           "NEVER confuse AC and DC analysis unless the concept explicitly covers both. All circuit values must be physically plausible.",
+    "PHILOSOPHY":         "Ground every claim in a named philosophical tradition or argument. NEVER use vague 'some philosophers say' attributions.",
+    "LAW-CASE":           "NEVER generalize across jurisdictions. Specify the jurisdiction (common law / civil law / specific country) for every legal claim.",
 }
 
 # General Formatting Constraints injected into ALL modes
@@ -482,16 +491,27 @@ class TheoryAgent:
         self.llm = llm
         self.domain = domain
 
-    async def generate_micro(self, note_schema, source_text: str, all_concepts: str) -> Dict[str, str]:
+    async def generate_micro(self, note_schema, source_text: str, all_concepts: str, used_scenarios: list = None) -> Dict[str, str]:
         title_readable = note_schema.title.replace("_", " ")
         
+        # Scenario exclusion: prevent the same everyday analogy from being reused
+        scenario_ban = ""
+        if used_scenarios:
+            banned = ", ".join(f"'{s}'" for s in used_scenarios[-8:])
+            scenario_ban = (
+                f"\nANALOGY PROHIBITION: The following everyday scenarios have ALREADY been used in "
+                f"this batch and MUST NOT be reused: {banned}. "
+                f"Pick a completely different, vivid real-world scenario instead."
+            )
+
+        prof_domain = get_professional_domain(note_schema.title, note_schema.mode)
         # 1. Analogy Call
-        analogy_prompt = f"As a {self.domain['persona']}, explain '{title_readable}' using a vivid everyday analogy for a 10-year-old. ONE paragraph only."
+        analogy_prompt = f"As a {self.domain['persona']}, explain '{title_readable}' using a professional real-world scenario (NOT a toy store or candy shop). Use a scenario from: {prof_domain}. Map TWO specific components explicitly. ONE paragraph only.{scenario_ban}"
         analogy_res = await self.llm.ainvoke([("system", analogy_prompt), ("human", f"Analogy for {title_readable} based on: {source_text[:1000]}")])
         
         # 2. Technical Call
-        tech_prompt = f"As a {self.domain['persona']}, provide a rigorous technical definition and mechanism for '{title_readable}'. Use continuous prose, no bullets. Embed 2-3 wikilinks from: {all_concepts}."
-        tech_res = await self.llm.ainvoke([("system", tech_prompt), ("human", f"Technical analysis for {title_readable} based on: {source_text[:2000]}")])
+        tech_prompt = f"As a {self.domain['persona']}, provide a rigorous technical definition and mechanism for '{title_readable}'. Use continuous prose, no bullets. Embed 2-3 wikilinks from: {all_concepts}.\nVERBATIM SOURCE ANCHOR: The following sentences from the textbook MUST be the foundation of your technical definition. Do not contradict them:\n\"{source_text[:400]}\""
+        tech_res = await self.llm.ainvoke([("system", tech_prompt), ("human", f"Technical analysis for {title_readable}")])
         
         # 3. Limitations Call
         limit_prompt = f"As a {self.domain['persona']}, analyze the specific limitations and edge cases of '{title_readable}'. ONE paragraph only. No bullets."
@@ -527,7 +547,7 @@ Your goal is to take a student from ZERO knowledge to TOTAL MASTERY of '{title_r
 STRICT INSTRUCTION: Output ONLY the requested sections. NO introductory text, NO concluding remarks, NO "Here is your note". Start directly with '## 1. Mental Model'.
 
 ## 1. Mental Model
-Explain the ENTIRE concept to a 10-year-old using a vivid everyday analogy. Mapping: Map at least 2 mechanical components of the analogy to the concept. 2-3 sentences. No technical jargon.{scenario_ban}
+Explain the ENTIRE concept using a vivid, professional real-world scenario (NOT a toy store, candy shop, restaurant, or child's game). Use a scenario from: {prof_domain}. Mapping: Map at least 2 mechanical components of the analogy to the concept. 2-3 sentences. No technical jargon.{scenario_ban}
 
 ## 2. {self.domain['h1']}
 Provide a rigorous, technical definition and the underlying mechanism in continuous analytical prose. No bullet points.
@@ -667,19 +687,24 @@ class QuestionAgent:
         if not prof_domain:
             prof_domain = get_professional_domain(note_title + str(self.q_type), mode=mode)
         
+        # --- PHASE 1: Extract Core Fact ---
+        topic_prompt = f"From this note about '{title_readable}', extract ONE specific testable fact or mechanism.\nReturn ONLY a single sentence. Do NOT invent anything. Use ONLY text from the context.\nContext: {context[:1500]}"
+        topic_res = await self.llm.ainvoke([("system", topic_prompt), ("human", "Extract the testable fact.")])
+        core_fact = topic_res.content.strip()
+
         # Load Specialized Sub-Agent Protocol
         protocol_map = DOMAIN_QUESTION_PROTOCOLS.get(mode, {})
         specialized_instruction = protocol_map.get(self.canonical_type, "Focus on high-fidelity technical application and deep causal understanding.")
 
         prompts = {
-            "mcq": f"Find a technical nuance about '{title_readable}' within {prof_domain}. {specialized_instruction} Generate 1 correct answer and 3 distractors. Distractors must be technically plausible, not 'None of the above'.",
+            "mcq": f"Find a technical nuance about '{title_readable}' within {prof_domain}. {specialized_instruction} Generate 1 correct answer and 3 distractors. Distractors must be technically plausible, not 'None of the above' or 'All of the above'.",
             "true_false": f"Generate a high-stakes T/F statement regarding a critical failure point of '{title_readable}' within {prof_domain}. {specialized_instruction}",
             "fill_in": f"Extract a VERBATIM or near-verbatim sentence directly from the 'Context' section below that contains the single most important technical term for '{title_readable}'. Replace that term with [[blank]]. The sentence MUST come from the Context, not be invented. REMOVE all other [[wikilinks]] from the sentence.",
             "writing": f"Challenge the user to analyze '{title_readable}' in a {prof_domain} scenario. {specialized_instruction} Provide a 3-5 sentence 'Perfect Response' demonstrating mastery. NO RUBRICS.",
             "matching": f"Extract 4 distinct technical components of '{title_readable}' and their specific roles in {prof_domain}. {specialized_instruction} Shuffle them.",
             "order": f"Identify a 4-5 step technical process or causal chain for '{title_readable}'. {specialized_instruction} Use REAL steps from the text. SHUFFLE the 'steps' array so they are NOT in order. PROHIBITION: Never use 'step1', 'step2', or generic markers. The steps must be logically sequential (A -> B -> C), not just a list of definitions.",
-            "debug": f"Act as a Principal Specialist in {prof_domain}. {specialized_instruction} Provide a code/formula/scenario snippet for '{title_readable}' with ONE subtle, realistic technical error.",
-            "trace": f"Provide a valid, complex technical execution trace for '{title_readable}' in {prof_domain}. {specialized_instruction} Ask for the exact final state/output.",
+            "debug": f"Act as a Principal Specialist in {prof_domain}. {specialized_instruction} Provide a code/formula/scenario snippet for '{title_readable}' with ONE subtle, realistic technical error. If mode is ECON-MICRO, use a supply/demand schedule or a utility function error. If mode is LAW, use a misapplied precedent.",
+            "trace": f"Provide a valid, complex technical execution trace for '{title_readable}' in {prof_domain}. {specialized_instruction} Ask for the exact final state/output. If mode is ECON, trace a variable change through the model steps.",
             "synthesis": f"Create an emergency scenario in {prof_domain} where '{title_readable}' must be applied to prevent system failure. {specialized_instruction} Provide a definitive 'Mastery Solution'."
         }
         
@@ -698,13 +723,18 @@ class QuestionAgent:
         prompt_logic = prompts.get(self.canonical_type, prompts["writing"])
         json_schema = schemas.get(self.canonical_type, schemas["writing"])
         
+        domain_fix = get_domain_instruction(mode)
+
         sys_prompt = f"""You are the Dedicated '{self.canonical_type.upper()}' Question Agent, operating as a **{persona}**.
 {prompt_logic}
 
+{domain_fix}
+
 ### [STRICT CONCEPT SCOPE LOCK]
 1. **NO EXTERNAL CONCEPTS**: Do NOT use concepts, scenarios, or professional domains outside of the provided context or the intended '{prof_domain}' domain.
-2. **NO ANALOGY DEPENDENCY**: If the theory uses an analogy (e.g., 'A factory is like a cell'), the question must be about the CELL, not the factory.
-3. **MODE ADHERENCE**:
+2. **GROUND TRUTH**: The question MUST test this specific fact: "{core_fact}"
+3. **NO ANALOGY DEPENDENCY**: If the theory uses an analogy (e.g., 'A factory is like a cell'), the question must be about the CELL, not the factory.
+4. **MODE ADHERENCE**:
    - If mode='ECON-MACRO': scenarios MUST involve GDP, inflation, or central banks. No bioinformatics.
    - If mode='ECON-MICRO': scenarios MUST involve firms, consumers, or price elasticity. No generic software engineering.
 4. **FILL_IN PROTOCOL**:
@@ -885,7 +915,7 @@ Source context (what the note should teach): {source_context[:400]}"""
                 last_error = e
                 print(f"[VerifierAgent] Verification attempt {attempt+1} failed: {e}")
                 if attempt == 1:
-                    return {"passed": True, "failures": []}  # Fail open
+                    return {"passed": False, "failures": [{"check": "verifier_parse_error", "issue": "Verifier could not assess note quality", "fix_instruction": "Regenerate the theory section."}]}
 
 
 # ── QUIZ AUDITOR AGENT ─────────────────────────────────────────────────────────

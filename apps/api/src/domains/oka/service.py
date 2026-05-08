@@ -1015,6 +1015,64 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         
         return None
 
+    def _topological_sort_prerequisites(self, notes: List[dict]) -> List[dict]:
+        """Breaks circular deps and creates a valid learning sequence via Kahn's algorithm."""
+        title_set = {n["title"] for n in notes}
+        note_map = {n["title"]: n for n in notes}
+
+        # Clean graph: title -> list of prereq titles that exist in this batch (max 2)
+        graph: Dict[str, List[str]] = {}
+        for note in notes:
+            raw = note.get("prerequisites") or []
+            valid = [p.replace("[[", "").replace("]]", "") for p in raw
+                     if p.replace("[[", "").replace("]]", "") in title_set]
+            graph[note["title"]] = valid[:2]
+
+        # Build reverse map (dependents) and in-degree count
+        dependents: Dict[str, List[str]] = {t: [] for t in title_set}
+        in_degree: Dict[str, int] = {t: 0 for t in title_set}
+        for title, prereqs in graph.items():
+            for prereq in prereqs:
+                in_degree[title] += 1
+                dependents[prereq].append(title)
+
+        # Seed queue with root nodes (no in-batch prerequisites)
+        queue = [note_map[t] for t in title_set if in_degree[t] == 0]
+        sorted_notes: List[dict] = []
+
+        while queue:
+            node = queue.pop(0)
+            sorted_notes.append(node)
+            for dep_title in dependents.get(node["title"], []):
+                in_degree[dep_title] -= 1
+                if in_degree[dep_title] == 0:
+                    queue.append(note_map[dep_title])
+
+        # Remaining nodes have circular dependencies — strip prereqs and append
+        sorted_titles = {n["title"] for n in sorted_notes}
+        remaining = [n for n in notes if n["title"] not in sorted_titles]
+        for r in remaining:
+            print(f"[OKA] Circular prereq detected for '{r['title']}' — stripping prerequisites.")
+            r["prerequisites"] = []
+        sorted_notes.extend(remaining)
+
+        return sorted_notes
+
+    def _extract_source_snippet(self, source_text: str, concept_title: str, page_hint: int) -> str:
+        """Finds the most relevant 2-3 sentences near the page hint for this concept."""
+        readable_title = concept_title.replace("_", " ").lower()
+        sentences = re.split(r'(?<=[.!?])\s+', source_text)
+        
+        # Score sentences by relevance to concept title
+        scored = []
+        for sent in sentences:
+            score = sum(1 for word in readable_title.split() if word in sent.lower())
+            scored.append((score, sent))
+        
+        scored.sort(reverse=True)
+        top_sentences = [s for _, s in scored[:3] if len(s) > 40]
+        return " ".join(top_sentences) if top_sentences else source_text[:400]
+
     def get_active_academic_context(self) -> Dict[str, str]:
         """Reads the vault to find the currently active semester and year."""
         try:
@@ -1348,7 +1406,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
         # Phase 1.5: Deterministic Domain Routing
         OkaService._status[session_id] = "Detecting Domain Discipline..."
-        detected_mode = router.route(full_text)
+        detected_mode = router.route(full_text, course=course)
         print(f"[OKA Service] Deterministic Router Detected: {detected_mode}")
 
         # Invoke Architect Agent
@@ -1389,7 +1447,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 for note in partial_plan.atomic_notes:
                     if note.title not in seen_titles:
                         # Re-evaluate mode based on note content to fix boundary issues (e.g., Macro inside Micro chapter)
-                        note_mode = router.route(f"{note.title} {note.description}", parent_mode=detected_mode)
+                        note_mode = router.route(f"{note.title} {note.description}", parent_mode=detected_mode, course=course)
                         if note_mode != "ACADEMIC-GENERAL":
                             note.mode = note_mode
                         elif detected_mode != "ACADEMIC-GENERAL":
@@ -1421,8 +1479,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             from .post_processing import deduplicate_plan
             print(f"[OKA Service] Deduplicating {len(all_atomic_notes)} concepts...")
             all_atomic_notes = deduplicate_plan(all_atomic_notes)
+            all_atomic_notes = self._topological_sort_prerequisites(all_atomic_notes)
         except Exception as e:
-            print(f"[OKA Service] Deduplication failed: {e}")
+            print(f"[OKA Service] Deduplication / Sorting failed: {e}")
 
         # Synthesize the Hub Note with strict Title_Case_With_Underscores
         hub_base = self.validator.sanitize_title(hub_title.replace(" Hub", "").replace("_Hub", ""))
@@ -1613,6 +1672,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             
             if "all_note_probes" not in session:
                 session["all_note_probes"] = {}
+            
+            if "used_scenarios" not in session:
+                session["used_scenarios"] = []
 
             async def run_single_batch(b_num, b_type, b_notes):
                 nonlocal deployment_results
@@ -1663,12 +1725,34 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             # 1. Micro-Theory Pass
                             OkaService._status[session_id] = f"{phase_prefix} Theory: [[{current_note_title}]]..."
                             await self.governor.acquire(expected_tokens=4000)
+                            
+                            # THIN CONTEXT: Limit concept list to immediate prerequisites + unit neighbors
+                            prereqs = note_schema.prerequisites or []
+                            neighbors = all_note_titles[:15] # Just a sample of the unit's concepts
+                            thin_concepts = ", ".join([f"[[{t}]]" for t in set(prereqs + neighbors)])
+
+                            # Extract top sentences from source
+                            source_snippet = self._extract_source_snippet(
+                                note_schema.source_context or "No context", 
+                                note_schema.title, 
+                                0
+                            )
+
                             theory_parts = await theory_agent.generate_micro(
                                 note_schema, 
-                                note_schema.source_context or "No context", 
-                                all_concepts_list
+                                source_snippet, 
+                                thin_concepts,
+                                used_scenarios=session.get("used_scenarios", [])
                             )
                             note_data.update(theory_parts)
+                            
+                            # Track scenario to prevent reuse
+                            if "mental_model" in theory_parts:
+                                # Extract first 3 words of analogy as a 'scenario signature'
+                                words = re.findall(r'\w+', theory_parts["mental_model"].lower())
+                                if len(words) > 3:
+                                    session["used_scenarios"].append(" ".join(words[:3]))
+                            
                             await asyncio.sleep(2.0)
 
                             # 2. Micro-Practitioner Pass
@@ -1712,7 +1796,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     note_data["technical_definition"], 
                                     diff, 
                                     mode=note_schema.mode, 
-                                    prof_domain=prof_domain
+                                    prof_domain=prof_domain,
+                                    index=i+1,
+                                    total=q_limit
                                 ))
                             
                             q_results = await asyncio.gather(*tasks)
@@ -1821,7 +1907,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     try:
                         from .post_processing import (
                             canonicalize_unit, infer_unit_prerequisites, enforce_gutter,
-                            audit_walkthroughs, audit_intra_links, sync_hub_connections
+                            audit_walkthroughs, audit_intra_links, sync_hub_connections,
+                            purge_pedagogical_artifacts
                         )
                         # Resolve hub file (may be the anchored Study Planner hub)
                         relative_path = local_results[0]["path"]
@@ -1848,6 +1935,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
                         if unit_dir.exists():
                             canonicalize_unit(unit_dir)
+                            purge_pedagogical_artifacts(unit_dir)  # TikZ, bold→wiki, header norm
                             infer_unit_prerequisites(unit_dir)
                             enforce_gutter(unit_dir)
                             audit_walkthroughs(unit_dir)

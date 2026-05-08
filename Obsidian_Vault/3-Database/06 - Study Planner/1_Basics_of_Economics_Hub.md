@@ -14,15 +14,15 @@ generated: true
 ---
 
 ## Overview
-The study of economics revolves around the fundamental problem of scarcity, where limited resources are available to fulfill unlimited human wants. This issue necessitates choices and trade-offs, forming the basis of economic analysis. The field of economics aims to understand how individuals, firms, and governments allocate scarce resources to produce various commodities, addressing the questions of what to produce, how to produce, and for whom to produce.
+The Basics of Economics Hub revolves around the fundamental concept of scarcity, which refers to the limited availability of resources, leading to the need for choices and trade-offs. This concept is central to understanding the efficient allocation of scarce resources to attain the maximum fulfillment of unlimited human wants. The hub explores how economics, as a social science, studies the allocation of resources, and how individuals, firms, and governments make choices to produce various commodities. The core pedagogical narrative emphasizes the use of logical reasoning to derive laws and generalizations through a top-down approach.
 
-The core concepts of economics are built around the efficient allocation of resources, examining how people choose to utilize limited productive resources to produce goods and services. The study of economics encompasses a broad range of topics, from the analysis of the whole economy to the examination of individual choices and market mechanisms. The discipline employs logical reasoning and empirical analysis to derive laws and generalizations, distinguishing between positive statements, which can be verified, and normative statements, which involve value judgments.
+The hub is structured around the three important questions related to the allocation of resources: What to Produce?, How to Produce?, and For Whom to Produce?. These questions are addressed through the study of microeconomics and macroeconomics, which provide a framework for analyzing the whole economy and understanding the big picture of economic activity. The hub also explores the factors of production, including land, labor, equipment, and technical knowledge, and how they are used to produce goods and services. The concept of the production possibility frontier (PPF) is used to illustrate the combinations of output that the economy can possibly produce given the available factors of production and technology.
 
-The organization of economic systems, including market economies and the role of government, is critical in addressing the fundamental economic problem. Economists use tools such as the production possibility frontier (PPF) to illustrate the trade-offs and choices that economies face, and concepts like opportunity cost and scarcity to understand the implications of these choices. By examining the interlocking mechanisms of economics, individuals can gain a deeper understanding of how societies allocate resources, make decisions, and ultimately strive to achieve maximum fulfillment of their unlimited wants.
+The hub highlights the importance of understanding the economic system, including the role of the government in a market economy, and the concept of market failure, where the price mechanism does not provide the best allocation of resources. The narrative also emphasizes the distinction between positive and normative economics, with positive economics concerned with analysis of facts and verifiable, and normative economics a matter of opinion and value judgments. Through this hub, learners gain a comprehensive understanding of the basics of economics and how the concepts interlock to form a larger system that underpins economic analysis and decision-making.
 
 
 ## Unit Objectives
-- [ ] Master core technical definitions for [[Definition_Of_Economics]], [[Scarcity_And_Choice]], [[Opportunity_Cost]].
+- [ ] Master core technical definitions for [[Economic_Analysis]], [[Deductive_Reasoning]], [[Branches_Of_Economics]].
 - [ ] Internalize the mental models and professional analogies for each unit concept.
 - [ ] Trace and understand every source-anchored worked example and walkthrough.
 - [ ] Complete all Socratic Probes and verify with the Answer Key.
@@ -35,9 +35,9 @@ The organization of economic systems, including market economies and the role of
   - [ ] [[Branches_Of_Economics]]
   - [ ] [[Capitalist_Economy]]
   - [ ] [[Choice]]
-  - [ ] [[Decision_Making_Units]]
   - [ ] [[Deductive_Reasoning]]
   - [ ] [[Definition_Of_Economics]]
+  - [ ] [[Economic_Analysis]]
   - [ ] [[Economic_Growth]]
   - [ ] [[Economic_Resources]]
   - [ ] [[Economic_Systems]]
@@ -59,5 +59,4 @@ The organization of economic systems, including market economies and the role of
   - [ ] [[Role_Of_Government]]
   - [ ] [[Scarcity]]
   - [ ] [[Scarcity_And_Choice]]
-  - [ ] [[Tradeoffs]]
   - [ ] [[What_To_Produce]]

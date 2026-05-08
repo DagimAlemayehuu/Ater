@@ -33,6 +33,13 @@ class DomainRouter:
             "consumer surplus": "ECON-MICRO",
             "producer surplus": "ECON-MICRO",
             "utility": "ECON-MICRO",
+            "production possibilities": "ECON-MICRO",
+            "opportunity cost": "ECON-MICRO",
+            "scarcity": "ECON-MICRO",
+            "economic resources": "ECON-MICRO",
+            "law of demand": "ECON-MICRO",
+            "law of supply": "ECON-MICRO",
+            "law of increasing": "ECON-MICRO",
             "macroeconomics": "ECON-MACRO",
             "macro": "ECON-MACRO",
             "gdp": "ECON-MACRO",
@@ -80,12 +87,28 @@ class DomainRouter:
         for kw, mode in anchors.items():
             self.keyword_map[kw.lower()] = mode
 
-    def route(self, text: str, parent_mode: str = None) -> str:
+    def route(self, text: str, parent_mode: str = None, course: str = "") -> str:
         """
         Analyzes text and returns the most likely DOMAIN_MATRIX key.
         Returns 'ACADEMIC-GENERAL' if no clear winner is found.
         If parent_mode is provided, it acts as a 'gravitational anchor' for ties.
         """
+        # NEW: If course is provided, lock immediately — no keyword scan needed
+        if course:
+            course_lock = {
+                "economics":    "ECON-MICRO",
+                "microeconomics": "ECON-MICRO",
+                "macroeconomics": "ECON-MACRO",
+                "law":          "LAW-CASE",
+                "chemistry":    "CHEMISTRY",
+                "biology":      "BIOLOGY",
+                "physics":      "PHYSICS-KINEMATICS",
+            }
+            course_lower = course.lower()
+            for kw, locked_mode in course_lock.items():
+                if kw in course_lower:
+                    return locked_mode
+
         text_lower = text.lower()
         scores: Dict[str, int] = {}
 

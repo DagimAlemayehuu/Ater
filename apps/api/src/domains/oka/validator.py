@@ -208,6 +208,16 @@ class OkaValidator:
         if last_char not in [".", "!", "?", "`", ">", "]", "}"] and not body.strip().endswith("```"):
             errors.append("TRUNCATED_GENERATION: The note appears to be cut off mid-sentence without proper closing punctuation.")
 
+        # ── TRUNCATION GUARD: Check for mid-sentence cuts inside sections ──────
+        # Terminate at the next ## heading of any level, the quiz fence, or end-of-string
+        section_texts = re.findall(r'## (?:\d+\.)[^\n]*\n(.*?)(?=##|```interactive-quiz|$)', body, re.DOTALL)
+        for section_body in section_texts:
+            stripped = section_body.strip()
+            if len(stripped) > 10:  # skip trivially empty sections only
+                last_sent_char = stripped[-1]
+                if last_sent_char not in [".", "!", "?", "`", ")", "]", "}"]:
+                    errors.append(f"SECTION_TRUNCATION: A section body ends mid-sentence: '...{stripped[-40:]}'")
+
         # ── 7. Walkthrough step count — section is ## 5. Walkthrough in the template
         walkthrough_match = re.search(r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)', body, re.DOTALL)
         if walkthrough_match:
