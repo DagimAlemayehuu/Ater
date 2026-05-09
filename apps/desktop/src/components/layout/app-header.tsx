@@ -60,29 +60,29 @@ export function AppHeader() {
   return (
     <header className="relative h-12 w-full bg-background/80 backdrop-blur-md border-b border-border/40 flex items-center shrink-0 z-40 sticky top-0 px-4 select-none">
       {/* Left: Navigation */}
-      <div className="flex items-center gap-2 shrink-0 z-10">
-        <div className="flex items-center gap-1 bg-muted/30 p-0.5 rounded-lg border border-border/50">
-          <button 
-            onClick={goBack}
-            disabled={!canGoBack}
-            className={cn(
-              "w-7 h-7 flex items-center justify-center rounded-md ",
-              canGoBack ? "text-foreground/60  hover:bg-background hover:shadow-sm" : "text-foreground/10 cursor-not-allowed"
-            )}
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button 
-            onClick={goForward}
-            disabled={!canGoForward}
-            className={cn(
-              "w-7 h-7 flex items-center justify-center rounded-md ",
-              canGoForward ? "text-foreground  hover:bg-background hover:shadow-sm" : "text-foreground/10 cursor-not-allowed"
-            )}
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
+      <div className="flex items-center gap-1.5 shrink-0 z-10">
+        <button 
+          onClick={goBack}
+          disabled={!canGoBack}
+          className={cn(
+            "w-7 h-7 flex items-center justify-center rounded-md border border-border/40 transition-all",
+            canGoBack ? "text-foreground bg-background hover:border-foreground/40 shadow-sm" : "text-foreground/5 opacity-20 cursor-not-allowed"
+          )}
+          title="Go Back"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <button 
+          onClick={goForward}
+          disabled={!canGoForward}
+          className={cn(
+            "w-7 h-7 flex items-center justify-center rounded-md border border-border/40 transition-all",
+            canGoForward ? "text-foreground bg-background hover:border-foreground/40 shadow-sm" : "text-foreground/5 opacity-20 cursor-not-allowed"
+          )}
+          title="Go Forward"
+        >
+          <ChevronRight size={16} />
+        </button>
       </div>
 
       {/* Center: Breadcrumbs & Meta - Absolute Centered relative to window */}

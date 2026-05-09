@@ -9,6 +9,7 @@ import ObsidianKnowledgeArchitect from '@/routes/obsidian'
 import Settings from '@/routes/settings'
 import Practice from '@/routes/practice'
 import AcademicDashboard from '@/routes/academic'
+import Agents from '@/routes/agents'
 import Onboarding from '@/routes/onboarding'
 
 /**
@@ -68,6 +69,7 @@ export default function App() {
                         <Route path="/" element={<Navigate to="/obsidian" replace />} />
                         <Route path="/obsidian" element={<ObsidianKnowledgeArchitect />} />
                         <Route path="/academic" element={<AcademicDashboard />} />
+                        <Route path="/agents" element={<Agents />} />
                         <Route path="/practice" element={<Practice />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/onboarding" element={<Onboarding />} />

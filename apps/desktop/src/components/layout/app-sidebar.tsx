@@ -9,37 +9,59 @@ export function AppSidebar() {
         {/* Navigation Links */}
         <div className="flex flex-col gap-6 flex-1">
             <NavLink 
-                to="/obsidian"
-                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground ")} 
-                title="Obsidian Vault"
-            >
-                <FileText className="w-6 h-6" />
-            </NavLink>
-            <NavLink 
                 to="/academic"
-                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground ")} 
+                className={({ isActive }) => cn(
+                  "relative flex items-center justify-center w-full transition-colors",
+                  isActive ? "text-foreground" : "text-foreground/20 hover:text-foreground/60"
+                )} 
                 title="Academic Dashboard"
             >
-                <GraduationCap className="w-6 h-6" />
+              <GraduationCap className="w-5 h-5" />
+            </NavLink>
+            <NavLink 
+                to="/obsidian"
+                className={({ isActive }) => cn(
+                  "relative flex items-center justify-center w-full transition-colors",
+                  isActive ? "text-foreground" : "text-foreground/20 hover:text-foreground/60"
+                )} 
+                title="Obsidian Vault"
+            >
+              <FileText className="w-5 h-5" />
+            </NavLink>
+            <NavLink 
+                to="/agents"
+                className={({ isActive }) => cn(
+                  "relative flex items-center justify-center w-full transition-colors",
+                  isActive ? "text-foreground" : "text-foreground/20 hover:text-foreground/60"
+                )} 
+                title="AI Agents"
+            >
+              <RefreshCw className="w-5 h-5" />
             </NavLink>
         </div>
 
         {/* Bottom Actions */}
-        <div className="flex flex-col gap-6 mt-auto px-1 items-center mb-2">
-            <NavLink 
-                to="/onboarding"
-                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground ")} 
-                title="Onboarding"
-            >
-                <Zap className="w-6 h-6" />
-            </NavLink>
+        <div className="flex flex-col gap-6 mt-auto px-1 items-center mb-2 w-full">
             <ThemeSwitch />
             <NavLink 
+                to="/onboarding"
+                className={({ isActive }) => cn(
+                  "relative flex items-center justify-center w-full transition-colors",
+                  isActive ? "text-foreground" : "text-foreground/20 hover:text-foreground/60"
+                )} 
+                title="Onboarding"
+            >
+              <Zap className="w-5 h-5" />
+            </NavLink>
+            <NavLink 
                 to="/settings"
-                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground ")} 
+                className={({ isActive }) => cn(
+                  "relative flex items-center justify-center w-full transition-colors",
+                  isActive ? "text-foreground" : "text-foreground/20 hover:text-foreground/60"
+                )} 
                 title="Settings"
             >
-                <Settings className="w-6 h-6" />
+              <Settings className="w-5 h-5" />
             </NavLink>
         </div>
     </aside>

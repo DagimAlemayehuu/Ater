@@ -543,7 +543,10 @@ export default function ObsidianVaultPage() {
  const isMobile = useIsMobile()
 
  // --- Layout State ---
- const [showGraphView, setShowGraphView] = useState(false)
+  const [showGraphView, setShowGraphView] = useState(false)
+  const [sidebarTab, setSidebarTab] = useState<'explorer' | 'hubs' | 'pdfs'>('explorer')
+  const [hubs, setHubs] = useState<any[]>([])
+  const [loadingHubs, setLoadingHubs] = useState(false)
  // --- Vault Explorer State ---
  const [files, setFiles] = useState<ObsidianFile[]>([])
  const [loadingFiles, setLoadingFiles] = useState(false)
@@ -1315,7 +1318,55 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
 }
 
- const toggleFolder = (path: string) => {
+  const fetchHubs = async () => {
+    setLoadingHubs(true)
+    try {
+      const res = await sidecarApi.listHubs()
+      setHubs(res.hubs || [])
+    } catch (err) {
+      console.error("Failed to fetch hubs:", err)
+    } finally {
+      setLoadingHubs(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchHubs() // Initial fetch
+  }, [])
+
+  useEffect(() => {
+    if (sidebarTab === 'hubs') fetchHubs()
+  }, [sidebarTab])
+
+  // Grouping logic for Hubs
+  const groupedHubs = useMemo(() => {
+    const groups: Record<string, any[]> = {}
+    hubs.forEach(hub => {
+      const course = hub.course || 'Uncategorized'
+      if (!groups[course]) groups[course] = []
+      groups[course].push(hub)
+    })
+    // Sort courses and units
+    return Object.keys(groups).sort().reduce((acc, key) => {
+      acc[key] = groups[key].sort((a, b) => (parseInt(a.unit) || 0) - (parseInt(b.unit) || 0))
+      return acc
+    }, {} as Record<string, any[]>)
+  }, [hubs])
+
+  // Grouping logic for PDFs
+  const groupedPdfs = useMemo(() => {
+    const pdfFiles = files.filter(f => f.path.toLowerCase().endsWith('.pdf'))
+    const groups: Record<string, any[]> = {}
+    pdfFiles.forEach(file => {
+      const parts = file.path.split('/')
+      const folder = parts.length > 1 ? parts[parts.length - 2] : 'Root'
+      if (!groups[folder]) groups[folder] = []
+      groups[folder].push(file)
+    })
+    return groups
+  }, [files])
+
+  const toggleFolder = (path: string) => {
  const newExpanded = new Set(expandedFolders)
  if (newExpanded.has(path)) newExpanded.delete(path)
  else newExpanded.add(path)
@@ -1614,7 +1665,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  onClick={() => node.isFolder ? toggleFolder(node.path) : selectFile(node.path)}
  className={cn(
    "flex items-center gap-1.5 py-1 cursor-pointer  px-2 group relative rounded-sm mx-1",
-   isSelected ? "bg-accent text-accent-foreground font-medium" : "hover:bg-accent/50 text-muted-foreground/90",
+   isSelected 
+    ? "bg-primary/10 text-primary font-bold border-l-2 border-primary shadow-[inset_4px_0_10px_-4px_rgba(var(--primary),0.1)]" 
+    : "hover:bg-foreground/[0.03] text-muted-foreground hover:text-foreground",
    dragOverPath === node.path && "bg-primary/10 ring-2 ring-primary/40 ring-inset shadow-[0_0_15px_rgba(var(--primary),0.1)]",
    draggedPath === node.path && "opacity-40 grayscale"
   )}
@@ -1626,11 +1679,11 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  </div>
  
  {node.isFolder ? (
- <Folder className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-accent-foreground" : "text-muted-foreground/60")} />
+ <Folder className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/60")} />
  ) : node.path.toLowerCase().endsWith('.pdf') ? (
- <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-accent-foreground" : "text-red-500/50")} />
+ <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-red-500/50")} />
  ) : (
- <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-accent-foreground" : "text-muted-foreground/40")} />
+ <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/40")} />
  )}
  
  {isRenaming ? (
@@ -1759,64 +1812,172 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  )}
  onMouseDown={startResizing}
  />
- {/* Explorer Toolbar */}
- <div className="p-3 flex items-center justify-between gap-1">
- <div className="flex items-center gap-1 w-full">
- <div 
- className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 " 
- title="New Note"
- onClick={() => {setCreatingInPath(null); setCreatingType('file'); setNewItemName('');}}
- >
- <Plus className="w-4 h-4" />
- </div>
- <div 
- className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 " 
- title="New Folder"
- onClick={() => {setCreatingInPath(null); setCreatingType('folder'); setNewItemName('');}}
- >
- <FolderPlus className="w-4 h-4" />
- </div>
- <div className="flex-1 ml-1">
- <div className="relative flex items-center">
- <Search className="absolute left-2 w-3 h-3 text-muted-foreground/50" />
- <input
- type="text"
- placeholder="Search..."
- value={searchQuery}
- onChange={(e) => setSearchQuery(e.target.value)}
- className="w-full bg-muted/50 border border-border text-[11px] px-2 py-1.5 pl-7 rounded-md focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 "
- />
- </div>
- </div>
- <div 
- className={cn("cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 ", showGraphView ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground")} 
- onClick={() => setShowGraphView(!showGraphView)} 
- title="Toggle Graph View"
- >
- <Network className="w-4 h-4" />
- </div>
+  {/* Global Toolbar */}
+  <div className="p-3 flex items-center justify-between gap-1 border-b border-border/50">
+    <div className="flex items-center gap-1 w-full">
+      <div 
+        className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 " 
+        title="New Note"
+        onClick={() => {setCreatingInPath(null); setCreatingType('file'); setNewItemName('');}}
+      >
+        <Plus className="w-4 h-4" />
+      </div>
+      <div 
+        className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 " 
+        title="New Folder"
+        onClick={() => {setCreatingInPath(null); setCreatingType('folder'); setNewItemName('');}}
+      >
+        <FolderPlus className="w-4 h-4" />
+      </div>
+      <div className="flex-1 ml-1">
+        <div className="relative flex items-center">
+          <Search className="absolute left-2 w-3 h-3 text-muted-foreground/50" />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-muted/50 border border-border text-[11px] px-2 py-1.5 pl-7 rounded-md focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 "
+          />
+        </div>
+      </div>
+      <div 
+        className={cn("cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 ", showGraphView ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground")} 
+        onClick={() => setShowGraphView(!showGraphView)} 
+        title="Toggle Graph View"
+      >
+        <Network className="w-4 h-4" />
+      </div>
+    </div>
+  </div>
 
- </div>
- </div>
- 
- {/* File Tree */}
- <div 
- className="flex-1 overflow-y-auto min-h-0 text-[13px] text-muted-foreground custom-scrollbar"
- onDragOver={(e) => {
- e.preventDefault()
- e.dataTransfer.dropEffect = 'move'
-}}
- onDrop={(e) => handleDrop(e, null)}
- >
- <div className="py-2 min-h-full">
- {files.length > 0 ? renderTree(fileTree) : (
- <div className="py-10 text-center opacity-40">
- <Database size={24} className="mx-auto mb-2 text-muted-foreground" />
- <p className="text-[10px] font-bold uppercase">Vault Empty</p>
- </div>
- )}
- </div>
- </div>
+  {/* Sidebar Tabs - Minimal style matching academics */}
+  <div className="flex border-b border-border bg-muted/5 sticky top-0 z-20">
+    <button 
+      onClick={() => setSidebarTab('explorer')}
+      className={cn(
+        "flex-1 flex items-center justify-center py-2 text-[9px] font-black uppercase tracking-widest transition-all border-b-2 outline-none",
+        sidebarTab === 'explorer' 
+          ? "text-foreground border-primary" 
+          : "text-muted-foreground border-transparent hover:border-border hover:text-foreground"
+      )}
+    >
+      <Folder size={11} className="mr-1.5" /> Files
+    </button>
+    <button 
+      onClick={() => setSidebarTab('hubs')}
+      className={cn(
+        "flex-1 flex items-center justify-center py-2 text-[9px] font-black uppercase tracking-widest transition-all border-b-2 outline-none",
+        sidebarTab === 'hubs' 
+          ? "text-foreground border-primary" 
+          : "text-muted-foreground border-transparent hover:border-border hover:text-foreground"
+      )}
+    >
+      <GraduationCap size={11} className="mr-1.5" /> Hubs
+    </button>
+    <button 
+      onClick={() => setSidebarTab('pdfs')}
+      className={cn(
+        "flex-1 flex items-center justify-center py-2 text-[9px] font-black uppercase tracking-widest transition-all border-b-2 outline-none",
+        sidebarTab === 'pdfs' 
+          ? "text-foreground border-primary" 
+          : "text-muted-foreground border-transparent hover:border-border hover:text-foreground"
+      )}
+    >
+      <FileText size={11} className="mr-1.5" /> PDFs
+    </button>
+  </div>
+
+  <div className="flex-1 overflow-y-auto custom-scrollbar">
+    {sidebarTab === 'explorer' && (
+      <div 
+        className="py-2 min-h-full"
+        onDragOver={(e) => {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
+        }}
+        onDrop={(e) => handleDrop(e, null)}
+      >
+        {files.length > 0 ? renderTree(fileTree) : (
+          <div className="py-10 text-center opacity-40">
+            <Folder className="w-8 h-8 mx-auto mb-2 opacity-20" />
+            <p className="text-[10px] font-black uppercase tracking-widest">Vault Empty</p>
+          </div>
+        )}
+      </div>
+    )}
+
+    {sidebarTab === 'hubs' && (
+      <div className="flex flex-col p-2 gap-4">
+        {loadingHubs ? (
+          <div className="py-8 flex justify-center"><RefreshCw size={16} className="animate-spin text-muted-foreground/30" /></div>
+        ) : Object.keys(groupedHubs).length > 0 ? (
+          Object.entries(groupedHubs).map(([course, courseHubs]) => (
+            <div key={course} className="flex flex-col gap-1">
+              <div className="px-2 py-1 flex items-center gap-2">
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{course}</span>
+                <div className="h-px flex-1 bg-border/40" />
+              </div>
+              {courseHubs.map(hub => (
+                <button 
+                  key={hub.id}
+                  onClick={() => selectFile(hub.path)}
+                  className={cn(
+                    "flex flex-col p-2 rounded-md hover:bg-accent text-left transition-colors mx-1",
+                    selectedPath === hub.path ? "bg-accent border-l-2 border-primary" : ""
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black text-muted-foreground opacity-50 tabular-nums">U{hub.unit || '0'}</span>
+                    <span className="text-[12px] font-bold text-foreground truncate">{hub.title.replace(' Hub', '')}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ))
+        ) : (
+          <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/20">No hubs found</div>
+        )}
+      </div>
+    )}
+
+    {sidebarTab === 'pdfs' && (
+      <div className="flex flex-col p-2 gap-4">
+        {Object.entries(groupedPdfs).map(([folder, folderPdfs]) => (
+          <div key={folder} className="flex flex-col gap-1">
+            <div className="px-2 py-1 flex items-center gap-2">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{folder}</span>
+              <div className="h-px flex-1 bg-border/40" />
+            </div>
+            {folderPdfs.map(file => (
+              <button 
+                key={file.path}
+                onClick={() => selectFile(file.path)}
+                className={cn(
+                  "flex items-center gap-2 p-2 rounded-md text-left transition-all mx-1 group/pdf",
+                  selectedPath === file.path 
+                    ? "bg-primary/10 border-l-2 border-primary shadow-[inset_4px_0_10px_-4px_rgba(var(--primary),0.1)]" 
+                    : "hover:bg-foreground/[0.03] text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <FileText size={14} className={cn(
+                  "shrink-0 transition-colors",
+                  selectedPath === file.path ? "text-primary" : "text-red-500/30 group-hover/pdf:text-red-500/60"
+                )} />
+                <span className={cn(
+                  "text-[12px] font-medium truncate transition-colors",
+                  selectedPath === file.path ? "text-primary font-bold" : "text-foreground/80 group-hover/pdf:text-foreground"
+                )}>{file.name.replace('.pdf', '')}</span>
+              </button>
+            ))}
+          </div>
+        ))}
+        {Object.keys(groupedPdfs).length === 0 && (
+          <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/20">No PDFs found</div>
+        )}
+      </div>
+    )}
+  </div>
  </aside>
  )}
 
