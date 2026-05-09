@@ -2,10 +2,13 @@ import time
 import asyncio
 import sqlite3
 from pathlib import Path
+from collections import deque
 
 class TokenGovernor:
     """
-    Proactively manages rate limits (Tokens Per Minute / Day) via SQLite to avoid brittle 429s.
+    Intelligent Air Traffic Controller for LLM traffic.
+    Uses a sliding window (deque) for high-performance in-memory pacing
+    and SQLite for persistent usage tracking.
     """
     def __init__(self, db_path: str = None):
         if not db_path:
@@ -13,11 +16,22 @@ class TokenGovernor:
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self.db_path = db_path
         self._init_db()
+        self._lock = asyncio.Lock()
         
-        # Groq Free Tier limits for meta-llama/llama-4-scout-17b-16e-instruct
+        # Groq Free Tier limits (v30.0 Pantheon Prime)
         self.max_tpm = 30000  # Tokens Per Minute
-        self.max_tpd = 500000 # Tokens Per Day
-        self.max_rpm = 30     # Requests per minute
+        self.max_rpm = 30     # Requests Per Minute
+        self.safety_margin = 0.85 # 15% safety buffer
+        
+        # Sliding Window for pacing
+        self.request_window = deque() # Timestamps of requests in the last 60s
+        self.token_window = deque()   # (timestamp, tokens) tuples in the last 60s
+
+        # DYNAMIC CONCURRENCY (v31.0 Singularity)
+        self.active_slots = 0
+        self.max_concurrency = 5  # Default, will scale
+        self.min_concurrency = 1
+        self.current_concurrency_limit = 1 
 
     def _init_db(self):
         with sqlite3.connect(self.db_path) as conn:
@@ -31,42 +45,84 @@ class TokenGovernor:
             ''')
             conn.commit()
 
-    async def acquire(self, expected_tokens: int = 1500, expected_requests: int = 1):
+    async def get_permit(self, expected_tokens: int = 2000, expected_requests: int = 1):
         """
-        Wait until we have enough capacity to proceed based on RPM and TPM.
+        Adaptive Pacing: Grants permits instantly under low load,
+        throttles intelligently as limits approach.
         """
+        async with self._lock:
+            while True:
+                now = time.time()
+                self._clear_old_windows(now)
+                
+                tpm_used = sum(t for _, t in self.token_window)
+                rpm_used = len(self.request_window)
+                
+                tpm_ratio = tpm_used / (self.max_tpm * self.safety_margin)
+                rpm_ratio = rpm_used / (self.max_rpm * self.safety_margin)
+                pressure = max(tpm_ratio, rpm_ratio)
+
+                # DYNAMIC SCALING LOGIC
+                if pressure < 0.3 and self.current_concurrency_limit < self.max_concurrency:
+                    self.current_concurrency_limit += 1
+                    print(f"[Governor] 🚀 Pressure Low ({pressure:.2f}). Scaling UP Concurrency to {self.current_concurrency_limit}")
+                elif pressure > 0.7 and self.current_concurrency_limit > self.min_concurrency:
+                    self.current_concurrency_limit -= 1
+                    print(f"[Governor] 🚦 Pressure High ({pressure:.2f}). Scaling DOWN Concurrency to {self.current_concurrency_limit}")
+
+                tpm_ok = (tpm_used + expected_tokens) < (self.max_tpm * self.safety_margin)
+                rpm_ok = (rpm_used + expected_requests) < (self.max_rpm * self.safety_margin)
+                
+                if tpm_ok and rpm_ok:
+                    # Permit Granted
+                    self.request_window.append(now)
+                    self.token_window.append((now, expected_tokens))
+                    self._record_usage_db(expected_tokens, expected_requests)
+                    return True
+                
+                # Calculation of wait time based on pressure
+                wait_time = 5.0 if not tpm_ok else 2.0
+                print(f"[Governor] 🚦 Pressure Detected: {tpm_used}/{self.max_tpm} TPM. Waiting {wait_time}s...")
+                await asyncio.sleep(wait_time)
+
+    async def acquire_slot(self):
+        """Wait until a concurrency slot is available."""
         while True:
-            tpm_used, rpm_used = self._get_last_minute_usage()
-            
-            if (tpm_used + expected_tokens) < self.max_tpm and (rpm_used + expected_requests) < self.max_rpm:
-                break
-            
-            # Pacing: wait 2 seconds before checking again
-            await asyncio.sleep(2)
-            
-        self._record_usage(expected_tokens, expected_requests)
-        return
+            async with self._lock:
+                if self.active_slots < self.current_concurrency_limit:
+                    self.active_slots += 1
+                    return True
+            await asyncio.sleep(0.5)
 
-    def _get_last_minute_usage(self):
-        cutoff = time.time() - 60
-        with sqlite3.connect(self.db_path) as conn:
-            c = conn.cursor()
-            c.execute('SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp > ?', (cutoff,))
-            row = c.fetchone()
-            return (row[0] or 0, row[1] or 0)
+    async def release_slot(self):
+        """Release a concurrency slot."""
+        async with self._lock:
+            self.active_slots = max(0, self.active_slots - 1)
 
-    def _get_daily_usage(self):
-        cutoff = time.time() - 86400
-        with sqlite3.connect(self.db_path) as conn:
-            c = conn.cursor()
-            c.execute('SELECT SUM(tokens) FROM usage WHERE timestamp > ?', (cutoff,))
-            return c.fetchone()[0] or 0
+    def _clear_old_windows(self, now: float):
+        cutoff = now - 60
+        while self.request_window and self.request_window[0] < cutoff:
+            self.request_window.popleft()
+        while self.token_window and self.token_window[0][0] < cutoff:
+            self.token_window.popleft()
 
-    def _record_usage(self, tokens: int, requests: int):
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute('INSERT INTO usage (timestamp, tokens, requests) VALUES (?, ?, ?)',
-                         (time.time(), tokens, requests))
-            conn.commit()
+    def _record_usage_db(self, tokens: int, requests: int):
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute('INSERT INTO usage (timestamp, tokens, requests) VALUES (?, ?, ?)',
+                             (time.time(), tokens, requests))
+                conn.commit()
+        except Exception: pass # Database lock shouldn't block the permit
+
+    def report_error(self, wait_seconds: float = 60.0):
+        """External hook to force a cooldown on 429 detection."""
+        now = time.time()
+        self.current_concurrency_limit = self.min_concurrency
+        # Inject penalty into the windows
+        for _ in range(10):
+            self.request_window.append(now)
+        self.token_window.append((now, int(self.max_tpm * 0.6)))
+        print(f"[Governor] 💥 429 detected. Dropping Concurrency to {self.min_concurrency}. Cooling down...")
 
 # Global governor instance
 governor = TokenGovernor()

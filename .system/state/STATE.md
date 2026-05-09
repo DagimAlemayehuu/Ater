@@ -1,6 +1,6 @@
 # Project State
 ## 1. Status Summary
-**Current Status:** The system has reached **v27.0 (Hardened Pedagogical Interface & Domain Matrix)**. The Obsidian Knowledge Architect has been hardened against macroeconomic drift in microeconomic notes, featuring enforced Sentence Case across all pedagogical content, stateful topic-hinting for non-redundant practice batches, and a compacted UI layout for the Proving Grounds.
+**Current Status:** The system has reached **v32.0 (Oracle Architecture & Global Context)**. The Obsidian Knowledge Architect has evolved into a context-aware pedagogical "Oracle," featuring document-wide pre-analysis (MetaScanner), massive parallel processing (Singularity), and strict domain-persona stability through the Law of Cognitive Anchoring.
 
 ## 2. Global Milestones
 *   [x] Initialization & Architecture
@@ -22,6 +22,8 @@
 *   [x] **OKA v25.5: Perfection Overhaul (Hostile Persona + Graph Density + Accuracy Guardrails)**
 *   [x] **v26.0: High-Density UI & Seamless Navigation (Integrated Footer + Nested List Fix)**
 *   [x] **v27.0: Hardened Pedagogical Interface (Domain Splitting + Sentence Case Law + Stateful Entropy)**
+*   [x] **OKA v31.0: Singularity Protocol (Massive Parallel Batching & Token Governor)**
+*   [x] **OKA v32.0: Oracle Architecture (MetaScanner + Global Context Briefing + Cognitive Anchoring)**
 *   [x] Global E2E Tests Pass
 *   [ ] Production Deployment
 

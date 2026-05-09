@@ -1,12 +1,12 @@
-# Graph Report - LifeOs  (2026-05-08)
+# Graph Report - LifeOs  (2026-05-09)
 
 ## Corpus Check
-- 201 files · ~206,546 words
+- 206 files · ~162,302 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1242 nodes · 4008 edges · 74 communities detected
-- Extraction: 30% EXTRACTED · 70% INFERRED · 0% AMBIGUOUS · INFERRED: 2803 edges (avg confidence: 0.53)
+- 1347 nodes · 4839 edges · 89 communities detected
+- Extraction: 26% EXTRACTED · 74% INFERRED · 0% AMBIGUOUS · INFERRED: 3566 edges (avg confidence: 0.52)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -26,7 +26,7 @@
 - [[_COMMUNITY_Community 13|Community 13]]
 - [[_COMMUNITY_Community 14|Community 14]]
 - [[_COMMUNITY_Community 15|Community 15]]
-- [[_COMMUNITY_Community 16|Community 16]]
+- [[_COMMUNITY_Community 17|Community 17]]
 - [[_COMMUNITY_Community 18|Community 18]]
 - [[_COMMUNITY_Community 19|Community 19]]
 - [[_COMMUNITY_Community 20|Community 20]]
@@ -37,32 +37,29 @@
 - [[_COMMUNITY_Community 25|Community 25]]
 - [[_COMMUNITY_Community 26|Community 26]]
 - [[_COMMUNITY_Community 27|Community 27]]
-- [[_COMMUNITY_Community 28|Community 28]]
-- [[_COMMUNITY_Community 30|Community 30]]
+- [[_COMMUNITY_Community 29|Community 29]]
+- [[_COMMUNITY_Community 32|Community 32]]
 - [[_COMMUNITY_Community 33|Community 33]]
 - [[_COMMUNITY_Community 34|Community 34]]
-- [[_COMMUNITY_Community 35|Community 35]]
-- [[_COMMUNITY_Community 38|Community 38]]
-- [[_COMMUNITY_Community 42|Community 42]]
+- [[_COMMUNITY_Community 37|Community 37]]
+- [[_COMMUNITY_Community 39|Community 39]]
+- [[_COMMUNITY_Community 40|Community 40]]
 - [[_COMMUNITY_Community 43|Community 43]]
 - [[_COMMUNITY_Community 44|Community 44]]
-- [[_COMMUNITY_Community 45|Community 45]]
-- [[_COMMUNITY_Community 48|Community 48]]
+- [[_COMMUNITY_Community 47|Community 47]]
+- [[_COMMUNITY_Community 49|Community 49]]
 - [[_COMMUNITY_Community 50|Community 50]]
 - [[_COMMUNITY_Community 51|Community 51]]
-- [[_COMMUNITY_Community 52|Community 52]]
-- [[_COMMUNITY_Community 121|Community 121]]
-- [[_COMMUNITY_Community 122|Community 122]]
-- [[_COMMUNITY_Community 123|Community 123]]
-- [[_COMMUNITY_Community 124|Community 124]]
+- [[_COMMUNITY_Community 72|Community 72]]
+- [[_COMMUNITY_Community 73|Community 73]]
 - [[_COMMUNITY_Community 125|Community 125]]
 - [[_COMMUNITY_Community 126|Community 126]]
+- [[_COMMUNITY_Community 127|Community 127]]
 - [[_COMMUNITY_Community 128|Community 128]]
 - [[_COMMUNITY_Community 129|Community 129]]
-- [[_COMMUNITY_Community 144|Community 144]]
-- [[_COMMUNITY_Community 145|Community 145]]
-- [[_COMMUNITY_Community 146|Community 146]]
-- [[_COMMUNITY_Community 147|Community 147]]
+- [[_COMMUNITY_Community 130|Community 130]]
+- [[_COMMUNITY_Community 132|Community 132]]
+- [[_COMMUNITY_Community 133|Community 133]]
 - [[_COMMUNITY_Community 148|Community 148]]
 - [[_COMMUNITY_Community 149|Community 149]]
 - [[_COMMUNITY_Community 150|Community 150]]
@@ -84,18 +81,36 @@
 - [[_COMMUNITY_Community 166|Community 166]]
 - [[_COMMUNITY_Community 167|Community 167]]
 - [[_COMMUNITY_Community 168|Community 168]]
+- [[_COMMUNITY_Community 169|Community 169]]
+- [[_COMMUNITY_Community 170|Community 170]]
+- [[_COMMUNITY_Community 171|Community 171]]
+- [[_COMMUNITY_Community 172|Community 172]]
+- [[_COMMUNITY_Community 173|Community 173]]
+- [[_COMMUNITY_Community 174|Community 174]]
+- [[_COMMUNITY_Community 175|Community 175]]
+- [[_COMMUNITY_Community 176|Community 176]]
+- [[_COMMUNITY_Community 177|Community 177]]
+- [[_COMMUNITY_Community 178|Community 178]]
+- [[_COMMUNITY_Community 179|Community 179]]
+- [[_COMMUNITY_Community 180|Community 180]]
+- [[_COMMUNITY_Community 181|Community 181]]
+- [[_COMMUNITY_Community 182|Community 182]]
+- [[_COMMUNITY_Community 183|Community 183]]
+- [[_COMMUNITY_Community 184|Community 184]]
+- [[_COMMUNITY_Community 185|Community 185]]
+- [[_COMMUNITY_Community 186|Community 186]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `OkaService` - 216 edges
-2. `ModelFactory` - 205 edges
+1. `ModelFactory` - 230 edges
+2. `OkaService` - 225 edges
 3. `AppSecrets` - 158 edges
 4. `OkaQueueManager` - 151 edges
 5. `VaultIndexer` - 150 edges
 6. `ChromaManager` - 147 edges
 7. `ObsidianClient` - 144 edges
 8. `RAGWatcherService` - 142 edges
-9. `VaultManager` - 94 edges
-10. `OkaValidator` - 89 edges
+9. `OkaValidator` - 124 edges
+10. `VaultManager` - 119 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `fix_exams()` --calls--> `load()`  [INFERRED]
@@ -105,423 +120,515 @@
 - `fix_assignments()` --calls--> `load()`  [INFERRED]
   scratch/standardize_db.py → apps/mobile-client/src/routes/ModuleView.tsx
 - `main()` --calls--> `AppSecrets`  [INFERRED]
-  scratch/test_detect.py → apps/api/src/api/deps.py
+  scratch/test_generate.py → apps/api/src/api/deps.py
 - `main()` --calls--> `OkaService`  [INFERRED]
-  scratch/test_detect.py → apps/api/src/domains/oka/service.py
+  scratch/test_generate.py → apps/api/src/domains/oka/service.py
 
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.07
-Nodes (163): ModelFactory, Unified Model Factory to provide a consistent LangChain interface      across mu, AppSecrets, get_app_secrets(), Extracts core secrets from request headers.     Supports 3-tier reasoning levels, list_obsidian_files(), oka_get_paused_sessions(), rag_watcher_toggle() (+155 more)
+Cohesion: 0.04
+Nodes (212): get_model(), ModelFactory, Unified Model Factory to provide a consistent LangChain interface      across mu, AppSecrets, get_app_secrets(), Extracts core secrets from request headers.     Supports 3-tier reasoning levels, create_notion_page(), delete_notion_page() (+204 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.2
-Nodes (96): ArchitectAgent, CriticAgent, HubAgent, PractitionerAgent, QuestionAgent, QuizAuditorAgent, TheoryAgent, VerifierAgent (+88 more)
+Cohesion: 0.17
+Nodes (127): ArchitectAgent, CriticAgent, EpistemicClassifierAgent, HubAgent, MetaScannerAgent, PractitionerAgent, QuestionAgent, QuizAuditorAgent (+119 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.03
-Nodes (79): get_academics_dashboard(), get_note_data(), oka_list_generated(), read_obsidian_file(), BaseModel, getAuthHeaders(), request(), Reads the content of a specific note and its frontmatter. (+71 more)
+Nodes (94): get_academics_dashboard(), get_note_data(), oka_list_generated(), BaseModel, getAuthHeaders(), request(), create_property_option(), CreateDatabaseRequest (+86 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
-Nodes (27): NativeBackend, cn(), fetchImg(), if(), load(), MermaidWrapper(), fetchRows(), fetchTemplates() (+19 more)
+Nodes (31): ai_upload(), generate_practice_session(), oka_list_hub_notes(), cn(), getPageNumbers(), sleep(), Writes (creates or updates) a specific note., get_persona() (+23 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.04
-Nodes (31): list_practice_sessions(), oka_confirm_plan(), oka_list_hub_notes(), oka_list_hubs(), oka_process_manual(), oka_resume_paused_session(), Writes (creates or updates) a specific note., _deep_clean_value() (+23 more)
+Nodes (27): NativeBackend, cn(), fetchImg(), if(), load(), MermaidWrapper(), fetchRows(), fetchTemplates() (+19 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.04
-Nodes (50): get_model(), Captures rate limit information from LLM responses., Capture rate limits and usage stats from metadata., TrackingCallbackHandler, ProviderRateLimit, RateLimitTracker, create_notion_page(), delete_notion_page() (+42 more)
+Nodes (47): FileSystemEventHandler, _deep_clean_value(), Parses the interactive-quiz JSON and heals internal math inconsistencies., Parses the interactive-quiz JSON and heals internal math inconsistencies., Ensures all markdown tables have strict outer pipes.         Fixes lines like 'P, Fixes broken wikilinks by fuzzy matching against known titles in the current hub, Enforces wikilink density: removes excess links beyond max, keeping the most con, Violently removes LLM conversational filler and metatalk. (+39 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.04
-Nodes (29): ai_upload(), generate_practice_session(), cn(), getPageNumbers(), sleep(), is_safe_to_normalize(), normalize(), PdfSanitizer (+21 more)
+Cohesion: 0.05
+Nodes (30): Captures rate limit information from LLM responses., Capture rate limits and usage stats from metadata., TrackingCallbackHandler, ProviderRateLimit, RateLimitTracker, get_rate_limits(), rag_sync_vault(), sync_notion_mirror() (+22 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.07
 Nodes (26): async(), confirmDeployment(), fetchFiles(), fetchInbox(), fetchStats(), fetchStatus(), formatValue(), handleBack() (+18 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.06
-Nodes (27): Parses the interactive-quiz JSON and heals internal math inconsistencies., Fixes broken wikilinks by fuzzy matching against known titles in the current hub, Violently removes LLM conversational filler and metatalk., Sandbox for verifying arithmetic within prose or artifacts.         Supports: +,, DomainRouter, Deterministic keyword-based router to offload domain classification from LLMs., Analyzes text and returns the most likely DOMAIN_MATRIX key.         Returns 'AC, Deterministically renders the atomic note using a Python template.     Guarantee (+19 more)
-
-### Community 9 - "Community 9"
 Cohesion: 0.09
 Nodes (12): cleanTitle(), handleScaffold(), handleUpdateProgram(), async(), handleSetStatus(), confidenceColorClass(), getVal(), gradeColorClass() (+4 more)
 
-### Community 10 - "Community 10"
+### Community 9 - "Community 9"
 Cohesion: 0.22
 Nodes (14): calculateScore(), handleDeletePractice(), handleResumePractice(), handleSelectAnswer(), handleStartSession(), handleSubmitAnswer(), loadHubNotes(), loadHubs() (+6 more)
 
-### Community 11 - "Community 11"
-Cohesion: 0.15
-Nodes (10): canonicalize_unit(), deduplicate_plan(), Rebuild the hub's ## Connections section from the actual deployed atomic notes., Deterministic content sanitizer for weak-LLM artifacts.      Fixes applied (in o, Scans all notes in unit_dir and removes wikilinks that don't point to      an ex, Scan a deployed note for dead quiz stubs that slipped past validation.     Retur, reconcile_broken_links(), sanitize_body() (+2 more)
+### Community 10 - "Community 10"
+Cohesion: 0.13
+Nodes (12): canonicalize_unit(), deduplicate_plan(), purge_pedagogical_artifacts(), Rebuild the hub's ## Connections section from the actual deployed atomic notes., Deterministic content sanitizer for weak-LLM artifacts.      Fixes applied (in o, Scans all notes in unit_dir and removes wikilinks that don't point to      an ex, Deterministic cleanup of TikZ artifacts, walkthrough normalization,     and conv, Scan a deployed note for dead quiz stubs that slipped past validation.     Retur (+4 more)
 
-### Community 12 - "Community 12"
+### Community 11 - "Community 11"
 Cohesion: 0.18
 Nodes (4): calculateScore(), handleDeletePractice(), loadPastPractices(), nextQuestion()
 
-### Community 13 - "Community 13"
+### Community 12 - "Community 12"
 Cohesion: 0.21
 Nodes (9): cleanLink(), cleanTitle(), fetchInbox(), fetchStatus(), handleHubSelect(), poll(), processSelectedFile(), resetOkaSession() (+1 more)
 
-### Community 14 - "Community 14"
+### Community 13 - "Community 13"
 Cohesion: 0.33
 Nodes (9): Sheet(), SheetClose(), SheetDescription(), SheetFooter(), SheetHeader(), SheetOverlay(), SheetPortal(), SheetTitle() (+1 more)
 
-### Community 15 - "Community 15"
+### Community 14 - "Community 14"
 Cohesion: 0.33
 Nodes (9): Select(), SelectGroup(), SelectItem(), SelectLabel(), SelectScrollDownButton(), SelectScrollUpButton(), SelectSeparator(), SelectTrigger() (+1 more)
 
-### Community 16 - "Community 16"
+### Community 15 - "Community 15"
 Cohesion: 0.29
 Nodes (6): finishQuiz(), handleSelectAnswer(), handleSelfGrade(), moveDown(), moveUp(), nextQuestion()
 
-### Community 18 - "Community 18"
+### Community 17 - "Community 17"
 Cohesion: 0.25
 Nodes (4): ThemeSwitch(), ThemeProvider(), useTheme(), Toaster()
 
-### Community 19 - "Community 19"
+### Community 18 - "Community 18"
 Cohesion: 0.36
 Nodes (3): getColor(), handleNodeCanvasObject(), updateDims()
 
-### Community 20 - "Community 20"
+### Community 19 - "Community 19"
 Cohesion: 0.29
 Nodes (2): fetchOptions(), handleCreateOption()
 
-### Community 21 - "Community 21"
-Cohesion: 0.33
-Nodes (2): cn(), CommandItem()
-
-### Community 22 - "Community 22"
-Cohesion: 0.48
-Nodes (5): Dialog(), DialogClose(), DialogOverlay(), DialogPortal(), DialogTrigger()
-
-### Community 23 - "Community 23"
-Cohesion: 0.33
-Nodes (2): SidebarMenuButton(), useSidebar()
-
-### Community 24 - "Community 24"
+### Community 20 - "Community 20"
 Cohesion: 0.33
 Nodes (3): LayoutProvider(), useLayout(), AuthenticatedLayoutContent()
 
-### Community 25 - "Community 25"
+### Community 21 - "Community 21"
+Cohesion: 0.48
+Nodes (5): Dialog(), DialogClose(), DialogOverlay(), DialogPortal(), DialogTrigger()
+
+### Community 22 - "Community 22"
+Cohesion: 0.33
+Nodes (2): SidebarMenuButton(), useSidebar()
+
+### Community 23 - "Community 23"
+Cohesion: 0.33
+Nodes (2): cn(), CommandItem()
+
+### Community 24 - "Community 24"
 Cohesion: 0.33
 Nodes (1): handleSendMessage()
 
-### Community 26 - "Community 26"
+### Community 25 - "Community 25"
 Cohesion: 0.33
 Nodes (1): VaultEventBus
 
-### Community 27 - "Community 27"
+### Community 26 - "Community 26"
 Cohesion: 0.7
 Nodes (4): fix_assignments(), fix_exams(), fix_study_planner(), process_file()
 
-### Community 28 - "Community 28"
+### Community 27 - "Community 27"
 Cohesion: 0.6
 Nodes (3): fix_exams(), fix_study_planner(), process_file()
 
-### Community 30 - "Community 30"
+### Community 29 - "Community 29"
 Cohesion: 0.6
 Nodes (3): CardDescription(), CardFooter(), cn()
 
-### Community 33 - "Community 33"
+### Community 32 - "Community 32"
 Cohesion: 0.6
 Nodes (3): getCookie(), removeCookie(), setCookie()
 
-### Community 34 - "Community 34"
+### Community 33 - "Community 33"
 Cohesion: 0.5
 Nodes (2): run(), main()
 
-### Community 35 - "Community 35"
+### Community 34 - "Community 34"
 Cohesion: 0.67
 Nodes (2): SearchProvider(), useSearch()
 
-### Community 38 - "Community 38"
+### Community 37 - "Community 37"
 Cohesion: 0.67
 Nodes (2): Popover(), PopoverTrigger()
 
-### Community 42 - "Community 42"
-Cohesion: 0.67
-Nodes (2): ConfigProvider(), useConfig()
-
-### Community 43 - "Community 43"
+### Community 39 - "Community 39"
 Cohesion: 0.67
 Nodes (2): ScrollArea(), ScrollBar()
 
-### Community 44 - "Community 44"
+### Community 40 - "Community 40"
 Cohesion: 0.67
 Nodes (2): RadioGroup(), RadioGroupItem()
 
-### Community 45 - "Community 45"
+### Community 43 - "Community 43"
+Cohesion: 0.67
+Nodes (2): ConfigProvider(), useConfig()
+
+### Community 44 - "Community 44"
 Cohesion: 0.67
 Nodes (2): isActive(), renderNode()
 
-### Community 48 - "Community 48"
+### Community 47 - "Community 47"
 Cohesion: 0.67
 Nodes (1): Label()
 
-### Community 50 - "Community 50"
+### Community 49 - "Community 49"
 Cohesion: 0.67
 Nodes (1): Badge()
 
-### Community 51 - "Community 51"
+### Community 50 - "Community 50"
 Cohesion: 0.67
 Nodes (1): cn()
 
-### Community 52 - "Community 52"
+### Community 51 - "Community 51"
 Cohesion: 0.67
 Nodes (1): Input()
 
-### Community 121 - "Community 121"
+### Community 72 - "Community 72"
 Cohesion: 1.0
-Nodes (1): Returns (is_valid, error_messages).         A note fails if it:           - Is m
+Nodes (1): Release a concurrency slot.
 
-### Community 122 - "Community 122"
+### Community 73 - "Community 73"
 Cohesion: 1.0
-Nodes (1): Fault-tolerant JSON parser for weak model outputs.         Handles LaTeX backsla
-
-### Community 123 - "Community 123"
-Cohesion: 1.0
-Nodes (1): Ensures a title is in canonical Title_Case_With_Underscores format.
-
-### Community 124 - "Community 124"
-Cohesion: 1.0
-Nodes (1): Normalise all prerequisite titles to [[Underscore_Title_Case]] format.
+Nodes (1): External hook to force a cooldown on 429 detection.
 
 ### Community 125 - "Community 125"
 Cohesion: 1.0
-Nodes (1): Recursively strips ALL quote forms from [[wikilink]] strings.
+Nodes (1): Returns (is_valid, error_messages).         A note fails if it:           - Is m
 
 ### Community 126 - "Community 126"
 Cohesion: 1.0
-Nodes (1): Strips internal quote patterns from [[wikilinks]] inside the brackets: [["X"]] -
+Nodes (1): Fault-tolerant JSON parser for weak model outputs.         Handles LaTeX backsla
+
+### Community 127 - "Community 127"
+Cohesion: 1.0
+Nodes (1): Ensures a title is in canonical Title_Case_With_Underscores format.
 
 ### Community 128 - "Community 128"
 Cohesion: 1.0
-Nodes (1): Instantiates and returns the appropriate LangChain ChatModel.
+Nodes (1): Normalise all prerequisite titles to [[Underscore_Title_Case]] format.
 
 ### Community 129 - "Community 129"
 Cohesion: 1.0
+Nodes (1): Recursively strips ALL quote forms from [[wikilink]] strings.
+
+### Community 130 - "Community 130"
+Cohesion: 1.0
+Nodes (1): Strips internal quote patterns from [[wikilinks]] inside the brackets: [["X"]] -
+
+### Community 132 - "Community 132"
+Cohesion: 1.0
+Nodes (1): Instantiates and returns the appropriate LangChain ChatModel.
+
+### Community 133 - "Community 133"
+Cohesion: 1.0
 Nodes (1): Safety check:          1. Must be a valid PDF.         2. Must be low resolution
-
-### Community 144 - "Community 144"
-Cohesion: 1.0
-Nodes (1): Fault-tolerant JSON parser for weak model outputs.         Handles LaTeX backsla
-
-### Community 145 - "Community 145"
-Cohesion: 1.0
-Nodes (1): Normalise all prerequisite titles to [[Underscore_Title_Case]] format.
-
-### Community 146 - "Community 146"
-Cohesion: 1.0
-Nodes (1): The Precision Assembler schema.
-
-### Community 147 - "Community 147"
-Cohesion: 1.0
-Nodes (1): Scans all notes in unit_dir and removes wikilinks that don't point to      an ex
 
 ### Community 148 - "Community 148"
 Cohesion: 1.0
-Nodes (1): Writes (creates or updates) a specific note.
+Nodes (1): Nuclear-grade validation suite for OKA notes.     Checks structure, wikilink den
 
 ### Community 149 - "Community 149"
 Cohesion: 1.0
-Nodes (1): Deletes a specific note or folder (recursively).
+Nodes (1): Returns (is_valid, error_messages).         A note fails if it:           - Is m
 
 ### Community 150 - "Community 150"
 Cohesion: 1.0
-Nodes (1): Renames or moves a file or folder.
+Nodes (1): Fault-tolerant JSON parser for weak model outputs.         Handles LaTeX backsla
 
 ### Community 151 - "Community 151"
 Cohesion: 1.0
-Nodes (1): Creates a new folder.
+Nodes (1): Ensures a title is in canonical Title_Case_With_Underscores format.
 
 ### Community 152 - "Community 152"
 Cohesion: 1.0
-Nodes (1): Nuclear-grade validation suite for OKA notes.     Checks structure, wikilink den
+Nodes (1): Normalise all prerequisite titles to [[Underscore_Title_Case]] format.
 
 ### Community 153 - "Community 153"
 Cohesion: 1.0
-Nodes (1): Returns (is_valid, error_messages).         A note fails if it:           - Is m
+Nodes (1): Proactively manages rate limits (Tokens Per Minute / Day) via SQLite to avoid br
 
 ### Community 154 - "Community 154"
 Cohesion: 1.0
-Nodes (1): Fault-tolerant JSON parser for weak model outputs.
+Nodes (1): Wait until we have enough capacity to proceed based on RPM and TPM.
 
 ### Community 155 - "Community 155"
 Cohesion: 1.0
-Nodes (1): Normalise all prerequisite titles to [[Underscore_Title_Case]] format.
+Nodes (1): The Precision Assembler schema.
 
 ### Community 156 - "Community 156"
 Cohesion: 1.0
-Nodes (1): Rebuild the hub's ## Connections section from the actual deployed atomic notes.
+Nodes (1): Deterministic content sanitizer for weak-LLM artifacts.      Fixes applied (in o
 
 ### Community 157 - "Community 157"
 Cohesion: 1.0
-Nodes (1): Normalise all prerequisite titles to [[Underscore_Title_Case]] format.
+Nodes (1): Scan a deployed note for dead quiz stubs that slipped past validation.     Retur
 
 ### Community 158 - "Community 158"
 Cohesion: 1.0
-Nodes (1): Proactively manages rate limits (Tokens Per Minute / Day) via SQLite to avoid br
+Nodes (1): Rebuild the hub's ## Connections section from the actual deployed atomic notes.
 
 ### Community 159 - "Community 159"
 Cohesion: 1.0
-Nodes (1): Wait until we have enough capacity to proceed.
+Nodes (1): Scans all notes in unit_dir and removes wikilinks that don't point to      an ex
 
 ### Community 160 - "Community 160"
 Cohesion: 1.0
-Nodes (1): Parses a note into frontmatter and body.
+Nodes (1): Deterministic keyword-based router to offload domain classification from LLMs.
 
 ### Community 161 - "Community 161"
 Cohesion: 1.0
-Nodes (1): Standardizes and protects code blocks in content for Obsidian.
+Nodes (1): Analyzes text and returns the most likely DOMAIN_MATRIX key.         Returns 'AC
 
 ### Community 162 - "Community 162"
 Cohesion: 1.0
-Nodes (1): Scans the academic root and extracts YAML metadata from all notes.
+Nodes (1): Fault-tolerant JSON parser for weak model outputs.         Handles LaTeX backsla
 
 ### Community 163 - "Community 163"
 Cohesion: 1.0
-Nodes (1): Serves a file directly from the vault (for PDFs, images, etc.)
+Nodes (1): Normalise all prerequisite titles to [[Underscore_Title_Case]] format.
 
 ### Community 164 - "Community 164"
 Cohesion: 1.0
-Nodes (1): Fault-tolerant JSON parser for weak model outputs.
+Nodes (1): The Precision Assembler schema.
 
 ### Community 165 - "Community 165"
 Cohesion: 1.0
-Nodes (1): Normalise all prerequisite titles to [[Underscore_Title_Case]] format.
+Nodes (1): Scans all notes in unit_dir and removes wikilinks that don't point to      an ex
 
 ### Community 166 - "Community 166"
 Cohesion: 1.0
-Nodes (1): Parses a note into frontmatter and body.
+Nodes (1): Writes (creates or updates) a specific note.
 
 ### Community 167 - "Community 167"
 Cohesion: 1.0
-Nodes (1): Standardizes and protects code blocks in content for Obsidian.
+Nodes (1): Deletes a specific note or folder (recursively).
 
 ### Community 168 - "Community 168"
+Cohesion: 1.0
+Nodes (1): Renames or moves a file or folder.
+
+### Community 169 - "Community 169"
+Cohesion: 1.0
+Nodes (1): Creates a new folder.
+
+### Community 170 - "Community 170"
+Cohesion: 1.0
+Nodes (1): Nuclear-grade validation suite for OKA notes.     Checks structure, wikilink den
+
+### Community 171 - "Community 171"
+Cohesion: 1.0
+Nodes (1): Returns (is_valid, error_messages).         A note fails if it:           - Is m
+
+### Community 172 - "Community 172"
+Cohesion: 1.0
+Nodes (1): Fault-tolerant JSON parser for weak model outputs.
+
+### Community 173 - "Community 173"
+Cohesion: 1.0
+Nodes (1): Normalise all prerequisite titles to [[Underscore_Title_Case]] format.
+
+### Community 174 - "Community 174"
+Cohesion: 1.0
+Nodes (1): Rebuild the hub's ## Connections section from the actual deployed atomic notes.
+
+### Community 175 - "Community 175"
+Cohesion: 1.0
+Nodes (1): Normalise all prerequisite titles to [[Underscore_Title_Case]] format.
+
+### Community 176 - "Community 176"
+Cohesion: 1.0
+Nodes (1): Proactively manages rate limits (Tokens Per Minute / Day) via SQLite to avoid br
+
+### Community 177 - "Community 177"
+Cohesion: 1.0
+Nodes (1): Wait until we have enough capacity to proceed.
+
+### Community 178 - "Community 178"
+Cohesion: 1.0
+Nodes (1): Parses a note into frontmatter and body.
+
+### Community 179 - "Community 179"
+Cohesion: 1.0
+Nodes (1): Standardizes and protects code blocks in content for Obsidian.
+
+### Community 180 - "Community 180"
+Cohesion: 1.0
+Nodes (1): Scans the academic root and extracts YAML metadata from all notes.
+
+### Community 181 - "Community 181"
+Cohesion: 1.0
+Nodes (1): Serves a file directly from the vault (for PDFs, images, etc.)
+
+### Community 182 - "Community 182"
+Cohesion: 1.0
+Nodes (1): Fault-tolerant JSON parser for weak model outputs.
+
+### Community 183 - "Community 183"
+Cohesion: 1.0
+Nodes (1): Normalise all prerequisite titles to [[Underscore_Title_Case]] format.
+
+### Community 184 - "Community 184"
+Cohesion: 1.0
+Nodes (1): Parses a note into frontmatter and body.
+
+### Community 185 - "Community 185"
+Cohesion: 1.0
+Nodes (1): Standardizes and protects code blocks in content for Obsidian.
+
+### Community 186 - "Community 186"
 Cohesion: 1.0
 Nodes (1): Scans the academic root and extracts YAML metadata from all notes.
 
 ## Knowledge Gaps
-- **91 isolated node(s):** `Manages the local ChromaDB instance and the local embedding model.     Uses 'all`, `Embeds and adds documents to the vector store.`, `Queries the vector store for the most relevant chunks.`, `Deletes all chunks associated with a specific file path.         This is crucial`, `Nuclear-grade validation suite for OKA notes.     Checks structure, wikilink den` (+86 more)
+- **120 isolated node(s):** `Manages the local ChromaDB instance and the local embedding model.     Uses 'all`, `Embeds and adds documents to the vector store.`, `Queries the vector store for the most relevant chunks.`, `Deletes all chunks associated with a specific file path.         This is crucial`, `Nuclear-grade validation suite for OKA notes.     Checks structure, wikilink den` (+115 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 20`** (8 nodes): `EditableCell.tsx`, `ButtonCell()`, `fetchOptions()`, `getBadgeColor()`, `handleCreateOption()`, `renderInlineMarkdown()`, `RollupCell()`, `TypeIcon()`
+- **Thin community `Community 19`** (8 nodes): `EditableCell.tsx`, `ButtonCell()`, `fetchOptions()`, `getBadgeColor()`, `handleCreateOption()`, `renderInlineMarkdown()`, `RollupCell()`, `TypeIcon()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 21`** (7 nodes): `command.tsx`, `command.tsx`, `cn()`, `CommandGroup()`, `CommandInput()`, `CommandItem()`, `CommandList()`
+- **Thin community `Community 22`** (7 nodes): `sidebar.tsx`, `cn()`, `handleKeyDown()`, `SidebarMenu()`, `SidebarMenuButton()`, `SidebarMenuItem()`, `useSidebar()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 23`** (7 nodes): `sidebar.tsx`, `cn()`, `handleKeyDown()`, `SidebarMenu()`, `SidebarMenuButton()`, `SidebarMenuItem()`, `useSidebar()`
+- **Thin community `Community 23`** (7 nodes): `command.tsx`, `command.tsx`, `cn()`, `CommandGroup()`, `CommandInput()`, `CommandItem()`, `CommandList()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 25`** (6 nodes): `AiSidecar.tsx`, `AiSidecar.tsx`, `handleAnswerQuiz()`, `handleInitialExplain()`, `handleSendMessage()`, `nextQuestion()`
+- **Thin community `Community 24`** (6 nodes): `AiSidecar.tsx`, `AiSidecar.tsx`, `handleAnswerQuiz()`, `handleInitialExplain()`, `handleSendMessage()`, `nextQuestion()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 26`** (6 nodes): `events.py`, `VaultEventBus`, `.__init__()`, `.publish()`, `.subscribe()`, `.unsubscribe()`
+- **Thin community `Community 25`** (6 nodes): `events.py`, `VaultEventBus`, `.__init__()`, `.publish()`, `.subscribe()`, `.unsubscribe()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 34`** (4 nodes): `lib.rs`, `main.rs`, `run()`, `main()`
+- **Thin community `Community 33`** (4 nodes): `lib.rs`, `main.rs`, `run()`, `main()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 35`** (4 nodes): `search-provider.tsx`, `search-provider.tsx`, `SearchProvider()`, `useSearch()`
+- **Thin community `Community 34`** (4 nodes): `search-provider.tsx`, `search-provider.tsx`, `SearchProvider()`, `useSearch()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 38`** (4 nodes): `popover.tsx`, `popover.tsx`, `Popover()`, `PopoverTrigger()`
+- **Thin community `Community 37`** (4 nodes): `popover.tsx`, `popover.tsx`, `Popover()`, `PopoverTrigger()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 42`** (4 nodes): `ConfigContext.tsx`, `ConfigContext.tsx`, `ConfigProvider()`, `useConfig()`
+- **Thin community `Community 39`** (4 nodes): `scroll-area.tsx`, `scroll-area.tsx`, `ScrollArea()`, `ScrollBar()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 43`** (4 nodes): `scroll-area.tsx`, `scroll-area.tsx`, `ScrollArea()`, `ScrollBar()`
+- **Thin community `Community 40`** (4 nodes): `radio-group.tsx`, `radio-group.tsx`, `RadioGroup()`, `RadioGroupItem()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 44`** (4 nodes): `radio-group.tsx`, `radio-group.tsx`, `RadioGroup()`, `RadioGroupItem()`
+- **Thin community `Community 43`** (4 nodes): `ConfigContext.tsx`, `ConfigContext.tsx`, `ConfigProvider()`, `useConfig()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 45`** (4 nodes): `NoteMetadata.tsx`, `getPropertyIcon()`, `isActive()`, `renderNode()`
+- **Thin community `Community 44`** (4 nodes): `NoteMetadata.tsx`, `getPropertyIcon()`, `isActive()`, `renderNode()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 48`** (3 nodes): `label.tsx`, `label.tsx`, `Label()`
+- **Thin community `Community 47`** (3 nodes): `label.tsx`, `label.tsx`, `Label()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 50`** (3 nodes): `badge.tsx`, `badge.tsx`, `Badge()`
+- **Thin community `Community 49`** (3 nodes): `badge.tsx`, `badge.tsx`, `Badge()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 51`** (3 nodes): `button.tsx`, `button.tsx`, `cn()`
+- **Thin community `Community 50`** (3 nodes): `button.tsx`, `button.tsx`, `cn()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 52`** (3 nodes): `input.tsx`, `input.tsx`, `Input()`
+- **Thin community `Community 51`** (3 nodes): `input.tsx`, `input.tsx`, `Input()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 121`** (1 nodes): `Returns (is_valid, error_messages).         A note fails if it:           - Is m`
+- **Thin community `Community 72`** (2 nodes): `Release a concurrency slot.`, `.release_slot()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 122`** (1 nodes): `Fault-tolerant JSON parser for weak model outputs.         Handles LaTeX backsla`
+- **Thin community `Community 73`** (2 nodes): `External hook to force a cooldown on 429 detection.`, `.report_error()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 123`** (1 nodes): `Ensures a title is in canonical Title_Case_With_Underscores format.`
+- **Thin community `Community 125`** (1 nodes): `Returns (is_valid, error_messages).         A note fails if it:           - Is m`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 124`** (1 nodes): `Normalise all prerequisite titles to [[Underscore_Title_Case]] format.`
+- **Thin community `Community 126`** (1 nodes): `Fault-tolerant JSON parser for weak model outputs.         Handles LaTeX backsla`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 125`** (1 nodes): `Recursively strips ALL quote forms from [[wikilink]] strings.`
+- **Thin community `Community 127`** (1 nodes): `Ensures a title is in canonical Title_Case_With_Underscores format.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 126`** (1 nodes): `Strips internal quote patterns from [[wikilinks]] inside the brackets: [["X"]] -`
+- **Thin community `Community 128`** (1 nodes): `Normalise all prerequisite titles to [[Underscore_Title_Case]] format.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 128`** (1 nodes): `Instantiates and returns the appropriate LangChain ChatModel.`
+- **Thin community `Community 129`** (1 nodes): `Recursively strips ALL quote forms from [[wikilink]] strings.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 129`** (1 nodes): `Safety check:          1. Must be a valid PDF.         2. Must be low resolution`
+- **Thin community `Community 130`** (1 nodes): `Strips internal quote patterns from [[wikilinks]] inside the brackets: [["X"]] -`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 144`** (1 nodes): `Fault-tolerant JSON parser for weak model outputs.         Handles LaTeX backsla`
+- **Thin community `Community 132`** (1 nodes): `Instantiates and returns the appropriate LangChain ChatModel.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 145`** (1 nodes): `Normalise all prerequisite titles to [[Underscore_Title_Case]] format.`
+- **Thin community `Community 133`** (1 nodes): `Safety check:          1. Must be a valid PDF.         2. Must be low resolution`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 146`** (1 nodes): `The Precision Assembler schema.`
+- **Thin community `Community 148`** (1 nodes): `Nuclear-grade validation suite for OKA notes.     Checks structure, wikilink den`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 147`** (1 nodes): `Scans all notes in unit_dir and removes wikilinks that don't point to      an ex`
+- **Thin community `Community 149`** (1 nodes): `Returns (is_valid, error_messages).         A note fails if it:           - Is m`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 148`** (1 nodes): `Writes (creates or updates) a specific note.`
+- **Thin community `Community 150`** (1 nodes): `Fault-tolerant JSON parser for weak model outputs.         Handles LaTeX backsla`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 149`** (1 nodes): `Deletes a specific note or folder (recursively).`
+- **Thin community `Community 151`** (1 nodes): `Ensures a title is in canonical Title_Case_With_Underscores format.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 150`** (1 nodes): `Renames or moves a file or folder.`
+- **Thin community `Community 152`** (1 nodes): `Normalise all prerequisite titles to [[Underscore_Title_Case]] format.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 151`** (1 nodes): `Creates a new folder.`
+- **Thin community `Community 153`** (1 nodes): `Proactively manages rate limits (Tokens Per Minute / Day) via SQLite to avoid br`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 152`** (1 nodes): `Nuclear-grade validation suite for OKA notes.     Checks structure, wikilink den`
+- **Thin community `Community 154`** (1 nodes): `Wait until we have enough capacity to proceed based on RPM and TPM.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 153`** (1 nodes): `Returns (is_valid, error_messages).         A note fails if it:           - Is m`
+- **Thin community `Community 155`** (1 nodes): `The Precision Assembler schema.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 154`** (1 nodes): `Fault-tolerant JSON parser for weak model outputs.`
+- **Thin community `Community 156`** (1 nodes): `Deterministic content sanitizer for weak-LLM artifacts.      Fixes applied (in o`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 155`** (1 nodes): `Normalise all prerequisite titles to [[Underscore_Title_Case]] format.`
+- **Thin community `Community 157`** (1 nodes): `Scan a deployed note for dead quiz stubs that slipped past validation.     Retur`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 156`** (1 nodes): `Rebuild the hub's ## Connections section from the actual deployed atomic notes.`
+- **Thin community `Community 158`** (1 nodes): `Rebuild the hub's ## Connections section from the actual deployed atomic notes.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 157`** (1 nodes): `Normalise all prerequisite titles to [[Underscore_Title_Case]] format.`
+- **Thin community `Community 159`** (1 nodes): `Scans all notes in unit_dir and removes wikilinks that don't point to      an ex`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 158`** (1 nodes): `Proactively manages rate limits (Tokens Per Minute / Day) via SQLite to avoid br`
+- **Thin community `Community 160`** (1 nodes): `Deterministic keyword-based router to offload domain classification from LLMs.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 159`** (1 nodes): `Wait until we have enough capacity to proceed.`
+- **Thin community `Community 161`** (1 nodes): `Analyzes text and returns the most likely DOMAIN_MATRIX key.         Returns 'AC`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 160`** (1 nodes): `Parses a note into frontmatter and body.`
+- **Thin community `Community 162`** (1 nodes): `Fault-tolerant JSON parser for weak model outputs.         Handles LaTeX backsla`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 161`** (1 nodes): `Standardizes and protects code blocks in content for Obsidian.`
+- **Thin community `Community 163`** (1 nodes): `Normalise all prerequisite titles to [[Underscore_Title_Case]] format.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 162`** (1 nodes): `Scans the academic root and extracts YAML metadata from all notes.`
+- **Thin community `Community 164`** (1 nodes): `The Precision Assembler schema.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 163`** (1 nodes): `Serves a file directly from the vault (for PDFs, images, etc.)`
+- **Thin community `Community 165`** (1 nodes): `Scans all notes in unit_dir and removes wikilinks that don't point to      an ex`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 164`** (1 nodes): `Fault-tolerant JSON parser for weak model outputs.`
+- **Thin community `Community 166`** (1 nodes): `Writes (creates or updates) a specific note.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 165`** (1 nodes): `Normalise all prerequisite titles to [[Underscore_Title_Case]] format.`
+- **Thin community `Community 167`** (1 nodes): `Deletes a specific note or folder (recursively).`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 166`** (1 nodes): `Parses a note into frontmatter and body.`
+- **Thin community `Community 168`** (1 nodes): `Renames or moves a file or folder.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 167`** (1 nodes): `Standardizes and protects code blocks in content for Obsidian.`
+- **Thin community `Community 169`** (1 nodes): `Creates a new folder.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 168`** (1 nodes): `Scans the academic root and extracts YAML metadata from all notes.`
+- **Thin community `Community 170`** (1 nodes): `Nuclear-grade validation suite for OKA notes.     Checks structure, wikilink den`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 171`** (1 nodes): `Returns (is_valid, error_messages).         A note fails if it:           - Is m`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 172`** (1 nodes): `Fault-tolerant JSON parser for weak model outputs.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 173`** (1 nodes): `Normalise all prerequisite titles to [[Underscore_Title_Case]] format.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 174`** (1 nodes): `Rebuild the hub's ## Connections section from the actual deployed atomic notes.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 175`** (1 nodes): `Normalise all prerequisite titles to [[Underscore_Title_Case]] format.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 176`** (1 nodes): `Proactively manages rate limits (Tokens Per Minute / Day) via SQLite to avoid br`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 177`** (1 nodes): `Wait until we have enough capacity to proceed.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 178`** (1 nodes): `Parses a note into frontmatter and body.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 179`** (1 nodes): `Standardizes and protects code blocks in content for Obsidian.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 180`** (1 nodes): `Scans the academic root and extracts YAML metadata from all notes.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 181`** (1 nodes): `Serves a file directly from the vault (for PDFs, images, etc.)`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 182`** (1 nodes): `Fault-tolerant JSON parser for weak model outputs.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 183`** (1 nodes): `Normalise all prerequisite titles to [[Underscore_Title_Case]] format.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 184`** (1 nodes): `Parses a note into frontmatter and body.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 185`** (1 nodes): `Standardizes and protects code blocks in content for Obsidian.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 186`** (1 nodes): `Scans the academic root and extracts YAML metadata from all notes.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `OkaService` connect `Community 0` to `Community 1`, `Community 2`, `Community 4`, `Community 5`, `Community 6`, `Community 8`?**
-  _High betweenness centrality (0.125) - this node is a cross-community bridge._
-- **Why does `AppSecrets` connect `Community 0` to `Community 2`, `Community 4`, `Community 6`?**
-  _High betweenness centrality (0.033) - this node is a cross-community bridge._
-- **Why does `VaultManager` connect `Community 1` to `Community 8`, `Community 0`, `Community 4`?**
-  _High betweenness centrality (0.025) - this node is a cross-community bridge._
-- **Are the 182 inferred relationships involving `OkaService` (e.g. with `VaultManager` and `OkaDeployer`) actually correct?**
-  _`OkaService` has 182 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 203 inferred relationships involving `ModelFactory` (e.g. with `OkaService` and `Main orchestrator for OKA.`) actually correct?**
-  _`ModelFactory` has 203 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `OkaService` connect `Community 0` to `Community 1`, `Community 2`, `Community 3`, `Community 5`?**
+  _High betweenness centrality (0.130) - this node is a cross-community bridge._
+- **Why does `ModelFactory` connect `Community 0` to `Community 1`, `Community 6`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **Why does `AppSecrets` connect `Community 0` to `Community 2`, `Community 3`?**
+  _High betweenness centrality (0.035) - this node is a cross-community bridge._
+- **Are the 228 inferred relationships involving `ModelFactory` (e.g. with `OkaService` and `Main orchestrator for OKA.`) actually correct?**
+  _`ModelFactory` has 228 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 190 inferred relationships involving `OkaService` (e.g. with `VaultManager` and `OkaDeployer`) actually correct?**
+  _`OkaService` has 190 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 155 inferred relationships involving `AppSecrets` (e.g. with `ObsidianDumper` and `UpdateRowRequest`) actually correct?**
   _`AppSecrets` has 155 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 134 inferred relationships involving `OkaQueueManager` (e.g. with `OkaService` and `Life OS - FastAPI Sidecar Entry Point  This process is spawned by Tauri on deskt`) actually correct?**

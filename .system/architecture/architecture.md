@@ -5,14 +5,14 @@
 *   `apps/mobile-client`: React/Vite (IIFE) + Scriptable Bridge
 *   `apps/api`: Python FastAPI Sidecar (Desktop Only)
 
-### Core Reasoning Engine: OKA v27.0 (Hardened & Precise)
-1.  **2-Pass Generation Strategy**: Decouples technical theory from pedagogical artifacts. Pass 1 (Theorist) generates strict markdown prose; Pass 2 (Inquisitor) generates artifacts and randomized 3-level quizzes.
-2.  **Validation Gatekeeping**: A nuclear-grade `OkaValidator` intercepts generation output to block error markers, answer leaks in debug questions, and insufficient wikilink density.
-3.  **Domain Matrix Evolution**: Implementation of sovereign domain modes (e.g., splitting `ECON-MACRO` and `ECON-MICRO`) with domain-specific agent protocols to prevent conceptual drift.
-4.  **Casing Protocol**: Enforced **Sentence Case Law** across all generated questions, options, and explanations to ensure professional, non-aggressive UI content.
-5.  **Stateful Entropy**: Batch-level `topic_hint` injection ensures 100% semantic diversity within practice sets, eliminating intra-batch redundancy.
-6.  **Fail-Safe Rate-Limit Recovery**: The `OkaService` captures 429 errors, persists current progress to disk, and enters a `rate_limited` state.
-7.  **Interactive Recall Interceptor**: The React frontend renders interactive quizzes via the compacted `MiniPracticeUI.tsx`, optimized for screen-density.
+### Core Reasoning Engine: OKA v32.0 Oracle (Context-Aware & Massive Parallel)
+1.  **Oracle Context Briefing**: Document pre-processing via `MetaScannerAgent` generates a global context summary, primary discipline detection, and core keywords before any note generation begins. This eliminates "chunk-level amnesia."
+2.  **Law of Cognitive Anchoring**: Every atomic concept is anchored to a globally-detected domain mode during the planning phase. This prevents hallucinated domain modes (e.g., bio-ecology in a CS textbook) by enforcing strict persona compliance.
+3.  **Singularity Parallel Protocol**: Massively parallelized generation loop for atomic notes, governed by the `TokenGovernor`. High-throughput concurrency is balanced by deterministic rate-limit protection.
+4.  **2-Pass Generation Strategy**: Decouples technical theory (TheoryAgent) from pedagogical artifacts (PractitionerAgent).
+5.  **Exoskeleton Assembler**: Combines theory, artifacts, and assessment into a single, structurally-sound knowledge asset.
+6.  **Oracle Routing**: Upgraded `DomainRouter` uses LLM-assisted "Wisdom Routing" against a canonical taxonomy, fallbacking to deterministic keywords only when confidence is low.
+7.  **Fail-Safe Token Sovereignty**: The `TokenGovernor` dynamically scales concurrency based on system pressure and Groq API status.
 
 ## 2. UI/UX Strategy
 *   **Monochrome High-Fidelity**: Professional grayscale palette with premium typography (Inter/Outfit).

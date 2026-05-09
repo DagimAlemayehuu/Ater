@@ -54,6 +54,7 @@ class InboxHandler(FileSystemEventHandler):
 class OkaQueueManager:
     """
     Watches the Inbox, maintains a queue, and processes files autonomously if enabled.
+    Supports parallel file processing via asynchronous tasks.
     """
     def __init__(self, service: OkaService, inbox_path: str, system_instruction_path: str):
         self.service = service
@@ -64,8 +65,8 @@ class OkaQueueManager:
         
         # Queue State
         self.auto_process = False
-        self.status = "idle" # 'idle', 'planning', 'deploying', 'cooling', 'error'
-        self.current_file: Optional[str] = None
+        self.status = "idle" 
+        self.active_tasks: Dict[str, asyncio.Task] = {} # Map file_path -> Task
         self.current_batch = 0
         self.total_batches = 0
         self.last_action: str = "Ready"
@@ -73,12 +74,10 @@ class OkaQueueManager:
         self.planned_batches: List[Dict[str, Any]] = [] 
         self.worker_task: Optional[asyncio.Task] = None
         
-        # v13.6 Persistence & Rate Limiting
         if not self.inbox_path.exists():
             self.inbox_path.mkdir(parents=True, exist_ok=True)
             
         self.db_path = str(self.inbox_path.absolute() / "oka_queue.db")
-        self.governor_cooldown = 30.0
         self._init_db()
         self._lock = asyncio.Lock()
 
@@ -100,7 +99,6 @@ class OkaQueueManager:
         
         event_handler = InboxHandler(self)
         self.observer = Observer()
-        # v13.7: Non-recursive to avoid loops when archiving to subdirectories
         self.observer.schedule(event_handler, str(self.inbox_path), recursive=False)
         self.observer.start()
         
@@ -120,12 +118,10 @@ class OkaQueueManager:
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
         try:
             conn = sqlite3.connect(self.db_path)
-            # Reset 'error' → 'pending'; preserve 'deploying' (has checkpoint data)
             conn.execute("UPDATE queue SET status = 'pending' WHERE status = 'error'")
             conn.commit()
             conn.close()
             
-            # Add any new files
             for item in self.inbox_path.iterdir():
                 if item.is_file() and not item.name.startswith('.') and item.suffix.lower() in supported:
                     self.add_to_queue(item)
@@ -135,7 +131,6 @@ class OkaQueueManager:
     def _get_conn(self):
         """Returns a connection and ensures the schema exists."""
         conn = sqlite3.connect(self.db_path)
-        # Ensure table exists before any operation
         conn.execute("""
             CREATE TABLE IF NOT EXISTS queue (
                 file_path TEXT PRIMARY KEY,
@@ -147,27 +142,7 @@ class OkaQueueManager:
                 curriculum TEXT
             )
         """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS practice_log (
-                id TEXT PRIMARY KEY,
-                note_id TEXT NOT NULL,
-                question_type TEXT NOT NULL,
-                is_correct BOOLEAN NOT NULL,
-                time_taken_seconds INTEGER,
-                timestamp TEXT NOT NULL
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS note_srs (
-                note_id TEXT PRIMARY KEY,
-                review_count INTEGER DEFAULT 0,
-                consecutive_correct INTEGER DEFAULT 0,
-                easiness_factor REAL DEFAULT 2.5,
-                interval_days INTEGER DEFAULT 0,
-                next_review_date TEXT NOT NULL
-            )
-        """)
-        # Basic migration for missing columns
+        # Migrations
         for col, defval in [("session_id", "NULL"), ("current_batch", "0"),
                             ("total_batches", "0"), ("curriculum", "NULL")]:
             try:
@@ -179,7 +154,6 @@ class OkaQueueManager:
 
     def add_to_queue(self, file_path: Path):
         path_str = str(file_path.absolute())
-        # Don't queue files that are already in the "_Generated" folder
         if "_Generated" in path_str:
             return
             
@@ -188,16 +162,6 @@ class OkaQueueManager:
                      (path_str, "pending", datetime.now().isoformat()))
         conn.commit()
         conn.close()
-
-    def _get_next_task(self):
-        conn = self._get_conn()
-        # Pick up 'deploying' first (crash-resume), then 'pending' (new files)
-        row = conn.execute(
-            "SELECT file_path FROM queue WHERE status IN ('deploying', 'pending') ORDER BY "
-            "CASE status WHEN 'deploying' THEN 0 ELSE 1 END, added_at ASC LIMIT 1"
-        ).fetchone()
-        conn.close()
-        return row[0] if row else None
 
     def _mark_done(self, file_path: str):
         conn = self._get_conn()
@@ -212,7 +176,6 @@ class OkaQueueManager:
         conn.close()
 
     def _save_checkpoint(self, file_path: str, session_id: str, batch: int, total: int, curriculum: dict):
-        """Persist deployment progress so a server restart can resume."""
         import json as _json
         conn = self._get_conn()
         conn.execute(
@@ -224,7 +187,6 @@ class OkaQueueManager:
         conn.close()
 
     def _get_checkpoint(self, file_path: str):
-        """Return (session_id, current_batch, total_batches, curriculum) if a checkpoint exists."""
         import json as _json
         conn = self._get_conn()
         row = conn.execute(
@@ -237,248 +199,143 @@ class OkaQueueManager:
         return None, 0, 0, {}
 
     async def _worker_loop(self):
-        """Continuous background loop for autonomous processing."""
+        """Monitor the queue and spawn parallel workers for pending files."""
+        watcher_logger.info("OKA Parallel Worker Loop Started.")
+        
         while True:
             try:
+                # Cleanup finished tasks
+                finished = [f for f, t in self.active_tasks.items() if t.done()]
+                for f in finished:
+                    try:
+                        await self.active_tasks[f] # Catch errors
+                    except Exception as e:
+                        watcher_logger.error(f"Task for {f} failed: {e}")
+                    del self.active_tasks[f]
+
                 if not self.auto_process:
                     await asyncio.sleep(5)
                     continue
 
-                file_path_str = self._get_next_task()
-                if not file_path_str:
-                    await asyncio.sleep(5)
-                    continue
+                conn = self._get_conn()
+                cursor = conn.cursor()
+                cursor.execute("SELECT file_path FROM queue WHERE status IN ('pending', 'deploying') ORDER BY added_at ASC")
+                pending = cursor.fetchall()
+                conn.close()
 
-                path = Path(file_path_str)
-                # Check if file still exists
-                if not path.exists():
-                    self._mark_done(file_path_str)
-                    continue
+                for (file_path_str,) in pending:
+                    if file_path_str not in self.active_tasks:
+                        task = asyncio.create_task(self.process_file(file_path_str))
+                        self.active_tasks[file_path_str] = task
+                        watcher_logger.info(f"Spawned parallel worker for {Path(file_path_str).name}")
 
-                self.current_file = file_path_str
+                self.status = "processing" if self.active_tasks else "idle"
+                await asyncio.sleep(5)
 
-                # ── Check for an existing checkpoint (crash-resume) ──────────────────
-                saved_session_id, saved_batch, saved_total, saved_curriculum = self._get_checkpoint(file_path_str)
+            except Exception as e:
+                watcher_logger.error(f"Error in OKA worker loop: {e}")
+                await asyncio.sleep(10)
 
-                if saved_session_id and saved_batch > 0:
-                    watcher_logger.info(
-                        f"Resuming {path.name} from batch {saved_batch}/{saved_total} "
-                        f"(session={saved_session_id[:8]}...)"
-                    )
-                    self.current_batch = saved_batch
-                    self.total_batches = saved_total
-                    self.status = "deploying"
-                    self.last_action = f"Resuming from batch {saved_batch}"
-                    curriculum = saved_curriculum
-                    session_id = saved_session_id
-                    anchored_hub = None  # not needed for resume
-                    has_more = True
-                    temp_batch = saved_batch
-                    deployment_failed = False
-                    curriculum_override_applied = True  # Already applied in a prior run
-
-                    # Jump directly to the deployment loop below
-                    goto_deployment = True
-                else:
-                    goto_deployment = False
-
-                if not goto_deployment:
-                    # Clear state for new file
-                    self.current_batch = 0
-                    self.total_batches = 0
-                    self.planned_batches = []
-                    self.processed_notes = []
-                    self.last_action = "Inbound Detection..."
-                    self.status = "detecting"
-
-                    watcher_logger.info(f"Starting autonomous planning for: {path.name}")
-
-                    # 1. Detection Phase
+    async def process_file(self, file_path_str: str):
+        """Worker task for a single file."""
+        path = Path(file_path_str)
+        try:
+            # Mark as active
+            conn = self._get_conn()
+            conn.execute("UPDATE queue SET status = 'deploying' WHERE file_path = ?", (file_path_str,))
+            conn.commit()
+            conn.close()
+            
+            watcher_logger.info(f"Worker started for {path.name}")
+            
+            # Check for checkpoint
+            session_id, temp_batch, total, curriculum = self._get_checkpoint(file_path_str)
+            
+            if not session_id:
+                # 1. Detection
+                self.last_action = f"Detecting {path.name}..."
+                detect_res = await self.service.detect_curriculum(str(path.absolute()))
+                curriculum = detect_res.get("detected_curriculum") or {}
+                
+                # 2. Planning
+                self.last_action = f"Planning {path.name}..."
+                plan_res = await self.service.generate_plan(str(path.absolute()), self.si_path, curriculum=curriculum)
+                session_id = plan_res["session_id"]
+                total = len(plan_res["plan_structured"].get("batches", []))
+            
+            # 3. Deployment Loop (Hyperdrive)
+            has_more = True
+            deployment_failed = False
+            curriculum_override_applied = (temp_batch > 0)
+            
+            while has_more:
+                command = "Confirm Final Plan & Proceed Batch 1" if temp_batch == 0 else f"Proceed Batch {temp_batch + 1}"
+                watcher_logger.info(f"Worker for {path.name} executing {command}")
+                
+                batch_retry = 0
+                success = False
+                while batch_retry < 5 and not success:
                     try:
-                        detect_res = await self.service.detect_curriculum(str(path.absolute()))
+                        confirm_res = await self.service.confirm_plan(
+                            session_id, 
+                            command=command,
+                            curriculum_override=curriculum if (temp_batch == 0 and not curriculum_override_applied) else None
+                        )
+                        
+                        if confirm_res.get("status") == "success":
+                            temp_batch = confirm_res.get("current_batch", temp_batch + 1)
+                            has_more = confirm_res.get("has_more", False)
+                            self._save_checkpoint(file_path_str, session_id, temp_batch, total, curriculum)
+                            success = True
+                            curriculum_override_applied = True
+                        else:
+                            raise ValueError(confirm_res.get("message", "Unknown service error"))
                     except Exception as e:
-                        watcher_logger.error(f"Detection failed for {path.name}: {e}")
-                        if "429" in str(e) or "rate limit" in str(e).lower() or "rate_limit" in str(e).lower():
-                            watcher_logger.warning("Rate limit during detection. Cooling down for 60s...")
+                        err_msg = str(e).lower()
+                        if "429" in err_msg or "rate limit" in err_msg:
+                            watcher_logger.warning(f"Rate limit hit for {path.name}. Sleeping 60s...")
                             await asyncio.sleep(60)
                         else:
-                            self._mark_error(file_path_str)
-                        continue
-
-                    anchored_hub = detect_res.get("anchored_hub")
-                    detected = detect_res.get("detected_curriculum") or {}
-
-                    curriculum = {
-                        "course": (anchored_hub.get("course") if anchored_hub else detected.get("course")) or "",
-                        "unit": (anchored_hub.get("unit") if anchored_hub else detected.get("unit")) or "",
-                        "semester": (anchored_hub.get("semester") if anchored_hub else detected.get("semester")) or "",
-                        "hub_title": (anchored_hub.get("title") if anchored_hub else detected.get("hub_title") or path.stem) or path.stem,
-                        "primary_language": detected.get("primary_language", "General")
-                    }
-
-                    if not curriculum["course"]:
-                        parts = path.parts
-                        for i, p in enumerate(parts):
-                            if p == "2-Academic" and i + 1 < len(parts):
-                                potential_course = parts[i+1]
-                                if potential_course != path.name and potential_course != "PDF Inbox":
-                                    curriculum["course"] = potential_course
-                                    break
-
-                    # 2. Planning Phase
-                    self.status = "planning"
-                    self.last_action = "Architecting Knowledge Plan..."
-
-                    plan_retry = 0
-                    res = None
-                    while plan_retry < 5:
-                        try:
-                            res = await self.service.generate_plan(
-                                str(path.absolute()),
-                                self.si_path,
-                                curriculum=curriculum,
-                                target_hub_id=anchored_hub.get("id") if anchored_hub else None
-                            )
-                            if res: break
-                        except Exception as e:
-                            plan_retry += 1
-                            err_msg = str(e).lower()
-                            watcher_logger.warning(f"Planning failed (Attempt {plan_retry}/5): {e}")
-                            if "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg:
-                                await asyncio.sleep(60)
-                            else:
-                                await asyncio.sleep(10)
-
-                    if not res:
-                        watcher_logger.error(f"Planning exhausted all retries for {path.name}")
-                        self._mark_error(file_path_str)
-                        continue
-
-                    session_id = res["session_id"]
-                    structured_plan = res["plan_structured"]
-                    self.planned_batches = structured_plan.get("batches", [])
-                    self.total_batches = len(self.planned_batches)
-                    self.status = "deploying"
-                    self.last_action = f"Architecting {self.total_batches} Batches"
-
-                    watcher_logger.info(f"Plan generated for {path.name}. Total batches: {self.total_batches}")
-
-                    # 3. Deployment Phase (Strict Continuous Loop)
-                    watcher_logger.info(f"Starting strict continuous deployment for {path.name}")
-                    self.last_action = "Continuous Deployment Active..."
-
-                    has_more = True
-                    temp_batch = 0
-                    deployment_failed = False
-                    curriculum_override_applied = False  # Will be set True after first successful batch
-
-                    # Save initial checkpoint
-                    self._save_checkpoint(file_path_str, session_id, 0, self.total_batches, curriculum)
-
-                # ── Deployment loop (shared for both fresh and resumed) ──────────────
-                while has_more and self.auto_process:
-                    command = "Confirm Final Plan & Proceed Batch 1" if temp_batch == 0 else f"Proceed Batch {temp_batch + 1}"
-                    watcher_logger.info(f"Auto-confirming {command} for {path.name}")
-                    
-                    batch_retry = 0
-                    success = False
-                    while batch_retry < 5 and not success:
-                        try:
-                            confirm_res = await self.service.confirm_plan(
-                                session_id, 
-                                command=command,
-                                curriculum_override=curriculum if (temp_batch == 0 and not curriculum_override_applied) else None,
-                                anchored_hub_id=anchored_hub.get("id") if (anchored_hub and temp_batch == 0 and not curriculum_override_applied) else None
-                            )
-                            
-                            if confirm_res.get("status") == "success":
-                                temp_batch = confirm_res.get("current_batch", temp_batch + 1)
-                                self.current_batch = temp_batch
-                                has_more = confirm_res.get("has_more", False)
-                                new_notes = confirm_res.get("results", [])
-                                self.processed_notes.extend(new_notes)
-                                self.last_action = f"Deployed {temp_batch}/{self.total_batches}"
-                                curriculum_override_applied = True  # Ensure it only fires once even on 429 retries
-                                # Persist checkpoint after every successful batch
-                                self._save_checkpoint(file_path_str, session_id, temp_batch, self.total_batches, curriculum)
-                                success = True
-                            else:
-                                raise ValueError(confirm_res.get("message", "Unknown service error"))
-                        except Exception as e:
-                            err_msg = str(e).lower()
-                            if "tpd" in err_msg or "daily" in err_msg or "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg:
-                                import random
-                                jitter = random.randint(5, 30)
-                                sleep_time = 60 + jitter
-                                watcher_logger.warning(f"Rate limit hit during deployment. Sleeping for {sleep_time}s (jittered) and retrying...")
-                                self.status = "cooling"
-                                self.last_action = f"Rate limited — sleeping {sleep_time}s"
-                                await asyncio.sleep(sleep_time)
-                                self.status = "processing"
-                                # Do NOT increment batch_retry for rate limits, just wait it out
-                            else:
-                                batch_retry += 1
-                                watcher_logger.error(f"Batch execution failed (Attempt {batch_retry}/5): {e}")
-                                await asyncio.sleep(15)
-                    
-                    if not success:
-                        watcher_logger.error(f"Deployment exhausted all retries for {path.name} at batch {temp_batch}")
-                        deployment_failed = True
-                        break
-
-                    
-                # 4. Finalize (Only if fully successful)
-                if not deployment_failed and not has_more:
-                    if path.exists():
-                        # Extract curriculum info for structured archiving
-                        meta = curriculum # This is available in the loop
-                        _sem = (meta.get("semester") or "General").strip()
-                        _crs = self.service.vm.get_canonical_title(meta.get("course") or "General_Knowledge")
-                        # Build mirroring path: 5-Pdf Store/note generated/Semester/Course
-                        vault_root = Path(self.service.secrets.vault_path)
-                        target_dir = vault_root / "5-Pdf Store" / "note generated" / _sem / _crs
-                        target_dir.mkdir(parents=True, exist_ok=True)
-
-                        # Clean filename: replace spaces with underscores
-                        clean_name = path.name.replace(" ", "_")
-                        new_path = target_dir / clean_name
-                        
-                        watcher_logger.info(f"Archiving source to course-level path: {new_path}")
-                        shutil.move(str(path.absolute()), str(new_path.absolute()))
-                    
-                    self._mark_done(file_path_str)
-                    watcher_logger.info(f"Successfully processed and archived {path.name}")
-                else:
-                    self._mark_error(file_path_str)
-                    self.status = "error"
+                            batch_retry += 1
+                            watcher_logger.error(f"Worker for {path.name} failed batch (Attempt {batch_retry}/5): {e}")
+                            await asyncio.sleep(15)
                 
-                # Governor Cooldown (10s)
-                if not deployment_failed:
-                    self.status = "cooling"
-                    for i in range(10, 0, -1):
-                        self.last_action = f"Cooling Down ({i}s)"
-                        await asyncio.sleep(1)
+                if not success:
+                    deployment_failed = True
+                    break
+
+            # 4. Finalize
+            if not deployment_failed and not has_more:
+                if path.exists():
+                    meta = curriculum
+                    _sem = (meta.get("semester") or "General").strip()
+                    _crs = self.service.vm.get_canonical_title(meta.get("course") or "General_Knowledge")
+                    vault_root = Path(self.service.secrets.vault_path)
+                    target_dir = vault_root / "5-Pdf Store" / "note generated" / _sem / _crs
+                    target_dir.mkdir(parents=True, exist_ok=True)
+                    clean_name = path.name.replace(" ", "_")
+                    shutil.move(str(path.absolute()), str(target_dir / clean_name))
                 
-                self.status = "idle"
-                self.last_action = f"Finished {path.name}" if not deployment_failed else f"Failed {path.name}"
-                self.current_file = None
-                
-            except Exception:
-                watcher_logger.error(f"Error processing {self.current_file}: {traceback.format_exc()}")
-                if self.current_file:
-                    self._mark_error(self.current_file)
-                self.status = "idle"
-                await asyncio.sleep(10)
+                self._mark_done(file_path_str)
+                watcher_logger.info(f"Successfully processed {path.name}")
+            else:
+                self._mark_error(file_path_str)
+
+        except Exception as e:
+            watcher_logger.error(f"Critical worker failure for {path.name}: {e}")
+            self._mark_error(file_path_str)
 
     def get_status(self) -> Dict[str, Any]:
         conn = self._get_conn()
         pending_count = conn.execute("SELECT COUNT(*) FROM queue WHERE status = 'pending'").fetchone()[0]
         conn.close()
         
+        active_files = [Path(f).name for f in self.active_tasks.keys()]
+        
         return {
             "status": self.status,
             "auto_process": self.auto_process,
-            "current_file": Path(self.current_file).name if self.current_file else None,
+            "active_files": active_files,
             "current_batch": self.current_batch,
             "total_batches": self.total_batches,
             "planned_batches": self.planned_batches,
@@ -490,7 +347,6 @@ class OkaQueueManager:
     def stop(self):
         if self.observer:
             self.observer.stop()
-            # No join() here to avoid blocking the event loop during shutdown/reload
         if self.worker_task:
             self.worker_task.cancel()
         print("[OKA Queue] Stopped.")

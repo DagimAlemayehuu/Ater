@@ -1,11 +1,13 @@
 import re
-from typing import Dict, List
+import json
+from typing import Dict, List, Any
 from .agents import DOMAIN_MATRIX, MODE_SPECIALITIES
+from .keywords import DOMAIN_KEYWORDS
 
 class DomainRouter:
     """
     Deterministic keyword-based router to offload domain classification from LLMs.
-    Uses frequency analysis of discipline-specific terminology.
+    Uses frequency analysis of discipline-specific terminology from keywords.py.
     """
     
     def __init__(self):
@@ -14,133 +16,136 @@ class DomainRouter:
         self._build_keyword_map()
 
     def _build_keyword_map(self):
-        # 1. Use MODE_SPECIALITIES as high-weight keywords
+        # 1. Use canonical keywords from keywords.py
+        for mode, keywords in DOMAIN_KEYWORDS.items():
+            for kw in keywords:
+                # Store multi-word keywords as-is for exact matching
+                self.keyword_map[kw.lower()] = mode
+
+        # 2. Integrate MODE_SPECIALITIES for high-level coverage
         for mode, specialities in MODE_SPECIALITIES.items():
             for spec in specialities:
-                # Clean and tokenize
                 words = re.findall(r'\w+', spec.lower())
                 for word in words:
-                    if len(word) > 3: # Ignore small stop words
+                    if len(word) > 3 and word not in self.keyword_map:
                         self.keyword_map[word] = mode
-
-        # 2. Add manual "anchor" keywords for high-risk boundaries
-        anchors = {
-            "microeconomics": "ECON-MICRO",
-            "micro": "ECON-MICRO",
-            "supply": "ECON-MICRO",
-            "demand": "ECON-MICRO",
-            "elasticity": "ECON-MICRO",
-            "consumer surplus": "ECON-MICRO",
-            "producer surplus": "ECON-MICRO",
-            "utility": "ECON-MICRO",
-            "production possibilities": "ECON-MICRO",
-            "opportunity cost": "ECON-MICRO",
-            "scarcity": "ECON-MICRO",
-            "economic resources": "ECON-MICRO",
-            "law of demand": "ECON-MICRO",
-            "law of supply": "ECON-MICRO",
-            "law of increasing": "ECON-MICRO",
-            "macroeconomics": "ECON-MACRO",
-            "macro": "ECON-MACRO",
-            "gdp": "ECON-MACRO",
-            "inflation": "ECON-MACRO",
-            "unemployment": "ECON-MACRO",
-            "central bank": "ECON-MACRO",
-            "monetary policy": "ECON-MACRO",
-            "fiscal policy": "ECON-MACRO",
-            "aggregate demand": "ECON-MACRO",
-            "aggregate supply": "ECON-MACRO",
-            "multiplier": "ECON-MACRO",
-            "software": "CS-SOFTWARE",
-            "programming": "CS-SOFTWARE",
-            "algorithm": "CS-SOFTWARE",
-            "database": "CS-DB",
-            "sql": "CS-DB",
-            "quantum": "PHYSICS-QUANTUM",
-            "calculus": "MATH-PURE",
-            "integral": "MATH-PURE",
-            "derivative": "MATH-PURE",
-            "statistics": "MATH-STAT",
-            "probability": "MATH-STAT",
-            "geometry": "MATH-PURE",
-            "algebra": "MATH-PURE",
-            "law": "LAW-CASE",
-            "contract": "LAW-CONTRACT",
-            "criminal": "LAW-CRIMINAL",
-            "anatomy": "MED-ANATOMY",
-            "pathology": "MED-PATHOLOGY",
-            "marketing": "BIZ-MARKETING",
-            "strategy": "BIZ-STRATEGY",
-            "competitive advantage": "BIZ-STRATEGY",
-            "swot": "BIZ-STRATEGY",
-            "market equilibrium": "ECON-MICRO",
-            "consumer behavior": "ECON-MICRO",
-            "perfect competition": "ECON-MICRO",
-            "monopoly": "ECON-MICRO",
-            "oligopoly": "ECON-MICRO",
-            "externality": "ECON-MICRO",
-            "public good": "ECON-MICRO",
-            "national income": "ECON-MACRO",
-            "as-ad": "ECON-MACRO",
-            "phillips curve": "ECON-MACRO",
-        }
-        for kw, mode in anchors.items():
-            self.keyword_map[kw.lower()] = mode
 
     def route(self, text: str, parent_mode: str = None, course: str = "") -> str:
         """
         Analyzes text and returns the most likely DOMAIN_MATRIX key.
-        Returns 'ACADEMIC-GENERAL' if no clear winner is found.
-        If parent_mode is provided, it acts as a 'gravitational anchor' for ties.
+        Uses multi-word keyword matching and frequency analysis.
         """
-        # NEW: If course is provided, lock immediately — no keyword scan needed
+        # 1. Course Lock (Highest Priority)
         if course:
-            course_lock = {
-                "economics":    "ECON-MICRO",
-                "microeconomics": "ECON-MICRO",
-                "macroeconomics": "ECON-MACRO",
-                "law":          "LAW-CASE",
-                "chemistry":    "CHEMISTRY",
-                "biology":      "BIOLOGY",
-                "physics":      "PHYSICS-KINEMATICS",
+            c_lower = course.lower()
+            # Check for direct matches in taxonomy categories
+            # This is a fast-path for known textbook titles
+            course_map = {
+                "economics": "ECON-MICRO",
+                "biology": "BIOLOGY",
+                "physics": "PHYS-MECHANICS",
+                "web": "CS-WEB-DEV",
+                "html": "CS-WEB-DEV",
+                "javascript": "CS-WEB-DEV",
+                "software": "CS-SOFTWARE",
+                "math": "MATH-PURE",
+                "calculus": "MATH-CALCULUS",
+                "philosophy": "PHILOSOPHY"
             }
-            course_lower = course.lower()
-            for kw, locked_mode in course_lock.items():
-                if kw in course_lower:
-                    return locked_mode
+            for k, mode in course_map.items():
+                if k in c_lower:
+                    return mode
 
+        # 2. Keyword Frequency Analysis
         text_lower = text.lower()
-        scores: Dict[str, int] = {}
-
-        # Scan for keywords
+        
+        scores: Dict[str, float] = {mode: 0.0 for mode in set(self.keyword_map.values())}
+        total_matches = 0
+        
+        # Check for multi-word keywords first (Greedy match)
         for kw, mode in self.keyword_map.items():
-            # Use regex for word boundaries to avoid partial matches
-            count = len(re.findall(rf'\b{re.escape(kw)}\b', text_lower))
-            if count > 0:
-                scores[mode] = scores.get(mode, 0) + count
+            if " " in kw:
+                count = text_lower.count(kw)
+                if count > 0:
+                    scores[mode] += (count * 2.5) # Weight multi-word phrases higher
+                    total_matches += count
 
-        if not scores:
-            return "ACADEMIC-GENERAL"
+        # Check for single-word keywords
+        words = re.findall(r'\w+', text_lower)
+        for word in words:
+            if word in self.keyword_map:
+                mode = self.keyword_map[word]
+                scores[mode] += 1.0
+                total_matches += 1
 
-        # Find the winner
-        winner = max(scores, key=scores.get)
+        if total_matches == 0:
+            return parent_mode if parent_mode else "DOMAIN-UNKNOWN"
+
+        # 3. Confidence Threshold (v30.0 Pantheon)
+        sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        top_mode, top_count = sorted_scores[0]
         
-        # Confidence check: Winner must have at least 20% lead over runner-up
-        sorted_scores = sorted(scores.values(), reverse=True)
-        
-        # If we have a parent_mode and it scored at all, give it a 2.0x weight boost to prevent jumping
+        # Gravitational Anchor
         if parent_mode and parent_mode in scores:
-            scores[parent_mode] = int(scores[parent_mode] * 2.0)
-            # Re-calculate winner after boost
-            winner = max(scores, key=scores.get)
-            sorted_scores = sorted(scores.values(), reverse=True)
+            if top_mode != parent_mode:
+                boosted_parent_count = scores[parent_mode] * 1.5
+                if boosted_parent_count >= top_count:
+                    top_mode = parent_mode
+                    top_count = boosted_parent_count
 
-        if len(sorted_scores) > 1:
-            if sorted_scores[0] < sorted_scores[1] * 1.2:
-                # Too close to call, default to parent_mode if available, else general
-                return parent_mode if parent_mode else "ACADEMIC-GENERAL"
+        confidence = top_count / total_matches
 
-        return winner
+        # Log for debugging low confidence
+        if confidence < 0.40:
+            import logging
+            logging.getLogger("LifeOS").warning(f"[Taxonomy Gap] Confidence: {confidence:.2f} for top_mode: {top_mode}. Text snippet: {text[:50]}...")
+
+        return top_mode
+
+    async def route_with_oracle(self, llm, briefing: Dict[str, Any], text: str, course: str = "") -> str:
+        """Uses LLM-based wisdom to pick the single best domain from the taxonomy."""
+        from .taxonomy import get_all_domains
+        available_domains = get_all_domains()
+        
+        system = f"""You are a master librarian. Your goal is to assign this document to an existing department in your library.
+
+**DOCUMENT BRIEFING:** 
+{json.dumps(briefing, indent=2)}
+
+**AVAILABLE DEPARTMENTS:** 
+{", ".join(available_domains)}
+
+Based on the briefing, which of the available departments is the single best fit? You are strictly forbidden from inventing a new department. Choose the closest possible match from the provided list."""
+
+        user = f"Sample text from document:\n{text[:5000]}"
+        
+        try:
+            # We use the deterministic router as a hint
+            hint = self.route(text, course=course)
+            
+            # Adaptive instruction based on hint
+            hint_note = f"\n\nHint from deterministic router: {hint}" if hint != "DOMAIN-UNKNOWN" else ""
+            
+            from langchain_core.messages import SystemMessage, HumanMessage
+            res = await llm.ainvoke([
+                SystemMessage(content=system),
+                HumanMessage(content=f"{user}{hint_note}\n\nReturn ONLY the exact domain key (e.g., 'CS-DATA-SYSTEMS'). NO EXPLANATION.")
+            ])
+            
+            mode = res.content.strip().strip("'\"").strip()
+            # Clean up potential markdown formatting if AI ignored "NO MARKDOWN"
+            if "```" in mode:
+                mode = mode.split("```")[1].strip()
+            
+            if mode in available_domains:
+                print(f"[DomainRouter] Oracle routing successful: {mode}")
+                return mode
+            
+            print(f"[DomainRouter] Oracle hallucinated mode '{mode}'. Falling back to deterministic hint: {hint}")
+            return hint
+        except Exception as e:
+            print(f"[DomainRouter] Oracle routing failed: {e}")
+            return self.route(text, course=course)
 
 # Global instance
 router = DomainRouter()

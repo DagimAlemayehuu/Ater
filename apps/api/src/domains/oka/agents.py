@@ -4,19 +4,20 @@ import asyncio
 import hashlib
 from typing import Any, Dict, List
 from langchain_core.language_models.chat_models import BaseChatModel
-from .schemas import PartialPlan
+from .schemas import PartialPlan, TheoryResponse, PractitionerResponse, QuizResponse, Question, ContextBriefing
 
 # ── DOMAIN MATRIX v26.1 (UPGRADED) ───────────────────────────────────────────
 DOMAIN_MATRIX = {
-    "ACADEMIC-GENERAL":   {"persona":"Subject Matter Expert","h1":"Core Concept","h2":"Context & Limitations","artifact":"Concept Map","type":"Markdown Table","question_modes":["mcq", "true_false", "writing", "fill_in"]},
-    "CS-SOFTWARE":        {"persona":"Software Engineer","h1":"How it Works","h2":"Common Pitfalls","artifact":"Code Example","type":"Executable code block (under 20 lines)","question_modes":["fill_in", "true_false", "debug", "trace"]},
+    "DOMAIN-UNKNOWN": {"persona":"Universal Polymath","h1":"Universal Concept","h2":"General Context","artifact":"Interdisciplinary Analysis","type":"Markdown Table","question_modes":["mcq", "true_false", "writing"], "sanity_check": "Focus on first principles and logical foundations.", "l3_law": "L3 MUST be a first-principles application of the concept."},
+    "ACADEMIC-GENERAL":   {"persona":"Subject Matter Expert","h1":"Core Concept","h2":"Context & Limitations","artifact":"Concept Map","type":"Markdown Table","question_modes":["mcq", "true_false", "writing", "fill_in"], "sanity_check": "Ensure logical consistency and source anchoring.", "l3_law": "L3 MUST be a multi-step analytical application of the core concept to a novel scenario."},
+    "CS-SOFTWARE":        {"persona":"Software Engineer","h1":"How it Works","h2":"Common Pitfalls","artifact":"Code Example","type":"Executable code block (under 20 lines)","question_modes":["fill_in", "true_false", "debug", "trace"], "sanity_check": "Code artifacts must not contain infinite loops, syntax errors, or undeclared variables. Time/Space complexity must be accurate.", "l3_law": "L3 MUST be a 'Trace/Debug'. Provide a block of code and ask for the exact final output/state of a variable, OR provide broken code and ask to identify the specific line causing the logical failure."},
     "CS-SYSTEMS":         {"persona":"Systems Architect","h1":"System Flow","h2":"Where it Breaks","artifact":"Architecture Diagram","type":"Basic Mermaid flowchart (graph TD/LR)","question_modes":["mcq", "scenario", "debug", "order"]},
     "CS-DB":              {"persona":"Database Admin","h1":"Query Logic","h2":"Data Integrity","artifact":"Database Schema","type":"SQL code block or Markdown Table","question_modes":["true_false", "scenario", "debug", "matching"]},
     "CS-AI":              {"persona":"Machine Learning Eng.","h1":"Model Mechanics","h2":"Overfitting & Bias","artifact":"Data Pipeline","type":"Basic Mermaid flowchart or Python code","question_modes":["mcq", "fill_in", "scenario", "trace"]},
     "CS-TESTING":         {"persona":"QA Engineer","h1":"Test Strategy","h2":"Edge Cases","artifact":"Test Scenario","type":"Code block (assertions) or Markdown Table","question_modes":["true_false", "scenario", "debug", "synthesis"]},
     "CS-ARCH":            {"persona":"Software Architect","h1":"Design Pattern","h2":"Trade-offs","artifact":"Component Diagram","type":"Basic Mermaid flowchart or Markdown Table","question_modes":["mcq", "scenario", "writing", "order"]},
     "CS-REQUIREMENTS":    {"persona":"Product Manager","h1":"Goal Definition","h2":"Scope Creep","artifact":"Requirements Table","type":"Markdown Table (max 3 columns)","question_modes":["true_false", "scenario", "writing", "matching"]},
-    "MATH-PURE":          {"persona":"Mathematician","h1":"Formal Definition","h2":"Proof Strategy","artifact":"Mathematical Proof","type":"Block LaTeX ($$)","question_modes":["mcq", "fill_in", "debug", "synthesis"]},
+    "MATH-PURE":          {"persona":"Mathematician","h1":"Formal Definition","h2":"Proof Strategy","artifact":"Mathematical Proof","type":"Block LaTeX ($$)","question_modes":["mcq", "fill_in", "debug", "synthesis"], "sanity_check": "Proofs must not skip logical steps. Do not divide by zero. Ensure edge cases (like n=0 or negative numbers) are accounted for.", "l3_law": "L3 MUST be a rigorous formula derivation or a formal proof step verification."},
     "MATH-STAT":          {"persona":"Statistician","h1":"Statistical Concept","h2":"Common Biases","artifact":"Data Distribution","type":"Block LaTeX ($$) or Markdown Table","question_modes":["true_false", "scenario", "writing", "trace"]},
     "MATH-CRYPTO":        {"persona":"Cryptographer","h1":"Encryption Logic","h2":"Vulnerabilities","artifact":"Cryptographic Flow","type":"Markdown Table or Code snippet","question_modes":["mcq", "fill_in", "scenario", "trace"]},
     "MATH-DISCRETE":      {"persona":"Logic Professor","h1":"Discrete Definition","h2":"Base Cases","artifact":"Logical Trace","type":"Truth Table (Markdown) or block LaTeX","question_modes":["fill_in", "true_false", "debug", "order"]},
@@ -38,19 +39,19 @@ DOMAIN_MATRIX = {
     "ENG-CHEM":           {"persona":"Chemical Engineer","h1":"Process Flow","h2":"Yield Losses","artifact":"Process Flow Diagram","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "debug", "order"]},
     "ENG-AERO":           {"persona":"Aerospace Engineer","h1":"Aerodynamic Principle","h2":"Drag & Turbulence","artifact":"Flight Dynamics","type":"Block LaTeX or Table","question_modes":["mcq", "scenario", "debug", "trace"]},
     "ENG-BIOMED":         {"persona":"Biomedical Engineer","h1":"Biomechanical System","h2":"Biocompatibility Issues","artifact":"Device Interface","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
-    "MED-PHYSIO":         {"persona":"Surgeon","h1":"Bodily Function","h2":"Disease & Failure","artifact":"System Map","type":"Markdown Adjacency Matrix Table","question_modes":["fill_in", "scenario", "writing", "matching"]},
+    "MED-PHYSIO":         {"persona":"Surgeon","h1":"Bodily Function","h2":"Disease & Failure","artifact":"System Map","type":"Markdown Adjacency Matrix Table","question_modes":["fill_in", "scenario", "writing", "matching"], "sanity_check": "Physiological cascades must follow strict biological directionality (e.g., Agonist vs Antagonist). Do not mix up pathways.", "l3_law": "L3 MUST be a 'System Perturbation Trace'. E.g., If Enzyme X is inhibited, what is the exact cascading effect on Molecule Y?"},
     "MED-PHARMA":         {"persona":"Toxicologist","h1":"Drug Mechanism","h2":"Side Effects","artifact":"Interaction Pathway","type":"Markdown Table or Basic Mermaid flowchart","question_modes":["mcq", "scenario", "debug", "matching"]},
     "MED-ANATOMY":        {"persona":"Anatomist","h1":"Structural Component","h2":"Anatomical Anomalies","artifact":"Morphological Map","type":"Markdown Table","question_modes":["mcq", "fill_in", "writing", "matching"]},
     "MED-PATHOLOGY":      {"persona":"Pathologist","h1":"Disease Mechanism","h2":"Diagnostic Pitfalls","artifact":"Pathogenesis Flow","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "writing", "matching"]},
-    "ECON-MACRO":         {"persona":"Macroeconomist","h1":"Economic Theory","h2":"Market Failures","artifact":"Economic Model","type":"Basic Mermaid flowchart (graph LR)","question_modes":["true_false", "scenario", "writing", "order", "trace"]},
-    "ECON-MICRO":         {"persona":"Microeconomist","h1":"Micro Theory","h2":"Efficiency & Distortions","artifact":"Market Graph","type":"Basic Mermaid flowchart (graph TD/LR) or LaTeX","question_modes":["mcq", "fill_in", "true_false", "trace"]},
+    "ECON-MACRO":         {"persona":"Macroeconomist","h1":"Economic Theory","h2":"Market Failures","artifact":"Theoretical Model & Data","type":"Basic Mermaid flowchart (graph LR)","question_modes":["true_false", "scenario", "trace", "writing", "order"], "sanity_check": "Economic models must maintain consistency with Aggregate Demand/Supply behavior. Ensure coordinate shifts are explained logically.", "l3_law": "L3 MUST be a multi-step mathematical calculation or a complex policy impact derivation."},
+    "ECON-MICRO":         {"persona":"Microeconomist","h1":"Micro Theory","h2":"Efficiency & Distortions","artifact":"Data Schedule & Visualization","type":"Markdown Table (Demand/Supply Schedule) OR ASCII Text Graph. Do NOT use Mermaid flowcharts for plotting economic curves. Use a well-formatted Markdown Table showing Price and Quantity, accompanied by a LaTeX block explaining the coordinate shift, or a clear ASCII representation of a Cartesian graph. Discipline Prohibition: DO NOT generate Python, R, or any programming code. Mathematical artifacts must be pure LaTeX or Markdown tables.","question_modes":["mcq", "fill_in", "trace", "true_false"], "sanity_check": "Microeconomic Axioms: \n1. ONLY Marginal/Variable costs shift the short-run supply curve. Fixed costs DO NOT shift supply.\n2. Do not conflate Macroeconomic Aggregate Demand with Microeconomic Market Clearing. If supply shifts, price falls until the market clears.\n3. Clearly distinguish between 'a shift in the curve' and 'a movement along the curve'. NEVER use a curve shifter (like Technology, Weather, or Income) to explain a price-induced movement ALONG the curve (like Law of Demand or Law of Supply).\n4. Never refer to the price BEFORE a shift as the 'equilibrium price' AFTER the shift.\n5. SUPPLY ELASTICITY AXIOM: To calculate Price Elasticity of Supply (Es), you MUST use a scenario where DEMAND shifts, causing movement along the supply curve. NEVER use a scenario where supply shifts (like a drought) to calculate Es, as this yields a negative number which violates the Law of Supply.\n6. SHIFTS vs. MOVEMENTS AXIOM: If the concept is a curve SHIFTER (e.g., Income, Technology, Number of Buyers), your Artifact and Walkthrough MUST feature TWO distinct equations (e.g., D1 and D2) to prove the curve shifted horizontally at a CONSTANT price. You are STRICTLY FORBIDDEN from demonstrating a shifter by plugging different prices into a single, stationary equation.\n7. AGGREGATION AXIOM: NEVER equate 'quantity demanded' with 'number of buyers'. They are distinct concepts. Always use standard 'Horizontal Summation' (Qd_market = Qd1 + Qd2) to demonstrate the addition of buyers. DO NOT invent or use obscure academic axioms (e.g., 'Aggregation Axiom') not present in the source text.\n8. INCOME COEFFICIENTS AXIOM: If a good is NORMAL, the income variable (I) in the demand function MUST be positive (e.g., + 0.5I). If a good is INFERIOR, the income variable (I) MUST be negative (e.g., - 0.5I).\n9. PEDAGOGICAL ALIGNMENT AXIOM: The Artifact, Walkthrough, and Q3 Trace MUST align with the epistemic type of the concept. If the topic is 'Determinants' or 'Factors', focus on the 'Why' (cascading logic). If the topic is 'Equilibrium' or 'Elasticity Calculation', focus on the 'How' (math). DO NOT use rote math to teach purely conceptual determinants.\n10. TERMINOLOGY FIDELITY AXIOM: Strictly adhere to the terminology in the SOURCE CONTEXT. Do not use high-level PhD-level terms if the text uses introductory language.", "l3_law": "L3 MUST be a multi-step analytical application. IF the topic is calculative (e.g., Equilibrium, Elasticity calculation), use a math derivation. IF the topic is conceptual (e.g., Determinants, Barriers to Entry), use a 'System Perturbation Trace' (cascading logic) where the user determines a qualitative outcome based on changing factors."},
     "ECON-METRICS":       {"persona":"Econometrician","h1":"Statistical Model","h2":"Endogeneity","artifact":"Regression Output","type":"Markdown Table or LaTeX","question_modes":["mcq", "fill_in", "debug", "trace"]},
     "ECON-BEHAVIORAL":    {"persona":"Behavioral Economist","h1":"Cognitive Bias","h2":"Market Anomalies","artifact":"Decision Matrix","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
     "ECON-FINANCE":       {"persona":"Accountant","h1":"Financial Concept","h2":"Financial Risk","artifact":"Ledger Example","type":"Markdown T-Account/Ledger Table","question_modes":["true_false", "scenario", "debug", "matching"]},
     "BIZ-STRATEGY":       {"persona":"Business Strategist","h1":"Strategic Concept","h2":"Weaknesses","artifact":"Strategy Matrix","type":"Markdown Table (SWOT)","question_modes":["mcq", "scenario", "writing", "synthesis"]},
     "BIZ-MARKETING":      {"persona":"Marketing Executive","h1":"Market Principle","h2":"Consumer Churn","artifact":"Campaign Funnel","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "writing", "order"]},
     "BIZ-OPERATIONS":     {"persona":"Operations Manager","h1":"Process Optimization","h2":"Supply Chain Bottlenecks","artifact":"Process Map","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "debug", "trace"]},
-    "LAW-CASE":           {"persona":"Lawyer","h1":"Legal Principle","h2":"Exceptions & Limits","artifact":"Case Application","type":"IRAC Framework Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
+    "LAW-CASE":           {"persona":"Lawyer","h1":"Legal Principle","h2":"Exceptions & Limits","artifact":"Case Application","type":"IRAC Framework Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"], "sanity_check": "Do not conflate holding with dicta. Do not apply federal precedents to state-specific common law unless explicitly stated.", "l3_law": "L3 MUST be a 'Novel Fact Pattern Application'. Provide a highly complex, edge-case scenario and force the user to determine the exact outcome based strictly on the note's theory."},
     "LAW-CONTRACT":       {"persona":"Corporate Lawyer","h1":"Contract Rule","h2":"Breach Conditions","artifact":"Liability Map","type":"Markdown Dependency Table","question_modes":["fill_in", "scenario", "writing", "matching"]},
     "LAW-CRIMINAL":       {"persona":"Criminal Defense Attorney","h1":"Criminal Statute","h2":"Defenses & Exceptions","artifact":"Burden of Proof","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
     "LAW-CONSTITUTIONAL": {"persona":"Constitutional Scholar","h1":"Constitutional Principle","h2":"Rights Limitations","artifact":"Precedent Map","type":"Basic Mermaid flowchart","question_modes":["mcq", "scenario", "writing", "matching"]},
@@ -79,6 +80,471 @@ DOMAIN_MATRIX = {
     "ARTS-FILM":          {"persona":"Film Theorist","h1":"Cinematic Technique","h2":"Narrative Impact","artifact":"Scene Breakdown","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "synthesis"]},
     "BIZ-ENTREPRENEURSHIP":{"persona":"Startup Founder","h1":"Value Proposition","h2":"Market Risks","artifact":"Business Canvas","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "synthesis"]},
     "SOC-CRIMINOLOGY":    {"persona":"Criminologist","h1":"Criminological Theory","h2":"Systemic Bias","artifact":"Behavioral Matrix","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
+    "CS-WEB-DEV":         {"persona":"Web Developer","h1":"Frontend/Backend Architecture","h2":"Web Standards & Optimization","artifact":"UI Component or API Spec","type":"HTML/JS code block or Markdown Table","question_modes":["mcq", "fill_in", "debug", "trace"]},
+}
+
+# ── DYNAMIC DOMAIN MATRIX v29.0 (HYDRA) ───────────────────────────────────────
+# This matrix allows for modality-specific personas within a domain.
+DYNAMIC_DOMAIN_MATRIX = {
+    "ECON-MICRO": {
+        "Quantitative": {
+            "persona": "Microeconomist",
+            "h1": "Quantitative Model",
+            "h2": "Numerical Sensitivity",
+            "artifact": "Demand/Supply Data Schedule",
+            "walkthrough": "5-Step Calculation Trace",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on horizontal summation, elasticity coefficients, and equilibrium shifts.",
+            "l3_law": "L3 MUST be a multi-step mathematical calculation (e.g. solving for P* and Q*).",
+            "prohibited_anti_patterns": "Avoid vague philosophical broadness. Do not skip calculations."
+        },
+        "Qualitative/Definitional": {
+            "persona": "Economic Historian",
+            "h1": "Foundational Concept",
+            "h2": "Historical & Social Context",
+            "artifact": "Case Study Analysis Table",
+            "walkthrough": "Application to Scenario",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on the 'Why' and the social/philosophical foundations. Do not use math.",
+            "l3_law": "L3 MUST be a 'System Perturbation Trace' - qualitative outcome based on changing factors.",
+            "prohibited_anti_patterns": "You are FORBIDDEN from generating numerical demand/supply schedules or mathematical equations."
+        },
+        "Procedural": {
+            "persona": "Market Analyst",
+            "h1": "Process Architecture",
+            "h2": "Execution Risks",
+            "artifact": "Market Process Flow",
+            "walkthrough": "Step-by-Step Execution",
+            "type": "Basic Mermaid flowchart (graph TD)",
+            "sanity_check": "Focus on the logical sequence of actions in a market or firm.",
+            "l3_law": "L3 MUST be a 'Process Failure Audit'.",
+            "prohibited_anti_patterns": "Do not treat this as a static definition. Focus on the 'How'."
+        },
+        "Comparative": {
+            "persona": "Policy Advisor",
+            "h1": "Comparative Framework",
+            "h2": "Trade-offs & Efficiency",
+            "artifact": "Pros/Cons Matrix Table",
+            "walkthrough": "Point-by-Point Contrast",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on efficiency losses, welfare trade-offs, and structural differences.",
+            "l3_law": "L3 MUST be a 'Comparative Evaluation'.",
+            "prohibited_anti_patterns": "Do not describe concepts in isolation. Maintain contrast."
+        },
+        "Causal/Historical": {
+            "persona": "Research Economist",
+            "h1": "Causal Mechanism",
+            "h2": "Long-term Equilibrium",
+            "artifact": "Causal Chain Timeline",
+            "walkthrough": "Causal Chain Analysis",
+            "type": "Basic Mermaid flowchart (graph LR)",
+            "sanity_check": "Focus on cascading effects over time.",
+            "l3_law": "L3 MUST be a 'Cascading Logic Trace'.",
+            "prohibited_anti_patterns": "Do not ignore the timeline of events. Effect follows cause."
+        }
+    },
+    "CS-SOFTWARE": {
+        "Quantitative": {
+            "persona": "Algorithm Engineer",
+            "h1": "Big-O Analysis",
+            "h2": "Complexity Bounds",
+            "artifact": "Time/Space Complexity Table",
+            "walkthrough": "Complexity Derivation Trace",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on worst-case and average-case analysis using LaTeX.",
+            "l3_law": "L3 MUST be a Big-O derivation.",
+            "prohibited_anti_patterns": "Vague 'it is fast' statements. Use formal bounds."
+        },
+        "Qualitative/Definitional": {
+            "persona": "Software Architect",
+            "h1": "Architectural Design",
+            "h2": "Design Trade-offs",
+            "artifact": "Component Relationship Table",
+            "walkthrough": "System Design Rationale",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on SOLID principles and design patterns.",
+            "l3_law": "L3 MUST be a design pattern selection task.",
+            "prohibited_anti_patterns": "STRICTLY FORBIDDEN from using code or math. Focus on high-level architecture."
+        },
+        "Procedural": {
+            "persona": "DevOps / SRE",
+            "h1": "Execution Pipeline",
+            "h2": "Operational Logic",
+            "artifact": "Deployment/CI Flow",
+            "walkthrough": "Operational Step Trace",
+            "type": "Basic Mermaid flowchart (graph TD)",
+            "sanity_check": "Focus on failure modes and recovery steps.",
+            "l3_law": "L3 MUST be a failure-mode analysis of the process.",
+            "prohibited_anti_patterns": "Focus on the 'how' of execution, not the 'why' of the theory."
+        },
+        "Comparative": {
+            "persona": "Systems Analyst",
+            "h1": "Framework Comparison",
+            "h2": "Benchmark Contrasts",
+            "artifact": "Feature Parity Matrix",
+            "walkthrough": "Benchmarking Analysis",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on latency, throughput, and developer experience trade-offs.",
+            "l3_law": "L3 MUST be a framework selection given constraints.",
+            "prohibited_anti_patterns": "Describing one framework without direct contrast."
+        },
+        "Causal/Historical": {
+            "persona": "CS Historian",
+            "h1": "Technological Evolution",
+            "h2": "Legacy Dependencies",
+            "artifact": "Stack Evolution Timeline",
+            "walkthrough": "Evolutionary Logic Trace",
+            "type": "Basic Mermaid flowchart (graph LR)",
+            "sanity_check": "Focus on why a specific technology was superseded.",
+            "l3_law": "L3 MUST predict the next evolutionary step.",
+            "prohibited_anti_patterns": "Non-chronological history."
+        }
+    },
+    "CHEM-ORGANIC": {
+        "Quantitative": {
+            "persona": "Computational Chemist",
+            "h1": "Reaction Kinetics",
+            "h2": "Thermodynamic Yield",
+            "artifact": "Arrhenius/Yield Data Table",
+            "walkthrough": "Yield Calculation Trace",
+            "type": "LaTeX Equation",
+            "sanity_check": "Focus on reaction orders and activation energies.",
+            "l3_law": "L3 MUST be a multi-step yield calculation.",
+            "prohibited_anti_patterns": "Vague, non-mathematical descriptions."
+        },
+        "Qualitative/Definitional": {
+            "persona": "Nomenclature Specialist",
+            "h1": "Foundational Structure",
+            "h2": "Functional Group Context",
+            "artifact": "IUPAC Naming Convention Table",
+            "walkthrough": "Nomenclature Application",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on naming rules and structural definitions. No math.",
+            "l3_law": "L3 MUST be a naming logic task.",
+            "prohibited_anti_patterns": "STRICTLY FORBIDDEN from using reaction yields or formulas."
+        },
+        "Procedural": {
+            "persona": "Synthetic Chemist",
+            "h1": "Synthesis Pathway",
+            "h2": "Reagent Logic",
+            "artifact": "Synthesis Flowchart",
+            "walkthrough": "Laboratory Procedure Trace",
+            "type": "Basic Mermaid flowchart (graph TD)",
+            "sanity_check": "Focus on the sequence of reagents and catalysts.",
+            "l3_law": "L3 MUST identify a critical reagent failure.",
+            "prohibited_anti_patterns": "Abstract theory. Focus on the 'how'."
+        },
+        "Comparative": {
+            "persona": "Reaction Analyst",
+            "h1": "Mechanism Comparison",
+            "h2": "Stereochemical Contrasts",
+            "artifact": "SN1 vs SN2 Matrix",
+            "walkthrough": "Point-by-Point Mechanism Contrast",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on substrate requirements and inversion vs racemization.",
+            "l3_law": "L3 MUST select the optimal mechanism for a substrate.",
+            "prohibited_anti_patterns": "Describing one mechanism in isolation."
+        },
+        "Causal/Historical": {
+            "persona": "Chemical Historian",
+            "h1": "Breakthrough Lineage",
+            "h2": "Discovery Sequence",
+            "artifact": "Discovery Timeline",
+            "walkthrough": "Experimental Logic Narrative",
+            "type": "Basic Mermaid flowchart (graph LR)",
+            "sanity_check": "Focus on the sequence of experiments (e.g. Kekule's benzene dream).",
+            "l3_law": "L3 MUST predict a structural outcome based on early evidence.",
+            "prohibited_anti_patterns": "Presenting final results without chronological context."
+        }
+    },
+    "CS-WEB-DEV": {
+        "Quantitative": {
+            "persona": "Performance Engineer",
+            "h1": "Performance Benchmarks",
+            "h2": "Resource Consumption",
+            "artifact": "Lighthouse/Core Web Vitals Data",
+            "walkthrough": "Optimization Calculation",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on LCP, FID, CLS, and bundle size.",
+            "l3_law": "L3 MUST be a bundle size or latency optimization calculation.",
+            "prohibited_anti_patterns": "Vague 'make it faster' statements."
+        },
+        "Qualitative/Definitional": {
+            "persona": "UI/UX Architect",
+            "h1": "Semantic Structure",
+            "h2": "Accessibility & SEO",
+            "artifact": "DOM Structure Table",
+            "walkthrough": "Semantic Mapping",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on semantic HTML5 tags and ARIA labels.",
+            "l3_law": "L3 MUST be a semantic mapping or accessibility audit.",
+            "prohibited_anti_patterns": "STRICTLY FORBIDDEN from using CSS or JS logic. Focus on HTML semantics."
+        },
+        "Procedural": {
+            "persona": "Fullstack Engineer",
+            "h1": "Execution Lifecycle",
+            "h2": "Asynchronous Flow",
+            "artifact": "Event Loop / Fetch Flow",
+            "walkthrough": "Request/Response Trace",
+            "type": "Basic Mermaid flowchart (graph TD)",
+            "sanity_check": "Focus on the sequence of browser events or API calls.",
+            "l3_law": "L3 MUST identify a race condition or async failure.",
+            "prohibited_anti_patterns": "Static code snippets without flow logic."
+        },
+        "Comparative": {
+            "persona": "Solution Architect",
+            "h1": "Technology Comparison",
+            "h2": "Stack Trade-offs",
+            "artifact": "Framework Comparison Matrix",
+            "walkthrough": "Selection Rationale",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on SSR vs CSR vs SSG trade-offs.",
+            "l3_law": "L3 MUST choose the optimal stack given project constraints.",
+            "prohibited_anti_patterns": "Describing one tool in isolation."
+        },
+        "Causal/Historical": {
+            "persona": "Web Historian",
+            "h1": "Web Evolution",
+            "h2": "Standardization History",
+            "artifact": "Browser War Timeline",
+            "walkthrough": "Evolutionary Logic Trace",
+            "type": "Basic Mermaid flowchart (graph LR)",
+            "sanity_check": "Focus on why certain standards (like Flexbox or Grid) emerged.",
+            "l3_law": "L3 MUST predict the obsolescence of a current standard.",
+            "prohibited_anti_patterns": "Non-chronological history."
+        }
+    },
+    "LAW-CASE": {
+        "Quantitative": {
+            "persona": "Statutory Auditor",
+            "h1": "Damages Assessment",
+            "h2": "Numerical Penalties",
+            "artifact": "Liability Calculation Table",
+            "walkthrough": "Penalty Computation Trace",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on statutory maximums and compensatory damages.",
+            "l3_law": "L3 MUST be a complex damage calculation.",
+            "prohibited_anti_patterns": "Vague legal moralizing. Focus on the numbers."
+        },
+        "Qualitative/Definitional": {
+            "persona": "Constitutional Scholar",
+            "h1": "Legal Principle",
+            "h2": "Jurisprudential Context",
+            "artifact": "Principle Application Table",
+            "walkthrough": "Socratic Application",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on the 'Ratio Decidendi'. No math.",
+            "l3_law": "L3 MUST be a Socratic logic puzzle.",
+            "prohibited_anti_patterns": "STRICTLY FORBIDDEN from using penalty numbers or math."
+        },
+        "Procedural": {
+            "persona": "Litigation Manager",
+            "h1": "Procedural Pathway",
+            "h2": "Filing Constraints",
+            "artifact": "Trial Procedure Flow",
+            "walkthrough": "Step-by-Step Filing Trace",
+            "type": "Basic Mermaid flowchart (graph TD)",
+            "sanity_check": "Focus on statutes of limitations and filing order.",
+            "l3_law": "L3 MUST identify a procedural default.",
+            "prohibited_anti_patterns": "Focus on the 'how' of the case filing, not the 'why' of the law."
+        },
+        "Comparative": {
+            "persona": "Comparative Jurist",
+            "h1": "Jurisdictional Contrast",
+            "h2": "Structural Divergence",
+            "artifact": "Common Law vs Civil Law Matrix",
+            "walkthrough": "Point-by-Point Legal Contrast",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on the difference in precedent application.",
+            "l3_law": "L3 MUST choose the optimal jurisdiction for a case.",
+            "prohibited_anti_patterns": "Describing one jurisdiction in isolation."
+        },
+        "Causal/Historical": {
+            "persona": "Legal Historian",
+            "h1": "Precedent Evolution",
+            "h2": "Judicial Lineage",
+            "artifact": "Case Law Evolution Timeline",
+            "walkthrough": "Precedent Logic Narrative",
+            "type": "Basic Mermaid flowchart (graph LR)",
+            "sanity_check": "Focus on how one case overturned or expanded another.",
+            "l3_law": "L3 MUST predict a judicial outcome based on current trends.",
+            "prohibited_anti_patterns": "Ignoring the chronological evolution of law."
+        }
+    },
+    "BIOLOGY": {
+        "Quantitative": {
+            "persona": "Biostatistician",
+            "h1": "Population Dynamics",
+            "h2": "Statistical Significance",
+            "artifact": "Growth Curve Data Table",
+            "walkthrough": "Population Growth Calculation",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on carrying capacity and growth rates.",
+            "l3_law": "L3 MUST be a population projection calculation.",
+            "prohibited_anti_patterns": "Vague descriptions of 'nature'."
+        },
+        "Qualitative/Definitional": {
+            "persona": "Cell Biologist",
+            "h1": "Biological Mechanism",
+            "h2": "Structural Components",
+            "artifact": "Organelle Function Table",
+            "walkthrough": "Pathway Narrative",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on cellular structure and function. No math.",
+            "l3_law": "L3 MUST be a pathway logic task.",
+            "prohibited_anti_patterns": "Using numbers or statistical data."
+        },
+        "Procedural": {
+            "persona": "Lab Technician",
+            "h1": "Experimental Protocol",
+            "h2": "Contamination Risks",
+            "artifact": "Lab Procedure Flowchart",
+            "walkthrough": "Step-by-Step Bench Trace",
+            "type": "Basic Mermaid flowchart (graph TD)",
+            "sanity_check": "Focus on the sequence of lab steps.",
+            "l3_law": "L3 MUST identify a procedural error in the lab.",
+            "prohibited_anti_patterns": "Abstract biological theory."
+        },
+        "Comparative": {
+            "persona": "Evolutionary Biologist",
+            "h1": "Phylogenetic Comparison",
+            "h2": "Homologous Traits",
+            "artifact": "Species Contrast Matrix",
+            "walkthrough": "Evolutionary Trade-off Analysis",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on selective pressures and adaptive differences.",
+            "l3_law": "L3 MUST predict an evolutionary outcome.",
+            "prohibited_anti_patterns": "Describing one species in isolation."
+        },
+        "Causal/Historical": {
+            "persona": "Paleobiologist",
+            "h1": "Evolutionary Lineage",
+            "h2": "Extinction Events",
+            "artifact": "Lineage Timeline",
+            "walkthrough": "Evolutionary Transition Narrative",
+            "type": "Basic Mermaid flowchart (graph LR)",
+            "sanity_check": "Focus on the causal chain of environmental change and adaptation.",
+            "l3_law": "L3 MUST predict a survival outcome based on fossil evidence.",
+            "prohibited_anti_patterns": "Non-chronological history."
+        }
+    },
+    "PHILOSOPHY": {
+        "Quantitative": {
+            "persona": "Formal Logician",
+            "h1": "Logical Proof",
+            "h2": "Truth Functional Calculus",
+            "artifact": "Truth Table / Deduction",
+            "walkthrough": "Step-by-Step Proof Trace",
+            "type": "Block LaTeX ($$)",
+            "sanity_check": "Focus on validity and soundness using symbolic logic.",
+            "l3_law": "L3 MUST be a symbolic logic proof.",
+            "prohibited_anti_patterns": "Vague ethical debates. Focus on the symbols."
+        },
+        "Qualitative/Definitional": {
+            "persona": "Ethicist",
+            "h1": "Normative Principle",
+            "h2": "Deontological Context",
+            "artifact": "Moral Framework Table",
+            "walkthrough": "Socratic Analysis",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on the core definitions and ethical axioms. No symbols.",
+            "l3_law": "L3 MUST be a Socratic moral dilemma.",
+            "prohibited_anti_patterns": "Using formal logic symbols or math."
+        },
+        "Procedural": {
+            "persona": "Argumentation Coach",
+            "h1": "Dialectical Process",
+            "h2": "Fallacy Detection",
+            "artifact": "Argument Flow Diagram",
+            "walkthrough": "Step-by-Step Critique",
+            "type": "Basic Mermaid flowchart (graph TD)",
+            "sanity_check": "Focus on the flow of an argument from premise to conclusion.",
+            "l3_law": "L3 MUST identify a logical fallacy in a sequence.",
+            "prohibited_anti_patterns": "Abstract metaphysical theory."
+        },
+        "Comparative": {
+            "persona": "Comparative Philosopher",
+            "h1": "Tradition Contrast",
+            "h2": "Axiomatic Divergence",
+            "artifact": "East vs West Matrix",
+            "walkthrough": "Cross-Cultural Critique",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on the difference in underlying metaphysical assumptions.",
+            "l3_law": "L3 MUST resolve a conflict between two schools of thought.",
+            "prohibited_anti_patterns": "Describing one tradition in isolation."
+        },
+        "Causal/Historical": {
+            "persona": "Historian of Ideas",
+            "h1": "Ideological Evolution",
+            "h2": "Intellectual Lineage",
+            "artifact": "Evolution of Thought Timeline",
+            "walkthrough": "Conceptual Shift Narrative",
+            "type": "Basic Mermaid flowchart (graph LR)",
+            "sanity_check": "Focus on how one philosopher influenced or reacted to another.",
+            "l3_law": "L3 MUST predict a philosophical shift based on societal changes.",
+            "prohibited_anti_patterns": "Ignoring the chronological evolution of ideas."
+        }
+    }
+}
+
+# ── UNIVERSAL MODALITY PERSONAS (v30.0 PANTHEON) ──────────────────────────────
+# These are used when a concept falls outside the defined canonical taxonomy.
+UNIVERSAL_MODALITY_PERSONAS = {
+    "Quantitative": {
+        "persona": "Master Mathematician",
+        "h1": "Quantitative Architecture",
+        "h2": "Numerical Logic",
+        "artifact": "Formal Mathematical Model",
+        "walkthrough": "Axiomatic Calculation Trace",
+        "type": "Markdown Table",
+        "sanity_check": "Focus on numerical proofs and formula integrity.",
+        "l3_law": "L3 must be a rigorous calculation.",
+        "prohibited_anti_patterns": "Vague descriptions. No missing variables."
+    },
+    "Qualitative/Definitional": {
+        "persona": "Logic Professor",
+        "h1": "Foundational Logic",
+        "h2": "Conceptual Framework",
+        "artifact": "Ontological Relationship Table",
+        "walkthrough": "Conceptual Breakdown",
+        "type": "Markdown Table",
+        "sanity_check": "Focus on the logical definition and first principles.",
+        "l3_law": "L3 must be a logic puzzle.",
+        "prohibited_anti_patterns": "No math. No formulas."
+    },
+    "Procedural": {
+        "persona": "Master Craftsman",
+        "h1": "Procedural Execution",
+        "h2": "Implementation Protocol",
+        "artifact": "Optimal Execution Flow",
+        "walkthrough": "Step-by-Step Implementation",
+        "type": "Basic Mermaid flowchart (graph TD)",
+        "sanity_check": "Focus on the sequence of operations.",
+        "l3_law": "L3 must identify a bottleneck in the process.",
+        "prohibited_anti_patterns": "Abstract theory. Focus on the 'how'."
+    },
+    "Comparative": {
+        "persona": "Litigation Attorney",
+        "h1": "Comparative Analysis",
+        "h2": "Structural Contrasts",
+        "artifact": "Adversarial Comparison Matrix",
+        "walkthrough": "Point-by-Point Evaluation",
+        "type": "Markdown Table",
+        "sanity_check": "Focus on the trade-offs and direct contrasts.",
+        "l3_law": "L3 must be a decision analysis between two options.",
+        "prohibited_anti_patterns": "Describing one item in isolation."
+    },
+    "Causal/Historical": {
+        "persona": "Universal Historian",
+        "h1": "Causal Ancestry",
+        "h2": "Long-term Consequences",
+        "artifact": "Causal Continuity Timeline",
+        "walkthrough": "Causal Chain Narrative",
+        "type": "Basic Mermaid flowchart (graph LR)",
+        "sanity_check": "Focus on the lineage of events.",
+        "l3_law": "L3 must predict an outcome based on historical patterns.",
+        "prohibited_anti_patterns": "Non-chronological logic. Effects before causes."
+    }
 }
 
 # ── GOLD STANDARD DOMAIN INSTRUCTIONS (v26.5) ───────────────────────────────────
@@ -169,7 +635,7 @@ EXAMPLE OF MASTER-LEVEL LOGIC (#2):
 }
 
 DOMAIN_PROHIBITIONS = {
-    "ECON-MICRO": "NEVER use 'Central Banking', 'Exchange Rates', or 'Currency Devaluation'. Focus on individual markets, consumers, and firms. The Demand Curve for a normal good is ALWAYS downward-sloping. ANALOGY PROHIBITION: NEVER use lemonade stands, bake sales, ice cream shops, or toy stores. Use real-world scenarios: housing markets, smartphone pricing, gasoline demand, coffee shop competition.",
+    "ECON-MICRO": "NEVER use 'Central Banking', 'Exchange Rates', or 'Currency Devaluation'. Focus on individual markets, consumers, and firms. The Demand Curve for a normal good is ALWAYS downward-sloping. ANALOGY PROHIBITION: NEVER use lemonade stands, bake sales, ice cream shops, or toy stores. Use real-world scenarios: housing markets, smartphone pricing, gasoline demand, coffee shop competition. AXIOM 5: NEVER confuse consumers with producers. A new store opening increases SUPPLY (more sellers). A population increase or new demographic increases DEMAND (more buyers).",
     "ECON-MACRO": "NEVER use 'Lemonade Stands' or child-centric analogies. Focus on national aggregates. Use real-world scenarios: National budgets, unemployment cycles, international trade agreements, central bank interest rate decisions.",
 }
 
@@ -180,7 +646,7 @@ def get_domain_instruction(mode: str) -> str:
         instr = f"{instr}\n\nSTRICT PROHIBITION: {prohibition}"
     return instr
 
-VALID_MODES = set(DOMAIN_MATRIX.keys())
+VALID_MODES = set(DOMAIN_MATRIX.keys()) | set(DYNAMIC_DOMAIN_MATRIX.keys())
 
 # ── MODE-AWARE PROFESSIONAL DOMAINS (v26.6) ───────────────────────────────────
 MODE_SPECIALITIES = {
@@ -308,52 +774,83 @@ DOMAIN_QUESTION_PROTOCOLS = {
 }
 
 
-# ── DOMAIN PROHIBITIONS & WALKTHROUGH STYLE ───────────────────────────────────
-# NOTE: The primary DOMAIN_PROHIBITIONS dict is defined above at line ~171 and
-# merged into DOMAIN_SPECIFIC_INSTRUCTIONS by get_domain_instruction().
-# Additional mode-level prohibitions injected into ALL agent prompts:
-DOMAIN_EXTRA_PROHIBITIONS: Dict[str, str] = {
-    "MATH-PURE":          "NEVER use ODEs, dy/dx, d²y, integrals (∫), ẋ(t), or any continuous calculus. ALL worked examples MUST use integer-indexed sequences (aₙ, f(n)). Verify every arithmetic step before writing it.",
-    "MATH-DISCRETE":      "NEVER use differential equations, integrals, or continuous functions. Use ONLY discrete structures: integer sequences, recurrences, combinatorics, graphs, propositional logic. Verify every arithmetic step.",
-    "MATH-STAT":          "NEVER drift into ODEs or deterministic mechanics. Keep all examples probabilistic with proper random variable notation.",
-    "MATH-CRYPTO":        "Focus exclusively on discrete cryptographic operations. NEVER drift into continuous probability or calculus.",
-    "CS-SOFTWARE":        "NEVER generate OAuth/JWT/UUID/distributed-system content unless the note title explicitly names those topics. Code MUST use the primary_language. Every code block must be syntactically correct and runnable.",
-    "CS-DB":              "NEVER confuse relational schema with NoSQL document structure unless both are the note's topic. Avoid application-layer auth topics.",
-    "CS-AI":              "NEVER confuse model training with inference, or supervised with unsupervised, unless that distinction IS the concept.",
-    "MED-PHYSIO":         "NEVER confuse physiology with pharmacology. Stay in the specific organ system or physiological mechanism relevant to the concept title.",
-    "MED-PHARMA":         "NEVER confuse pharmacokinetics (what the body does to the drug) with pharmacodynamics (what the drug does to the body) unless the concept explicitly covers both.",
-    "PHYSICS-KINEMATICS": "Use SI units throughout. NEVER confuse kinematics (motion) with dynamics (forces) unless the concept explicitly covers both.",
-    "ENG-ELEC":           "NEVER confuse AC and DC analysis unless the concept explicitly covers both. All circuit values must be physically plausible.",
-    "PHILOSOPHY":         "Ground every claim in a named philosophical tradition or argument. NEVER use vague 'some philosophers say' attributions.",
-    "LAW-CASE":           "NEVER generalize across jurisdictions. Specify the jurisdiction (common law / civil law / specific country) for every legal claim.",
-}
 
-# General Formatting Constraints injected into ALL modes
-GLOBAL_FORMATTING_RULES = (
-    "MARKDOWN TABLES: NEVER insert blank lines between table rows. A table must be a single contiguous block of text. "
-    "Correct: \n| A | B |\n|---|---|\n| 1 | 2 |\n"
-    "Incorrect: \n| A | B |\n\n|---|---|\n\n| 1 | 2 |\n"
-)
+def get_persona(mode: str, modality: str = "Qualitative/Definitional") -> dict:
+    """Helper to fetch the congruent persona based on domain and epistemic nature."""
+    
+    # 1. Unknown Domain Fallback (v30.0 Pantheon Protocol)
+    if mode == "DOMAIN-UNKNOWN":
+        return UNIVERSAL_MODALITY_PERSONAS.get(modality, UNIVERSAL_MODALITY_PERSONAS["Qualitative/Definitional"])
 
-# Modes where the walkthrough must be a clean technical derivation — NO logistics/business scenario wrapping.
-WALKTHROUGH_PURE: set = {"MATH-PURE", "MATH-DISCRETE", "MATH-STAT", "MATH-CRYPTO", "PHILOSOPHY"}
+    # 2. Check Dynamic Matrix
+    if mode in DYNAMIC_DOMAIN_MATRIX:
+        if modality in DYNAMIC_DOMAIN_MATRIX[mode]:
+            return DYNAMIC_DOMAIN_MATRIX[mode][modality]
+        # Option A: Stay within domain, fall back to Qualitative default
+        if "Qualitative/Definitional" in DYNAMIC_DOMAIN_MATRIX[mode]:
+            return DYNAMIC_DOMAIN_MATRIX[mode]["Qualitative/Definitional"]
+    
+    # 3. Domain Matrix Fallback (Preserve technical context over modality flavor)
+    return DOMAIN_MATRIX.get(mode, DOMAIN_MATRIX["ACADEMIC-GENERAL"])
 
 
-# Concept drift guard
-_DRIFT_SIGNALS = {
-    "access_token", "refresh_token", "oauth", "jwt", "authorization_code",
-    "token_blacklist", "uuid", "guid", "distributed system",
-}
+# ── EPISTEMIC CLASSIFIER AGENT ────────────────────────────────────────────────
 
-def _has_domain_drift(title: str, body: str) -> bool:
-    title_words = set(re.sub(r"[_\-]", " ", title.lower()).split())
-    body_lower = body.lower()
-    drift_hits = sum(1 for s in _DRIFT_SIGNALS if s in body_lower)
-    title_hits = sum(1 for w in title_words if len(w) > 3 and w in body_lower)
-    return drift_hits >= 2 and title_hits == 0
+class EpistemicClassifierAgent:
+    """The 'Epistemologist'. Tags each concept with a modality to ensure structural congruence."""
+    def __init__(self, llm: BaseChatModel):
+        self.llm = llm
 
-def _count_wikilinks(text: str) -> int:
-    return len(re.findall(r"\[\[[^\]]+\]\]", text))
+    async def classify_batch(self, notes: list) -> dict:
+        """Categorizes a batch of concepts in a single API pass to avoid rate-limit death."""
+        system = """You are an Epistemologist. Categorize the nature of the following technical concepts.
+Choose EXACTLY one tag from this taxonomy for EACH concept.
+
+AMBIGUITY PROTOCOL (PRIORITY HIERARCHY):
+1. Quantitative: Centered around a mathematical formula, equation, or numerical data. (e.g., Elasticity, GDP calculation).
+2. Procedural: A sequence of steps, a process, or a workflow. (e.g., How to calculate equilibrium).
+3. Comparative: Comparing and contrasting two or more concepts. (e.g., Capitalism vs Socialism).
+4. Causal/Historical: Explaining a cause-and-effect relationship or history. (e.g., Market Shifts).
+5. Qualitative/Definitional: A definition or non-numerical idea. (e.g., Normative Economics).
+
+OUTPUT: You MUST return a JSON object mapping titles to tags.
+{"Title_1": "Quantitative", "Title_2": "Procedural"}
+Return ONLY pure JSON. No markdown fences, no explanation."""
+
+        results = {}
+        # We batch in groups of 12 to balance token count and context complexity
+        batch_size = 12
+        for i in range(0, len(notes), batch_size):
+            chunk = notes[i : i + batch_size]
+            concepts_data = "\n".join([
+                f"- {n['title']}: {n.get('description', '')}" 
+                for n in chunk
+            ])
+            
+            try:
+                res = await self.llm.ainvoke([("system", system), ("human", f"Classify these concepts:\n{concepts_data}")])
+                content = res.content.strip()
+                
+                # Robust JSON extraction
+                if "{" in content and "}" in content:
+                    json_str = content[content.find("{"):content.rfind("}")+1]
+                    batch_res = json.loads(json_str)
+                    results.update(batch_res)
+                else:
+                    raise ValueError("No JSON found in response")
+                    
+            except Exception as e:
+                print(f"[EpistemicClassifier] Batch classification failed: {e}")
+                # Fallback for failed chunk
+                for n in chunk:
+                    results[n["title"]] = "Qualitative/Definitional"
+        
+        return results
+
+    async def classify(self, note_title: str, description: str, source_context: str) -> str:
+        """Legacy single classification for isolated note updates."""
+        res = await self.classify_batch([{"title": note_title, "description": description}])
+        return res.get(note_title, "Qualitative/Definitional")
 
 
 # ── ARCHITECT AGENT ───────────────────────────────────────────────────────────
@@ -381,7 +878,7 @@ class ArchitectAgent:
             "3. **PREREQUISITE DEPENDENCIES**: If a concept is 'compound' or 'derived' (e.g., 'GDP Deflator' depends on 'Nominal GDP'), you MUST list the prerequisites in the `prerequisites` array. NEVER leave it empty for non-atomic starting concepts.\n"
             "4. source_context: copy 1-2 most relevant sentences.\n"
             "5. source_pages: list page numbers mentioned (integers only).\n"
-            "OUTPUT: pure JSON only — no markdown fences.\n"
+            "OUTPUT: pure JSON only - no markdown fences.\n"
             '{"course_title": "...", "academic_level": "...", "epistemic_stance": "...", '
             '"atomic_notes":[{"title":"...","description":"...","mode":"...","prerequisites":[],'
             '"source_context":"...","source_pages":[]}],"possible_questions":[]}'
@@ -425,18 +922,25 @@ class ArchitectAgent:
         if not content or not content.strip(): 
             raise ValueError("Empty response from LLM")
             
-        # 1. Clean markdown fences
+        # 1. Clean markdown fences aggressively
         clean = content.strip()
+        # Strip code blocks
+        clean = re.sub(r'^```(?:json)?\s*', '', clean)
+        clean = re.sub(r'\s*```$', '', clean)
+        
         blocks = re.findall(r"```(?:json)?\s*([\s\S]*?)```", clean)
         if blocks:
+            # Prefer the block with most JSON-like structure
             json_blocks = [b.strip() for b in blocks if "{" in b and "}" in b]
             if json_blocks:
                 clean = max(json_blocks, key=len)
         
+        # 2. Extract first { to last }
         start = clean.find("{")
         end = clean.rfind("}")
-        if start == -1 or end == -1: 
-            raise ValueError(f"No JSON object found in LLM response. Content: {content[:100]}...")
+        
+        if start == -1 or end == -1:
+            raise ValueError(f"No JSON object found in response: {clean[:100]}...")
 
         json_str = clean[start:end+1]
         
@@ -475,439 +979,199 @@ class ArchitectAgent:
                 if brace_count == 0 and i > 0:
                     try:
                         return json.loads(json_str[:i+1], strict=False)
-                    except json.JSONDecodeError:
-                        break
+                    except Exception:
+                        pass
             
-            raise ValueError(f"Failed to parse JSON: {e}. Snippet: {json_str[:120]}...")
+            raise e
 
-    @staticmethod
-    def _is_rate_limit(e: Exception) -> bool:
-        s = str(e).lower()
-        return "429" in s or "rate_limit" in s or "rate limit" in s
-
-
-# ── SPLIT AGENTS (Theory, Practitioner, Examiner, Critic) ──
+    def _is_rate_limit(self, e: Exception) -> bool:
+        msg = str(e).lower()
+        return "429" in msg or "rate_limit" in msg or "resource_exhausted" in msg
 
 class TheoryAgent:
     def __init__(self, llm: BaseChatModel, domain: dict):
         self.llm = llm
         self.domain = domain
 
-    async def generate_micro(self, note_schema, source_text: str, all_concepts: str, used_scenarios: list = None, academic_level: str = "Unknown", course_title: str = "Unknown") -> Dict[str, str]:
+    async def generate_micro(self, note_schema, source_text: str, all_concepts: str, used_scenarios: list = None, academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 1500) -> Dict[str, str]:
+        persona = self.domain.get("persona", "Subject Matter Expert")
         title_readable = note_schema.title.replace("_", " ")
-        
-        if academic_level in ["High School", "Undergraduate 101"]:
-            scope_constraint = "Match the academic level of the source text. If the text is a 101-level introduction, DO NOT introduce advanced graduate-level concepts, external theories, or outside jargon (like Bounded Rationality or Industrial Organization) to sound smart. Strictly use the boundaries provided by the PDF. Use the exact terminology found in the text for limitations (e.g., use 'monopolies' or 'inefficiency' instead of translating them into advanced terms like 'imperfect competition' or 'information asymmetry')."
-        elif academic_level in ["Undergraduate 300/400", "Master's"]:
-            scope_constraint = "When writing the 'Limitations' section, critically evaluate the model. Introduce real-world friction, exceptions, and bridging concepts to higher-level theories."
-        elif academic_level in ["Doctoral / Post-Doc", "Research Paper"]:
-            scope_constraint = "When writing the 'Limitations' section, focus on epistemological boundaries, current gaps in the academic literature, and theoretical failures at the frontier of research. Assume the reader is a peer."
-        else:
-            scope_constraint = "Match the academic level of the source text. DO NOT introduce advanced graduate-level concepts to sound smart. Strictly use the boundaries provided by the PDF."
 
-        context_wrapper = f"You are generating material for a course titled exactly: **{course_title}**. When framing examples, writing graph captions, or designing quizzes, you MUST use this exact course title as your context. DO NOT hallucinate advanced sub-fields, unrelated academic disciplines, or outside context wrappers."
-        
-        source_examples_instruction = "Whenever the source text provides specific real-world examples (e.g., Japan's aging population, hand looms), you MUST prioritize using those exact examples in your walkthroughs before inventing your own (like Apple or Ford)."
-        
-        scope_constraint = f"{context_wrapper}\n\n{scope_constraint}\n\n{source_examples_instruction}"
-        
-        # Scenario exclusion: prevent the same everyday analogy from being reused
-        scenario_ban = ""
-        if used_scenarios:
-            banned = ", ".join(f"'{s}'" for s in used_scenarios[-8:])
-            scenario_ban = (
-                f"\nANALOGY PROHIBITION: The following everyday scenarios have ALREADY been used in "
-                f"this batch and MUST NOT be reused: {banned}. "
-                f"Pick a completely different, vivid real-world scenario instead."
-            )
+        axioms = self.domain.get("sanity_check", "Ensure logical consistency.")
+        sys_prompt = f"""You are a Hostile Senior Expert in {persona}. Your tone is brutal, authoritative, and technically rigorous. 
 
-        prof_domain = get_professional_domain(note_schema.title, note_schema.mode)
-        # 1. Analogy Call
-        analogy_prompt = f"As a {self.domain['persona']}, explain '{title_readable}' using a professional real-world scenario (NOT a toy store or candy shop). Use a scenario from: {prof_domain}. Map TWO specific components explicitly. When creating the Mental Model, you MUST explicitly integrate the exact subtypes or definitions found in the text. (e.g., If the text defines a concept as A, B, and C, your real-world analogy must feature A, B, and C). ONE paragraph only.{scenario_ban}\n\n{scope_constraint}"
-        analogy_res = await self.llm.ainvoke(
-            [("system", analogy_prompt), ("human", f"Analogy for {title_readable} based on: {source_text[:1000]}")],
-            max_tokens=512
-        )
-        
-        # 2. Technical Call
-        tech_prompt = f"""You are a strict data-extraction parser operating as a {self.domain['persona']}.
-Your task is to provide a technical definition for '{title_readable}'.
+CONCEPT TO TEACH: {title_readable}
+ACADEMIC LEVEL: {academic_level}
+SOURCE CONTEXT: {source_text[:5000]}
 
-{scope_constraint}
+CORE LAWS:
+1. Confidence Law: DO NOT self-correct or apologize. State facts with absolute authority.
+2. Source Anchoring Law: If the SOURCE CONTEXT provides specific data/scenarios, YOU MUST use them.
+3. Jargon Law: Use terminology appropriate for {academic_level}. Keep analogies physically grounded.
+4. Wikilink Law: YOU MUST INCLUDE EXACTLY 3 TO 5 [[Wikilinks]] in your prose. YOU MUST INTEGRATE THESE NATURALLY into your sentences; DO NOT append them at the end of sentences like citations (e.g., 'The law of demand [[Law_Of_Demand]]' is FORBIDDEN; 'Following the [[Law_Of_Demand]], we see...' is CORRECT). Wrap critical domain terms in double brackets.
+5. Closed Knowledge Graph Law: YOU ARE STRICTLY FORBIDDEN from linking to concepts that are not in the provided concept list: {all_concepts}. Hallucinating links to external ideas is a hard failure.
+6. PDF Quarantine Law: You are strictly quarantined to the concepts present in the SOURCE CONTEXT. Teach ONLY what is provided. Furthermore, DO NOT list core determinants or factors mentioned in the text as "limitations" (e.g., if Expectations or Taxes are determinants of supply, they are part of the model, NOT a limitation of it).
+7. Value-Additive Limitations Law: A limitation must be specific and value-additive. Do not just say a model 'might be inaccurate.' Instead, identify the specific underlying assumption (e.g., independence of buyers, perfect information) and explain a real-world edge case (e.g., network effects, bandwagon effects, irrationality) where that assumption fails.
+8. Terminology Fidelity Law: Strictly adhere to the language in the SOURCE CONTEXT. Do not invent or use obscure academic jargon (e.g., 'Aggregation Axiom') if it is not in the text. Use standard introductory terminology.
+9. Anti-Pattern Law: {self.domain.get("prohibited_anti_patterns", "None.")}
+10. Formatting: Return strict JSON matching the schema.
 
-You are FORBIDDEN from outputting conversational text or markdown. You must output EXACTLY and ONLY valid JSON matching this schema:
-```json
-{{
-  "core_paragraph": "Write exactly ONE concise paragraph defining the concept and mechanism. Max 4 sentences. Embed 2-3 wikilinks from this list ONLY: {all_concepts}",
-  "key_takeaways": [
-    "First key takeaway based strictly on the text",
-    "Second key takeaway",
-    "Third key takeaway"
-  ]
-}}
-```
+DOMAIN AXIOMS (CRITICAL):
+{axioms}"""
 
-VERBATIM SOURCE ANCHOR: The following sentences from the textbook MUST be the foundation of your technical definition. Do not contradict them:
-"{source_text[:400]}\""""
-        tech_res = await self.llm.ainvoke([("system", tech_prompt), ("human", f"Technical analysis for {title_readable}")])
+        theory_llm = self.llm.with_structured_output(TheoryResponse)
         
-        # Assemble Markdown from JSON
-        import json
-        raw_tech = tech_res.content.strip()
-        # Fix string stitching typo sometimes generated by local models
-        raw_tech = raw_tech.replace("enFor", "ensure. For")
-        clean_json = raw_tech.replace("```json", "").replace("```", "").strip()
-        try:
-            tech_data = json.loads(clean_json)
-            assembled_tech = f"{tech_data.get('core_paragraph', '')}\n\n### Key Takeaways:\n"
-            for tk in tech_data.get('key_takeaways', []):
-                assembled_tech += f"- {tk}\n"
-        except Exception:
-            assembled_tech = raw_tech # Fallback if model failed JSON formatting
-        
-        # 3. Limitations Call
-        limit_prompt = f"As a {self.domain['persona']}, analyze the specific limitations and edge cases of '{title_readable}'. ONE paragraph only. No bullets.\n\n{scope_constraint}"
-        limit_res = await self.llm.ainvoke([("system", limit_prompt), ("human", f"Limitations of {title_readable} based on: {source_text[:1000]}")])
-        
-        return {
-            "mental_model": analogy_res.content.strip(),
-            "technical_definition": assembled_tech.strip(),
-            "limitations": limit_res.content.strip()
-        }
+        for attempt in range(3):
+            try:
+                res: TheoryResponse = await theory_llm.ainvoke([
+                    ("system", sys_prompt),
+                    ("human", f"Generate the v28.0 theory core for {title_readable} based on the source.")
+                ])
+                
+                assembled_tech = f"{res.theory_prose.strip()}\n\n### Key Takeaways:\n"
+                for tk in res.key_takeaways:
+                    assembled_tech += f"- {tk.strip()}\n"
+
+                return {
+                    "h1_title": self.domain.get("h1", "Technical Architecture"),
+                    "mental_model": res.mental_model.strip().replace('\\\\n', '\\n'),
+                    "technical_definition": assembled_tech.strip().replace('\\\\n', '\\n'),
+                    "limitations": res.limitations.strip().replace('\\\\n', '\\n')
+                }
+            except Exception as e:
+                print(f"[TheoryAgent] Attempt {attempt+1} failed: {e}")
+                if attempt == 2:
+                    raise e
 
     async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str, used_scenarios: list = None) -> str:
         title_readable = note_schema.title.replace("_", " ")
-        prof_domain = get_professional_domain(note_schema.title)
-        domain_fix = get_domain_instruction(note_schema.mode or "ECON-MACRO")
-
-        # Scenario exclusion: prevent the same everyday analogy from being reused
-        # across notes in the same batch (e.g. bake sale appearing 4 times).
-        scenario_ban = ""
-        if used_scenarios:
-            banned = ", ".join(f"'{s}'" for s in used_scenarios[-8:])
-            scenario_ban = (
-                f"\nANALOGY PROHIBITION: The following everyday scenarios have ALREADY been used in "
-                f"this batch and MUST NOT be reused: {banned}. "
-                f"Pick a completely different, vivid real-world scenario instead."
-            )
-
-        sys_prompt = f"""You are a strict data-extraction parser operating as a world-class {self.domain['persona']}.
-Your goal is to extract theoretical knowledge about '{title_readable}' from the source text.
-
-{domain_fix}
-{scenario_ban}
-
-You are FORBIDDEN from outputting conversational text or markdown. You must output EXACTLY and ONLY valid JSON matching this schema:
-
-```json
-{{
-  "mental_model": "Explain the ENTIRE concept using a vivid, professional real-world scenario from: {prof_domain}. Map at least 2 mechanical components of the analogy to the concept. 2-3 sentences. No technical jargon.",
-  "core_paragraph": "Write exactly ONE concise paragraph defining the concept. Max 4 sentences. Embed 3-5 wikilinks from this list ONLY: {all_concepts}",
-  "key_takeaways": [
-    "First key takeaway based strictly on the text",
-    "Second key takeaway",
-    "Third key takeaway"
-  ],
-  "limitations": "Analyze the specific limitations, model assumptions that break down, and known edge cases of '{title_readable}' in 2-3 sentences. Embed 3-5 wikilinks from this list ONLY: {all_concepts}"
-}}
-```
-
-Concept: {title_readable}
-Source context: {source_text[:2000]}"""
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Theoretical Architecture for {title_readable}")])
-        return res.content.strip()
+        res = await self.generate_micro(note_schema, source_text, all_concepts, used_scenarios)
+        return f"## 1. Mental Model\n{res['mental_model']}\n\n## 2. {res['h1_title']}\n{res['technical_definition']}\n\n## 3. Limitations & Future Context\n{res['limitations']}"
 
     async def retry(self, note_schema, source_text: str, primary_language: str, all_concepts: str, diagnosis: str) -> str:
-        title_readable = note_schema.title.replace("_", " ")
-        sys_prompt = f"""You are a helpful {self.domain['persona']} tutor.
-
-PREVIOUS ATTEMPT FAILED. FIX INSTRUCTION: {diagnosis}
-
-Write EXACTLY 3 sections.
-
-## 1. Mental Model
-Explain to a 10-year-old using a vivid everyday analogy.
-
-## 2. {self.domain['h1']}
-Provide the rigorous technical definition and mechanism. 
-MANDATORY: Embed 3-5 wikilinks from this list ONLY: {all_concepts}
-
-## 3. Limitations & Edge Cases
-Analyze the specific limitations and edge cases of '{title_readable}'. Do NOT use the heading 'Market Failures' unless this note is specifically about externalities or market imperfections.
-
-Concept: {title_readable}
-Source context: {source_text[:1500]}"""
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the corrected theory sections.")])
-        return res.content.strip()
+        return await self.generate(note_schema, source_text, primary_language, all_concepts)
 
 class PractitionerAgent:
     def __init__(self, llm: BaseChatModel, domain: dict):
         self.llm = llm
         self.domain = domain
 
-    async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "", source_text: str = "", academic_level: str = "Unknown", course_title: str = "Unknown") -> Dict[str, str]:
+    async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "", source_text: str = "", academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 2500, mental_model: str = "") -> Dict[str, str]:
+        persona = self.domain.get("persona", "Senior Expert")
+        artifact_format = self.domain.get("type", "Markdown Table")
+        sanity_check = self.domain.get("sanity_check", "Ensure logical consistency.")
         title_readable = note_title.replace("_", " ")
-        prof_domain = get_professional_domain(note_title, mode=mode)
-        
-        if academic_level in ["High School", "Undergraduate 101"]:
-            artifact_req = "Generate a 5-step logical walkthrough or simple arithmetic calculation."
-        elif academic_level in ["Doctoral / Post-Doc", "Research Paper"]:
-            artifact_req = "Generate a rigorous LaTeX block ($$) proving the theorem or deriving the equation step-by-step."
-        else:
-            artifact_req = "Generate a Python/C++ code block implementing this concept, or a complex Mermaid architecture diagram."
 
-        context_wrapper = f"You are generating material for a course titled exactly: **{course_title}**. When framing examples, writing graph captions, or designing quizzes, you MUST use this exact course title as your context. DO NOT hallucinate advanced sub-fields, unrelated academic disciplines, or outside context wrappers."
-        
-        source_examples_instruction = "Whenever the source text provides specific real-world examples (e.g., Japan's aging population, hand looms), you MUST prioritize using those exact examples in your walkthroughs before inventing your own (like Apple or Ford)."
+        sys_prompt = f"""You are a Hostile Senior Expert in {persona}. 
 
-        # 1. Artifact Call
-        art_prompt = f"As a {self.domain['persona']}, provide EXACTLY ONE high-fidelity artifact (type: {self.domain['type']}) for '{title_readable}' in {prof_domain}. If code, use {primary_language}. If math, use LaTeX ($$). Follow with 2 sentences of explanation.\n\n{context_wrapper}\n\nARTIFACT REQUIREMENT: {artifact_req}\n\n{source_examples_instruction}"
-        art_res = await self.llm.ainvoke([("system", art_prompt), ("human", f"Artifact for {title_readable} based on: {theory_body[:1000]}\n\nSource constraint: {source_text[:1000]}")])
-        
-        import re
-        has_math = bool(re.search(r'[\d%=$+*/-]', source_text))
-        
-        if has_math:
-            math_instruction = "Extract the exact equation from the text and solve it in 5 steps."
-        else:
-            math_instruction = "The text is purely theoretical. Write a 5-step logical breakdown. YOU ARE STRICTLY FORBIDDEN FROM USING NUMBERS OR INVENTING STATISTICS."
+CONCEPT: {title_readable}
+PREVIOUS CONTEXT (MENTAL MODEL): {mental_model}
 
-        # 2. Walkthrough Call
-        walk_prompt = f"""As a {self.domain['persona']}, provide a strict technical walkthrough of how '{title_readable}' operates.
-GROUNDING RULE: Every scenario MUST come directly from the provided source text.
-{math_instruction}
-- PROHIBITION: NEVER invent names like 'Azura', 'Luminaria', or 'Company X'. Use real companies (e.g., Apple, Ford) or real commodities (e.g., WTI Crude Oil, Wheat).
-{context_wrapper}
-No intro."""
-        walk_res = await self.llm.ainvoke([("system", walk_prompt), ("human", f"Walkthrough for {title_readable} based on: {theory_body[:1000]}\n\nSource text: {source_text[:1000]}")])
-        
-        return {
-            "artifact_content": art_res.content.strip(),
-            "walkthrough": walk_res.content.strip()
-        }
+CORE LAWS:
+1. Narrative Consistency: YOU MUST strictly use the characters, industry, and specific scenario defined in the MENTAL MODEL above (e.g., if the model mentions a coffee shop manager, your artifact and walkthrough MUST involve coffee prices and latte quantities). DO NOT revert to abstract variables (P, Q) or generic scenarios. Anchor the data to the story.
+2. Artifact Format: Your artifact MUST be: {artifact_format}.
+3. K.I.S.S. Math Law: Keep formulas incredibly simple. DO NOT use 3-term equations (like Qd = 100 - 2P - 0.5I). Use 2-term equations (like Qd = 100 - 2P) to prevent arithmetic failure. Keep constants small.
+4. Sub-Operation Math Law: You MUST break arithmetic into strict sub-steps on SEPARATE LINES or explicit sentences. NEVER chain multiple equals signs in a single line (e.g., NEVER write 100 - 2*1 = 98). Instead, write "Step 1: 2 * 1 = 2. Step 2: 100 - 2 = 98." Evaluate only two numbers per line.
+5. Visual Honesty: Do not say "as seen on graph". Use "If plotted, the curve would...".
+6. Table Integrity: Markdown tables MUST have start/end pipes `|`.
+8. Algorithmic Fidelity Law: You MUST explicitly demonstrate the UNIQUE mathematical mechanism of the concept based on the source text. For example, if the concept is "Market Demand," you CANNOT just show a generic demand equation; you MUST demonstrate the horizontal summation of multiple buyers. Do not use generic, default math if the concept requires a specific formula.
+9. Walkthrough Table Ban: DO NOT generate Markdown tables inside the `walkthrough` field. Reference the table from Section 4 using text only.
+11. Epistemic Alignment Law: You MUST match your application to the nature of the concept. If the concept is a "Determinant", "Factor", or "Qualitative Principle", your walkthrough MUST explain the "Why" and the logical cascade of those factors. Rote math calculation is FORBIDDEN for purely conceptual topics.
+12. Anti-Pattern Law: {self.domain.get("prohibited_anti_patterns", "None.")}
+13. Formatting: Return ONLY the structured output. You MUST provide EXACTLY 5 to 7 steps in the walkthrough array. If you provide fewer than 5 steps, the system will CRASH.
+14. String Integrity Law: You MUST return raw strings for the `artifact` and `primary_equation_or_logic` fields. DO NOT wrap them in objects like {{"type": "string", "value": "..."}}. Return only the text.
+
+DOMAIN AXIOMS (CRITICAL):
+{sanity_check}"""
+
+        prac_llm = self.llm.with_structured_output(PractitionerResponse)
+
+        for attempt in range(3):
+            try:
+                res: PractitionerResponse = await prac_llm.ainvoke([
+                    ("system", sys_prompt),
+                    ("human", f"Generate the v28.0 practitioner artifact for {title_readable}.")
+                ])
+                
+                clean_artifact = res.artifact.replace('\\n', '\n')
+                clean_steps = [s.replace('\\n', '\n') for s in res.walkthrough]
+
+                h1_title = self.domain.get("h1", "Technical Architecture")
+                artifact_title = self.domain.get("artifact", "Artifact")
+                return {
+                    "h1_title": h1_title,
+                    "artifact_title": artifact_title,
+                    "artifact_content": f"{res.primary_equation_or_logic}\n\n{clean_artifact}",
+                    "walkthrough": "\n".join([f"{step}" if step.strip()[0].isdigit() else f"{i+1}. {step}" for i, step in enumerate(clean_steps)])
+                }
+            except Exception as e:
+                print(f"[PractitionerAgent] Attempt {attempt+1} failed: {e}")
+                if attempt == 2:
+                    raise e
 
     async def generate(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> str:
         title_readable = note_title.replace("_", " ")
-        prof_domain = get_professional_domain(note_title, mode=mode)
-        domain_fix = get_domain_instruction(mode)
-        
-        import re
-        has_math = bool(re.search(r'[\d%=$+*/-]', theory_body))
-        
-        if has_math:
-            math_instruction = "Extract the exact equation from the text and solve it in 5 steps."
-        else:
-            math_instruction = "The text is purely theoretical. Write a 5-step logical breakdown. YOU ARE STRICTLY FORBIDDEN FROM USING NUMBERS OR INVENTING STATISTICS."
-
-        sys_prompt = f"""You are a helpful {self.domain['persona']} and technical writer.
-Complete the sovereign note for '{title_readable}' by adding the high-fidelity artifact and execution walkthrough.
-
-{domain_fix}
-
-STRICT INSTRUCTION: Output ONLY the requested sections. NO introductory text like "Here's the rest of the note". Start directly with '## 4. {self.domain['artifact']}'.
-
-## 4. {self.domain['artifact']}
-Provide EXACTLY ONE high-fidelity artifact of type: **{self.domain['type']}** for the domain **{prof_domain}**.
-GROUNDING: If the source text contains specific data, equations, or code, you MUST use it. If not, use real-world industry benchmarks (e.g., 'S&P 500 average return of 10%').
-PROHIBITION: No placeholders or generic 'Variable_A'.
-If code, use ```primary_language. If math, use block LaTeX ($$).
-Followed by 2-3 sentences of prose explaining HOW to read this artifact.
-
-## 5. Walkthrough
-Provide a strict, 5-step technical walkthrough of how the concept/artifact operates in **{prof_domain}**.
-Show intermediate state changes or data transformations. 
-You are a Practitioner. You must create a 5-step walkthrough based ONLY on the source text. 
-{math_instruction}
-
-Concept: {title_readable}
-Theory context: {theory_body[:1200]}"""
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Finalize execution for {title_readable}")])
-        return res.content.strip()
+        res = await self.generate_micro(note_title, theory_body, primary_language, mode=mode)
+        return f"## 4. {res['artifact_title']}\n{res['artifact_content']}\n\n## 5. Walkthrough\n{res['walkthrough']}"
 
     async def retry(self, note_title: str, theory_body: str, primary_language: str, diagnosis: str) -> str:
-        title_readable = note_title.replace("_", " ")
-        prof_domain = get_professional_domain(note_title)
-        sys_prompt = f"""You are a helpful {self.domain['persona']} tutor.
-
-PREVIOUS ATTEMPT FAILED. FIX: {diagnosis}
-
-Write EXACTLY 2 sections.
-
-## 4. {self.domain['artifact']}
-Provide the high-fidelity artifact for **{prof_domain}**.
-
-## 5. Walkthrough
-Provide the 5-step technical walkthrough for **{prof_domain}**.
-
-Concept: {title_readable}
-Theory context: {theory_body[:800]}"""
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Write the corrected walkthrough and edge cases.")])
-        return res.content.strip()
+        return await self.generate(note_title, theory_body, primary_language)
 
 class QuestionAgent:
-    def __init__(self, llm, q_type: str):
+    def __init__(self, llm):
         self.llm = llm
-        self.q_type = q_type.lower().replace("_", "")
-        # Normalize types
-        mapping = {
-            "multiplechoice": "mcq", "mcq": "mcq",
-            "truefalse": "true_false", "true_false": "true_false",
-            "fillin": "fill_in", "fill_in": "fill_in",
-            "writing": "writing", "shortanswer": "writing",
-            "matching": "matching",
-            "order": "order", "sequencing": "order",
-            "debug": "debug", "diagnostic": "debug",
-            "synthesis": "synthesis", "scenario": "synthesis",
-            "trace": "trace"
-        }
-        self.canonical_type = mapping.get(self.q_type, "writing")
 
-    async def generate(self, note_title: str, context: str, difficulty: str = "L1", persona: str = "Expert Educator", mode: str = "ECON-MACRO", prof_domain: str = None, index: int = 1, total: int = 1, topic_hint: str = "") -> dict:
+    async def generate(self, note_title: str, context: str, mode: str = "ECON-MACRO", academic_level: str = "Undergraduate", course_title: str = "Unknown", modality: str = "Qualitative/Definitional", max_tokens: int = 2000) -> List[Dict]:
+        domain = get_persona(mode, modality)
+        persona = domain.get("persona", "Senior Assessment Engineer")
+        l3_law = domain.get("l3_law", "L3 must test critical analysis.")
         title_readable = note_title.replace("_", " ")
-        if not prof_domain:
-            prof_domain = get_professional_domain(note_title + str(self.q_type), mode=mode)
+
+        axioms = domain.get("sanity_check", "Ensure logical consistency.")
+        sys_prompt = f"""You are a Hostile Senior Assessment Engineer in {persona}. Create a 3-question quiz for the following note.
+
+NOTE TEXT:
+{context[:6000]}
+
+CORE LAWS:
+1. Scope Constraint: DO NOT test formulas or concepts not in the NOTE TEXT.
+2. Difficulty: Q1=L1 (fill_in), Q2=L2 (mcq), Q3=L3 (trace).
+3. L3 Rule: {l3_law}.
+4. UI Syntax: 'fill_in' uses `[[blank]]`. Answer is 1-2 words.
+5. Answer Formatting: For L3 Trace, the `answer` field MUST contain ONLY the final output (e.g., "80"). Scratchpad math goes ONLY in `explanation`.
+6. Math Sovereignty: Verify every arithmetic step. evaluating `2 * 10` MUST result in `20`. Once you calculate the final mathematical answer using your formula, YOU MUST STOP. DO NOT verify it with alternative methods. DO NOT add adjustments, interpolations, or corrections. The raw mathematical output of your equation is absolute law.
+7. Algorithmic Scope: MATCH the math format of the NOTE TEXT (Table vs. Function).
+8. Trace Diversity Law: The L3 Trace question is a test of logical progression. It is NOT limited to arithmetic. For conceptual notes (Determinants, Factors), present a complex scenario and force the user to 'trace' the outcome through 2-3 logical steps based on the theory. The answer must be a single specific word or scalar value.
+9. Unique Answer Law: For 'fill_in' questions, YOU MUST ensure there is exactly ONE logically correct 1-2 word answer based on the NOTE TEXT. DO NOT create "mind-reading" lists (e.g., 'Determinants include A, B, and [[blank]]') where any synonym would fit. If a unique answer is not possible, YOU MUST use 'mcq' instead.
+10. Formatting: Return strict JSON matching the schema.
+
+DOMAIN AXIOMS (CRITICAL):
+{axioms}"""
+
+        quiz_llm = self.llm.with_structured_output(QuizResponse)
         
-        # --- PHASE 1: Extract Core Fact ---
-        topic_prompt = f"From this note about '{title_readable}', extract ONE specific testable fact or mechanism.\nReturn ONLY a single sentence. Do NOT invent anything. Use ONLY text from the context.\nContext: {context[:1500]}"
-        topic_res = await self.llm.ainvoke([("system", topic_prompt), ("human", "Extract the testable fact.")])
-        core_fact = topic_res.content.strip()
-
-        # Load Specialized Sub-Agent Protocol
-        protocol_map = DOMAIN_QUESTION_PROTOCOLS.get(mode, {})
-        specialized_instruction = protocol_map.get(self.canonical_type, "Focus on high-fidelity technical application and deep causal understanding.")
-
-        prompts = {
-            "mcq": f"Find a technical nuance about '{title_readable}' within {prof_domain}. {specialized_instruction} Generate 1 correct answer and 3 distractors. Distractors must be technically plausible, not 'None of the above' or 'All of the above'.",
-            "true_false": f"Generate a high-stakes T/F statement regarding a critical failure point of '{title_readable}' within {prof_domain}. {specialized_instruction}",
-            "fill_in": f"Extract a VERBATIM or near-verbatim sentence directly from the 'Context' section below that contains the single most important technical term for '{title_readable}'. Replace that term with [[blank]]. The sentence MUST come from the Context, not be invented. REMOVE all other [[wikilinks]] from the sentence.",
-            "writing": f"Challenge the user to analyze '{title_readable}' in a {prof_domain} scenario. {specialized_instruction} Provide a 3-5 sentence 'Perfect Response' demonstrating mastery. NO RUBRICS.",
-            "matching": f"Extract 4 distinct technical components of '{title_readable}' and their specific roles in {prof_domain}. {specialized_instruction} Shuffle them.",
-            "order": f"Identify a 4-5 step technical process or causal chain for '{title_readable}'. {specialized_instruction} Use REAL steps from the text. SHUFFLE the 'steps' array so they are NOT in order. PROHIBITION: Never use 'step1', 'step2', or generic markers. The steps must be logically sequential (A -> B -> C), not just a list of definitions.",
-            "debug": f"Act as a Principal Specialist in {prof_domain}. {specialized_instruction} Provide a code/formula/scenario snippet for '{title_readable}' with ONE subtle, realistic technical error. If mode is ECON-MICRO, use a supply/demand schedule or a utility function error. If mode is LAW, use a misapplied precedent.",
-            "trace": f"Provide a valid, complex technical execution trace for '{title_readable}' in {prof_domain}. {specialized_instruction} Ask for the exact final state/output. If mode is ECON, trace a variable change through the model steps.",
-            "synthesis": f"Create an emergency scenario in {prof_domain} where '{title_readable}' must be applied to prevent system failure. {specialized_instruction} Provide a definitive 'Mastery Solution'."
-        }
-        
-        schemas = {
-            "mcq": '{"type":"mcq","difficulty":"' + difficulty + '","question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"answer":"B","explanation":"..."}',
-            "true_false": '{"type":"true_false","difficulty":"' + difficulty + '","question":"...","answer":false,"explanation":"..."}',
-            "fill_in": '{"type":"fill_in","difficulty":"' + difficulty + '","question":"Fill in the blank.","textWithBlanks":"The [[blank]] is...","answer":["exactword"],"explanation":"..."}',
-            "writing": '{"type":"writing","difficulty":"' + difficulty + '","question":"Explain...","answer":"...","required_keywords":["keyword1", "keyword2"],"explanation":"..."}',
-            "matching": '{"type":"matching","difficulty":"' + difficulty + '","question":"Match terms.","pairs":[{"left":"...","right":"..."}]}',
-            "order": '{"type":"order","difficulty":"' + difficulty + '","question":"Order steps.","steps":["step2","step3","step1"],"answer":["step1","step2","step3"]}',
-            "debug": '{"type":"debug","difficulty":"' + difficulty + '","question":"Find the bug.","content":"...","answer":"...","required_keywords":["fix_this_keyword"],"explanation":"..."}',
-            "trace": '{"type":"trace","difficulty":"' + difficulty + '","question":"What is the exact output?","content":"...","answer":"...","required_keywords":["keyword1"],"explanation":"..."}',
-            "synthesis": '{"type":"synthesis","difficulty":"' + difficulty + '","question":"Complex scenario...","answer":"...","required_keywords":["concept1"],"explanation":"..."}'
-        }
-        
-        prompt_logic = prompts.get(self.canonical_type, prompts["writing"])
-        json_schema = schemas.get(self.canonical_type, schemas["writing"])
-        
-        domain_fix = get_domain_instruction(mode)
-
-        sys_prompt = f"""You are the Dedicated '{self.canonical_type.upper()}' Question Agent, operating as a **{persona}**.
-{prompt_logic}
-
-{domain_fix}
-
-### [STRICT CONCEPT SCOPE LOCK]
-Generate a 3-question quiz based strictly on the text provided. 
-**GOOD EXAMPLE:** If the text is about 'Scarcity', ask 'What happens when resources are limited?'
-**BAD EXAMPLE:** If the text is about 'Scarcity', do not ask about 'Game Theory' or 'Labor Markets' because they were not mentioned.
-Only test facts explicitly written in the text above.
-
-1. **NO EXTERNAL CONCEPTS**: Do NOT use concepts, scenarios, or professional domains outside of the provided context or the intended '{prof_domain}' domain.
-2. **GROUND TRUTH**: The question MUST test this specific fact: "{core_fact}"
-3. **NO ANALOGY DEPENDENCY**: If the theory uses an analogy (e.g., 'A factory is like a cell'), the question must be about the CELL, not the factory.
-4. **MODE ADHERENCE**:
-   - If mode='ECON-MACRO': scenarios MUST involve GDP, inflation, or central banks. No bioinformatics.
-   - If mode='ECON-MICRO': scenarios MUST involve firms, consumers, or price elasticity. No generic software engineering.
-4. **FILL_IN PROTOCOL**:
-   - You MUST replace the target technical term with the exact string `[[blank]]` in the `textWithBlanks` field.
-   - Blanks must be CRITICAL TECHNICAL terms found in the text.
-   - **STRICT PROHIBITION**: You MUST NOT leave any [[wikilinks]] or bracketed terms in the `textWithBlanks` string except for the `[[blank]]` marker.
-
-ENTROPY ENFORCEMENT:
-- You are generating question **{index} of {total}** for this concept.
-- FOCUS HINT: {topic_hint}
-
-MANDATORY SCHEMA:
-{json_schema}
-
-STRICT RULES:
-1. Output ONLY a valid JSON object. No markdown fences.
-2. The 'answer' field MUST be a definitive correct response. 
-3. Professional Context: You are currently operating in the **{prof_domain}** domain.
-4. ANTI-LAZINESS: If the question or answer is generic or uses placeholders, it will be REJECTED.
-5. OPEN-ENDED RUBRICS: For writing, synthesis, debug, and trace questions, you MUST include a 'required_keywords' array containing 2-4 mandatory technical keywords/phrases that MUST be present in a correct answer.
-
-Concept: {title_readable}
-Context: {context[:3000]}
-"""
-        
-        max_retries = 3
-        last_error = None
-        for attempt in range(max_retries):
+        for attempt in range(3):
             try:
-                retry_note = f"\n\nCRITICAL: PREVIOUS ATTEMPT FAILED TO PARSE.\nERROR: {last_error}\nEnsure the JSON is perfectly valid. Escape ALL backslashes in LaTeX as \\\\ (double backslash). NO chitchat.\n" if last_error else ""
-                res = await self.llm.ainvoke([("system", sys_prompt + retry_note), ("human", "Output the JSON object.")])
-                content = res.content.strip()
-                q_data = ArchitectAgent._parse_json(content)
-                q_data["type"] = self.canonical_type
-                q_data["difficulty"] = difficulty
+                res: QuizResponse = await quiz_llm.ainvoke([
+                    ("system", sys_prompt),
+                    ("human", f"Generate the v28.0 mastery quiz for {title_readable}.")
+                ])
                 
-                # PHYSICAL SHUFFLE for 'order' type to guarantee robustness
-                if self.canonical_type == "order" and "steps" in q_data:
-                    import random
-                    original_order = list(q_data["steps"])
-                    shuffled = list(original_order)
-                    # Attempt to shuffle up to 10 times to ensure it's different from original
-                    for _ in range(10):
-                        random.shuffle(shuffled)
-                        if shuffled != original_order:
-                            break
-                    q_data["steps"] = shuffled
-                    q_data["answer"] = original_order
+                # Convert Pydantic models to dicts and sanitize
+                sanitized_qs = []
+                for q in res.questions:
+                    q_dict = q.model_dump()
+                    # Ensure escaped newlines render correctly
+                    for field in ["question", "explanation", "answer", "content"]:
+                        if q_dict.get(field) and isinstance(q_dict[field], str):
+                            q_dict[field] = q_dict[field].replace('\\\\n', '\\n').replace('\\n', '\n')
+                    sanitized_qs.append(q_dict)
+                return sanitized_qs
 
-                return q_data
             except Exception as e:
-                last_error = e
-                err_msg = str(e).lower()
-                if "429" in err_msg or "rate limit" in err_msg:
-                    if attempt == max_retries - 1:
-                        raise e
-                    # Backoff
-                    await asyncio.sleep(2.0 * (2 ** attempt))
-                else:
-                    print(f"[QuestionAgent] Parse failed for {self.canonical_type} (attempt {attempt}): {e}")
-
-        # ── NUCLEAR FALLBACK: Weak LLM couldn't parse the full schema. ─────────
-        # Drop all complexity — ask for the absolute minimum valid MCQ.
-        # A guaranteed L1 MCQ is infinitely better than a dead error stub.
-        print(f"[QuestionAgent] NUCLEAR FALLBACK triggered for {self.canonical_type} on '{title_readable}'")
-        nuclear_prompt = (
-            f"You must output ONLY a raw JSON object. No markdown. No explanation. No extra text.\n"
-            f"Fill in ONLY the 4 fields marked with ??? below for the concept '{title_readable}'.\n\n"
-            f'{{"id":"q1","type":"mcq","difficulty":"L1",'
-            f'"question":"???Write a basic question about {title_readable}???","options":{{"A":"???correct answer???","B":"???wrong option???","C":"???wrong option???","D":"???wrong option???"}},"answer":"A","explanation":"???Why A is correct???"}}'
-        )
-        try:
-            res = await self.llm.ainvoke([("system", nuclear_prompt), ("human", "Output the completed JSON.")])
-            raw = res.content.strip()
-            raw = re.sub(r"^```[a-z]*\n?", "", raw)
-            raw = re.sub(r"\n?```$", "", raw).strip()
-            q_data = ArchitectAgent._parse_json(raw)
-            q_data["type"] = "mcq"
-            q_data["difficulty"] = "L1"
-            print(f"[QuestionAgent] Nuclear fallback succeeded for '{title_readable}'")
-            return q_data
-        except Exception as fallback_err:
-            # All attempts exhausted — raise so the service layer triggers full note regeneration
-            print(f"[QuestionAgent] FATAL: Nuclear fallback also failed for '{title_readable}': {fallback_err}")
-            raise RuntimeError(
-                f"QuestionAgent({self.canonical_type}) failed all attempts for '{title_readable}'. "
-                f"Last error: {last_error}. Fallback error: {fallback_err}"
-            )
+                print(f"[QuestionAgent] Attempt {attempt+1} failed: {e}")
+                if attempt == 2:
+                    raise e
 
 class CriticAgent:
     def __init__(self, llm: BaseChatModel):
@@ -939,6 +1203,9 @@ class HubAgent:
     async def generate_hub(self, unit_title: str, descriptions: List[str], current_hub_text: str) -> str:
         sys_prompt = (
             "You are the OKA Curriculum Architect. Synthesize a unified Hub overview.\n"
+            "SYNTHESIS GAP PROTOCOL: If you detect multiple notes on the same core topic but with different modalities "
+            "(e.g., a 'Quantitative' note and a 'Qualitative' note on the same law), you MUST include a specific "
+            "'Integrated Synthesis' paragraph that bridges the math and the philosophy of that topic.\n\n"
             "Given the descriptions of the atomic notes in this unit, write a 3-paragraph executive summary "
             "of how these concepts interlock to form the larger system. Focus on the core pedagogical narrative.\n\n"
             "Output ONLY the text of the overview. Do not include markdown headers or greetings."
@@ -968,21 +1235,25 @@ class VerifierAgent:
     def __init__(self, llm: BaseChatModel):
         self.llm = llm
 
-    async def verify(self, note_title: str, mode: str, note_content: str, source_context: str) -> dict:
+    async def verify(self, note_title: str, mode: str, note_content: str, source_context: str, modality: str = "Qualitative/Definitional") -> dict:
         sys_prompt = f"""You are a rigorous academic quality auditor. Evaluate this atomic study note.
-Return ONLY a valid JSON object — no markdown fences, no commentary.
+Return ONLY a valid JSON object - no markdown fences, no commentary.
 
-Check ALL criteria and report true/false for each.
+CHECK ALL CRITERIA:
 - `clean_output`: No "Wait", "Let me think", or "As an AI". No all-caps text unless technically necessary.
 - `economic_laws`: STRICT for ECON: Demand curves MUST slope DOWNWARD.
 - `unique_scenario`: Is the scenario/analogy fresh? (FAIL if it uses 'Azura' or currency devaluation for Microeconomics).
+- `epistemic_congruence`: Does the content match the MODALITY "{modality}"? 
+  - FAIL if a 'Qualitative' note contains rote math formulas.
+  - FAIL if a 'Quantitative' note lacks a numerical schedule/table.
+  - FAIL if a 'Procedural' note lacks a step-by-step logic.
 
-Output format — use EXACTLY this structure:
-{{"domain_lock\":true,\"quiz_topicality\":true,\"debug_validity\":true,\"arithmetic_correct\":true,\"mental_model_maps\":true,\"clean_output\":true,\"economic_laws\":true,\"unique_scenario\":true,\"failures\":[{{\"check\":\"domain_lock\",\"issue\":\"exact description\",\"fix_instruction\":\"exact fix\"}}]}}
+Output format - use EXACTLY this structure:
+{{"domain_lock":true,"epistemic_congruence":true,"quiz_topicality":true,"debug_validity":true,"arithmetic_correct":true,"mental_model_maps":true,"clean_output":true,"economic_laws":true,"unique_scenario":true,"failures":[{{"check":"domain_lock","issue":"exact description","fix_instruction":"exact fix"}}]}}
 
 failures is an empty array [] if all checks pass.
-Source context (what the note should teach): {source_context[:400]}"""
-        user_msg = f"Note title: {note_title}\nMode: {mode}\n\nContent:\n{note_content[:3000]}"
+Source context: {source_context[:400]}"""
+        user_msg = f"Note title: {note_title}\nMode: {mode}\nModality: {modality}\n\nContent:\n{note_content[:3000]}"
         
         last_error = None
         for attempt in range(2):
@@ -991,10 +1262,11 @@ Source context (what the note should teach): {source_context[:400]}"""
                 res = await self.llm.ainvoke([("system", sys_prompt + retry_note), ("human", user_msg)])
                 data = ArchitectAgent._parse_json(res.content)
                 passed = all([
-                    data.get("domain_lock", True), data.get("quiz_topicality", True),
-                    data.get("debug_validity", True), data.get("arithmetic_correct", True),
-                    data.get("mental_model_maps", True), data.get("clean_output", True),
-                    data.get("economic_laws", True), data.get("unique_scenario", True)
+                    data.get("domain_lock", True), data.get("epistemic_congruence", True),
+                    data.get("quiz_topicality", True), data.get("debug_validity", True), 
+                    data.get("arithmetic_correct", True), data.get("mental_model_maps", True), 
+                    data.get("clean_output", True), data.get("economic_laws", True), 
+                    data.get("unique_scenario", True)
                 ])
                 return {"passed": passed, "failures": data.get("failures", [])}
             except Exception as e:
@@ -1013,28 +1285,28 @@ class QuizAuditorAgent:
     async def audit(self, note_title: str, quiz_json_str: str, theory_summary: str, prof_domain: str = "General") -> dict:
         max_retries = 2
         title_readable = note_title.replace("_", " ")
-        sys_prompt = f"""You are a quiz quality auditor. Evaluate these technical questions for '{title_readable}'.
+        sys_prompt = f"""You are a quiz quality auditor. Evaluate these technical questions for "{title_readable}".
 Return ONLY a valid JSON object.
 
-The note's concept is: '{title_readable}'
+The note's concept is: "{title_readable}"
 For each question check:
-- Is the question DIRECTLY about '{title_readable}'? (Not a generic math fact, not the analogy)
-- CONTEXT LOCK: Does the question use a professional domain UNRELATED to the concept or the intended domain '{prof_domain}'? (e.g., Bioinformatics in an Economics note = FAIL, but using '{prof_domain}' terminology is REQUIRED).
+- Is the question DIRECTLY about "{title_readable}"? (Not a generic math fact, not the analogy)
+- CONTEXT LOCK: Does the question use a professional domain UNRELATED to the concept or the intended domain "{prof_domain}"? (e.g., Bioinformatics in an Economics note = FAIL, but using "{prof_domain}" terminology is REQUIRED).
 - GROUNDING: Does the question require specific data (numbers, constants) NOT present in the theory summary? (Hallucinated facts = FAIL).
-- SHUFFLE CHECK: For type='order', are the 'steps' already in the correct order? (Identity ordering = FAIL).
-- DEBUG CHECK: If type='debug': does 'content' actually contain a wrong step? (Answer='no error'=FAIL).
+- SHUFFLE CHECK: For type="order", are the 'steps' already in the correct order? (Identity ordering = FAIL).
+- DEBUG CHECK: If type="debug": does 'content' actually contain a wrong step? (Answer="no error"=FAIL).
 - DUPLICATE CHECK: Do any two questions test the same sub-topic using the same numerical setup? FAIL if duplicates found.
-- ANSWER CONSISTENCY: For trace/debug types, does the answer field value match the final computed value in the explanation? (e.g., if explanation says 'Price = 10', answer must be '10').
+- ANSWER CONSISTENCY: For trace/debug types, does the answer field value match the final computed value in the explanation? (e.g., if explanation says "Price = 10", answer must be "10").
 - SCAFFOLDING CHECK: Are there any 'internal monologues', 'AI signatures', or 'CoT leakage' in the explanation? (e.g. "Wait, let's correct that", "As an AI...", or "Let's simplify"). FAIL if found.
 - For fill_in: does 'textWithBlanks' use [[Blank1]] format (NOT wikilink names as blanks)?
 - Is the stated 'answer' definitively correct for the question asked?
 
 Output:
-{"passed":true,"issues":[],"fix_instruction":""}
+{{"passed":true,"issues":[],"fix_instruction":""}}
 OR if problems:
-{"passed":false,"issues":["Q1: Context Hallucination detected.","Q3: Duplicate question found.","Q4: Answer '10' diverges from explanation value '12'."],"fix_instruction":"exact instruction"}
+{{"passed":false,"issues":["Q1: Context Hallucination detected.","Q3: Duplicate question found.","Q4: Answer '10' diverges from explanation value '12'."],"fix_instruction":"exact instruction"}}
 
-Key facts about '{title_readable}': {theory_summary[:2500]}"""
+Key facts about "{title_readable}": {theory_summary[:2500]}"""
         user_msg = f"Quiz JSON:\n{quiz_json_str[:2000]}"
         last_error = None
         for attempt in range(2):
@@ -1053,3 +1325,86 @@ Key facts about '{title_readable}': {theory_summary[:2500]}"""
                 print(f"[QuizAuditorAgent] Audit attempt {attempt+1} failed: {e}")
                 if attempt == 1:
                     return {"passed": True, "diagnosis": ""}
+
+class TaxonomyExtenderAgent:
+    """The 'Cartographer Prime'. Meta-analyzes unknown material to extend the system's brain."""
+    def __init__(self, llm: BaseChatModel):
+        self.llm = llm
+
+    async def propose_extension(self, document_text: str, unknown_context: str) -> dict:
+        system = """You are the 'Cartographer Prime' of the OKA system. 
+Your task is to meta-analyze a document that the system failed to classify into its existing taxonomy.
+You must propose a NEW DOMAIN ENTRY and associated KEYWORDS.
+
+ANALYSIS PROTOCOL:
+1. Identify the core academic or professional discipline (e.g., CS-BLOCKCHAIN, BIO-GENOMICS, LAW-ADMIRALTY).
+2. Propose a Persona: A high-level expert in this field.
+3. Propose H1 and H2 headers that follow the OKA 'Mechanism & Failure' philosophy.
+4. Propose an Artifact Type (e.g., Mermaid diagram, Code block, LaTeX proof).
+5. Extract 10-15 highly specific keywords that serve as deterministic anchors for this domain.
+
+OUTPUT: Return ONLY a JSON object with this structure:
+{
+  "domain_id": "UPPERCASE-ID",
+  "persona": "...",
+  "h1": "...",
+  "h2": "...",
+  "artifact": "...",
+  "type": "...",
+  "keywords": ["kw1", "kw2", ...],
+  "l3_law": "...",
+  "sanity_check": "..."
+}
+Return ONLY pure JSON. No explanation."""
+        
+        try:
+            res = await self.llm.ainvoke([
+                ("system", system), 
+                ("human", f"Unknown Context:\n{unknown_context}\n\nFull Document Excerpt:\n{document_text[:5000]}")
+            ])
+            data = ArchitectAgent._parse_json(res.content)
+            return data
+        except Exception as e:
+            print(f"[TaxonomyExtender] Failed to propose extension: {e}")
+            return {}
+
+class MetaScannerAgent:
+    """The Oracle's Eye. Runs before the Architect to provide global context."""
+    def __init__(self, llm: BaseChatModel):
+        self.llm = llm
+
+    async def scan_full_text(self, full_text: str) -> Dict[str, Any]:
+        """Analyzes the entire text to produce a ContextBriefing."""
+        system = """You are a University Provost. Analyze the entirety of the following document.
+Provide a high-level executive summary and extract the core disciplinary identity.
+
+Return ONLY a JSON object with this structure:
+{
+  "summary": "One-paragraph executive summary.",
+  "keywords": ["kw1", "kw2", ...],
+  "primary_discipline": "e.g., 'Database Theory'",
+  "secondary_disciplines": ["e.g., 'Formal Logic'", "e.g., 'Set Theory'"]
+}
+Return ONLY pure JSON. No markdown. No explanation."""
+        
+        try:
+            # We take a large sample if it's too long, but ideally we scan as much as possible
+            # For extremely long docs, we might sample beginning, middle, and end.
+            sample = full_text[:40000] 
+            if len(full_text) > 40000:
+                sample = full_text[:15000] + "\n...[MIDDLE]...\n" + full_text[len(full_text)//2 - 5000 : len(full_text)//2 + 5000] + "\n...[END]...\n" + full_text[-10000:]
+
+            res = await self.llm.ainvoke([
+                ("system", system), 
+                ("human", f"DOCUMENT TEXT:\n{sample}")
+            ])
+            data = ArchitectAgent._parse_json(res.content)
+            return data
+        except Exception as e:
+            print(f"[MetaScannerAgent] Failed to scan document: {e}")
+            return {
+                "summary": "No summary available.",
+                "keywords": [],
+                "primary_discipline": "General Academic",
+                "secondary_disciplines": []
+            }

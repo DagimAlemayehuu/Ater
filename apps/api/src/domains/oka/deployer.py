@@ -285,9 +285,18 @@ class OkaDeployer:
                 meta["type"] = "Atomic Note"
                 if clean_hub_name:
                     meta["hub"] = f"[[{unit_str}{clean_hub_name}_Hub]]"
-                meta.setdefault("mode", "CS-SOFTWARE")
+                meta.setdefault("mode", "DOMAIN-UNKNOWN")
                 from datetime import datetime
                 meta.setdefault("study_date", datetime.now().strftime("%Y-%m-%d"))
+
+                # ── HIGH-PRIORITY LOGGING (v30.0 Pantheon) ──
+                if meta.get("mode") == "DOMAIN-UNKNOWN":
+                    import logging
+                    logging.getLogger("LifeOS").warning(
+                        f"🚨 [HIGH_PRIORITY_WARNING] Taxonomy Gap Detected: '{title}' generated using UNIVERSAL FALLBACK. "
+                        f"Architecture requires manual taxonomy update."
+                    )
+
                 # ── Sanitise prerequisites: spaces → underscores ──
                 if meta.get("prerequisites"):
                     meta["prerequisites"] = OkaValidator.sanitize_prerequisites(

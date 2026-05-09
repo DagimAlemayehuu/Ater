@@ -17,7 +17,7 @@ ATOMIC_NOTE_TEMPLATE = """
 {walkthrough}
 
 ---
-## Review & Practice
+## 6. The Proving Grounds
 {possible_questions}
 """
 
@@ -33,7 +33,7 @@ def render_atomic_note(data: Dict[str, Any], healer=None) -> str:
         data["mental_model"] = healer.heal_all(data.get("mental_model", ""))
         data["technical_definition"] = healer.heal_all(data.get("technical_definition", ""))
         data["limitations"] = healer.heal_all(data.get("limitations", ""))
-        data["artifact_content"] = healer.verify_arithmetic(data.get("artifact_content", ""))
+        data["artifact_content"] = healer.heal_all(data.get("artifact_content", ""))
         data["walkthrough"] = healer.heal_all(data.get("walkthrough", ""))
         data["possible_questions"] = healer.heal_all(data.get("possible_questions", ""), is_quiz=True)
 

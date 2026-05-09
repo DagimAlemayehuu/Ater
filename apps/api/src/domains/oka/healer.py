@@ -21,6 +21,9 @@ class LogicHealer:
         Fixes broken wikilinks by fuzzy matching against known titles in the current hub plan.
         Handles aliases like [[Title|Alias]].
         """
+        # 0. Pre-heal broken brackets: [[Concept] -> [[Concept]]
+        text = re.sub(r'\[\[([^\]\n]+)\](?!\])', r'[[\1]]', text)
+        
         def _fix_link(match):
             raw_content = match.group(1).strip()
             
@@ -52,9 +55,11 @@ class LogicHealer:
                         break
                 
                 if not matched:
-                    # Final fallback: Use the sanitized version even if not in the current plan (might be a global note)
-                    fixed_link = sanitized_link
-                    self.logger.warning(f"[Healer] Unresolved wikilink: {link} -> Canonical: {fixed_link}")
+                    # v29.2: STRICT Closed Knowledge Graph Law
+                    # If we can't find a match in the plan, we strip the brackets and convert to plain text
+                    self.logger.warning(f"[Healer] Hallucinated link pruned: {link}")
+                    # If an alias was provided, use it; otherwise use the cleaned link text
+                    return alias if alias else link.replace('_', ' ')
             
             if alias:
                 return f"[[{fixed_link}|{alias}]]"
@@ -120,35 +125,10 @@ class LogicHealer:
 
     def verify_arithmetic(self, text: str) -> str:
         """
-        Sandbox for verifying arithmetic within prose or artifacts.
-        Supports: +, -, *, /, ^, **
+        Sandbox for verifying arithmetic. 
+        DEPRECATED: Prompt-based 'Math Sovereignty' and 'Sub-Operation' laws have made 
+        this regex-based healer redundant and risky (friendly-fire on chained equations).
         """
-        # Regex for common expressions including scientific notation and powers
-        # Format: [num] [op] [num] = [res]
-        expr_pattern = r"(\d+(?:\.\d+)?(?:e[\+\-]\d+)?)\s*([\+\-\*\/^]|\*\*)\s*(\d+(?:\.\d+)?(?:e[\+\-]\d+)?)\s*=\s*(\d+(?:\.\d+)?(?:e[\+\-]\d+)?)"
-        exprs = re.findall(expr_pattern, text, re.IGNORECASE)
-        
-        for num1, op, num2, res in exprs:
-            try:
-                n1, n2, r = float(num1), float(num2), float(res)
-                if op == '+': real = n1 + n2
-                elif op == '-': real = n1 - n2
-                elif op == '*': real = n1 * n2
-                elif op == '/': real = n1 / n2 if n2 != 0 else 0
-                elif op in ['^', '**']: real = n1 ** n2
-                
-                # Use a small epsilon for float comparison
-                if abs(real - r) > abs(real * 0.001):
-                    real_str = f"{real:g}"
-                    self.logger.warning(f"[Healer] Math Fix: {num1}{op}{num2} -> {real_str} (was {res})")
-                    # Replace all occurrences of the incorrect equation
-                    incorrect = f"{num1} {op} {num2} = {res}"
-                    correct = f"{num1} {op} {num2} = {real_str}"
-                    text = text.replace(incorrect, correct)
-                    # Also try compact version
-                    text = text.replace(incorrect.replace(" ", ""), correct.replace(" ", ""))
-            except Exception:
-                continue
         return text
 
     def heal_quiz_json(self, quiz_json_str: str) -> str:
@@ -185,7 +165,8 @@ class LogicHealer:
                             
                 # ── 5.3 Cross-Key Numeric Consistency Heal ──
                 # If explanation says 'X = 12' and answer is '10', and type is not MCQ (where keys are A/B/C/D), heal it.
-                if q.get("type") not in ["mcq", "matching", "order"]:
+                # EXEMPT: 'trace' questions, as they often derive full equations which the regex would truncate.
+                if q.get("type") not in ["mcq", "matching", "order", "trace"]:
                     exp = q.get("explanation", "")
                     ans = str(q.get("answer", ""))
                     nums_in_exp = re.findall(r"=\s*([\d\.]+)", exp)
@@ -200,6 +181,36 @@ class LogicHealer:
             self.logger.error(f"[Healer] Quiz JSON healing failed: {e}")
             return quiz_json_str
 
+    def heal_markdown_tables(self, text: str) -> str:
+        """
+        Ensures all markdown tables have strict outer pipes.
+        Fixes lines like 'Price | Quantity' -> '| Price | Quantity |'
+        """
+        lines = text.split("\n")
+        healed_lines = []
+        in_table = False
+        
+        for line in lines:
+            stripped = line.strip()
+            # Detect table start/content
+            if "|" in stripped and not stripped.startswith("##") and not stripped.startswith("$"):
+                in_table = True
+                # Preserve indent
+                indent_match = re.match(r"^(\s*)", line)
+                indent = indent_match.group(1) if indent_match else ""
+                
+                content = stripped
+                if not content.startswith("|"):
+                    content = "| " + content
+                if not content.endswith("|"):
+                    content = content + " |"
+                
+                healed_lines.append(indent + content)
+            else:
+                in_table = False
+                healed_lines.append(line)
+        return "\n".join(healed_lines)
+
     def heal_all(self, text: str, is_quiz: bool = False) -> str:
         if is_quiz:
             return self.heal_quiz_json(text)
@@ -208,4 +219,5 @@ class LogicHealer:
         text = self.heal_wikilinks(text)
         text = self.enforce_wikilink_density(text)
         text = self.verify_arithmetic(text)
+        text = self.heal_markdown_tables(text)
         return text

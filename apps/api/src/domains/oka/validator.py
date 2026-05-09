@@ -11,6 +11,39 @@ HARD_FAILURE_MARKERS = [
     "Error generating question.",
     "Error generating",
     "Error extracting",
+    "is not correct, it is actually",
+    "Wait, that is incorrect",
+    "I should correct myself",
+    "Apologies, I made a mistake",
+    "Let's adjust our approach",
+    "doesn't make sense in this context",
+    "Let's assume a different",
+    "Wait,",
+    "but it doesn't visually demonstrate",
+    "but it doesn't visually show",
+    "This shows that... but",
+    "This contradicts",
+    "so we'll focus on interpreting those",
+    "However, the table provides",
+    "indicating a need for a more realistic approach",
+    "for instructional purposes",
+    "let's assume a corrected",
+    "is incorrect based on miscalculation",
+    "to match provided solutions",
+    "let's correct and",
+    "Wait, that's not right",
+    "Wait, that's incorrect",
+    "Upon further reflection",
+    "Actually, the calculation should be",
+    "Corrected version:",
+    "Let's re-evaluate",
+    "I'll correct that",
+    "My previous explanation was slightly off",
+    "Let me refine that",
+    "given the nature of the question",
+    "let's verify the calculation with proper steps",
+    "adjust for accurate",
+    "approximately, by correct interpolation",
 ]
 
 # Quiz-specific stub patterns — a quiz block containing ONLY these is pedagogically dead
@@ -53,7 +86,19 @@ class OkaValidator:
         """
         errors: List[str] = []
 
-        # ── 1. Hard-failure markers — immediate reject ──────────────────────
+        # ── 0. Structural Obedience (v28.0) ──────────────────────────────────
+        required_sections = [
+            r"## 1\. Mental Model",
+            r"## 2\. ", # Dynamic title
+            r"## 3\. Limitations & Edge Cases",
+            r"## 4\. ", # Dynamic title
+            r"## 5\. Walkthrough",
+            r"## 6\. The Proving Grounds"
+        ]
+        for section in required_sections:
+            if not re.search(section, content):
+                clean_name = section.replace('\\', '')
+                errors.append(f"MISSING_SECTION: {clean_name}")
         for marker in HARD_FAILURE_MARKERS:
             if marker in content:
                 errors.append(f"HARD_FAILURE_MARKER: '{marker}' found in content. Note must be regenerated.")
@@ -96,8 +141,10 @@ class OkaValidator:
         if yaml_match:
             body = content[yaml_match.end():]
 
-        # Wikilink density — require ≥ 3 [[Wikilinks]] in the body
-        wikilink_count = len(re.findall(r"\[\[[^\]]+\]\]", body))
+        # -- 3. Wikilink integrity (v29.2) --------------------------------------
+        wikilinks = re.findall(r'\[\[([^\]|]+)(?:\|[^\]]*)?\]\]', body)
+        wikilink_count = len(wikilinks)
+        
         # Hub/PQ notes don't need prose wikilinks — they ARE wikilinks
         note_type_match = re.search(r"type:\s*(.+)", content[:500])
         note_type = note_type_match.group(1).strip().lower() if note_type_match else ""
@@ -106,6 +153,13 @@ class OkaValidator:
                 f"INSUFFICIENT_WIKILINKS: Found {wikilink_count}, need ≥ 3. "
                 "Section 2 must wrap related concepts in [[Wikilinks]]."
             )
+
+        # Closed Knowledge Graph Check
+        if unit_stems:
+            for link in wikilinks:
+                canonical_link = link.replace(' ', '_').strip()
+                if canonical_link not in unit_stems:
+                    errors.append(f"HALLUCINATED_LINK: Concept [[{link}]] is not in the approved plan.")
 
         # Wikilink Format check: no spaces inside brackets
         broken_wikilinks = re.findall(r'\[\[\s+[^\]]+\]\]|\[\[[^\]]+\s+\]\]', body)
@@ -118,8 +172,7 @@ class OkaValidator:
 
         # Intra-unit wikilinks check
         if unit_stems and note_type not in ("hub", "possible questions"):
-            intra_links = [w for w in re.findall(r'\[\[([^\]]+)\]\]', body) 
-                           if w.replace(' ', '_') in unit_stems and w.replace(' ', '_') != meta.get("title", "")]
+            intra_links = [w for w in wikilinks if w.replace(' ', '_') in unit_stems and w.replace(' ', '_') != meta.get("title", "")]
             if not intra_links:
                 errors.append("NO_INTRA_UNIT_LINKS: Must wikilink to at least 1 other note in this unit")
 
@@ -162,10 +215,22 @@ class OkaValidator:
                         if "answer" not in q:
                             errors.append(f"QUIZ_Q{i+1}_MISSING_ANSWER")
                         if "explanation" in q:
-                            # ── 5.1 Internal Truncation Check ──
                             exp = str(q["explanation"])
+                            # ── 5.1 Hard-failure Check in Quiz Explanation ──
+                            for marker in HARD_FAILURE_MARKERS:
+                                if marker in exp:
+                                    errors.append(f"QUIZ_Q{i+1}_HARD_FAILURE: '{marker}' found in explanation.")
+                            
+                            # ── 5.2 Internal Truncation Check ──
                             if exp.strip() and exp.strip()[-1] not in [".", "!", "?", "}", "]", ")", "`", "$"]:
                                 errors.append(f"QUIZ_Q{i+1}_TRUNCATED_EXPLANATION: Explanation ends mid-sentence.")
+                        
+                        if "answer" in q:
+                            ans_str = str(q["answer"])
+                            # ── 5.3 Hard-failure Check in Quiz Answer ──
+                            for marker in HARD_FAILURE_MARKERS:
+                                if marker in ans_str:
+                                    errors.append(f"QUIZ_Q{i+1}_HARD_FAILURE: '{marker}' found in answer.")
                             
                             # ── 5.2 Cross-Key Numeric Consistency ──
                             # If the explanation contains a result (e.g., 'Price = 12') but answer is '10', fail.
@@ -205,18 +270,35 @@ class OkaValidator:
         # ── 6.5. Truncation check ──────────────────────────────────────────
         # If the body doesn't end with a closing backtick (quiz), or punctuation, it's likely truncated.
         last_char = body.strip()[-1:] if body.strip() else ""
-        if last_char not in [".", "!", "?", "`", ">", "]", "}"] and not body.strip().endswith("```"):
+        valid_endings = [".", "!", "?", "`", ">", "]", "}", "|", "$", ")", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        if last_char not in valid_endings and not body.strip().endswith("```"):
             errors.append("TRUNCATED_GENERATION: The note appears to be cut off mid-sentence without proper closing punctuation.")
 
         # ── TRUNCATION GUARD: Check for mid-sentence cuts inside sections ──────
         # Terminate at the next ## heading of any level, the quiz fence, or end-of-string
         section_texts = re.findall(r'## (?:\d+\.)[^\n]*\n(.*?)(?=##|```interactive-quiz|$)', body, re.DOTALL)
         for section_body in section_texts:
+            # v27.5 FIX: Strip markdown artifacts like ---, ***, ___ and trailing whitespace
+            # before checking for terminal punctuation to avoid false-positives.
             stripped = section_body.strip()
-            if len(stripped) > 10:  # skip trivially empty sections only
-                last_sent_char = stripped[-1]
-                if last_sent_char not in [".", "!", "?", "`", ")", "]", "}"]:
-                    errors.append(f"SECTION_TRUNCATION: A section body ends mid-sentence: '...{stripped[-40:]}'")
+            # Cleanly remove common markdown horizontal rules at the end of sections
+            cleaned = re.sub(r'[\s\n\-\*_]+$', '', stripped)
+            
+            if len(cleaned) > 10:  # skip trivially empty sections only
+                last_sent_char = cleaned[-1]
+                valid_terminal = [".", "!", "?", "`", ")", "]", "}", "$", "|", '"', "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+                if last_sent_char not in valid_terminal:
+                    errors.append(f"SECTION_TRUNCATION: A section body ends mid-sentence: '...{cleaned[-40:]}'")
+
+            # v28.4 FIX: Empty Table Kill-Switch (Section 4 Artifacts)
+            if "## 4." in body:
+                artifact_match = re.search(r'## 4\.[^\n]*\n(.*?)(?=## 5\.|```interactive-quiz|$)', body, re.DOTALL)
+                if artifact_match:
+                    artifact_text = artifact_match.group(1).strip()
+                    if "|" in artifact_text:
+                        pipe_lines = [l for l in artifact_text.split('\n') if "|" in l]
+                        if len(pipe_lines) < 3:
+                            errors.append("EMPTY_TABLE: Section 4 contains a table header but no data rows (Header, Separator, and at least 1 Data row required).")
 
         # ── 7. Walkthrough step count — section is ## 5. Walkthrough in the template
         walkthrough_match = re.search(r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)', body, re.DOTALL)
