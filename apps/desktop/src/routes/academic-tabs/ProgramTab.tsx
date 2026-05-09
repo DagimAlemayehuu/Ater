@@ -174,12 +174,12 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
  {semCourses.map((c, idx) => (
  <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
- className="p-6 border border-border/10 rounded-2xl bg-muted/5 hover:bg-muted/10 hover:border-foreground/10 transition-all cursor-pointer group">
+ className="p-6 border border-border bg-muted/5 transition-all cursor-pointer group">
  <div className="flex items-center justify-between mb-2">
  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Course</span>
  <span className="text-[9px] font-black text-muted-foreground/40">{getVal(c, 'Credits', 'credits')} CR</span>
  </div>
- <h3 className="text-xl font-black uppercase tracking-tight group-hover:text-primary transition-colors">{cleanTitle(c.title)}</h3>
+ <h3 className="text-xl font-black uppercase tracking-tight transition-colors">{cleanTitle(c.title)}</h3>
  <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 mt-2">{stripWL(getVal(c, 'Status', 'status'))}</p>
  </div>
  ))}
@@ -287,14 +287,14 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <div className={cn('roadmap-dot', isCompleted ? 'roadmap-dot-completed' : isActive ? 'roadmap-dot-active pulse-node' : 'roadmap-dot-planned')}>
  {isCompleted ? <Check size={10} strokeWidth={4} /> : (idx + 1)}
  </div>
- <div className="roadmap-content p-4 border border-border/15 bg-muted/5 rounded-xl hover:border-foreground/10 hover:bg-muted/10 transition-all flex items-center justify-between">
+ <div className="roadmap-content p-4 border border-border bg-muted/5 rounded-xl transition-all flex items-center justify-between">
  <div className="min-w-0">
- <span className="text-[12px] font-black uppercase group-hover/sem:text-primary transition-colors">{cleanTitle(s.title)}</span>
+ <span className="text-[12px] font-black uppercase transition-colors">{cleanTitle(s.title)}</span>
  <span className="ml-2 text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{statusRaw}</span>
  </div>
  <div className="flex items-center gap-2 shrink-0">
- <span className="text-[8px] font-black uppercase text-muted-foreground/20 group-hover/sem:text-primary/40 transition-colors">View Details</span>
- <ChevronRight size={11} className="text-muted-foreground/20 group-hover/sem:translate-x-0.5 transition-all" />
+ <span className="text-[8px] font-black uppercase text-muted-foreground/20 transition-colors">View Details</span>
+ <ChevronRight size={11} className="text-muted-foreground/20 transition-all" />
  </div>
  </div>
  </div>
@@ -310,7 +310,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  return (
  <div className="h-full flex overflow-hidden">
  {/* Left: Roadmap panel */}
- <aside className="w-56 shrink-0 border-r border-border/10 flex flex-col p-5 overflow-hidden">
+ <aside className="w-56 shrink-0 border-r border-border flex flex-col p-5 overflow-hidden">
  <div className="flex items-center justify-between mb-4">
  <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/40">Roadmap</span>
  <button onClick={() => setShowSetup(!showSetup)} className="px-2 py-1 bg-foreground/5 text-[7px] font-black uppercase tracking-widest rounded hover:bg-foreground/10 transition-all border border-border/10">
@@ -434,7 +434,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <SectionHeader title="Active Courses" count={activeCourses.length} />
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
  {activeCourses.map((c, idx) => (
- <div key={`course-${idx}`} className="p-4 border border-border/10 bg-muted/5 rounded-xl flex items-center justify-between cursor-pointer hover:bg-muted/10 transition-all"
+ <div key={`course-${idx}`} className="p-4 border border-border bg-muted/5 rounded-xl flex items-center justify-between cursor-pointer hover:bg-muted/10 transition-all"
  onClick={() => navigateTo('COURSES', c.id)}>
  <div>
  <span className="text-[13px] font-black uppercase">{cleanTitle(c.title)}</span>

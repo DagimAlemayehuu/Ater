@@ -692,10 +692,11 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
      )
  
      return () => {
-       setCenterContent(null)
-       setRightContent(null)
-     }
-   }, [selectedPath, isEditing, isFullscreen, pdfState, noteMetadata, config, saveConfig, setCenterContent, setRightContent, showArchitect, isMobile])
+      setCenterContent(null)
+      setRightContent(null)
+      setIsFullscreen(false)
+    }
+  }, [selectedPath, isEditing, isFullscreen, pdfState, noteMetadata, config, saveConfig, setCenterContent, setRightContent, showArchitect, isMobile, setIsFullscreen])
  
  // --- Sync & Topology Cache ---
  const currentHubPath = useRef<string | null>(null);

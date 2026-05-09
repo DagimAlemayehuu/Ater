@@ -396,15 +396,15 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
 
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
- <div className="p-6 bg-muted/10 border border-border/10 rounded-lg flex flex-col gap-1">
+ <div className="p-6 bg-muted/10 border border-border rounded-lg flex flex-col gap-1">
  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Average Score</span>
  <span className="text-2xl font-black tracking-tight">{totalPrecision}%</span>
  </div>
- <div className="p-6 bg-muted/10 border border-border/10 rounded-lg flex flex-col gap-1">
+ <div className="p-6 bg-muted/10 border border-border rounded-lg flex flex-col gap-1">
  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Total Practices</span>
  <span className="text-2xl font-black tracking-tight">{pastPractices.length}</span>
  </div>
- <div className="p-6 bg-muted/10 border border-border/10 rounded-lg flex flex-col gap-1">
+ <div className="p-6 bg-muted/10 border border-border rounded-lg flex flex-col gap-1">
  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Stability</span>
  <span className="text-2xl font-black tracking-tight uppercase text-primary">{stability}</span>
  </div>
@@ -412,7 +412,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 
  <div className="flex flex-col gap-8">
  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
- <div className="p-8 bg-muted/10 border border-border/10 rounded-2xl space-y-6 shadow-xl shadow-primary/5">
+ <div className="p-8 bg-muted/10 border border-border rounded-2xl space-y-6">
  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40">Trend</h3>
  <div className="w-full h-64">
  <ResponsiveContainer width="100%" height="100%">
@@ -427,7 +427,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
  </div>
 
- <div className="p-8 bg-muted/10 border border-border/10 rounded-2xl space-y-8 shadow-xl shadow-primary/5">
+ <div className="p-8 bg-muted/10 border border-border rounded-2xl space-y-8">
  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40">Cognitive Modalities</h3>
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-8">
  {[
@@ -477,7 +477,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 border-b border-border/10 pb-2">Past Sessions</h3>
  <div className="grid grid-cols-1 gap-2">
  {(Array.isArray(pastPractices) ? pastPractices : []).slice().reverse().map((p, i) => (
- <div key={i} onClick={() => handleResumePractice(p.path)} className="group p-4 bg-muted/5 border border-border/10 rounded-lg hover:border-foreground/20 cursor-pointer transition-all flex items-center justify-between">
+ <div key={i} onClick={() => handleResumePractice(p.path)} className="group p-4 bg-muted/5 border border-border rounded-lg cursor-pointer transition-all flex items-center justify-between">
  <div className="flex items-center gap-4">
  <div className="text-[10px] font-black text-muted-foreground/40">{p.score}%</div>
  <div className="flex flex-col">
@@ -508,14 +508,14 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 
  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
  <div className="lg:col-span-2 space-y-6">
- <div className="p-8 bg-muted/10 border border-border/10 rounded-lg space-y-10">
+ <div className="p-8 bg-muted/10 border border-border rounded-lg space-y-10">
  <div className="space-y-6">
  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Topic</h3>
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
  <Select value={selectedHub} onValueChange={(val) => {setSelectedHub(val); loadHubNotes(val);}}>
- <SelectTrigger className="w-full h-10 bg-background border-border/10 rounded-md px-4 text-[10px] font-black uppercase tracking-tight"><SelectValue placeholder="Select Topic..." /></SelectTrigger>
+ <SelectTrigger className="w-full h-10 bg-background border-border rounded-md px-4 text-[10px] font-black uppercase tracking-tight"><SelectValue placeholder="Select Topic..." /></SelectTrigger>
  <SelectContent className="border-border/10">{hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>))}</SelectContent>
  </Select>
  </div>
@@ -523,7 +523,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Difficulty</Label>
  <RadioGroup value={advancedConfig.difficulty} onValueChange={(val) => setAdvancedConfig(prev => ({...prev, difficulty: val as any}))} className="grid grid-cols-4 gap-1">
  {[ {val: 'L1', label: '1'}, {val: 'L2', label: '2'}, {val: 'L3', label: '3'}, {val: 'Mixed', label: 'M'} ].map((level) => (
- <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-border/10 rounded-md bg-background peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground items-center justify-center cursor-pointer text-[10px] font-black">{level.label}</Label></div>
+ <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-border rounded-md bg-background peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground items-center justify-center cursor-pointer text-[10px] font-black">{level.label}</Label></div>
  ))}
  </RadioGroup>
  </div>
@@ -534,12 +534,12 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Notes</h3>
  <Popover>
  <PopoverTrigger asChild>
- <Button variant="outline" className="w-full h-10 border-border/10 bg-background text-[10px] font-black uppercase px-4 justify-between">
+ <Button variant="outline" className="w-full h-10 border-border bg-background text-[10px] font-black uppercase px-4 justify-between">
  <span>{advancedConfig.selectedAtomicNotes.length} Selected</span>
  <Layers size={12} className="opacity-40" />
  </Button>
  </PopoverTrigger>
- <PopoverContent className="w-[90vw] sm:w-[400px] p-0 rounded-md border border-border bg-popover shadow-xl overflow-hidden" align="start">
+ <PopoverContent className="w-[90vw] sm:w-[400px] p-0 rounded-md border border-border bg-popover overflow-hidden" align="start">
  <Command className="bg-transparent">
  <div className="p-3 border-b border-border flex justify-between items-center bg-muted/10">
  <span className="text-[8px] font-black uppercase text-muted-foreground/40">{availableNotes.length} Total</span>
@@ -568,14 +568,14 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total (Min)</Label>
  <Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val) => setAdvancedConfig(prev => ({...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val)}))}>
- <SelectTrigger className="w-full h-10 bg-background border-border/10 rounded-md px-4 text-[10px] font-black uppercase"><SelectValue placeholder="No Limit" /></SelectTrigger>
+ <SelectTrigger className="w-full h-10 bg-background border-border rounded-md px-4 text-[10px] font-black uppercase"><SelectValue placeholder="No Limit" /></SelectTrigger>
  <SelectContent>{[null, 5, 10, 15, 30, 60].map(m => (<SelectItem key={String(m)} value={String(m)} className="text-[10px] font-black uppercase">{m ? `${m}m` : 'None'}</SelectItem>))}</SelectContent>
  </Select>
  </div>
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Per Question (Sec)</Label>
  <Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val) => setAdvancedConfig(prev => ({...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val)}))}>
- <SelectTrigger className="w-full h-10 bg-background border-border/10 rounded-md px-4 text-[10px] font-black uppercase"><SelectValue placeholder="No Limit" /></SelectTrigger>
+ <SelectTrigger className="w-full h-10 bg-background border-border rounded-md px-4 text-[10px] font-black uppercase"><SelectValue placeholder="No Limit" /></SelectTrigger>
  <SelectContent>{[null, 15, 30, 60, 120].map(s => (<SelectItem key={String(s)} value={String(s)} className="text-[10px] font-black uppercase">{s ? `${s}s` : 'None'}</SelectItem>))}</SelectContent>
  </Select>
  </div>
@@ -584,8 +584,8 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
  </div>
 
- <div className="p-8 bg-muted/10 border border-border/10 rounded-lg space-y-8 flex flex-col">
- <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 border-b border-border/5 pb-4">Types</h3>
+ <div className="p-8 bg-muted/10 border border-border rounded-lg space-y-8 flex flex-col">
+ <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 border-b border-border pb-4">Types</h3>
  <div className="flex-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar">
  {[
  {key: 'mcq', label: 'Choice'}, 
@@ -638,7 +638,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const progress = ((currentQuestionIdx + 1) / questions.length) * 100;
  return (
  <div className="h-full w-full flex flex-col bg-background text-foreground overflow-hidden">
- <div className="px-4 sm:px-10 py-4 sm:py-6 border-b border-border/10 flex flex-col lg:flex-row items-start sm:items-center justify-between gap-4">
+ <div className="px-4 sm:px-10 py-4 sm:py-6 border-b border-border flex flex-col lg:flex-row items-start sm:items-center justify-between gap-4">
  <div className="flex flex-col sm:flex-row lg:w-auto sm:items-center gap-4 sm:gap-10 w-full sm:w-auto">
  <div className="flex flex-col gap-0.5">
  <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Practice</span>
@@ -652,7 +652,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  {globalTimeLeft !== null && (
  <div className="flex flex-col items-end gap-1">
  <span className="text-muted-foreground/20 text-[7px]">Total</span>
- <div className={cn("px-3 py-1 rounded border", globalTimeLeft < 60 ? "border-destructive text-destructive animate-pulse" : "border-border/10 text-muted-foreground/60")}>
+ <div className={cn("px-3 py-1 rounded border", globalTimeLeft < 60 ? "border-destructive text-destructive" : "border-border text-muted-foreground/60")}>
  {Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}
  </div>
  </div>
@@ -660,14 +660,14 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  {questionTimeLeft !== null && (
  <div className="flex flex-col items-end gap-1">
  <span className="text-muted-foreground/20 text-[7px]">Q-Time</span>
- <div className={cn("px-3 py-1 rounded border", questionTimeLeft < 10 ? "border-destructive text-destructive animate-pulse" : "border-border/10 text-primary")}>
+ <div className={cn("px-3 py-1 rounded border", questionTimeLeft < 10 ? "border-destructive text-destructive" : "border-border text-primary")}>
  {Math.floor(questionTimeLeft / 60)}:{String(questionTimeLeft % 60).padStart(2, '0')}
  </div>
  </div>
  )}
  <div className="flex flex-col items-end gap-1">
  <span className="text-muted-foreground/20 text-[7px]">Progress</span>
- <div className="px-3 py-1 rounded border border-border/10">{currentQuestionIdx + 1} / {questions.length}</div>
+ <div className="px-3 py-1 rounded border border-border">{currentQuestionIdx + 1} / {questions.length}</div>
  </div>
  </div>
  </div>
@@ -690,7 +690,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const isSelected = userAnswers[currentQuestion.id] === key; 
  const isCorrect = isRevealed && (key === currentQuestion.answer || String(val).toLowerCase() === String(currentQuestion.answer).toLowerCase());
  return (
- <button key={key} disabled={isRevealed} onClick={() => handleSelectAnswer(key)} className={cn("p-5 border rounded-md text-left transition-all text-[13px] font-black uppercase tracking-tight", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border/10 opacity-40 grayscale" : isSelected ? "bg-muted/30 border-foreground" : "border-border/10 hover:bg-muted/10")}>
+ <button key={key} disabled={isRevealed} onClick={() => handleSelectAnswer(key)} className={cn("p-5 border rounded-md text-left transition-all text-[13px] font-black uppercase tracking-tight", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10")}>
  <span className="text-muted-foreground/20 shrink-0 mt-0.5 mr-4">{key}</span> <div className="flex-1 overflow-x-auto"><MarkdownBlock content={String(val)} /></div>
  </button>
  );
@@ -700,10 +700,10 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 
  {(currentQuestion.type === 'writing' || currentQuestion.type === 'synthesis' || currentQuestion.type === 'debug' || currentQuestion.type === 'trace') && (
   <div className="space-y-8">
-  {currentQuestion.type === 'debug' && <div className="p-1 border border-border/10 rounded-xl bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${currentQuestion.content}\n\`\`\``} /></div>}
-  <textarea rows={8} disabled={isRevealed} className="w-full p-8 bg-muted/5 border-2 border-border/10 rounded-2xl text-base font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
+  {currentQuestion.type === 'debug' && <div className="p-1 border border-border rounded-xl bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${currentQuestion.content}\n\`\`\``} /></div>}
+  <textarea rows={8} disabled={isRevealed} className="w-full p-8 bg-muted/5 border-2 border-border rounded-2xl text-base font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
   {isRevealed && (
-    <div className="p-8 border-2 border-primary/20 bg-primary/5 rounded-2xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-xl shadow-primary/5">
+    <div className="p-8 border-2 border-primary/20 bg-primary/5 rounded-2xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
       <div className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-2">Mastery Solution</div>
       <div className="text-sm font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap"><MarkdownBlock content={String(currentQuestion.answer)} /></div>
     </div>
@@ -717,7 +717,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const isSelected = userAnswers[currentQuestion.id] === v; 
  const isCorrect = isRevealed && v.toLowerCase() === String(currentQuestion.answer).toLowerCase(); 
  return (
- <button key={v} disabled={isRevealed} onClick={() => handleSelectAnswer(v)} className={cn("h-32 border rounded-md text-[10px] font-black uppercase tracking-widest transition-all", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border/10 opacity-40 grayscale text-muted-foreground/40" : isSelected ? "bg-muted/30 border-foreground" : "border-border/10 hover:bg-muted/10 text-muted-foreground/40")}>{v}</button>
+ <button key={v} disabled={isRevealed} onClick={() => handleSelectAnswer(v)} className={cn("h-32 border rounded-md text-[10px] font-black uppercase tracking-widest transition-all", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale text-muted-foreground/40" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10 text-muted-foreground/40")}>{v}</button>
  );
 })}
  </div>
@@ -735,7 +735,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
      return (
          <div key={i} className={cn(
              "flex items-center gap-6 p-5 border rounded-2xl transition-all",
-             isCorrect ? "border-primary bg-primary/5 shadow-lg shadow-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border/10 bg-muted/5 hover:border-foreground/20"
+             isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border bg-muted/5 hover:border-foreground/20"
          )}>
              <div className="flex flex-col gap-2 border-r border-border/10 pr-6">
                  <button disabled={isRevealed || i===0} onClick={moveUp} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-primary transition-all disabled:opacity-0">▲</button>
@@ -758,11 +758,11 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
      return (
          <div key={i} className={cn(
              "flex items-center gap-8 p-6 border rounded-2xl transition-all",
-             isCorrect ? "border-primary bg-primary/5 shadow-lg shadow-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border/10 bg-muted/5 hover:border-foreground/20"
+             isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border bg-muted/5 hover:border-foreground/20"
          )}>
              <div className="flex-1 font-black uppercase tracking-[0.2em] text-[11px] text-muted-foreground/60">{pair.left}</div>
              <div className="flex-1">
-                 <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-4 bg-background border border-border/10 rounded-xl outline-none focus:border-primary/50 text-[11px] font-black uppercase tracking-widest transition-all appearance-none cursor-pointer hover:border-border/40">
+                 <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-4 bg-background border border-border rounded-xl outline-none focus:border-primary/50 text-[11px] font-black uppercase tracking-widest transition-all appearance-none cursor-pointer">
                      <option value="">Select match...</option>
                      {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
                  </select>
@@ -822,7 +822,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
           const isFound = String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase());
           return (
             <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-xl cursor-pointer transition-all", isFound ? "border-primary/50 bg-primary/5" : "border-border/40 hover:bg-muted/10")}>
-              <input type="checkbox" checked={keywordChecks[kw] || false} onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} className="w-5 h-5 rounded border-border/50 text-primary focus:ring-primary" />
+              <input type="checkbox" checked={keywordChecks[kw] || false} onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} className="w-5 h-5 rounded border-border text-primary focus:ring-primary" />
               <span className={cn("text-sm font-bold", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[10px] uppercase tracking-widest text-primary ml-3">(Found in your answer)</span>}</span>
             </label>
           );
@@ -878,7 +878,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
  <div className="flex flex-col sm:flex-row gap-6 sm:gap-12 text-center border-y border-border/10 py-8 px-6 sm:px-12 w-full sm:w-auto items-center justify-center">
  <div className="space-y-1"><div className="text-2xl font-black tracking-tight">{correct}/{total}</div><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Correct</div></div>
- <div className="space-y-1 hidden sm:block h-8 w-px bg-border/10"></div>
+ <div className="space-y-1 hidden sm:block h-8 w-px bg-border"></div>
  <div className="space-y-1"><div className="text-2xl font-black tracking-tight">{total}</div><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total</div></div>
  </div>
  <div className="flex gap-4">

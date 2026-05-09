@@ -58,7 +58,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  return (
  <div className="h-full flex flex-col overflow-hidden">
  {/* ── Stats + Filters ── */}
- <div className="px-6 py-4 border-b border-border/10 flex items-center gap-4 flex-wrap shrink-0">
+  <div className="px-6 py-4 border-b border-border flex items-center gap-4 flex-wrap shrink-0">
  {/* Stats */}
  <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest">
  <span className="text-foreground">{pending.length} <span className="text-muted-foreground/40">pending</span></span>
@@ -75,7 +75,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <button key={id} onClick={() => setCourseFilter(id)}
  className={cn(
  'px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wide whitespace-nowrap transition-all',
- courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-transparent bg-muted/5 text-muted-foreground/50 hover:text-foreground hover:border-border/50'
+ courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-transparent bg-muted/5 text-muted-foreground/50 hover:text-foreground hover:border-border'
  )}>{label}</button>
  )
 })}
@@ -201,16 +201,16 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  const daysColor = urgency === 'overdue' ? 'text-foreground font-black' : urgency === 'today' ? 'text-foreground/70' : 'text-muted-foreground/40'
 
  return (
- <div onClick={onOpen} className={cn(
- 'flex items-center gap-3 p-3.5 border rounded-xl cursor-pointer transition-all group',
- urgency === 'overdue' ? 'border-border bg-muted/5 hover:border-foreground/30' :
- urgency === 'today' ? 'border-border/40 bg-muted/5 hover:border-foreground/20' :
- urgency === 'done' ? 'border-border/5 opacity-60' : 'border-border/15 hover:border-foreground/10 bg-background'
- )}>
+  <div onClick={onOpen} className={cn(
+  'flex items-center gap-3 p-3.5 border rounded-xl cursor-pointer transition-all group',
+  urgency === 'overdue' ? 'border-border bg-muted/5' :
+  urgency === 'today' ? 'border-border bg-muted/5' :
+  urgency === 'done' ? 'border-border opacity-60' : 'border-border bg-background'
+  )}>
  {/* Checkbox */}
  <button onClick={e => {e.stopPropagation(); if (!isDone) onComplete(a)}}
  className={cn('w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all',
- isDone ? 'bg-primary border-primary' : 'border-border/40 hover:border-primary'
+ isDone ? 'bg-primary border-primary' : 'border-border hover:border-primary'
  )}>
  {isDone && <Check size={9} strokeWidth={4} className="text-primary-foreground" />}
  </button>
@@ -230,11 +230,11 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  <div className="relative">
  <button onClick={e => {e.stopPropagation(); setShowStatusMenu(!showStatusMenu)}}
  className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border transition-all',
- statusColorClass(stripWL(getVal(a, 'Status', 'status'))) || 'text-muted-foreground/30 bg-muted/10 border-border/10')}>
+ statusColorClass(stripWL(getVal(a, 'Status', 'status'))) || 'text-muted-foreground/30 bg-muted/10 border-border')}>
  {cleanTitle(stripWL(getVal(a, 'Status', 'status')) || 'Planned')}
  </button>
  {showStatusMenu && (
- <div className="absolute top-full right-0 mt-1 bg-background border border-border/20 rounded-lg shadow-xl z-50 p-1 min-w-[120px]">
+ <div className="absolute top-full right-0 mt-1 bg-background border border-border rounded-lg shadow-xl z-50 p-1 min-w-[120px]">
  {['Planned', 'In Progress', 'Completed'].map(s => (
  <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('03 - Assignments', a.id, {Status: wrapWL(s)}); setShowStatusMenu(false)}}
  className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase rounded hover:bg-muted/10 transition-all', statusColorClass(s))}>

@@ -79,7 +79,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
 
  {/* Next exam callout */}
  {nextExam && (
- <div className="p-4 bg-muted/5 border border-border/20 rounded-xl flex items-center justify-between">
+ <div className="p-4 bg-muted/5 border border-border rounded-xl flex items-center justify-between">
  <div>
  <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Next Exam</span>
  <p className="text-[13px] font-black uppercase">{nextExam.title}</p>
@@ -129,8 +129,8 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  <div className="flex flex-col gap-2">
  {pendingAssignments.slice(0, 5).map((a, idx) => (
  <div key={idx} onClick={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)}
- className="flex items-center gap-3 p-3 border border-border/10 rounded-xl hover:border-foreground/10 cursor-pointer bg-background transition-all">
- <div className="w-3 h-3 rounded-full border border-border/30 shrink-0" />
+ className="flex items-center gap-3 p-3 border border-border rounded-xl cursor-pointer bg-background transition-all">
+ <div className="w-3 h-3 rounded-full border border-border shrink-0" />
  <span className="text-[11px] font-black uppercase flex-1">{cleanTitle(a.title)}</span>
  {a.due_date && <span className="text-[8px] font-black text-muted-foreground/40">{a.due_date.split('T')[0]}</span>}
  </div>
@@ -150,8 +150,8 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  return (
  <div key={idx} onClick={() => onOpenNote(`3-Database/06 - Study Planner/${hub.id}.md`)}
  className={cn('p-3 border rounded-xl flex items-center gap-3 cursor-pointer hover:border-foreground/10 transition-all',
- isDone ? 'border-border/10 bg-muted/5 opacity-50' : 'border-border/10 bg-background')}>
- <div className={cn('w-3 h-3 rounded-full border shrink-0', isDone ? 'bg-primary border-primary' : 'border-border/30')} />
+ isDone ? 'border-border bg-muted/5 opacity-50' : 'border-border bg-background')}>
+ <div className={cn('w-3 h-3 rounded-full border shrink-0', isDone ? 'bg-primary border-primary' : 'border-border')} />
  <span className={cn('text-[10px] font-black uppercase truncate', isDone ? 'text-muted-foreground/30 line-through' : 'text-foreground')}>
  {cleanTitle(hub.title || hub.id)}
  </span>
@@ -169,7 +169,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  return (
  <div className="h-full flex flex-col overflow-hidden">
  {/* Filter bar */}
- <div className="px-6 py-3 border-b border-border/10 flex items-center gap-3 shrink-0">
+ <div className="px-6 py-3 border-b border-border flex items-center gap-3 shrink-0">
  <div className="flex items-center gap-1.5 bg-muted/10 p-1 rounded-lg">
  {(['Active', 'All', 'Completed'] as const).map(f => (
  <button key={f} onClick={() => setStatusFilter(f)}
@@ -178,7 +178,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  )}>{f}</button>
  ))}
  </div>
- <div className="flex items-center gap-2 flex-1 bg-muted/5 border border-border/10 rounded-lg px-3 py-2">
+ <div className="flex items-center gap-2 flex-1 bg-muted/5 border border-border rounded-lg px-3 py-2">
  <Search size={11} className="text-muted-foreground/30" />
  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search courses..."
  className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-foreground placeholder:text-muted-foreground/30" />
@@ -211,10 +211,10 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
 
  return (
  <div key={idx} onClick={() => setSelectedId(course.id)}
- className="p-5 border border-border/20 rounded-xl hover:border-foreground/20 cursor-pointer bg-background transition-all group flex flex-col gap-3">
+ className="p-5 border border-border rounded-xl cursor-pointer bg-background transition-all group flex flex-col gap-3">
  {/* Title + Grade */}
  <div className="flex items-start justify-between gap-2">
- <h3 className="text-[13px] font-black uppercase leading-tight group-hover:text-primary transition-colors cursor-pointer"
+ <h3 className="text-[13px] font-black uppercase leading-tight transition-colors cursor-pointer"
  onClick={(e) => {
  e.stopPropagation()
  const next = window.prompt('Rename Course', course.title || '')
@@ -247,7 +247,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  )}
 
  {/* Quick stats */}
- <div className="flex items-center gap-3 text-[8px] font-black uppercase tracking-widest border-t border-border/5 pt-2">
+ <div className="flex items-center gap-3 text-[8px] font-black uppercase tracking-widest border-t border-border pt-2">
  {pending > 0 && <span className="text-foreground/70">{pending} due</span>}
  {daysToExam !== null && daysToExam >= 0 && (
  <span className={daysToExam <= 7 ? 'text-foreground font-black' : 'text-muted-foreground/30'}>exam in {daysToExam}d</span>

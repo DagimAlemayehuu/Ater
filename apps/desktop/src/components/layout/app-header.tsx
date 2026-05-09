@@ -24,7 +24,7 @@ export function AppHeader() {
         subPath = entry.path.replace(/\.md$/, '').replace(/_/g, ' ')
       }
     } else if (path.startsWith('/academic')) {
-      module = 'Academic Mastery'
+      module = 'Academic Dashboard'
       const parts = path.split('/').filter(Boolean)
       if (parts.length > 1) subPath = parts.slice(1).join(' / ')
     } else if (path.startsWith('/practice')) {

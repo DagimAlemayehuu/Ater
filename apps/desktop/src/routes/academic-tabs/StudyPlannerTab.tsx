@@ -134,8 +134,8 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  return (
  <div className="h-full flex overflow-hidden">
  {/* ── Left Course Sidebar ── */}
- <aside className="w-56 shrink-0 border-r border-border/10 flex flex-col overflow-hidden">
- <div className="p-4 border-b border-border/10">
+ <aside className="w-56 shrink-0 border-r border-border flex flex-col overflow-hidden">
+ <div className="p-4 border-b border-border">
  <p className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 flex items-center gap-1.5"><Brain size={10} />Courses</p>
  </div>
  <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -143,8 +143,8 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  <button
  onClick={() => setSelectedCourseId(null)}
  className={cn(
- 'w-full flex items-center justify-between px-4 py-3 text-left border-b border-border/5 transition-all',
- !selectedCourseId ? 'bg-foreground/5 text-foreground' : 'text-muted-foreground/50 hover:text-foreground hover:bg-muted/5'
+ 'w-full flex items-center justify-between px-4 py-3 text-left border-b border-border transition-all',
+ !selectedCourseId ? 'bg-foreground/5 text-foreground' : 'text-muted-foreground/50'
  )}>
  <div className="min-w-0">
  <p className="text-[11px] font-black uppercase">All Hubs</p>
@@ -158,8 +158,8 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  return (
  <button key={idx} onClick={() => setSelectedCourseId(course.id)}
  className={cn(
- 'w-full flex items-center justify-between px-4 py-3 text-left border-b border-border/5 transition-all',
- selectedCourseId === course.id ? 'bg-foreground/5 text-foreground' : 'text-muted-foreground/40 hover:text-foreground hover:bg-muted/5'
+ 'w-full flex items-center justify-between px-4 py-3 text-left border-b border-border transition-all',
+ selectedCourseId === course.id ? 'bg-foreground/5 text-foreground' : 'text-muted-foreground/40'
  )}>
  <div className="min-w-0 pr-2">
  <p className="text-[10px] font-black uppercase truncate">{cleanTitle(course.title)}</p>
@@ -170,14 +170,14 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  )
 })}
  </div>
- <div className="p-3 border-t border-border/10">
+ <div className="p-3 border-t border-border">
  <button
  onClick={() => {
  const title = window.prompt('Enter Hub Title', 'New Hub') || 'New Hub'
  const cleanHubTitle = cleanTitle(title)
  onCreate('06 - Study Planner', cleanHubTitle, selectedCourseId && selectedCourse ? {course: wrapWL(selectedCourse.title)} : {})
 }}
- className="w-full py-2 bg-foreground/5 hover:bg-foreground/10 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all">
+ className="w-full py-2 bg-foreground/5 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all">
  + Add Hub
  </button>
  </div>
@@ -186,7 +186,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  {/* ── Main Content ── */}
  <div className="flex-1 flex flex-col overflow-hidden">
  {/* Controls bar */}
- <div className="px-6 py-3 border-b border-border/10 flex items-center gap-3 flex-wrap shrink-0">
+ <div className="px-6 py-3 border-b border-border flex items-center gap-3 flex-wrap shrink-0">
  <div className="flex items-center gap-2 flex-1 min-w-[140px]">
  <Search size={12} className="text-muted-foreground/30 shrink-0" />
  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search hubs..."
@@ -196,7 +196,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  {(['All', 'Not Started', 'In Progress', 'Reviewing', 'Completed'] as StatusFilter[]).map(s => (
  <button key={s} onClick={() => setStatusFilter(s)}
  className={cn('px-2 py-1 rounded text-[7px] font-black uppercase tracking-wide transition-all whitespace-nowrap',
- statusFilter === s ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground/40 hover:text-foreground'
+ statusFilter === s ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground/40'
  )}>{s}</button>
  ))}
  </div>
@@ -214,7 +214,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
 
  {/* Stats strip for selected course */}
  {selectedCourse && (
- <div className="px-6 py-2.5 border-b border-border/5 flex items-center gap-5 shrink-0 bg-muted/[0.03]">
+ <div className="px-6 py-2.5 border-b border-border flex items-center gap-5 shrink-0 bg-muted/[0.03]">
  <span className="text-[12px] font-black uppercase">{cleanTitle(selectedCourse.title)}</span>
  <div className="flex items-center gap-4 text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">
  <span>{visibleHubs.length} hubs</span>
@@ -237,7 +237,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  <section key={si} className="space-y-3">
  <div className="flex items-center gap-3">
  <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 shrink-0">{section.title}</span>
- <div className="h-px flex-1 bg-border/10" />
+ <div className="h-px flex-1 bg-border" />
  <span className="text-[8px] font-black text-muted-foreground/20">{section.hubs.length}</span>
  </div>
  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -280,7 +280,7 @@ function HubCard({hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete
  return (
  <div className={cn(
  'relative p-4 border rounded-xl flex flex-col gap-3 transition-all group/hub',
- isCompleted ? 'border-border/10 bg-muted/5 opacity-60' : 'border-border/20 bg-background hover:border-foreground/10'
+ isCompleted ? 'border-border bg-muted/5 opacity-60' : 'border-border bg-background hover:bg-muted/5'
  )}>
  {/* Header */}
  <div className="flex items-start gap-2">
@@ -304,11 +304,11 @@ function HubCard({hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete
  <button
  onClick={() => setShowStatusMenu(!showStatusMenu)}
  className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border transition-all',
- statusColorClass(status) || 'text-muted-foreground/30 bg-muted/10 border-border/10')}>
+ statusColorClass(status) || 'text-muted-foreground/30 bg-muted/10 border-border')}>
  {status || 'Not Started'}
  </button>
  {showStatusMenu && (
- <div className="absolute top-full left-0 mt-1 bg-background border border-border/20 rounded-lg shadow-xl z-20 p-1 min-w-[150px]">
+ <div className="absolute top-full left-0 mt-1 bg-background border border-border rounded-lg shadow-xl z-20 p-1 min-w-[150px]">
  {['Planned', 'In Progress', 'Completed'].map(s => (
  <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('06 - Study Planner', hub.id, {Status: wrapWL(s)}); setShowStatusMenu(false)}}
  className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase rounded hover:bg-muted/10 transition-all', statusColorClass(s))}>
@@ -332,12 +332,12 @@ function HubCard({hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete
  type="date"
  value={studyDate || ''}
  onChange={e => onSetStudyDate(hub, e.target.value)}
- className="flex-1 bg-transparent text-[9px] font-black text-muted-foreground/50 focus:text-foreground focus:outline-none border-b border-transparent hover:border-border/30 focus:border-primary transition-all cursor-pointer min-w-0"
+ className="flex-1 bg-transparent text-[9px] font-black text-muted-foreground/50 focus:text-foreground focus:outline-none border-b border-transparent focus:border-primary transition-all cursor-pointer min-w-0"
  />
  </div>
 
  {/* Actions */}
- <div className="flex gap-2 pt-1 border-t border-border/5">
+ <div className="flex gap-2 pt-1 border-t border-border">
  <button onClick={onOpen} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[8px] font-black uppercase text-muted-foreground/50 hover:text-foreground hover:bg-muted/10 rounded-md transition-all">
  <BookOpen size={10} />Open
  </button>

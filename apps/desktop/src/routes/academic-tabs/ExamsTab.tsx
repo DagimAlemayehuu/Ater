@@ -98,7 +98,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  className="p-2 text-muted-foreground/20 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all">
  <Trash2 size={13} />
  </button>
- <button onClick={() => setSelectedId(null)} className="px-3 py-1.5 bg-muted/10 border border-border/20 rounded-lg text-[9px] font-black uppercase hover:bg-muted/20 transition-all">Back</button>
+ <button onClick={() => setSelectedId(null)} className="px-3 py-1.5 bg-muted/10 border border-border rounded-lg text-[9px] font-black uppercase hover:bg-muted/20 transition-all">Back</button>
  </div>
  </div>
 
@@ -146,8 +146,8 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  const hubStatus = stripWL(getVal(hub, 'status', 'Status'))
  const isDone = hubStatus.toLowerCase().includes('complet')
  return (
- <div key={idx} className={cn('p-3 border rounded-xl flex items-center gap-3', isDone ? 'border-border/10 bg-muted/5 opacity-60' : 'border-border/15 bg-background')}>
- <div className={cn('w-4 h-4 rounded-full border flex items-center justify-center shrink-0', isDone ? 'bg-primary border-primary' : 'border-border/30')}>
+ <div key={idx} className={cn('p-3 border border-border rounded-xl flex items-center gap-3', isDone ? 'bg-muted/5 opacity-60' : 'bg-background')}>
+ <div className={cn('w-4 h-4 rounded-full border flex items-center justify-center shrink-0', isDone ? 'bg-primary border-primary' : 'border-border')}>
  {isDone && <Check size={9} strokeWidth={4} className="text-primary-foreground" />}
  </div>
  <div className="flex-1 min-w-0">
@@ -171,7 +171,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  {/* Next Exam Hero */}
  {nextExam && (
  <div className="mx-6 mt-6 mb-2 shrink-0">
- <div className="p-6 sm:p-8 border border-border/10 bg-muted/5 rounded-2xl flex items-center justify-between gap-6">
+ <div className="p-6 sm:p-8 border border-border bg-muted/5 rounded-2xl flex items-center justify-between gap-6">
  <div className="space-y-1">
  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Next Exam</span>
  <h2 className="text-xl font-black uppercase tracking-tighter text-foreground">{cleanTitle(nextExam.title)}</h2>
@@ -190,14 +190,14 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  )}
 
  {/* Filter + Add bar */}
- <div className="px-6 py-3 border-b border-border/10 flex items-center gap-3 flex-wrap shrink-0">
+ <div className="px-6 py-3 border-b border-border flex items-center gap-3 flex-wrap shrink-0">
  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1">
  {['All', ...courses.map(c => c.id)].map(id => {
  const label = id === 'All' ? 'All' : courses.find(c => c.id === id)?.title || id
  return (
  <button key={id} onClick={() => setCourseFilter(id)}
  className={cn('px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wide whitespace-nowrap transition-all',
- courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-transparent bg-muted/5 text-muted-foreground/50 hover:text-foreground hover:border-border/50')}>
+  courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-border bg-muted/5 text-muted-foreground/50 hover:text-foreground hover:border-border')}>
  {label}
  </button>
  )
@@ -222,8 +222,6 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  {upcoming.map((exam, idx) => {
  const edate = getVal(exam, 'date', 'Exam Date')
  const days = edate ? differenceInDays(parseISO(edate), now) : 0
- const urgencyBorder = days <= 3 ? 'border-border' : days <= 7 ? 'border-border/40' : 'border-border/20'
- const urgencyText = days <= 3 ? 'text-foreground font-black' : days <= 7 ? 'text-foreground/70' : 'text-muted-foreground/60'
  const examCourse = stripWL(getVal(exam, 'Course', 'course')).toLowerCase()
  const relatedHubs = hubs.filter(h => {
  const hubCourse = stripWL(getVal(h, 'course', 'Course')).toLowerCase()
@@ -234,14 +232,14 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
 
  return (
  <div key={idx} onClick={() => setSelectedId(exam.id)}
- className={cn('p-5 border rounded-xl cursor-pointer hover:border-foreground/20 bg-background transition-all', urgencyBorder)}>
+ className={cn('p-5 border border-border rounded-xl cursor-pointer bg-background transition-all')}>
  <div className="flex items-start justify-between gap-3 mb-3">
  <div className="flex-1 min-w-0">
  <span className="text-[13px] font-black uppercase block truncate">{cleanTitle(exam.title)}</span>
  <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{cleanTitle(examCourse)}</span>
  </div>
  <div className="text-right shrink-0">
- <div className={cn('text-xl font-black', urgencyText)}>{days}</div>
+ <div className={cn('text-xl font-black')}>{days}</div>
  <div className="text-[7px] font-black uppercase text-muted-foreground/30">days</div>
  </div>
  </div>
@@ -275,7 +273,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  const score = getVal(exam, 'score', 'Score')
  return (
  <div key={idx} onClick={() => !isEditing && setSelectedId(exam.id)}
- className="p-5 border border-border/10 rounded-xl bg-background cursor-pointer hover:border-foreground/10 transition-all">
+ className="p-5 border border-border rounded-xl bg-background cursor-pointer transition-all">
  <div className="flex items-start justify-between gap-3">
  <div className="flex-1 min-w-0">
  <span className="text-[13px] font-black uppercase block truncate">{cleanTitle(exam.title)}</span>
@@ -285,17 +283,17 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  </div>
  <div onClick={e => e.stopPropagation()}>
  {score ? (
- <span className="px-2 py-1 bg-foreground/5 border border-border/20 rounded text-[10px] font-black text-foreground">{score}</span>
+ <span className="px-2 py-1 bg-foreground/5 border border-border rounded text-[10px] font-black text-foreground">{score}</span>
  ) : isEditing ? (
  <div className="flex items-center gap-1">
  <input autoFocus value={scoreInput} onChange={e => setScoreInput(e.target.value)} placeholder="Score"
- className="w-20 bg-background border border-border/30 px-2 py-1 rounded text-[10px] font-black focus:outline-none"
+ className="w-20 bg-background border border-border px-2 py-1 rounded text-[10px] font-black focus:outline-none"
  onKeyDown={e => {if (e.key === 'Enter') handleAddScore(exam); if (e.key === 'Escape') setEditingScore(null)}} />
  <button onClick={() => handleAddScore(exam)} className="p-1 text-primary"><Check size={11} /></button>
  </div>
  ) : (
  <button onClick={() => {setEditingScore(exam.id); setScoreInput('')}}
- className="px-2 py-1 text-[8px] font-black uppercase tracking-wide text-muted-foreground/30 border border-border/10 rounded hover:border-border/30 hover:text-foreground transition-all">
+ className="px-2 py-1 text-[8px] font-black uppercase tracking-wide text-muted-foreground/30 border border-border rounded hover:text-foreground transition-all">
  + Score
  </button>
  )}

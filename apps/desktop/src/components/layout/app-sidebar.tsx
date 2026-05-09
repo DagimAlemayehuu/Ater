@@ -25,7 +25,7 @@ export function AppSidebar() {
             <NavLink 
                 to="/academic"
                 className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")} 
-                title="Academic Mastery"
+                title="Academic Dashboard"
             >
                 <GraduationCap className="w-6 h-6" />
             </NavLink>
