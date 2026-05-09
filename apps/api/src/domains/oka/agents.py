@@ -5,6 +5,7 @@ import hashlib
 from typing import Any, Dict, List
 from langchain_core.language_models.chat_models import BaseChatModel
 from .schemas import PartialPlan, TheoryResponse, PractitionerResponse, QuizResponse, Question, ContextBriefing
+from .governor import governor
 
 # ── DOMAIN MATRIX v26.1 (UPGRADED) ───────────────────────────────────────────
 DOMAIN_MATRIX = {
@@ -1039,9 +1040,17 @@ DOMAIN AXIOMS (CRITICAL):
                     "limitations": res.limitations.strip().replace('\\\\n', '\\n')
                 }
             except Exception as e:
+                err_msg = str(e).lower()
+                is_429 = "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg
+                if is_429:
+                    governor.report_error(wait_seconds=5.0)
+                
                 print(f"[TheoryAgent] Attempt {attempt+1} failed: {e}")
                 if attempt == 2:
                     raise e
+                
+                wait_time = 2 * (attempt + 1) if is_429 else 1
+                await asyncio.sleep(wait_time)
 
     async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str, used_scenarios: list = None) -> str:
         title_readable = note_schema.title.replace("_", " ")
@@ -1105,9 +1114,17 @@ DOMAIN AXIOMS (CRITICAL):
                     "walkthrough": "\n".join([f"{step}" if step.strip()[0].isdigit() else f"{i+1}. {step}" for i, step in enumerate(clean_steps)])
                 }
             except Exception as e:
+                err_msg = str(e).lower()
+                is_429 = "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg
+                if is_429:
+                    governor.report_error(wait_seconds=5.0)
+                
                 print(f"[PractitionerAgent] Attempt {attempt+1} failed: {e}")
                 if attempt == 2:
                     raise e
+                
+                wait_time = 2 * (attempt + 1) if is_429 else 1
+                await asyncio.sleep(wait_time)
 
     async def generate(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> str:
         title_readable = note_title.replace("_", " ")
@@ -1169,9 +1186,17 @@ DOMAIN AXIOMS (CRITICAL):
                 return sanitized_qs
 
             except Exception as e:
+                err_msg = str(e).lower()
+                is_429 = "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg
+                if is_429:
+                    governor.report_error(wait_seconds=5.0)
+                
                 print(f"[QuestionAgent] Attempt {attempt+1} failed: {e}")
                 if attempt == 2:
                     raise e
+                
+                wait_time = 2 * (attempt + 1) if is_429 else 1
+                await asyncio.sleep(wait_time)
 
 class CriticAgent:
     def __init__(self, llm: BaseChatModel):

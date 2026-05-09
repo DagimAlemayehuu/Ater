@@ -1458,22 +1458,29 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         if unit_dir.exists():
             existing_notes = [f.stem for f in unit_dir.glob("*.md")]
 
-        # Phase 1.4: Oracle Context Briefing (Global Document Awareness)
+        # Phase 1.4: Intelligent Routing Selection
+        # We try the fast deterministic router first to save time and tokens.
+        OkaService._status[session_id] = "Analyzing Domain (Fast Track)..."
+        fast_mode = router.route(full_text, course=course)
+        
         OkaService._status[session_id] = "Oracle Context Briefing..."
         context_briefing_data = await self.meta_scanner_agent.scan_full_text(full_text)
         from .schemas import ContextBriefing
         context_briefing = ContextBriefing(**context_briefing_data)
         print(f"[OKA Service] Oracle Briefing: {context_briefing.primary_discipline}")
 
-        # Phase 1.5: Oracle Domain Routing (Self-Aware Selection)
-        OkaService._status[session_id] = "Oracle Domain Routing..."
-        detected_mode = await router.route_with_oracle(
-            self.planner_llm, 
-            context_briefing.model_dump(), 
-            full_text, 
-            course=course
-        )
-        print(f"[OKA Service] Oracle Router Detected: {detected_mode}")
+        if fast_mode != "DOMAIN-UNKNOWN":
+            detected_mode = fast_mode
+            print(f"[OKA Service] Fast Router Confirmed: {detected_mode}")
+        else:
+            OkaService._status[session_id] = "Oracle Domain Routing..."
+            detected_mode = await router.route_with_oracle(
+                self.planner_llm, 
+                context_briefing.model_dump(), 
+                full_text, 
+                course=course
+            )
+            print(f"[OKA Service] Oracle Router Detected: {detected_mode}")
 
         # Invoke Architect Agent
         OkaService._status[session_id] = "Architecting Sovereign Plan..."
@@ -1647,6 +1654,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             "metadata": structured_plan,
             "current_batch": 0,
             "total_batches": total_batches,
+            "processed_notes": [],
             "target_hub": next((h for h in self.list_planner_hubs() if h["id"] == target_hub_id), None) if target_hub_id else None,
             "messages": [] # We don't need to persist messages anymore if we use the Agent pattern
         }
@@ -1784,8 +1792,18 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     local_results = []
                     
                     if b_type == "atomic":
-                        # --- NEW AGENT-BASED ATOMIC GENERATION WITH VALIDATION LOOP ---
                         current_note_title = b_notes[0] if b_notes else ""
+                        
+                        # ── IDEMPOTENCY CHECK (v32.1 Singularity) ──
+                        # Compute target path and check if it already exists
+                        target_path = self.vm.get_note_path({"title": current_note_title, "type": "atomic_note"}, session_metadata=session)
+                        if target_path.exists():
+                            print(f"[OKA Service] Idempotency Hit: [[{current_note_title}]] already exists. Skipping.")
+                            if current_note_title not in session.get("processed_notes", []):
+                                session.setdefault("processed_notes", []).append(current_note_title)
+                            return True
+
+                        # --- NEW AGENT-BASED ATOMIC GENERATION WITH VALIDATION LOOP ---
                         note_schema_dict = next((n for n in session["metadata"].get("atomic_notes", []) if n["title"] == current_note_title), None)
                         
                         if not note_schema_dict:
@@ -1956,6 +1974,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 local_results = self.deployer.deploy_atomic_notes(
                                     session_id, [current_note_title], [final_markdown], plan_obj, session.get("path", "")
                                 )
+                                if current_note_title not in session.get("processed_notes", []):
+                                    session.setdefault("processed_notes", []).append(current_note_title)
                                 break # Success, exit generation loop
 
                             except Exception as e:
@@ -2076,7 +2096,18 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 # 1. Run all atomic notes in parallel
                 # They will compete for governor slots (max 5 by default)
                 tasks = [run_single_batch(b["id"], b["type"], b["notes"]) for b in atomic_batches]
-                await asyncio.gather(*tasks)
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                
+                # Check for critical failures in the parallel batch
+                exceptions = [r for r in results if isinstance(r, Exception)]
+                if exceptions:
+                    first_err = str(exceptions[0])
+                    if "429" in first_err or "rate_limit" in first_err.lower():
+                        print(f"[OKA Service] Hyperdrive Batch throttled (429). {len(exceptions)} tasks failed.")
+                        # We return a specific status to help the watcher
+                        return {"status": "rate_limited", "error": first_err}
+                    else:
+                        raise exceptions[0] # Re-raise first non-rate-limit error
                 
                 # 2. Run sequential batches (PQ, Hub)
                 for b in other_batches:

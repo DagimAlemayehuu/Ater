@@ -182,10 +182,16 @@ export default function Practice() {
         }
     } else if (q.type === 'fill_in') {
         const answers = userAnswers[q.id] || [];
-        const correctAnswers = q.answer || [];
-        isCorrect = Array.isArray(correctAnswers) && correctAnswers.every((ans: string, idx: number) => 
-            String(answers[idx] || '').trim().toLowerCase() === String(ans || '').trim().toLowerCase()
-        );
+        // Support both array and single string (legacy/edge cases) for correct answers
+        const correctAnswers = q.answer;
+        if (Array.isArray(correctAnswers)) {
+            isCorrect = correctAnswers.every((ans: string, idx: number) => 
+                String(answers[idx] || '').trim().toLowerCase() === String(ans || '').trim().toLowerCase()
+            );
+        } else {
+            // If it's a single string, check against the first user answer
+            isCorrect = String(answers[0] || '').trim().toLowerCase() === String(correctAnswers || '').trim().toLowerCase();
+        }
     } else if (q.type === 'matching') {
         const userPairs = userAnswers[q.id] || {};
         const correctPairs = q.pairs || [];
@@ -664,6 +670,36 @@ export default function Practice() {
                          })}
                          </div>
                          )}
+
+                        {currentQuestion.type === 'fill_in' && (
+                            <div className="space-y-6">
+                                <div className="p-6 bg-muted/10 rounded-3xl border border-border/40 text-sm leading-relaxed font-medium">
+                                    {(currentQuestion.text_with_blanks || (currentQuestion as any).textWithBlanks || '').split(/\[\[blank\]\]/g).map((part: string, i: number, arr: any[]) => (
+                                        <React.Fragment key={i}>
+                                            {part}
+                                            {i < arr.length - 1 && (
+                                                <input
+                                                    type="text"
+                                                    value={(userAnswers[currentQuestion.id] || [])[i] || ''}
+                                                    disabled={isRevealed}
+                                                    onChange={(e) => {
+                                                        const newAns = [...(userAnswers[currentQuestion.id] || [])];
+                                                        newAns[i] = e.target.value;
+                                                        handleSelectAnswer(newAns);
+                                                    }}
+                                                    className={cn(
+                                                        "mx-1 px-3 py-1 bg-background border-b-2 border-primary/30 focus:border-primary outline-none text-center min-w-[80px] transition-all",
+                                                        isRevealed && (currentQuestion.answer || [])[i]?.toLowerCase() === (userAnswers[currentQuestion.id] || [])[i]?.toLowerCase() ? "text-green-500 border-green-500" : 
+                                                        isRevealed ? "text-red-500 border-red-500" : ""
+                                                    )}
+                                                    placeholder="..."
+                                                />
+                                            )}
+                                        </React.Fragment>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {['short_answer', 'scenario', 'writing', 'synthesis', 'debug', 'trace'].includes(currentQuestion.type) && (
                             <div className="space-y-8">

@@ -143,8 +143,10 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
         setScores({...scores, [currentIdx]: isCorrect});
     } else if (currentQ.type === 'fill_in') {
         const userAnswersArr = userAnswers[currentQ.id] || [];
-        const correctAnswersArr = currentQ.answer || [];
-        isCorrect = Array.isArray(correctAnswersArr) && correctAnswersArr.every((ans: string, idx: number) => 
+        const rawAnswer = currentQ.answer || [];
+        const correctAnswersArr = Array.isArray(rawAnswer) ? rawAnswer : [rawAnswer];
+        
+        isCorrect = correctAnswersArr.every((ans: string, idx: number) => 
             String(userAnswersArr[idx] || '').trim().toLowerCase() === String(ans || '').trim().toLowerCase()
         );
         setScores({...scores, [currentIdx]: isCorrect});
@@ -196,7 +198,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
   };
 
   const renderFillInBlanks = () => {
-    const text = currentQ.textWithBlanks || '';
+    const text = currentQ.textWithBlanks || currentQ.text_with_blanks || '';
     const parts = text.split(/\[\[.*?\]\]/);
     return parts.map((part: string, i: number) => (
       <React.Fragment key={i}>

@@ -2088,10 +2088,24 @@ export default function ObsidianVaultPage() {
  </div>
  {queueStatus?.status !== 'idle' && (
  <div className="space-y-1.5">
- <p className="text-[9px] text-muted-foreground truncate">{queueStatus?.current_file}</p>
+ <p className="text-[9px] text-foreground font-semibold truncate uppercase tracking-tight">{queueStatus?.last_action || queueStatus?.current_file}</p>
+ <div className="flex justify-between text-[8px] font-bold text-muted-foreground uppercase">
+ <span>Batch {queueStatus?.current_batch} / {queueStatus?.total_batches || '?'}</span>
+ {queueStatus?.total_notes_count > 0 && (
+ <span>{queueStatus?.processed_notes?.length || 0} / {queueStatus?.total_notes_count} Notes</span>
+ )}
+ </div>
  <div className="h-1 bg-muted rounded-full overflow-hidden">
  <div className="h-full bg-primary transition-all " style={{width: `${(queueStatus?.current_batch / (queueStatus?.total_batches || 1)) * 100}%`}} />
  </div>
+ {queueStatus?.total_notes_count > 0 && (
+ <div className="h-0.5 bg-muted/50 rounded-full overflow-hidden mt-1">
+ <div 
+ className="h-full bg-foreground/30 transition-all duration-700 ease-in-out" 
+ style={{width: `${((queueStatus?.processed_notes?.length || 0) / queueStatus?.total_notes_count) * 100}%`}} 
+ />
+ </div>
+ )}
  </div>
  )}
  </div>

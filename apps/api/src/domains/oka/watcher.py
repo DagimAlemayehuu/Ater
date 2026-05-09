@@ -10,6 +10,7 @@ from typing import Optional, List, Dict, Any
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from .service import OkaService
+from .governor import governor
 
 file_handler = logging.FileHandler("/tmp/oka_watcher.log")
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
@@ -258,18 +259,30 @@ class OkaQueueManager:
                 curriculum = detect_res.get("detected_curriculum") or {}
                 
                 # 2. Planning
-                self.last_action = f"Planning {path.name}..."
+                self.last_action = f"Planning {path.name}: Generating Batches..."
                 plan_res = await self.service.generate_plan(str(path.absolute()), self.si_path, curriculum=curriculum)
                 session_id = plan_res["session_id"]
-                total = len(plan_res["plan_structured"].get("batches", []))
+                plan_structured = plan_res.get("plan_structured", {})
+                total = len(plan_structured.get("batches", []))
+                
+                # Update manager state for UI (Primary focus)
+                self.planned_batches = plan_structured.get("batches", [])
+                self.total_batches = total
+                self.current_batch = 0
+                self.processed_notes = []
+                
+                # Immediate Checkpoint to prevent re-planning on restart
+                self._save_checkpoint(file_path_str, session_id, 0, total, curriculum)
             
             # 3. Deployment Loop (Hyperdrive)
             has_more = True
             deployment_failed = False
             curriculum_override_applied = (temp_batch > 0)
+            self.last_action = f"Deployment Started: {path.name} ({total} batches)..."
             
             while has_more:
                 command = "Confirm Final Plan & Proceed Batch 1" if temp_batch == 0 else f"Proceed Batch {temp_batch + 1}"
+                self.last_action = f"Deploying {path.name}: Batch {temp_batch + 1}/{total}..."
                 watcher_logger.info(f"Worker for {path.name} executing {command}")
                 
                 batch_retry = 0
@@ -285,18 +298,35 @@ class OkaQueueManager:
                         if confirm_res.get("status") == "success":
                             temp_batch = confirm_res.get("current_batch", temp_batch + 1)
                             has_more = confirm_res.get("has_more", False)
+                            
+                            # Update DB & Manager State
                             self._save_checkpoint(file_path_str, session_id, temp_batch, total, curriculum)
+                            self.current_batch = temp_batch
+                            
+                            # Append to processed notes for UI
+                            new_notes = confirm_res.get("results", [])
+                            for n in new_notes:
+                                if n not in self.processed_notes:
+                                    self.processed_notes.append(n)
+                            
                             success = True
                             curriculum_override_applied = True
+                        elif confirm_res.get("status") == "rate_limited":
+                            self.last_action = f"Throttled: {governor.last_throttle_event or 'Cooling down'}"
+                            watcher_logger.warning(f"Rate limit hit for {path.name}. Governor cooling down...")
+                            await asyncio.sleep(5) # Let the governor wait loop take over
+                            continue # Retry same batch without incrementing batch_retry
                         else:
                             raise ValueError(confirm_res.get("message", "Unknown service error"))
                     except Exception as e:
                         err_msg = str(e).lower()
                         if "429" in err_msg or "rate limit" in err_msg:
-                            watcher_logger.warning(f"Rate limit hit for {path.name}. Sleeping 60s...")
-                            await asyncio.sleep(60)
+                            self.last_action = f"Rate Limit Detected: Waiting for Governor..."
+                            watcher_logger.warning(f"Rate limit hit for {path.name}. Sleeping 10s...")
+                            await asyncio.sleep(10)
                         else:
                             batch_retry += 1
+                            self.last_action = f"Error in Batch {temp_batch + 1} (Retry {batch_retry}/5)..."
                             watcher_logger.error(f"Worker for {path.name} failed batch (Attempt {batch_retry}/5): {e}")
                             await asyncio.sleep(15)
                 
@@ -306,6 +336,7 @@ class OkaQueueManager:
 
             # 4. Finalize
             if not deployment_failed and not has_more:
+                self.last_action = f"Finalizing {path.name}..."
                 if path.exists():
                     meta = curriculum
                     _sem = (meta.get("semester") or "General").strip()
@@ -317,31 +348,76 @@ class OkaQueueManager:
                     shutil.move(str(path.absolute()), str(target_dir / clean_name))
                 
                 self._mark_done(file_path_str)
+                self.last_action = f"Finished {path.name}."
                 watcher_logger.info(f"Successfully processed {path.name}")
             else:
                 self._mark_error(file_path_str)
+                self.last_action = f"Failed to process {path.name}."
 
         except Exception as e:
             watcher_logger.error(f"Critical worker failure for {path.name}: {e}")
             self._mark_error(file_path_str)
+            self.last_action = f"Error: {str(e)}"
 
     def get_status(self) -> Dict[str, Any]:
         conn = self._get_conn()
         pending_count = conn.execute("SELECT COUNT(*) FROM queue WHERE status = 'pending'").fetchone()[0]
-        conn.close()
         
+        # Pull real-time progress for the primary active file from DB if available
+        current_file = None
+        if self.active_tasks:
+            # Sort keys to be deterministic, or just pick first
+            primary_path_str = list(self.active_tasks.keys())[0]
+            current_file = Path(primary_path_str).name
+            
+            # Optionally refresh batch counts from DB to ensure accuracy if multiple workers are active
+            row = conn.execute("SELECT current_batch, total_batches FROM queue WHERE file_path=?", (primary_path_str,)).fetchone()
+            if row:
+                self.current_batch = row[0] or self.current_batch
+                self.total_batches = row[1] or self.total_batches
+        
+        conn.close()
         active_files = [Path(f).name for f in self.active_tasks.keys()]
         
+        # Inject governor status into last_action if waiting
+        display_action = self.last_action
+        session_id = primary_path_str if self.active_tasks else None
+        
+        # Pull granular status from service if available
+        if session_id:
+            svc_status = OkaService._status.get(session_id)
+            if svc_status:
+                display_action = f"{self.last_action} | {svc_status}"
+            
+            # Pull real-time processed notes from service session
+            session = OkaService._sessions.get(session_id)
+            if session:
+                svc_processed = session.get("processed_notes", [])
+                # Combine local (completed batches) with session (in-progress parallel notes)
+                combined_notes = list(set(self.processed_notes + svc_processed))
+                self.processed_notes = combined_notes
+
+        if governor.last_throttle_event:
+            display_action = f"Throttled: {governor.last_throttle_event}"
+
+        # Calculate total notes count across all planned batches
+        total_notes_count = 0
+        for batch in self.planned_batches:
+            total_notes_count += len(batch.get("notes", []))
+
         return {
             "status": self.status,
             "auto_process": self.auto_process,
             "active_files": active_files,
+            "current_file": current_file,
             "current_batch": self.current_batch,
             "total_batches": self.total_batches,
             "planned_batches": self.planned_batches,
-            "last_action": self.last_action,
+            "total_notes_count": total_notes_count,
+            "last_action": display_action,
             "queue_size": pending_count,
-            "processed_notes": self.processed_notes
+            "processed_notes": self.processed_notes,
+            "governor_pressure": governor.current_pressure
         }
 
     def stop(self):

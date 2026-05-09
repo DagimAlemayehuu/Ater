@@ -19,9 +19,9 @@ class TokenGovernor:
         self._lock = asyncio.Lock()
         
         # Groq Free Tier limits (v30.0 Pantheon Prime)
-        self.max_tpm = 30000  # Tokens Per Minute
+        self.max_tpm = 60000  # Increased for stability
         self.max_rpm = 30     # Requests Per Minute
-        self.safety_margin = 0.85 # 15% safety buffer
+        self.safety_margin = 0.95 # Higher margin for less frequent waiting
         
         # Sliding Window for pacing
         self.request_window = deque() # Timestamps of requests in the last 60s
@@ -32,6 +32,11 @@ class TokenGovernor:
         self.max_concurrency = 5  # Default, will scale
         self.min_concurrency = 1
         self.current_concurrency_limit = 1 
+        
+        # Real-time Telemetry (v32.0 Oracle)
+        self.current_pressure = 0.0
+        self.last_throttle_event = None
+        self.cooldown_until = 0.0
 
     def _init_db(self):
         with sqlite3.connect(self.db_path) as conn:
@@ -53,6 +58,14 @@ class TokenGovernor:
         async with self._lock:
             while True:
                 now = time.time()
+                
+                # Check for active cooldown (v32.1 Hardening)
+                if now < self.cooldown_until:
+                    wait_remaining = self.cooldown_until - now
+                    self.last_throttle_event = f"Cooling down ({wait_remaining:.1f}s)..."
+                    await asyncio.sleep(wait_remaining)
+                    continue
+
                 self._clear_old_windows(now)
                 
                 tpm_used = sum(t for _, t in self.token_window)
@@ -61,6 +74,7 @@ class TokenGovernor:
                 tpm_ratio = tpm_used / (self.max_tpm * self.safety_margin)
                 rpm_ratio = rpm_used / (self.max_rpm * self.safety_margin)
                 pressure = max(tpm_ratio, rpm_ratio)
+                self.current_pressure = pressure
 
                 # DYNAMIC SCALING LOGIC
                 if pressure < 0.3 and self.current_concurrency_limit < self.max_concurrency:
@@ -75,13 +89,15 @@ class TokenGovernor:
                 
                 if tpm_ok and rpm_ok:
                     # Permit Granted
+                    self.last_throttle_event = None
                     self.request_window.append(now)
                     self.token_window.append((now, expected_tokens))
                     self._record_usage_db(expected_tokens, expected_requests)
                     return True
                 
                 # Calculation of wait time based on pressure
-                wait_time = 5.0 if not tpm_ok else 2.0
+                wait_time = 1.5 if not tpm_ok else 1.0
+                self.last_throttle_event = f"Waiting {wait_time}s (TPM: {tpm_used}/{self.max_tpm})"
                 print(f"[Governor] 🚦 Pressure Detected: {tpm_used}/{self.max_tpm} TPM. Waiting {wait_time}s...")
                 await asyncio.sleep(wait_time)
 
@@ -114,15 +130,16 @@ class TokenGovernor:
                 conn.commit()
         except Exception: pass # Database lock shouldn't block the permit
 
-    def report_error(self, wait_seconds: float = 60.0):
+    def report_error(self, wait_seconds: float = 5.0):
         """External hook to force a cooldown on 429 detection."""
         now = time.time()
+        self.cooldown_until = now + wait_seconds
         self.current_concurrency_limit = self.min_concurrency
-        # Inject penalty into the windows
+        # Inject penalty into the windows to prevent immediate bursts after cooldown
         for _ in range(10):
             self.request_window.append(now)
-        self.token_window.append((now, int(self.max_tpm * 0.6)))
-        print(f"[Governor] 💥 429 detected. Dropping Concurrency to {self.min_concurrency}. Cooling down...")
+        self.token_window.append((now, int(self.max_tpm * 0.8)))
+        print(f"[Governor] 💥 429 detected. Dropping Concurrency to {self.min_concurrency}. Cooling down for {wait_seconds}s...")
 
 # Global governor instance
 governor = TokenGovernor()
