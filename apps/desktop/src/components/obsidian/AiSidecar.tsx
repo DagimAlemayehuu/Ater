@@ -147,7 +147,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
     };
 
     return (
-        <div className="w-80 h-full border-l border-border bg-background flex flex-col shadow-2xl animate-in slide-in-from-right duration-300 stop-selection-clear">
+        <div className="w-80 h-full border-l border-border bg-background flex flex-col shadow-2xl  slide-in-from-right  stop-selection-clear">
             {/* Header */}
             <div className="p-4 border-b border-border flex items-center justify-between bg-background/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="flex items-center gap-3">
@@ -161,19 +161,19 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                         <div className="flex gap-2 mt-0.5">
                             <span className={cn(
                                 "text-[8px] font-bold uppercase tracking-widest",
-                                mode === 'explain' ? "text-indigo-500" : "text-muted-foreground cursor-pointer hover:text-indigo-400 transition-colors"
+                                mode === 'explain' ? "text-indigo-500" : "text-muted-foreground cursor-pointer hover:text-indigo-400 "
                             )} onClick={() => setMode('explain')}>Explain</span>
                             <span className="text-[8px] text-muted-foreground/30">|</span>
                             <span className={cn(
                                 "text-[8px] font-bold uppercase tracking-widest",
-                                mode === 'quiz' ? "text-amber-500" : "text-muted-foreground cursor-pointer hover:text-amber-400 transition-colors"
+                                mode === 'quiz' ? "text-amber-500" : "text-muted-foreground cursor-pointer hover:text-amber-400 "
                             )} onClick={() => { setMode('quiz'); if (quizQuestions.length === 0) handleInitialQuiz(); }}>Interactive Quiz</span>
                         </div>
                     </div>
                 </div>
                 <button 
                     onClick={onClose}
-                    className="p-2 hover:bg-muted rounded-xl transition-all text-muted-foreground hover:text-foreground active:scale-95"
+                    className="p-2 hover:bg-muted rounded-xl  text-muted-foreground hover:text-foreground active:scale-95"
                 >
                     <X size={16} />
                 </button>
@@ -187,8 +187,8 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                         <Quote size={10} className="text-muted-foreground/40" />
                         <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Context Selection</span>
                     </div>
-                    <div className="p-4 bg-muted/30 rounded-2xl border border-border border-l-4 border-l-primary group transition-all hover:bg-muted/50">
-                        <p className="text-[11px] text-muted-foreground leading-relaxed italic line-clamp-3 group-hover:line-clamp-none transition-all">"{selection}"</p>
+                    <div className="p-4 bg-muted/30 rounded-2xl border border-border border-l-4 border-l-primary group  hover:bg-muted/50">
+                        <p className="text-[11px] text-muted-foreground leading-relaxed italic line-clamp-3 group-hover:line-clamp-none ">"{selection}"</p>
                     </div>
                 </div>
 
@@ -199,7 +199,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                     <div className="space-y-6 pb-20">
                         {messages.map((msg, i) => (
                             <div key={i} className={cn(
-                                "flex flex-col space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300",
+                                "flex flex-col space-y-2   slide-in-from-bottom-2 ",
                                 msg.role === 'user' ? "items-end" : "items-start"
                             )}>
                                 <div className={cn(
@@ -217,7 +217,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                             </div>
                         ))}
                         {isThinking && (
-                            <div className="flex items-center gap-3 text-muted-foreground/40 animate-pulse">
+                            <div className="flex items-center gap-3 text-muted-foreground/40 ">
                                 <div className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '0ms' }} />
                                 <div className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '150ms' }} />
                                 <div className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -229,14 +229,14 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                     /* Quiz View */
                     <div className="space-y-6 pb-20">
                         {!isThinking && quizQuestions.length > 0 ? (
-                            <div className="space-y-8 animate-in fade-in duration-500">
+                            <div className="space-y-8   ">
                                 {/* Quiz Progress */}
                                 <div className="flex items-center justify-between">
                                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Question {currentQuestionIndex + 1}/{quizQuestions.length}</span>
                                     <div className="flex gap-1">
                                         {quizQuestions.map((_, i) => (
                                             <div key={i} className={cn(
-                                                "w-4 h-1 rounded-full transition-all duration-300",
+                                                "w-4 h-1 rounded-full  ",
                                                 i === currentQuestionIndex ? "bg-amber-500 w-8" : i < currentQuestionIndex ? "bg-primary/20" : "bg-muted"
                                             )} />
                                         ))}
@@ -257,7 +257,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                                     onClick={() => handleAnswerQuiz(opt)}
                                                     disabled={isAnswered}
                                                     className={cn(
-                                                        "w-full px-4 py-3 rounded-xl border text-[12px] text-left transition-all active:scale-[0.98] flex items-center justify-between group",
+                                                        "w-full px-4 py-3 rounded-xl border text-[12px] text-left  active:scale-[0.98] flex items-center justify-between group",
                                                         isAnswered 
                                                             ? (opt.toLowerCase() === quizQuestions[currentQuestionIndex].answer.toLowerCase() 
                                                                 ? "bg-green-500/10 border-green-500/20 text-green-600 font-bold" 
@@ -277,7 +277,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                                         onClick={() => handleAnswerQuiz(opt)}
                                                         disabled={isAnswered}
                                                         className={cn(
-                                                            "px-4 py-4 rounded-xl border text-[12px] font-black uppercase tracking-widest transition-all active:scale-95 flex flex-col items-center gap-2",
+                                                            "px-4 py-4 rounded-xl border text-[12px] font-black uppercase tracking-widest  active:scale-95 flex flex-col items-center gap-2",
                                                             isAnswered 
                                                                 ? (opt.toLowerCase() === quizQuestions[currentQuestionIndex].answer.toLowerCase() 
                                                                     ? "bg-green-500/10 border-green-500/20 text-green-600" 
@@ -297,7 +297,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                 {/* Feedback */}
                                 {quizFeedback && (
                                     <div className={cn(
-                                        "p-5 rounded-2xl border-2 animate-in slide-in-from-top-4 duration-500",
+                                        "p-5 rounded-2xl border-2  slide-in-from-top-4 ",
                                         quizFeedback.correct ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20"
                                     )}>
                                         <div className="flex items-center gap-3 mb-3">
@@ -319,7 +319,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                         </p>
                                         <button 
                                             onClick={nextQuestion}
-                                            className="w-full py-3 bg-primary text-primary-foreground rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg"
+                                            className="w-full py-3 bg-primary text-primary-foreground rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:opacity-90 active:scale-95  shadow-lg"
                                         >
                                             {currentQuestionIndex < quizQuestions.length - 1 ? 'Next Challenge' : 'Finish Quiz'}
                                             <ArrowRight size={14} />
@@ -332,7 +332,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                 <div className="space-y-4 py-8 flex flex-col items-center justify-center">
                                     <div className="relative">
                                         <RefreshCw size={40} className="text-muted/20 animate-spin" />
-                                        <Zap size={20} className="text-amber-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                                        <Zap size={20} className="text-amber-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 " />
                                     </div>
                                     <span className="text-[11px] font-black text-muted-foreground/30 uppercase tracking-[0.2em] text-center max-w-[150px]">Architecting Interactive Quiz...</span>
                                 </div>
@@ -358,13 +358,13 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                             onChange={(e) => setChatInput(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                             placeholder="Ask follow-up..."
-                            className="w-full bg-muted border-none rounded-2xl pl-5 pr-12 py-4 text-[12px] focus:ring-2 focus:ring-primary transition-all placeholder:text-muted-foreground/30 placeholder:font-bold placeholder:uppercase placeholder:tracking-widest text-foreground"
+                            className="w-full bg-muted border-none rounded-2xl pl-5 pr-12 py-4 text-[12px] focus:ring-2 focus:ring-primary  placeholder:text-muted-foreground/30 placeholder:font-bold placeholder:uppercase placeholder:tracking-widest text-foreground"
                         />
                         <button 
                             onClick={handleSendMessage}
                             disabled={!chatInput.trim() || isThinking}
                             className={cn(
-                                "absolute right-2 p-2 rounded-xl transition-all active:scale-90",
+                                "absolute right-2 p-2 rounded-xl  active:scale-90",
                                 chatInput.trim() && !isThinking ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground/30"
                             )}
                         >

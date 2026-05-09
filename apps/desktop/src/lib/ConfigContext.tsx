@@ -142,7 +142,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const savedApiKeys = (await store.get<SavedApiKey[]>('savedApiKeys')) || [];
                 const showProperties = (await store.get<boolean>('showProperties')) ?? false;
 
-                const loadedConfig: any = {
+                let loadedConfig: any = {
                     aiProvider,
                     aiApiKey,
                     aiModel,
@@ -164,6 +164,17 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     savedApiKeys,
                     showProperties,
                 };
+
+                // Auto-select first key if none active
+                if (!aiApiKey && savedApiKeys.length > 0) {
+                    const first = savedApiKeys[0];
+                    loadedConfig.aiApiKey = first.key;
+                    loadedConfig.aiProvider = first.provider;
+                    // Persist this selection
+                    await store.set('aiApiKey', first.key);
+                    await store.set('aiProvider', first.provider);
+                    await store.save();
+                }
 
                 setConfig(loadedConfig);
             } catch (err) {
@@ -200,9 +211,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const isConfigured = Boolean(
         config?.aiApiKey &&
-        config?.obsidianVaultPath &&
-        config?.inboxPath &&
-        config?.academicFolderPath
+        config?.obsidianVaultPath
     );
 
     const addCustomPersona = async (p: CustomPersona) => {

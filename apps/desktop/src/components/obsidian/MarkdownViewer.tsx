@@ -83,10 +83,10 @@ const CodeBlock = ({ language, value }: { language: string | null, value: string
     };
 
     return (
-        <div className="relative group my-8 rounded-xl border border-border/20 overflow-hidden bg-transparent transition-all hover:border-border/40">
+        <div className="relative group my-8 rounded-xl border border-border/20 overflow-hidden bg-transparent  hover:border-border/40">
             {/* Header / Top Bar - Minimalist and blended */}
             <div className={cn(
-                "flex items-center justify-between px-5 py-1.5 border-b border-border/5 bg-muted/5 transition-opacity",
+                "flex items-center justify-between px-5 py-1.5 border-b border-border/5 bg-muted/5 ",
                 !language && "opacity-0 group-hover:opacity-100"
             )}>
                 <div className="flex items-center">
@@ -96,10 +96,10 @@ const CodeBlock = ({ language, value }: { language: string | null, value: string
                 </div>
                 <button 
                     onClick={handleCopy}
-                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-muted/20 rounded-md transition-all text-muted-foreground/50 hover:text-foreground group/copy"
+                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-muted/20 rounded-md  text-muted-foreground/50 hover:text-foreground group/copy"
                     title="Copy Code"
                 >
-                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-0 group-hover/copy:opacity-100 transition-opacity">
+                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-0 group-hover/copy:opacity-100 ">
                         {copied ? 'Copied' : 'Copy'}
                     </span>
                     {copied ? <Check size={12} className="text-primary" /> : <Copy size={12} className="group-hover/copy:scale-110 transition-transform" />}
@@ -323,7 +323,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                                 }
                             }
                         }}
-                        className="mt-1 size-3.5 appearance-none border border-border/50 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[4px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer transition-colors" 
+                        className="mt-1 size-3.5 appearance-none border border-border/50 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[4px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer " 
                     />
                 );
             }
@@ -408,7 +408,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
         },
         hr: () => <hr className="my-10 border-t border-border" />,
         a: ({ href, children }: any) => (
-            <a href={href} target="_blank" rel="noreferrer" className="text-foreground font-black underline underline-offset-4 decoration-border/40 hover:decoration-foreground/40 transition-all font-medium">
+            <a href={href} target="_blank" rel="noreferrer" className="text-foreground font-black underline underline-offset-4 decoration-border/40 hover:decoration-foreground/40  font-medium">
                 {children}
             </a>
         )

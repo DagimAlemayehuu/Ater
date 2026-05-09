@@ -27,7 +27,7 @@ export function SlashCommandPopover({ onSelect, onClose, position }: SlashComman
 
     return (
         <div 
-            className="fixed z-[999] w-64 bg-popover border border-border shadow-2xl rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+            className="fixed z-[999] w-64 bg-popover border border-border shadow-2xl rounded-xl overflow-hidden   slide-in-from-top-2 "
             style={{ top: position.top, left: position.left }}
         >
             <div className="p-3 border-b border-border bg-muted/30 flex items-center gap-2">
@@ -50,7 +50,7 @@ export function SlashCommandPopover({ onSelect, onClose, position }: SlashComman
                 </div>
                 
                 {loading ? (
-                    <div className="px-3 py-4 text-center text-[10px] text-muted-foreground animate-pulse">Scanning Vault...</div>
+                    <div className="px-3 py-4 text-center text-[10px] text-muted-foreground ">Scanning Vault...</div>
                 ) : filteredDbs.length === 0 ? (
                     <div className="px-3 py-4 text-center text-[10px] text-muted-foreground">No matching databases</div>
                 ) : (
@@ -58,9 +58,9 @@ export function SlashCommandPopover({ onSelect, onClose, position }: SlashComman
                         <button
                             key={db.id}
                             onClick={() => onSelect(`/table ${db.id || db.name}`)}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent rounded-lg transition-all group"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent rounded-lg  group"
                         >
-                            <div className="size-8 rounded-lg bg-muted flex items-center justify-center text-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-sm">
+                            <div className="size-8 rounded-lg bg-muted flex items-center justify-center text-foreground group-hover:bg-primary group-hover:text-primary-foreground  shadow-sm">
                                 <Table size={14} />
                             </div>
                             <div className="flex flex-col min-w-0">
@@ -87,9 +87,9 @@ function CommandItem({ icon, label, desc, onClick }: { icon: any, label: string,
     return (
         <button
             onClick={onClick}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent rounded-lg transition-all group"
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent rounded-lg  group"
         >
-            <div className="size-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+            <div className="size-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground ">
                 {icon}
             </div>
             <div className="flex flex-col min-w-0">

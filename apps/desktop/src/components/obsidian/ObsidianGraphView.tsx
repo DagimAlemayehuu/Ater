@@ -27,6 +27,7 @@ interface GraphSettings {
     repelForce: number
     linkDistance: number
     linkForce: number
+    collideForce: number
     showArrows: boolean
     textFadeThreshold: number
 }
@@ -35,9 +36,10 @@ const DEFAULT_SETTINGS: GraphSettings = {
     nodeSize: 3,
     linkThickness: 1,
     centerForce: 0.5,
-    repelForce: 150,
+    repelForce: 250,
     linkDistance: 100,
     linkForce: 0.5,
+    collideForce: 35,
     showArrows: false,
     textFadeThreshold: 2.0
 }
@@ -93,14 +95,24 @@ export function ObsidianGraphView({
         const centerX = dimensions.width / 2;
         const centerY = dimensions.height / 2;
 
-        fg.d3Force('center', null); 
-        fg.d3Force('charge').strength(-settings.repelForce);
-        fg.d3Force('link')
-            .distance(settings.linkDistance)
-            .strength(settings.linkForce);
-
-        fg.d3Force('radial', d3.forceRadial(10, centerX, centerY).strength(settings.centerForce));
+        // Central pull forces
+        fg.d3Force('center', d3.forceCenter(centerX, centerY));
+        fg.d3Force('x', d3.forceX(centerX).strength(settings.centerForce * 0.1));
+        fg.d3Force('y', d3.forceY(centerY).strength(settings.centerForce * 0.1));
         
+        // Repelling forces
+        fg.d3Force('charge', d3.forceManyBody().strength(-settings.repelForce));
+        
+        // Collision prevention (repelling force between nodes)
+        fg.d3Force('collide', d3.forceCollide().radius((node: any) => {
+            const r = (node.val || 4) * (settings.nodeSize / 3);
+            return r + settings.collideForce / 5;
+        }).iterations(2));
+
+        fg.d3Force('link', d3.forceLink()
+            .distance(settings.linkDistance)
+            .strength(settings.linkForce));
+
         fg.d3AlphaTarget(0.3).restart();
         setTimeout(() => fg.d3AlphaTarget(0), 1000);
     }, [settings, dimensions.width, dimensions.height]);
@@ -188,7 +200,7 @@ export function ObsidianGraphView({
             <div className="flex-1 relative">
                 {isLoading ? (
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xs uppercase tracking-widest text-muted-foreground animate-pulse">Initializing Neural Graph...</span>
+                        <span className="text-xs uppercase tracking-widest text-muted-foreground ">Initializing Neural Graph...</span>
                     </div>
                 ) : (
                     <>
@@ -214,14 +226,14 @@ export function ObsidianGraphView({
                         
                         {/* Overlay Navigation Controls */}
                         <div className="absolute bottom-6 left-6 flex flex-col gap-2 z-10">
-                            <button onClick={handleCenter} className="p-2 bg-background border border-border rounded-md shadow-sm hover:bg-accent text-muted-foreground transition-colors" title="Center Graph">
+                            <button onClick={handleCenter} className="p-2 bg-background border border-border rounded-md shadow-sm hover:bg-accent text-muted-foreground " title="Center Graph">
                                 <Maximize size={16} />
                             </button>
                             <div className="flex flex-col bg-background border border-border rounded-md shadow-sm overflow-hidden">
-                                <button onClick={handleZoomIn} className="p-2 hover:bg-accent text-muted-foreground border-b border-border transition-colors" title="Zoom In">
+                                <button onClick={handleZoomIn} className="p-2 hover:bg-accent text-muted-foreground border-b border-border " title="Zoom In">
                                     <ZoomIn size={16} />
                                 </button>
-                                <button onClick={handleZoomOut} className="p-2 hover:bg-accent text-muted-foreground transition-colors" title="Zoom Out">
+                                <button onClick={handleZoomOut} className="p-2 hover:bg-accent text-muted-foreground " title="Zoom Out">
                                     <ZoomOut size={16} />
                                 </button>
                             </div>
@@ -230,7 +242,7 @@ export function ObsidianGraphView({
                         {/* Settings Toggle */}
                         <button 
                             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                            className="absolute top-6 right-6 p-2 bg-background border border-border rounded-md shadow-sm hover:bg-accent text-muted-foreground transition-colors z-20"
+                            className="absolute top-6 right-6 p-2 bg-background border border-border rounded-md shadow-sm hover:bg-accent text-muted-foreground  z-20"
                         >
                             <Settings size={18} className={cn(isSettingsOpen && "rotate-90 transition-transform")} />
                         </button>
@@ -240,7 +252,7 @@ export function ObsidianGraphView({
 
             {/* Settings Side Panel */}
             {isSettingsOpen && (
-                <div className="w-72 bg-background border-l border-border h-full flex flex-col z-30 animate-in slide-in-from-right duration-300">
+                <div className="w-72 bg-background border-l border-border h-full flex flex-col z-30  slide-in-from-right ">
                     <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                         <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Graph Settings</span>
                         <button onClick={() => setIsSettingsOpen(false)} className="text-muted-foreground hover:text-foreground"><X size={14} /></button>
@@ -372,12 +384,25 @@ export function ObsidianGraphView({
                                 />
                             </div>
 
+                            <div className="flex flex-col gap-2">
+                                <div className="flex justify-between">
+                                    <label className="text-[11px] font-bold text-muted-foreground">Collision (Gap)</label>
+                                    <span className="text-[10px] text-muted-foreground">{settings.collideForce}</span>
+                                </div>
+                                <input 
+                                    type="range" min="0" max="100" step="5"
+                                    value={settings.collideForce} 
+                                    onChange={e => setSettings({...settings, collideForce: parseInt(e.target.value)})}
+                                    className="accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
+
                             <button 
                                 onClick={() => {
                                     fgRef.current.d3AlphaTarget(0.5).restart();
                                     setTimeout(() => fgRef.current.d3AlphaTarget(0), 1000);
                                 }}
-                                className="mt-4 flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-md text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-opacity"
+                                className="mt-4 flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-md text-[10px] font-black uppercase tracking-widest hover:opacity-90 "
                             >
                                 <Play size={12} fill="currentColor" />
                                 Re-Animate

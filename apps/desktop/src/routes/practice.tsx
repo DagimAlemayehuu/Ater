@@ -403,10 +403,10 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-4 sm:p-10 space-y-8">
  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
  <div className="flex bg-muted/5 p-1 rounded-lg border border-border w-full sm:w-auto">
- <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", view === 'dashboard' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>Dashboard</button>
- <button onClick={() => setView('history')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", view === 'history' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>History</button>
+ <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", view === 'dashboard' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>Dashboard</button>
+ <button onClick={() => setView('history')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", view === 'history' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>History</button>
  </div>
- <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-muted/5 border border-border hover:border-foreground/50 text-foreground rounded-md font-black uppercase tracking-widest text-[9px] transition-all">Start</Button>
+ <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-muted/5 border border-border hover:border-foreground/50 text-foreground rounded-md font-black uppercase tracking-widest text-[9px] ">Start</Button>
  </div>
 
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -481,8 +481,8 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-4 sm:p-10 space-y-8">
  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
  <div className="flex bg-muted/10 p-1 rounded-lg border border-border/10 w-full sm:w-auto">
- <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", false ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>Dashboard</button>
- <button onClick={() => setView('history')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", true ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>History</button>
+ <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", false ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>Dashboard</button>
+ <button onClick={() => setView('history')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", true ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>History</button>
  </div>
  <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-primary text-primary-foreground rounded-md font-black uppercase tracking-widest text-[9px]">Start</Button>
  </div>
@@ -491,7 +491,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 border-b border-border/10 pb-2">Past Sessions</h3>
  <div className="grid grid-cols-1 gap-2">
  {(Array.isArray(pastPractices) ? pastPractices : []).slice().reverse().map((p, i) => (
- <div key={i} onClick={() => handleResumePractice(p.path)} className="group p-4 bg-muted/5 border border-border rounded-lg cursor-pointer transition-all flex items-center justify-between">
+ <div key={i} onClick={() => handleResumePractice(p.path)} className="group p-4 bg-muted/5 border border-border rounded-lg cursor-pointer  flex items-center justify-between">
  <div className="flex items-center gap-4">
  <div className="text-[10px] font-black text-muted-foreground/40">{p.score}%</div>
  <div className="flex flex-col">
@@ -499,7 +499,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">{new Date(p.date).toLocaleDateString()}</span>
  </div>
  </div>
- <button onClick={(e) => {e.stopPropagation(); handleDeletePractice(p.path);}} className="p-1.5 text-muted-foreground/20 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={12}/></button>
+ <button onClick={(e) => {e.stopPropagation(); handleDeletePractice(p.path);}} className="p-1.5 text-muted-foreground/20 hover:text-destructive opacity-0 group-hover:opacity-100 "><Trash2 size={12}/></button>
  </div>
  ))}
  </div>
@@ -516,7 +516,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  return (
  <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-hidden p-4 sm:p-10">
  <div className="flex items-center justify-between mb-8">
- <button onClick={() => setView('dashboard')} className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border rounded-md bg-muted/5 transition-all">Cancel</button>
+ <button onClick={() => setView('dashboard')} className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border rounded-md bg-muted/5 ">Cancel</button>
  <div className="text-xl font-black tracking-tight">{totalQuestions} Questions</div>
  </div>
 
@@ -527,7 +527,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
  <Select value={selectedHub} onValueChange={(val) => {setSelectedHub(val); loadHubNotes(val);}}>
- <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-md px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 transition-all"><SelectValue placeholder="Select Topic..." /></SelectTrigger>
+ <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-md px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 "><SelectValue placeholder="Select Topic..." /></SelectTrigger>
  <SelectContent className="border-border bg-popover">{hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>))}</SelectContent>
  </Select>
  </div>
@@ -535,7 +535,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Difficulty</Label>
  <RadioGroup value={advancedConfig.difficulty} onValueChange={(val) => setAdvancedConfig(prev => ({...prev, difficulty: val as any}))} className="grid grid-cols-4 gap-1">
  {[ {val: 'L1', label: '1'}, {val: 'L2', label: '2'}, {val: 'L3', label: '3'}, {val: 'Mixed', label: 'M'} ].map((level) => (
- <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-border rounded-md bg-muted/5 peer-data-[state=checked]:bg-foreground/10 peer-data-[state=checked]:border-foreground peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black transition-all hover:bg-muted/10">{level.label}</Label></div>
+ <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-border rounded-md bg-muted/5 peer-data-[state=checked]:bg-foreground/10 peer-data-[state=checked]:border-foreground peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black  hover:bg-muted/10">{level.label}</Label></div>
  ))}
  </RadioGroup>
  </div>
@@ -546,7 +546,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Notes</Label>
  <Popover>
  <PopoverTrigger asChild>
- <Button variant="outline" className="w-full h-10 border-border bg-muted/5 text-[10px] font-black uppercase px-4 justify-between hover:bg-muted/10 transition-all">
+ <Button variant="outline" className="w-full h-10 border-border bg-muted/5 text-[10px] font-black uppercase px-4 justify-between hover:bg-muted/10 ">
  <span>{advancedConfig.selectedAtomicNotes.length} Selected</span>
  <Layers size={12} className="opacity-40" />
  </Button>
@@ -563,7 +563,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const isSelected = advancedConfig.selectedAtomicNotes.includes(note.id); 
  return (
  <CommandItem key={note.id} onSelect={() => toggleAtomicNote(note.id)} className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-md text-[9px] font-black uppercase">
- <div className={cn("w-3 h-3 border flex items-center justify-center rounded-sm transition-all", isSelected ? "bg-foreground border-foreground text-background" : "border-border")}>{isSelected && <Check size={8} />}</div>
+ <div className={cn("w-3 h-3 border flex items-center justify-center rounded-sm ", isSelected ? "bg-foreground border-foreground text-background" : "border-border")}>{isSelected && <Check size={8} />}</div>
  <span className="truncate">{note.title}</span>
  </CommandItem>
  ); 
@@ -578,14 +578,14 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total (Min)</Label>
  <Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val) => setAdvancedConfig(prev => ({...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val)}))}>
- <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-md px-4 text-[10px] font-black uppercase hover:border-foreground/20 transition-all"><SelectValue placeholder="No Limit" /></SelectTrigger>
+ <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-md px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
  <SelectContent className="border-border bg-popover">{[null, 5, 10, 15, 30, 60].map(m => (<SelectItem key={String(m)} value={String(m)} className="text-[10px] font-black uppercase">{m ? `${m}m` : 'None'}</SelectItem>))}</SelectContent>
  </Select>
  </div>
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Per Q (Sec)</Label>
  <Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val) => setAdvancedConfig(prev => ({...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val)}))}>
- <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-md px-4 text-[10px] font-black uppercase hover:border-foreground/20 transition-all"><SelectValue placeholder="No Limit" /></SelectTrigger>
+ <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-md px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
  <SelectContent className="border-border bg-popover">{[null, 15, 30, 60, 120].map(s => (<SelectItem key={String(s)} value={String(s)} className="text-[10px] font-black uppercase">{s ? `${s}s` : 'None'}</SelectItem>))}</SelectContent>
  </Select>
  </div>
@@ -617,7 +617,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
  ))}
  </div>
- <Button onClick={handleStartSession} disabled={isLoading} className="h-10 w-full bg-foreground/5 border border-foreground/20 hover:border-foreground/50 hover:bg-muted/10 text-foreground text-[10px] font-black uppercase tracking-widest rounded-md mt-6 transition-all">Start Session</Button>
+ <Button onClick={handleStartSession} disabled={isLoading} className="h-10 w-full bg-foreground/5 border border-foreground/20 hover:border-foreground/50 hover:bg-muted/10 text-foreground text-[10px] font-black uppercase tracking-widest rounded-md mt-6 ">Start Session</Button>
  </div>
  </div>
  </div>
@@ -628,7 +628,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  if (view === 'loading') {
  return (
  <div className="h-full flex-1 flex flex-col items-center justify-center bg-background text-foreground">
- <div className="flex flex-col items-center gap-6 animate-pulse">
+ <div className="flex flex-col items-center gap-6 ">
  <Loader2 size={32} className="text-primary animate-spin" />
  <div className="flex flex-col items-center gap-2">
  <span className="text-[10px] font-black uppercase tracking-widest text-primary">{genStatus}</span>
@@ -653,7 +653,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="text-xs font-black uppercase tracking-tight truncate max-w-[200px]">{cleanTitle(hubs.find(h => h.id === selectedHub)?.title || '')}</div>
  </div>
  <div className="flex-1 sm:w-64 h-1 bg-muted/20 rounded-full overflow-hidden">
- <div className="h-full bg-primary transition-all " style={{width: `${progress}%`}} />
+ <div className="h-full bg-primary  " style={{width: `${progress}%`}} />
  </div>
  </div>
  <div className="flex items-center justify-between lg:justify-end w-full sm:w-auto gap-4 sm:gap-10 text-[9px] font-black uppercase tracking-widest">
@@ -681,7 +681,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
 
  <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center py-16 px-10">
- <div className="max-w-3xl w-full space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+ <div className="max-w-3xl w-full space-y-16    ">
  <div className="space-y-8">
  <div className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/40 flex items-center gap-3">
  <Badge variant="outline" className="text-[8px] border-primary/20 bg-primary/5 text-primary rounded-md px-2 py-0">{currentQuestion.difficulty || '1'}</Badge>
@@ -698,7 +698,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const isSelected = userAnswers[currentQuestion.id] === key; 
  const isCorrect = isRevealed && (key === currentQuestion.answer || String(val).toLowerCase() === String(currentQuestion.answer).toLowerCase());
  return (
- <button key={key} disabled={isRevealed} onClick={() => handleSelectAnswer(key)} className={cn("p-5 border rounded-md text-left transition-all text-[13px] font-black uppercase tracking-tight", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10")}>
+ <button key={key} disabled={isRevealed} onClick={() => handleSelectAnswer(key)} className={cn("p-5 border rounded-md text-left  text-[13px] font-black uppercase tracking-tight", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10")}>
  <span className="text-muted-foreground/20 shrink-0 mt-0.5 mr-4">{key}</span> <div className="flex-1 overflow-x-auto"><MarkdownBlock content={String(val)} /></div>
  </button>
  );
@@ -709,9 +709,9 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  {(currentQuestion.type === 'writing' || currentQuestion.type === 'synthesis' || currentQuestion.type === 'debug' || currentQuestion.type === 'trace') && (
   <div className="space-y-8">
   {currentQuestion.type === 'debug' && <div className="p-1 border border-border rounded-xl bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${currentQuestion.content}\n\`\`\``} /></div>}
-  <textarea rows={8} disabled={isRevealed} className="w-full p-8 bg-muted/5 border-2 border-border rounded-2xl text-base font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
+  <textarea rows={8} disabled={isRevealed} className="w-full p-8 bg-muted/5 border-2 border-border rounded-2xl text-base font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none  placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
   {isRevealed && (
-    <div className="p-8 border-2 border-primary/20 bg-primary/5 rounded-2xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+    <div className="p-8 border-2 border-primary/20 bg-primary/5 rounded-2xl space-y-4   slide-in-from-top-4 ">
       <div className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-2">Mastery Solution</div>
       <div className="text-sm font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap"><MarkdownBlock content={String(currentQuestion.answer)} /></div>
     </div>
@@ -725,7 +725,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const isSelected = userAnswers[currentQuestion.id] === v; 
  const isCorrect = isRevealed && v.toLowerCase() === String(currentQuestion.answer).toLowerCase(); 
  return (
- <button key={v} disabled={isRevealed} onClick={() => handleSelectAnswer(v)} className={cn("h-32 border rounded-md text-[10px] font-black uppercase tracking-widest transition-all", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale text-muted-foreground/40" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10 text-muted-foreground/40")}>{v}</button>
+ <button key={v} disabled={isRevealed} onClick={() => handleSelectAnswer(v)} className={cn("h-32 border rounded-md text-[10px] font-black uppercase tracking-widest ", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale text-muted-foreground/40" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10 text-muted-foreground/40")}>{v}</button>
  );
 })}
  </div>
@@ -742,12 +742,12 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
      const isWrong = isRevealed && step !== (currentQuestion.answer || [])[i];
      return (
          <div key={i} className={cn(
-             "flex items-center gap-6 p-5 border rounded-2xl transition-all",
+             "flex items-center gap-6 p-5 border rounded-2xl ",
              isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border bg-muted/5 hover:border-foreground/20"
          )}>
              <div className="flex flex-col gap-2 border-r border-border/10 pr-6">
-                 <button disabled={isRevealed || i===0} onClick={moveUp} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-primary transition-all disabled:opacity-0">▲</button>
-                 <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-primary transition-all disabled:opacity-0">▼</button>
+                 <button disabled={isRevealed || i===0} onClick={moveUp} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-primary  disabled:opacity-0">▲</button>
+                 <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-primary  disabled:opacity-0">▼</button>
              </div>
              <div className="text-base font-bold tracking-tight text-foreground/80 pl-2">{step}</div>
          </div>
@@ -765,18 +765,18 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
      const isWrong = isRevealed && selected !== pair.right;
      return (
          <div key={i} className={cn(
-             "flex items-center gap-8 p-6 border rounded-2xl transition-all",
+             "flex items-center gap-8 p-6 border rounded-2xl ",
              isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border bg-muted/5 hover:border-foreground/20"
          )}>
              <div className="flex-1 font-black uppercase tracking-[0.2em] text-[11px] text-muted-foreground/60">{pair.left}</div>
              <div className="flex-1">
-                 <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-4 bg-background border border-border rounded-xl outline-none focus:border-primary/50 text-[11px] font-black uppercase tracking-widest transition-all appearance-none cursor-pointer">
+                 <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-4 bg-background border border-border rounded-xl outline-none focus:border-primary/50 text-[11px] font-black uppercase tracking-widest  appearance-none cursor-pointer">
                      <option value="">Select match...</option>
                      {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
                  </select>
              </div>
              {isRevealed && isWrong && (
-                <div className="flex-1 animate-in slide-in-from-right-4 duration-500">
+                <div className="flex-1  slide-in-from-right-4 ">
                     <div className="text-[8px] font-black uppercase text-primary/40 mb-1">Correct Match</div>
                     <div className="text-xs font-black uppercase tracking-widest text-primary">{pair.right}</div>
                 </div>
@@ -804,14 +804,14 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  )}
 
   {isRevealed && currentQuestion.explanation && (
-    <div className="p-8 border border-border/10 rounded-2xl bg-muted/5 text-sm font-medium text-muted-foreground/80 italic leading-relaxed animate-in fade-in duration-1000">
+    <div className="p-8 border border-border/10 rounded-2xl bg-muted/5 text-sm font-medium text-muted-foreground/80 italic leading-relaxed   ">
         <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30 mb-4 not-italic">Mechanism Insight</div>
         <MarkdownBlock content={currentQuestion.explanation} />
     </div>
   )}
 
   {isRevealed && ['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQuestion.type) && currentQuestion.required_keywords && currentQuestion.required_keywords.length > 0 && (
-    <div className="p-8 border border-border/10 rounded-2xl bg-muted/5 space-y-4 animate-in fade-in duration-1000">
+    <div className="p-8 border border-border/10 rounded-2xl bg-muted/5 space-y-4   ">
       <div className="flex items-center justify-between">
         <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mandatory Concepts Checklist</div>
         <div className="text-[10px] font-black tabular-nums text-muted-foreground/50">
@@ -829,7 +829,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
         {currentQuestion.required_keywords.map((kw: string, i: number) => {
           const isFound = String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase());
           return (
-            <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-xl cursor-pointer transition-all", isFound ? "border-primary/50 bg-primary/5" : "border-border/40 hover:bg-muted/10")}>
+            <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-xl cursor-pointer ", isFound ? "border-primary/50 bg-primary/5" : "border-border/40 hover:bg-muted/10")}>
               <input type="checkbox" checked={keywordChecks[kw] || false} onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} className="w-5 h-5 rounded border-border text-primary focus:ring-primary" />
               <span className={cn("text-sm font-bold", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[10px] uppercase tracking-widest text-primary ml-3">(Found in your answer)</span>}</span>
             </label>

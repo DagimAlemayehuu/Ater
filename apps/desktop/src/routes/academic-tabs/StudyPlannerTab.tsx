@@ -150,11 +150,11 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  <aside className="w-56 shrink-0 border-r border-border flex flex-col overflow-hidden">
   <div className="p-4 border-b border-border flex flex-col gap-3">
    <div className="flex items-center justify-between">
-    <p className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 flex items-center gap-1.5"><Brain size={10} />Courses</p>
+    <p className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground flex items-center gap-1.5"><Brain size={10} />Courses</p>
    </div>
    <div className="flex bg-muted/5 p-1 rounded-lg border border-border w-full">
-    <button onClick={() => setCourseFilter('Active')} className={cn("flex-1 px-2 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all", courseFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>Active</button>
-    <button onClick={() => setCourseFilter('All')} className={cn("flex-1 px-2 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all", courseFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>All</button>
+    <button onClick={() => setCourseFilter('Active')} className={cn("flex-1 px-2 py-1 text-[8px] font-black uppercase tracking-widest rounded-md ", courseFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground  hover:bg-muted/5")}>Active</button>
+    <button onClick={() => setCourseFilter('All')} className={cn("flex-1 px-2 py-1 text-[8px] font-black uppercase tracking-widest rounded-md ", courseFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground  hover:bg-muted/5")}>All</button>
    </div>
   </div>
  <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -162,12 +162,12 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  <button
  onClick={() => setSelectedCourseId(null)}
  className={cn(
- 'w-full flex items-center justify-between px-4 py-3 text-left border-b border-border transition-all',
- !selectedCourseId ? 'bg-foreground/5 text-foreground' : 'text-muted-foreground/50'
+ 'w-full flex items-center justify-between px-4 py-3 text-left border-b border-border ',
+ !selectedCourseId ? 'bg-foreground/5 text-foreground' : 'text-muted-foreground'
  )}>
  <div className="min-w-0">
  <p className="text-[11px] font-black uppercase">All Hubs</p>
- <p className="text-[8px] font-black text-muted-foreground/30">{totalDone}/{allHubs.length} done</p>
+ <p className="text-[8px] font-black text-muted-foreground">{totalDone}/{allHubs.length} done</p>
  </div>
  <ProgressRing done={totalDone} total={allHubs.length} size={28} />
  </button>
@@ -177,12 +177,12 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  return (
  <button key={idx} onClick={() => setSelectedCourseId(course.id)}
  className={cn(
- 'w-full flex items-center justify-between px-4 py-3 text-left border-b border-border transition-all',
- selectedCourseId === course.id ? 'bg-foreground/5 text-foreground' : 'text-muted-foreground/40'
+ 'w-full flex items-center justify-between px-4 py-3 text-left border-b border-border ',
+ selectedCourseId === course.id ? 'bg-foreground/5 text-foreground' : 'text-muted-foreground'
  )}>
  <div className="min-w-0 pr-2">
  <p className="text-[10px] font-black uppercase truncate">{cleanTitle(course.title)}</p>
- <p className="text-[8px] font-black text-muted-foreground/30">{stats.done}/{stats.total} done</p>
+ <p className="text-[8px] font-black text-muted-foreground">{stats.done}/{stats.total} done</p>
  </div>
  <ProgressRing done={stats.done} total={stats.total} size={28} />
  </button>
@@ -196,7 +196,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  const cleanHubTitle = cleanTitle(title)
  onCreate('06 - Study Planner', cleanHubTitle, selectedCourseId && selectedCourse ? {course: wrapWL(selectedCourse.title)} : {})
 }}
- className="w-full py-2 bg-foreground/5 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all">
+ className="w-full py-2 bg-foreground/5 text-[8px] font-black uppercase tracking-widest rounded-lg ">
  + Add Hub
  </button>
  </div>
@@ -207,22 +207,22 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  {/* Controls bar */}
  <div className="px-6 py-3 border-b border-border flex items-center gap-3 flex-wrap shrink-0">
  <div className="flex items-center gap-2 flex-1 min-w-[140px]">
- <Search size={12} className="text-muted-foreground/30 shrink-0" />
+ <Search size={12} className="text-muted-foreground shrink-0" />
  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search hubs..."
- className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none placeholder:text-muted-foreground/30" />
+ className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none placeholder:text-muted-foreground" />
  </div>
  <div className="flex items-center gap-1 bg-muted/5 p-0.5 rounded-lg flex-wrap">
  {(['All', 'Not Started', 'In Progress', 'Reviewing', 'Completed'] as StatusFilter[]).map(s => (
  <button key={s} onClick={() => setStatusFilter(s)}
- className={cn('px-2 py-1 rounded text-[7px] font-black uppercase tracking-wide transition-all whitespace-nowrap',
- statusFilter === s ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground/40'
+ className={cn('px-2 py-1 rounded text-[7px] font-black uppercase tracking-wide  whitespace-nowrap',
+ statusFilter === s ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'
  )}>{s}</button>
  ))}
  </div>
  <div className="flex items-center gap-1.5">
- <SortAsc size={11} className="text-muted-foreground/30" />
+ <SortAsc size={11} className="text-muted-foreground" />
  <select value={sortKey} onChange={e => setSortKey(e.target.value as SortKey)}
- className="bg-transparent text-[9px] font-black uppercase text-muted-foreground/50 focus:outline-none cursor-pointer">
+ className="bg-transparent text-[9px] font-black uppercase text-muted-foreground focus:outline-none cursor-pointer">
  <option value="unit">Unit</option>
  <option value="status">Status</option>
  <option value="confidence">Confidence</option>
@@ -235,10 +235,10 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  {selectedCourse && (
  <div className="px-6 py-2.5 border-b border-border flex items-center gap-5 shrink-0 bg-muted/[0.03]">
  <span className="text-[12px] font-black uppercase">{cleanTitle(selectedCourse.title)}</span>
- <div className="flex items-center gap-4 text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">
+ <div className="flex items-center gap-4 text-[8px] font-black uppercase tracking-widest text-muted-foreground">
  <span>{visibleHubs.length} hubs</span>
- <span className="text-foreground/70">{visibleHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length} done</span>
- <span className="text-muted-foreground/50">{visibleHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('progress')).length} in progress</span>
+ <span className="text-foreground">{visibleHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length} done</span>
+ <span className="text-muted-foreground">{visibleHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('progress')).length} in progress</span>
  </div>
  </div>
  )}
@@ -255,9 +255,9 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  {sections.map((section, si) => (
  <section key={si} className="space-y-3">
  <div className="flex items-center gap-3">
- <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 shrink-0">{section.title}</span>
+ <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground shrink-0">{section.title}</span>
  <div className="h-px flex-1 bg-border" />
- <span className="text-[8px] font-black text-muted-foreground/20">{section.hubs.length}</span>
+ <span className="text-[8px] font-black text-muted-foreground">{section.hubs.length}</span>
  </div>
  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
  {section.hubs.map((hub, idx) => (
@@ -298,20 +298,20 @@ function HubCard({hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete
 
  return (
  <div className={cn(
- 'relative p-4 border rounded-xl flex flex-col gap-3 transition-all group/hub',
+ 'relative p-4 border rounded-xl flex flex-col gap-3  group/hub',
  isCompleted ? 'border-border bg-muted/5 opacity-60' : 'border-border bg-background hover:bg-muted/5'
  )}>
  {/* Header */}
  <div className="flex items-start gap-2">
  <EditableTitle
  value={displayTitle}
- className={cn('text-[11px] font-black uppercase leading-tight flex-1', isCompleted ? 'text-muted-foreground/40 line-through' : 'text-foreground')}
+ className={cn('text-[11px] font-black uppercase leading-tight flex-1', isCompleted ? 'text-muted-foreground line-through' : 'text-foreground')}
  onSave={(next) => onUpdate('06 - Study Planner', hub.id, {title: next})}
  />
  <div className="flex items-center gap-1">
- {isCompleted && <Check size={12} className="text-muted-foreground/40 shrink-0" />}
+ {isCompleted && <Check size={12} className="text-muted-foreground shrink-0" />}
  <button onClick={(e) => {e.stopPropagation(); onDelete()}}
- className="p-1.5 text-muted-foreground/0 group-hover/hub:text-muted-foreground/20 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all">
+ className="p-1.5 text-muted-foreground/0 group-hover/hub:text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg ">
  <Trash2 size={11} />
  </button>
  </div>
@@ -322,15 +322,15 @@ function HubCard({hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete
  <div className="relative">
  <button
  onClick={() => setShowStatusMenu(!showStatusMenu)}
- className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border transition-all',
- statusColorClass(status) || 'text-muted-foreground/30 bg-muted/10 border-border')}>
+ className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border ',
+ statusColorClass(status) || 'text-muted-foreground bg-muted/10 border-border')}>
  {status || 'Not Started'}
  </button>
  {showStatusMenu && (
  <div className="absolute top-full left-0 mt-1 bg-background border border-border rounded-lg shadow-xl z-20 p-1 min-w-[150px]">
  {['Planned', 'In Progress', 'Completed'].map(s => (
  <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('06 - Study Planner', hub.id, {Status: wrapWL(s)}); setShowStatusMenu(false)}}
- className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase rounded hover:bg-muted/10 transition-all', statusColorClass(s))}>
+ className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase rounded hover:bg-muted/10 ', statusColorClass(s))}>
  {s}
  </button>
  ))}
@@ -346,21 +346,21 @@ function HubCard({hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete
 
  {/* Study date */}
  <div className="flex items-center gap-2">
- <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/30 shrink-0">Study Date</span>
+ <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground shrink-0">Study Date</span>
  <input
  type="date"
  value={studyDate || ''}
  onChange={e => onSetStudyDate(hub, e.target.value)}
- className="flex-1 bg-transparent text-[9px] font-black text-muted-foreground/50 focus:text-foreground focus:outline-none border-b border-transparent focus:border-primary transition-all cursor-pointer min-w-0"
+ className="flex-1 bg-transparent text-[9px] font-black text-muted-foreground focus:text-foreground focus:outline-none border-b border-transparent focus:border-primary  cursor-pointer min-w-0"
  />
  </div>
 
  {/* Actions */}
  <div className="flex gap-2 pt-1 border-t border-border">
- <button onClick={onOpen} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[8px] font-black uppercase text-muted-foreground/50 hover:text-foreground hover:bg-muted/10 rounded-md transition-all">
+ <button onClick={onOpen} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[8px] font-black uppercase text-muted-foreground  hover:bg-muted/10 rounded-md ">
  <BookOpen size={10} />Open
  </button>
- <button onClick={onPractice} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[8px] font-black uppercase text-primary/70 hover:text-primary hover:bg-primary/5 rounded-md transition-all border border-primary/10">
+ <button onClick={onPractice} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[8px] font-black uppercase text-primary/70  hover:bg-primary/5 rounded-md  border border-primary/10">
  <PlayCircle size={10} />Practice
  </button>
  </div>

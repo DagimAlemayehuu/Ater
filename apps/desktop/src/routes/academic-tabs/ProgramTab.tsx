@@ -18,7 +18,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  const yearSchema = databases.find(d => d.id === '09 - Years')?.schema || {}
  const semesterSchema = databases.find(d => d.id === '08 - Semesters')?.schema || {}
 
- const sorted = [...years].sort((a, b) => getYearOrder(a.title) - getYearOrder(b.title))
+ const sorted = [...years].sort((a, b) => getYearOrder(a?.title || '') - getYearOrder(b?.title || ''))
  const activeYear = sorted.find(y => y['Current Year'] === true || y['Current Year'] === 'true')
  const activeProgram = cleanTitle(stripWL(getVal(activeYear, 'Program', 'program')))
  const programYears = activeProgram
@@ -105,7 +105,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <div className="h-full overflow-y-auto custom-scrollbar p-6 lg:p-10 space-y-10 pb-24">
  <div className="flex items-start justify-between">
  <div>
- <button onClick={() => setSelectedSemesterId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground mb-2 transition-all">← {selectedYear?.title || 'Year'}</button>
+ <button onClick={() => setSelectedSemesterId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground  mb-2 ">← {selectedYear?.title || 'Year'}</button>
  <EditableTitle
  value={semester.title}
  className="text-xl font-black uppercase tracking-tight"
@@ -113,11 +113,11 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  onUpdate('08 - Semesters', semester.id, {title: next})
 }}
  />
- <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{cleanTitle(activeProgram)} · {cleanTitle(selectedYear?.title || '')}</span>
+ <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{cleanTitle(activeProgram)} · {cleanTitle(selectedYear?.title || '')}</span>
  </div>
  <div className="flex items-center gap-2">
  <button onClick={() => {onDelete('08 - Semesters', selectedSemesterId); setSelectedSemesterId(null)}}
- className="p-2 text-muted-foreground/20 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all">
+ className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg ">
  <Trash2 size={13} />
  </button>
  </div>
@@ -168,19 +168,19 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  const title = window.prompt('Enter Course Title', 'New Course') || 'New Course'
  onCreate('07 - Courses', title, {Semester: `[[${semester.title}]]`, Status: '[[Active]]'})
 }}
- className="px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase rounded hover:border-foreground/50 transition-all">Add Course</button>
+ className="px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase rounded hover:border-foreground/50 ">Add Course</button>
  </div>
  {semCourses.length === 0 && <EmptyState message="No courses linked to this semester." />}
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
  {semCourses.map((c, idx) => (
  <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
- className="p-6 border border-border bg-muted/5 transition-all cursor-pointer group">
+ className="p-6 border border-border bg-muted/5  cursor-pointer group">
  <div className="flex items-center justify-between mb-2">
- <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Course</span>
- <span className="text-[9px] font-black text-muted-foreground/40">{getVal(c, 'Credits', 'credits')} CR</span>
+ <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Course</span>
+ <span className="text-[9px] font-black text-muted-foreground">{getVal(c, 'Credits', 'credits')} CR</span>
  </div>
- <h3 className="text-xl font-black uppercase tracking-tight transition-colors">{cleanTitle(c.title)}</h3>
- <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 mt-2">{stripWL(getVal(c, 'Status', 'status'))}</p>
+ <h3 className="text-xl font-black uppercase tracking-tight  text-foreground">{cleanTitle(stripWL(c.title))}</h3>
+ <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mt-2">{stripWL(getVal(c, 'Status', 'status'))}</p>
  </div>
  ))}
  </div>
@@ -202,7 +202,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <div className="h-full overflow-y-auto custom-scrollbar p-6 lg:p-10 space-y-10 pb-24">
  <div className="flex items-start justify-between">
  <div>
- <button onClick={() => setSelectedYearId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground mb-2 transition-all">← Program</button>
+ <button onClick={() => setSelectedYearId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground  mb-2 ">← Program</button>
  <EditableTitle
  value={selectedYear.title}
  className="text-2xl font-black uppercase tracking-tighter mb-2"
@@ -210,17 +210,17 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  onUpdate('09 - Years', selectedYear.id, {title: next})
  }}
  />
- <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{cleanTitle(activeProgram)} · {cleanTitle(level)}</span>
+ <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{cleanTitle(activeProgram)} · {cleanTitle(level)}</span>
  </div>
  <div className="flex items-center gap-2 flex-wrap">
  {derived === 'Completed' && !currentStatus.toLowerCase().includes('complet') && (
  <button onClick={() => onUpdate('09 - Years', selectedYearId, {Status: '[[Completed]]'})}
- className="px-3 py-1.5 bg-muted border border-border text-foreground text-[8px] font-black uppercase rounded-lg hover:bg-muted/80 transition-all">
+ className="px-3 py-1.5 bg-muted border border-border text-foreground text-[8px] font-black uppercase rounded-lg hover:bg-muted/80 ">
  Mark Complete
  </button>
  )}
  <button onClick={() => {onDelete('09 - Years', selectedYearId); setSelectedYearId(null)}}
- className="p-2 text-muted-foreground/20 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all">
+ className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg ">
  <Trash2 size={13} />
  </button>
  </div>
@@ -272,7 +272,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  const title = window.prompt('Enter Semester Title', 'New Semester') || 'New Semester'
  onCreate('08 - Semesters', title, {Year: `[[${selectedYear.title}]]`, Status: '[[Planned]]'})
 }}
- className="px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase rounded hover:border-foreground/50 transition-all">Add</button>
+ className="px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase rounded hover:border-foreground/50 ">Add</button>
  </div>
  {relatedSemesters.length === 0 && <EmptyState message="No semesters yet. Add one above." />}
  <div className="roadmap-container pl-2">
@@ -287,14 +287,14 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <div className={cn('roadmap-dot', isCompleted ? 'roadmap-dot-completed' : isActive ? 'roadmap-dot-active pulse-node' : 'roadmap-dot-planned')}>
  {isCompleted ? <Check size={10} strokeWidth={4} /> : (idx + 1)}
  </div>
- <div className="roadmap-content p-4 border border-border bg-muted/5 rounded-xl transition-all flex items-center justify-between">
+ <div className="roadmap-content p-4 border border-border bg-muted/5 rounded-xl  flex items-center justify-between">
  <div className="min-w-0">
- <span className="text-[12px] font-black uppercase transition-colors">{cleanTitle(s.title)}</span>
- <span className="ml-2 text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{statusRaw}</span>
+ <span className="text-[12px] font-black uppercase ">{cleanTitle(s.title)}</span>
+ <span className="ml-2 text-[8px] font-black uppercase tracking-widest text-muted-foreground">{statusRaw}</span>
  </div>
  <div className="flex items-center gap-2 shrink-0">
- <span className="text-[8px] font-black uppercase text-muted-foreground/20 transition-colors">View Details</span>
- <ChevronRight size={11} className="text-muted-foreground/20 transition-all" />
+ <span className="text-[8px] font-black uppercase text-muted-foreground ">View Details</span>
+ <ChevronRight size={11} className="text-muted-foreground " />
  </div>
  </div>
  </div>
@@ -312,8 +312,8 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  {/* Left: Roadmap panel */}
  <aside className="w-56 shrink-0 border-r border-border flex flex-col p-5 overflow-hidden">
  <div className="flex items-center justify-between mb-4">
- <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/40">Roadmap</span>
- <button onClick={() => setShowSetup(!showSetup)} className="px-2 py-1 bg-foreground/5 text-[7px] font-black uppercase tracking-widest rounded hover:bg-foreground/10 transition-all border border-border/10">
+ <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground">Roadmap</span>
+ <button onClick={() => setShowSetup(!showSetup)} className="px-2 py-1 bg-foreground/5 text-[7px] font-black uppercase tracking-widest rounded hover:bg-foreground/70  border border-border/10">
  {showSetup ? 'Back' : (programYears.length > 0 ? 'Edit' : 'Setup')}
  </button>
  </div>
@@ -321,7 +321,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  {programYears.length > 0 ? (
  <AcademicRoadmap items={programYears} semesters={semesters} activeId={selectedYearId} onSelect={setSelectedYearId} />
  ) : (
- <p className="text-[9px] font-black uppercase text-muted-foreground/20 text-center mt-8">No program yet</p>
+ <p className="text-[9px] font-black uppercase text-muted-foreground text-center mt-8">No program yet</p>
  )}
  </div>
  </aside>
@@ -333,10 +333,10 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  ) : (
  <div className="space-y-10 ">
  {showSetup && activeYear && (
-    <section className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+    <section className="space-y-6   zoom-in-95 ">
        <div className="flex items-center justify-between border-b border-border pb-4">
            <h3 className="text-[10px] font-black uppercase tracking-widest">Edit Program Details</h3>
-           <button onClick={() => setShowSetup(false)} className="text-[10px] font-black uppercase text-muted-foreground hover:text-foreground">Close</button>
+           <button onClick={() => setShowSetup(false)} className="text-[10px] font-black uppercase text-muted-foreground ">Close</button>
        </div>
        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
            {(() => {
@@ -378,7 +378,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  )}
  <div className="flex items-center justify-between">
  <div className="group/protitle">
- <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Program</p>
+ <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Program</p>
  <EditableTitle
  value={activeProgram || 'Your Program'}
  className="text-2xl font-black uppercase tracking-tight"
@@ -386,7 +386,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  handleUpdateProgram(activeProgram, next, stripWL(getVal(activeYear, 'Academic Level')), targetYears)
 }}
  />
- <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">
+ <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
  {cleanTitle(stripWL(getVal(activeYear, 'Academic Level', 'academic_level')))}
  </span>
  </div>
@@ -429,13 +429,13 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <SectionHeader title="Active Courses" count={activeCourses.length} />
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
  {activeCourses.map((c, idx) => (
- <div key={`course-${idx}`} className="p-4 border border-border bg-muted/5 rounded-xl flex items-center justify-between cursor-pointer hover:bg-muted/10 transition-all"
+ <div key={`course-${idx}`} className="p-4 border border-border bg-muted/5 rounded-xl flex items-center justify-between cursor-pointer hover:bg-muted/10 "
  onClick={() => navigateTo('COURSES', c.id)}>
  <div>
- <span className="text-[13px] font-black uppercase">{cleanTitle(c.title)}</span>
- <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{getVal(c, 'Credits', 'credits')} Credits</p>
+  <span className="text-[13px] font-black uppercase text-foreground">{cleanTitle(stripWL(c.title))}</span>
+ <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">{getVal(c, 'Credits', 'credits')} Credits</p>
  </div>
- <ChevronRight size={14} className="text-muted-foreground/20" />
+ <ChevronRight size={14} className="text-muted-foreground" />
  </div>
  ))}
  </div>
@@ -455,7 +455,7 @@ function ProgramFieldEditor({label, defaultValue, onBlur, type = 'text'}: {label
  const [val, setVal] = useState(defaultValue)
  return (
  <div className="flex flex-col gap-1">
- <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{label}</label>
+ <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">{label}</label>
  <input type={type} value={val} onChange={e => setVal(e.target.value)} onBlur={() => onBlur(val)}
  className="bg-background border border-border/20 px-3 py-2.5 rounded-lg text-sm font-bold outline-none focus:ring-1 focus:ring-primary/20" />
  </div>

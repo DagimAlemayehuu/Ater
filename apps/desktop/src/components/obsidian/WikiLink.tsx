@@ -13,7 +13,7 @@ export const WikiLink = ({ dest, alias, onNavigate, className }: { dest: string,
                 onNavigate(dest);
             }}
             className={cn(
-                "text-foreground/90 font-medium transition-all inline-block hover:text-primary underline decoration-border hover:decoration-primary/50 underline-offset-4 cursor-pointer p-0 h-auto align-baseline bg-transparent border-none",
+                "text-foreground/90 font-medium  inline-block hover:text-primary underline decoration-border hover:decoration-primary/50 underline-offset-4 cursor-pointer p-0 h-auto align-baseline bg-transparent border-none",
                 className
             )}
             title={dest !== alias ? dest : undefined}

@@ -60,7 +60,14 @@ async def sync_academics_profile(secrets: AppSecrets = Depends(get_app_secrets))
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
         
     vault_root = Path(secrets.vault_path)
-    folders = [
+    
+    # 1. Create Main Folders
+    main_folders = ["Inbox", "Notes", "Database"]
+    for f in main_folders:
+        (vault_root / f).mkdir(parents=True, exist_ok=True)
+        
+    # 2. Create Database Structure
+    db_folders = [
         "Database/03 - Assignments",
         "Database/04 - Exams",
         "Database/06 - Study Planner",
@@ -69,8 +76,16 @@ async def sync_academics_profile(secrets: AppSecrets = Depends(get_app_secrets))
         "Database/09 - Years",
         "0-Bases"
     ]
-    
-    for f in folders:
+    for f in db_folders:
         (vault_root / f).mkdir(parents=True, exist_ok=True)
+        
+    # 3. Create Seed Files (Only if they don't exist)
+    year_path = vault_root / "Database/09 - Years/2025.md"
+    if not year_path.exists():
+        year_path.write_text("---\ntitle: 2025\nstatus: active\n---")
+        
+    semester_path = vault_root / "Database/08 - Semesters/Autumn 2025.md"
+    if not semester_path.exists():
+        semester_path.write_text("---\ntitle: Autumn 2025\nyear: [[2025]]\nstatus: active\n---")
         
     return {"success": True}

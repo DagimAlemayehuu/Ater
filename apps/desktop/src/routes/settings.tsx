@@ -45,15 +45,15 @@ const SettingsCard = ({title, icon, value, children, onEdit, isEditing, onSave, 
 
  <div className="flex justify-end pt-4 border-t border-border/10 mt-auto">
  {!isEditing ? (
- <button onClick={onEdit} className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-foreground bg-background border border-border hover:border-foreground/30 transition-all">
+ <button onClick={onEdit} className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-foreground bg-background border border-border hover:border-foreground/30 ">
  <Edit2 size={11} className="mr-2" /> Edit
  </button>
  ) : (
  <div className="flex gap-2">
- <button onClick={onCancel} className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/10 border border-transparent hover:text-foreground transition-all">
+ <button onClick={onCancel} className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/10 border border-transparent hover:text-foreground ">
  Cancel
  </button>
- <button onClick={onSave} className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-foreground bg-background border border-border hover:border-foreground/50 transition-all">
+ <button onClick={onSave} className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-foreground bg-background border border-border hover:border-foreground/50 ">
  Save
  </button>
  </div>
@@ -187,7 +187,7 @@ export default function Settings() {
  <CardContent>
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
  {config?.savedApiKeys?.map((k) => (
- <div key={k.id} className="group relative flex flex-col p-3 rounded border border-border bg-muted/20 hover:border-primary/30 transition-all">
+ <div key={k.id} className="group relative flex flex-col p-3 rounded border border-border bg-muted/20 hover:border-primary/30 ">
  <div className="flex items-center justify-between mb-2">
  <span className="text-[11px] font-bold uppercase tracking-wider text-foreground truncate max-w-[120px]">{k.name}</span>
  <span className="text-[9px] px-1.5 py-0.5 rounded bg-background border border-border font-bold uppercase text-muted-foreground">{k.provider}</span>
@@ -196,7 +196,7 @@ export default function Settings() {
  
  <button 
  onClick={() => {deleteApiKey(k.id)}}
- className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+ className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 "
  >
  <Trash2 size={12} />
  </button>
@@ -238,7 +238,7 @@ export default function Settings() {
  ) : (
  <button 
  onClick={() => setIsAddingKey(true)}
- className="flex flex-col items-center justify-center p-3 rounded border border-dashed border-border hover:border-primary/30 hover:bg-muted/10 transition-all text-muted-foreground gap-1"
+ className="flex flex-col items-center justify-center p-3 rounded border border-dashed border-border hover:border-primary/30 hover:bg-muted/10  text-muted-foreground gap-1"
  >
  <Plus size={16} />
  <span className="text-[10px] font-bold uppercase tracking-wider">New Key</span>
@@ -248,329 +248,149 @@ export default function Settings() {
  </CardContent>
  </Card>
 
- {/* AI Engine */}
- <SettingsCard
- title="AI Engine"
- icon={<Brain size={18} />}
- value="Select Provider and Configure API Keys"
- isEditing={editingKey === 'aiApiKey' || editingKey === 'plannerApiKey' || editingKey === 'utilityApiKey'}
- onEdit={() => {
- if (aiTab === 'primary') startEditing('aiApiKey', config?.aiApiKey || '')
- else if (aiTab === 'planner') startEditing('plannerApiKey', config?.plannerApiKey || '')
- else startEditing('utilityApiKey', config?.utilityApiKey || '')
-}}
- onSave={handleSave}
- onCancel={() => setEditingKey(null)}
- >
- <div className="space-y-6 text-foreground">
- {/* Tabs Header */}
- <div className="flex border-b border-border mb-4">
- <button 
- onClick={() => { setAiTab('primary'); setEditingKey(null); }}
- className={cn(
- "px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2",
- aiTab === 'primary' ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
- )}
- >
- Synthesis
- </button>
- <button 
- onClick={() => { setAiTab('planner'); setEditingKey(null); }}
- className={cn(
- "px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2",
- aiTab === 'planner' ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
- )}
- >
- Planning
- </button>
- <button 
- onClick={() => { setAiTab('utility'); setEditingKey(null); }}
- className={cn(
- "px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2",
- aiTab === 'utility' ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
- )}
- >
- Utility
- </button>
- </div>
+  {/* AI Engine */}
+  <SettingsCard
+    title="AI Engine"
+    icon={<Brain size={18} />}
+    value="Configure your primary intelligence carrier"
+    isEditing={editingKey === 'aiApiKey'}
+    onEdit={() => startEditing('aiApiKey', config?.aiApiKey || '')}
+    onSave={handleSave}
+    onCancel={() => setEditingKey(null)}
+  >
+    <div className="space-y-6 text-foreground">
+      {/* Saved Key Selection */}
+      <div className="space-y-2 pb-4 border-b border-border/50">
+        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+          <Key size={10} /> Saved Keys
+        </label>
+        <div className="flex flex-wrap gap-1.5">
+          {config?.savedApiKeys?.length === 0 && (
+            <p className="text-[11px] text-muted-foreground/40 italic">No keys saved in vault yet.</p>
+          )}
+          {config?.savedApiKeys?.map(k => {
+            const isSelected = config.aiApiKey === k.key;
+            return (
+              <button
+                key={k.id}
+                onClick={() => saveConfig({aiProvider: k.provider, aiApiKey: k.key})}
+                className={cn(
+                  "px-2 py-1 rounded text-[10px] font-bold border  flex items-center gap-1.5",
+                  isSelected 
+                    ? "bg-primary border-primary text-primary-foreground" 
+                    : "bg-background border-border text-muted-foreground hover:border-muted-foreground/50"
+                )}
+              >
+                {isSelected && <Check size={10} />}
+                {k.name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
- {/* Saved Key Selection */}
- <div className="space-y-2 pb-4 border-b border-border/50">
- <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
- <Key size={10} /> Saved Keys
- </label>
- <div className="flex flex-wrap gap-1.5">
- {config?.savedApiKeys?.length === 0 && (
- <p className="text-[11px] text-muted-foreground/40 italic">No keys saved in vault yet.</p>
- )}
- {config?.savedApiKeys?.map(k => {
- const isSelected = (aiTab === 'primary' && config.aiApiKey === k.key) ||
- (aiTab === 'planner' && config.plannerApiKey === k.key) ||
- (aiTab === 'utility' && config.utilityApiKey === k.key);
- return (
- <button
- key={k.id}
- onClick={() => selectSavedKey(aiTab, k)}
- className={cn(
- "px-2 py-1 rounded text-[10px] font-bold border transition-all flex items-center gap-1.5",
- isSelected 
- ? "bg-primary border-primary text-primary-foreground" 
- : "bg-background border-border text-muted-foreground hover:border-muted-foreground/50"
- )}
- >
- {isSelected && <Check size={10} />}
- {k.name}
- </button>
- );
-})}
- </div>
- </div>
+      <div className="space-y-4 ">
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Provider</label>
+          <select
+            value={config?.aiProvider || 'google'}
+            onChange={(e) => {
+              const provider = e.target.value;
+              let defaultModel = 'gemini-2.0-flash';
+              if (provider === 'openai') defaultModel = 'gpt-4o';
+              if (provider === 'anthropic') defaultModel = 'claude-3-5-sonnet-latest';
+              if (provider === 'groq') defaultModel = 'llama-3.3-70b-versatile';
+              if (provider === 'openrouter') defaultModel = 'google/gemini-2.0-flash-001';
+              saveConfig({aiProvider: provider, aiModel: defaultModel});
+            }}
+            className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="google">Google Gemini</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="groq">Groq (Fast/Free)</option>
+            <option value="openrouter">OpenRouter</option>
+          </select>
+        </div>
 
- {aiTab === 'primary' && (
- <div className="space-y-4 ">
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L1 Provider</label>
- <select
- value={config?.aiProvider || 'google'}
- onChange={(e) => {
- const provider = e.target.value;
- let defaultModel = 'gemini-2.0-flash';
- if (provider === 'openai') defaultModel = 'gpt-4o';
- if (provider === 'anthropic') defaultModel = 'claude-3-5-sonnet-latest';
- if (provider === 'groq') defaultModel = 'llama-3.3-70b-versatile';
- if (provider === 'openrouter') defaultModel = 'google/gemini-2.0-flash-001';
- saveConfig({aiProvider: provider, aiModel: defaultModel});
-}}
- className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
- >
- <option value="google">Google Gemini</option>
- <option value="openai">OpenAI</option>
- <option value="anthropic">Anthropic</option>
- <option value="groq">Groq (Fast/Free)</option>
- <option value="openrouter">OpenRouter</option>
- </select>
- </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">API Key</label>
+          {editingKey === 'aiApiKey' ? (
+            <input
+              type="password"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring font-mono"
+              autoFocus
+              placeholder={`Enter ${config?.aiProvider.toUpperCase()} Key`}
+            />
+          ) : (
+            <div className="px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent">
+              <span>{config?.aiApiKey ? '••••••••' + config?.aiApiKey.slice(-4) : 'Not configured'}</span>
+              <Key size={14} className="text-muted-foreground" />
+            </div>
+          )}
+        </div>
 
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L1 API Key</label>
- {editingKey === 'aiApiKey' ? (
- <input
- type="password"
- value={editValue}
- onChange={(e) => setEditValue(e.target.value)}
- className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring font-mono"
- autoFocus
- placeholder={`Enter ${config?.aiProvider.toUpperCase()} Key`}
- />
- ) : (
- <div className="px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent">
- <span>{config?.aiApiKey ? '••••••••' + config?.aiApiKey.slice(-4) : 'Not configured'}</span>
- <Key size={14} className="text-muted-foreground" />
- </div>
- )}
- </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Model ID</label>
+          <input
+            type="text"
+            value={config?.aiModel || ''}
+            onChange={(e) => saveConfig({aiModel: e.target.value})}
+            className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
 
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L1 Model ID</label>
- <input
- type="text"
- value={config?.aiModel || ''}
- onChange={(e) => saveConfig({aiModel: e.target.value})}
- className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
- />
- </div>
+        <div className="pt-2">
+          <button
+            onClick={() => handleTestConnection('primary')}
+            disabled={testStatus.loading || !config?.aiApiKey}
+            className={cn(
+              "w-full flex items-center justify-center gap-2 px-3 py-2 rounded text-[12px] font-medium  border",
+              testStatus.loading ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
+              testStatus.success === true ? "bg-green-500/10 border-green-500/20 text-green-500" :
+              testStatus.success === false ? "bg-destructive/10 border-destructive/20 text-destructive" :
+              "bg-background hover:bg-muted text-muted-foreground border-border"
+            )}
+          >
+            {testStatus.loading ? (
+              <><Icons.Loader2 size={14} className="animate-spin" /> Testing...</>
+            ) : (
+              <><Zap size={14} className={cn(testStatus.success ? "fill-current" : "")} /> Test Connection</>
+            )}
+          </button>
+        </div>
+      </div>
 
- <div className="pt-2">
- <button
- onClick={() => handleTestConnection('primary')}
- disabled={testStatus.loading || !config?.aiApiKey}
- className={cn(
- "w-full flex items-center justify-center gap-2 px-3 py-2 rounded text-[12px] font-medium transition-all border",
- testStatus.loading && testTarget === 'primary' ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
- testStatus.success === true && testTarget === 'primary' ? "bg-green-500/10 border-green-500/20 text-green-500" :
- testStatus.success === false && testTarget === 'primary' ? "bg-destructive/10 border-destructive/20 text-destructive" :
- "bg-background hover:bg-muted text-muted-foreground border-border"
- )}
- >
- {testStatus.loading && testTarget === 'primary' ? (
- <><Icons.Loader2 size={14} className="animate-spin" /> Testing...</>
- ) : (
- <><Zap size={14} className={cn(testStatus.success && testTarget === 'primary' ? "fill-current" : "")} /> Test L1 Connection</>
- )}
- </button>
- </div>
- </div>
- )}
+      {testStatus.message && (
+        <p className={cn(
+          "text-[11px] mt-2 px-2 py-1.5 rounded border font-medium",
+          testStatus.success ? "bg-green-500/10 border-green-500/20 text-green-500" : "bg-destructive/10 border-destructive/20 text-destructive"
+        )}>
+          {testStatus.message}
+        </p>
+      )}
 
- {aiTab === 'planner' && (
- <div className="space-y-4 ">
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L2 Provider</label>
- <select
- value={config?.plannerProvider || 'google'}
- onChange={(e) => {
- const provider = e.target.value;
- const defaultModel = 'gemini-2.0-flash';
- saveConfig({plannerProvider: provider, plannerModel: defaultModel});
-}}
- className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
- >
- <option value="google">Google Gemini</option>
- <option value="groq">Groq</option>
- <option value="openrouter">OpenRouter</option>
- <option value="openai">OpenAI</option>
- </select>
- </div>
+      {/* Real-time Rate Limit Tracker */}
+      <div className="pt-6 border-t border-border/50 mt-6">
+        <RateLimitMonitor config={config || undefined} activeTier="primary" />
+      </div>
+    </div>
+  </SettingsCard>
 
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L2 API Key (Optional)</label>
- {editingKey === 'plannerApiKey' ? (
- <input
- type="password"
- value={editValue}
- onChange={(e) => setEditValue(e.target.value)}
- className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring font-mono"
- autoFocus
- placeholder="Defaults to L1 Key"
- />
- ) : (
- <div className="px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent">
- <span>{config?.plannerApiKey ? '••••••••' + config?.plannerApiKey.slice(-4) : 'Using L1 Key'}</span>
- <Key size={14} className="text-muted-foreground" />
- </div>
- )}
- </div>
-
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L2 Model ID</label>
- <input
- type="text"
- value={config?.plannerModel || ''}
- onChange={(e) => saveConfig({plannerModel: e.target.value})}
- className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
- />
- </div>
-
- <div className="pt-2">
- <button
- onClick={() => handleTestConnection('planner')}
- disabled={testStatus.loading || (!config?.plannerApiKey && !config?.aiApiKey)}
- className={cn(
- "w-full flex items-center justify-center gap-2 px-3 py-2 rounded text-[12px] font-medium transition-all border",
- testStatus.loading && testTarget === 'planner' ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
- testStatus.success === true && testTarget === 'planner' ? "bg-green-500/10 border-green-500/20 text-green-500" :
- testStatus.success === false && testTarget === 'planner' ? "bg-destructive/10 border-destructive/20 text-destructive" :
- "bg-background hover:bg-muted text-muted-foreground border-border"
- )}
- >
- {testStatus.loading && testTarget === 'planner' ? (
- <><Icons.Loader2 size={14} className="animate-spin" /> Testing...</>
- ) : (
- <><Zap size={14} className={cn(testStatus.success && testTarget === 'planner' ? "fill-current" : "")} /> Test L2 Connection</>
- )}
- </button>
- </div>
- </div>
- )}
-
- {aiTab === 'utility' && (
- <div className="space-y-4 ">
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L3 Provider</label>
- <select
- value={config?.utilityProvider || 'google'}
- onChange={(e) => {
- const provider = e.target.value;
- const defaultModel = 'gemini-1.5-flash-8b';
- saveConfig({utilityProvider: provider, utilityModel: defaultModel});
-}}
- className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
- >
- <option value="google">Google Gemini (Recommended)</option>
- <option value="groq">Groq</option>
- <option value="openrouter">OpenRouter</option>
- <option value="openai">OpenAI</option>
- </select>
- </div>
-
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L3 API Key (Optional)</label>
- {editingKey === 'utilityApiKey' ? (
- <input
- type="password"
- value={editValue}
- onChange={(e) => setEditValue(e.target.value)}
- className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring font-mono"
- autoFocus
- placeholder="Defaults to L2 Key"
- />
- ) : (
- <div className="px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent">
- <span>{config?.utilityApiKey ? '••••••••' + config?.utilityApiKey.slice(-4) : 'Using L2 Key'}</span>
- <Key size={14} className="text-muted-foreground" />
- </div>
- )}
- </div>
-
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L3 Model ID</label>
- <input
- type="text"
- value={config?.utilityModel || ''}
- onChange={(e) => saveConfig({utilityModel: e.target.value})}
- className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
- />
- </div>
-
- <div className="pt-2">
- <button
- onClick={() => handleTestConnection('utility')}
- disabled={testStatus.loading || (!config?.utilityApiKey && !config?.plannerApiKey && !config?.aiApiKey)}
- className={cn(
- "w-full flex items-center justify-center gap-2 px-3 py-2 rounded text-[12px] font-medium transition-all border",
- testStatus.loading && testTarget === 'utility' ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
- testStatus.success === true && testTarget === 'utility' ? "bg-green-500/10 border-green-500/20 text-green-500" :
- testStatus.success === false && testTarget === 'utility' ? "bg-destructive/10 border-destructive/20 text-destructive" :
- "bg-background hover:bg-muted text-muted-foreground border-border"
- )}
- >
- {testStatus.loading && testTarget === 'utility' ? (
- <><Icons.Loader2 size={14} className="animate-spin" /> Testing...</>
- ) : (
- <><Zap size={14} className={cn(testStatus.success && testTarget === 'utility' ? "fill-current" : "")} /> Test L3 Connection</>
- )}
- </button>
- </div>
- </div>
- )}
-
- {testStatus.message && (
- <p className={cn(
- "text-[11px] mt-2 px-2 py-1.5 rounded border font-medium",
- testStatus.success ? "bg-green-500/10 border-green-500/20 text-green-500" : "bg-destructive/10 border-destructive/20 text-destructive"
- )}>
- {testStatus.message}
- </p>
- )}
-
- {/* Real-time Rate Limit Tracker */}
- <div className="pt-6 border-t border-border/50 mt-6">
- <RateLimitMonitor config={config || undefined} activeTier={aiTab} />
- </div>
- </div>
- </SettingsCard>
-
- {/* Obsidian & Inbox */}
+ {/* Vault Configuration */}
  <div className="flex flex-col gap-6">
  <SettingsCard
- title="Obsidian Vault"
+ title="Vault Folder"
  icon={<HardDrive size={18} />}
- value="Local directory for markdown notes"
+ value="Local root for your life data"
  isEditing={editingKey === 'obsidianVaultPath'}
  onEdit={() => startEditing('obsidianVaultPath', config?.obsidianVaultPath || '')}
  onSave={handleSave}
  onCancel={() => setEditingKey(null)}
  >
+ <div className="space-y-4">
  <div className="flex gap-2">
  <div className="flex-1 px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent overflow-hidden">
  <span className="truncate pr-2">{editingKey === 'obsidianVaultPath' ? editValue : (config?.obsidianVaultPath || 'Not selected')}</span>
@@ -579,75 +399,11 @@ export default function Settings() {
  <button
  onClick={async () => {
  try {
- const selected = await open({directory: true, multiple: false, title: 'Select Obsidian Vault'});
+ const selected = await open({directory: true, multiple: false, title: 'Select Vault Folder'});
  if (selected) setEditValue(selected as string);
 } catch (err) {console.error(err);}
 }}
- className="inline-flex items-center justify-center rounded bg-background text-muted-foreground transition-colors hover:bg-muted border border-border px-3 py-2 shrink-0"
- >
- <FolderOpen size={16} />
- </button>
- )}
- </div>
- </SettingsCard>
-
- <SettingsCard
- title="School Folder"
- icon={<BookOpen size={18} />}
- value="Folder for notes (relative to vault)"
- isEditing={editingKey === 'academicFolderPath'}
- onEdit={() => startEditing('academicFolderPath', config?.academicFolderPath || '1-Academic')}
- onSave={handleSave}
- onCancel={() => setEditingKey(null)}
- >
- <div className="flex gap-2">
- <div className="flex-1 px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent overflow-hidden">
- <span className="truncate pr-2">{editingKey === 'academicFolderPath' ? editValue : (config?.academicFolderPath || '1-Academic')}</span>
- </div>
- {editingKey === 'academicFolderPath' && (
- <button
- onClick={async () => {
- try {
- const selected = await open({
- directory: true, 
- multiple: false, 
- title: 'Select Academic Folder',
- defaultPath: config?.obsidianVaultPath
-});
- if (selected) setEditValue(selected as string);
-} catch (err) {console.error(err);}
-}}
- className="inline-flex items-center justify-center rounded bg-background text-muted-foreground transition-colors hover:bg-muted border border-border px-3 py-2 shrink-0"
- >
- <FolderOpen size={16} />
- </button>
- )}
- </div>
- </SettingsCard>
-
- <SettingsCard
- title="Inbox"
- icon={<Zap size={18} className="text-foreground" />}
- value="Auto-process files"
- isEditing={editingKey === 'inboxPath'}
- onEdit={() => startEditing('inboxPath', config?.inboxPath || '')}
- onSave={handleSave}
- onCancel={() => setEditingKey(null)}
- >
- <div className="space-y-4">
- <div className="flex gap-2">
- <div className="flex-1 px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent overflow-hidden">
- <span className="truncate pr-2">{editingKey === 'inboxPath' ? editValue : (config?.inboxPath || 'Not selected')}</span>
- </div>
- {editingKey === 'inboxPath' && (
- <button
- onClick={async () => {
- try {
- const selected = await open({directory: true, multiple: false, title: 'Select Inbox Folder'});
- if (selected) setEditValue(selected as string);
-} catch (err) {console.error(err);}
-}}
- className="inline-flex items-center justify-center rounded bg-background text-muted-foreground transition-colors hover:bg-muted border border-border px-3 py-2 shrink-0"
+ className="inline-flex items-center justify-center rounded bg-background text-muted-foreground  hover:bg-muted border border-border px-3 py-2 shrink-0"
  >
  <FolderOpen size={16} />
  </button>
@@ -657,7 +413,7 @@ export default function Settings() {
  <div className="flex items-center justify-between p-3 rounded border border-border bg-muted/30">
  <div className="space-y-0.5">
  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Auto-Deploy</label>
- <p className="text-[11px] text-muted-foreground/60">Automatically process new files</p>
+ <p className="text-[11px] text-muted-foreground/60 text-[9px] uppercase tracking-widest opacity-40">Process Inbox automatically</p>
  </div>
  <button
  onClick={async () => {
@@ -666,12 +422,12 @@ export default function Settings() {
  try {await sidecarApi.okaWatcherToggle();} catch(e) {console.error(e);}
 }}
  className={cn(
- "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
+ "relative inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full ",
  config?.autoDeploy ? "bg-primary" : "bg-muted-foreground/20"
  )}
  >
  <span className={cn(
- "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-sm ring-0 transition-transform",
+ "pointer-events-none block h-3 w-3 rounded-full bg-background shadow-sm ring-0 transition-transform",
  config?.autoDeploy ? "translate-x-4" : "translate-x-1"
  )} />
  </button>
@@ -687,7 +443,7 @@ export default function Settings() {
  <CardContent>
  <button
  onClick={handleClear}
- className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-[9px] font-black uppercase tracking-widest transition-all text-destructive border border-destructive/20 bg-destructive/5 hover:bg-destructive/10 h-9"
+ className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-[9px] font-black uppercase tracking-widest  text-destructive border border-destructive/20 bg-destructive/5 hover:bg-destructive/10 h-9"
  >
  <Trash2 size={12} className="mr-2" />
  Reset Config

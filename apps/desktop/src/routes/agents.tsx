@@ -47,16 +47,16 @@ function CurriculumPill({
  else if (options.length > 0) setIsMenuOpen(!isMenuOpen);
 }}
  className={cn(
- "px-2.5 py-1.5 rounded bg-background border border-border text-xs font-semibold uppercase tracking-tight flex items-center gap-2 transition-all hover:bg-muted hover:border-muted-foreground/30",
+ "px-2.5 py-1.5 rounded bg-background border border-border text-xs font-semibold uppercase tracking-tight flex items-center gap-2  hover:bg-muted hover:border-muted-foreground/30",
  (isDropdown || options.length > 0) && "cursor-pointer"
  )}
  >
- <Icon size={14} className="text-muted-foreground group-hover:text-foreground transition-colors" />
+ <Icon size={14} className="text-muted-foreground group-hover:text-foreground " />
  <div className="flex items-center gap-1.5">
  <span className="text-muted-foreground">{label}:</span>
  {isEditable && options.length === 0 ? (
  <input 
- className="bg-transparent border-none focus:outline-none text-foreground font-medium min-w-[20px] placeholder:text-muted-foreground/40 border-b border-transparent focus:border-border transition-all"
+ className="bg-transparent border-none focus:outline-none text-foreground font-medium min-w-[20px] placeholder:text-muted-foreground/40 border-b border-transparent focus:border-border "
  value={value}
  onChange={(e) => onChange?.(e.target.value)}
  placeholder="Set..."
@@ -84,7 +84,7 @@ function CurriculumPill({
  setIsMenuOpen(false);
 }}
  className={cn(
- "w-full text-left px-2 py-1.5 rounded text-sm font-medium transition-all hover:bg-muted",
+ "w-full text-left px-2 py-1.5 rounded text-sm font-medium  hover:bg-muted",
  value === opt && "text-foreground bg-accent"
  )}
  >
@@ -141,7 +141,7 @@ function BatchTreeView({batches, processedNotes}: {batches: any[], processedNote
          key={`${item.batchId}-${item.note}-${idx}`}
          ref={isCurrentNote ? firstPendingRef : null}
          className={cn(
-           "flex items-center gap-3 px-2 py-1.5 rounded-md transition-all duration-300",
+           "flex items-center gap-3 px-2 py-1.5 rounded-md  ",
            item.isDone ? "opacity-35" : "opacity-100",
            isCurrentNote && "bg-muted/15 border border-border/40"
          )}
@@ -260,7 +260,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  <div className="flex flex-col overflow-y-auto custom-scrollbar pr-2 gap-6 h-full">
  <div className="flex flex-col gap-3">
  {hubContent && (
- <div className="rounded border border-border bg-background p-5 hover:border-muted-foreground/30 transition-all group">
+ <div className="rounded border border-border bg-background p-5 hover:border-muted-foreground/30  group">
  <div className="flex items-center gap-3 mb-3">
  <div className="p-1.5 bg-muted rounded text-foreground">
  <Brain size={16} />
@@ -273,7 +273,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  </div>
  )}
  {pqContent && (
- <div className="rounded border border-border bg-background p-5 hover:border-muted-foreground/30 transition-all group">
+ <div className="rounded border border-border bg-background p-5 hover:border-muted-foreground/30  group">
  <div className="flex items-center gap-3 mb-3">
  <div className="p-1.5 bg-muted rounded text-foreground">
  <ShieldCheck size={16} />
@@ -299,12 +299,12 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  key={i} 
  style={{marginLeft: `${node.level * 24}px`}}
  className={cn(
- "p-3 rounded border bg-background hover:border-muted-foreground/30 hover:bg-muted/50 transition-all relative overflow-hidden group min-w-0 w-full",
+ "p-3 rounded border bg-background hover:border-muted-foreground/30 hover:bg-muted/50  relative overflow-hidden group min-w-0 w-full",
  node.level > 0 ? "border-dashed opacity-90 scale-[1] border-border" : "border-solid border-border shadow-sm"
  )}
  >
  {node.level > 0 && (
- <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-border group-hover:bg-muted-foreground/40 transition-colors" />
+ <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-border group-hover:bg-muted-foreground/40 " />
  )}
  <div className="flex items-start justify-between gap-4 min-w-0">
  <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -315,7 +315,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  <FileText size={12} />
  </div>
  <div className="flex flex-col gap-1 min-w-0">
- <div className="font-bold text-[13px] text-foreground truncate group-hover:text-foreground transition-colors">
+ <div className="font-bold text-[13px] text-foreground truncate group-hover:text-foreground ">
  {node.title}
  {node.mode && (
  <span className="ml-2 text-[9px] font-black uppercase text-muted-foreground tracking-widest border border-border px-1 rounded">
@@ -333,7 +333,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  <span className="text-[9px] font-bold uppercase text-muted-foreground tracking-tighter">Relevant Pages:</span>
  <div className="flex flex-wrap gap-1">
  {node.pages.map(p => (
- <span key={p} className="text-[9px] font-bold px-1.5 py-0.5 bg-muted text-muted-foreground border border-border rounded hover:bg-background hover:border-muted-foreground/30 transition-all cursor-default">
+ <span key={p} className="text-[9px] font-bold px-1.5 py-0.5 bg-muted text-muted-foreground border border-border rounded hover:bg-background hover:border-muted-foreground/30  cursor-default">
  {p}
  </span>
  ))}
@@ -401,19 +401,19 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
      <button 
       onClick={toggleAutoDeploy}
       className={cn(
-       "relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none", 
+       "relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border border-transparent   ease-in-out focus:outline-none", 
        config?.autoDeploy ? 'bg-foreground' : 'bg-muted-foreground/30'
       )}
      >
       <span className={cn(
-       "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out", 
+       "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-background shadow ring-0 transition  ease-in-out", 
        config?.autoDeploy ? 'translate-x-3.5' : 'translate-x-0'
       )} />
      </button>
     </div>
     <button 
      onClick={() => {fetchInbox(); fetchStatus();}} 
-     className="flex items-center justify-center w-8 h-8 bg-muted/30 border border-border/40 text-muted-foreground rounded-md hover:text-foreground hover:border-foreground/30 transition-all"
+     className="flex items-center justify-center w-8 h-8 bg-muted/30 border border-border/40 text-muted-foreground rounded-md hover:text-foreground hover:border-foreground/30 "
     >
      <RefreshCw size={12} />
     </button>
@@ -655,7 +655,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  <span>{Math.round(((queueStatus?.current_batch || 0) / (queueStatus?.total_batches || 1)) * 100)}%</span>
  </div>
  <div className="h-2 w-full bg-background rounded-full overflow-hidden border border-border">
- <div className="h-full bg-foreground transition-all duration-700 ease-in-out" style={{width: `${((queueStatus?.current_batch || 0) / (queueStatus?.total_batches || 1)) * 100}%`}} />
+ <div className="h-full bg-foreground  duration-700 ease-in-out" style={{width: `${((queueStatus?.current_batch || 0) / (queueStatus?.total_batches || 1)) * 100}%`}} />
  </div>
  </div>
 
@@ -697,14 +697,14 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
     {loadingInbox ? (
     Array.from({length: 4}).map((_, i) => (
-    <div key={i} className="h-24 rounded-xl bg-muted/5 border border-border animate-pulse" />
+    <div key={i} className="h-24 rounded-xl bg-muted/5 border border-border " />
     ))
     ) : inboxFiles.length > 0 ? (
     inboxFiles.map(f => (
     <div 
     key={f.path} 
     onClick={() => {setSelectedInboxFile(f); setOkaError(null); setActivePlan(null); setIsAwaitingConfirmation(false); setIsCurriculumReady(false); setBatchFeed([]);}}
-    className="p-8 rounded-lg border border-border bg-muted/5 hover:bg-muted/5 hover:border-foreground/30 cursor-pointer transition-all group flex flex-col justify-between"
+    className="p-8 rounded-lg border border-border bg-muted/5 hover:bg-muted/5 hover:border-foreground/30 cursor-pointer  group flex flex-col justify-between"
     >
     <div>
     <h3 className="text-sm font-black uppercase tracking-tight text-foreground truncate">{f.name}</h3>
@@ -730,7 +730,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  {/* Selected File Header */}
  <div className="p-6 rounded-lg border border-border bg-muted/5 mb-8 flex items-center justify-between shrink-0">
  <div className="flex items-center gap-4">
- <button onClick={() => setSelectedInboxFile(null)} className="p-2 bg-background border border-border rounded-lg text-muted-foreground hover:text-foreground transition-all">
+ <button onClick={() => setSelectedInboxFile(null)} className="p-2 bg-background border border-border rounded-lg text-muted-foreground hover:text-foreground ">
  BACK
  </button>
  <div>
@@ -741,37 +741,37 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
 
  <div className="flex items-center gap-2">
  {!isCurriculumReady && !processing && (
- <button onClick={() => processSelectedFile()} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg transition-all">
+ <button onClick={() => processSelectedFile()} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg ">
  Analyze Context
  </button>
  )}
  {isCurriculumReady && !activePlan && !processing && (
- <button onClick={startPlanning} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground bg-muted/5 hover:bg-muted/5 rounded-lg transition-all">
+ <button onClick={startPlanning} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground bg-muted/5 hover:bg-muted/5 rounded-lg ">
  Generate Plan
  </button>
  )}
  {isAwaitingConfirmation && (
  <div className="flex items-center gap-2">
- <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground bg-muted/5 hover:bg-muted/5 rounded-lg transition-all disabled:opacity-50">
+ <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground bg-muted/5 hover:bg-muted/5 rounded-lg  disabled:opacity-50">
  Full Deploy
  </button>
- <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg transition-all disabled:opacity-50">
+ <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg  disabled:opacity-50">
  Deploy Step 1
  </button>
  </div>
  )}
  {isAwaitingNextBatch && (
  <div className="flex items-center gap-2">
- <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground bg-muted/5 hover:bg-muted/5 rounded-lg transition-all disabled:opacity-50">
+ <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground bg-muted/5 hover:bg-muted/5 rounded-lg  disabled:opacity-50">
  Finish All
  </button>
- <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg transition-all disabled:opacity-50">
+ <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg  disabled:opacity-50">
  Next Step
  </button>
  </div>
  )}
  {isCompleted && (
- <button onClick={resetOkaSession} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg transition-all">
+ <button onClick={resetOkaSession} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg ">
  Reset
  </button>
  )}
@@ -780,14 +780,14 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
 
  {/* Processing Indicator */}
  {processing && !activePlan && !batchFeed.length && (
- <div className="py-24 flex flex-col items-center justify-center text-center animate-pulse">
+ <div className="py-24 flex flex-col items-center justify-center text-center ">
  <div className="w-4 h-4 border-2 border-foreground border-t-transparent rounded-full animate-spin mb-6" />
  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] mb-4 text-foreground/40">Architecting...</h4>
  </div>
  )}
 
  {processing && (activePlan || batchFeed.length > 0) && (
- <div className="mb-8 p-6 rounded-lg bg-muted/5 border border-border shrink-0 flex items-center justify-between animate-pulse">
+ <div className="mb-8 p-6 rounded-lg bg-muted/5 border border-border shrink-0 flex items-center justify-between ">
  <div className="flex items-center gap-4">
  <div className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin" />
  <div>
@@ -885,7 +885,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  </div>
  <h4 className="text-xl font-black uppercase tracking-tight mb-2 text-foreground">All Done</h4>
  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mb-8 max-w-sm">All files have been saved to your vault.</p>
- <button onClick={() => navigate('/obsidian')} className="flex items-center justify-center rounded-lg px-6 py-3 text-[10px] font-black uppercase tracking-widest text-foreground bg-background border border-border hover:border-foreground/50 transition-all">
+ <button onClick={() => navigate('/obsidian')} className="flex items-center justify-center rounded-lg px-6 py-3 text-[10px] font-black uppercase tracking-widest text-foreground bg-background border border-border hover:border-foreground/50 ">
  Go to Vault
  </button>
  </div>

@@ -10,21 +10,21 @@ export function AppSidebar() {
         <div className="flex flex-col gap-6 flex-1">
             <NavLink 
                 to="/obsidian"
-                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")} 
+                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground ")} 
                 title="Obsidian Vault"
             >
                 <FileText className="w-6 h-6" />
             </NavLink>
             <NavLink 
                 to="/agents"
-                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")} 
+                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground ")} 
                 title="Agents"
             >
                 <Users className="w-6 h-6" />
             </NavLink>
             <NavLink 
                 to="/academic"
-                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")} 
+                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground ")} 
                 title="Academic Dashboard"
             >
                 <GraduationCap className="w-6 h-6" />
@@ -35,7 +35,7 @@ export function AppSidebar() {
         <div className="flex flex-col gap-6 mt-auto px-1 items-center mb-2">
             <NavLink 
                 to="/onboarding"
-                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")} 
+                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground ")} 
                 title="Onboarding"
             >
                 <Zap className="w-6 h-6" />
@@ -43,7 +43,7 @@ export function AppSidebar() {
             <ThemeSwitch />
             <NavLink 
                 to="/settings"
-                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")} 
+                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground ")} 
                 title="Settings"
             >
                 <Settings className="w-6 h-6" />

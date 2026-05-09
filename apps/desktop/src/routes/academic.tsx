@@ -188,13 +188,13 @@ export default function AcademicDashboard() {
  useEffect(() => {
    setRightContent(
      <div className="flex items-center gap-2 shrink-0">
-       <button aria-label="Sync Vault Databases" onClick={handleSync} className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm focus-visible:ring-1 focus-visible:ring-primary outline-none" title="Sync Vault Databases">
+       <button aria-label="Sync Vault Databases" onClick={handleSync} className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary  shadow-sm focus-visible:ring-1 focus-visible:ring-primary outline-none" title="Sync Vault Databases">
          <RefreshCw size={12} />
        </button>
        <button onClick={() => setActiveTab(prev => prev === 'CALENDAR' ? 'PROGRAM' : 'CALENDAR')}
          title={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar (Cmd+C)'}
          aria-label={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar'}
-         className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all focus-visible:ring-1 focus-visible:ring-primary outline-none',
+         className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[8px] font-black uppercase tracking-widest  focus-visible:ring-1 focus-visible:ring-primary outline-none',
          activeTab === 'CALENDAR' ? 'bg-primary text-primary-foreground' : 'bg-background border border-border text-muted-foreground hover:text-foreground hover:border-primary shadow-sm')}>
          <CalendarDays size={11} />
          <span className="hidden sm:inline">{activeTab === 'CALENDAR' ? 'Close' : 'Calendar'}</span>
@@ -275,7 +275,7 @@ export default function AcademicDashboard() {
     {/* ── Main Content ── */}
     <main className="flex-1 flex flex-col overflow-hidden min-w-0">
   {/* Top bar */}
-   <div className={cn("shrink-0 px-4 sm:px-6 lg:px-10 pt-5 pb-0 border-b border-border bg-background/95 backdrop-blur-xl sticky top-0 z-30 transition-all", activeTab === 'CALENDAR' && "hidden")}>
+   <div className={cn("shrink-0 px-4 sm:px-6 lg:px-10 pt-5 pb-0 border-b border-border bg-background/95 backdrop-blur-xl sticky top-0 z-30 ", activeTab === 'CALENDAR' && "hidden")}>
   <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide mb-4">
   {tabs.map(t => (
   <TabButton key={t.id} active={activeTab === t.id} onClick={() => setActiveTab(t.id)} icon={t.icon} label={t.label} />
@@ -288,7 +288,7 @@ export default function AcademicDashboard() {
  {data && (
  <>
   {activeTab === 'CALENDAR' && (
-   <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-10 bg-background animate-in fade-in slide-in-from-bottom-4 duration-500 custom-scrollbar">
+   <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-10 bg-background     custom-scrollbar">
     <div className="w-full h-full max-w-none bg-background rounded-2xl border border-border">
      <MiniCalendar events={calendarEvents} onSelectEvent={(path) => nav(`/obsidian?path=${encodeURIComponent(path)}&fullscreen=true`)} />
     </div>
@@ -347,9 +347,9 @@ function MiniCalendar({events, onSelectEvent}: {events: any[]; onSelectEvent: (p
  <div className="flex items-center justify-between mb-4">
  <h3 className="text-[11px] font-black uppercase tracking-widest">{format(currentMonth, 'MMMM yyyy')}</h3>
  <div className="flex items-center gap-1">
- <button aria-label="Previous month" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1 hover:bg-muted/10 rounded transition-all text-muted-foreground/40 hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary outline-none"><ChevronLeft size={12} /></button>
- <button onClick={() => setCurrentMonth(new Date())} className="px-2 py-0.5 text-[8px] font-black uppercase rounded border border-border hover:bg-muted/20 transition-all text-muted-foreground/40 focus-visible:ring-1 focus-visible:ring-primary outline-none">Now</button>
- <button aria-label="Next month" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1 hover:bg-muted/10 rounded transition-all text-muted-foreground/40 hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary outline-none"><ChevronRight size={12} /></button>
+ <button aria-label="Previous month" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1 hover:bg-muted/10 rounded  text-muted-foreground/40 hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary outline-none"><ChevronLeft size={12} /></button>
+ <button onClick={() => setCurrentMonth(new Date())} className="px-2 py-0.5 text-[8px] font-black uppercase rounded border border-border hover:bg-muted/20  text-muted-foreground/40 focus-visible:ring-1 focus-visible:ring-primary outline-none">Now</button>
+ <button aria-label="Next month" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1 hover:bg-muted/10 rounded  text-muted-foreground/40 hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary outline-none"><ChevronRight size={12} /></button>
  </div>
  </div>
 
@@ -365,11 +365,11 @@ function MiniCalendar({events, onSelectEvent}: {events: any[]; onSelectEvent: (p
  const dayEvents = eventsByDate.get(cellDateStr) || []
  const inMonth = isSameMonth(cell, currentMonth)
  return (
- <div key={i} className={cn('min-h-[64px] p-2 flex flex-col gap-1 transition-all', !inMonth ? 'opacity-20 bg-muted/5' : 'bg-background', isToday(cell) && 'bg-primary/[0.03]')}>
+ <div key={i} className={cn('min-h-[64px] p-2 flex flex-col gap-1 ', !inMonth ? 'opacity-20 bg-muted/5' : 'bg-background', isToday(cell) && 'bg-primary/[0.03]')}>
  <span className={cn('text-[10px] font-black', isToday(cell) ? 'text-primary' : 'text-muted-foreground/50')}>{format(cell, 'd')}</span>
  {dayEvents.slice(0, 2).map((ev, idx) => (
  <button key={idx} onClick={() => onSelectEvent(ev._type === 'Assignment' ? `3-Database/03 - Assignments/${ev.id}.md` : `3-Database/04 - Exams/${ev.id}.md`)}
- className={cn('text-[8px] font-black uppercase px-1.5 py-1 rounded-md truncate text-left transition-all focus-visible:ring-1 focus-visible:ring-primary outline-none',
+ className={cn('text-[8px] font-black uppercase px-1.5 py-1 rounded-md truncate text-left  focus-visible:ring-1 focus-visible:ring-primary outline-none',
  ev._type === 'Exam' ? 'text-foreground border border-border bg-muted/20 hover:bg-muted/40' : 'bg-muted/10 text-muted-foreground hover:text-foreground hover:bg-muted/20')}>
  {cleanTitle(ev.title)}
  </button>
@@ -389,9 +389,9 @@ function MiniCalendar({events, onSelectEvent}: {events: any[]; onSelectEvent: (p
  .slice(0, 5)
  .map((ev, idx) => (
  <button key={idx} onClick={() => onSelectEvent(ev._type === 'Assignment' ? `3-Database/03 - Assignments/${ev.id}.md` : `3-Database/04 - Exams/${ev.id}.md`)}
- className="w-full flex items-center gap-3 text-left p-2 rounded-xl hover:bg-muted/20 transition-all group border border-transparent focus-visible:ring-1 focus-visible:ring-primary outline-none">
+ className="w-full flex items-center gap-3 text-left p-2 rounded-xl hover:bg-muted/20  group border border-transparent focus-visible:ring-1 focus-visible:ring-primary outline-none">
  <div className={cn('w-2 h-2 rounded-full shrink-0', ev._type === 'Exam' ? 'bg-primary' : 'bg-muted-foreground/20')} />
- <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground/70 group-hover:text-foreground transition-colors">{cleanTitle(ev.title)}</span>
+ <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground/70 group-hover:text-foreground ">{cleanTitle(ev.title)}</span>
  <span className="text-[9px] font-black text-muted-foreground/30 ml-auto shrink-0 uppercase tracking-widest">{ev._date ? format(parseISO(ev._date), 'MMM d') : ''}</span>
  </button>
  ))}

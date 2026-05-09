@@ -108,7 +108,7 @@ export default function RateLimitMonitor({ config, activeTier = 'primary' }: Rat
 
                     return (
                         <div key={key} className={cn(
-                            "group p-4 rounded-lg border transition-all animate-in fade-in slide-in-from-top-2 duration-300 relative overflow-hidden",
+                            "group p-4 rounded-lg border    slide-in-from-top-2  relative overflow-hidden",
                             isActive ? "border-primary/40 bg-primary/[0.02]" : "border-border bg-background hover:border-muted-foreground/20",
                             isCritical ? "border-destructive/30 bg-destructive/[0.02]" : 
                             isLow ? "border-amber-500/30 bg-amber-500/[0.02]" : ""
@@ -129,7 +129,7 @@ export default function RateLimitMonitor({ config, activeTier = 'primary' }: Rat
                                 </div>
                                 
                                 {limit.retry_after ? (
-                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-destructive text-destructive-foreground animate-pulse">
+                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-destructive text-destructive-foreground ">
                                         <Clock size={12} />
                                         <span className="text-[9px] font-black uppercase tracking-tighter">Throttled: {limit.retry_after}s</span>
                                     </div>
@@ -160,7 +160,7 @@ export default function RateLimitMonitor({ config, activeTier = 'primary' }: Rat
                                             <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
                                                 <div 
                                                     className={cn(
-                                                        "h-full transition-all duration-1000",
+                                                        "h-full  ",
                                                         isCritical ? "bg-destructive" : isLow ? "bg-amber-500" : "bg-primary"
                                                     )}
                                                     style={{ width: `${Math.max(2, reqPercent || 0)}%` }}
@@ -183,7 +183,7 @@ export default function RateLimitMonitor({ config, activeTier = 'primary' }: Rat
                                             <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
                                                 <div 
                                                     className={cn(
-                                                        "h-full transition-all duration-1000",
+                                                        "h-full  ",
                                                         isCritical ? "bg-destructive" : isLow ? "bg-amber-500" : "bg-primary"
                                                     )}
                                                     style={{ width: `${Math.max(2, tokenPercent || 0)}%` }}

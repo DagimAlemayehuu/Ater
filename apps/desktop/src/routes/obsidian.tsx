@@ -184,8 +184,8 @@ function NoteProperties({
  <div className="flex flex-col gap-4 mb-12 ">
  <div className="grid grid-cols-1 gap-y-1.5 py-6" data-purpose="note-metadata">
  {displayMetadata.map(([key, value]) => (
- <div key={key} className="flex items-center gap-3 group/prop hover:bg-muted/10 px-2 py-1 -mx-2 rounded-md transition-colors">
- <div className="w-4 flex justify-center text-muted-foreground/30 group-hover/prop:text-primary transition-colors">
+ <div key={key} className="flex items-center gap-3 group/prop hover:bg-muted/10 px-2 py-1 -mx-2 rounded-md ">
+ <div className="w-4 flex justify-center text-muted-foreground/30 group-hover/prop:text-primary ">
  {getPropertyIcon(key, value)}
  </div>
  <div className="flex flex-col min-w-0 flex-1">
@@ -219,7 +219,7 @@ function NoteProperties({
  </div>
  <button 
  onClick={() => onDeleteProperty(key)}
- className="opacity-0 group-hover/prop:opacity-100 p-1 hover:text-destructive transition-all"
+ className="opacity-0 group-hover/prop:opacity-100 p-1 hover:text-destructive "
  >
  <X size={12} />
  </button>
@@ -232,7 +232,7 @@ function NoteProperties({
  {!isAdding ? (
  <button 
  onClick={() => setIsAdding(true)}
- className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20 hover:text-primary transition-all py-2"
+ className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20 hover:text-primary  py-2"
  >
  <Plus size={10} /> Add Property
  </button>
@@ -243,7 +243,7 @@ function NoteProperties({
  value={newName}
  onChange={(e) => setNewName(e.target.value)}
  placeholder="NAME"
- className="w-32 bg-transparent border-b border-border/50 text-[10px] font-black uppercase tracking-widest placeholder:text-muted-foreground/10 focus:border-primary focus:ring-0 transition-all"
+ className="w-32 bg-transparent border-b border-border/50 text-[10px] font-black uppercase tracking-widest placeholder:text-muted-foreground/10 focus:border-primary focus:ring-0 "
  onKeyDown={(e) => {
  if (e.key === 'Enter' && newName) {
  onAddProperty(newName, selectedType)
@@ -260,7 +260,7 @@ function NoteProperties({
  onClick={() => setSelectedType(opt.id)}
  title={opt.label}
  className={cn(
- "p-1.5 rounded transition-all",
+ "p-1.5 rounded ",
  selectedType === opt.id ? "bg-primary/10 text-primary" : "text-muted-foreground/20 hover:text-foreground"
  )}
  >
@@ -360,13 +360,13 @@ function KnowledgeFooter({tree, activePath, onNavigate, onFinish}: {tree: NavNod
  if (!activePath) return null;
 
  return (
- <div className="mt-24 pt-12 border-t border-border/40 flex items-center justify-center transition-all pb-24 px-8">
+ <div className="mt-24 pt-12 border-t border-border/40 flex items-center justify-center  pb-24 px-8">
  <div className="w-full flex items-center justify-between">
  <div className="flex items-center gap-4">
  {prevNode && (
  <button 
  onClick={() => onNavigate(prevNode.target!)}
- className="flex items-center gap-3 px-6 py-2.5 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border/40 transition-all group"
+ className="flex items-center gap-3 px-6 py-2.5 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border/40  group"
  >
  <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
  <div className="flex flex-col items-start">
@@ -387,7 +387,7 @@ function KnowledgeFooter({tree, activePath, onNavigate, onFinish}: {tree: NavNod
  navigate(`/practice?hubId=${hubId}`);
 }
 }}
- className="flex items-center gap-3 px-8 py-2.5 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border/40 transition-all text-[10px] font-bold uppercase tracking-widest"
+ className="flex items-center gap-3 px-8 py-2.5 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border/40  text-[10px] font-bold uppercase tracking-widest"
  >
  Start Study Session
  </button>
@@ -401,7 +401,7 @@ function KnowledgeFooter({tree, activePath, onNavigate, onFinish}: {tree: NavNod
  if (onFinish) await onFinish();
  onNavigate(nextNode.target!);
 }}
- className="flex items-center gap-3 px-6 py-2.5 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border/40 transition-all group text-right"
+ className="flex items-center gap-3 px-6 py-2.5 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border/40  group text-right"
  >
  <div className="flex flex-col items-end">
  <span className="text-[8px] font-black uppercase tracking-widest opacity-30">Next Note</span>
@@ -459,7 +459,7 @@ function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox}: 
  <div key={`${node.target ?? node.label}-${idx}`} className="flex flex-col">
  <div 
  className={cn(
- "group flex items-center gap-1.5 py-1 px-3 rounded-sm cursor-pointer transition-colors relative",
+ "group flex items-center gap-1.5 py-1 px-3 rounded-sm cursor-pointer  relative",
  active ? "bg-accent text-accent-foreground font-semibold" : "hover:bg-accent/50 text-muted-foreground/80"
  )}
  >
@@ -487,7 +487,7 @@ function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox}: 
  checked={node.isChecked} 
  onChange={(e) => onToggleCheckbox(node.label, e.target.checked, node.target)}
  className={cn(
- "h-3 w-3 shrink-0 appearance-none border border-muted-foreground/40 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[3.5px] after:h-[6.5px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer transition-colors",
+ "h-3 w-3 shrink-0 appearance-none border border-muted-foreground/40 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[3.5px] after:h-[6.5px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer ",
  node.isChecked && "opacity-30"
  )} 
  />
@@ -496,7 +496,7 @@ function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox}: 
  <button
  onClick={() => onNavigate(node.target!)}
  className={cn(
- "text-left text-[11px] leading-tight truncate flex-1 hover:text-foreground transition-colors",
+ "text-left text-[11px] leading-tight truncate flex-1 hover:text-foreground ",
  node.isChecked && "line-through opacity-40"
  )}
  >
@@ -599,7 +599,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                <div className="flex items-center gap-1">
                  <button 
                    onClick={() => setIsEditing(true)}
-                   className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm"
+                   className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary  shadow-sm"
                    title="Edit Note"
                  >
                    <Edit2 size={14} />
@@ -607,7 +607,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                  <button 
                    onClick={() => setShowArchitect(!showArchitect)}
                    className={cn(
-                    "w-8 h-8 flex items-center justify-center rounded-md border transition-all shadow-sm",
+                    "w-8 h-8 flex items-center justify-center rounded-md border  shadow-sm",
                     showArchitect 
                     ? "bg-primary border-primary text-primary-foreground" 
                     : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary"
@@ -627,7 +627,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                          setSelectedPage(Number(pg))
                        }
                      }}
-                     className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm"
+                     className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary  shadow-sm"
                      title="Jump to Source PDF"
                    >
                      <FileText size={14} />
@@ -637,7 +637,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                    <button 
                      onClick={() => saveConfig({ ...config, showProperties: !config.showProperties })}
                      className={cn(
-                       "w-8 h-8 flex items-center justify-center rounded-md border transition-all shadow-sm",
+                       "w-8 h-8 flex items-center justify-center rounded-md border  shadow-sm",
                        config?.showProperties 
                        ? "bg-primary border-primary text-primary-foreground" 
                        : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary"
@@ -656,7 +656,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
            <div className="flex items-center gap-1 bg-muted/30 px-2 py-0.5 rounded border border-border/50 h-8">
              <button 
                onClick={() => pdfRef.current?.handlePrev()}
-               className="p-1 hover:bg-background rounded transition-all text-muted-foreground hover:text-foreground"
+               className="p-1 hover:bg-background rounded  text-muted-foreground hover:text-foreground"
              >
                <ChevronLeft size={12} />
              </button>
@@ -667,7 +667,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
              </div>
              <button 
                onClick={() => pdfRef.current?.handleNext()}
-               className="p-1 hover:bg-background rounded transition-all text-muted-foreground hover:text-foreground"
+               className="p-1 hover:bg-background rounded  text-muted-foreground hover:text-foreground"
              >
                <ChevronRight size={12} />
              </button>
@@ -678,7 +678,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
            <button 
              onClick={() => setIsFullscreen(!isFullscreen)}
              className={cn(
-               "w-8 h-8 flex items-center justify-center rounded-md border transition-all shadow-sm",
+               "w-8 h-8 flex items-center justify-center rounded-md border  shadow-sm",
                isFullscreen 
                ? "bg-primary border-primary text-primary-foreground" 
                : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary"
@@ -1626,7 +1626,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }}
  onClick={() => node.isFolder ? toggleFolder(node.path) : selectFile(node.path)}
  className={cn(
-   "flex items-center gap-1.5 py-1 cursor-pointer transition-all px-2 group relative rounded-sm mx-1",
+   "flex items-center gap-1.5 py-1 cursor-pointer  px-2 group relative rounded-sm mx-1",
    isSelected ? "bg-accent text-accent-foreground font-medium" : "hover:bg-accent/50 text-muted-foreground/90",
    dragOverPath === node.path && "bg-primary/10 ring-2 ring-primary/40 ring-inset shadow-[0_0_15px_rgba(var(--primary),0.1)]",
    draggedPath === node.path && "opacity-40 grayscale"
@@ -1665,7 +1665,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  </span>
  )}
 
- <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0 transition-all">
+ <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0 ">
  {node.isFolder && (
  <button
  onClick={(e) => {
@@ -1675,7 +1675,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  setNewItemName('')
  if (!isExpanded) toggleFolder(node.path)
 }}
- className="p-0.5 hover:bg-accent hover:text-foreground rounded transition-all"
+ className="p-0.5 hover:bg-accent hover:text-foreground rounded "
  title="New file"
  >
  <Plus size={10} />
@@ -1687,14 +1687,14 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  setRenamingPath(node.path)
  setNewItemName(node.name)
 }}
- className="p-0.5 hover:bg-accent hover:text-foreground rounded transition-all"
+ className="p-0.5 hover:bg-accent hover:text-foreground rounded "
  title="Rename"
  >
  <Edit3 size={10} />
  </button>
  <button
  onClick={(e) => handleDeleteItem(node.path, node.isFolder)}
- className="p-0.5 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
+ className="p-0.5 hover:bg-destructive/10 hover:text-destructive rounded "
  title="Delete"
  >
  <Trash2 size={10} strokeWidth={2.5} />
@@ -1761,13 +1761,13 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  {/* ExplorerSidebar */}
  {!isFullscreen && !isMobile && (
  <aside 
- className="relative border-r border-border flex flex-col bg-background shrink-0 group/sidebar z-40 transition-all duration-300"
+ className="relative border-r border-border flex flex-col bg-background shrink-0 group/sidebar z-40  "
  style={{width: `${sidebarWidth}px`}}
  >
  {/* Resize Handle */}
  <div 
  className={cn(
- "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50 transition-colors hover:bg-primary/50",
+ "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50  hover:bg-primary/50",
  isResizing ? "bg-primary w-1" : "bg-transparent"
  )}
  onMouseDown={startResizing}
@@ -1776,14 +1776,14 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  <div className="p-3 flex items-center justify-between gap-1">
  <div className="flex items-center gap-1 w-full">
  <div 
- className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 transition-colors" 
+ className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 " 
  title="New Note"
  onClick={() => {setCreatingInPath(null); setCreatingType('file'); setNewItemName('');}}
  >
  <Plus className="w-4 h-4" />
  </div>
  <div 
- className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 transition-colors" 
+ className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 " 
  title="New Folder"
  onClick={() => {setCreatingInPath(null); setCreatingType('folder'); setNewItemName('');}}
  >
@@ -1797,12 +1797,12 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  placeholder="Search..."
  value={searchQuery}
  onChange={(e) => setSearchQuery(e.target.value)}
- className="w-full bg-muted/50 border border-border text-[11px] px-2 py-1.5 pl-7 rounded-md focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 transition-all"
+ className="w-full bg-muted/50 border border-border text-[11px] px-2 py-1.5 pl-7 rounded-md focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 "
  />
  </div>
  </div>
  <div 
- className={cn("cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 transition-colors", showGraphView ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground")} 
+ className={cn("cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 ", showGraphView ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground")} 
  onClick={() => setShowGraphView(!showGraphView)} 
  title="Toggle Graph View"
  >
@@ -1847,13 +1847,13 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  {/* Sticky Connections Column (Left-Contextual) */}
   {selectedPath && !selectedPath.toLowerCase().endsWith('.pdf') && !isMobile && (
   <aside 
-  className="relative border-r border-border flex flex-col bg-background shrink-0 group/connections overflow-hidden transition-all duration-300"
+  className="relative border-r border-border flex flex-col bg-background shrink-0 group/connections overflow-hidden  "
   style={{width: `${connectionsWidth}px`}}
   >
  {/* Resize Handle */}
  <div 
  className={cn(
- "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50 transition-colors hover:bg-primary/50",
+ "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50  hover:bg-primary/50",
  isResizingConnections ? "bg-primary w-1" : "bg-transparent"
  )}
  onMouseDown={startResizingConnections}
@@ -1876,10 +1876,10 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  <div className="px-3 pt-3 pb-1 shrink-0">
  <button
  onClick={() => handleWikiLinkClick(typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '') : '')}
- className="w-full text-left p-2 rounded-md bg-muted/30 border border-border/50 hover:border-primary/30 transition-all group/hub-btn"
+ className="w-full text-left p-2 rounded-md bg-muted/30 border border-border/50 hover:border-primary/30  group/hub-btn"
  >
- <div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 mb-1 group-hover/hub-btn:text-primary/50 transition-colors">Topic</div>
- <div className="text-[11px] font-bold text-foreground/80 truncate group-hover/hub-btn:text-primary transition-colors">{clean?.replace(/_/g, ' ')}</div>
+ <div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 mb-1 group-hover/hub-btn:text-primary/50 ">Topic</div>
+ <div className="text-[11px] font-bold text-foreground/80 truncate group-hover/hub-btn:text-primary ">{clean?.replace(/_/g, ' ')}</div>
  </button>
  </div>
  )
@@ -1915,7 +1915,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">Select an asset to visualize</p>
  </div>
  ) : (
- <div className={cn("mx-auto w-full max-w-full transition-all", selectedPath.toLowerCase().endsWith('.pdf') ? "p-0 h-full overflow-hidden flex flex-col" : "py-12 px-6 sm:px-12 md:px-16 max-w-5xl")}>
+ <div className={cn("mx-auto w-full max-w-full ", selectedPath.toLowerCase().endsWith('.pdf') ? "p-0 h-full overflow-hidden flex flex-col" : "py-12 px-6 sm:px-12 md:px-16 max-w-5xl")}>
   {loadingNote ? (
   <div className="h-64 flex flex-col items-center justify-center gap-4 text-muted-foreground">
   <RefreshCw size={24} className="animate-spin" />
@@ -1972,7 +1972,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  handleSaveNote()
 }
 }}
- className="w-full h-[600px] p-8 bg-muted border border-border rounded-2xl font-mono text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring transition-all"
+ className="w-full h-[600px] p-8 bg-muted border border-border rounded-2xl font-mono text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring "
  placeholder="Start writing..."
  autoFocus
  />
@@ -2021,9 +2021,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  <span className="text-[8px] font-bold uppercase text-muted-foreground">Auto</span>
  <button 
  onClick={toggleAutoDeploy}
- className={cn("relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out", config?.autoDeploy ? 'bg-primary' : 'bg-muted-foreground/30')}
+ className={cn("relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent   ease-in-out", config?.autoDeploy ? 'bg-primary' : 'bg-muted-foreground/30')}
  >
- <span className={cn("pointer-events-none inline-block h-2.5 w-2.5 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out", config?.autoDeploy ? 'translate-x-3.5' : 'translate-x-0')} />
+ <span className={cn("pointer-events-none inline-block h-2.5 w-2.5 transform rounded-full bg-background shadow ring-0 transition  ease-in-out", config?.autoDeploy ? 'translate-x-3.5' : 'translate-x-0')} />
  </button>
  </div>
  </div>
@@ -2035,7 +2035,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Pipeline</h4>
  <div className="flex items-center justify-between mb-2">
  <div className="flex items-center gap-2">
- <div className={cn("w-1.5 h-1.5 rounded-full", queueStatus?.status !== 'idle' ? "bg-primary animate-pulse" : "bg-muted-foreground/30")} />
+ <div className={cn("w-1.5 h-1.5 rounded-full", queueStatus?.status !== 'idle' ? "bg-primary " : "bg-muted-foreground/30")} />
  <span className="text-[10px] font-bold uppercase text-foreground">{queueStatus?.status || 'Idle'}</span>
  </div>
  <span className="text-[9px] font-medium text-muted-foreground">{queueStatus?.pending_count || 0} Pending</span>
@@ -2050,12 +2050,12 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  )}
  </div>
  <div className="h-1 bg-muted rounded-full overflow-hidden">
- <div className="h-full bg-primary transition-all " style={{width: `${(queueStatus?.current_batch / (queueStatus?.total_batches || 1)) * 100}%`}} />
+ <div className="h-full bg-primary  " style={{width: `${(queueStatus?.current_batch / (queueStatus?.total_batches || 1)) * 100}%`}} />
  </div>
  {queueStatus?.total_notes_count > 0 && (
  <div className="h-0.5 bg-muted/50 rounded-full overflow-hidden mt-1">
  <div 
- className="h-full bg-foreground/30 transition-all duration-700 ease-in-out" 
+ className="h-full bg-foreground/30  duration-700 ease-in-out" 
  style={{width: `${((queueStatus?.processed_notes?.length || 0) / queueStatus?.total_notes_count) * 100}%`}} 
  />
  </div>
@@ -2073,7 +2073,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  key={f.path} 
  onClick={() => {setSelectedInboxFile(f); setOkaError(null); setActivePlan(null); setIsAwaitingConfirmation(false);}}
  className={cn(
- "p-2.5 rounded-md border text-[10px] cursor-pointer transition-all", 
+ "p-2.5 rounded-md border text-[10px] cursor-pointer ", 
  selectedInboxFile?.path === f.path ? "bg-accent border-border" : "bg-background hover:bg-accent/50 border-border"
  )}
  >
@@ -2094,7 +2094,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  <div className="pt-4 border-t border-border space-y-4">
  <div className="flex items-center justify-between">
  <h4 className="text-[10px] font-bold uppercase tracking-wider text-foreground">Active Analysis</h4>
- <button onClick={resetOkaSession} className="text-[9px] font-bold text-muted-foreground hover:text-foreground transition-colors">Reset</button>
+ <button onClick={resetOkaSession} className="text-[9px] font-bold text-muted-foreground hover:text-foreground ">Reset</button>
  </div>
  
  {!activePlan && !processing && (
@@ -2113,7 +2113,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  {activePlan && (
  <div className="space-y-4 slide-in-from-bottom-2">
  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent border border-border">
- <Sparkles size={12} className="text-foreground animate-pulse" />
+ <Sparkles size={12} className="text-foreground " />
  <p className="text-[10px] font-bold text-foreground uppercase tracking-wider">Architectural Plan</p>
  </div>
  

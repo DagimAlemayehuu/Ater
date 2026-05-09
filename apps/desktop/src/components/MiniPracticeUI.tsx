@@ -23,9 +23,9 @@ const CodeBlock = ({ language, value }: { language: string | null, value: string
     };
 
     return (
-        <div className="relative group my-4 rounded-xl border border-border/20 overflow-hidden bg-transparent transition-all hover:border-border/40 not-prose">
+        <div className="relative group my-4 rounded-xl border border-border/20 overflow-hidden bg-transparent  hover:border-border/40 not-prose">
             <div className={cn(
-                "flex items-center justify-between px-5 py-1.5 border-b border-border/5 bg-muted/5 transition-opacity",
+                "flex items-center justify-between px-5 py-1.5 border-b border-border/5 bg-muted/5 ",
                 !language && "opacity-0 group-hover:opacity-100"
             )}>
                 <div className="flex items-center">
@@ -35,10 +35,10 @@ const CodeBlock = ({ language, value }: { language: string | null, value: string
                 </div>
                 <button 
                     onClick={handleCopy}
-                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-muted/20 rounded-md transition-all text-muted-foreground/50 hover:text-foreground group/copy"
+                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-muted/20 rounded-md  text-muted-foreground/50 hover:text-foreground group/copy"
                     title="Copy Code"
                 >
-                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-0 group-hover/copy:opacity-100 transition-opacity">
+                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-0 group-hover/copy:opacity-100 ">
                         {copied ? 'Copied' : 'Copy'}
                     </span>
                     {copied ? <Check size={12} className="text-primary" /> : <Copy size={12} className="group-hover/copy:scale-110 transition-transform" />}
@@ -215,7 +215,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
             }}
             placeholder="..."
             className={cn(
-              "mx-1 px-2 py-0.5 border-b-2 bg-transparent focus:outline-none transition-all w-32 text-center placeholder:opacity-20 font-bold tracking-widest text-[12px] inline-block",
+              "mx-1 px-2 py-0.5 border-b-2 bg-transparent focus:outline-none  w-32 text-center placeholder:opacity-20 font-bold tracking-widest text-[12px] inline-block",
               isRevealed 
                 ? "border-muted-foreground/30 text-foreground"
                 : "border-muted-foreground/20 focus:border-foreground text-foreground"
@@ -243,7 +243,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
       </div>
       
       {showScore ? (
-        <div className="p-12 flex flex-col items-center justify-center space-y-8 text-center animate-in fade-in zoom-in duration-500">
+        <div className="p-12 flex flex-col items-center justify-center space-y-8 text-center   zoom-in ">
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20">
             <Check size={40} className="text-primary" />
           </div>
@@ -254,13 +254,13 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
           <div className="text-6xl font-black text-primary tabular-nums">
             {Object.values(scores).filter(Boolean).length} <span className="text-3xl text-muted-foreground/30">/ {questions.length}</span>
           </div>
-          <Button onClick={resetQuiz} className="mt-8 font-black uppercase tracking-[0.2em] text-[10px] h-12 px-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all active:scale-95">
+          <Button onClick={resetQuiz} className="mt-8 font-black uppercase tracking-[0.2em] text-[10px] h-12 px-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20  active:scale-95">
             <RotateCcw size={14} className="mr-3" /> Restart Challenge
           </Button>
         </div>
       ) : (
         <div className="p-6 lg:p-8 flex flex-col justify-center space-y-6 min-h-[350px]">
-          <div className="space-y-4 animate-in slide-in-from-top-4 fade-in duration-700" key={`header-${currentQ.id}`}>
+          <div className="space-y-4  slide-in-from-top-4  duration-700" key={`header-${currentQ.id}`}>
               <div className="text-[10px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-3">
     <Badge variant="outline" className="text-[8px] border-border/40 bg-muted/20 text-muted-foreground rounded-md px-2 py-0">{currentQ.difficulty || '1'}</Badge>
     <div className="w-1 h-1 rounded-full bg-muted-foreground/20" />
@@ -273,7 +273,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
               )}
           </div>
 
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-1000 delay-200" key={`body-${currentQ.id}`}>
+          <div className="space-y-4   slide-in-from-bottom-2  delay-200" key={`body-${currentQ.id}`}>
               
               {/* MCQ / True False */}
               {(currentQ.type === 'mcq' || currentQ.type === 'true_false') && (
@@ -288,7 +288,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       disabled={isRevealed} 
                       onClick={() => handleSelectAnswer(key)} 
                       className={cn(
-                          "group flex items-center gap-4 p-3 border-2 rounded-lg text-left transition-all duration-300", 
+                          "group flex items-center gap-4 p-3 border-2 rounded-lg text-left  ", 
                           isCorrectHighlight 
                           ? "border-foreground bg-muted/20 shadow-sm" 
                           : isSelected && !isRevealed 
@@ -298,7 +298,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       )}
                       >
                       <div className={cn(
-                          "flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-[10px] font-black border transition-all", 
+                          "flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-[10px] font-black border ", 
                           isCorrectHighlight || (isSelected && !isRevealed) 
                           ? "bg-foreground text-background border-foreground" 
                           : "bg-muted/10 border-border/50 text-muted-foreground/40 group-hover:border-foreground/40 group-hover:text-foreground/60"
@@ -325,14 +325,14 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                   const isCorrect = isRevealed && step === (currentQ.answer || [])[i];
                   return (
                       <div key={i} className={cn(
-                          "group flex items-center gap-3 p-3 border rounded-xl transition-all",
+                          "group flex items-center gap-3 p-3 border rounded-xl ",
                           isCorrect 
                             ? "border-foreground bg-muted/20" 
                             : "border-border/40 bg-muted/5 hover:border-foreground/20"
                       )}>
                           <div className="flex flex-col gap-2 border-r border-border/10 pr-4">
-                              <button disabled={isRevealed || i===0} onClick={moveUp} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-foreground transition-all disabled:opacity-5">▲</button>
-                              <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-foreground transition-all disabled:opacity-5">▼</button>
+                              <button disabled={isRevealed || i===0} onClick={moveUp} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-foreground  disabled:opacity-5">▲</button>
+                              <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-foreground  disabled:opacity-5">▼</button>
                           </div>
                           <div className="text-sm font-bold tracking-tight text-foreground/80 pl-2">{step}</div>
                       </div>
@@ -349,7 +349,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                   const isCorrect = isRevealed && selected === pair.right;
                   return (
                       <div key={i} className={cn(
-                          "flex items-center gap-4 p-4 border rounded-xl transition-all",
+                          "flex items-center gap-4 p-4 border rounded-xl ",
                           isCorrect ? "border-foreground bg-muted/20" : "border-border/40 bg-muted/5"
                       )}>
                           <div className="flex-1 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60">{pair.left}</div>
@@ -358,14 +358,14 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                                 disabled={isRevealed} 
                                 value={selected} 
                                 onChange={(e) => handleSelectAnswer({...userAnswers[currentQ.id], [pair.left]: e.target.value})} 
-                                className="w-full px-4 py-3 bg-background border border-border/10 rounded-lg outline-none focus:border-foreground/50 text-[10px] font-black uppercase tracking-widest transition-all appearance-none cursor-pointer hover:border-border/40"
+                                className="w-full px-4 py-3 bg-background border border-border/10 rounded-lg outline-none focus:border-foreground/50 text-[10px] font-black uppercase tracking-widest  appearance-none cursor-pointer hover:border-border/40"
                               >
                                   <option value="">Select Match...</option>
                                   {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
                               </select>
                           </div>
                           {isRevealed && !isCorrect && (
-                            <div className="flex-1 animate-in slide-in-from-right-2 fade-in duration-500">
+                            <div className="flex-1  slide-in-from-right-2  ">
                                 <div className="text-[8px] font-black uppercase text-foreground/40 mb-1">Correct Match</div>
                                 <div className="text-[10px] font-black uppercase tracking-widest text-foreground">{pair.right}</div>
                             </div>
@@ -401,7 +401,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       value={userAnswers[currentQ.id] || ''}
                       onChange={(e) => handleSelectAnswer(e.target.value)}
                       placeholder="Synthesize your analysis here..."
-                      className="w-full min-h-[140px] p-6 bg-muted/5 border-2 border-border/10 rounded-xl focus:outline-none focus:border-foreground/40 text-sm font-medium tracking-tight text-foreground/80 transition-all resize-y placeholder:opacity-20"
+                      className="w-full min-h-[140px] p-6 bg-muted/5 border-2 border-border/10 rounded-xl focus:outline-none focus:border-foreground/40 text-sm font-medium tracking-tight text-foreground/80  resize-y placeholder:opacity-20"
                   />
               </div>
               )}
@@ -411,13 +411,13 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                   <Button 
                   onClick={checkAnswer} 
                   disabled={userAnswers[currentQ.id] === undefined || userAnswers[currentQ.id] === '' || (Array.isArray(userAnswers[currentQ.id]) && userAnswers[currentQ.id].length === 0)}
-                  className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-lg transition-all"
+                  className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-lg "
                   >
                   Verify Understanding
                   </Button>
               </div>
               ) : (
-              <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="mt-4 space-y-4   slide-in-from-top-4 ">
                 <div className="p-8 border-2 border-border bg-muted/10 rounded-2xl space-y-6 shadow-xl shadow-foreground/5">
                   <div className="flex items-center gap-3 text-foreground/80 font-black uppercase text-[11px] tracking-[0.2em]">
                     <div className="w-5 h-5 rounded-full bg-foreground/10 flex items-center justify-center">
@@ -459,7 +459,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                         {currentQ.required_keywords.map((kw: string, i: number) => {
                           const isFound = String(userAnswers[currentQ.id] || '').toLowerCase().includes(kw.toLowerCase());
                           return (
-                            <label key={i} className={cn("flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all", isFound ? "border-primary/50 bg-primary/5" : "border-border/40 hover:bg-muted/10")}>
+                            <label key={i} className={cn("flex items-center gap-3 p-3 border rounded-lg cursor-pointer ", isFound ? "border-primary/50 bg-primary/5" : "border-border/40 hover:bg-muted/10")}>
                               <input type="checkbox" checked={keywordChecks[kw] || false} onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} className="w-4 h-4 rounded border-border/50 text-primary focus:ring-primary" />
                               <span className={cn("text-xs font-bold", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[9px] uppercase tracking-widest text-primary ml-2">(Found in your answer)</span>}</span>
                             </label>
@@ -475,13 +475,13 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
               <div className="flex gap-3">
                       {['fill_in', 'writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQ.type || 'writing') ? (
                           <>
-                              <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-12 rounded-xl transition-all border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 active:scale-95">
+                              <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-12 rounded-xl  border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 active:scale-95">
                                   Wrong
                               </Button>
                               <Button 
                                 onClick={() => handleSelfGrade(true)} 
                                 disabled={currentQ.required_keywords && currentQ.required_keywords.length > 0 && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw])}
-                                className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-12 rounded-xl transition-all hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-12 rounded-xl  hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title={currentQ.required_keywords && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
                               >
                                   Correct
@@ -492,7 +492,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                             <Button 
                               onClick={nextQuestion}
                               variant="outline"
-                              className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-lg transition-all border-border hover:bg-muted/20"
+                              className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-lg  border-border hover:bg-muted/20"
                             >
                               <span>Next Question</span>
                               <ArrowRight size={14} className="ml-2" />
@@ -500,7 +500,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                           ) : (
                             <Button 
                               onClick={finishQuiz}
-                              className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-lg transition-all"
+                              className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-lg "
                             >
                               <span>Finish & View Score</span>
                             </Button>

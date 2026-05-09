@@ -50,24 +50,24 @@ export function BacklinksView({ pageName, onNavigate }: BacklinksViewProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {loading ? (
                     Array(2).fill(0).map((_, i) => (
-                        <div key={i} className="h-20 bg-muted/30 rounded-xl animate-pulse" />
+                        <div key={i} className="h-20 bg-muted/30 rounded-xl " />
                     ))
                 ) : (
                     backlinks.map((link) => (
                         <button
                             key={link.path}
                             onClick={() => onNavigate(link.path)}
-                            className="group text-left p-4 rounded-xl border border-border bg-card hover:border-primary hover:shadow-lg transition-all space-y-2 relative overflow-hidden"
+                            className="group text-left p-4 rounded-xl border border-border bg-card hover:border-primary hover:shadow-lg  space-y-2 relative overflow-hidden"
                         >
                             <div className="flex items-center gap-2">
                                 {link.type === 'database' ? <Inbox size={12} className="text-muted-foreground" /> : <FileText size={12} className="text-muted-foreground" />}
                                 <span className="text-[11px] font-bold text-foreground truncate flex-1">{link.name}</span>
-                                <ChevronRight size={10} className="text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                                <ChevronRight size={10} className="text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 " />
                             </div>
                             <div className="text-[9px] text-muted-foreground truncate opacity-40 italic">
                                 {link.path.replace('.md', '')}
                             </div>
-                            <div className="absolute top-0 left-0 w-1 h-0 group-hover:h-full bg-primary transition-all" />
+                            <div className="absolute top-0 left-0 w-1 h-0 group-hover:h-full bg-primary " />
                         </button>
                     ))
                 )}

@@ -45,8 +45,8 @@ export function AppHeader() {
     return (
       <div className="flex flex-col items-center gap-0.5">
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{module}</span>
-          {subPath && <span className="text-[9px] text-muted-foreground/20 font-bold">/</span>}
+          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">{module}</span>
+          {subPath && <span className="text-[9px] text-muted-foreground font-bold">/</span>}
         </div>
         {subPath && (
           <span className="text-[10px] font-bold uppercase tracking-widest text-foreground truncate max-w-[500px] font-mono leading-none">
@@ -58,16 +58,16 @@ export function AppHeader() {
   }
 
   return (
-    <header className="h-12 w-full bg-background/80 backdrop-blur-md border-b border-border/40 flex items-center shrink-0 z-40 sticky top-0 px-4 select-none gap-4">
+    <header className="relative h-12 w-full bg-background/80 backdrop-blur-md border-b border-border/40 flex items-center shrink-0 z-40 sticky top-0 px-4 select-none">
       {/* Left: Navigation */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-2 shrink-0 z-10">
         <div className="flex items-center gap-1 bg-muted/30 p-0.5 rounded-lg border border-border/50">
           <button 
             onClick={goBack}
             disabled={!canGoBack}
             className={cn(
-              "w-7 h-7 flex items-center justify-center rounded-md transition-all",
-              canGoBack ? "text-foreground/60 hover:text-foreground hover:bg-background hover:shadow-sm" : "text-foreground/10 cursor-not-allowed"
+              "w-7 h-7 flex items-center justify-center rounded-md ",
+              canGoBack ? "text-foreground/60  hover:bg-background hover:shadow-sm" : "text-foreground/10 cursor-not-allowed"
             )}
           >
             <ChevronLeft size={16} />
@@ -76,8 +76,8 @@ export function AppHeader() {
             onClick={goForward}
             disabled={!canGoForward}
             className={cn(
-              "w-7 h-7 flex items-center justify-center rounded-md transition-all",
-              canGoForward ? "text-foreground/60 hover:text-foreground hover:bg-background hover:shadow-sm" : "text-foreground/10 cursor-not-allowed"
+              "w-7 h-7 flex items-center justify-center rounded-md ",
+              canGoForward ? "text-foreground  hover:bg-background hover:shadow-sm" : "text-foreground/10 cursor-not-allowed"
             )}
           >
             <ChevronRight size={16} />
@@ -85,16 +85,19 @@ export function AppHeader() {
         </div>
       </div>
 
-      {/* Center: Breadcrumbs & Meta - Flexible and scrollable/truncated */}
-      <div className="flex-1 flex flex-col items-center justify-center min-w-0">
-        <div className="max-w-full flex flex-col items-center overflow-hidden">
+      {/* Center: Breadcrumbs & Meta - Absolute Centered relative to window */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-40">
+        <div className="max-w-full flex flex-col items-center overflow-hidden pointer-events-auto">
           {renderBreadcrumbs()}
           {centerContent && <div className="mt-0.5 truncate max-w-full">{centerContent}</div>}
         </div>
       </div>
 
+      {/* Spacer to keep flex layout valid for right content */}
+      <div className="flex-1" />
+
       {/* Right: Actions */}
-      <div className="flex items-center justify-end gap-1.5 shrink-0">
+      <div className="flex items-center justify-end gap-1.5 shrink-0 z-10">
         {rightContent}
       </div>
     </header>

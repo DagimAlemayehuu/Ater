@@ -97,7 +97,8 @@ export const romanToNum: Record<string, number> = {
     'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
 }
 
-export const getYearOrder = (title: string): number => {
+export const getYearOrder = (title: any): number => {
+    if (!title || typeof title !== 'string') return 999
     const match = title.match(/Year\s+([IVX]+|\d+)/i)
     if (!match) return 999
     const v = match[1].toUpperCase()
