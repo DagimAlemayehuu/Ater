@@ -10,6 +10,7 @@ import Agents from '@/routes/agents'
 import Settings from '@/routes/settings'
 import Practice from '@/routes/practice'
 import AcademicDashboard from '@/routes/academic'
+import Onboarding from '@/routes/onboarding'
 
 /**
  * Gate to ensure sidecar is connected before proceeding.
@@ -71,6 +72,7 @@ export default function App() {
                         <Route path="/academic" element={<AcademicDashboard />} />
                         <Route path="/practice" element={<Practice />} />
                         <Route path="/settings" element={<Settings />} />
+                        <Route path="/onboarding" element={<Onboarding />} />
                       </Routes>
                     </AuthenticatedLayout>
                   } />

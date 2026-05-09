@@ -32,7 +32,14 @@ export function AppSidebar() {
         </div>
 
         {/* Bottom Actions */}
-        <div className="flex flex-col gap-6 mt-auto px-1 items-center">
+        <div className="flex flex-col gap-6 mt-auto px-1 items-center mb-2">
+            <NavLink 
+                to="/onboarding"
+                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")} 
+                title="Onboarding"
+            >
+                <Zap className="w-6 h-6" />
+            </NavLink>
             <ThemeSwitch />
             <NavLink 
                 to="/settings"

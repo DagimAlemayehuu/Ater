@@ -619,7 +619,7 @@ async def find_vault_page(page_name: str, secrets: AppSecrets = Depends(get_app_
         stem = page_name[:-4] if page_name.lower().endswith('.pdf') else page_name
         target_pdf_name = f"{stem}.pdf"
         
-        # Check in 5-Pdf Store first (high priority)
+        # Check in Inbox first (high priority)
         pdf_store = vault_root / "Inbox"
         if pdf_store.exists():
             # Try exact
