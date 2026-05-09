@@ -17,23 +17,25 @@ class TokenGovernor:
         self.db_path = db_path
         self._init_db()
         self._lock = asyncio.Lock()
-        
-        # Groq Free Tier limits (v30.0 Pantheon Prime)
-        self.max_tpm = 60000  # Increased for stability
-        self.max_rpm = 30     # Requests Per Minute
-        self.safety_margin = 0.95 # Higher margin for less frequent waiting
-        
-        # Sliding Window for pacing
-        self.request_window = deque() # Timestamps of requests in the last 60s
-        self.token_window = deque()   # (timestamp, tokens) tuples in the last 60s
+        self._slot_event = asyncio.Event()
+        self._slot_event.set()  # Initially unblocked
 
-        # DYNAMIC CONCURRENCY (v31.0 Singularity)
+        # Groq Free Tier limits
+        self.max_tpm = 60000
+        self.max_rpm = 30
+        self.safety_margin = 0.92  # Never exceed 92% of limits
+
+        # 60-second sliding windows
+        self.request_window: deque = deque()   # request timestamps
+        self.token_window: deque = deque()     # (timestamp, tokens) tuples
+
+        # Dynamic concurrency
         self.active_slots = 0
-        self.max_concurrency = 5  # Default, will scale
+        self.max_concurrency = 5
         self.min_concurrency = 1
-        self.current_concurrency_limit = 1 
-        
-        # Real-time Telemetry (v32.0 Oracle)
+        self.current_concurrency_limit = 2   # start conservatively
+
+        # Telemetry
         self.current_pressure = 0.0
         self.last_throttle_event = None
         self.cooldown_until = 0.0
@@ -50,96 +52,156 @@ class TokenGovernor:
             ''')
             conn.commit()
 
-    async def get_permit(self, expected_tokens: int = 2000, expected_requests: int = 1):
-        """
-        Adaptive Pacing: Grants permits instantly under low load,
-        throttles intelligently as limits approach.
-        """
-        async with self._lock:
-            while True:
-                now = time.time()
-                
-                # Check for active cooldown (v32.1 Hardening)
-                if now < self.cooldown_until:
-                    wait_remaining = self.cooldown_until - now
-                    self.last_throttle_event = f"Cooling down ({wait_remaining:.1f}s)..."
-                    await asyncio.sleep(wait_remaining)
-                    continue
-
-                self._clear_old_windows(now)
-                
-                tpm_used = sum(t for _, t in self.token_window)
-                rpm_used = len(self.request_window)
-                
-                tpm_ratio = tpm_used / (self.max_tpm * self.safety_margin)
-                rpm_ratio = rpm_used / (self.max_rpm * self.safety_margin)
-                pressure = max(tpm_ratio, rpm_ratio)
-                self.current_pressure = pressure
-
-                # DYNAMIC SCALING LOGIC
-                if pressure < 0.3 and self.current_concurrency_limit < self.max_concurrency:
-                    self.current_concurrency_limit += 1
-                    print(f"[Governor] 🚀 Pressure Low ({pressure:.2f}). Scaling UP Concurrency to {self.current_concurrency_limit}")
-                elif pressure > 0.7 and self.current_concurrency_limit > self.min_concurrency:
-                    self.current_concurrency_limit -= 1
-                    print(f"[Governor] 🚦 Pressure High ({pressure:.2f}). Scaling DOWN Concurrency to {self.current_concurrency_limit}")
-
-                tpm_ok = (tpm_used + expected_tokens) < (self.max_tpm * self.safety_margin)
-                rpm_ok = (rpm_used + expected_requests) < (self.max_rpm * self.safety_margin)
-                
-                if tpm_ok and rpm_ok:
-                    # Permit Granted
-                    self.last_throttle_event = None
-                    self.request_window.append(now)
-                    self.token_window.append((now, expected_tokens))
-                    self._record_usage_db(expected_tokens, expected_requests)
-                    return True
-                
-                # Calculation of wait time based on pressure
-                wait_time = 1.5 if not tpm_ok else 1.0
-                self.last_throttle_event = f"Waiting {wait_time}s (TPM: {tpm_used}/{self.max_tpm})"
-                print(f"[Governor] 🚦 Pressure Detected: {tpm_used}/{self.max_tpm} TPM. Waiting {wait_time}s...")
-                await asyncio.sleep(wait_time)
-
-    async def acquire_slot(self):
-        """Wait until a concurrency slot is available."""
-        while True:
-            async with self._lock:
-                if self.active_slots < self.current_concurrency_limit:
-                    self.active_slots += 1
-                    return True
-            await asyncio.sleep(0.5)
-
-    async def release_slot(self):
-        """Release a concurrency slot."""
-        async with self._lock:
-            self.active_slots = max(0, self.active_slots - 1)
-
     def _clear_old_windows(self, now: float):
-        cutoff = now - 60
+        cutoff = now - 60.0
         while self.request_window and self.request_window[0] < cutoff:
             self.request_window.popleft()
         while self.token_window and self.token_window[0][0] < cutoff:
             self.token_window.popleft()
 
+    def _tpm_wait_seconds(self, expected_tokens: int, now: float) -> float:
+        """
+        Calculates EXACT seconds until enough token budget expires from the window.
+        Walks oldest entries until the freed budget satisfies the request.
+        Returns 0.0 if budget is already available.
+        """
+        tpm_limit = self.max_tpm * self.safety_margin
+        tpm_used = sum(t for _, t in self.token_window)
+        if tpm_used + expected_tokens <= tpm_limit:
+            return 0.0
+        # Walk oldest → newest, accumulate freed tokens
+        freed = 0
+        for ts, tok in self.token_window:
+            freed += tok
+            if tpm_used - freed + expected_tokens <= tpm_limit:
+                return max(0.0, (ts + 60.0) - now + 0.05)  # +50ms buffer
+        # Entire window must expire
+        if self.token_window:
+            return max(0.0, (self.token_window[0][0] + 60.0) - now + 0.05)
+        return 0.0
+
+    def _rpm_wait_seconds(self, now: float) -> float:
+        """
+        Calculates EXACT seconds until an RPM slot opens.
+        Returns 0.0 if already within limit.
+        """
+        rpm_limit = self.max_rpm * self.safety_margin
+        if len(self.request_window) < rpm_limit:
+            return 0.0
+        if self.request_window:
+            return max(0.0, (self.request_window[0] + 60.0) - now + 0.05)
+        return 0.0
+
+    async def get_permit(self, expected_tokens: int = 2000, expected_requests: int = 1):
+        """
+        Precision Pacing: grants permits immediately when budget is available,
+        sleeps the EXACT duration needed when the window is full.
+        No fixed-time spin loops.
+        """
+        async with self._lock:
+            while True:
+                now = time.time()
+
+                # Hard cooldown — triggered by external 429 detection
+                if now < self.cooldown_until:
+                    wait_remaining = self.cooldown_until - now
+                    self.last_throttle_event = f"Cooling down ({wait_remaining:.1f}s)..."
+                    print(f"[Governor] ⏳ Cooldown active. Waiting {wait_remaining:.1f}s...")
+                    await asyncio.sleep(wait_remaining + 0.1)
+                    continue
+
+                self._clear_old_windows(now)
+
+                tpm_used = sum(t for _, t in self.token_window)
+                rpm_used = len(self.request_window)
+
+                tpm_ratio = tpm_used / (self.max_tpm * self.safety_margin)
+                rpm_ratio = rpm_used / (self.max_rpm * self.safety_margin)
+                pressure = max(tpm_ratio, rpm_ratio)
+                self.current_pressure = pressure
+
+                # Dynamic concurrency scaling based on pressure
+                if pressure < 0.30 and self.current_concurrency_limit < self.max_concurrency:
+                    self.current_concurrency_limit = min(self.current_concurrency_limit + 1, self.max_concurrency)
+                    print(f"[Governor] 🚀 Pressure low ({pressure:.2f}). Scaling UP → {self.current_concurrency_limit} workers")
+                elif pressure > 0.75 and self.current_concurrency_limit > self.min_concurrency:
+                    self.current_concurrency_limit = max(self.current_concurrency_limit - 1, self.min_concurrency)
+                    print(f"[Governor] 🚦 Pressure high ({pressure:.2f}). Scaling DOWN → {self.current_concurrency_limit} workers")
+
+                # Calculate precise wait
+                tpm_wait = self._tpm_wait_seconds(expected_tokens, now)
+                rpm_wait = self._rpm_wait_seconds(now)
+                wait = max(tpm_wait, rpm_wait)
+
+                if wait <= 0.0:
+                    # ✅ Permit granted
+                    self.last_throttle_event = None
+                    self.request_window.append(now)
+                    self.token_window.append((now, expected_tokens))
+                    self._record_usage_db(expected_tokens, expected_requests)
+                    return True
+
+                self.last_throttle_event = (
+                    f"Pacing {wait:.1f}s "
+                    f"(TPM: {int(tpm_used)}/{self.max_tpm}, RPM: {rpm_used}/{self.max_rpm})"
+                )
+                print(f"[Governor] ⏱  Precise wait {wait:.1f}s "
+                      f"(TPM: {int(tpm_used)}/{self.max_tpm})")
+                await asyncio.sleep(wait)
+
+    async def acquire_slot(self):
+        """Event-driven slot acquisition — no 0.5s polling spin."""
+        while True:
+            async with self._lock:
+                if self.active_slots < self.current_concurrency_limit:
+                    self.active_slots += 1
+                    return True
+            # Block until release_slot fires the event
+            self._slot_event.clear()
+            await self._slot_event.wait()
+
+    async def release_slot(self):
+        """Release a concurrency slot and wake any blocked acquire_slot callers."""
+        async with self._lock:
+            self.active_slots = max(0, self.active_slots - 1)
+        self._slot_event.set()
+
     def _record_usage_db(self, tokens: int, requests: int):
         try:
             with sqlite3.connect(self.db_path) as conn:
-                conn.execute('INSERT INTO usage (timestamp, tokens, requests) VALUES (?, ?, ?)',
-                             (time.time(), tokens, requests))
+                conn.execute(
+                    'INSERT INTO usage (timestamp, tokens, requests) VALUES (?, ?, ?)',
+                    (time.time(), tokens, requests)
+                )
                 conn.commit()
-        except Exception: pass # Database lock shouldn't block the permit
+        except Exception:
+            pass  # DB contention must never block a permit
 
-    def report_error(self, wait_seconds: float = 5.0):
-        """External hook to force a cooldown on 429 detection."""
+    def report_error(self, wait_seconds: float = 15.0):
+        """Force a hard cooldown on 429 detection from any agent."""
         now = time.time()
         self.cooldown_until = now + wait_seconds
         self.current_concurrency_limit = self.min_concurrency
-        # Inject penalty into the windows to prevent immediate bursts after cooldown
-        for _ in range(10):
+        # Inject heavy token/request penalty to prevent immediate re-bursting
+        for _ in range(8):
             self.request_window.append(now)
-        self.token_window.append((now, int(self.max_tpm * 0.8)))
-        print(f"[Governor] 💥 429 detected. Dropping Concurrency to {self.min_concurrency}. Cooling down for {wait_seconds}s...")
+        self.token_window.append((now, int(self.max_tpm * 0.85)))
+        print(f"[Governor] 💥 429 received. Dropping to {self.min_concurrency} worker. "
+              f"Hard cooldown for {wait_seconds}s...")
+        self._slot_event.set()  # Wake blocked workers so they re-evaluate
 
-# Global governor instance
+    @property
+    def current_tpm(self) -> int:
+        now = time.time()
+        cutoff = now - 60.0
+        return sum(t for ts, t in self.token_window if ts >= cutoff)
+
+    @property
+    def current_rpm(self) -> int:
+        now = time.time()
+        cutoff = now - 60.0
+        return sum(1 for ts in self.request_window if ts >= cutoff)
+
+
+# Global singleton — shared across all agents and the service
 governor = TokenGovernor()

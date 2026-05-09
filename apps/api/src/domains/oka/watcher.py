@@ -40,9 +40,9 @@ class InboxHandler(FileSystemEventHandler):
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
         
         # Absolute check to prevent re-processing generated files
-        # Standardized to 5-Pdf Store/note generated per user request
+        # Standardized to Inbox/Generated per user request
         vault_root = Path(self.manager.service.secrets.vault_path).resolve()
-        generated_dir = (vault_root / "5-Pdf Store" / "note generated").resolve()
+        generated_dir = (vault_root / "Inbox" / "Generated").resolve()
         abs_src = src_path.resolve()
 
         if str(abs_src).startswith(str(generated_dir)):
@@ -92,7 +92,7 @@ class OkaQueueManager:
             self.inbox_path.mkdir(parents=True, exist_ok=True)
             
         vault_root = self.service.secrets.vault_path
-        generated_dir = Path(vault_root) / "5-Pdf Store" / "note generated"
+        generated_dir = Path(vault_root) / "Inbox" / "Generated"
         generated_dir.mkdir(parents=True, exist_ok=True)
             
         self.loop = loop
@@ -306,8 +306,9 @@ class OkaQueueManager:
                             # Append to processed notes for UI
                             new_notes = confirm_res.get("results", [])
                             for n in new_notes:
-                                if n not in self.processed_notes:
-                                    self.processed_notes.append(n)
+                                title_str = n.get("title") if isinstance(n, dict) else str(n)
+                                if title_str not in self.processed_notes:
+                                    self.processed_notes.append(title_str)
                             
                             success = True
                             curriculum_override_applied = True
@@ -342,7 +343,7 @@ class OkaQueueManager:
                     _sem = (meta.get("semester") or "General").strip()
                     _crs = self.service.vm.get_canonical_title(meta.get("course") or "General_Knowledge")
                     vault_root = Path(self.service.secrets.vault_path)
-                    target_dir = vault_root / "5-Pdf Store" / "note generated" / _sem / _crs
+                    target_dir = vault_root / "Inbox" / "Generated" / _sem / _crs
                     target_dir.mkdir(parents=True, exist_ok=True)
                     clean_name = path.name.replace(" ", "_")
                     shutil.move(str(path.absolute()), str(target_dir / clean_name))
@@ -405,12 +406,18 @@ class OkaQueueManager:
         for batch in self.planned_batches:
             total_notes_count += len(batch.get("notes", []))
 
+        # In Hyperdrive mode, current_batch stays 0 until all notes complete.
+        # Derive a live "notes done" count from processed_notes for the progress bar.
+        displayed_batch = self.current_batch
+        if self.planned_batches and len(self.processed_notes) > displayed_batch:
+            displayed_batch = len(self.processed_notes)
+
         return {
             "status": self.status,
             "auto_process": self.auto_process,
             "active_files": active_files,
             "current_file": current_file,
-            "current_batch": self.current_batch,
+            "current_batch": displayed_batch,
             "total_batches": self.total_batches,
             "planned_batches": self.planned_batches,
             "total_notes_count": total_notes_count,

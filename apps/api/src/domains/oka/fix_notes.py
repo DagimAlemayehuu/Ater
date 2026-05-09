@@ -25,8 +25,8 @@ def get_canonical_title(text: str) -> str:
 
 def fix_notes(vault_path: str):
     vault = Path(vault_path)
-    academic_root = vault / "2-Academic"
-    planner_root = vault / "3-Database" / "06 - Study Planner"
+    academic_root = vault / "Notes"
+    planner_root = vault / "Database" / "06 - Study Planner"
     
     # 1. Map Hubs: (Course, Unit) -> Hub_Info
     hub_map = {}

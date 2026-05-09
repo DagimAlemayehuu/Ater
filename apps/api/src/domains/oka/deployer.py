@@ -140,7 +140,7 @@ class OkaDeployer:
         """Resolves an anchored hub ID to an absolute path."""
         anchored_id = session_metadata.get("anchored_hub_id")
         if anchored_id and anchored_id != "new":
-            planner_dir = Path(self.vm.vault_path) / "3-Database" / "06 - Study Planner"
+            planner_dir = Path(self.vm.vault_path) / "Database" / "06 - Study Planner"
             target = planner_dir / anchored_id
             if target.exists():
                 return str(target.absolute())
@@ -153,7 +153,7 @@ class OkaDeployer:
         anchored_path = None
         anchored_id = session_metadata.get("anchored_hub_id")
         if anchored_id and anchored_id != "new":
-            planner_dir = Path(self.vm.vault_path) / "3-Database" / "06 - Study Planner"
+            planner_dir = Path(self.vm.vault_path) / "Database" / "06 - Study Planner"
             target = planner_dir / anchored_id
             if target.exists():
                 anchored_path = str(target.absolute())

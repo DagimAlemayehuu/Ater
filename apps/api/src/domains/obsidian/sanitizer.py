@@ -67,7 +67,7 @@ class PdfSanitizer:
 
 def start_auto_sanitizer(vault_path: str):
     """Scan existing store and prepare for background watching."""
-    pdf_store = Path(vault_path) / "5-Pdf Store"
+    pdf_store = Path(vault_path) / "Inbox"
     if not pdf_store.exists():
         return
     

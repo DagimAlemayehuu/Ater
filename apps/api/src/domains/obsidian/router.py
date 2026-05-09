@@ -13,7 +13,7 @@ from src.api.deps import AppSecrets, get_app_secrets
 
 router = APIRouter()
 
-DB_DIR_PREFIX = "3-Database"
+DB_DIR_PREFIX = "Database"
 
 import yaml
 
@@ -107,7 +107,7 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                     "study date": {"type": "date"},
                     "type": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Type"},
                     "generated": {"type": "bool"},
-                    "source": {"type": "relation", "source": "5-Pdf Store"},
+                    "source": {"type": "relation", "source": "Inbox"},
                     "source pages": {"type": "str"}
                 })
 
@@ -150,7 +150,7 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                                                 "grade": {"type": "select", "source": f"{DB_DIR_PREFIX}/07 - Courses/Grade"},
                                                 "professor": {"type": "select", "source": f"{DB_DIR_PREFIX}/07 - Courses/Professor"},
                                                 "generated": {"type": "bool"},
-                                                "source": {"type": "relation", "source": "5-Pdf Store"},
+                                                "source": {"type": "relation", "source": "Inbox"},
                                                 "source pages": {"type": "str"},
                                                 "academic level": {"type": "select", "source": f"{DB_DIR_PREFIX}/09 - Years/Academic Level"},
                                                 "program": {"type": "select", "source": f"{DB_DIR_PREFIX}/09 - Years/Program"},
@@ -620,7 +620,7 @@ async def find_vault_page(page_name: str, secrets: AppSecrets = Depends(get_app_
         target_pdf_name = f"{stem}.pdf"
         
         # Check in 5-Pdf Store first (high priority)
-        pdf_store = vault_root / "5-Pdf Store"
+        pdf_store = vault_root / "Inbox"
         if pdf_store.exists():
             # Try exact
             found = find_case_insensitive(pdf_store, target_pdf_name)
@@ -760,7 +760,7 @@ async def delete_vault_database(db_name: str, secrets: AppSecrets = Depends(get_
     db_path = vault_root / DB_DIR_PREFIX / db_name
     try:
         # Move to archive or delete?
-        archive_path = vault_root / "3-Database" / "12 - Archive" / f"{db_name}_{uuid.uuid4().hex[:4]}"
+        archive_path = vault_root / "Database" / "12 - Archive" / f"{db_name}_{uuid.uuid4().hex[:4]}"
         if db_path.exists():
             archive_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(db_path), str(archive_path))

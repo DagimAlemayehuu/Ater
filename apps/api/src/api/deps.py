@@ -19,7 +19,7 @@ class AppSecrets(BaseModel):
 
     vault_path: Optional[str] = None
     inbox_path: Optional[str] = None
-    academic_path: str = "2-Academic"
+    academic_path: str = "Notes"
     auto_deploy: bool = False
     google_calendar_token: Optional[str] = None
 
@@ -40,7 +40,7 @@ async def get_app_secrets(
     
     x_vault_path: Optional[str] = Header(None),
     x_inbox_path: Optional[str] = Header(None),
-    x_academic_path: str = Header("2-Academic"),
+    x_academic_path: str = Header("Notes"),
     x_auto_deploy: str = Header("false"),
     x_google_calendar_token: Optional[str] = Header(None)
 ) -> AppSecrets:

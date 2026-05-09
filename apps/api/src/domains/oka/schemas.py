@@ -197,7 +197,7 @@ class ProbeEnrichment(BaseModel):
 
 class TheoryResponse(BaseModel):
     mental_model: str = Field(..., description="Minimum 5 sentences. Explain using a simple, physical real-world scenario (e.g., a coffee shop, a moving train, a hospital triage). DO NOT use advanced academic jargon. DO NOT mention charts or math here.")
-    theory_prose: str = Field(..., description="Minimum 6 sentences. Define the concept academically. DO NOT use bullet points. YOU MUST INCLUDE EXACTLY 3 TO 5 [[Wikilinks]] IN THIS TEXT. IF YOU INCLUDE 2 OR FEWER, THE SYSTEM WILL CRASH. Wrap critical domain vocabulary in double brackets (e.g., [[Market_Equilibrium]]). THIS IS A STRICT SYSTEM REQUIREMENT.")
+    theory_prose: str = Field(..., description="Minimum 6 sentences. YOU MUST EXPLICITLY EXTRACT AND STATE THE CORE FACTS, LISTS, OR ENUMERATIONS PRESENT IN THE SOURCE EXCERPT. Define the concept academically based on these raw facts. DO NOT use bullet points. YOU MUST INCLUDE EXACTLY 3 TO 5 [[Wikilinks]] IN THIS TEXT. IF YOU INCLUDE 2 OR FEWER, THE SYSTEM WILL CRASH. Wrap critical domain vocabulary in double brackets (e.g., [[Market_Equilibrium]]). THIS IS A STRICT SYSTEM REQUIREMENT.")
     key_takeaways: List[str] = Field(..., min_length=3, max_length=3, description="An array of EXACTLY 3 distinct strings. DO NOT output a single block of text.")
     limitations: str = Field(..., description="Minimum 5 sentences. Analyze edge cases, exceptions, and limitations. DO NOT output placeholder text.")
 

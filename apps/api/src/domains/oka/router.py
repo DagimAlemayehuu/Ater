@@ -38,22 +38,53 @@ class DomainRouter:
         # 1. Course Lock (Highest Priority)
         if course:
             c_lower = course.lower()
-            # Check for direct matches in taxonomy categories
-            # This is a fast-path for known textbook titles
-            course_map = {
-                "economics": "ECON-MICRO",
-                "biology": "BIOLOGY",
-                "physics": "PHYS-MECHANICS",
-                "web": "CS-WEB-DEV",
-                "html": "CS-WEB-DEV",
-                "javascript": "CS-WEB-DEV",
-                "software": "CS-SOFTWARE",
-                "math": "MATH-PURE",
-                "calculus": "MATH-CALCULUS",
-                "philosophy": "PHILOSOPHY"
-            }
-            for k, mode in course_map.items():
-                if k in c_lower:
+            # Fast-path deterministic course → domain mapping
+            # ORDER MATTERS: more specific entries first
+            course_map = [
+                # Statistics / Probability — must come BEFORE economics to avoid ECON-METRICS bleed
+                ("statistics",          "MATH-STAT"),
+                ("probability",         "MATH-STAT"),
+                ("data science",        "MATH-STAT"),
+                ("data analysis",       "MATH-STAT"),
+                ("biostatistics",       "MATH-STAT"),
+                ("actuarial",           "MATH-STAT"),
+                # Economics specialisations
+                ("microeconomics",      "ECON-MICRO"),
+                ("macroeconomics",      "ECON-MACRO"),
+                ("econometrics",        "ECON-METRICS"),
+                ("behavioral economics","ECON-BEHAVIORAL"),
+                ("finance",             "ECON-FINANCE"),
+                ("economics",           "ECON-MICRO"),   # default econ → micro
+                # Sciences
+                ("chemistry",           "CHEMISTRY"),
+                ("organic chemistry",   "CHEM-ORGANIC"),
+                ("biology",             "BIOLOGY"),
+                ("physics",             "PHYSICS-KINEMATICS"),
+                # Computer Science
+                ("web development",     "CS-WEB-DEV"),
+                ("html",                "CS-WEB-DEV"),
+                ("javascript",          "CS-WEB-DEV"),
+                ("computer programming","CS-SOFTWARE"),
+                ("software engineering","CS-SOFTWARE"),
+                ("software",            "CS-SOFTWARE"),
+                ("database",            "CS-DB"),
+                ("networking",          "CS-NETWORKING"),
+                ("cybersecurity",       "CS-CYBERSECURITY"),
+                ("machine learning",    "CS-AI"),
+                ("artificial intelligence", "CS-AI"),
+                # Math
+                ("calculus",            "MATH-CALCULUS"),
+                ("algebra",             "MATH-ALGEBRA"),
+                ("discrete mathematics","MATH-DISCRETE"),
+                ("mathematics",         "MATH-PURE"),
+                ("math",                "MATH-PURE"),
+                # Other
+                ("philosophy",          "PHILOSOPHY"),
+                ("law",                 "LAW-CASE"),
+                ("history",             "HIST-CATALYST"),
+            ]
+            for keyword, mode in course_map:
+                if keyword in c_lower:
                     return mode
 
         # 2. Keyword Frequency Analysis

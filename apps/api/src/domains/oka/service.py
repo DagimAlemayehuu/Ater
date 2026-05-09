@@ -308,11 +308,11 @@ class OkaService:
 
     def _get_planner_path(self) -> Path:
         """Resolves the absolute path to the Study Planner database."""
-        return Path(self.secrets.vault_path) / "3-Database" / "06 - Study Planner"
+        return Path(self.secrets.vault_path) / "Database" / "06 - Study Planner"
 
     def list_available_options(self) -> Dict[str, List[str]]:
         """Returns all available options for Course, Semester, Year, Hubs, and Units from the vault."""
-        base_path = Path(self.secrets.vault_path) / "3-Database"
+        base_path = Path(self.secrets.vault_path) / "Database"
         
         courses = [f.stem for f in (base_path / "07 - Courses").glob("*.md") if not f.name.startswith("_")]
         semesters = [f.stem for f in (base_path / "08 - Semesters").glob("*.md") if not f.name.startswith("_")]
@@ -1112,7 +1112,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
     def get_active_academic_context(self) -> Dict[str, str]:
         """Reads the vault to find the currently active semester and year."""
         try:
-            semesters_path = Path(self.secrets.vault_path) / "3-Database" / "08 - Semesters"
+            semesters_path = Path(self.secrets.vault_path) / "Database" / "08 - Semesters"
             if not semesters_path.exists(): return {}
             
             active_sem = None
@@ -1125,7 +1125,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         active_sem = f.stem
                         break
             
-            years_path = Path(self.secrets.vault_path) / "3-Database" / "09 - Years"
+            years_path = Path(self.secrets.vault_path) / "Database" / "09 - Years"
             active_year = None
             if years_path.exists():
                 for f in years_path.glob("*.md"):
@@ -1193,7 +1193,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 course_name = detected_curriculum["course"]
                 # Handle wiki-links in course name
                 clean_course_name = self.vm.super_clean(course_name)
-                course_file = Path(self.secrets.vault_path) / "3-Database" / "07 - Courses" / f"{clean_course_name}.md"
+                course_file = Path(self.secrets.vault_path) / "Database" / "07 - Courses" / f"{clean_course_name}.md"
                 
                 if course_file.exists():
                     try:
@@ -1541,13 +1541,28 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
                 # Merge notes, avoiding duplicates
                 for note in partial_plan.atomic_notes:
-                    if note.title not in seen_titles:
+                    # Normalize title for cross-session idempotency comparison
+                    norm_title = note.title
+                    if norm_title not in seen_titles:
                         # Law of Cognitive Anchoring: Enforced in generation phase
                         note.mode = detected_mode
                         
+                        note_dict = note.model_dump()
+                        
+                        # SOURCE ENRICHMENT: Append the originating chunk text so TheoryAgent
+                        # has rich definitional material, not just the architect's 1-2 sentence summary.
+                        # Cap at 3000 chars to stay within token budget.
+                        arch_context = note_dict.get("source_context") or ""
+                        chunk_supplement = chunk[:3000] if chunk else ""
+                        if chunk_supplement and chunk_supplement not in arch_context:
+                            note_dict["source_context"] = f"{arch_context}\n\n[SOURCE EXCERPT]\n{chunk_supplement}"
+                        
                         print(f"[OKA Service] Adding concept: {note.title} (Mode: {note.mode})")
-                        all_atomic_notes.append(note.model_dump())
-                        seen_titles.add(note.title)
+                        all_atomic_notes.append(note_dict)
+                        seen_titles.add(norm_title)
+                    else:
+                        print(f"[OKA Service] Cross-session idempotency: '{note.title}' already in vault or plan. Skipping.")
+
 
                 for pq in partial_plan.possible_questions:
                     if pq.title not in seen_titles:
@@ -1575,7 +1590,6 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
             # Phase 1.5: Epistemic Classification (HYDRA)
             OkaService._status[session_id] = "Classifying Concept Modalities..."
-            await self.governor.get_permit(expected_tokens=3000)
             classifications = await self.epistemic_classifier_agent.classify_batch(all_atomic_notes)
             for note in all_atomic_notes:
                 modality = classifications.get(note["title"], "Qualitative/Definitional")
@@ -1879,8 +1893,6 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     if len(words) > 3:
                                         session["used_scenarios"].append(" ".join(words[:3]))
                                 
-                                await asyncio.sleep(1.0) # Reduced from 2.0 since we have parallel workers
-
                                 # 2. Micro-Practitioner Pass
                                 OkaService._status[session_id] = f"{phase_prefix} Execution: [[{current_note_title}]]..."
                                 await self.governor.get_permit(expected_tokens=3000)
@@ -1896,8 +1908,6 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     mental_model=note_data.get("mental_model", "")
                                 )
                                 note_data.update(prac_parts)
-                                await asyncio.sleep(1.0)
-
                                 # 3. Micro-Question Pass (Dynamic Assessment)
                                 OkaService._status[session_id] = f"{phase_prefix} Assessment: [[{current_note_title}]]..."
                                 await self.governor.get_permit(expected_tokens=3000)
@@ -2156,7 +2166,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             clean_filename = Path(session_path).name.replace(" ", "_")
             _sem = (plan.semester or "General").strip()
             _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
-            return f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
+            return f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
         return f"[[{plan.hub_note.title}]]"
 
     def _compile_pq_note(self, plan: SovereignPlan, note_schema: NoteSchema, note_content: NoteContent, all_note_probes: Dict[str, ProbeEnrichment], session_path: str = "") -> str:
@@ -2172,9 +2182,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             
             try:
                 rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path)
-                source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
+                source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
             except Exception:
-                source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
+                source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
         else:
             source_link = f"[[{plan.hub_note.title}]]"
 
@@ -2222,9 +2232,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             
             try:
                 rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path)
-                source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
+                source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
             except Exception:
-                source_link = f"[[5-Pdf Store/note generated/{_sem}/{_crs}/{clean_filename}]]"
+                source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
         else:
             source_link = f"[[{plan.hub_note.title}]]"
 

@@ -34,7 +34,7 @@ class VaultSyncHandler(FileSystemEventHandler):
     def _publish_event(self, event_type: str, file_path: str):
         # We also notify the frontend of the change for the database view
         path_obj = Path(file_path)
-        if "3-Database" in path_obj.parts:
+        if "Database" in path_obj.parts:
             db_name = path_obj.parent.name
             file_name = path_obj.name
             self.loop.call_soon_threadsafe(
@@ -46,7 +46,7 @@ class VaultSyncHandler(FileSystemEventHandler):
             return
             
         # PDF Sanitization Bridge
-        if event.src_path.lower().endswith('.pdf') and "5-Pdf Store" in event.src_path:
+        if event.src_path.lower().endswith('.pdf') and "Inbox" in event.src_path:
             if self._should_process(event.src_path):
                 logger.info(f"[Sanitizer] New or Modified PDF detected: {Path(event.src_path).name}")
                 self.loop.run_in_executor(None, PdfSanitizer.normalize, Path(event.src_path))
@@ -66,7 +66,7 @@ class VaultSyncHandler(FileSystemEventHandler):
             return
             
         # PDF Sanitization Bridge
-        if event.src_path.lower().endswith('.pdf') and "5-Pdf Store" in event.src_path:
+        if event.src_path.lower().endswith('.pdf') and "Inbox" in event.src_path:
             if self._should_process(event.src_path):
                 logger.info(f"[Sanitizer] New PDF detected: {Path(event.src_path).name}")
                 self.loop.run_in_executor(None, PdfSanitizer.normalize, Path(event.src_path))

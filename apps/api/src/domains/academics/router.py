@@ -7,7 +7,7 @@ from src.api.deps import AppSecrets, get_app_secrets
 
 router = APIRouter()
 
-DB_DIR_PREFIX = "3-Database"
+DB_DIR_PREFIX = "Database"
 
 def get_note_data(file_path: Path) -> Dict[str, Any]:
     try:
@@ -61,12 +61,12 @@ async def sync_academics_profile(secrets: AppSecrets = Depends(get_app_secrets))
         
     vault_root = Path(secrets.vault_path)
     folders = [
-        "3-Database/03 - Assignments",
-        "3-Database/04 - Exams",
-        "3-Database/06 - Study Planner",
-        "3-Database/07 - Courses",
-        "3-Database/08 - Semesters",
-        "3-Database/09 - Years",
+        "Database/03 - Assignments",
+        "Database/04 - Exams",
+        "Database/06 - Study Planner",
+        "Database/07 - Courses",
+        "Database/08 - Semesters",
+        "Database/09 - Years",
         "0-Bases"
     ]
     

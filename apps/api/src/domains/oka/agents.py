@@ -802,50 +802,77 @@ class EpistemicClassifierAgent:
     def __init__(self, llm: BaseChatModel):
         self.llm = llm
 
+    # Keyword-based heuristic fallback — used when the LLM call fails
+    _QUANT_KEYWORDS = frozenset([
+        "calculation", "formula", "equation", "elasticity", "gdp", "rate", "percentage",
+        "coefficient", "regression", "mean", "median", "standard deviation", "probability",
+        "derivative", "integral", "equilibrium", "price", "quantity", "cost", "revenue",
+        "census", "sample", "statistic", "distribution", "variance", "hypothesis"
+    ])
+    _PROC_KEYWORDS = frozenset([
+        "process", "steps", "procedure", "how to", "methodology", "algorithm", "workflow",
+        "protocol", "sequence", "collection", "method", "data collection"
+    ])
+    _COMP_KEYWORDS = frozenset([
+        "vs", "versus", "compare", "contrast", "difference", "types of", "advantages",
+        "disadvantages", "alternatives"
+    ])
+
+    def _heuristic_classify(self, title: str, description: str) -> str:
+        """Fast keyword-based fallback for when the LLM classifier fails."""
+        text = (title + " " + description).lower()
+        tokens = set(text.split())
+        if tokens & self._QUANT_KEYWORDS or any(kw in text for kw in self._QUANT_KEYWORDS):
+            return "Quantitative"
+        if any(kw in text for kw in self._PROC_KEYWORDS):
+            return "Procedural"
+        if any(kw in text for kw in self._COMP_KEYWORDS):
+            return "Comparative"
+        return "Qualitative/Definitional"
+
     async def classify_batch(self, notes: list) -> dict:
         """Categorizes a batch of concepts in a single API pass to avoid rate-limit death."""
         system = """You are an Epistemologist. Categorize the nature of the following technical concepts.
 Choose EXACTLY one tag from this taxonomy for EACH concept.
 
 AMBIGUITY PROTOCOL (PRIORITY HIERARCHY):
-1. Quantitative: Centered around a mathematical formula, equation, or numerical data. (e.g., Elasticity, GDP calculation).
-2. Procedural: A sequence of steps, a process, or a workflow. (e.g., How to calculate equilibrium).
-3. Comparative: Comparing and contrasting two or more concepts. (e.g., Capitalism vs Socialism).
+1. Quantitative: Centered around a mathematical formula, equation, or numerical data. (e.g., Elasticity, GDP calculation, Census sampling, Standard Deviation).
+2. Procedural: A sequence of steps, a process, or a workflow. (e.g., Data Collection Methods, How to calculate equilibrium).
+3. Comparative: Comparing and contrasting two or more concepts. (e.g., Capitalism vs Socialism, Census vs Sample).
 4. Causal/Historical: Explaining a cause-and-effect relationship or history. (e.g., Market Shifts).
-5. Qualitative/Definitional: A definition or non-numerical idea. (e.g., Normative Economics).
+5. Qualitative/Definitional: A definition or non-numerical idea. (e.g., Normative Economics, Types of Data).
 
 OUTPUT: You MUST return a JSON object mapping titles to tags.
 {"Title_1": "Quantitative", "Title_2": "Procedural"}
 Return ONLY pure JSON. No markdown fences, no explanation."""
 
         results = {}
-        # We batch in groups of 12 to balance token count and context complexity
-        batch_size = 12
+        batch_size = 15  # Larger batches = fewer API calls
         for i in range(0, len(notes), batch_size):
             chunk = notes[i : i + batch_size]
             concepts_data = "\n".join([
-                f"- {n['title']}: {n.get('description', '')}" 
+                f"- {n['title']}: {n.get('description', '')}"
                 for n in chunk
             ])
-            
+
             try:
+                # Gate through governor before each LLM call
+                await governor.get_permit(expected_tokens=len(concepts_data) // 4 + 300)
                 res = await self.llm.ainvoke([("system", system), ("human", f"Classify these concepts:\n{concepts_data}")])
                 content = res.content.strip()
-                
-                # Robust JSON extraction
+
                 if "{" in content and "}" in content:
                     json_str = content[content.find("{"):content.rfind("}")+1]
                     batch_res = json.loads(json_str)
                     results.update(batch_res)
                 else:
                     raise ValueError("No JSON found in response")
-                    
+
             except Exception as e:
-                print(f"[EpistemicClassifier] Batch classification failed: {e}")
-                # Fallback for failed chunk
+                print(f"[EpistemicClassifier] Batch classification failed: {e}. Using heuristic fallback.")
                 for n in chunk:
-                    results[n["title"]] = "Qualitative/Definitional"
-        
+                    results[n["title"]] = self._heuristic_classify(n["title"], n.get("description", ""))
+
         return results
 
     async def classify(self, note_title: str, description: str, source_context: str) -> str:
@@ -1015,7 +1042,8 @@ CORE LAWS:
 7. Value-Additive Limitations Law: A limitation must be specific and value-additive. Do not just say a model 'might be inaccurate.' Instead, identify the specific underlying assumption (e.g., independence of buyers, perfect information) and explain a real-world edge case (e.g., network effects, bandwagon effects, irrationality) where that assumption fails.
 8. Terminology Fidelity Law: Strictly adhere to the language in the SOURCE CONTEXT. Do not invent or use obscure academic jargon (e.g., 'Aggregation Axiom') if it is not in the text. Use standard introductory terminology.
 9. Anti-Pattern Law: {self.domain.get("prohibited_anti_patterns", "None.")}
-10. Formatting: Return strict JSON matching the schema.
+10. Factual Primacy Law: The theory explanation MUST explicitly state and enumerate the core facts, rules, or lists found in the SOURCE CONTEXT. Do not rely entirely on the mental model; state the raw academic facts.
+11. Formatting: Return strict JSON matching the schema.
 
 DOMAIN AXIOMS (CRITICAL):
 {axioms}"""

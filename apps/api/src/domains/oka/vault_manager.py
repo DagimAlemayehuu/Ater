@@ -14,7 +14,7 @@ class VaultManager:
     Handles atomic writes, metadata extraction, and strict naming conventions.
     """
 
-    def __init__(self, vault_path: str, academic_root: str = "2-Academic"):
+    def __init__(self, vault_path: str, academic_root: str = "Notes"):
         self.vault_path = Path(vault_path)
         self.academic_root = self.vault_path / academic_root
         self.academic_root.mkdir(parents=True, exist_ok=True)
