@@ -3,7 +3,7 @@ import {
  ShieldCheck, RefreshCw, 
  FileText, Activity, 
  Zap,
- User, BookOpen, DollarSign, Brain, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, Bot, CheckCircle, CheckCircle2
+ User, BookOpen, DollarSign, Bot, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, Bot, CheckCircle, CheckCircle2
 } from 'lucide-react'
 import {sidecarApi} from '@/lib/sidecarApi'
 import {cn} from '@/lib/utils'
@@ -263,7 +263,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  <div className="rounded border border-border bg-background p-5 hover:border-muted-foreground/30  group">
  <div className="flex items-center gap-3 mb-3">
  <div className="p-1.5 bg-muted rounded text-foreground">
- <Brain size={16} />
+ <Bot size={16} />
  </div>
  <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Topic</h4>
  </div>
@@ -357,7 +357,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  )
 }
 
-/* ─── Obsidian Knowledge Architect (OKA) Dashboard ─── */
+/* ─── AI Agents (OKA) Dashboard ─── */
 function OkaDashboard({onBack}: {onBack: () => void}) {
  const {config, saveConfig} = useConfig()
  const navigate = useNavigate()
@@ -682,7 +682,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  {queueStatus?.status === 'idle' && !selectedInboxFile && (
  <div className="flex flex-col items-center justify-center h-full px-6 overflow-hidden">
   <div className="text-center mb-10 shrink-0">
-  <h2 className="text-4xl font-black uppercase tracking-tighter text-foreground mb-4 mt-8">Knowledge Architect</h2>
+  <h2 className="text-4xl font-black uppercase tracking-tighter text-foreground mb-4 mt-8">AI Agents</h2>
   {config?.autoDeploy ? (
     <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/40">
       Drop your file in the folder you set
@@ -782,7 +782,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  {processing && !activePlan && !batchFeed.length && (
  <div className="py-24 flex flex-col items-center justify-center text-center ">
  <div className="w-4 h-4 border-2 border-foreground border-t-transparent rounded-full animate-spin mb-6" />
- <h4 className="text-[11px] font-black uppercase tracking-[0.3em] mb-4 text-foreground/40">Architecting...</h4>
+ <h4 className="text-[11px] font-black uppercase tracking-[0.3em] mb-4 text-foreground/40">Generating...</h4>
  </div>
  )}
 

@@ -12,7 +12,7 @@ export function AppSidebar() {
                 to="/academic"
                 className={({ isActive }) => cn(
                   "relative flex items-center justify-center w-full transition-colors",
-                  isActive ? "text-foreground" : "text-foreground/20 hover:text-foreground/60"
+                  isActive ? "text-foreground" : "text-foreground/40 hover:text-foreground/70"
                 )} 
                 title="Academic Dashboard"
             >
@@ -22,7 +22,7 @@ export function AppSidebar() {
                 to="/obsidian"
                 className={({ isActive }) => cn(
                   "relative flex items-center justify-center w-full transition-colors",
-                  isActive ? "text-foreground" : "text-foreground/20 hover:text-foreground/60"
+                  isActive ? "text-foreground" : "text-foreground/40 hover:text-foreground/70"
                 )} 
                 title="Obsidian Vault"
             >
@@ -32,7 +32,7 @@ export function AppSidebar() {
                 to="/agents"
                 className={({ isActive }) => cn(
                   "relative flex items-center justify-center w-full transition-colors",
-                  isActive ? "text-foreground" : "text-foreground/20 hover:text-foreground/60"
+                  isActive ? "text-foreground" : "text-foreground/40 hover:text-foreground/70"
                 )} 
                 title="AI Agents"
             >
@@ -47,7 +47,7 @@ export function AppSidebar() {
                 to="/onboarding"
                 className={({ isActive }) => cn(
                   "relative flex items-center justify-center w-full transition-colors",
-                  isActive ? "text-foreground" : "text-foreground/20 hover:text-foreground/60"
+                  isActive ? "text-foreground" : "text-foreground/40 hover:text-foreground/70"
                 )} 
                 title="Onboarding"
             >
@@ -57,7 +57,7 @@ export function AppSidebar() {
                 to="/settings"
                 className={({ isActive }) => cn(
                   "relative flex items-center justify-center w-full transition-colors",
-                  isActive ? "text-foreground" : "text-foreground/20 hover:text-foreground/60"
+                  isActive ? "text-foreground" : "text-foreground/40 hover:text-foreground/70"
                 )} 
                 title="Settings"
             >

@@ -334,7 +334,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                         <RefreshCw size={40} className="text-muted/20 animate-spin" />
                                         <Zap size={20} className="text-amber-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 " />
                                     </div>
-                                    <span className="text-[11px] font-black text-muted-foreground/30 uppercase tracking-[0.2em] text-center max-w-[150px]">Architecting Interactive Quiz...</span>
+                                    <span className="text-[11px] font-black text-muted-foreground/30 uppercase tracking-[0.2em] text-center max-w-[150px]">Generating Interactive Quiz...</span>
                                 </div>
                             )
                         )}

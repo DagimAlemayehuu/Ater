@@ -1852,39 +1852,39 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   </div>
 
   {/* Sidebar Tabs - Minimal style matching academics */}
-  <div className="flex border-b border-border bg-muted/5 sticky top-0 z-20">
+  <div className="flex border-b border-border bg-background/50 backdrop-blur sticky top-0 z-20">
     <button 
       onClick={() => setSidebarTab('explorer')}
       className={cn(
-        "flex-1 flex items-center justify-center py-2 text-[9px] font-black uppercase tracking-widest transition-all border-b-2 outline-none",
+        "flex-1 flex items-center justify-center py-3 text-[9px] font-black uppercase tracking-[0.2em] transition-all border-b-2 outline-none",
         sidebarTab === 'explorer' 
-          ? "text-foreground border-primary" 
-          : "text-muted-foreground border-transparent hover:border-border hover:text-foreground"
+          ? "text-foreground border-foreground bg-foreground/[0.02]" 
+          : "text-muted-foreground border-transparent hover:text-foreground/60"
       )}
     >
-      <Folder size={11} className="mr-1.5" /> Files
+      Explorer
     </button>
     <button 
       onClick={() => setSidebarTab('hubs')}
       className={cn(
-        "flex-1 flex items-center justify-center py-2 text-[9px] font-black uppercase tracking-widest transition-all border-b-2 outline-none",
+        "flex-1 flex items-center justify-center py-3 text-[9px] font-black uppercase tracking-[0.2em] transition-all border-b-2 outline-none",
         sidebarTab === 'hubs' 
-          ? "text-foreground border-primary" 
-          : "text-muted-foreground border-transparent hover:border-border hover:text-foreground"
+          ? "text-foreground border-foreground bg-foreground/[0.02]" 
+          : "text-muted-foreground border-transparent hover:text-foreground/60"
       )}
     >
-      <GraduationCap size={11} className="mr-1.5" /> Hubs
+      Hubs
     </button>
     <button 
       onClick={() => setSidebarTab('pdfs')}
       className={cn(
-        "flex-1 flex items-center justify-center py-2 text-[9px] font-black uppercase tracking-widest transition-all border-b-2 outline-none",
+        "flex-1 flex items-center justify-center py-3 text-[9px] font-black uppercase tracking-[0.2em] transition-all border-b-2 outline-none",
         sidebarTab === 'pdfs' 
-          ? "text-foreground border-primary" 
-          : "text-muted-foreground border-transparent hover:border-border hover:text-foreground"
+          ? "text-foreground border-foreground bg-foreground/[0.02]" 
+          : "text-muted-foreground border-transparent hover:text-foreground/60"
       )}
     >
-      <FileText size={11} className="mr-1.5" /> PDFs
+      PDFs
     </button>
   </div>
 

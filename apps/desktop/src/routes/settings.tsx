@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
  Database, Key, HardDrive, Trash2, Edit2, FolderOpen, ShieldCheck, Zap, Plus, X,
- User, BookOpen, DollarSign, Activity, Brain, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Check
+ User, BookOpen, DollarSign, Activity ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Check
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
 import {useConfig, SavedApiKey} from '@/lib/ConfigContext'
@@ -251,7 +251,7 @@ export default function Settings() {
   {/* AI Engine */}
   <SettingsCard
     title="AI Engine"
-    icon={<Brain size={18} />}
+    icon={<Activity size={18} />}
     value="Configure your primary intelligence carrier"
     isEditing={editingKey === 'aiApiKey'}
     onEdit={() => startEditing('aiApiKey', config?.aiApiKey || '')}

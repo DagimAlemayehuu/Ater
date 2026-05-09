@@ -1,5 +1,5 @@
 import React, {useState, useMemo} from 'react'
-import {Search, SortAsc, BookOpen, PlayCircle, Brain, Check, Plus, Trash2} from 'lucide-react'
+import {Search, SortAsc, BookOpen, PlayCircle, Target, Check, Plus, Trash2} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {toast} from 'sonner'
 import {stripWL, getVal, statusColorClass, confidenceColorClass, groupBy, wrapWL, cleanTitle} from './utils'
@@ -150,7 +150,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  <aside className="w-56 shrink-0 border-r border-border flex flex-col overflow-hidden">
   <div className="p-4 border-b border-border flex flex-col gap-3">
    <div className="flex items-center justify-between">
-    <p className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground flex items-center gap-1.5"><Brain size={10} />Courses</p>
+    <p className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground flex items-center gap-1.5"><Target size={10} />Courses</p>
    </div>
    <div className="flex bg-muted/5 p-1 rounded-lg border border-border w-full">
     <button onClick={() => setCourseFilter('Active')} className={cn("flex-1 px-2 py-1 text-[8px] font-black uppercase tracking-widest rounded-md ", courseFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground  hover:bg-muted/5")}>Active</button>
@@ -248,7 +248,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  {visibleHubs.length === 0 && (
  <EmptyState
   message={allHubs.length === 0 ? "No study hubs yet. Process course materials to generate them." : "No hubs match your filter."}
- icon={<Brain size={24} />}
+ icon={<Target size={24} />}
  />
  )}
 
