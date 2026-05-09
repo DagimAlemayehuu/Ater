@@ -1,10 +1,10 @@
 ---
-title: 1_Basics_of_Economics_Hub
+title: Data_Collection_Hub
 type: Hub
-course: Economics
-semester: Winter 2026
+course: Statistics And Probability
+semester: Autumn 2025
 year: Year II
-unit: 1
+unit: 
 source: 
 source_pages: []
 status: Not Started

@@ -8,6 +8,7 @@ import {
 import {sidecarApi} from '@/lib/sidecarApi'
 import {cn} from '@/lib/utils'
 import {useConfig} from '@/lib/ConfigContext'
+import {useHeader} from '@/context/header-context'
 import {useNavigate} from 'react-router-dom'
 
 /* ─── Utilities ─── */
@@ -336,12 +337,46 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
 
  const [isAwaitingNextBatch, setIsAwaitingNextBatch] = useState(false)
 
+  const {setRightContent} = useHeader()
+
  const fetchStatus = async () => {
  try {
  const res = await sidecarApi.okaQueueStatus()
  setQueueStatus(res)
 } catch (err) {console.error(err)}
 }
+
+ // Sync Header Actions
+ useEffect(() => {
+  const HeaderActions = (
+   <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 bg-muted/30 border border-border/40 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+     <span>Auto-Ingest</span>
+     <button 
+      onClick={toggleAutoDeploy}
+      className={cn(
+       "relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none", 
+       config?.autoDeploy ? 'bg-foreground' : 'bg-muted-foreground/30'
+      )}
+     >
+      <span className={cn(
+       "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out", 
+       config?.autoDeploy ? 'translate-x-3.5' : 'translate-x-0'
+      )} />
+     </button>
+    </div>
+    <button 
+     onClick={() => {fetchInbox(); fetchStatus();}} 
+     className="flex items-center justify-center w-8 h-8 bg-muted/30 border border-border/40 text-muted-foreground rounded-md hover:text-foreground hover:border-foreground/30 transition-all"
+    >
+     <RefreshCw size={12} />
+    </button>
+   </div>
+  );
+
+  setRightContent(HeaderActions);
+  return () => setRightContent(null);
+ }, [config?.autoDeploy, queueStatus]);
 
  const fetchInbox = async () => {
  setLoadingInbox(true)
@@ -543,30 +578,6 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
 }
  return (
  <div className="h-full flex flex-col font-sans bg-background text-foreground overflow-hidden">
- <div className="flex items-center justify-between p-8 shrink-0 border-b border-border/10 bg-muted/5">
- <div className="flex flex-col">
- <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/30 mb-2">
- <span>Knowledge</span>
- <span>/</span>
- <span>Architect</span>
- </div>
- <h1 className="text-xl font-black uppercase tracking-tight text-foreground">OKA Dashboard</h1>
- </div>
- <div className="flex items-center gap-4">
- <div className="flex items-center gap-2 bg-background border border-border/20 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest text-muted-foreground">
- <span>Auto-Ingest</span>
- <button 
- onClick={toggleAutoDeploy}
- className={cn("relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none", config?.autoDeploy ? 'bg-foreground' : 'bg-muted-foreground/30')}
- >
- <span className={cn("pointer-events-none inline-block h-3 w-3 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out", config?.autoDeploy ? 'translate-x-3.5' : 'translate-x-0')} />
- </button>
- </div>
- <button onClick={() => {fetchInbox(); fetchStatus();}} className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-foreground/30 transition-all">
- <RefreshCw size={12} />
- </button>
- </div>
- </div>
 
  <div className="flex-1 overflow-y-auto custom-scrollbar bg-background">
  <div className="max-w-3xl mx-auto py-8 sm:py-12 px-4 sm:px-6">
@@ -623,37 +634,45 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
 
  {/* INBOX VIEW (When idle and no file selected) */}
  {queueStatus?.status === 'idle' && !selectedInboxFile && (
- <div className=" -95 ">
- <div className="text-center mb-12">
- <h2 className="text-2xl font-black uppercase tracking-tighter text-foreground mb-3">Knowledge Architect</h2>
- <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/40">Select a file from your inbox to begin processing.</p>
- </div>
- 
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
- {loadingInbox ? (
- Array.from({length: 4}).map((_, i) => (
- <div key={i} className="h-24 rounded-xl bg-muted/5 border border-border/10 animate-pulse" />
- ))
- ) : inboxFiles.length > 0 ? (
- inboxFiles.map(f => (
- <div 
- key={f.path} 
- onClick={() => {setSelectedInboxFile(f); setOkaError(null); setActivePlan(null); setIsAwaitingConfirmation(false); setIsCurriculumReady(false); setBatchFeed([]);}}
- className="p-6 rounded-xl border border-border/10 bg-muted/5 hover:bg-muted/10 hover:border-border/30 cursor-pointer transition-all group flex flex-col justify-between"
- >
- <div>
- <h3 className="text-sm font-black uppercase tracking-tight text-foreground truncate">{f.name}</h3>
- <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 truncate mt-2">{f.path}</p>
- </div>
- </div>
- ))
- ) : (
- <div className="col-span-full py-20 border border-dashed border-border/20 rounded-2xl flex flex-col items-center justify-center text-muted-foreground/30">
- <Archive size={32} className="mb-4 opacity-50" />
- <p className="text-[10px] font-black uppercase tracking-widest">Inbox is empty</p>
- </div>
- )}
- </div>
+ <div className="flex flex-col items-center justify-center min-h-[65vh] px-6">
+  <div className="text-center mb-16">
+  <h2 className="text-4xl font-black uppercase tracking-tighter text-foreground mb-4">Knowledge Architect</h2>
+  {config?.autoDeploy ? (
+    <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/40">
+      Drop your file in the folder you set
+    </p>
+  ) : (
+    <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/40">Select a file from your inbox to begin processing.</p>
+  )}
+  </div>
+  
+  {!config?.autoDeploy && (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl mx-auto">
+    {loadingInbox ? (
+    Array.from({length: 4}).map((_, i) => (
+    <div key={i} className="h-24 rounded-xl bg-muted/5 border border-border/10 animate-pulse" />
+    ))
+    ) : inboxFiles.length > 0 ? (
+    inboxFiles.map(f => (
+    <div 
+    key={f.path} 
+    onClick={() => {setSelectedInboxFile(f); setOkaError(null); setActivePlan(null); setIsAwaitingConfirmation(false); setIsCurriculumReady(false); setBatchFeed([]);}}
+    className="p-8 rounded-2xl border border-border/40 bg-muted/5 hover:bg-muted/10 hover:border-foreground/30 cursor-pointer transition-all group flex flex-col justify-between"
+    >
+    <div>
+    <h3 className="text-sm font-black uppercase tracking-tight text-foreground truncate">{f.name}</h3>
+    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 truncate mt-2">{f.path}</p>
+    </div>
+    </div>
+    ))
+    ) : (
+    <div className="col-span-full py-20 border border-dashed border-border/20 rounded-2xl flex flex-col items-center justify-center text-muted-foreground/30">
+    <Archive size={32} className="mb-4 opacity-50" />
+    <p className="text-[10px] font-black uppercase tracking-widest">Inbox is empty</p>
+    </div>
+    )}
+    </div>
+  )}
  </div>
  )}
 
