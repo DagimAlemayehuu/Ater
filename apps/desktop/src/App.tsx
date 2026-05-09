@@ -6,7 +6,6 @@ import { ThemeProvider } from '@/context/theme-provider'
 import { NavigationProvider } from '@/context/navigation-context'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import ObsidianKnowledgeArchitect from '@/routes/obsidian'
-import Agents from '@/routes/agents'
 import Settings from '@/routes/settings'
 import Practice from '@/routes/practice'
 import AcademicDashboard from '@/routes/academic'
@@ -68,7 +67,6 @@ export default function App() {
                       <Routes>
                         <Route path="/" element={<Navigate to="/obsidian" replace />} />
                         <Route path="/obsidian" element={<ObsidianKnowledgeArchitect />} />
-                        <Route path="/agents" element={<Agents />} />
                         <Route path="/academic" element={<AcademicDashboard />} />
                         <Route path="/practice" element={<Practice />} />
                         <Route path="/settings" element={<Settings />} />

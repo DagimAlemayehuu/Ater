@@ -247,7 +247,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
  {visibleHubs.length === 0 && (
  <EmptyState
- message={allHubs.length === 0 ? "No study hubs yet. Run OKA on your course materials to generate them." : "No hubs match your filter."}
+  message={allHubs.length === 0 ? "No study hubs yet. Process course materials to generate them." : "No hubs match your filter."}
  icon={<Brain size={24} />}
  />
  )}

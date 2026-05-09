@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import * as d3 from 'd3-force'
 import { sidecarApi } from '@/lib/sidecarApi'
-import { ZoomIn, ZoomOut, Maximize, Settings, X, Play } from 'lucide-react'
+import { ZoomIn, ZoomOut, Maximize, Settings, X, Play, RefreshCw, ChevronRight, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/theme-provider'
 
@@ -27,19 +27,17 @@ interface GraphSettings {
     repelForce: number
     linkDistance: number
     linkForce: number
-    collideForce: number
     showArrows: boolean
     textFadeThreshold: number
 }
 
 const DEFAULT_SETTINGS: GraphSettings = {
-    nodeSize: 3,
+    nodeSize: 4,
     linkThickness: 1,
     centerForce: 0.5,
-    repelForce: 250,
+    repelForce: 300,
     linkDistance: 100,
     linkForce: 0.5,
-    collideForce: 35,
     showArrows: false,
     textFadeThreshold: 2.0
 }
@@ -92,30 +90,31 @@ export function ObsidianGraphView({
         if (!fgRef.current) return;
         
         const fg = fgRef.current;
-        const centerX = dimensions.width / 2;
-        const centerY = dimensions.height / 2;
+        const centerX = 0;
+        const centerY = 0;
 
-        // Central pull forces
-        fg.d3Force('center', d3.forceCenter(centerX, centerY));
-        fg.d3Force('x', d3.forceX(centerX).strength(settings.centerForce * 0.1));
-        fg.d3Force('y', d3.forceY(centerY).strength(settings.centerForce * 0.1));
+        // 1. Center force: Pulls every atomic note to the center of the canvas
+        fg.d3Force('x', d3.forceX(centerX).strength(settings.centerForce));
+        fg.d3Force('y', d3.forceY(centerY).strength(settings.centerForce));
         
-        // Repelling forces
+        // 2. Repel force: Pushes atomic notes from each other
         fg.d3Force('charge', d3.forceManyBody().strength(-settings.repelForce));
         
-        // Collision prevention (repelling force between nodes)
-        fg.d3Force('collide', d3.forceCollide().radius((node: any) => {
-            const r = (node.val || 4) * (settings.nodeSize / 3);
-            return r + settings.collideForce / 5;
-        }).iterations(2));
-
+        // 3. Link force: Pulls atomic notes to other notes
+        // 4. Link distance: The length of the lines
         fg.d3Force('link', d3.forceLink()
+            .id((d: any) => d.id)
             .distance(settings.linkDistance)
             .strength(settings.linkForce));
 
-        fg.d3AlphaTarget(0.3).restart();
-        setTimeout(() => fg.d3AlphaTarget(0), 1000);
-    }, [settings, dimensions.width, dimensions.height]);
+        // 5. Collision prevention (Implicitly part of repel/proper feel)
+        fg.d3Force('collide', d3.forceCollide().radius((node: any) => {
+            return (node.val || 4) * (settings.nodeSize / 3) + 2;
+        }));
+
+        fg.d3AlphaTarget?.(0.1);
+        setTimeout(() => fg.d3AlphaTarget?.(0), 500);
+    }, [settings]);
 
     useEffect(() => {
         let mounted = true
@@ -127,10 +126,15 @@ export function ObsidianGraphView({
                     linkCounts[l.target] = (linkCounts[l.target] || 0) + 1
                 })
 
-                const processedNodes = data.nodes.map(n => ({
-                    ...n,
-                    val: Math.max(1, Math.min(10, (linkCounts[n.id] || 0) / 2))
-                }))
+                const processedNodes = data.nodes.map(n => {
+                    const count = linkCounts[n.id] || 0;
+                    // Obsidian uses a subtle scale. log(count + 1) or similar.
+                    // Range: 1 to 3 effectively for the base value.
+                    return {
+                        ...n,
+                        val: 1 + Math.log10(count + 1) * 2
+                    }
+                })
                 
                 setGraphData({ nodes: processedNodes, links: data.links })
                 setIsLoading(false)
@@ -252,162 +256,58 @@ export function ObsidianGraphView({
 
             {/* Settings Side Panel */}
             {isSettingsOpen && (
-                <div className="w-72 bg-background border-l border-border h-full flex flex-col z-30  slide-in-from-right ">
-                    <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Graph Settings</span>
-                        <button onClick={() => setIsSettingsOpen(false)} className="text-muted-foreground hover:text-foreground"><X size={14} /></button>
+                <div className="absolute top-4 right-4 w-72 bg-background/80 backdrop-blur-xl border border-border/50 rounded-xl shadow-2xl flex flex-col z-30 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-foreground/80">Graph settings</span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setSettings(DEFAULT_SETTINGS)} className="text-muted-foreground hover:text-foreground transition-colors" title="Reset settings">
+                                <RefreshCw size={14} />
+                            </button>
+                            <button onClick={() => setIsSettingsOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                                <X size={14} />
+                            </button>
+                        </div>
                     </div>
                     
-                    <div className="flex-1 overflow-auto px-5 py-6 custom-scrollbar flex flex-col gap-8">
-                        {/* Filters Section */}
-                        <section className="flex flex-col gap-4 pb-4 border-b border-border">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Filters</span>
-                            
-                            <div className="flex items-center justify-between">
-                                <label className="text-[11px] font-bold text-muted-foreground">Orphans</label>
-                                <input 
-                                    type="checkbox" 
-                                    checked={true}
-                                    className="accent-primary"
-                                    readOnly
-                                />
-                            </div>
-                        </section>
-
-                        {/* Display Section */}
-                        <section className="flex flex-col gap-4">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Display</span>
-                            
-                            <div className="flex items-center justify-between">
-                                <label className="text-[11px] font-bold text-muted-foreground">Arrows</label>
-                                <input 
-                                    type="checkbox" 
-                                    checked={settings.showArrows} 
-                                    onChange={e => setSettings({...settings, showArrows: e.target.checked})}
-                                    className="accent-primary"
-                                />
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between">
-                                    <label className="text-[11px] font-bold text-muted-foreground">Node size</label>
-                                    <span className="text-[10px] text-muted-foreground">{settings.nodeSize}</span>
-                                </div>
-                                <input 
-                                    type="range" min="1" max="15" step="0.5"
-                                    value={settings.nodeSize} 
-                                    onChange={e => setSettings({...settings, nodeSize: parseFloat(e.target.value)})}
-                                    className="accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between">
-                                    <label className="text-[11px] font-bold text-muted-foreground">Link thickness</label>
-                                    <span className="text-[10px] text-muted-foreground">{settings.linkThickness}</span>
-                                </div>
-                                <input 
-                                    type="range" min="1" max="5" step="0.5"
-                                    value={settings.linkThickness} 
-                                    onChange={e => setSettings({...settings, linkThickness: parseFloat(e.target.value)})}
-                                    className="accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between">
-                                    <label className="text-[11px] font-bold text-muted-foreground">Text fade</label>
-                                    <span className="text-[10px] text-muted-foreground">{settings.textFadeThreshold}</span>
-                                </div>
-                                <input 
-                                    type="range" min="0" max="5" step="0.1"
-                                    value={settings.textFadeThreshold} 
-                                    onChange={e => setSettings({...settings, textFadeThreshold: parseFloat(e.target.value)})}
-                                    className="accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
-                        </section>
-
-                        {/* Forces Section */}
-                        <section className="flex flex-col gap-4">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Forces</span>
-                            
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between">
-                                    <label className="text-[11px] font-bold text-muted-foreground">Center force</label>
-                                    <span className="text-[10px] text-muted-foreground">{settings.centerForce}</span>
-                                </div>
-                                <input 
-                                    type="range" min="0" max="1" step="0.05"
-                                    value={settings.centerForce} 
-                                    onChange={e => setSettings({...settings, centerForce: parseFloat(e.target.value)})}
-                                    className="accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between">
-                                    <label className="text-[11px] font-bold text-muted-foreground">Repel force</label>
-                                    <span className="text-[10px] text-muted-foreground">{settings.repelForce}</span>
-                                </div>
-                                <input 
-                                    type="range" min="50" max="1000" step="10"
-                                    value={settings.repelForce} 
-                                    onChange={e => setSettings({...settings, repelForce: parseInt(e.target.value)})}
-                                    className="accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between">
-                                    <label className="text-[11px] font-bold text-muted-foreground">Link force</label>
-                                    <span className="text-[10px] text-muted-foreground">{settings.linkForce}</span>
-                                </div>
-                                <input 
-                                    type="range" min="0.1" max="2" step="0.1"
-                                    value={settings.linkForce} 
-                                    onChange={e => setSettings({...settings, linkForce: parseFloat(e.target.value)})}
-                                    className="accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between">
-                                    <label className="text-[11px] font-bold text-muted-foreground">Link distance</label>
-                                    <span className="text-[10px] text-muted-foreground">{settings.linkDistance}</span>
-                                </div>
-                                <input 
-                                    type="range" min="30" max="300" step="10"
-                                    value={settings.linkDistance} 
-                                    onChange={e => setSettings({...settings, linkDistance: parseInt(e.target.value)})}
-                                    className="accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between">
-                                    <label className="text-[11px] font-bold text-muted-foreground">Collision (Gap)</label>
-                                    <span className="text-[10px] text-muted-foreground">{settings.collideForce}</span>
-                                </div>
-                                <input 
-                                    type="range" min="0" max="100" step="5"
-                                    value={settings.collideForce} 
-                                    onChange={e => setSettings({...settings, collideForce: parseInt(e.target.value)})}
-                                    className="accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
-
-                            <button 
-                                onClick={() => {
-                                    fgRef.current.d3AlphaTarget(0.5).restart();
-                                    setTimeout(() => fgRef.current.d3AlphaTarget(0), 1000);
-                                }}
-                                className="mt-4 flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-md text-[10px] font-black uppercase tracking-widest hover:opacity-90 "
-                            >
-                                <Play size={12} fill="currentColor" />
-                                Re-Animate
+                    <div className="flex-1 overflow-auto p-4 custom-scrollbar flex flex-col gap-1">
+                        {/* Accordion Style Sections */}
+                        <SettingsSection title="Filters" isOpen={false} />
+                        <SettingsSection title="Groups" isOpen={false} />
+                        <SettingsSection title="Display" isOpen={false} />
+                        
+                        <div className="flex flex-col">
+                            <button className="flex items-center gap-2 py-2 text-[11px] font-bold text-foreground/70 hover:text-foreground transition-colors w-full text-left group">
+                                <ChevronDown size={14} className="text-muted-foreground/40 group-hover:text-muted-foreground" />
+                                Forces
                             </button>
-                        </section>
+                            
+                            <div className="pl-6 flex flex-col gap-6 py-4 border-l border-border/10 ml-1.5">
+                                <ForceSlider 
+                                    label="Center force" 
+                                    value={settings.centerForce} 
+                                    min={0} max={1} step={0.01}
+                                    onChange={v => setSettings({...settings, centerForce: v})} 
+                                />
+                                <ForceSlider 
+                                    label="Repel force" 
+                                    value={settings.repelForce} 
+                                    min={0} max={1000} step={10}
+                                    onChange={v => setSettings({...settings, repelForce: v})} 
+                                />
+                                <ForceSlider 
+                                    label="Link force" 
+                                    value={settings.linkForce} 
+                                    min={0} max={1} step={0.01}
+                                    onChange={v => setSettings({...settings, linkForce: v})} 
+                                />
+                                <ForceSlider 
+                                    label="Link distance" 
+                                    value={settings.linkDistance} 
+                                    min={30} max={500} step={5}
+                                    onChange={v => setSettings({...settings, linkDistance: v})} 
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
@@ -415,4 +315,30 @@ export function ObsidianGraphView({
     )
 }
 
+function SettingsSection({ title, isOpen }: { title: string, isOpen: boolean }) {
+    return (
+        <button className="flex items-center gap-2 py-2 text-[11px] font-bold text-foreground/40 hover:text-foreground/60 transition-colors w-full text-left">
+            <ChevronRight size={14} className="text-muted-foreground/20" />
+            {title}
+        </button>
+    )
+}
 
+function ForceSlider({ label, value, min, max, step, onChange }: { label: string, value: number, min: number, max: number, step: number, onChange: (v: number) => void }) {
+    return (
+        <div className="flex flex-col gap-2.5">
+            <div className="flex justify-between items-center">
+                <label className="text-[11px] font-medium text-foreground/60">{label}</label>
+            </div>
+            <div className="relative flex items-center group">
+                <input 
+                    type="range" 
+                    min={min} max={max} step={step}
+                    value={value} 
+                    onChange={e => onChange(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-muted-foreground/10 rounded-full appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all"
+                />
+            </div>
+        </div>
+    )
+}

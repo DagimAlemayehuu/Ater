@@ -16,13 +16,6 @@ export function AppSidebar() {
                 <FileText className="w-6 h-6" />
             </NavLink>
             <NavLink 
-                to="/agents"
-                className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground ")} 
-                title="Agents"
-            >
-                <Users className="w-6 h-6" />
-            </NavLink>
-            <NavLink 
                 to="/academic"
                 className={({ isActive }) => cn("cursor-pointer", isActive ? "text-sidebar-primary" : "text-sidebar-foreground ")} 
                 title="Academic Dashboard"
