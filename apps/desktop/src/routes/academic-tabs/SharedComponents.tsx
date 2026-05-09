@@ -217,9 +217,9 @@ export function ProgressRing({done, total, size = 32}: {done: number; total: num
  const dash = circ * pct
  return (
  <svg width={size} height={size} style={{transform: 'rotate(-90deg)'}}>
- <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--border))" strokeWidth={3} opacity={0.2} />
- <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--foreground))" strokeWidth={3}
- strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" style={{transition: 'stroke-dasharray 0.5s ease'}} />
+ <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={1.5} className="text-border/20" />
+ <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={1.5} className="text-foreground"
+ strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" style={{transition: 'stroke-dasharray 0.8s cubic-bezier(0.4, 0, 0.2, 1)'}} />
  </svg>
  )
 }
@@ -245,34 +245,75 @@ export function CreateBanner({label, onConfirm, onCancel}: {
 }
 
 // ─── Academic Roadmap (Year Timeline) ──────────────────────────────────────────
-export function AcademicRoadmap({items, activeId, onSelect}: {
- items: any[]; activeId: string | null; onSelect: (id: string) => void
+export function AcademicRoadmap({items, semesters = [], activeId, onSelect}: {
+ items: any[]; semesters?: any[]; activeId: string | null; onSelect: (id: string) => void
 }) {
  const sorted = [...items].sort((a, b) => getYearOrder(a.title) - getYearOrder(b.title))
- const completedCount = sorted.filter(i => stripWL(i.Status || i.properties?.Status || '').toLowerCase().includes('complet')).length
- const progressPct = sorted.length > 1 ? ((completedCount - 1) / (sorted.length - 1)) * 100 : 0
 
  return (
- <div className="roadmap-container pl-2">
- <div className="roadmap-line opacity-5" />
- <div className="roadmap-line roadmap-line-solid transition-all " style={{height: `${Math.max(0, progressPct)}%`, opacity: progressPct > 0 ? 1 : 0}} />
+ <div className="space-y-6">
  {sorted.map((item, idx) => {
  const status = stripWL(item.Status || item.properties?.Status || '').toLowerCase()
  const isCompleted = status.includes('complet')
  const isActive = item['Current Year'] === true || item['Current Year'] === 'true' || item.properties?.['Current Year'] === true
+ const isSelected = activeId === item.id
+ 
+ const yearSemesters = semesters.filter(s => {
+    const semYear = stripWL(getVal(s, 'Year', 'year')).toLowerCase().trim()
+    const targetYear = (item.title || '').toLowerCase().trim()
+    return semYear === targetYear && targetYear !== ''
+ }).sort((a, b) => {
+    const order = ['Autumn', 'Fall', 'Winter', 'Spring', 'Summer']
+    const ai = order.findIndex(o => a.title?.includes(o))
+    const bi = order.findIndex(o => b.title?.includes(o))
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
+ })
+
  return (
- <div key={idx} className="roadmap-node group cursor-pointer" onClick={() => onSelect(item.id)}>
- <div className={cn('roadmap-dot', isCompleted ? 'roadmap-dot-completed' : isActive ? 'roadmap-dot-active pulse-node' : 'roadmap-dot-planned', activeId === item.id && 'ring-2 ring-primary/40')}>
- {isCompleted ? <Check size={10} strokeWidth={4} /> : (idx + 1)}
+ <div key={idx} className="space-y-2">
+ <div 
+ onClick={() => onSelect(item.id)}
+ className={cn(
+    "group flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer",
+    isSelected ? "border-foreground bg-foreground/5 shadow-[0_0_15px_rgba(255,255,255,0.02)]" : "border-border/40 hover:border-foreground/20 hover:bg-muted/5"
+ )}>
+ <div className="flex flex-col">
+ <span className={cn("text-[10px] font-black uppercase tracking-widest transition-colors", isSelected ? "text-foreground" : "text-muted-foreground/40")}>{item.title}</span>
+ <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/20">{status}</span>
  </div>
- <div className="roadmap-content">
- <span className={cn('text-[11px] font-black uppercase', isActive ? 'text-foreground' : isCompleted ? 'text-muted-foreground/20' : 'text-muted-foreground/40 group-hover:text-foreground/60')}>{cleanTitle(item.title)}</span>
+ {isActive && <div className="w-1.5 h-1.5 rounded-full bg-foreground animate-pulse" />}
  </div>
+
+ {yearSemesters.length > 0 && (
+    <div className="pl-4 flex flex-col gap-1.5 border-l border-border/20 ml-2">
+        {yearSemesters.map(s => {
+            const sStatus = stripWL(getVal(s, 'Status', 'status')).toLowerCase()
+            const sActive = sStatus.includes('active')
+            return (
+                <div key={s.id} className="flex items-center justify-between group/sem">
+                    <span className={cn(
+                        "text-[8px] font-black uppercase tracking-widest transition-colors",
+                        sActive ? "text-foreground" : "text-muted-foreground/20 group-hover/sem:text-muted-foreground/40"
+                    )}>{cleanTitle(s.title)}</span>
+                    {sActive && <div className="w-1 h-1 rounded-full bg-foreground/40" />}
+                </div>
+            )
+        })}
+    </div>
+ )}
  </div>
  )
 })}
  </div>
  )
+}
+
+function getVal(obj: any, key: string, fallback?: string): string {
+    if (!obj) return ''
+    const val = obj[key] || (obj.properties && obj.properties[key])
+    if (val !== undefined && val !== null) return String(val)
+    if (fallback && obj[fallback]) return String(obj[fallback])
+    return ''
 }
 
 

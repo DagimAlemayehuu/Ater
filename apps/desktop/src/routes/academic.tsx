@@ -31,8 +31,13 @@ export default function AcademicDashboard() {
       setSearchParams({ tab })
     }
   }
- const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
- const {setRightContent} = useHeader()
+  const selectedItemId = searchParams.get('id')
+  const setSelectedItemId = (id: string | null) => setSearchParams(prev => {
+    if (id) prev.set('id', id)
+    else prev.delete('id')
+    return prev
+  })
+  const {setRightContent} = useHeader()
  const {setIsFullscreen} = useLayout()
  const nav = useNavigate()
  const API_BASE = 'http://127.0.0.1:8765'
@@ -240,9 +245,13 @@ export default function AcademicDashboard() {
   onDelete,
   onOpenNote: (path) => nav(`/obsidian?path=${encodeURIComponent(path)}&fullscreen=true`),
   navigateTo: (tab, id) => {
-   setActiveTab(tab)
-   if (id) setSelectedItemId(id)
-  },
+    setSearchParams(prev => {
+      prev.set('tab', tab)
+      if (id) prev.set('id', id)
+      else prev.delete('id')
+      return prev
+    })
+   },
   onRefresh: fetchData,
  }
 

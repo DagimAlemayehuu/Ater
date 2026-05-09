@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
  Database, Key, HardDrive, Trash2, Edit2, FolderOpen, ShieldCheck, Zap, Plus, X,
  User, BookOpen, DollarSign, Activity, Brain, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Check
@@ -75,7 +76,12 @@ export default function Settings() {
  const [newKeyProvider, setNewKeyProvider] = useState('google');
 
  const [testStatus, setTestStatus] = useState<{loading: boolean; success?: boolean; message?: string}>({loading: false})
- const [aiTab, setAiTab] = useState<'primary' | 'planner' | 'utility'>('primary')
+ const [searchParams, setSearchParams] = useSearchParams()
+ const aiTab = (searchParams.get('tab') || 'primary') as 'primary' | 'planner' | 'utility'
+ const setAiTab = (tab: string) => setSearchParams(prev => {
+    prev.set('tab', tab)
+    return prev
+  })
  const [testTarget, setTestTarget] = useState<'primary' | 'planner' | 'utility'>('primary')
 
  if (isLoading || !config) {

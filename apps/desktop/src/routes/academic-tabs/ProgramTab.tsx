@@ -319,26 +319,63 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  </div>
  <div className="flex-1 overflow-y-auto custom-scrollbar">
  {programYears.length > 0 ? (
- <AcademicRoadmap items={programYears} activeId={selectedYearId} onSelect={setSelectedYearId} />
+ <AcademicRoadmap items={programYears} semesters={semesters} activeId={selectedYearId} onSelect={setSelectedYearId} />
  ) : (
  <p className="text-[9px] font-black uppercase text-muted-foreground/20 text-center mt-8">No program yet</p>
  )}
  </div>
- <button onClick={() => {
- const title = window.prompt('Enter Year Title (e.g. Year I)', 'Year') || 'Year'
- onCreate('09 - Years', title, {'Target Years': targetYears, Status: '[[Planned]]'})
-}}
- className="mt-3 w-full py-2 bg-foreground/5 hover:bg-foreground/10 text-[8px] font-black uppercase rounded-lg transition-all border border-border/10">
- + Add Year
- </button>
  </aside>
 
  {/* Right: Overview or setup */}
  <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10 pb-24">
- {showSetup || programYears.length === 0 ? (
+ {programYears.length === 0 ? (
  <ProgramSetupForm onScaffold={(n, y, l, c) => {handleScaffold(n, y, l, c); setShowSetup(false)}} />
  ) : (
  <div className="space-y-10 ">
+ {showSetup && activeYear && (
+    <section className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+       <div className="flex items-center justify-between border-b border-border pb-4">
+           <h3 className="text-[10px] font-black uppercase tracking-widest">Edit Program Details</h3>
+           <button onClick={() => setShowSetup(false)} className="text-[10px] font-black uppercase text-muted-foreground hover:text-foreground">Close</button>
+       </div>
+       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+           {(() => {
+               const internal = ['id', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by']
+               const keys = new Set([...Object.keys(yearSchema || {}), ...Object.keys(activeYear || {})])
+               return Array.from(keys)
+                   .filter(k => !internal.includes(k))
+                   .sort((a, b) => {
+                       const priority = ['Program', 'Academic Level', 'Status', 'Target Years', 'Current Year']
+                       const ai = priority.indexOf(a); const bi = priority.indexOf(b)
+                       if (ai !== -1 && bi !== -1) return ai - bi
+                       if (ai !== -1) return -1
+                       if (bi !== -1) return 1
+                       return a.localeCompare(b)
+                   })
+                   .map(key => (
+                       <BigPropertyCard
+                           key={key}
+                           label={key}
+                           value={activeYear[key]}
+                           schema={yearSchema[key]}
+                           onUpdate={(v) => {
+                               if (['Program', 'Academic Level', 'Target Years'].includes(key)) {
+                                   handleUpdateProgram(
+                                       activeProgram,
+                                       key === 'Program' ? stripWL(v) : activeProgram,
+                                       key === 'Academic Level' ? stripWL(v) : stripWL(getVal(activeYear, 'Academic Level')),
+                                       key === 'Target Years' ? parseInt(v) : targetYears
+                                   )
+                               } else {
+                                   onUpdate('09 - Years', activeYear.id, {[key]: v})
+                               }
+                           }}
+                       />
+                   ))
+           })()}
+       </div>
+    </section>
+ )}
  <div className="flex items-center justify-between">
  <div className="group/protitle">
  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Program</p>
@@ -367,49 +404,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
 })()}
 
 
- {showSetup && activeYear && (
- <section className="space-y-4 ">
- <SectionHeader title="Edit Program Metadata" />
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
- {(() => {
- const internal = ['id', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by']
- const keys = new Set([...Object.keys(yearSchema || {}), ...Object.keys(activeYear || {})])
- return Array.from(keys)
- .filter(k => !internal.includes(k))
- .sort((a, b) => {
- const priority = ['Program', 'Academic Level', 'Status', 'Target Years', 'Current Year']
- const ai = priority.indexOf(a)
- const bi = priority.indexOf(b)
- if (ai !== -1 && bi !== -1) return ai - bi
- if (ai !== -1) return -1
- if (bi !== -1) return 1
- return a.localeCompare(b)
-})
- .map(key => (
- <BigPropertyCard
- key={key}
- label={key}
- value={activeYear[key]}
- schema={yearSchema[key]}
- onUpdate={(v) => {
- if (['Program', 'Academic Level', 'Target Years'].includes(key)) {
- // Bulk update for program-wide properties
- handleUpdateProgram(
- activeProgram,
- key === 'Program' ? stripWL(v) : activeProgram,
- key === 'Academic Level' ? stripWL(v) : stripWL(getVal(activeYear, 'Academic Level')),
- key === 'Target Years' ? parseInt(v) : targetYears
- )
-} else {
- onUpdate('09 - Years', activeYear.id, {[key]: v})
-}
-}}
- />
- ))
-})()}
- </div>
- </section>
- )}
+
 
  {/* Active Status Sections */}
  <div className="space-y-8">

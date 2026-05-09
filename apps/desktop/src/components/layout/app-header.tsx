@@ -25,14 +25,21 @@ export function AppHeader() {
       }
     } else if (path.startsWith('/academic')) {
       module = 'Academic Dashboard'
-      const parts = path.split('/').filter(Boolean)
-      if (parts.length > 1) subPath = parts.slice(1).join(' / ')
+      const search = new URLSearchParams(location.search)
+      const tab = search.get('tab')
+      if (tab) subPath = tab.charAt(0) + tab.slice(1).toLowerCase()
     } else if (path.startsWith('/practice')) {
       module = 'Practice Hub'
+      const search = new URLSearchParams(location.search)
+      const view = search.get('view')
+      if (view) subPath = view.charAt(0) + view.slice(1).toLowerCase()
     } else if (path.startsWith('/agents')) {
       module = 'Agent Orchestrator'
     } else if (path.startsWith('/settings')) {
       module = 'System Settings'
+      const search = new URLSearchParams(location.search)
+      const tab = search.get('tab')
+      if (tab) subPath = tab.charAt(0) + tab.slice(1).toLowerCase()
     }
 
     return (
