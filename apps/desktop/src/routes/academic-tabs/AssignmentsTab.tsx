@@ -8,14 +8,30 @@ import {SectionHeader, EmptyState, BadgePill, EditableTitle} from './SharedCompo
 import type {TabProps} from './types'
 
 export default function AssignmentsTab({data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo}: TabProps) {
- const [courseFilter, setCourseFilter] = useState<string>('All')
- const [showDone, setShowDone] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'Active' | 'All'>('Active')
+  const [courseFilter, setCourseFilter] = useState<string>('All')
+  const [showDone, setShowDone] = useState(false)
 
- const courses = data.courses || []
- const allAssignments = data.assignments || []
+  const allCourses = data.courses || []
+  const allAssignments = data.assignments || []
+
+  const activeSemesters = (data.semesters || []).filter(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase() === 'active').map(s => (s.title || '').toLowerCase())
+
+  const courses = useMemo(() => {
+    if (statusFilter === 'All') return allCourses
+    return allCourses.filter(c => {
+      const isCompleted = stripWL(getVal(c, 'Status', 'status')).toLowerCase().includes('complet')
+      const courseSem = stripWL(getVal(c, 'Semester', 'semester')).toLowerCase()
+      const inActiveSemester = activeSemesters.length === 0 || activeSemesters.some(s => courseSem.includes(s))
+      return !isCompleted && inActiveSemester
+    })
+  }, [allCourses, statusFilter, activeSemesters])
 
  const filtered = useMemo(() => {
- if (courseFilter === 'All') return allAssignments
+ if (courseFilter === 'All') return allAssignments.filter(a => {
+   const cName = getVal(a, 'Course', 'course')
+   return courses.find(c => cleanTitle(c.title).toLowerCase() === cleanTitle(cName).toLowerCase()) || cName === ''
+ })
  const cName = cleanTitle(courses.find(c => c.id === courseFilter)?.title || '')
  return allAssignments.filter(a => {
  const assignmentCourse = getVal(a, 'Course', 'course').toLowerCase()
@@ -58,17 +74,28 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  return (
  <div className="h-full flex flex-col overflow-hidden">
  {/* ── Stats + Filters ── */}
-  <div className="px-6 py-4 border-b border-border flex items-center gap-4 flex-wrap shrink-0">
- {/* Stats */}
- <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest">
- <span className="text-foreground">{pending.length} <span className="text-muted-foreground/40">pending</span></span>
- {overdue.length > 0 && <span className="text-foreground font-black">{overdue.length} <span className="text-muted-foreground/40">overdue</span></span>}
- {todayDue.length > 0 && <span className="text-foreground/70">{todayDue.length} <span className="text-muted-foreground/40">today</span></span>}
- <span className="text-muted-foreground/30">{done.length} done</span>
- </div>
- <div className="flex-1" />
- {/* Course filter pills */}
- <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+  <div className="px-6 py-4 border-b border-border flex flex-col gap-4 shrink-0">
+  <div className="flex items-center justify-between w-full">
+   {/* Stats */}
+   <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest">
+   <span className="text-foreground">{pending.length} <span className="text-muted-foreground/40">pending</span></span>
+   {overdue.length > 0 && <span className="text-foreground font-black">{overdue.length} <span className="text-muted-foreground/40">overdue</span></span>}
+   {todayDue.length > 0 && <span className="text-foreground/70">{todayDue.length} <span className="text-muted-foreground/40">today</span></span>}
+   <span className="text-muted-foreground/30">{done.length} done</span>
+   </div>
+   
+   {/* Filters */}
+   <div className="flex items-center gap-2">
+    <div className="flex bg-muted/5 p-1 rounded-lg border border-border">
+     <button onClick={() => setStatusFilter('Active')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", statusFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>Active</button>
+     <button onClick={() => setStatusFilter('All')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", statusFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>All</button>
+    </div>
+   </div>
+  </div>
+  
+  <div className="flex items-center gap-2 w-full">
+  {/* Course filter pills */}
+  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1">
  {['All', ...courses.map(c => c.id)].map(id => {
  const label = id === 'All' ? 'All' : cleanTitle(courses.find(c => c.id === id)?.title || id)
  return (
@@ -80,16 +107,17 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  )
 })}
  </div>
- <button onClick={() => {
-  const title = window.prompt('Enter Assignment Title', 'New Assignment') || 'New Assignment'
-  const cleanAsgnTitle = cleanTitle(title)
-  const props = courseFilter !== 'All' ? {Course: wrapWL(courses.find(c => c.id === courseFilter)?.title)} : {}
-  onCreate('03 - Assignments', cleanAsgnTitle, props)
-}}
-  className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-lg hover:border-foreground/30 transition-all">
-  <Plus size={10} /> Add
-  </button>
- </div>
+   <button onClick={() => {
+   const title = window.prompt('Enter Assignment Title', 'New Assignment') || 'New Assignment'
+   const cleanAsgnTitle = cleanTitle(title)
+   const props = courseFilter !== 'All' ? {Course: wrapWL(courses.find(c => c.id === courseFilter)?.title)} : {}
+   onCreate('03 - Assignments', cleanAsgnTitle, props)
+ }}
+   className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-lg hover:border-foreground/30 transition-all shrink-0">
+   <Plus size={10} /> Add
+   </button>
+  </div>
+  </div>
 
  {/* ── Assignment list ── */}
  <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8 pb-24">

@@ -3,11 +3,12 @@ import {Hash, ChevronRight, Plus, Check, BookOpen, Trash2} from 'lucide-react'
 import {format, parseISO, differenceInDays, isBefore, startOfDay} from 'date-fns'
 import {cn} from '@/lib/utils'
 import {toast} from 'sonner'
-import {stripWL, getVal, cleanTitle} from './utils'
+import {stripWL, getVal, cleanTitle, wrapWL} from './utils'
 import {SectionHeader, EmptyState, StatCard, BigPropertyCard, EditableTitle} from './SharedComponents'
 import type {TabProps} from './types'
 
 export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, initialSelectedId, onClearSelection}: TabProps) {
+ const [statusFilter, setStatusFilter] = useState<'Active' | 'All'>('Active')
  const [courseFilter, setCourseFilter] = useState<string>('All')
  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId || null)
  const [editingScore, setEditingScore] = useState<string | null>(null)
@@ -20,20 +21,39 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
 }
 }, [initialSelectedId, onClearSelection])
 
- const courses = data.courses || []
+ const allCourses = data.courses || []
  const allExams = data.exams || []
  const hubs = data.study_sessions || []
+
+ const activeSemesters = (data.semesters || []).filter(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase() === 'active').map(s => (s.title || '').toLowerCase())
+
+ const courses = useMemo(() => {
+  if (statusFilter === 'All') return allCourses
+  return allCourses.filter(c => {
+   const isCompleted = stripWL(getVal(c, 'Status', 'status')).toLowerCase().includes('complet')
+   const courseSem = stripWL(getVal(c, 'Semester', 'semester')).toLowerCase()
+   const inActiveSemester = activeSemesters.length === 0 || activeSemesters.some(s => courseSem.includes(s))
+   return !isCompleted && inActiveSemester
+  })
+ }, [allCourses, statusFilter, activeSemesters])
 
  const now = startOfDay(new Date())
 
  const filtered = useMemo(() => {
- if (courseFilter === 'All') return allExams
- const cName = courses.find(c => c.id === courseFilter)?.title || ''
- return allExams.filter(e => {
- const examCourse = getVal(e, 'Course', 'course').toLowerCase()
- return examCourse === cName.toLowerCase() && examCourse !== ''
-})
-}, [allExams, courseFilter, courses])
+  let baseExams = allExams
+  if (statusFilter === 'Active') {
+    baseExams = allExams.filter(e => {
+      const cName = getVal(e, 'Course', 'course')
+      return courses.find(c => cleanTitle(c.title).toLowerCase() === cleanTitle(cName).toLowerCase()) || cName === ''
+    })
+  }
+  if (courseFilter === 'All') return baseExams
+  const cName = courses.find(c => c.id === courseFilter)?.title || ''
+  return baseExams.filter(e => {
+  const examCourse = getVal(e, 'Course', 'course').toLowerCase()
+  return examCourse === cName.toLowerCase() && examCourse !== ''
+ })
+ }, [allExams, courseFilter, courses, statusFilter])
 
  const upcoming = filtered.filter(e => {
  const d = getVal(e, 'date', 'Exam Date')
@@ -189,28 +209,49 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  </div>
  )}
 
- {/* Filter + Add bar */}
- <div className="px-6 py-3 border-b border-border flex items-center gap-3 flex-wrap shrink-0">
- <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1">
- {['All', ...courses.map(c => c.id)].map(id => {
- const label = id === 'All' ? 'All' : courses.find(c => c.id === id)?.title || id
- return (
- <button key={id} onClick={() => setCourseFilter(id)}
- className={cn('px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wide whitespace-nowrap transition-all',
-  courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-border bg-muted/5 text-muted-foreground/50 hover:text-foreground hover:border-border')}>
- {label}
- </button>
- )
-})}
- </div>
- <button onClick={() => {
- const title = window.prompt('Enter Exam Title', 'New Exam') || 'New Exam'
- onCreate('04 - Exams', title)
-}}
- className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-lg hover:border-foreground/30 transition-all">
- <Plus size={10} /> Add Exam
- </button>
- </div>
+  {/* Filter + Add bar */}
+  <div className="px-6 py-4 border-b border-border flex flex-col gap-4 shrink-0">
+  <div className="flex items-center justify-between w-full">
+   {/* Stats */}
+   <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest">
+   {upcoming.length > 0 && <span className="text-foreground">{upcoming.length} <span className="text-muted-foreground/40">upcoming</span></span>}
+   {past.length > 0 && <span className="text-muted-foreground/40">{past.length} past</span>}
+   </div>
+   
+   {/* Filters */}
+   <div className="flex items-center gap-2">
+    <div className="flex bg-muted/5 p-1 rounded-lg border border-border">
+     <button onClick={() => setStatusFilter('Active')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", statusFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>Active</button>
+     <button onClick={() => setStatusFilter('All')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", statusFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>All</button>
+    </div>
+   </div>
+  </div>
+  
+  <div className="flex items-center gap-2 w-full">
+  {/* Course filter pills */}
+  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1">
+  {['All', ...courses.map(c => c.id)].map(id => {
+  const label = id === 'All' ? 'All' : cleanTitle(courses.find(c => c.id === id)?.title || id)
+  return (
+  <button key={id} onClick={() => setCourseFilter(id)}
+  className={cn(
+  'px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wide whitespace-nowrap transition-all',
+  courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-transparent bg-muted/5 text-muted-foreground/50 hover:text-foreground hover:border-border'
+  )}>{label}</button>
+  )
+ })}
+  </div>
+   <button onClick={() => {
+   const title = window.prompt('Enter Exam Title', 'New Exam') || 'New Exam'
+   const cleanAsgnTitle = cleanTitle(title)
+   const props = courseFilter !== 'All' ? {Course: wrapWL(courses.find(c => c.id === courseFilter)?.title)} : {}
+   onCreate('04 - Exams', cleanAsgnTitle, props)
+ }}
+   className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-lg hover:border-foreground/30 transition-all shrink-0">
+   <Plus size={10} /> Add
+   </button>
+  </div>
+  </div>
 
  {/* Exam lists */}
  <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-10 pb-24">

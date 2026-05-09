@@ -410,24 +410,24 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
 
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
- <div className="p-6 bg-muted/10 border border-border rounded-lg flex flex-col gap-1">
+ <div className="p-6 bg-muted/5 border border-border rounded-lg flex flex-col gap-1">
  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Average Score</span>
  <span className="text-2xl font-black tracking-tight">{totalPrecision}%</span>
  </div>
- <div className="p-6 bg-muted/10 border border-border rounded-lg flex flex-col gap-1">
+ <div className="p-6 bg-muted/5 border border-border rounded-lg flex flex-col gap-1">
  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Total Practices</span>
  <span className="text-2xl font-black tracking-tight">{pastPractices.length}</span>
  </div>
- <div className="p-6 bg-muted/10 border border-border rounded-lg flex flex-col gap-1">
+ <div className="p-6 bg-muted/5 border border-border rounded-lg flex flex-col gap-1">
  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Stability</span>
- <span className="text-2xl font-black tracking-tight uppercase text-primary">{stability}</span>
+ <span className="text-2xl font-black tracking-tight uppercase text-foreground">{stability}</span>
  </div>
  </div>
 
  <div className="flex flex-col gap-8">
  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
- <div className="p-8 bg-muted/10 border border-border rounded-2xl space-y-6">
- <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40">Trend</h3>
+ <div className="p-8 bg-muted/5 border border-border rounded-lg space-y-6">
+ <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Trend</h3>
  <div className="w-full h-64">
  <ResponsiveContainer width="100%" height="100%">
  <LineChart data={validPractices.slice(-10).map((p, i) => ({name: i + 1, score: parseInt(p.score) || 0}))}>
@@ -435,14 +435,14 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <XAxis dataKey="name" hide />
  <YAxis domain={[0, 100]} hide />
  <Tooltip contentStyle={{backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: '4px', fontSize: '10px'}} />
- <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} dot={{r: 2, fill: 'hsl(var(--background))'}} />
+ <Line type="monotone" dataKey="score" stroke="hsl(var(--foreground))" strokeWidth={2} dot={{r: 2, fill: 'hsl(var(--background))'}} />
  </LineChart>
  </ResponsiveContainer>
  </div>
  </div>
 
- <div className="p-8 bg-muted/10 border border-border rounded-2xl space-y-8">
- <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40">Cognitive Modalities</h3>
+ <div className="p-8 bg-muted/5 border border-border rounded-lg space-y-8">
+ <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Cognitive Modalities</h3>
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-8">
  {[
  {type: 'Choice (MCQ/TF)', p: 88},

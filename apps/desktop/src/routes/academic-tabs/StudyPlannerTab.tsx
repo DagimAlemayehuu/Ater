@@ -14,9 +14,22 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  const [statusFilter, setStatusFilter] = useState<StatusFilter>('All')
  const [sortKey, setSortKey] = useState<SortKey>('unit')
  const [search, setSearch] = useState('')
+ const [courseFilter, setCourseFilter] = useState<'Active' | 'All'>('Active')
 
- const courses = data.courses || []
+ const allCourses = data.courses || []
  const allHubs = data.study_sessions || []
+
+ const activeSemesters = (data.semesters || []).filter(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase() === 'active').map(s => (s.title || '').toLowerCase())
+
+ const courses = useMemo(() => {
+  if (courseFilter === 'All') return allCourses
+  return allCourses.filter(c => {
+   const isCompleted = stripWL(getVal(c, 'Status', 'status')).toLowerCase().includes('complet')
+   const courseSem = stripWL(getVal(c, 'Semester', 'semester')).toLowerCase()
+   const inActiveSemester = activeSemesters.length === 0 || activeSemesters.some(s => courseSem.includes(s))
+   return !isCompleted && inActiveSemester
+  })
+ }, [allCourses, courseFilter, activeSemesters])
 
  // ── Stats per course ──────────────────────────────────────────────────────
  const courseStats = useMemo(() => {
@@ -135,9 +148,15 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  <div className="h-full flex overflow-hidden">
  {/* ── Left Course Sidebar ── */}
  <aside className="w-56 shrink-0 border-r border-border flex flex-col overflow-hidden">
- <div className="p-4 border-b border-border">
- <p className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 flex items-center gap-1.5"><Brain size={10} />Courses</p>
- </div>
+  <div className="p-4 border-b border-border flex flex-col gap-3">
+   <div className="flex items-center justify-between">
+    <p className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 flex items-center gap-1.5"><Brain size={10} />Courses</p>
+   </div>
+   <div className="flex bg-muted/5 p-1 rounded-lg border border-border w-full">
+    <button onClick={() => setCourseFilter('Active')} className={cn("flex-1 px-2 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all", courseFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>Active</button>
+    <button onClick={() => setCourseFilter('All')} className={cn("flex-1 px-2 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all", courseFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>All</button>
+   </div>
+  </div>
  <div className="flex-1 overflow-y-auto custom-scrollbar">
  {/* All Hubs option */}
  <button

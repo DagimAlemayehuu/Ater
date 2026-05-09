@@ -25,13 +25,22 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  const schema = databases.find(d => d.id === '07 - Courses')?.schema || {}
  const now = startOfDay(new Date())
 
+ const activeSemesters = (data.semesters || []).filter(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase() === 'active').map(s => (s.title || '').toLowerCase())
+
  const filtered = useMemo(() => {
  let cs = allCourses
- if (statusFilter === 'Active') cs = cs.filter(c => !stripWL(getVal(c, 'Status', 'status')).toLowerCase().includes('complet'))
+ if (statusFilter === 'Active') {
+  cs = cs.filter(c => {
+  const isCompleted = stripWL(getVal(c, 'Status', 'status')).toLowerCase().includes('complet')
+  const courseSem = stripWL(getVal(c, 'Semester', 'semester')).toLowerCase()
+  const inActiveSemester = activeSemesters.length === 0 || activeSemesters.some(s => courseSem.includes(s))
+  return !isCompleted && inActiveSemester
+  })
+ }
  if (statusFilter === 'Completed') cs = cs.filter(c => stripWL(getVal(c, 'Status', 'status')).toLowerCase().includes('complet'))
  if (search.trim()) cs = cs.filter(c => c.title?.toLowerCase().includes(search.toLowerCase()))
  return cs
-}, [allCourses, statusFilter, search])
+ }, [allCourses, statusFilter, search, activeSemesters])
 
  // ── Course Detail ───────────────────────────────────────────────────────────
  if (selectedId) {
@@ -170,11 +179,11 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  <div className="h-full flex flex-col overflow-hidden">
  {/* Filter bar */}
  <div className="px-6 py-3 border-b border-border flex items-center gap-3 shrink-0">
- <div className="flex items-center gap-1.5 bg-muted/10 p-1 rounded-lg">
+ <div className="flex items-center gap-1.5 bg-muted/5 p-1 rounded-lg border border-border">
  {(['Active', 'All', 'Completed'] as const).map(f => (
  <button key={f} onClick={() => setStatusFilter(f)}
  className={cn('px-3 py-1.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all',
- statusFilter === f ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground/50 hover:text-foreground'
+ statusFilter === f ? 'bg-muted/20 text-foreground border border-border' : 'text-muted-foreground/50 hover:text-foreground hover:bg-muted/5'
  )}>{f}</button>
  ))}
  </div>
