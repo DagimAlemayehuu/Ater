@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "3-Database/07 - Courses/Discrete Mathematics.md",
+                "file": "3-Database/04 - Exams/Computer Programming Final.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Discrete Mathematics"
+              "title": "Computer Programming Final"
             }
           }
         ]
@@ -185,6 +185,11 @@
   },
   "active": "e4e52099906a74b0",
   "lastOpenFiles": [
+    "3-Database/09 - Years/Year II.md",
+    "2026-05-09.md",
+    "Untitled.canvas",
+    "3-Database/04 - Exams/Discrete Mathematics Final.md",
+    "3-Database/07 - Courses/Discrete Mathematics.md",
     "5-Pdf Store/note generated/Winter 2026/Economics/Chapter_2.pdf",
     "2-Academic/Autumn 2025/Economics/2_Theory_Of_Demand_And_Supply/Law_Of_Demand.md",
     "2-Academic/Autumn 2025/Economics/2_Theory_Of_Demand_And_Supply/Theory_Of_Demand.md",
@@ -216,9 +221,6 @@
     "2-Academic/Winter 2026/Economics/2_Theory_Of_Demand_And_Supply/Income_Elasticity_Of_Demand.md",
     "2-Academic/Winter 2026/Economics/2_Theory_Of_Demand_And_Supply/Elasticity_Of_Supply.md",
     "2-Academic/Winter 2026/Economics/2_Theory_Of_Demand_And_Supply/Elasticity_Of_Demand.md",
-    "2-Academic/Winter 2026/Economics/2_Theory_Of_Demand_And_Supply/Effects_Of_Shift_In_Demand_And_Supply.md",
-    "2-Academic/Winter 2026/Economics/2_Theory_Of_Demand_And_Supply/Determinants_Of_Elasticity_Of_Supply.md",
-    "2-Academic/Winter 2026/Economics/2_Theory_Of_Demand_And_Supply/Determinants_Of_Demand.md",
-    "2-Academic/Winter 2026/Economics/2_Theory_Of_Demand_And_Supply/Demand_Schedule.md"
+    "2-Academic/Winter 2026/Economics/2_Theory_Of_Demand_And_Supply/Effects_Of_Shift_In_Demand_And_Supply.md"
   ]
 }

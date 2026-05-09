@@ -386,7 +386,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 }
 
  return (
- <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-10 space-y-8">
+ <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-4 sm:p-10 space-y-8">
  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
  <div className="flex bg-muted/10 p-1 rounded-lg border border-border/10 w-full sm:w-auto">
  <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", true ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>Dashboard</button>
@@ -395,7 +395,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-primary text-primary-foreground rounded-md font-black uppercase tracking-widest text-[9px]">Start</Button>
  </div>
 
- <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+ <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
  <div className="p-6 bg-muted/10 border border-border/10 rounded-lg flex flex-col gap-1">
  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Average Score</span>
  <span className="text-2xl font-black tracking-tight">{totalPrecision}%</span>
@@ -464,7 +464,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  // ──────────────────────────────────────────────────────────────────────────
  if (view === 'history') {
  return (
- <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-10 space-y-8">
+ <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-4 sm:p-10 space-y-8">
  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
  <div className="flex bg-muted/10 p-1 rounded-lg border border-border/10 w-full sm:w-auto">
  <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md transition-all", false ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>Dashboard</button>
@@ -500,7 +500,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  if (view === 'configuring') {
  const totalQuestions = Object.values(advancedConfig.questionDistribution).reduce((a, b) => a + b, 0)
  return (
- <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-10 space-y-12">
+ <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-4 sm:p-10 space-y-12">
  <div className="flex items-center justify-between">
  <button onClick={() => setView('dashboard')} className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border/10 rounded-md">Cancel</button>
  <div className="text-xl font-black tracking-tight">{totalQuestions} Questions</div>
@@ -638,8 +638,8 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const progress = ((currentQuestionIdx + 1) / questions.length) * 100;
  return (
  <div className="h-full w-full flex flex-col bg-background text-foreground overflow-hidden">
- <div className="px-6 sm:px-10 py-4 sm:py-6 border-b border-border/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
- <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-10 w-full sm:w-auto">
+ <div className="px-4 sm:px-10 py-4 sm:py-6 border-b border-border/10 flex flex-col lg:flex-row items-start sm:items-center justify-between gap-4">
+ <div className="flex flex-col sm:flex-row lg:w-auto sm:items-center gap-4 sm:gap-10 w-full sm:w-auto">
  <div className="flex flex-col gap-0.5">
  <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Practice</span>
  <div className="text-xs font-black uppercase tracking-tight truncate max-w-[200px]">{cleanTitle(hubs.find(h => h.id === selectedHub)?.title || '')}</div>
@@ -648,7 +648,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="h-full bg-primary transition-all " style={{width: `${progress}%`}} />
  </div>
  </div>
- <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-10 text-[9px] font-black uppercase tracking-widest">
+ <div className="flex items-center justify-between lg:justify-end w-full sm:w-auto gap-4 sm:gap-10 text-[9px] font-black uppercase tracking-widest">
  {globalTimeLeft !== null && (
  <div className="flex flex-col items-end gap-1">
  <span className="text-muted-foreground/20 text-[7px]">Total</span>

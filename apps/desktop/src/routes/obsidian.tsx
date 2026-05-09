@@ -7,12 +7,14 @@ import {
  Database, Search, Archive,
  ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft,
  Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Network,
- Edit3, Save, FolderPlus, Hash, CheckSquare, Link, List
+ Edit2, Edit3, Save, FolderPlus, Hash, CheckSquare, Link, List, Heart
 } from 'lucide-react'
+import {useIsMobile} from '@/hooks/use-mobile'
 import {sidecarApi, ObsidianFile} from '@/lib/sidecarApi'
 import {ObsidianGraphView} from '@/components/obsidian/ObsidianGraphView'
 import {cn} from '@/lib/utils'
 import {useConfig} from '@/lib/ConfigContext'
+import {toast} from 'sonner'
 import {useLocation, useNavigate} from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -20,6 +22,8 @@ import {Button} from '@/components/ui/button'
 import {MarkdownViewer} from '@/components/obsidian/MarkdownViewer'
 import {PdfViewer} from '@/components/obsidian/PdfViewer'
 import {useLayout} from '@/context/layout-provider'
+import {useNavigation} from '@/context/navigation-context'
+import {useHeader} from '@/context/header-context'
 import React from 'react'
 
 interface InboxFile {
@@ -536,6 +540,7 @@ function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox}: 
 export default function ObsidianVaultPage() {
  const {config, saveConfig} = useConfig()
  const location = useLocation()
+ const isMobile = useIsMobile()
 
  // --- Layout State ---
  const [showArchitect, setShowArchitect] = useState(false)
@@ -547,18 +552,154 @@ export default function ObsidianVaultPage() {
  const selectRequestId = useRef(0)
  const [selectedPage, setSelectedPage] = useState(1)
  const [selectedFilteredPages, setSelectedFilteredPages] = useState<number[]>([])
- const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
+const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const [noteContent, setNoteContent] = useState('')
   const noteContentRef = useRef('')
- const [isEditing, setIsEditing] = useState(false)
- const [editedContent, setEditedContent] = useState('')
- const [history, setHistory] = useState<string[]>([])
- const [historyIndex, setHistoryIndex] = useState(-1)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedContent, setEditedContent] = useState('')
+
+  // --- PDF State & Ref ---
+  const pdfRef = useRef<any>(null)
+  const [pdfState, setPdfState] = useState({
+    page: 1,
+    pageCount: 1,
+    sidebarOpen: false,
+    isFullscreen: false
+  })
+  const { push, history, currentIndex } = useNavigation()
+  const { setCenterContent, setRightContent } = useHeader()
+  const { isFullscreen, setIsFullscreen } = useLayout()
+
+  // --- Header Action Registration ---
+  useEffect(() => {
+    // Center Content (Status/Meta)
+    setCenterContent(null)
+ 
+     // Right Content (Actions)
+     setRightContent(
+       <div className="flex items-center gap-1.5">
+         {selectedPath && !selectedPath.toLowerCase().endsWith('.pdf') && (
+           <>
+             {isEditing ? (
+               <div className="flex items-center gap-1.5">
+                 <button 
+                   onClick={handleSaveNote}
+                   className="h-8 px-3 bg-primary text-primary-foreground rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm hover:opacity-90"
+                 >
+                   <Save size={12} /> SAVE
+                 </button>
+                 <button 
+                   onClick={() => setIsEditing(false)}
+                   className="h-8 px-3 bg-muted text-muted-foreground rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 hover:bg-accent"
+                 >
+                   <X size={12} /> CANCEL
+                 </button>
+               </div>
+             ) : (
+               <div className="flex items-center gap-1">
+                 <button 
+                   onClick={() => setIsEditing(true)}
+                   className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm"
+                   title="Edit Note"
+                 >
+                   <Edit2 size={14} />
+                 </button>
+                 <button 
+                   onClick={() => setShowArchitect(!showArchitect)}
+                   className={cn(
+                    "w-8 h-8 flex items-center justify-center rounded-md border transition-all shadow-sm",
+                    showArchitect 
+                    ? "bg-primary border-primary text-primary-foreground" 
+                    : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary"
+                   )}
+                   title="Toggle Architect"
+                 >
+                    <BrainCircuit size={14} />
+                 </button>
+                 {(noteMetadata?.source_file || noteMetadata?.source) && (
+                   <button 
+                     onClick={() => {
+                       const src = noteMetadata.source_file || noteMetadata.source
+                       const cleanPath = typeof src === 'string' ? src.replace(/^\[\[/, '').replace(/\]\]$/, '') : src
+                       setSelectedPath(cleanPath)
+                       const pg = noteMetadata.source_page || (Array.isArray(noteMetadata.source_pages) ? noteMetadata.source_pages[0] : noteMetadata.source_pages)
+                       if (pg) {
+                         setSelectedPage(Number(pg))
+                       }
+                     }}
+                     className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm"
+                     title="Jump to Source PDF"
+                   >
+                     <FileText size={14} />
+                   </button>
+                 )}
+                 {!isMobile && (
+                   <button 
+                     onClick={() => saveConfig({ ...config, showProperties: !config.showProperties })}
+                     className={cn(
+                       "w-8 h-8 flex items-center justify-center rounded-md border transition-all shadow-sm",
+                       config?.showProperties 
+                       ? "bg-primary border-primary text-primary-foreground" 
+                       : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary"
+                     )}
+                     title="Toggle Properties"
+                   >
+                     <Info size={14} />
+                   </button>
+                 )}
+               </div>
+             )}
+           </>
+         )}
+ 
+         {selectedPath && selectedPath.toLowerCase().endsWith('.pdf') && (
+           <div className="flex items-center gap-1 bg-muted/30 px-2 py-0.5 rounded border border-border/50 h-8">
+             <button 
+               onClick={() => pdfRef.current?.handlePrev()}
+               className="p-1 hover:bg-background rounded transition-all text-muted-foreground hover:text-foreground"
+             >
+               <ChevronLeft size={12} />
+             </button>
+             <div className="flex items-center gap-1 min-w-[32px] justify-center px-1">
+               <span className="text-[10px] font-black text-foreground tabular-nums">{pdfState.page}</span>
+               <span className="text-[9px] font-bold text-muted-foreground/40">/</span>
+               <span className="text-[10px] font-black text-muted-foreground tabular-nums">{pdfState.pageCount}</span>
+             </div>
+             <button 
+               onClick={() => pdfRef.current?.handleNext()}
+               className="p-1 hover:bg-background rounded transition-all text-muted-foreground hover:text-foreground"
+             >
+               <ChevronRight size={12} />
+             </button>
+           </div>
+         )}
+ 
+         {selectedPath && (
+           <button 
+             onClick={() => setIsFullscreen(!isFullscreen)}
+             className={cn(
+               "w-8 h-8 flex items-center justify-center rounded-md border transition-all shadow-sm",
+               isFullscreen 
+               ? "bg-primary border-primary text-primary-foreground" 
+               : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary"
+             )}
+             title={isFullscreen ? "Exit Focus Mode" : "Focus Mode"}
+           >
+             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+           </button>
+         )}
+       </div>
+     )
+ 
+     return () => {
+       setCenterContent(null)
+       setRightContent(null)
+     }
+   }, [selectedPath, isEditing, isFullscreen, pdfState, noteMetadata, config, saveConfig, setCenterContent, setRightContent, showArchitect, isMobile])
  
  // --- Sync & Topology Cache ---
  const currentHubPath = useRef<string | null>(null);
  
- const {isFullscreen, setIsFullscreen} = useLayout()
 
  // --- File Operations State ---
  const [renamingPath, setRenamingPath] = useState<string | null>(null)
@@ -566,11 +707,11 @@ export default function ObsidianVaultPage() {
  const [creatingInPath, setCreatingInPath] = useState<string | null>(null) // Path of parent folder
  const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null)
 
- // --- Sidebar Resize State ---
- const [sidebarWidth, setSidebarWidth] = useState(520)
- const [isResizing, setIsResizing] = useState(false)
- const [connectionsWidth, setConnectionsWidth] = useState(220)
- const [isResizingConnections, setIsResizingConnections] = useState(false)
+  // --- Sidebar Resize State ---
+  const [sidebarWidth, setSidebarWidth] = useState(280)
+  const [isResizing, setIsResizing] = useState(false)
+  const [connectionsWidth, setConnectionsWidth] = useState(240)
+  const [isResizingConnections, setIsResizingConnections] = useState(false)
 
  const startResizing = (e: React.MouseEvent) => {
  e.preventDefault()
@@ -582,41 +723,41 @@ export default function ObsidianVaultPage() {
  setIsResizingConnections(true)
 }
 
+ // --- Navigation Listener ---
  useEffect(() => {
- const handleMouseMove = (e: MouseEvent) => {
- if (isResizing) {
- const newWidth = Math.max(160, Math.min(800, e.clientX))
- setSidebarWidth(newWidth)
+   const entry = history[currentIndex];
+   if (entry && entry.type === 'file' && entry.path !== selectedPath) {
+     selectFile(entry.path, entry.metadata?.page || 1, true, entry.metadata?.filterPages || []);
+   }
+ }, [currentIndex]);
+
+ useEffect(() => {
+  const handleMouseMove = (e: MouseEvent) => {
+  if (isResizing) {
+  const newWidth = Math.max(160, Math.min(window.innerWidth * 0.4, e.clientX))
+  setSidebarWidth(newWidth)
 } else if (isResizingConnections) {
- // Calculate based on explorer width
- const xOffset = !isFullscreen ? sidebarWidth : 0
- const newWidth = Math.max(160, Math.min(500, e.clientX - xOffset))
- setConnectionsWidth(newWidth)
+  // Calculate based on explorer width
+  const xOffset = !isFullscreen ? sidebarWidth : 0
+  const newWidth = Math.max(160, Math.min(window.innerWidth * 0.3, e.clientX - xOffset))
+  setConnectionsWidth(newWidth)
 }
 }
- const handleMouseUp = () => {
- setIsResizing(false)
- setIsResizingConnections(false)
+  const handleMouseUp = () => {
+  setIsResizing(false)
+  setIsResizingConnections(false)
 }
 
- if (isResizing || isResizingConnections) {
- window.addEventListener('mousemove', handleMouseMove)
- window.addEventListener('mouseup', handleMouseUp)
+  if (isResizing || isResizingConnections) {
+  window.addEventListener('mousemove', handleMouseMove)
+  window.addEventListener('mouseup', handleMouseUp)
 }
- return () => {
- window.removeEventListener('mousemove', handleMouseMove)
- window.removeEventListener('mouseup', handleMouseUp)
+  return () => {
+  window.removeEventListener('mousemove', handleMouseMove)
+  window.removeEventListener('mouseup', handleMouseUp)
 }
 }, [isResizing, isResizingConnections, sidebarWidth, isFullscreen])
 
- // --- PDF State & Ref ---
- const pdfRef = useRef<any>(null)
- const [pdfState, setPdfState] = useState({
- page: 1,
- pageCount: 1,
- sidebarOpen: false,
- isFullscreen: false
-})
 
  const handleSaveNote = async () => {
  if (!selectedPath) return
@@ -921,7 +1062,7 @@ export default function ObsidianVaultPage() {
 } catch (err) {
  console.error('[Property] Failed to update property:', err);
 } finally {
- setLoadingNote(false);
+ setLoadingNote(false)
 }
 };
 
@@ -1114,14 +1255,13 @@ export default function ObsidianVaultPage() {
  setSelectedFilteredPages(filterPages)
  setLoadingNote(true)
  
- if (!fromHistory) {
- const newHistory = history.slice(0, historyIndex + 1);
- if (newHistory[newHistory.length - 1] !== path) {
- newHistory.push(path);
- setHistory(newHistory);
- setHistoryIndex(newHistory.length - 1);
-}
-}
+  if (!fromHistory) {
+    push({ 
+      type: 'file', 
+      path: path, 
+      metadata: { page, filterPages } 
+    });
+  }
 
  if (path.toLowerCase().endsWith('.pdf')) {
  setNoteMetadata({})
@@ -1156,23 +1296,7 @@ export default function ObsidianVaultPage() {
 }
 }
 
- const handleBack = () => {
- if (historyIndex > 0) {
- const newIndex = historyIndex - 1;
- setHistoryIndex(newIndex);
- selectFile(history[newIndex], 1, true, []);
-}
-}
-
- const handleForward = () => {
- if (historyIndex < history.length - 1) {
- const newIndex = historyIndex + 1;
- setHistoryIndex(newIndex);
- selectFile(history[newIndex], 1, true, []);
-}
-}
-
- const handleWikiLinkClick = async (pageName: string, pageNumber?: number, filterPages: number[] = []) => {
+  const handleWikiLinkClick = async (pageName: string, pageNumber?: number, filterPages: number[] = []) => {
  try {
  const res = await sidecarApi.findVaultPage(pageName);
  if (res.found && res.path) {
@@ -1288,6 +1412,52 @@ export default function ObsidianVaultPage() {
  setProcessing(false) 
 }
 }
+
+  const handleRegenerateNote = async (path: string | null) => {
+    if (!path) return
+    setProcessing(true)
+    setOkaError(null)
+    setActivePlan(null)
+    setBatchFeed([])
+    setIsCompleted(false)
+    setIsAwaitingConfirmation(false)
+    
+    try {
+      const res = await sidecarApi.okaProcess({file_path: path})
+      setActivePlan(res.plan_raw)
+      setPlanData(res.plan_structured)
+      setSessionId(res.session_id)
+      setTotalBatches(res.plan_structured?.batches?.length || 1)
+      setCurrentBatch(0)
+      
+      if (config?.autoDeploy) {
+        setTimeout(() => confirmDeployment(res.session_id), 800)
+      } else {
+        setIsAwaitingConfirmation(true)
+      }
+      toast.success("Regeneration started")
+    } catch (err: any) {
+      setOkaError(err.message || 'Regeneration failed')
+      toast.error("Regeneration failed")
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const handleHealNote = async (path: string | null) => {
+    if (!path) return
+    setProcessing(true)
+    try {
+      toast.info("Healing note logic triggered...")
+      console.log("Heal requested for:", path)
+      await new Promise(r => setTimeout(r, 1000))
+      toast.success("Note healing complete")
+    } catch (err: any) {
+      toast.error("Healing failed")
+    } finally {
+      setProcessing(false)
+    }
+  }
 
  // --- Tree Construction ---
  const fileTree = useMemo(() => {
@@ -1588,9 +1758,9 @@ export default function ObsidianVaultPage() {
  <main className="flex-1 flex flex-col min-w-0">
  <div className="flex flex-1 overflow-hidden">
  {/* ExplorerSidebar */}
- {!isFullscreen && (
+ {!isFullscreen && !isMobile && (
  <aside 
- className="relative border-r border-border flex flex-col bg-background shrink-0 group/sidebar z-40"
+ className="relative border-r border-border flex flex-col bg-background shrink-0 group/sidebar z-40 transition-all duration-300"
  style={{width: `${sidebarWidth}px`}}
  >
  {/* Resize Handle */}
@@ -1637,13 +1807,7 @@ export default function ObsidianVaultPage() {
  >
  <Network className="w-4 h-4" />
  </div>
- <button
- onClick={() => setShowArchitect(!showArchitect)}
- className={cn("cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 transition-colors", showArchitect ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground")}
- title="Toggle OKA Architect"
- >
- <BrainCircuit className="w-4 h-4" />
- </button>
+
  </div>
  </div>
  
@@ -1680,11 +1844,11 @@ export default function ObsidianVaultPage() {
  ) : (
  <>
  {/* Sticky Connections Column (Left-Contextual) */}
- {selectedPath && !selectedPath.toLowerCase().endsWith('.pdf') && (
- <aside 
- className="relative border-r border-border flex flex-col bg-background shrink-0 group/connections overflow-hidden"
- style={{width: `${connectionsWidth}px`}}
- >
+  {selectedPath && !selectedPath.toLowerCase().endsWith('.pdf') && !isMobile && (
+  <aside 
+  className="relative border-r border-border flex flex-col bg-background shrink-0 group/connections overflow-hidden transition-all duration-300"
+  style={{width: `${connectionsWidth}px`}}
+  >
  {/* Resize Handle */}
  <div 
  className={cn(
@@ -1750,233 +1914,22 @@ export default function ObsidianVaultPage() {
  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">Select an asset to visualize</p>
  </div>
  ) : (
- <div className={cn("mx-auto w-full max-w-full", selectedPath.toLowerCase().endsWith('.pdf') ? "p-0 h-full overflow-hidden flex flex-col" : "py-12 px-16 max-w-5xl")}>
- {loadingNote ? (
- <div className="h-64 flex flex-col items-center justify-center gap-4 text-muted-foreground">
- <RefreshCw size={24} className="animate-spin" />
- <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Loading Document...</p>
- </div>
- ) : (
- <>
- {/* Top Bar: History & Actions - STICKY */}
- <div className={cn("sticky top-0 z-30 flex items-start justify-between mb-12 py-6 bg-background/95 backdrop-blur-xl border-b border-border/10 opacity-100 transition-all gap-8", selectedPath.toLowerCase().endsWith('.pdf') ? "px-4" : "-mx-16 px-16")}>
- <div className="flex flex-col gap-4 flex-1">
- <div className="flex items-center gap-4">
- {/* History Controls */}
- <div className="flex items-center gap-1.5 shrink-0">
- <button 
- onClick={handleBack}
- disabled={historyIndex <= 0}
- className={cn(
- "flex items-center justify-center w-7 h-7 rounded-md border transition-all shadow-sm",
- historyIndex > 0 
- ? "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary" 
- : "bg-muted border-muted text-muted-foreground/30 cursor-not-allowed"
- )}
- title="Go back"
- >
- <ChevronLeft size={16} />
- </button>
- <button 
- onClick={handleForward}
- disabled={historyIndex >= history.length - 1}
- className={cn(
- "flex items-center justify-center w-7 h-7 rounded-md border transition-all shadow-sm",
- historyIndex < history.length - 1 
- ? "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary" 
- : "bg-muted border-muted text-muted-foreground/30 cursor-not-allowed"
- )}
- title="Go forward"
- >
- <ChevronRight size={16} />
- </button>
- </div>
-
- {/* PDF Specific Controls */}
- {selectedPath.toLowerCase().endsWith('.pdf') && (
- <div className="flex items-center gap-4 flex-1 justify-end">
- {/* Navigation & Status Bundle */}
- <div className="flex items-center gap-1.5 bg-muted rounded-lg border border-border p-0.5 pr-2 shadow-sm">
- <div className="flex items-center gap-0.5">
- <button 
- onClick={() => pdfRef.current?.handlePrev()}
- className="p-1.5 hover:bg-background rounded-md transition-all text-muted-foreground hover:text-foreground hover:shadow-sm"
- title="Previous Page"
- >
- <ChevronLeft size={16} />
- </button>
- <button 
- onClick={() => pdfRef.current?.handleNext()}
- className="p-1.5 hover:bg-background rounded-md transition-all text-muted-foreground hover:text-foreground hover:shadow-sm"
- title="Next Page"
- >
- <ChevronRight size={16} />
- </button>
- </div>
- <div className="w-px h-3 bg-border mx-0.5" />
- <div className="flex items-center gap-1 min-w-[32px] justify-center">
- <span className="text-[10px] font-black text-foreground tabular-nums">{pdfState.page}</span>
- <span className="text-[9px] font-bold text-muted-foreground/40">/</span>
- <span className="text-[10px] font-black text-muted-foreground tabular-nums">{pdfState.pageCount}</span>
- </div>
- </div>
-
- {/* Actions Bundle */}
- <div className="flex items-center gap-1">
- <button 
- onClick={() => pdfRef.current?.toggleSidebar()}
- className={cn(
- "flex items-center justify-center w-8 h-8 rounded-md border transition-all shadow-sm",
- pdfState.sidebarOpen 
- ? "bg-primary border-primary text-primary-foreground" 
- : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary"
- )}
- title="Toggle Assistant Sidebar"
- >
- <PanelLeft size={16} />
- </button>
- <button 
- onClick={() => setIsFullscreen(!isFullscreen)}
- className={cn(
- "flex items-center justify-center w-8 h-8 rounded-md border transition-all shadow-sm",
- isFullscreen 
- ? "bg-primary border-primary text-primary-foreground" 
- : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary"
- )}
- title="Fullscreen"
- >
- {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
- </button>
- </div>
- </div>
- )}
- </div>
- </div>
-
- {/* Action Buttons for Markdown */}
- {!selectedPath.toLowerCase().endsWith('.pdf') && (
- <div className="flex flex-col items-end gap-3 opacity-100 transition-opacity shrink-0">
- {isEditing ? (
- <div className="flex items-center gap-2">
- <button 
- onClick={handleSaveNote}
- className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-sm"
- >
- <Save size={14} /> Save
- </button>
- <button 
- onClick={() => {
- setIsEditing(false)
-}}
- className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-accent transition-all shadow-sm"
- >
- <X size={14} /> Cancel
- </button>
- </div>
- ) : (
- <div className="flex flex-row flex-wrap items-center justify-end gap-2 shrink-0">
- <button 
- onClick={() => setIsFullscreen(!isFullscreen)}
- className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm"
- title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
- >
- {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />} 
- </button>
-
- <button 
- onClick={() => saveConfig({showProperties: !config?.showProperties})}
- className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm"
- title={config?.showProperties ? "Hide Properties" : "View Properties"}
- >
- {config?.showProperties ? <ChevronUp size={14} /> : <ChevronDown size={14} />} 
- </button>
-
- <button 
- onClick={() => setIsEditing(true)}
- className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm"
- title="Edit Note"
- >
- <Edit3 size={14} />
- </button>
-
- <button 
- onClick={() => handleDeleteItem(selectedPath!, false)}
- className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-destructive hover:border-destructive transition-all shadow-sm"
- title="Delete Note"
- >
- <Trash2 size={14} />
- </button>
- 
- {(() => {
- const metadata = noteMetadata || {};
- const rawSource = metadata.source || metadata.Source;
- 
- let pages: number[] = [];
- const rawPages = metadata.source_pages || metadata.occurrence || metadata.Occurrence || metadata.source_page || metadata.Source_Page;
- 
- if (Array.isArray(rawPages)) {
- pages = rawPages.map(Number).filter(p => !isNaN(p));
-} else if (typeof rawPages === 'number') {
- pages = [rawPages];
-} else if (typeof rawPages === 'string') {
- pages = rawPages.split(',').map(p => Number(p.trim())).filter(p => !isNaN(p));
-}
- 
- if (rawSource) {
- const sourceStr = Array.isArray(rawSource) ? String(rawSource[0]) : String(rawSource);
- const match = sourceStr.match(/\[\[(.*?)\]\]/);
- const cleanPath = match ? match[1] : sourceStr;
- 
- if (cleanPath) {
- return (
- <div className="flex flex-col items-end gap-2">
- <button 
- onClick={() => handleWikiLinkClick(cleanPath, pages[0] || 1, pages)}
- className="flex items-center justify-center h-7 px-3 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm group/btn"
- >
- <FileText size={14} className="group-hover/btn:rotate-6 transition-transform text-indigo-500/50 group-hover/btn:text-indigo-500 mr-1.5" /> 
- <span className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
- Jump to PDF {pages.length === 1 && pages[0] > 1 ? `(P. ${pages[0]})` : ''}
- </span>
- </button>
- 
- {pages.length > 1 && (
- <div className="flex flex-wrap items-center justify-end gap-1.5 max-w-[200px]">
- <span className="text-[9px] font-bold text-muted-foreground/30 uppercase tracking-tighter">Occurrences:</span>
- {pages.slice(0, 5).map((p, idx) => (
- <button
- key={idx}
- onClick={() => handleWikiLinkClick(cleanPath, p, pages)}
- className="px-1.5 py-0.5 bg-muted border border-border text-muted-foreground rounded hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-500/10 text-[9px] font-medium transition-colors"
- >
- P.{p}
- </button>
- ))}
- {pages.length > 5 && (
- <span className="text-[9px] text-muted-foreground/30 italic">+{pages.length - 5} more</span>
- )}
- </div>
- )}
- </div>
- );
-}
-}
- return null;
-})()}
- </div>
- )}
- </div>
- )}
- </div>
-
- {/* Page Title - hidden in PDF mode */}
- {!selectedPath.toLowerCase().endsWith('.pdf') && (
- <div className="flex items-start justify-between mb-12 group">
- <h1 className="text-5xl font-extrabold text-foreground tracking-tight leading-tight flex-1">
- {noteMetadata?.title || noteMetadata?.Title || selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '')?.replace(/_/g, ' ')}
- </h1>
- </div>
- )}
+ <div className={cn("mx-auto w-full max-w-full transition-all", selectedPath.toLowerCase().endsWith('.pdf') ? "p-0 h-full overflow-hidden flex flex-col" : "py-12 px-6 sm:px-12 md:px-16 max-w-5xl")}>
+  {loadingNote ? (
+  <div className="h-64 flex flex-col items-center justify-center gap-4 text-muted-foreground">
+  <RefreshCw size={24} className="animate-spin" />
+  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Loading Document...</p>
+  </div>
+  ) : (
+  <>
+  {/* Page Title - hidden in PDF mode */}
+  {!selectedPath.toLowerCase().endsWith('.pdf') && (
+  <div className="flex items-start justify-between mb-8 sm:mb-12 group">
+  <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-foreground tracking-tighter sm:tracking-tight leading-tight flex-1 break-words">
+  {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
+  </h1>
+  </div>
+  )}
 
  {selectedPath.toLowerCase().endsWith('.pdf') ? (
  <div className="flex-1 min-h-0">

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { ConfigProvider } from '@/lib/ConfigContext'
 import { ThemeProvider } from '@/context/theme-provider'
+import { NavigationProvider } from '@/context/navigation-context'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import ObsidianKnowledgeArchitect from '@/routes/obsidian'
 import Agents from '@/routes/agents'
@@ -49,26 +50,34 @@ function SidecarGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+import { HeaderProvider } from '@/context/header-context'
+import { Toaster } from '@/components/ui/sonner'
+
 export default function App() {
   return (
     <ThemeProvider>
       <ConfigProvider>
         <SidecarGate>
           <BrowserRouter>
-            <Routes>
-              <Route path="*" element={
-                <AuthenticatedLayout>
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/obsidian" replace />} />
-                    <Route path="/obsidian" element={<ObsidianKnowledgeArchitect />} />
-                    <Route path="/agents" element={<Agents />} />
-                    <Route path="/academic" element={<AcademicDashboard />} />
-                    <Route path="/practice" element={<Practice />} />
-                    <Route path="/settings" element={<Settings />} />
-                  </Routes>
-                </AuthenticatedLayout>
-              } />
-            </Routes>
+            <NavigationProvider>
+              <HeaderProvider>
+                <Routes>
+                  <Route path="*" element={
+                    <AuthenticatedLayout>
+                      <Routes>
+                        <Route path="/" element={<Navigate to="/obsidian" replace />} />
+                        <Route path="/obsidian" element={<ObsidianKnowledgeArchitect />} />
+                        <Route path="/agents" element={<Agents />} />
+                        <Route path="/academic" element={<AcademicDashboard />} />
+                        <Route path="/practice" element={<Practice />} />
+                        <Route path="/settings" element={<Settings />} />
+                      </Routes>
+                    </AuthenticatedLayout>
+                  } />
+                </Routes>
+                <Toaster />
+              </HeaderProvider>
+            </NavigationProvider>
           </BrowserRouter>
         </SidecarGate>
       </ConfigProvider>

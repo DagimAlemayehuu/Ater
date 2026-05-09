@@ -55,6 +55,7 @@ export interface BaseQuestion {
   explanation: string;
   hints?: string[];
   confidenceWager?: "Low" | "Medium" | "High";
+  required_keywords?: string[];
 }
 
 export interface MCQQuestion extends BaseQuestion {
@@ -119,6 +120,11 @@ export interface SynthesisQuestion extends BaseQuestion {
   answer: string;
 }
 
+export interface TraceQuestion extends BaseQuestion {
+  type: "trace";
+  answer: string;
+}
+
 export type Question = 
   | MCQQuestion 
   | TrueFalseQuestion 
@@ -130,4 +136,5 @@ export type Question =
   | SynthesisQuestion
   | ScenarioQuestion
   | CodeQuestion
-  | FindErrorQuestion;
+  | FindErrorQuestion
+  | TraceQuestion;

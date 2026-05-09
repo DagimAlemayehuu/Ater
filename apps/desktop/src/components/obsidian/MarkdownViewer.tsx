@@ -3,17 +3,15 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
-import katex from 'katex'
 import { cn } from '@/lib/utils'
 import React, { useState, useEffect, useMemo, useRef, memo } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { WikiLink, renderWikiLinks } from './WikiLink'
 import mermaid from 'mermaid'
-import { Sparkles, Zap, Copy, Check, RefreshCw, X, Quote } from 'lucide-react'
-import { AiSidecar } from './AiSidecar'
+import { Check, RefreshCw } from 'lucide-react'
 import MiniPracticeUI from '../MiniPracticeUI'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 mermaid.initialize({
   startOnLoad: false,
@@ -201,14 +199,6 @@ const CodeRenderer = memo((props: any) => {
 });
 
 export function MarkdownViewer({ content, onNavigate, path, components }: MarkdownViewerProps) {
-    const [selection, setSelection] = useState<string>('');
-    const [showPopover, setShowPopover] = useState(false);
-    const [showSidebar, setShowSidebar] = useState(false);
-    const [explanationSelection, setExplanationSelection] = useState('');
-    const [isQuizMode, setIsQuizMode] = useState(false);
-
-    const [popoverPosition, setPopoverPosition] = useState<{ top: number, left: number }>({ top: 0, left: 0 });
-
     // Use refs to keep callbacks stable for the useMemo dependency array
     const onNavigateRef = useRef(onNavigate);
     const pathRef = useRef(path);
@@ -222,10 +212,6 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
     const markdownComponents = useMemo(() => ({
         ...(componentsRef.current || {}),
         p: ({ node, children, ...props }: any) => {
-            const childrenArray = React.Children.toArray(children);
-            const textContent = childrenArray.map(c => typeof c === 'string' ? c : '').join(' ');
-            
-
             return (
                 <p className="mb-4 leading-relaxed text-[13px] text-foreground/80 antialiased">
                     {React.Children.map(children, (child) => 
@@ -258,13 +244,10 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
             const inlineContent: any[] = [];
             
             childrenArray.forEach((child: any) => {
-                // If it's a list or another block-level element, it should be below
-                // react-markdown uses custom components, so child.type is often a function. We check the AST node's tagName.
                 const tagName = child?.props?.node?.tagName || child?.type;
                 if (tagName === 'ul' || tagName === 'ol' || tagName === 'blockquote') {
                     nestedBlocks.push(child);
                 } else {
-                    // For string children, handle wiki links
                     if (typeof child === 'string') {
                         inlineContent.push(renderWikiLinks(child, onNavigateRef.current));
                     } else {
@@ -277,7 +260,6 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                 return (
                     <li className="list-none mb-1 group/task">
                         <div className="flex items-start gap-2">
-                            {/* This div will contain the checkbox and the item text */}
                             <div className="flex-1 flex items-start gap-2 text-[13px] leading-relaxed text-foreground/80">
                                 {inlineContent}
                             </div>
@@ -314,15 +296,12 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                                 try {
                                     const res = await sidecarApi.readObsidianNote(pathRef.current);
                                     const lines = res.content.split('\n');
-                                    // remark positions are 1-indexed, but frontmatter might shift it depending on how the parser handles it.
-                                    // Usually remark parses the whole file including frontmatter if it's not stripped.
                                     const targetLine = lines[line - 1];
                                     if (targetLine && targetLine.match(/\[[ xX]\]/)) {
                                         lines[line - 1] = targetLine.replace(/\[[ xX]\]/, `[${newChecked ? 'x' : ' '}]`);
                                         const updatedContent = lines.join('\n');
                                         await sidecarApi.updateObsidianNote(pathRef.current, updatedContent);
                                         
-                                        // Update atomic note if it's a wikilink connection
                                         const wikilinkMatch = targetLine.match(/\[\[(.*?)\]\]/);
                                         if (wikilinkMatch) {
                                             const targetNote = wikilinkMatch[1].split('|')[0];
@@ -435,64 +414,13 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
         )
     }), []);
 
-    const handleMouseUp = (e?: React.MouseEvent | React.KeyboardEvent) => {
-        if (e && (e.target as HTMLElement).closest('.stop-selection-clear')) return;
-        const sel = window.getSelection();
-        const text = sel?.toString().trim();
-        if (text && text.length > 0) {
-            const range = sel?.getRangeAt(0);
-            if (range) {
-                const rect = range.getBoundingClientRect();
-                setPopoverPosition({ top: rect.top - 40, left: rect.left + rect.width / 2 });
-            }
-            setSelection(text); setShowPopover(true);
-        } else {
-            setTimeout(() => {
-                if (!window.getSelection()?.toString().trim()) setShowPopover(false);
-            }, 50);
-        }
-    };
-
-    const handleExplain = async () => {
-        if (!selection) return;
-        setExplanationSelection(selection); setIsQuizMode(false); setShowPopover(false); setShowSidebar(true);
-    };
-
-    const handleQuickQuestions = async () => {
-        if (!selection) return;
-        setExplanationSelection(selection); setIsQuizMode(true); setShowPopover(false); setShowSidebar(true);
-    };
-
     return (
-        <div className="relative h-full flex flex-row bg-background text-foreground" onMouseUp={handleMouseUp} onKeyUp={handleMouseUp}>
+        <div className="relative h-full flex flex-row bg-background text-foreground">
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 relative">
-                {showPopover && selection && (
-                    <div 
-                        className="fixed z-[9999] bg-popover/95 backdrop-blur-md border border-border rounded-full h-10 flex items-center px-2 shadow-2xl animate-in fade-in zoom-in duration-200 stop-selection-clear"
-                        style={{ left: `${popoverPosition.left}px`, top: `${popoverPosition.top}px`, transform: 'translateX(-50%)' }}
-                        onMouseUp={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
-                    >
-                        <button onMouseDown={(e) => e.preventDefault()} onClick={handleExplain} className="flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] hover:bg-accent rounded-full transition-all active:scale-95 group text-foreground">
-                            <Sparkles size={11} className="group-hover:scale-110 transition-transform text-indigo-500" />
-                            <span>Explain</span>
-                        </button>
-                        <div className="w-px h-5 bg-border mx-1" />
-                        <button onMouseDown={(e) => e.preventDefault()} onClick={handleQuickQuestions} className="flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] hover:bg-accent rounded-full transition-all active:scale-95 group text-foreground">
-                            <Zap size={11} className="group-hover:scale-110 transition-transform text-amber-500" />
-                            <span>Questions</span>
-                        </button>
-                        <div className="w-px h-5 bg-border mx-1" />
-                        <button onClick={() => { navigator.clipboard.writeText(selection); setShowPopover(false); }} title="Copy Selection" className="p-2 hover:bg-accent rounded-full transition-colors group text-muted-foreground hover:text-foreground">
-                            <Copy size={12} />
-                        </button>
-                    </div>
-                )}
                 <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 text-foreground">
                     <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]} components={markdownComponents}>{content}</ReactMarkdown>
                 </div>
             </div>
-            {showSidebar && <AiSidecar selection={explanationSelection || selection} path={path || ""} onClose={() => setShowSidebar(false)} initialMode={isQuizMode ? 'quiz' : 'explain'} />}
         </div>
     )
 }

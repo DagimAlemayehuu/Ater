@@ -231,15 +231,15 @@ export default function AcademicDashboard() {
     {/* ── Main Content ── */}
     <main className="flex-1 flex flex-col overflow-hidden min-w-0">
   {/* Top bar */}
-  <div className="shrink-0 px-6 lg:px-10 pt-5 pb-0 border-b border-border/10 bg-background/95 backdrop-blur-xl sticky top-0 z-30">
+  <div className="shrink-0 px-4 sm:px-6 lg:px-10 pt-5 pb-0 border-b border-border/10 bg-background/95 backdrop-blur-xl sticky top-0 z-30">
   <div className="flex items-center justify-between mb-4">
-  <div>
-  <p className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/30">Academic Hub</p>
-  <h1 className="text-[13px] font-black uppercase tracking-tight text-foreground">
+  <div className="min-w-0">
+  <p className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/30 truncate">Academic Hub</p>
+  <h1 className="text-[13px] font-black uppercase tracking-tight text-foreground truncate">
    {activeTab === 'CALENDAR' ? 'Calendar' : tabs.find(t => t.id === activeTab)?.label}
   </h1>
   </div>
- <div className="flex items-center gap-2">
+ <div className="flex items-center gap-2 shrink-0">
  <button aria-label="Sync Vault Databases" onClick={handleSync} className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary transition-all shadow-sm focus-visible:ring-1 focus-visible:ring-primary outline-none" title="Sync Vault Databases">
  <RefreshCw size={12} />
  </button>
@@ -249,7 +249,7 @@ export default function AcademicDashboard() {
  className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all focus-visible:ring-1 focus-visible:ring-primary outline-none',
  activeTab === 'CALENDAR' ? 'bg-primary text-primary-foreground' : 'bg-background border border-border text-muted-foreground hover:text-foreground hover:border-primary shadow-sm')}>
  <CalendarDays size={11} />
- {activeTab === 'CALENDAR' ? 'Close' : 'Calendar'}
+ <span className="hidden sm:inline">{activeTab === 'CALENDAR' ? 'Close' : 'Calendar'}</span>
  </button>
  </div>
  </div>

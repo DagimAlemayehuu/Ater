@@ -27,14 +27,14 @@ export function SlashCommandPopover({ onSelect, onClose, position }: SlashComman
 
     return (
         <div 
-            className="fixed z-[999] w-64 bg-white border border-gray-200 shadow-2xl rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+            className="fixed z-[999] w-64 bg-popover border border-border shadow-2xl rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
             style={{ top: position.top, left: position.left }}
         >
-            <div className="p-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-                <Search size={12} className="text-gray-400" />
+            <div className="p-3 border-b border-border bg-muted/30 flex items-center gap-2">
+                <Search size={12} className="text-muted-foreground" />
                 <input 
                     autoFocus
-                    className="flex-1 bg-transparent border-none focus:outline-none text-[10px] font-bold uppercase tracking-wider placeholder:text-gray-300"
+                    className="flex-1 bg-transparent border-none focus:outline-none text-[10px] font-bold uppercase tracking-wider placeholder:text-muted-foreground/30 text-foreground"
                     placeholder="Search databases..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -45,35 +45,35 @@ export function SlashCommandPopover({ onSelect, onClose, position }: SlashComman
             </div>
 
             <div className="max-h-64 overflow-y-auto custom-scrollbar p-1">
-                <div className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                <div className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                     <Database size={10} /> Databases
                 </div>
                 
                 {loading ? (
-                    <div className="px-3 py-4 text-center text-[10px] text-gray-400 animate-pulse">Scanning Vault...</div>
+                    <div className="px-3 py-4 text-center text-[10px] text-muted-foreground animate-pulse">Scanning Vault...</div>
                 ) : filteredDbs.length === 0 ? (
-                    <div className="px-3 py-4 text-center text-[10px] text-gray-400">No matching databases</div>
+                    <div className="px-3 py-4 text-center text-[10px] text-muted-foreground">No matching databases</div>
                 ) : (
                     filteredDbs.map(db => (
                         <button
                             key={db.id}
                             onClick={() => onSelect(`/table ${db.id || db.name}`)}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-gray-50 rounded-lg transition-all group"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent rounded-lg transition-all group"
                         >
-                            <div className="size-8 rounded-lg bg-gray-100 flex items-center justify-center text-[#111827] group-hover:bg-[#111827] group-hover:text-white transition-colors shadow-sm">
+                            <div className="size-8 rounded-lg bg-muted flex items-center justify-center text-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-sm">
                                 <Table size={14} />
                             </div>
                             <div className="flex flex-col min-w-0">
-                                <span className="text-[11px] font-black text-[#111827] truncate uppercase tracking-tighter">{db.name}</span>
-                                <span className="text-[9px] text-gray-400 truncate opacity-60">Connected database view</span>
+                                <span className="text-[11px] font-black text-foreground truncate uppercase tracking-tighter">{db.name}</span>
+                                <span className="text-[9px] text-muted-foreground truncate opacity-60">Connected database view</span>
                             </div>
                         </button>
                     ))
                 )}
 
-                <div className="h-px bg-gray-100 my-1 mx-2" />
+                <div className="h-px bg-border my-1 mx-2" />
                 
-                <div className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                <div className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                     Visual Blocks
                 </div>
                 <CommandItem icon={<ImageIcon size={14} />} label="Image" desc="Upload or link an image" onClick={() => onSelect('![[Image]]')} />
@@ -87,14 +87,14 @@ function CommandItem({ icon, label, desc, onClick }: { icon: any, label: string,
     return (
         <button
             onClick={onClick}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-gray-50 rounded-lg transition-all group"
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent rounded-lg transition-all group"
         >
-            <div className="size-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-[#111827] group-hover:text-white transition-colors">
+            <div className="size-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                 {icon}
             </div>
             <div className="flex flex-col min-w-0">
-                <span className="text-[11px] font-black text-[#111827] truncate uppercase tracking-tighter">{label}</span>
-                <span className="text-[9px] text-gray-400 truncate opacity-60">{desc}</span>
+                <span className="text-[11px] font-black text-foreground truncate uppercase tracking-tighter">{label}</span>
+                <span className="text-[9px] text-muted-foreground truncate opacity-60">{desc}</span>
             </div>
         </button>
     )

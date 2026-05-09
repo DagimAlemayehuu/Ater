@@ -408,7 +408,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
 })
 
  if (res.status === 'error') {
-  setOkaError(res.message || 'Detection failed');
+  setOkaError((res as any).message || 'Detection failed');
   setProcessing(false);
   return;
  }
@@ -569,7 +569,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  </div>
 
  <div className="flex-1 overflow-y-auto custom-scrollbar bg-background">
- <div className="max-w-3xl mx-auto py-12 px-6">
+ <div className="max-w-3xl mx-auto py-8 sm:py-12 px-4 sm:px-6">
  {/* AUTO INGESTION VIEW */}
  {queueStatus?.status !== 'idle' && (
  <div className=" -95 mb-12">
