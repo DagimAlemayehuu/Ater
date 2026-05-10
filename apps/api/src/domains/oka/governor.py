@@ -50,11 +50,56 @@ class TokenGovernor:
         # API Key management
         self._current_key_hash = "default"
 
-    def set_api_key(self, api_key: str):
-        """Hashes the key and resets windows to prevent leaking pacing info between keys."""
-        self._current_key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+    def set_api_key(self, api_key: str) -> None:
+        """
+        Register the active API key with the governor.
+        Called on startup and every time the user swaps keys in Settings.
+        Resets in-memory sliding windows so the new key starts with a
+        fresh rate-limit budget instead of inheriting the old key's state.
+        """
+        if not api_key:
+            return
+        new_hash = hashlib.sha256(api_key.strip().encode()).hexdigest()[:16]
+        if new_hash == self._current_key_hash:
+            return  # Same key — nothing to do
+
+        old_hash = self._current_key_hash
+        self._current_key_hash = new_hash
+        # Reset in-memory windows — they're per-key at the API level
         self.request_window.clear()
         self.token_window.clear()
+        self.cooldown_until = 0.0
+        self.current_concurrency_limit = self.min_concurrency
+        print(
+            f"[Governor] 🔑 API key changed ({old_hash} → {new_hash}). "
+            f"In-memory windows reset. Daily quota tracked independently per key."
+        )
+
+    def get_key_status(self) -> dict:
+        """Returns daily usage stats for the currently active key."""
+        cutoff_24h = time.time() - (24 * 3600)
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    'SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND api_key_hash = ?',
+                    (cutoff_24h, self._current_key_hash)
+                )
+                row = cursor.fetchone()
+                used_tpd = row[0] or 0
+                used_rpd = row[1] or 0
+                return {
+                    "key_hash": self._current_key_hash,
+                    "used_tpd": used_tpd,
+                    "max_tpd": self.max_tpd,
+                    "used_rpd": used_rpd,
+                    "max_rpd": self.max_rpd,
+                    "tpd_pct": round((used_tpd / self.max_tpd) * 100, 1),
+                    "rpd_pct": round((used_rpd / self.max_rpd) * 100, 1),
+                    "exhausted": used_tpd >= self.max_tpd or used_rpd >= self.max_rpd,
+                }
+        except Exception as e:
+            return {"key_hash": self._current_key_hash, "error": str(e)}
 
     def _init_db(self):
         with sqlite3.connect(self.db_path) as conn:
@@ -72,6 +117,7 @@ class TokenGovernor:
             except sqlite3.OperationalError:
                 pass
             conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON usage(timestamp)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_key_ts ON usage(api_key_hash, timestamp)")
             conn.commit()
 
     def _clear_old_windows(self, now: float):

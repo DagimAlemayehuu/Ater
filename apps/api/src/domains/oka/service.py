@@ -100,6 +100,8 @@ class OkaService:
         # Register the active key with the governor so daily quota is tracked per-key
         if secrets.ai_key:
             self.governor.set_api_key(secrets.ai_key)
+
+        from .validator import OkaValidator
         self.validator = OkaValidator()
         
         # Initialize YAML compiler

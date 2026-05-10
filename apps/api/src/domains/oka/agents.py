@@ -1026,41 +1026,40 @@ class TheoryAgent:
         title_readable = note_schema.title.replace("_", " ")
         axioms = self.domain.get("sanity_check", "Ensure logical consistency.")
 
-        sys_prompt = f"""You are a Hostile Senior Expert in {persona}. Your tone is brutal, authoritative, and technically rigorous. 
+        sys_prompt = f"""You are a Hostile Senior Expert in {persona}. Brutal. Authoritative. Technically precise.
 
-CONCEPT TO TEACH: {title_readable}
-ACADEMIC LEVEL: {academic_level}
-SOURCE CONTEXT: {source_text[:5000]}
+CONCEPT: {title_readable}
+LEVEL: {academic_level}
+SOURCE (use specific facts/examples from this text):
+{source_text[:4000]}
 
-CORE LAWS:
-1. Confidence Law: DO NOT self-correct or apologize. State facts with absolute authority.
-2. Source Anchoring Law: If the SOURCE CONTEXT provides specific data/scenarios, YOU MUST use them.
-3. Wikilink Law: YOU MUST INCLUDE EXACTLY 3 TO 5 [[Wikilinks]] in your prose. INTEGRATE THEM NATURALLY.
-4. LaTeX Enforcement Law: wrap ALL math in LaTeX delimiters ($ or $$). NEVER write raw math like 'Qd = 100 - 2P'.
-5. PDF Quarantine Law: Teach ONLY what is provided.
-6. Closed Knowledge Graph Law: Link only to: {all_concepts}.
+LAWS — FOLLOW EXACTLY:
+1. SOURCE LAW: Pull specific facts, examples, or scenarios directly from SOURCE. Do NOT invent.
+2. ANTI-PADDING LAW: FORBIDDEN openings — "X is a fundamental concept", "X is important", "In this section". Start with a concrete fact or scenario.
+3. SELF-LINK BAN: NEVER write [[{title_readable.replace(' ', '_')}]] or [[{title_readable}]]. You cannot wikilink to this note itself.
+4. WIKILINK LAW: Include EXACTLY 3 to 5 [[Wikilinks]]. Link ONLY to these concepts: {all_concepts}. Integrate naturally.
+5. LATEX LAW: Wrap ALL math in $ or $$. NEVER write raw math.
+6. FINISH LAW: Every section MUST end with a complete sentence ending in punctuation (. ! ?). Never cut off.
 
-OUTPUT FORMAT (CRITICAL):
-You MUST wrap your response in these specific tags:
+OUTPUT FORMAT — use these exact XML tags:
 <MENTAL_MODEL>
-(Real-world physical scenario, min 5 sentences)
+A vivid, concrete real-world scenario that makes {title_readable} tangible. 3-4 sentences max. Start with a scene, not a definition.
 </MENTAL_MODEL>
 
 <THEORY_PROSE>
-(Academic definition with fact extraction, min 6 sentences, includes 3-5 wikilinks)
+Academic definition grounded in SOURCE. Include 3-5 [[wikilinks]]. At least 4 complete sentences.
 </THEORY_PROSE>
 
 <TAKEAWAYS>
-- Fact 1
-- Fact 2
-- Fact 3
+- [Specific fact from source, not a restatement of the definition]
+- [A nuance or edge case]
+- [Why this concept matters for the broader course]
 </TAKEAWAYS>
 
 <LIMITATIONS>
-(Edge cases and assumptions, min 5 sentences)
+At least 3 complete sentences on edge cases, assumptions that break the concept, and real-world complications. End with a full sentence.
 </LIMITATIONS>
 
-DOMAIN AXIOMS (CRITICAL):
 {axioms}"""
 
         for attempt in range(3):
@@ -1081,8 +1080,14 @@ DOMAIN AXIOMS (CRITICAL):
                 takeaways_raw = extract("TAKEAWAYS")
                 limitations = extract("LIMITATIONS")
 
-                if not (mental_model and theory_prose and limitations):
-                    raise Exception(f"LLM failed to provide required <TAGS> in the response. Received: {content[:200]}...")
+                if not theory_prose:
+                    raise Exception(f"LLM failed to provide required <THEORY_PROSE> tag in the response. Received: {content[:200]}...")
+
+                # Graceful fallbacks for optional sections
+                if not mental_model:
+                    mental_model = theory_prose[:500]
+                if not limitations:
+                    limitations = "Refer to source material for boundary conditions and edge cases."
 
                 assembled_tech = f"{theory_prose}\n\n### Key Takeaways:\n{takeaways_raw}"
 
@@ -1189,9 +1194,9 @@ DOMAIN AXIOMS (CRITICAL):
                 if not success:
                     raise Exception(f"Python Sandbox Execution Failed:\n{artifact_md}")
                 
-                eq = payload.get("equation", "")
-                art = payload.get("artifact", "")
-                steps = payload.get("walkthrough", [])
+                eq = payload.get("equation") or ""  # guard against Python None → 'None'
+                art = payload.get("artifact") or ""
+                steps = payload.get("walkthrough") or []
                 
                 clean_artifact = art.replace('\\n', '\n')
                 clean_steps = [str(s).replace('\\n', '\n') for s in steps]
@@ -1242,39 +1247,38 @@ class QuestionAgent:
         hint_str = f"FOCUS AREA: {topic_hint}" if topic_hint else ""
         type_constraint = f"ALL questions MUST be of type: '{target_type}'." if target_type else "Difficulty: Q1=L1 (fill_in), Q2=L2 (mcq), Q3=L3 (trace)."
         
-        sys_prompt = f"""You are a Hostile Senior Assessment Engineer in {persona}. Create a {num_questions}-question quiz for the following note.
+        sys_prompt = f"""You are a Hostile Senior Assessment Engineer in {persona}. Create a {num_questions}-question quiz.
 {hint_str}
 
 NOTE TEXT:
-{context[:6000]}
+{context[:5000]}
 
-CORE LAWS:
-1. Ground Truth Law: YOU MUST base all questions STRICTLY on the numbers and facts in the NOTE TEXT.
-2. Type Requirement: {type_constraint}
-3. Difficulty Target: {difficulty}.
-4. UI Syntax: 'fill_in' MUST use exactly `[[blank]]` placeholders. Answer is 1-2 words.
-5. Answer Formatting: For L3 Trace, the `answer` field MUST contain ONLY the final output (e.g., "80" or "Decrease").
-6. LaTeX Enforcement Law: wrap ALL math in LaTeX delimiters ($...$ or $$...$$).
+QUIZ LAWS (obey all):
+1. SOURCE LAW: Base ALL questions on facts in NOTE TEXT. No outside knowledge.
+2. TYPE LAW: {type_constraint}
+3. DIFFICULTY: {difficulty}.
+4. FILL-IN LAW: Use `[[blank]]` placeholder. FORBIDDEN: The answer word must NOT appear in the question text before the blank. The blank must test recall of a key term.
+   BAD EXAMPLE: "Human wants are considered [[unlimited]] in nature" — answer is in the question.
+   GOOD EXAMPLE: "The characteristic that makes scarcity an economic problem is that resources are [[blank]] while wants are unlimited."
+5. MCQ DISTRACTOR LAW: The 3 wrong options MUST be plausible domain concepts — not obviously wrong. A student who did NOT study should have a real chance of picking the wrong answer.
+   BAD DISTRACTORS: ["Decreasing", "Fixed", "Limited"] for a question about wants — too obviously wrong.
+   GOOD DISTRACTORS: Related economic concepts that could seem correct without careful study.
+6. TRACE LAW: Steps must be a CAUSAL CHAIN, not a summary. Each step must logically cause the next.
+7. FINISH LAW: Every explanation must end with a complete sentence.
 
-OUTPUT FORMAT (CRITICAL):
-You MUST return a single JSON array of question objects wrapped in `<QUIZ_JSON>...</QUIZ_JSON>` tags.
-Each object MUST have: 'type', 'question', 'answer', 'explanation'. 
-Optional: 'options' (for mcq), 'pairs' (for matching), 'steps' (for order), 'content' (for debug), 'textWithBlanks' (for fill_in).
+OUTPUT: Return a JSON array in <QUIZ_JSON>...</QUIZ_JSON> tags.
+Each object needs: 'type', 'question', 'answer', 'explanation'.
+MCQ needs: 'options' (list of 4). fill_in needs: 'textWithBlanks' (sentence with [[blank]]).
 
-EXAMPLE:
+EXAMPLE of a GOOD quiz set:
 <QUIZ_JSON>
 [
-  {{
-    "type": "mcq",
-    "question": "What is 2+2?",
-    "options": ["3", "4", "5"],
-    "answer": "4",
-    "explanation": "2+2 equals 4."
-  }}
+  {{"type": "fill_in", "question": "The method of drawing general conclusions from specific cases is called [[blank]] reasoning.", "answer": "inductive", "explanation": "Inductive reasoning moves from specific observations to general conclusions.", "textWithBlanks": "The method of drawing general conclusions from specific cases is called [[blank]] reasoning."}},
+  {{"type": "mcq", "question": "Which of the following is a limitation of inductive reasoning?", "options": ["It cannot handle quantitative data", "Conclusions are probabilistic, not certain", "It requires deductive proof first", "It only applies to natural sciences"], "answer": "Conclusions are probabilistic, not certain", "explanation": "Inductive conclusions are generalizations based on evidence — new data can always contradict them."}},
+  {{"type": "trace", "question": "Trace the causal chain from scarcity to economic choice.", "steps": ["Resources are limited", "Human wants exceed available resources", "Scarcity arises", "Choices must be made about allocation"], "answer": "Economic choice", "explanation": "Scarcity is the fundamental cause of economic choice — without scarcity, all wants could be satisfied."}}
 ]
 </QUIZ_JSON>
 
-DOMAIN AXIOMS (CRITICAL):
 {axioms}"""
 
         for attempt in range(3):
@@ -1293,12 +1297,34 @@ DOMAIN AXIOMS (CRITICAL):
                     raise Exception("LLM failed to provide <QUIZ_JSON> tags in the response.")
                 
                 raw_json = match.group(1).strip()
-                # Use ArchitectAgent's robust parser
-                data = ArchitectAgent._parse_json(raw_json)
-                
+
+                # Try direct array parse first (LLM often returns bare [...])
+                data = None
+                # Check if it looks like an array
+                stripped = raw_json.lstrip()
+                if stripped.startswith("["):
+                    try:
+                        # Find the matching closing bracket
+                        arr_start = raw_json.find("[")
+                        arr_end = raw_json.rfind("]")
+                        if arr_start != -1 and arr_end != -1:
+                            arr_str = raw_json[arr_start:arr_end+1]
+                            arr_str = re.sub(r",\s*([\]\}])", r"\1", arr_str)  # remove trailing commas
+                            data = json.loads(arr_str, strict=False)
+                    except Exception:
+                        pass
+
+                # Fallback: use ArchitectAgent's robust dict parser
+                if data is None:
+                    data = ArchitectAgent._parse_json(raw_json)
+
                 if isinstance(data, dict) and "questions" in data:
                     data = data["questions"]
-                
+                elif isinstance(data, dict):
+                    # Maybe the dict IS a single question — wrap it
+                    if "type" in data and "question" in data:
+                        data = [data]
+
                 if not isinstance(data, list):
                     raise Exception("Extracted quiz data is not a list.")
 

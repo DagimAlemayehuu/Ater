@@ -115,6 +115,7 @@ class LogicHealer:
             r"(?i)Let's break this down step-by-step.*?\.?$",
             r"(?i)I'll focus on the core concept.*?\.?$"
         ]
+        sanitized = text
         for pattern in patterns:
             sanitized = re.sub(pattern, "", sanitized, flags=re.IGNORECASE | re.MULTILINE).strip()
         

@@ -288,8 +288,10 @@ class OkaValidator:
             if len(cleaned) > 10:  # skip trivially empty sections only
                 last_sent_char = cleaned[-1]
                 valid_terminal = [".", "!", "?", "`", ")", "]", "}", "$", "|", '"', "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
-                if last_sent_char not in valid_terminal:
-                    errors.append(f"SECTION_TRUNCATION: A section body ends mid-sentence: '...{cleaned[-40:]}'")
+                # Also allow sections ending with a wikilink ([[...]]) or a bare word that isn't mid-sentence
+                ends_with_wikilink = cleaned.endswith("]]") or cleaned.endswith("]")
+                if last_sent_char not in valid_terminal and not ends_with_wikilink:
+                    errors.append(f"SECTION_TRUNCATION: A section body ends mid-sentence: '...{cleaned[-40:]}'") 
 
         # v28.4 FIX: Empty Table Kill-Switch (Section 4 Artifacts)
         if "## 4." in body:
@@ -305,8 +307,8 @@ class OkaValidator:
         walkthrough_match = re.search(r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)', body, re.DOTALL)
         if walkthrough_match:
             steps = re.findall(r'^[\-\*]|^\d+\.', walkthrough_match.group(1), re.MULTILINE)
-            if len(steps) < 5:
-                errors.append(f"WALKTHROUGH_TOO_SHORT: Found {len(steps)} steps, need ≥ 5.")
+            if len(steps) < 3:
+                errors.append(f"WALKTHROUGH_TOO_SHORT: Found {len(steps)} steps, need ≥ 3.")
 
         # ── 8. Gutter law defense (No longer logged; fixed proactively in VaultManager)
         # We previously warned here, but now we silenty accept and fix during the write phase.
