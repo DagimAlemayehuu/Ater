@@ -756,6 +756,7 @@ async def get_practice_session(
         raise HTTPException(status_code=400, detail="path is required")
         
     p = Path(path)
+    print(f"[get_practice_session] Checking path: {p} (Absolute: {p.absolute()}, Exists: {p.exists()})")
     if not p.exists():
         raise HTTPException(status_code=404, detail="Practice not found")
         

@@ -1247,11 +1247,12 @@ Generate EXACTLY {count} high-fidelity interactive quiz questions for {title_rea
 {q_type_str}{mcq_extra}
 
 S-TIER EXAMINER LAWS:
-1. CAUSAL TRACING: At least one question must involve a System Perturbation Trace (e.g. If X increases then Y drops which forces Z to...).
-2. CONTEXT LOCK: Use the professional domain {prof_domain} for all scenario-based questions.
-3. NO RECALL: Avoid What is X. Instead use In scenario Y what happens to X when Z occurs.
-4. JSON ONLY: Output ONLY a valid JSON array inside <QUIZ_JSON> tags. No text outside the tags. No markdown inside JSON strings - use plain text only.
-5. EXACT COUNT: The array must contain EXACTLY {count} objects. No more, no less.
+1. ACADEMIC LEVEL: The questions MUST strictly match {academic_level} difficulty. If L1, test foundational mechanisms. If L2, test procedural application. If L3, test edge cases, systemic failures, and higher-order synthesis.
+2. MECHANICS: {mechanics}
+3. CONTEXT LOCK: Use the professional domain {prof_domain} for all scenario-based questions.
+4. NO RECALL: Avoid "What is X". Instead use "In scenario Y what happens to X when Z occurs".
+5. JSON ONLY: Output ONLY a valid JSON array inside <QUIZ_JSON> tags. No text outside the tags. No markdown inside JSON strings - use plain text only.
+6. EXACT COUNT: The array must contain EXACTLY {count} objects. No more, no less.
 
 Output format - a JSON array of {count} objects wrapped in <QUIZ_JSON> tags:
 <QUIZ_JSON>
@@ -1363,6 +1364,12 @@ Axioms for this domain:
                         if q.get(field) and isinstance(q[field], str):
                             q[field] = q[field].replace('\\\\n', '\\n').replace('\\n', '\n')
                     sanitized_qs.append(q)
+                    
+                if len(sanitized_qs) < count:
+                    raise Exception(f"Generated only {len(sanitized_qs)} questions of type {q_type}, expected {count}.")
+                elif len(sanitized_qs) > count:
+                    sanitized_qs = sanitized_qs[:count]
+
                 return sanitized_qs
 
             except Exception as e:
