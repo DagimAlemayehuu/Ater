@@ -1,25 +1,25 @@
 ---
-title: Limited_Resources
-course: Economics
-unit: '1'
-semester: Winter 2026
-mode: ECON-MICRO
-type: atomic_note
-hub: '[[1_Basics_Of_Economics_Hub]]'
-source: '[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]'
-date: '2026-05-10'
+title: "Limited_Resources"
+course: "Economics"
+unit: "1"
+semester: "Winter 2026"
+mode: "ECON-MICRO"
+type: "atomic_note"
+hub: "[[1_Basics_Of_Economics_Hub]]"
+source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
+date: "2026-05-10"
 prerequisites:
-- '[[Scarcity]]'
-- '[[Basic_Economic_Questions]]'
-- '[[Definition_Of_Economics]]'
-- '[[Normative_Economics]]'
-- '[[Positive_Economics]]'
+ - "[[Scarcity]]"
+ - "[[Basic_Economic_Questions]]"
+ - "[[Definition_Of_Economics]]"
+ - "[[Normative_Economics]]"
+ - "[[Positive_Economics]]"
 source_pages:
-- 12
-- 13
+ - "12"
+ - "13"
 generated: true
+read: true
 ---
-
 
 ## 1. Mental Model
 

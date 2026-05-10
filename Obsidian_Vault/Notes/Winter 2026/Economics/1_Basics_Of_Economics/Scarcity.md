@@ -1,26 +1,26 @@
 ---
-title: Scarcity
-course: Economics
-unit: '1'
-semester: Winter 2026
-mode: ECON-MICRO
-type: atomic_note
-hub: '[[1_Basics_Of_Economics_Hub]]'
-source: '[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]'
-date: '2026-05-10'
+title: "Scarcity"
+course: "Economics"
+unit: "1"
+semester: "Winter 2026"
+mode: "ECON-MICRO"
+type: "atomic_note"
+hub: "[[1_Basics_Of_Economics_Hub]]"
+source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
+date: "2026-05-10"
 prerequisites:
-- '[[Basic_Economic_Questions]]'
-- '[[Limited_Resources]]'
-- '[[Economic_Systems]]'
-- '[[Economic_Growth]]'
-- '[[Capital_Intensive_Techniques]]'
+ - "[[Basic_Economic_Questions]]"
+ - "[[Limited_Resources]]"
+ - "[[Economic_Systems]]"
+ - "[[Economic_Growth]]"
+ - "[[Capital_Intensive_Techniques]]"
 source_pages:
-- 12
-- 13
-- 14
+ - "12"
+ - "13"
+ - "14"
 generated: true
+read: true
 ---
-
 
 ## 1. Mental Model
 

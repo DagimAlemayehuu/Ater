@@ -23,24 +23,24 @@ The concepts of economics interlock to form a comprehensive system that guides t
 
 ## Unit Objectives
 
-- [ ] Master core technical definitions for [[Normative_Economics]], [[Scarcity]], [[Deductive_Reasoning]].
+- [x] Master core technical definitions for [[Normative_Economics]], [[Scarcity]], [[Deductive_Reasoning]].
 - [ ] Internalize the mental models and professional analogies for each unit concept.
 - [ ] Trace and understand every source-anchored worked example and walkthrough.
 - [ ] Complete all Socratic Probes and verify with the Answer Key.
 
 ## Connections
 
-- [ ] [[Definition_Of_Economics]]
-- [ ] [[Scarcity]]
-    - [ ] [[Limited_Resources]]
-    - [ ] [[Choice]]
-    - [ ] [[Opportunity_Cost]]
-        - [ ] [[Law_Of_Increasing_Opportunity_Cost]]
-- [ ] [[Production_Possibilities_Frontier]]
-    - [ ] [[Economic_Growth]]
-- [ ] [[Basic_Economic_Questions]]
-    - [ ] [[For_Whom_To_Produce]]
-- [ ] [[Resource_Allocation]]
+- [x] [[Definition_Of_Economics]]
+- [x] [[Scarcity]]
+    - [x] [[Limited_Resources]]
+    - [x] [[Choice]]
+    - [x] [[Opportunity_Cost]]
+        - [x] [[Law_Of_Increasing_Opportunity_Cost]]
+- [x] [[Production_Possibilities_Frontier]]
+    - [x] [[Economic_Growth]]
+- [x] [[Basic_Economic_Questions]]
+    - [x] [[For_Whom_To_Produce]]
+- [x] [[Resource_Allocation]]
     - [ ] [[Efficient_Allocation]]
 - [ ] [[Economic_Systems]]
 - [ ] [[Positive_Economics]]

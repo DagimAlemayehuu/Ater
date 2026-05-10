@@ -1,24 +1,24 @@
 ---
-title: Definition_Of_Economics
-course: Economics
-unit: '1'
-semester: Winter 2026
-mode: ECON-MICRO
-type: atomic_note
-hub: '[[1_Basics_Of_Economics_Hub]]'
-source: '[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]'
-date: '2026-05-10'
+title: "Definition_Of_Economics"
+course: "Economics"
+unit: "1"
+semester: "Winter 2026"
+mode: "ECON-MICRO"
+type: "atomic_note"
+hub: "[[1_Basics_Of_Economics_Hub]]"
+source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
+date: "2026-05-10"
 prerequisites:
-- '[[Scarcity]]'
-- '[[Basic_Economic_Questions]]'
-- '[[Deductive_Reasoning]]'
-- '[[Inductive_Reasoning]]'
+ - "[[Scarcity]]"
+ - "[[Basic_Economic_Questions]]"
+ - "[[Deductive_Reasoning]]"
+ - "[[Inductive_Reasoning]]"
 source_pages:
-- 7
-- 8
+ - "7"
+ - "8"
 generated: true
+read: true
 ---
-
 
 ## 1. Mental Model
 

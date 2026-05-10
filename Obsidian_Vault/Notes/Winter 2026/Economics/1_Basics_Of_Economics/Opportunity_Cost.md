@@ -1,21 +1,22 @@
 ---
-title: Opportunity_Cost
+title: "Opportunity_Cost"
 course: "Economics"
-unit: '1'
+unit: "1"
 semester: "Winter 2026"
-mode: ECON-MICRO
-type: atomic_note
+mode: "ECON-MICRO"
+type: "atomic_note"
 hub: "[[1_Basics_Of_Economics_Hub]]"
 source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
-date: '2026-05-10'
+date: "2026-05-10"
 prerequisites:
-- "[[Scarcity]]"
-- "[[Choice]]"
+ - "[[Scarcity]]"
+ - "[[Choice]]"
 source_pages:
-- 2
-- 3
-- 4
+ - "2"
+ - "3"
+ - "4"
 generated: true
+read: true
 ---
 
 ## 1. Mental Model

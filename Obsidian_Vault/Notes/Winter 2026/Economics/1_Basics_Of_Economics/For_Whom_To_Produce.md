@@ -11,10 +11,10 @@ date: "2026-05-10"
 prerequisites:
  - "[[Basic_Economic_Questions]]"
 source_pages:
-- 2
-- 3
+ - "2"
+ - "3"
 generated: true
-read: false
+read: true
 ---
 
 ## 1. Mental Model

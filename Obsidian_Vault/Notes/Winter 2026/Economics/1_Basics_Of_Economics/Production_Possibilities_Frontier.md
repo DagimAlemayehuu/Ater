@@ -1,20 +1,21 @@
 ---
-title: Production_Possibilities_Frontier
+title: "Production_Possibilities_Frontier"
 course: "Economics"
-unit: '1'
+unit: "1"
 semester: "Winter 2026"
-mode: ECON-MICRO
-type: atomic_note
+mode: "ECON-MICRO"
+type: "atomic_note"
 hub: "[[1_Basics_Of_Economics_Hub]]"
 source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
-date: '2026-05-10'
+date: "2026-05-10"
 prerequisites:
-- "[[Scarcity]]"
-- "[[Resource_Allocation]]"
+ - "[[Scarcity]]"
+ - "[[Resource_Allocation]]"
 source_pages:
-- 15
-- 16
+ - "15"
+ - "16"
 generated: true
+read: true
 ---
 
 ## 1. Mental Model

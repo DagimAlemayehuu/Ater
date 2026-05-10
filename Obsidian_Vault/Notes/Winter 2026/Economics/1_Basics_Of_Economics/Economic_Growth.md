@@ -1,19 +1,20 @@
 ---
-title: Economic_Growth
+title: "Economic_Growth"
 course: "Economics"
-unit: '1'
+unit: "1"
 semester: "Winter 2026"
-mode: ECON-MICRO
-type: atomic_note
+mode: "ECON-MICRO"
+type: "atomic_note"
 hub: "[[1_Basics_Of_Economics_Hub]]"
 source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
-date: '2026-05-10'
+date: "2026-05-10"
 prerequisites:
-- "Production Possibilities Frontier (ppf)"
+ - "Production Possibilities Frontier (ppf)"
 source_pages:
-- 48
-- 49
+ - "48"
+ - "49"
 generated: true
+read: true
 ---
 
 ## 1. Mental Model

@@ -1,20 +1,19 @@
 ---
-
-title: Law_Of_Increasing_Opportunity_Cost
+title: "Law_Of_Increasing_Opportunity_Cost"
 course: "Economics"
-unit: '1'
+unit: "1"
 semester: "Winter 2026"
-mode: ECON-MICRO
-type: atomic_note
+mode: "ECON-MICRO"
+type: "atomic_note"
 hub: "[[1_Basics_Of_Economics_Hub]]"
 source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
-date: '2026-05-10'
+date: "2026-05-10"
 prerequisites:
-- "[[Opportunity_Cost]]"
+ - "[[Opportunity_Cost]]"
 source_pages:
-- 47
+ - "47"
 generated: true
-
+read: true
 ---
 
 ## 1. Mental Model

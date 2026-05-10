@@ -15,10 +15,10 @@ prerequisites:
  - "[[Economic_Growth]]"
  - "[[Market_Failure]]"
 source_pages:
-- 2
-- 3
+ - "2"
+ - "3"
 generated: true
-read: false
+read: true
 ---
 
 ## 1. Mental Model
