@@ -1,20 +1,19 @@
 ---
-
-title: For_Whom_To_Produce
+title: "For_Whom_To_Produce"
 course: "Economics"
-unit: '1'
+unit: "1"
 semester: "Winter 2026"
-mode: ECON-MICRO
-type: atomic_note
+mode: "ECON-MICRO"
+type: "atomic_note"
 hub: "[[1_Basics_Of_Economics_Hub]]"
 source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
-date: '2026-05-10'
+date: "2026-05-10"
 prerequisites:
-- "[[Basic_Economic_Questions]]"
+ - "[[Basic_Economic_Questions]]"
 source_pages:
-- 54
+ - "54"
 generated: true
-
+read: false
 ---
 
 ## 1. Mental Model

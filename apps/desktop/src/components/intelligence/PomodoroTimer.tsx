@@ -12,11 +12,12 @@ export default function PomodoroTimer() {
     setIsActive, setTimeLeft, setShowOverlay, setShowStats
   } = usePomodoroStore();
   
+  const sessionsBeforeLong = Number(config?.pomodoroSessionsBeforeLongBreak || 4);
   const settings = {
     focus: (config?.pomodoroWorkDuration || 25) * 60,
     shortBreak: (config?.pomodoroShortBreakDuration || 5) * 60,
     longBreak: (config?.pomodoroLongBreakDuration || 15) * 60,
-    sessionsBeforeLong: config?.pomodoroSessionsBeforeLongBreak || 4
+    sessionsBeforeLong
   };
 
   const formatTime = (seconds: number) => {
@@ -65,35 +66,40 @@ export default function PomodoroTimer() {
             {formatTime(timeLeft)}
           </div>
 
-          {/* Decorative element under timer */}
-          <div className="w-10 h-1.5 bg-foreground rounded-full mb-10" />
+          {/* Dynamic Session Progress Indicator */}
+          <div className="flex items-center gap-2 mb-10 h-2">
+            {Array.from({ length: sessionsBeforeLong }).map((_, i) => {
+              const currentSessionIndex = sessionCount % sessionsBeforeLong;
+              const isCompleted = i < currentSessionIndex;
+              const isActiveSession = i === currentSessionIndex;
+              
+              return (
+                <motion.div 
+                  key={i} 
+                  initial={false}
+                  animate={{ 
+                    width: isActiveSession ? 24 : 8,
+                    height: 8,
+                    opacity: isActiveSession ? 1 : (isCompleted ? 0.2 : 0.4),
+                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  className={cn(
+                    "rounded-full transition-colors",
+                    isActiveSession ? "bg-primary shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" : "bg-foreground"
+                  )}
+                />
+              );
+            })}
+          </div>
 
           {/* Circular Play/Pause Button */}
           <button 
             onClick={() => setIsActive(!isActive)}
-            className="w-20 h-20 rounded-full bg-foreground text-background flex items-center justify-center shadow-[0_0_40px_rgba(255,255,255,0.1)] dark:shadow-[0_0_40px_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95 transition-all z-10"
+            className="w-20 h-20 rounded-full bg-muted/40 border border-border/50 text-foreground flex items-center justify-center shadow-xl hover:bg-muted/60 active:scale-95 transition-all z-10"
           >
-            {isActive ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />}
+            {isActive ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
           </button>
         </div>
-      </div>
-
-      {/* Progress Circles (Dots) */}
-      <div className="flex gap-3 mb-8">
-        {Array.from({ length: settings.sessionsBeforeLong }).map((_, i) => (
-          <motion.div 
-            key={i} 
-            initial={false}
-            animate={{ 
-              scale: i < (sessionCount % settings.sessionsBeforeLong || (sessionCount > 0 ? settings.sessionsBeforeLong : 0)) ? 1.2 : 1,
-              backgroundColor: i < (sessionCount % settings.sessionsBeforeLong || (sessionCount > 0 ? settings.sessionsBeforeLong : 0)) 
-                ? 'var(--foreground)' 
-                : 'var(--muted-foreground)',
-              opacity: i < (sessionCount % settings.sessionsBeforeLong || (sessionCount > 0 ? settings.sessionsBeforeLong : 0)) ? 1 : 0.1
-            }}
-            className="w-2 h-2 rounded-full"
-          />
-        ))}
       </div>
 
       {/* Skip Break Control - Floating skip icon */}

@@ -995,7 +995,7 @@ async def get_study_history(
     
     db_path = Path(secrets.inbox_path) / "oka_queue.db"
     if not db_path.exists():
-        return {"sessions": [], "telemetry": []}
+        return {"sessions": [], "telemetry": [], "practice": []}
     
     try:
         conn = sqlite3.connect(str(db_path))

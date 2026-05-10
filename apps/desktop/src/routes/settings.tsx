@@ -11,6 +11,8 @@ import {cn} from '@/lib/utils'
 import {sidecarApi} from '@/lib/sidecarApi'
 import RateLimitMonitor from '@/components/intelligence/RateLimitMonitor'
 
+import { usePomodoroStore } from '@/lib/pomodoroStore'
+
 /* ─────────────────────── Types ─────────────────────── */
 
 type SettingsSection = 'general' | 'intelligence' | 'vault' | 'pomodoro'
@@ -68,6 +70,7 @@ const SettingsCard = ({title, icon, value, children, onEdit, isEditing, onSave, 
 
 export default function Settings() {
  const {config, saveConfig, isLoading, addApiKey, deleteApiKey} = useConfig()
+ const { clearHistory } = usePomodoroStore()
  const [editingKey, setEditingKey] = useState<string | null>(null)
  const [editValue, setEditValue] = useState('')
 
@@ -662,13 +665,24 @@ export default function Settings() {
  <div className="mt-12">
  <Card className="border-destructive/20 bg-destructive/5">
  <CardHeader title="Danger Zone" description="Permanent data deletion" />
- <CardContent>
+ <CardContent className="flex gap-4">
  <button
  onClick={handleClear}
  className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-[9px] font-black uppercase tracking-widest  text-destructive border border-destructive/20 bg-destructive/5 hover:bg-destructive/10 h-9"
  >
  <Trash2 size={12} className="mr-2" />
  Reset Config
+ </button>
+ <button
+ onClick={() => {
+   if (window.confirm('Are you sure you want to clear all tracked study history? This cannot be undone.')) {
+     clearHistory()
+   }
+ }}
+ className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-[9px] font-black uppercase tracking-widest  text-destructive border border-destructive/20 bg-destructive/5 hover:bg-destructive/10 h-9"
+ >
+ <Activity size={12} className="mr-2" />
+ Reset Tracked Data
  </button>
  </CardContent>
  </Card>

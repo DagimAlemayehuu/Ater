@@ -1,15 +1,15 @@
 ---
-title: 1_Basics_of_Economics_Hub
-type: Hub
+title: "1_Basics_of_Economics_Hub"
+type: "Hub"
 course: "[[Economics]]"
 semester: "[[Winter 2026]]"
-unit: '1'
+unit: "1"
 source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
 source_pages:
-- 1
-status: Not Started
-confidence: null
-study_date: null
+ - "1"
+status: "Not Started"
+confidence: ''
+study_date: ''
 generated: true
 ---
 

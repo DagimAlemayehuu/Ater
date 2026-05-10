@@ -40,6 +40,7 @@ interface PomodoroState {
   addHistory: (session: { hub: string; duration: number }) => void;
   addNoteFocus: (notePath: string, duration: number, hub?: string) => void;
   addPracticeResult: (hub: string, score: number, total: number, notePath?: string) => void;
+  clearHistory: () => void;
   tick: () => void;
   reset: (settings: { focus: number, shortBreak: number, longBreak: number }) => void;
 }
@@ -127,6 +128,8 @@ export const usePomodoroStore = create<PomodoroState>()(
           ]
         };
       }),
+      
+      clearHistory: () => set({ history: [] }),
       
       tick: () => set((state) => ({ timeLeft: Math.max(0, state.timeLeft - 1) })),
       

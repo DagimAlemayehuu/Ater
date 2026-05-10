@@ -1,26 +1,24 @@
 ---
-
-title: Basic_Economic_Questions
-course: Economics
-unit: '1'
-semester: Winter 2026
-mode: ECON-MICRO
-type: atomic_note
-hub: '[[1_Basics_Of_Economics_Hub]]'
-source: '[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]'
-date: '2026-05-10'
+title: "Basic_Economic_Questions"
+course: "Economics"
+unit: "1"
+semester: "Winter 2026"
+mode: "ECON-MICRO"
+type: "atomic_note"
+hub: "[[1_Basics_Of_Economics_Hub]]"
+source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
+date: "2026-05-10"
 prerequisites:
-- '[[Scarcity]]'
-- '[[Limited_Resources]]'
-- '[[Economic_Systems]]'
-- '[[Economic_Growth]]'
-- '[[Market_Failure]]'
+ - "[[Scarcity]]"
+ - "[[Limited_Resources]]"
+ - "[[Economic_Systems]]"
+ - "[[Economic_Growth]]"
+ - "[[Market_Failure]]"
 source_pages:
-- 50
+ - "50"
 generated: true
-
+read: false
 ---
-
 
 ## 1. Mental Model
 

@@ -466,5 +466,5 @@ export const sidecarApi = {
         }),
     
     getStudyHistory: () =>
-        request<{ sessions: any[]; telemetry: any[] }>('/api/study/history'),
+        request<{ sessions: any[]; telemetry: any[]; practice: any[] }>('/api/study/history'),
 }
