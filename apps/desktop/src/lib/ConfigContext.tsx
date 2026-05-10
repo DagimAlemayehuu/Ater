@@ -61,6 +61,10 @@ export interface AppConfig {
     customPersonas: CustomPersona[];
     savedApiKeys: SavedApiKey[];
     showProperties: boolean;
+    pomodoroWorkDuration: number;
+    pomodoroShortBreakDuration: number;
+    pomodoroLongBreakDuration: number;
+    pomodoroSessionsBeforeLongBreak: number;
 }
 
 interface ConfigContextType {
@@ -101,6 +105,10 @@ export const DEFAULT_CONFIG: AppConfig = {
     customPersonas: [],
     savedApiKeys: [],
     showProperties: false,
+    pomodoroWorkDuration: 25,
+    pomodoroShortBreakDuration: 5,
+    pomodoroLongBreakDuration: 15,
+    pomodoroSessionsBeforeLongBreak: 4,
 };
 
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -141,6 +149,10 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const customPersonas = (await store.get<CustomPersona[]>('customPersonas')) || [];
                 const savedApiKeys = (await store.get<SavedApiKey[]>('savedApiKeys')) || [];
                 const showProperties = (await store.get<boolean>('showProperties')) ?? false;
+                const pomodoroWorkDuration = (await store.get<number>('pomodoroWorkDuration')) || DEFAULT_CONFIG.pomodoroWorkDuration;
+                const pomodoroShortBreakDuration = (await store.get<number>('pomodoroShortBreakDuration')) || DEFAULT_CONFIG.pomodoroShortBreakDuration;
+                const pomodoroLongBreakDuration = (await store.get<number>('pomodoroLongBreakDuration')) || DEFAULT_CONFIG.pomodoroLongBreakDuration;
+                const pomodoroSessionsBeforeLongBreak = (await store.get<number>('pomodoroSessionsBeforeLongBreak')) || DEFAULT_CONFIG.pomodoroSessionsBeforeLongBreak;
 
                 let loadedConfig: any = {
                     aiProvider,
@@ -163,6 +175,10 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     customPersonas,
                     savedApiKeys,
                     showProperties,
+                    pomodoroWorkDuration,
+                    pomodoroShortBreakDuration,
+                    pomodoroLongBreakDuration,
+                    pomodoroSessionsBeforeLongBreak,
                 };
 
                 // Auto-select first key if none active

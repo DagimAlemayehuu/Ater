@@ -11,6 +11,7 @@ import 'katex/dist/katex.min.css';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { MermaidWrapper } from './obsidian/MarkdownViewer';
+import { usePomodoroStore } from '@/lib/pomodoroStore';
 
 // Density optimized CodeBlock
 const CodeBlock = ({ language, value }: { language: string | null, value: string }) => {
@@ -105,10 +106,13 @@ export const MarkdownBlock = ({ content }: { content: string }) => {
 
 interface MiniPracticeUIProps {
   question: any;
+  notePath?: string;
 }
 
-export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
+export default function MiniPracticeUI({ question, notePath }: MiniPracticeUIProps) {
+  const { addPracticeResult, currentHub } = usePomodoroStore();
   const questions = Array.isArray(question) ? question : [question];
+
   const [currentIdx, setCurrentIdx] = useState(0);
   const [userAnswers, setUserAnswers] = useState<Record<number | string, any>>({});
   const [revealedStates, setRevealedStates] = useState<Record<number, boolean>>({});
@@ -187,6 +191,8 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
   };
 
   const finishQuiz = () => {
+    const score = Object.values(scores).filter(Boolean).length;
+    addPracticeResult(currentHub, score, questions.length, notePath);
     setShowScore(true);
   };
 

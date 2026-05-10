@@ -9,13 +9,13 @@ import {
  Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Network,
  Edit2, Edit3, Save, FolderPlus, Hash, CheckSquare, Link, List, Heart
 } from 'lucide-react'
-import {useIsMobile} from '@/hooks/use-mobile'
-import {sidecarApi, ObsidianFile} from '@/lib/sidecarApi'
+import {motion, AnimatePresence} from 'framer-motion'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { usePomodoroStore } from '@/lib/pomodoroStore'
+import { useConfig } from '@/lib/ConfigContext'
 import {ObsidianGraphView} from '@/components/obsidian/ObsidianGraphView'
 import {cn} from '@/lib/utils'
-import {useConfig} from '@/lib/ConfigContext'
 import {toast} from 'sonner'
-import {useLocation, useNavigate} from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {Button} from '@/components/ui/button'
@@ -25,6 +25,8 @@ import {useLayout} from '@/context/layout-provider'
 import {useNavigation} from '@/context/navigation-context'
 import {useHeader} from '@/context/header-context'
 import React from 'react'
+import {useIsMobile} from '@/hooks/use-mobile'
+import {sidecarApi, ObsidianFile} from '@/lib/sidecarApi'
 
 interface InboxFile {
  name: string
@@ -332,6 +334,8 @@ function parseHubTree(content: string): NavNode[] {
 
 function KnowledgeFooter({tree, activePath, onNavigate, onFinish}: {tree: NavNode[], activePath: string | null, onNavigate: (path: string) => void, onFinish?: () => Promise<void>}) {
  const navigate = useNavigate();
+ const { setCurrentHub, setTimeLeft, setIsActive, setShowOverlay } = usePomodoroStore();
+ const { config } = useConfig();
  
  const flattened = useMemo(() => {
  const list: NavNode[] = [];
@@ -381,11 +385,20 @@ function KnowledgeFooter({tree, activePath, onNavigate, onFinish}: {tree: NavNod
  {isHub && (
  <button 
  onClick={() => {
- if (flattened.length > 0 && flattened[0].target) {
- onNavigate(flattened[0].target);
-} else {
- navigate(`/practice?hubId=${hubId}`);
-}
+  // Start Pomodoro Session with Hub Context
+  let hubName = activePath?.split('/').pop()?.replace('_Hub.md', '').replace('.md', '').replace(/_/g, ' ') || 'Current Hub';
+  hubName = hubName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  
+  setCurrentHub(hubName);
+  setTimeLeft((config?.pomodoroWorkDuration || 25) * 60);
+  setIsActive(true);
+  setShowOverlay(false); // Start silently
+
+  if (flattened.length > 0 && flattened[0].target) {
+  onNavigate(flattened[0].target);
+ } else {
+  navigate(`/practice?hubId=${hubId}`);
+ }
 }}
  className="flex items-center gap-3 px-8 py-2.5 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border/40  text-[10px] font-bold uppercase tracking-widest"
  >
@@ -538,11 +551,20 @@ function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox}: 
 }
 
 export default function ObsidianVaultPage() {
- const {config, saveConfig} = useConfig()
- const location = useLocation()
- const isMobile = useIsMobile()
+  const { config, saveConfig } = useConfig()
+  const { 
+    setCurrentHub, setIsActive, setShowOverlay, 
+    setTimeLeft, setShowStats, mode, addNoteFocus, currentHub 
+  } = usePomodoroStore()
+  const location = useLocation()
+  const isMobile = useIsMobile()
 
- // --- Layout State ---
+  // --- Focus Tracking ---
+  const entryTimeRef = useRef<number>(Date.now());
+  const lastPathRef = useRef<string | null>(null);
+
+  // --- Layout State ---
+
   const [showGraphView, setShowGraphView] = useState(false)
   const [sidebarTab, setSidebarTab] = useState<'explorer' | 'hubs' | 'pdfs'>('explorer')
   const [hubs, setHubs] = useState<any[]>([])
@@ -551,6 +573,7 @@ export default function ObsidianVaultPage() {
  const [files, setFiles] = useState<ObsidianFile[]>([])
  const [loadingFiles, setLoadingFiles] = useState(false)
  const [selectedPath, setSelectedPath] = useState<string | null>(null)
+ const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
  const selectRequestId = useRef(0)
  const [selectedPage, setSelectedPage] = useState(1)
  const [selectedFilteredPages, setSelectedFilteredPages] = useState<number[]>([])
@@ -571,6 +594,33 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   const { push, history, currentIndex } = useNavigation()
   const { setCenterContent, setRightContent } = useHeader()
   const { isFullscreen, setIsFullscreen } = useLayout()
+
+  // --- Focus Tracking Effect ---
+  useEffect(() => {
+    // Record time spent on the PREVIOUS note
+    if (lastPathRef.current && lastPathRef.current !== selectedPath) {
+      const duration = Math.floor((Date.now() - entryTimeRef.current) / 1000);
+      if (duration >= 5) { // Only record if spent more than 5 seconds
+        addNoteFocus(lastPathRef.current, duration, currentHub);
+      }
+    }
+    
+    // Reset for the NEW note
+    entryTimeRef.current = Date.now();
+    lastPathRef.current = selectedPath;
+  }, [selectedPath, addNoteFocus, currentHub]);
+
+  // Record on unmount
+  useEffect(() => {
+    return () => {
+      if (lastPathRef.current) {
+        const duration = Math.floor((Date.now() - entryTimeRef.current) / 1000);
+        if (duration >= 5) {
+          addNoteFocus(lastPathRef.current, duration, currentHub);
+        }
+      }
+    };
+  }, [addNoteFocus, currentHub]);
 
   // --- Header Action Registration ---
   useEffect(() => {
@@ -2154,11 +2204,11 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  </div>
  </>
  )}
- </section>
-
- </div>
- </main>
- </div>
- </div>
+  </section>
+ 
+  </div>
+  </main>
+  </div>
+  </div>
  )
 }

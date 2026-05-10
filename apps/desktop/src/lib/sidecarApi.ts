@@ -445,4 +445,20 @@ export const sidecarApi = {
     getWealthStatus: () => request<any>('/api/ai/specialists/wealth'),
     getGymStatus: () => request<any>('/api/ai/specialists/gym'),
     getScholarStatus: () => request<any>('/api/ai/specialists/scholar'),
+
+    // ── Telemetry & Study Tracking ──────────────────────────
+    logNoteVisit: (notePath: string, durationSeconds: number) =>
+        request<{ status: string }>('/api/obsidian/log-visit', {
+            method: 'POST',
+            body: JSON.stringify({ note_path: notePath, duration_seconds: durationSeconds })
+        }),
+    
+    logStudySession: (hubId: string, durationSeconds: number, mode: string = 'focus') =>
+        request<{ status: string }>('/api/study/log-session', {
+            method: 'POST',
+            body: JSON.stringify({ hub_id: hubId, duration_seconds: durationSeconds, mode })
+        }),
+    
+    getStudyHistory: () =>
+        request<{ sessions: any[]; telemetry: any[] }>('/api/study/history'),
 }

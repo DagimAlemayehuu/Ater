@@ -837,6 +837,67 @@ async def log_practice(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/obsidian/log-visit")
+async def log_note_visit(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Logs the time spent on an atomic note."""
+    if not secrets.inbox_path:
+        raise HTTPException(status_code=400, detail="Inbox Path not configured")
+    
+    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    if not db_path.exists():
+        return {"status": "ignored", "reason": "db not initialized"}
+    
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.execute(
+            "INSERT INTO study_telemetry (id, note_path, duration_seconds, timestamp) VALUES (?, ?, ?, ?)",
+            (
+                str(uuid.uuid4()),
+                payload.get("note_path", "unknown"),
+                payload.get("duration_seconds", 0),
+                datetime.now().isoformat()
+            )
+        )
+        conn.commit()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/study/log-session")
+async def log_study_session(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Logs a completed study/focus session."""
+    if not secrets.inbox_path:
+        raise HTTPException(status_code=400, detail="Inbox Path not configured")
+    
+    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    if not db_path.exists():
+        return {"status": "ignored", "reason": "db not initialized"}
+    
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.execute(
+            "INSERT INTO study_sessions (id, hub_id, duration_seconds, timestamp, mode) VALUES (?, ?, ?, ?, ?)",
+            (
+                str(uuid.uuid4()),
+                payload.get("hub_id", "unknown"),
+                payload.get("duration_seconds", 0),
+                datetime.now().isoformat(),
+                payload.get("mode", "focus")
+            )
+        )
+        conn.commit()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/practice/analytics")
 async def get_practice_analytics(
     secrets: AppSecrets = Depends(get_app_secrets)
@@ -887,6 +948,33 @@ async def get_practice_analytics(
         return {
             "modalities": modalities,
             "weakest_concepts": weakest_concepts
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/study/history")
+async def get_study_history(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Retrieves all study sessions and telemetry for the calendar/dashboard."""
+    if not secrets.inbox_path:
+        return {"sessions": [], "telemetry": []}
+    
+    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    if not db_path.exists():
+        return {"sessions": [], "telemetry": []}
+    
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        
+        sessions = [dict(r) for r in conn.execute("SELECT * FROM study_sessions ORDER BY timestamp DESC").fetchall()]
+        telemetry = [dict(r) for r in conn.execute("SELECT * FROM study_telemetry ORDER BY timestamp DESC LIMIT 100").fetchall()]
+        
+        conn.close()
+        return {
+            "sessions": sessions,
+            "telemetry": telemetry
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

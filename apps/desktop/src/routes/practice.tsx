@@ -15,7 +15,7 @@ import {
  Info,
  X,
  TrendingUp,
- BarChart3,
+ BarChart2,
  Plus
 } from 'lucide-react'
 import {

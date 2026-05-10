@@ -53,6 +53,7 @@ function SidecarGate({ children }: { children: React.ReactNode }) {
 
 import { HeaderProvider } from '@/context/header-context'
 import { Toaster } from '@/components/ui/sonner'
+import PomodoroController from '@/components/intelligence/PomodoroController'
 
 export default function App() {
   return (
@@ -78,6 +79,7 @@ export default function App() {
                   } />
                 </Routes>
                 <Toaster />
+                <PomodoroController />
               </HeaderProvider>
             </NavigationProvider>
           </BrowserRouter>

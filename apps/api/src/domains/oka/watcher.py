@@ -144,6 +144,52 @@ class OkaQueueManager:
                 curriculum TEXT
             )
         """)
+        
+        # Telemetry: Practice Log
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS practice_log (
+                id TEXT PRIMARY KEY,
+                note_id TEXT,
+                question_type TEXT,
+                is_correct BOOLEAN,
+                time_taken_seconds INTEGER,
+                timestamp TEXT
+            )
+        """)
+        
+        # Telemetry: Note SRS
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS note_srs (
+                note_id TEXT PRIMARY KEY,
+                review_count INTEGER DEFAULT 0,
+                consecutive_correct INTEGER DEFAULT 0,
+                easiness_factor REAL DEFAULT 2.5,
+                interval_days INTEGER DEFAULT 0,
+                next_review_date TEXT
+            )
+        """)
+        
+        # Telemetry: Note Visits (Time spent on each note)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS study_telemetry (
+                id TEXT PRIMARY KEY,
+                note_path TEXT,
+                duration_seconds INTEGER,
+                timestamp TEXT
+            )
+        """)
+        
+        # Telemetry: Study Sessions (Pomodoro/Focus sessions)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS study_sessions (
+                id TEXT PRIMARY KEY,
+                hub_id TEXT,
+                duration_seconds INTEGER,
+                timestamp TEXT,
+                mode TEXT
+            )
+        """)
+
         # Migrations
         for col, defval in [("session_id", "NULL"), ("current_batch", "0"),
                             ("total_batches", "0"), ("curriculum", "NULL")]:

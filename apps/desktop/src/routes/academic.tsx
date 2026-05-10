@@ -16,9 +16,11 @@ import AssignmentsTab from './academic-tabs/AssignmentsTab'
 import ExamsTab from './academic-tabs/ExamsTab'
 import {cleanTitle} from './academic-tabs/utils'
 import type {AcademicTab, AcademicData, VaultDatabase, TabProps} from './academic-tabs/types'
+import { usePomodoroStore } from '@/lib/pomodoroStore'
 
 export default function AcademicDashboard() {
  const [data, setData] = useState<AcademicData | null>(null)
+ const [studyHistory, setStudyHistory] = useState<{sessions: any[], telemetry: any[]}>({sessions: [], telemetry: []})
  const [loading, setLoading] = useState(true)
  const [databases, setDatabases] = useState<VaultDatabase[]>([])
   const [searchParams, setSearchParams] = useSearchParams()
@@ -45,8 +47,12 @@ export default function AcademicDashboard() {
  // ── Data fetching ──────────────────────────────────────────────────────────
  const fetchData = useCallback(async () => {
  try {
- const res = await sidecarApi.academicsDashboard()
- setData(res as any)
+ const [dashRes, studyRes] = await Promise.all([
+   sidecarApi.academicsDashboard(),
+   sidecarApi.getStudyHistory()
+ ])
+ setData(dashRes as any)
+ setStudyHistory(studyRes)
 } catch {toast.error('Could not connect to vault')}
  finally {setLoading(false)}
 }, [])
@@ -260,11 +266,25 @@ export default function AcademicDashboard() {
   )
  }
 
- // ── Upcoming items for the calendar ───────────────────────────────────────
- const calendarEvents = [
-  ...(data?.assignments || []).map(a => ({...a, _type: 'Assignment', _date: a.due_date})),
-  ...(data?.exams || []).map(e => ({...e, _type: 'Exam', _date: e.date})),
- ]
+  // ── Upcoming items for the calendar ───────────────────────────────────────
+  const calendarEvents = [
+    ...(data?.assignments || []).map(a => ({...a, _type: 'Assignment', _date: a.due_date})),
+    ...(data?.exams || []).map(e => ({...e, _type: 'Exam', _date: e.date})),
+    ...(studyHistory.sessions || []).map(s => ({
+      id: s.id,
+      title: `${s.hub_id || 'Focus'} Session`,
+      _type: 'Study Session',
+      _date: s.timestamp,
+      duration: s.duration_seconds
+    })),
+    ...(studyHistory.telemetry || []).map(t => ({
+      id: t.id,
+      title: `Read: ${t.note_path.split('/').pop()?.replace('.md', '')}`,
+      _type: 'Note Visit',
+      _date: t.timestamp,
+      duration: t.duration_seconds
+    }))
+  ]
 
  return (
   <div className="h-full flex flex-col bg-background font-sans overflow-hidden">
@@ -407,21 +427,33 @@ function MiniCalendar({events, onSelectEvent}: {events: any[]; onSelectEvent: (p
                 </div>
                 
                 <div className="flex flex-col gap-1 overflow-y-auto custom-scrollbar-mini">
-                  {dayEvents.map((ev, idx) => (
-                    <button 
-                      key={idx} 
-                      onClick={() => onSelectEvent(ev._type === 'Assignment' ? `Database/03 - Assignments/${ev.id}.md` : `Database/04 - Exams/${ev.id}.md`)}
-                      className={cn(
-                        'text-[8px] font-black uppercase px-2 py-1.5 rounded-lg border transition-all text-left truncate flex items-center gap-1.5 group/event',
-                        ev._type === 'Exam' 
-                          ? 'border-primary/20 bg-primary/[0.03] text-primary hover:bg-primary/[0.08]' 
-                          : 'border-border/40 bg-muted/5 text-muted-foreground hover:border-foreground/20 hover:text-foreground'
-                      )}
-                    >
-                      <div className={cn("w-1 h-2 rounded-full shrink-0", ev._type === 'Exam' ? 'bg-primary' : 'bg-muted-foreground/30')} />
-                      {cleanTitle(ev.title)}
-                    </button>
-                  ))}
+                  {dayEvents.map((ev, idx) => {
+                    const isStudy = ev._type === 'Study Session';
+                    const isExam = ev._type === 'Exam';
+                    return (
+                      <button 
+                        key={idx} 
+                        onClick={() => {
+                          if (isStudy) return; // Study sessions are just logs
+                          onSelectEvent(ev._type === 'Assignment' ? `Database/03 - Assignments/${ev.id}.md` : `Database/04 - Exams/${ev.id}.md`)
+                        }}
+                        className={cn(
+                          'text-[8px] font-black uppercase px-2 py-1.5 rounded-lg border transition-all text-left truncate flex items-center gap-1.5 group/event',
+                          isExam 
+                            ? 'border-primary/20 bg-primary/[0.03] text-primary hover:bg-primary/[0.08]' 
+                            : isStudy
+                            ? 'border-emerald-500/20 bg-emerald-500/[0.03] text-emerald-500 hover:bg-emerald-500/[0.08]'
+                            : 'border-border/40 bg-muted/5 text-muted-foreground hover:border-foreground/20 hover:text-foreground'
+                        )}
+                      >
+                        <div className={cn(
+                          "w-1 h-2 rounded-full shrink-0", 
+                          isExam ? 'bg-primary' : isStudy ? 'bg-emerald-500' : 'bg-muted-foreground/30'
+                        )} />
+                        {isStudy ? `${Math.floor(ev.duration / 60)}m ${ev.title}` : cleanTitle(ev.title)}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )

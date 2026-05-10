@@ -137,14 +137,14 @@ const CodeBlock = ({ language, value }: { language: string | null, value: string
 };
 
 const CodeRenderer = memo((props: any) => {
-    const { className, children, node } = props;
+    const { className, children, node, notePath } = props;
     const match = /language-([a-zA-Z0-9_-]+)/.exec(className || '')
     const language = match ? match[1] : null
     
     if (language === 'interactive-quiz') {
         try {
             const quizData = JSON.parse(String(children).trim());
-            return <MiniPracticeUI question={quizData} />;
+            return <MiniPracticeUI question={quizData} notePath={notePath} />;
         } catch (e) {
             return <div className="text-destructive p-4 border border-destructive/30 bg-destructive/10 rounded-xl my-4 text-xs font-mono">Failed to load interactive quiz JSON.</div>;
         }
@@ -281,7 +281,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
             );
         },
         pre: ({ children }: any) => <div className="not-prose">{children}</div>,
-        code: CodeRenderer,
+        code: (props: any) => <CodeRenderer {...props} notePath={pathRef.current} />,
         input: ({ node, type, checked, ...props }: any) => {
             if (type === 'checkbox') {
                 return (
