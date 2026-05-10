@@ -73,7 +73,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -85,13 +84,13 @@ graph LR
   {
     "type": "mcq",
     "question": "What is the primary goal of efficient allocation in the context of economic production?",
-    "options": [
-      "Maximize consumer satisfaction",
-      "Minimize production costs",
-      "Achieve technological advancement",
-      "Ensure equitable distribution"
-    ],
-    "answer": "Maximize consumer satisfaction",
+    "options": {
+      "a": "Maximize consumer satisfaction",
+      "b": "Minimize production costs",
+      "c": "Achieve technological advancement",
+      "d": "Ensure equitable distribution"
+    },
+    "answer": "a",
     "explanation": "Efficient allocation aims to maximize the production of goods and services given the constraints of scarcity, which ultimately leads to maximizing consumer satisfaction."
   },
   {
@@ -108,5 +107,4 @@ graph LR
     "explanation": "The causal chain leads to the conclusion that efficient allocation is necessary to address the fundamental economic problem of scarcity."
   }
 ]
-
 ```

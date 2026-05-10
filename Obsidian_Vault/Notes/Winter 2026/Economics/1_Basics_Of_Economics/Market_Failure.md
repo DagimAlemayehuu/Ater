@@ -67,7 +67,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -79,13 +78,13 @@ graph LR
   {
     "type": "mcq",
     "question": "What is a key characteristic of human wants in the context of market failure?",
-    "options": [
-      "They are limited and can be fully satisfied",
-      "They are unlimited and diverse",
-      "They are fixed and do not change over time",
-      "They are only for essential goods"
-    ],
-    "answer": "They are unlimited and diverse",
+    "options": {
+      "a": "They are limited and can be fully satisfied",
+      "b": "They are unlimited and diverse",
+      "c": "They are fixed and do not change over time",
+      "d": "They are only for essential goods"
+    },
+    "answer": "b",
     "explanation": "The concept of unlimited wants is crucial in understanding market failure, as it highlights the limitations of the market in dealing with scarcity."
   },
   {
@@ -102,5 +101,4 @@ graph LR
     "explanation": "The labor shortage and reduced production in both industries contribute to market failure, which ultimately leads to market inefficiency."
   }
 ]
-
 ```

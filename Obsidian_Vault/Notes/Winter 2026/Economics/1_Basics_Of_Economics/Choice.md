@@ -72,7 +72,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -84,13 +83,13 @@ graph LR
   {
     "type": "mcq",
     "question": "What is the term for the value of the next best alternative that is given up when a choice is made?",
-    "options": [
-      "Sunk Cost",
-      "Opportunity Cost",
-      "Market Value",
-      "Resource Allocation"
-    ],
-    "answer": "Opportunity Cost",
+    "options": {
+      "a": "Sunk Cost",
+      "b": "Opportunity Cost",
+      "c": "Market Value",
+      "d": "Resource Allocation"
+    },
+    "answer": "b",
     "explanation": "Opportunity cost is a crucial concept in economics that reflects the trade-offs involved in making choices, representing the value of the next best alternative foregone."
   },
   {
@@ -107,5 +106,4 @@ graph LR
     "explanation": "The presence of scarcity in Emily's situation, due to her unlimited wants and limited resources, directly leads to the need for her to make choices, weighing the trade-offs between different options."
   }
 ]
-
 ```

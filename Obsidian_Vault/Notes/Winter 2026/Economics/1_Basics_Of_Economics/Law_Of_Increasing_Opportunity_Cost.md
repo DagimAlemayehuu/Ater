@@ -64,7 +64,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -76,13 +75,13 @@ graph LR
   {
     "type": "mcq",
     "question": "What happens to the opportunity cost of producing more of one good as its production increases?",
-    "options": [
-      "It decreases due to economies of scale",
-      "It remains constant due to fixed resources",
-      "It increases due to the need to divert resources from other goods",
-      "It becomes irrelevant due to technological advancements"
-    ],
-    "answer": "It increases due to the need to divert resources from other goods",
+    "options": {
+      "a": "It decreases due to economies of scale",
+      "b": "It remains constant due to fixed resources",
+      "c": "It increases due to the need to divert resources from other goods",
+      "d": "It becomes irrelevant due to technological advancements"
+    },
+    "answer": "c",
     "explanation": "As the production of one good increases, resources are diverted from the production of another good, leading to an increase in the opportunity cost."
   },
   {
@@ -98,5 +97,4 @@ graph LR
     "explanation": "The causal chain illustrates how an increase in food production leads to an increase in the opportunity cost of producing computers, demonstrating the Law of Increasing Opportunity Cost."
   }
 ]
-
 ```

@@ -69,7 +69,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -81,13 +80,13 @@ graph LR
   {
     "type": "mcq",
     "question": "What is a key characteristic of human wants in the context of economics?",
-    "options": [
-      "They are limited and can be fully satisfied",
-      "They are constant and do not change over time",
-      "They are unlimited and diverse",
-      "They are only for material goods"
-    ],
-    "answer": "They are unlimited and diverse",
+    "options": {
+      "a": "They are limited and can be fully satisfied",
+      "b": "They are constant and do not change over time",
+      "c": "They are unlimited and diverse",
+      "d": "They are only for material goods"
+    },
+    "answer": "c",
     "explanation": "In economics, human wants are considered unlimited, which contrasts with the scarcity of resources available to satisfy those wants."
   },
   {
@@ -103,5 +102,4 @@ graph LR
     "explanation": "The unlimited nature of human wants, combined with the scarcity of resources, necessitates the allocation of resources to meet those wants efficiently."
   }
 ]
-
 ```

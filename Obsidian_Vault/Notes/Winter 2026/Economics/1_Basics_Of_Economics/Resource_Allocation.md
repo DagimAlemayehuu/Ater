@@ -60,7 +60,6 @@ $Total\ Stock = Apples + Carrots + Bananas + Lettuce + Remaining\ Stock$
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -72,13 +71,13 @@ $Total\ Stock = Apples + Carrots + Bananas + Lettuce + Remaining\ Stock$
   {
     "type": "mcq",
     "question": "What is a primary driver of the need for efficient resource allocation?",
-    "options": [
-      "Unlimited Wants",
-      "Economic Growth",
-      "Technological Advancement",
-      "Abundant Resources"
-    ],
-    "answer": "Unlimited Wants",
+    "options": {
+      "a": "Unlimited Wants",
+      "b": "Economic Growth",
+      "c": "Technological Advancement",
+      "d": "Abundant Resources"
+    },
+    "answer": "a",
     "explanation": "The primary driver of the need for efficient resource allocation is unlimited wants, as human desires exceed available resources."
   },
   {
@@ -94,5 +93,4 @@ $Total\ Stock = Apples + Carrots + Bananas + Lettuce + Remaining\ Stock$
     "explanation": "Scarcity necessitates the efficient allocation of resources to meet unlimited wants."
   }
 ]
-
 ```

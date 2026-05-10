@@ -72,7 +72,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -84,13 +83,13 @@ graph LR
   {
     "type": "mcq",
     "question": "Which of the following is a key characteristic of human wants in economics?",
-    "options": [
-      "They are limited and can be fully satisfied",
-      "They are unlimited and always increasing",
-      "They are fixed and do not change over time",
-      "They are only for material goods"
-    ],
-    "answer": "They are unlimited and always increasing",
+    "options": {
+      "a": "They are limited and can be fully satisfied",
+      "b": "They are unlimited and always increasing",
+      "c": "They are fixed and do not change over time",
+      "d": "They are only for material goods"
+    },
+    "answer": "b",
     "explanation": "In economics, human wants are considered unlimited, which, combined with limited resources, leads to the problem of scarcity.",
     "textWithBlanks": ""
   },
@@ -108,5 +107,4 @@ graph LR
     "explanation": "The existence of scarcity necessitates making choices about resource allocation, which in turn requires value judgments about the desired state of the economy."
   }
 ]
-
 ```

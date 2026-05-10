@@ -1289,21 +1289,20 @@ QUIZ LAWS (obey all):
    BAD EXAMPLE: "Human wants are considered [[unlimited]] in nature" — answer is in the question.
    GOOD EXAMPLE: "The characteristic that makes scarcity an economic problem is that resources are [[blank]] while wants are unlimited."
 5. MCQ DISTRACTOR LAW: The 3 wrong options MUST be plausible domain concepts — not obviously wrong. A student who did NOT study should have a real chance of picking the wrong answer.
-   BAD DISTRACTORS: ["Decreasing", "Fixed", "Limited"] for a question about wants — too obviously wrong.
-   GOOD DISTRACTORS: Related economic concepts that could seem correct without careful study.
-6. TRACE LAW: Steps must be a CAUSAL CHAIN, not a summary. Each step must logically cause the next.
+6. TRACE LAW: 'steps' must be a CAUSAL CHAIN of 4-6 strings. 'answer' must be the FINAL LOGICAL CONCLUSION/OUTCOME of the chain. 'explanation' must explain WHY the chain holds together.
 7. FINISH LAW: Every explanation must end with a complete sentence.
 
 OUTPUT: Return a JSON array in <QUIZ_JSON>...</QUIZ_JSON> tags.
 Each object needs: 'type', 'question', 'answer', 'explanation'.
-MCQ needs: 'options' (list of 4). fill_in needs: 'textWithBlanks' (sentence with [[blank]]).
+MCQ needs: 'options' (dict with keys 'a', 'b', 'c', 'd'). 'answer' must be the key (a, b, c, or d).
+fill_in needs: 'textWithBlanks' (sentence with [[blank]]).
 
 EXAMPLE of a GOOD quiz set:
 <QUIZ_JSON>
 [
   {{"type": "fill_in", "question": "The method of drawing general conclusions from specific cases is called [[blank]] reasoning.", "answer": "inductive", "explanation": "Inductive reasoning moves from specific observations to general conclusions.", "textWithBlanks": "The method of drawing general conclusions from specific cases is called [[blank]] reasoning."}},
-  {{"type": "mcq", "question": "Which of the following is a limitation of inductive reasoning?", "options": ["It cannot handle quantitative data", "Conclusions are probabilistic, not certain", "It requires deductive proof first", "It only applies to natural sciences"], "answer": "Conclusions are probabilistic, not certain", "explanation": "Inductive conclusions are generalizations based on evidence — new data can always contradict them."}},
-  {{"type": "trace", "question": "Trace the causal chain from scarcity to economic choice.", "steps": ["Resources are limited", "Human wants exceed available resources", "Scarcity arises", "Choices must be made about allocation"], "answer": "Economic choice", "explanation": "Scarcity is the fundamental cause of economic choice — without scarcity, all wants could be satisfied."}}
+  {{"type": "mcq", "question": "Which of the following is a limitation of inductive reasoning?", "options": {{"a": "It cannot handle quantitative data", "b": "Conclusions are probabilistic, not certain", "c": "It requires deductive proof first", "d": "It only applies to natural sciences"}}, "answer": "b", "explanation": "Inductive conclusions are generalizations based on evidence — new data can always contradict them."}},
+  {{"type": "trace", "question": "Trace the causal chain from scarcity to economic choice.", "steps": ["Resources are limited", "Human wants exceed available resources", "Scarcity arises", "Choices must be made about allocation"], "answer": "The necessity of economic choice", "explanation": "Scarcity is the fundamental cause of economic choice — without scarcity, all wants could be satisfied and no allocation decisions would be required."}}
 ]
 </QUIZ_JSON>
 

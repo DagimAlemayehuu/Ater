@@ -76,7 +76,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -88,13 +87,13 @@ graph LR
   {
     "type": "mcq",
     "question": "What is a primary role of deductive reasoning in economics?",
-    "options": [
-      "To predict future economic trends",
-      "To understand the implications of capital-intensive techniques on economic growth",
-      "To calculate GDP",
-      "To analyze consumer behavior"
-    ],
-    "answer": "To understand the implications of capital-intensive techniques on economic growth",
+    "options": {
+      "a": "To predict future economic trends",
+      "b": "To understand the implications of capital-intensive techniques on economic growth",
+      "c": "To calculate GDP",
+      "d": "To analyze consumer behavior"
+    },
+    "answer": "b",
     "explanation": "Deductive reasoning helps economists evaluate the impact of different techniques, such as capital-intensive versus labor-intensive techniques, on economic growth and resource allocation.",
     "textWithBlanks": ""
   },
@@ -111,5 +110,4 @@ graph LR
     "explanation": "The process begins with general principles, applies them to a specific situation, draws conclusions, and ultimately leads to making informed decisions about how to allocate resources effectively."
   }
 ]
-
 ```

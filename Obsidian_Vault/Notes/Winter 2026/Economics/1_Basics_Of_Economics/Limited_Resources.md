@@ -66,7 +66,6 @@ The concept of limited resources assumes that resources are scarce, but this may
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -78,13 +77,13 @@ The concept of limited resources assumes that resources are scarce, but this may
   {
     "type": "mcq",
     "question": "What is the primary reason for scarcity in economics?",
-    "options": [
-      "Unequal distribution of resources",
-      "Limited technology",
-      "Unlimited wants and limited resources",
-      "Government intervention"
-    ],
-    "answer": "Unlimited wants and limited resources",
+    "options": {
+      "a": "Unequal distribution of resources",
+      "b": "Limited technology",
+      "c": "Unlimited wants and limited resources",
+      "d": "Government intervention"
+    },
+    "answer": "c",
     "explanation": "Scarcity arises because the needs and wants of individuals are unlimited, but the resources available to satisfy those wants are limited."
   },
   {
@@ -100,5 +99,4 @@ The concept of limited resources assumes that resources are scarce, but this may
     "explanation": "The concept of unlimited wants leads to the need for resource allocation because resources are limited and choices must be made about how to use them efficiently."
   }
 ]
-
 ```

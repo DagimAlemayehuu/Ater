@@ -57,7 +57,6 @@ The concept of For Whom To Produce assumes that societies have a clear understan
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -69,13 +68,13 @@ The concept of For Whom To Produce assumes that societies have a clear understan
   {
     "type": "mcq",
     "question": "What is a primary implication of the production possibility frontier (PPF) in the context of For Whom To Produce?",
-    "options": [
-      "It shows that economies can produce beyond their current capacity with sufficient demand.",
-      "It illustrates the trade-offs involved in producing different goods given limited resources.",
-      "It indicates that all economies should aim to produce the same mix of goods.",
-      "It suggests that technological advancements eliminate scarcity."
-    ],
-    "answer": "It illustrates the trade-offs involved in producing different goods given limited resources.",
+    "options": {
+      "a": "It shows that economies can produce beyond their current capacity with sufficient demand.",
+      "b": "It illustrates the trade-offs involved in producing different goods given limited resources.",
+      "c": "It indicates that all economies should aim to produce the same mix of goods.",
+      "d": "It suggests that technological advancements eliminate scarcity."
+    },
+    "answer": "b",
     "explanation": "The PPF demonstrates the trade-offs involved in producing different goods, given limited resources and technology, which is crucial for understanding For Whom To Produce."
   },
   {
@@ -91,5 +90,4 @@ The concept of For Whom To Produce assumes that societies have a clear understan
     "explanation": "The distribution of goods and services influences individual well-being, which in turn affects economic growth by impacting productivity, investment, and consumption patterns."
   }
 ]
-
 ```

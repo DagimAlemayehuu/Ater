@@ -62,7 +62,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -74,13 +73,13 @@ graph LR
   {
     "type": "mcq",
     "question": "What is a nuance of labour-intensive techniques?",
-    "options": [
-      "They are always more cost-effective",
-      "They often require a high level of skill and training",
-      "They are typically used in the technology sector",
-      "They lead to rapid scalability"
-    ],
-    "answer": "They often require a high level of skill and training",
+    "options": {
+      "a": "They are always more cost-effective",
+      "b": "They often require a high level of skill and training",
+      "c": "They are typically used in the technology sector",
+      "d": "They lead to rapid scalability"
+    },
+    "answer": "b",
     "explanation": "Labour-intensive techniques often require a high level of skill and training, which can limit their scalability. This is because skilled labour is not easily substitutable with machines or less skilled workers."
   },
   {
@@ -96,5 +95,4 @@ graph LR
     "explanation": "The reliance on skilled artisans and traditional methods in labour-intensive techniques leads to challenges in scaling up production, as increasing output requires more skilled workers, which can be difficult to find and train."
   }
 ]
-
 ```

@@ -455,6 +455,20 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       <MarkdownBlock content={currentQ.explanation || "No explanation provided."} />
                     </div>
                   </div>
+
+                  {currentQ.type === 'trace' && currentQ.steps && (
+                    <div className="space-y-2 pt-3 border-t border-border/10">
+                      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30 mb-2">Causal Chain Logic</div>
+                      <div className="space-y-1.5 pl-2">
+                        {currentQ.steps.map((step: string, i: number) => (
+                          <div key={i} className="flex items-start gap-3">
+                            <div className="mt-1 w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
+                            <div className="text-[11px] font-bold text-foreground/70 leading-snug">{step}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   {['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQ.type) && currentQ.required_keywords && currentQ.required_keywords.length > 0 && (
                     <div className="space-y-3 pt-4 border-t border-border/10">

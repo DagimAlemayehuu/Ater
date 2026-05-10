@@ -173,6 +173,27 @@ class LogicHealer:
                             # this block is for logic tracking.
                             pass
                             
+                # ── 5.4 MCQ Format Heal (a,b,c,d) ──
+                if q.get("type") == "mcq" and isinstance(q.get("options"), list):
+                    old_options = q["options"]
+                    new_options = {}
+                    keys = ["a", "b", "c", "d"]
+                    for i, opt in enumerate(old_options[:4]):
+                        new_options[keys[i]] = opt
+                    
+                    old_answer = str(q.get("answer", "")).strip().lower()
+                    new_answer = q.get("answer", "") # Default to old
+                    
+                    # Try to find if answer matches one of the options text
+                    for i, opt in enumerate(old_options[:4]):
+                        if str(opt).strip().lower() == old_answer:
+                            new_answer = keys[i]
+                            break
+                    
+                    q["options"] = new_options
+                    q["answer"] = new_answer
+                    self.logger.info(f"[Healer] Converted MCQ options to dict format.")
+
                 # ── 5.3 Cross-Key Numeric Consistency Heal ──
                 # If explanation says 'X = 12' and answer is '10', and type is not MCQ (where keys are A/B/C/D), heal it.
                 # EXEMPT: 'trace' questions, as they often derive full equations which the regex would truncate.

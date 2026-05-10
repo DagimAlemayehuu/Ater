@@ -465,14 +465,14 @@ function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox}: 
  >
  {/* Level Indentation Guide Lines */}
  {node.depth > 0 && (
- <div className="absolute left-0 top-0 bottom-0 flex" style={{width: node.depth * 24}}>
+ <div className="absolute left-0 top-0 bottom-0 flex" style={{width: node.depth * 14}}>
  {Array.from({length: node.depth}).map((_, i) => (
- <div key={i} className="w-[24px] border-r border-border/20 h-full" />
+ <div key={i} className="w-[14px] border-r border-border/20 h-full" />
  ))}
  </div>
  )}
 
- <div className="flex items-center gap-2 w-full" style={{marginLeft: node.depth * 24}}>
+ <div className="flex items-center gap-2 w-full" style={{marginLeft: node.depth * 14}}>
  <div 
  className="w-4 h-4 shrink-0 flex items-center justify-center"
  onClick={(e) => {e.stopPropagation(); toggleNode(node.label);}}

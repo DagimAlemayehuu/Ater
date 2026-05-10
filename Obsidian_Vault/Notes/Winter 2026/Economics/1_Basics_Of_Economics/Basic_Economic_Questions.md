@@ -65,7 +65,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -77,13 +76,13 @@ graph LR
   {
     "type": "mcq",
     "question": "What is the primary reason economies must make choices about how to allocate resources?",
-    "options": [
-      "To maximize profit",
-      "To achieve full employment",
-      "To address scarcity and limited resources",
-      "To promote economic growth"
-    ],
-    "answer": "To address scarcity and limited resources",
+    "options": {
+      "a": "To maximize profit",
+      "b": "To achieve full employment",
+      "c": "To address scarcity and limited resources",
+      "d": "To promote economic growth"
+    },
+    "answer": "c",
     "explanation": "The primary reason economies must make choices is to address the fundamental economic problem of scarcity and limited resources."
   },
   {
@@ -99,5 +98,4 @@ graph LR
     "explanation": "Scarcity leads to choices about resource allocation, which in turn affect production, economic growth, and ultimately the standard of living."
   }
 ]
-
 ```

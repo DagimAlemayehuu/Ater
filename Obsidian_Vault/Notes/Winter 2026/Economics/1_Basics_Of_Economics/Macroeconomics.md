@@ -66,7 +66,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -78,13 +77,13 @@ graph LR
   {
     "type": "mcq",
     "question": "What is the primary focus of macroeconomics?",
-    "options": [
-      "Individual consumer behavior",
-      "The economy as a whole",
-      "Specific industries",
-      "International trade"
-    ],
-    "answer": "The economy as a whole",
+    "options": {
+      "a": "Individual consumer behavior",
+      "b": "The economy as a whole",
+      "c": "Specific industries",
+      "d": "International trade"
+    },
+    "answer": "b",
     "explanation": "Macroeconomics examines the economy's overall performance, focusing on issues like economic growth, market failure, and the interactions between different sectors."
   },
   {
@@ -100,5 +99,4 @@ graph LR
     "explanation": "The scarcity of resources, arising from unlimited wants and limited resources, can lead to economic instability as individuals and societies compete for resources."
   }
 ]
-
 ```

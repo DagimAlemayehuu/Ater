@@ -73,7 +73,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -85,13 +84,13 @@ graph LR
   {
     "type": "mcq",
     "question": "What is a potential drawback of inductive reasoning in economics?",
-    "options": [
-      "It leads to absolute truths",
-      "It relies on a single observation",
-      "Conclusions can be incorrect if observations are biased or incomplete",
-      "It only applies to microeconomics"
-    ],
-    "answer": "Conclusions can be incorrect if observations are biased or incomplete",
+    "options": {
+      "a": "It leads to absolute truths",
+      "b": "It relies on a single observation",
+      "c": "Conclusions can be incorrect if observations are biased or incomplete",
+      "d": "It only applies to microeconomics"
+    },
+    "answer": "c",
     "explanation": "Inductive reasoning involves making generalizations based on specific observations, which can sometimes lead to incorrect conclusions if the observations are biased or incomplete."
   },
   {
@@ -107,5 +106,4 @@ graph LR
     "explanation": "The process of inductive reasoning starts with specific observations, leads to identifying patterns, making generalizations, and finally drawing conclusions based on those generalizations."
   }
 ]
-
 ```

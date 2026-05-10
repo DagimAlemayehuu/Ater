@@ -87,7 +87,6 @@ Positive economics utilizes:
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -99,13 +98,13 @@ Positive economics utilizes:
   {
     "type": "mcq",
     "question": "Which of the following is a key characteristic of positive economics?",
-    "options": [
-      "It involves subjective judgments and value-based analysis",
-      "It relies on verifiable data and evidence",
-      "It aims to describe how economic phenomena should be",
-      "It is primarily concerned with policy recommendations"
-    ],
-    "answer": "It relies on verifiable data and evidence",
+    "options": {
+      "a": "It involves subjective judgments and value-based analysis",
+      "b": "It relies on verifiable data and evidence",
+      "c": "It aims to describe how economic phenomena should be",
+      "d": "It is primarily concerned with policy recommendations"
+    },
+    "answer": "b",
     "explanation": "Positive economics is based on verifiable data and evidence, allowing for the testing and validation of economic statements."
   },
   {
@@ -121,5 +120,4 @@ Positive economics utilizes:
     "explanation": "The use of deductive reasoning allows economists to systematically develop and test their theories, enhancing the credibility and reliability of economic research."
   }
 ]
-
 ```

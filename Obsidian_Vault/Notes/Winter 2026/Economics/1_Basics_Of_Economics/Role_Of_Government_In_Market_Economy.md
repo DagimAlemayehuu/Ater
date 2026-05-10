@@ -71,7 +71,6 @@ However, in reality, governments often face challenges in determining the optima
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -83,13 +82,13 @@ However, in reality, governments often face challenges in determining the optima
   {
     "type": "mcq",
     "question": "What is the primary function of the government in a capitalist economy?",
-    "options": [
-      "To directly influence market outcomes",
-      "To protect property rights and enforce contracts",
-      "To allocate resources based on consumer demand",
-      "To provide goods and services to meet all needs"
-    ],
-    "answer": "To protect property rights and enforce contracts",
+    "options": {
+      "a": "To directly influence market outcomes",
+      "b": "To protect property rights and enforce contracts",
+      "c": "To allocate resources based on consumer demand",
+      "d": "To provide goods and services to meet all needs"
+    },
+    "answer": "b",
     "explanation": "In a capitalist economy, the government's primary role is to create an environment conducive to economic growth by protecting property rights, enforcing contracts, and providing public goods. This approach allows the market to allocate resources efficiently."
   },
   {
@@ -105,5 +104,4 @@ However, in reality, governments often face challenges in determining the optima
     "explanation": "The government's non-interference in market operations enables the price mechanism to function effectively, leading to an efficient allocation of resources based on consumer demand and market interactions."
   }
 ]
-
 ```

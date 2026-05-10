@@ -74,7 +74,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -86,13 +85,13 @@ graph LR
   {
     "type": "mcq",
     "question": "What does a movement along the Production Possibilities Frontier (PPF) represent?",
-    "options": [
-      "A change in the economy's productive capacity",
-      "A change in consumer preferences",
-      "A change in the combination of goods produced",
-      "A change in the level of technology"
-    ],
-    "answer": "A change in the combination of goods produced",
+    "options": {
+      "a": "A change in the economy's productive capacity",
+      "b": "A change in consumer preferences",
+      "c": "A change in the combination of goods produced",
+      "d": "A change in the level of technology"
+    },
+    "answer": "c",
     "explanation": "A movement along the PPF represents a change in the combination of goods produced, while a shift of the PPF represents a change in the economy's productive capacity."
   },
   {
@@ -108,5 +107,4 @@ graph LR
     "explanation": "The PPF curve represents the trade-offs that the town faces when allocating its resources, and it shows the maximum possible output of one good for a given output of the other."
   }
 ]
-
 ```

@@ -68,7 +68,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -80,13 +79,13 @@ graph LR
   {
     "type": "mcq",
     "question": "What is the typical slope of the Production Possibilities Frontier (PPF)?",
-    "options": [
-      "Upward sloping",
-      "Downward sloping",
-      "Horizontal",
-      "Vertical"
-    ],
-    "answer": "Downward sloping",
+    "options": {
+      "a": "Upward sloping",
+      "b": "Downward sloping",
+      "c": "Horizontal",
+      "d": "Vertical"
+    },
+    "answer": "b",
     "explanation": "The PPF is typically downward sloping, indicating that as more of one good is produced, less of the other good can be produced."
   },
   {
@@ -101,5 +100,4 @@ graph LR
     "explanation": "When an economy decides to produce more cars, it must divert some of its resources away from producing computers, resulting in a decrease in computer production."
   }
 ]
-
 ```

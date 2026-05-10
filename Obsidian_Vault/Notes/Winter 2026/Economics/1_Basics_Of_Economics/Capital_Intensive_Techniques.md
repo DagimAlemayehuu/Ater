@@ -55,7 +55,6 @@ However, the use of capital-intensive techniques has its limitations. For instan
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -67,13 +66,13 @@ However, the use of capital-intensive techniques has its limitations. For instan
   {
     "type": "mcq",
     "question": "What is a primary benefit of using capital-intensive techniques in industries like the car and computer sectors?",
-    "options": [
-      "Increased reliance on manual labor",
-      "Reduced need for technological innovation",
-      "Improved product quality and reduced labor costs",
-      "Decreased scalability and efficiency"
-    ],
-    "answer": "Improved product quality and reduced labor costs",
+    "options": {
+      "a": "Increased reliance on manual labor",
+      "b": "Reduced need for technological innovation",
+      "c": "Improved product quality and reduced labor costs",
+      "d": "Decreased scalability and efficiency"
+    },
+    "answer": "c",
     "explanation": "Capital-intensive techniques allow firms to produce high-quality products at scale while minimizing labor costs."
   },
   {
@@ -89,5 +88,4 @@ However, the use of capital-intensive techniques has its limitations. For instan
     "explanation": "The use of capital-intensive techniques enables firms to produce more efficiently and effectively, thereby addressing the fundamental economic questions."
   }
 ]
-
 ```

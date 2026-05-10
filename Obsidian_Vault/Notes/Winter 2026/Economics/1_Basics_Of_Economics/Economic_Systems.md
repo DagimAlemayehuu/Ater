@@ -63,7 +63,6 @@ However, these economic systems are not mutually exclusive, and most real-world 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -75,13 +74,13 @@ However, these economic systems are not mutually exclusive, and most real-world 
   {
     "type": "mcq",
     "question": "What is the primary goal of a capitalist system?",
-    "options": [
-      "Promote social welfare through government control",
-      "Maximize profits through private enterprise",
-      "Achieve a balance between private and public sectors",
-      "Ensure equal distribution of resources"
-    ],
-    "answer": "Maximize profits through private enterprise",
+    "options": {
+      "a": "Promote social welfare through government control",
+      "b": "Maximize profits through private enterprise",
+      "c": "Achieve a balance between private and public sectors",
+      "d": "Ensure equal distribution of resources"
+    },
+    "answer": "b",
     "explanation": "In a capitalist system, the primary goal is to maximize profits through private enterprise and competition."
   },
   {
@@ -98,5 +97,4 @@ However, these economic systems are not mutually exclusive, and most real-world 
     "explanation": "The existence of unlimited wants and limited resources can lead to market failures in capitalist systems, necessitating government intervention and resulting in the need for a mixed economy."
   }
 ]
-
 ```

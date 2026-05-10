@@ -57,7 +57,6 @@ The concept of opportunity cost assumes that individuals and firms have perfect 
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -69,13 +68,13 @@ The concept of opportunity cost assumes that individuals and firms have perfect 
   {
     "type": "mcq",
     "question": "What is a key characteristic of human wants in the context of Opportunity Cost?",
-    "options": [
-      "They are limited",
-      "They are constant",
-      "They are subjective",
-      "They are unlimited"
-    ],
-    "answer": "They are unlimited",
+    "options": {
+      "a": "They are limited",
+      "b": "They are constant",
+      "c": "They are subjective",
+      "d": "They are unlimited"
+    },
+    "answer": "d",
     "explanation": "Human wants are considered unlimited in nature, which contributes to the problem of scarcity and the need for choices."
   },
   {
@@ -92,5 +91,4 @@ The concept of opportunity cost assumes that individuals and firms have perfect 
     "explanation": "The causal chain leads to the realization that choices have consequences, and Opportunity Cost helps evaluate those consequences."
   }
 ]
-
 ```

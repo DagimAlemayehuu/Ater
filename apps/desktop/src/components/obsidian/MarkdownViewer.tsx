@@ -232,7 +232,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
         h4: ({ children }: any) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] text-muted-foreground/60">{children}</h4>,
         ul: ({ children, className }: any) => {
             const isTaskList = className?.includes('contains-task-list');
-            return <ul className={cn("space-y-1 mb-4 text-[13px] text-foreground", isTaskList ? "list-none pl-1" : "list-disc pl-5")}>{children}</ul>
+            return <ul className={cn("space-y-1 mb-4 text-[13px] text-foreground", isTaskList ? "list-none pl-8" : "list-disc pl-5")}>{children}</ul>
         },
         ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ol>,
         li: ({ children, className }: any) => {

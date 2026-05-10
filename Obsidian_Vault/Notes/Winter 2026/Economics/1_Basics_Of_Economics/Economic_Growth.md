@@ -65,7 +65,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -77,13 +76,13 @@ graph LR
   {
     "type": "mcq",
     "question": "Which of the following can lead to economic growth?",
-    "options": [
-      "Decrease in labor",
-      "Increase in capital",
-      "Decrease in technology",
-      "Increase in scarcity"
-    ],
-    "answer": "Increase in capital",
+    "options": {
+      "a": "Decrease in labor",
+      "b": "Increase in capital",
+      "c": "Decrease in technology",
+      "d": "Increase in scarcity"
+    },
+    "answer": "b",
     "explanation": "An increase in capital, such as an increase in the stock of machines or buildings, can lead to economic growth by enabling the production of more goods and services.",
     "optionsValid": [
       "Increase in labor",
@@ -104,5 +103,4 @@ graph LR
     "explanation": "An increase in labor can lead to an increase in output, which can drive economic growth and ultimately improve the standard of living."
   }
 ]
-
 ```

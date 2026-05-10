@@ -74,7 +74,6 @@ graph LR
 ## 6. The Proving Grounds
 
 ```interactive-quiz
-
 [
   {
     "type": "fill_in",
@@ -86,13 +85,13 @@ graph LR
   {
     "type": "mcq",
     "question": "What is a direct consequence of scarcity in an economy?",
-    "options": [
-      "Increased economic growth",
-      "Decreased opportunity costs",
-      "The need for efficient resource allocation",
-      "Automatic satisfaction of all wants"
-    ],
-    "answer": "The need for efficient resource allocation",
+    "options": {
+      "a": "Increased economic growth",
+      "b": "Decreased opportunity costs",
+      "c": "The need for efficient resource allocation",
+      "d": "Automatic satisfaction of all wants"
+    },
+    "answer": "c",
     "explanation": "Scarcity implies that resources are limited and wants are unlimited, leading to the need for efficient allocation of resources to maximize satisfaction.",
     "optionsValid": [
       "The need for efficient resource allocation",
@@ -116,5 +115,4 @@ graph LR
     "explanation": "The causal chain leads to opportunity costs as a direct result of scarcity and the consequent need for choices about resource allocation."
   }
 ]
-
 ```
