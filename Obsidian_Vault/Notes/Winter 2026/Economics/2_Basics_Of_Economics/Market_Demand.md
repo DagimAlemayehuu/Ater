@@ -38,7 +38,7 @@ The [[Market_Demand]] for a good or service is the quantity that consumers are w
 
 ## 3. Limitations & Edge Cases
 
-The concept of market demand assumes that consumers have perfect information about the market and that they make rational decisions. However, in reality, consumers may have limited information or make irrational decisions. Additionally, the concept of market demand assumes that the market is in [[Market_Equilibrium]], where the quantity demanded equals the quantity supplied. However, markets may not always be in equilibrium, and external factors such as [[Substitute_Goods]] or [[Inferior_Goods]] can influence demand. Furthermore, the concept of market demand may not apply to certain goods or services, such as those with [[Time_And_Eligibility]] constraints. The assumption of ceteris paribus also limits the concept, as changes in other variables can impact demand.
+The concept of market demand assumes that consumers have perfect information about the market and that they make rational decisions. However, in reality, consumers may have limited information or make irrational decisions. Additionally, the concept of market demand assumes that the market is in [[Market_Equilibrium]], where the quantity demanded equals the quantity supplied. However, markets may not always be in equilibrium, and external factors such as [[Substitute_Goods]] or [[Inferior_Goods]] can influence demand. Furthermore, market demand behavior can be influenced by time horizons and other factors detailed in the [[Determinants_Of_Price_Elasticity_Of_Demand]]. The assumption of ceteris paribus also limits the concept, as changes in other variables can impact demand.
 
 ## 4. Market Demand Curve
 

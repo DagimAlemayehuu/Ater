@@ -842,40 +842,34 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     seed=str(s)
                 ))
                 
-        # Limit concurrency and rate to avoid groq/ollama rate limits
-        from aiolimiter import AsyncLimiter
-        # Scanned Active Context
-        
-        # Groq limits are often ~30 RPM on free tier. Limit to 20 per minute for speed with safety.
-        rate_limiter = AsyncLimiter(20, 60)
-        
+        # Sequential execution with per-task stagger to stay within TPM limits.
+        # The Governor inside QuestionAgent already handles precise token pacing;
+        # we serialise at this level to prevent burst storms on multi-type sessions.
+        sem = asyncio.Semaphore(2)  # Max 2 concurrent QuestionAgent calls
+
         async def run_agent(task_fn):
-            max_retries = 5
-            base_delay = 3.0
-            for attempt in range(max_retries):
-                try:
-                    async with rate_limiter:
+            async with sem:
+                max_retries = 5
+                base_delay = 2.0
+                for attempt in range(max_retries):
+                    try:
                         return await task_fn()
-                except Exception as e:
-                    err_msg = str(e)
-                    if "429" in err_msg or "rate limit" in err_msg.lower():
-                        if attempt == max_retries - 1:
-                            logger.error(f"[OKA Service] Max retries reached for question generation: {e}")
-                            return {"error": "Rate limit exceeded after retries"}
-                        
-                        # Extract the required wait time from Groq error if available, else exponential backoff
-                        delay = base_delay * (2 ** attempt)
-                        import re
-                        match = re.search(r'Please try again in ([0-9.]+)s', err_msg)
-                        if match:
-                            delay = float(match.group(1)) + 1.0 # Add a buffer
-                        
-                        logger.warning(f"[OKA Service] Rate limit hit (Attempt {attempt+1}/{max_retries}). Retrying in {delay:.2f}s... Error: {err_msg[:100]}")
-                        await asyncio.sleep(delay)
-                    else:
-                        logger.error(f"[OKA Service] Non-retryable error during generation: {e}")
-                        return {"error": str(e)}
-                
+                    except Exception as e:
+                        err_msg = str(e)
+                        is_rate = "429" in err_msg or "rate limit" in err_msg.lower()
+                        if is_rate:
+                            if attempt == max_retries - 1:
+                                logger.error(f"[OKA Service] Max retries reached: {e}")
+                                return {"error": "Rate limit exceeded after retries"}
+                            import re as _re
+                            m = _re.search(r'Please try again in ([0-9.]+)s', err_msg)
+                            delay = float(m.group(1)) + 2.0 if m else base_delay * (2 ** attempt)
+                            logger.warning(f"[OKA Service] 429 – waiting {delay:.1f}s (attempt {attempt+1})")
+                            await asyncio.sleep(delay)
+                        else:
+                            logger.error(f"[OKA Service] Non-retryable error during generation: {e}")
+                            return {"error": str(e)}
+
         results = await asyncio.gather(*(run_agent(t) for t in tasks), return_exceptions=True)
         
         all_questions = []
@@ -993,70 +987,63 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             "completed": False
         }
         yaml_frontmatter = f"---\n{yaml.dump(yaml_data, sort_keys=False)}---\n"
-        
-        # Create Premium Readable Markdown
-        md_content = f"# 🧠 OKA MASTERY SESSION: {hub['title'].upper()}\n\n"
-        md_content += f"> **Session ID:** `{session_id}` | **Date:** {datetime.now().strftime('%Y-%m-%d')} | **Difficulty:** {config.difficulty}\n"
-        md_content += f"> **Scope:** {selected_scope_str}\n\n"
-        
-        md_content += "## 🎯 THE CHALLENGE\n\n"
-        
+
+        # Clean academic markdown — no emojis, no decorations
+        md_content = f"# OKA MASTERY SESSION: {hub['title'].upper()}\n\n"
+        md_content += f"> Session ID: `{session_id}` | Date: {datetime.now().strftime('%Y-%m-%d')} | Difficulty: {config.difficulty}\n"
+        md_content += f"> Scope: {selected_scope_str}\n\n"
+        md_content += "## THE CHALLENGE\n\n"
+
         for idx, q in enumerate(questions, 1):
             q_text = q.get('question', '')
             if not q_text and q.get('type') == 'writing':
                 q_text = q.get('answer', 'Analyze the following concept:')
-            
-            md_content += f"### Q{idx} | {q.get('type').replace('_', ' ').upper()}\n"
+
+            md_content += f"### Q{idx} | {(q.get('type') or 'mcq').replace('_', ' ').upper()}\n"
             md_content += f"{q_text}\n\n"
-            
+
             if q.get('type') == 'mcq' and q.get('options'):
-                options = q.get('options')
-                for k, v in options.items():
+                for k, v in q['options'].items():
                     md_content += f"- [ ] **{k})** {v}\n"
             elif q.get('type') == 'true_false':
                 md_content += "- [ ] True\n- [ ] False\n"
             elif q.get('type') == 'fill_in':
                 md_content += f"> {q.get('textWithBlanks', '')}\n"
-            elif q.get('type') == 'debug':
-                md_content += f"```{(q.get('language') or 'text')}\n{q.get('content', '')}\n```\n"
+            elif q.get('type') in ('debug', 'code'):
+                snippet = q.get('content') or q.get('codeSnippet', '')
+                lang = q.get('language') or 'text'
+                md_content += f"```{lang}\n{snippet}\n```\n"
             elif q.get('type') == 'order' and q.get('steps'):
-                for step in q.get('steps'):
+                for step in q['steps']:
                     md_content += f"- [ ] {step}\n"
             elif q.get('type') == 'matching' and q.get('pairs'):
-                lefts = [p.get('left') for p in q.get('pairs') if p.get('left')]
-                rights = [p.get('right') for p in q.get('pairs') if p.get('right')]
-                import random
-                random.shuffle(rights)
+                import random as _random
+                rights = [p.get('right', '') for p in q['pairs']]
+                _random.shuffle(rights)
                 md_content += "| Concept | Match |\n| :--- | :--- |\n"
-                for left, right in zip(lefts, rights):
-                    md_content += f"| {left} | `__________` |\n"
+                for pair in q['pairs']:
+                    md_content += f"| {pair.get('left', '')} | __________ |\n"
                 md_content += "\n**Options:** " + ", ".join([f"`{r}`" for r in rights]) + "\n"
-            elif q.get('type') == 'code':
-                md_content += f"```{(q.get('language') or 'text')}\n{q.get('codeSnippet', '')}\n```\n"
-            
+
             md_content += "\n---\n\n"
-        
-        md_content += "\n## 🔐 SOLUTION KEY (DO NOT PEEK)\n\n"
-        md_content += "<details>\n<summary>Click to reveal answers and technical logic</summary>\n\n"
-        
+
+        md_content += "\n## SOLUTION KEY\n\n"
+        md_content += "<details>\n<summary>Click to reveal answers</summary>\n\n"
+
         for idx, q in enumerate(questions, 1):
-            md_content += f"#### Q{idx} Logic\n"
+            md_content += f"#### Q{idx}\n"
             ans_val = q.get('answer')
-            if isinstance(ans_val, list):
-                ans_str = ", ".join([str(x) for x in ans_val])
-            else:
-                ans_str = str(ans_val)
-            
-            md_content += f"- **Definitive Answer:** `{ans_str}`\n"
-            md_content += f"- **Mechanism:** {q.get('explanation', 'No explanation provided.')}\n\n"
-        
+            ans_str = ", ".join(str(x) for x in ans_val) if isinstance(ans_val, list) else str(ans_val)
+            md_content += f"- **Answer:** `{ans_str}`\n"
+            md_content += f"- **Explanation:** {q.get('explanation', 'N/A')}\n\n"
+
         md_content += "</details>\n\n"
-        
-        md_content += "## 📊 Session Data\n"
+        md_content += "## Session Data\n"
         md_content += "```json\n"
-        md_content += json.dumps(questions, indent=2)
+        md_content += json.dumps(questions, indent=2, ensure_ascii=False)
         md_content += "\n```\n"
 
+        quiz_path.parent.mkdir(parents=True, exist_ok=True)
         with open(quiz_path, "w", encoding="utf-8") as f:
             f.write(yaml_frontmatter + md_content)
 

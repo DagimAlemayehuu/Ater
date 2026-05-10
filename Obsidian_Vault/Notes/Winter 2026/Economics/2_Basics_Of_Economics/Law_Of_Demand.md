@@ -38,7 +38,7 @@ The Law of Demand describes the relationship between the quantity demanded of a 
 
 ## 3. Limitations & Edge Cases
 
-The Law of Demand assumes that other factors, such as consumer income, tastes, and prices of related goods [[Substitute_Goods]], remain constant. In reality, these factors can change, causing shifts in the demand curve. For instance, an increase in consumer income can increase demand for [[Normal_Goods]] but decrease demand for [[Inferior_Goods]]. Additionally, the Law of Demand may not hold for goods with [[Technological_Advancement]] that significantly changes consumer preferences or needs. The concept also assumes that consumers have [[Time_And_Eligibility]] to adjust their consumption patterns. Real-world complications, such as Arc Elasticity Of Demand and varying Determinants Of Elasticity Of Supply, can affect the application of the Law of Demand in specific markets.
+The Law of Demand assumes that other factors, such as consumer income, tastes, and prices of related goods [[Substitute_Goods]], remain constant. In reality, these factors can change, causing shifts in the demand curve. For instance, an increase in consumer income can increase demand for [[Normal_Goods]] but decrease demand for [[Inferior_Goods]]. Additionally, the Law of Demand may not hold for goods with [[Technological_Advancement]] that significantly changes consumer preferences or needs. The concept also assumes that consumers have sufficient time (see [[Determinants_Of_Price_Elasticity_Of_Demand]]) to adjust their consumption patterns. Real-world complications, such as Arc Elasticity Of Demand and varying Determinants Of Elasticity Of Supply, can affect the application of the Law of Demand in specific markets.
 
 ## 4. Demand Curve Analysis
 

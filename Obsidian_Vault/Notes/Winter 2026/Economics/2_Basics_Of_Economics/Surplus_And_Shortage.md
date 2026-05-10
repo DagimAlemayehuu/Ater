@@ -33,7 +33,7 @@ A surplus occurs when the quantity supplied of a good or service is greater than
 
 ## 3. Limitations & Edge Cases
 
-The concepts of surplus and shortage assume that markets are perfectly competitive and that prices can adjust freely. However, in real-world scenarios, prices might be sticky due to various factors like [[Technological_Advancement]] or government interventions. Additionally, the presence of [[Substitutes_And_Eligibility]] can affect how surpluses and shortages are resolved in the market. Furthermore, in [[Time_And_Eligibility]], the timing of supply and demand can also influence the occurrence of surpluses and shortages. These complexities highlight the need for nuanced analysis when applying these concepts to real-world markets.
+The concepts of surplus and shortage assume that markets are perfectly competitive and that prices can adjust freely. However, in real-world scenarios, prices might be sticky due to various factors like [[Technological_Advancement]] or government interventions. Additionally, the availability of substitutes (see [[Determinants_Of_Price_Elasticity_Of_Demand]]) can affect how surpluses and shortages are resolved. Furthermore, time horizons in both demand and supply can influence the persistence of these states. These complexities highlight the need for nuanced analysis when applying these concepts to real-world markets.
 
 ## 4. Surplus and Shortage Diagram
 

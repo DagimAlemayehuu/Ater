@@ -12,7 +12,7 @@ prerequisites:
 - '[[Determinants_Of_Elasticity_Of_Supply]]'
 - '[[Law_Of_Supply]]'
 - '[[Market_Equilibrium]]'
-- '[[Time_And_Eligibility]]'
+- '[[Determinants_Of_Elasticity_Of_Supply]]'
 source_pages:
 - 48
 - 49
@@ -36,7 +36,7 @@ The elasticity of supply, denoted by $E_S$, measures the responsiveness of the q
 
 ## 3. Limitations & Edge Cases
 
-The concept of elasticity of supply assumes that producers have the ability to adjust their production levels in response to price changes. However, in reality, producers may face limitations such as fixed production capacities, limited access to resources, or technological constraints. For example, a farmer may not be able to increase production immediately due to weather conditions or limited availability of labor. Furthermore, the elasticity of supply may vary over time, with producers being more responsive to price changes in the long run than in the short run [[Time_And_Eligibility]]. These limitations highlight the importance of considering the specific context and constraints faced by producers when analyzing the elasticity of supply. The concept also assumes that producers have perfect knowledge of market conditions, which may not always be the case.
+The concept of elasticity of supply assumes that producers have the ability to adjust their production levels in response to price changes. However, in reality, producers may face limitations such as fixed production capacities, limited access to resources, or technological constraints. For example, a farmer may not be able to increase production immediately due to weather conditions or limited availability of labor. Furthermore, the elasticity of supply may vary over time, with producers being more responsive to price changes in the long run than in the short run (see [[Determinants_Of_Elasticity_Of_Supply]]). These limitations highlight the importance of considering the specific context and constraints faced by producers when analyzing the elasticity of supply. The concept also assumes that producers have perfect knowledge of market conditions, which may not always be the case.
 
 ## 4. Elasticity of Supply Classification
 

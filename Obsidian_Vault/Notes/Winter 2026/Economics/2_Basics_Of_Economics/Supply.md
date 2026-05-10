@@ -12,7 +12,7 @@ prerequisites:
 - '[[Technological_Advancement]]'
 - '[[Law_Of_Supply]]'
 - '[[Market_Equilibrium]]'
-- '[[Time_And_Eligibility]]'
+- '[[Determinants_Of_Elasticity_Of_Supply]]'
 - '[[Substitute_Goods]]'
 source_pages:
 - 46
@@ -38,7 +38,7 @@ The concept of supply is directly influenced by a firm's ability to produce and 
 
 ## 3. Limitations & Edge Cases
 
-The concept of supply assumes that producers have the ability to adjust their production levels in response to price changes. However, in reality, there may be limitations to this ability, such as [[Time_And_Eligibility]] constraints or lack of access to variable factors. Additionally, the relationship between supply and price may not always be straightforward, particularly in markets with [[Substitute_Goods]] or [[Inferior_Goods]]. Furthermore, external factors, such as changes in government policies or weather conditions, can also impact supply. The concept of supply also relies on the assumption that producers are rational and aim to maximize profits.
+The concept of supply assumes that producers have the ability to adjust their production levels in response to price changes. However, in reality, there may be limitations to this ability, such as time constraints (see [[Determinants_Of_Elasticity_Of_Supply]]) or lack of access to variable factors. Additionally, the relationship between supply and price may not always be straightforward, particularly in markets with [[Substitute_Goods]] or [[Inferior_Goods]]. Furthermore, external factors, such as changes in government policies or weather conditions, can also impact supply. The concept of supply also relies on the assumption that producers are rational and aim to maximize profits.
 
 ## 4. Impact of Technological Advancement on Supply
 

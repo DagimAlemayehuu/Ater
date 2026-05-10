@@ -158,6 +158,11 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
   const [bookmarked, setBookmarked] = useState<Set<number>>(new Set())
   const [confidenceWager, setConfidenceWager] = useState<Record<number,number>>({})
 
+  // ── Explain More state ─────────────────────────────────────────────
+  const [explainOpen, setExplainOpen] = useState(false)
+  const [explainLesson, setExplainLesson] = useState('')
+  const [explainLoading, setExplainLoading] = useState(false)
+
   const globalTimeLeftRef = useRef(globalTimeLeft);
   const questionTimeLeftRef = useRef(questionTimeLeft);
   const isRevealedRef = useRef(isRevealed);
@@ -349,7 +354,9 @@ const handleStartSession = async () => {
  setUserAnswers({}); 
  setIsRevealed(false); 
  setGradedAnswers({}); 
+ setStreak(0); setBookmarked(new Set());
  setView('session');
+ (window as any).__practiceStartTime = Date.now();
  if (advancedConfig.globalTimeLimitMinutes) setGlobalTimeLeft(advancedConfig.globalTimeLimitMinutes * 60);
  if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
 }, 1000);
@@ -377,6 +384,7 @@ const handleStartSession = async () => {
  setIsRevealed(false); 
  setGradedAnswers({}); 
  setView('session');
+ (window as any).__practiceStartTime = Date.now();
 }, 500);
 } catch {
  toast.error('Error loading.'); 
@@ -470,6 +478,27 @@ const handleStartSession = async () => {
  const resetSession = () => {setQuestions([]); setView('dashboard');}
  const handleSelectAnswer = (val: any) => {if (!isRevealed) setUserAnswers(prev => ({...prev, [questions[currentQuestionIdx].id]: val}));}
  const handleDeletePractice = async (path: string) => {await sidecarApi.deletePractice(path); loadPastPractices();}
+
+ const handleExplainMore = async () => {
+   if (!currentQuestion) return
+   setExplainOpen(true)
+   setExplainLesson('')
+   setExplainLoading(true)
+   try {
+     const res = await sidecarApi.explainQuestion({
+       question: currentQuestion.question,
+       type: currentQuestion.type,
+       answer: (currentQuestion as any).answer,
+       explanation: currentQuestion.explanation,
+       context: (currentQuestion as any).content || (currentQuestion as any).codeSnippet || ''
+     })
+     setExplainLesson(res.lesson)
+   } catch (e: any) {
+     setExplainLesson('Failed to generate lesson. Please check your API key in Settings.')
+   } finally {
+     setExplainLoading(false)
+   }
+ }
 
  const toggleAtomicNote = (noteId: string) => {
  setAdvancedConfig(prev => ({
@@ -889,6 +918,35 @@ const handleStartSession = async () => {
  const progress = ((currentQuestionIdx + 1) / questions.length) * 100;
  return (
  <div className="h-full w-full flex flex-col bg-background text-foreground overflow-hidden">
+ {/* ── Explain More Modal ── */}
+ {explainOpen && (
+   <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)'}}>
+     <div className="relative w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col bg-background border border-border/40 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+       <div className="flex items-start justify-between px-6 py-5 border-b border-border/20 gap-4">
+         <div className="min-w-0">
+           <div className="text-[8px] font-black uppercase tracking-[0.35em] text-primary/50 mb-1">Deep Lesson</div>
+           <div className="text-sm font-black tracking-tight text-foreground/85 leading-snug line-clamp-2">{currentQuestion.question}</div>
+         </div>
+         <button onClick={() => setExplainOpen(false)} className="shrink-0 p-1.5 rounded-lg hover:bg-muted/20 text-muted-foreground/30 hover:text-foreground transition-colors mt-0.5"><X size={15}/></button>
+       </div>
+       <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5">
+         {explainLoading ? (
+           <div className="flex flex-col items-center justify-center py-20 gap-4">
+             <Loader2 size={28} className="animate-spin text-primary/40" />
+             <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Generating your lesson...</span>
+           </div>
+         ) : (
+           <div className="prose prose-sm max-w-none text-foreground/80 leading-relaxed">
+             <MarkdownBlock content={explainLesson} />
+           </div>
+         )}
+       </div>
+       <div className="px-6 py-4 border-t border-border/10">
+         <button onClick={() => setExplainOpen(false)} className="w-full h-10 bg-muted/5 border border-border/20 hover:border-foreground/20 text-foreground/50 hover:text-foreground text-[9px] font-black uppercase tracking-widest rounded-lg transition-colors">Close Lesson</button>
+       </div>
+     </div>
+   </div>
+ )}
  <div className="px-4 sm:px-8 py-3 border-b border-border flex flex-col lg:flex-row items-start sm:items-center justify-between gap-3">
  <div className="flex flex-col sm:flex-row lg:w-auto sm:items-center gap-4 sm:gap-8 w-full sm:w-auto">
  <div className="flex flex-col gap-0.5">
@@ -945,7 +1003,7 @@ const handleStartSession = async () => {
           'scenario': 'Scenario Analysis',
           'code': 'Code / Implementation'
       } as any)[currentQuestion.type as string] || (currentQuestion.type || '').replace('_', ' ')
-  }</span>
+  } MODE</span>
   <button onClick={() => toggleBookmark(currentQuestionIdx)} className={cn("ml-auto transition-colors", bookmarked.has(currentQuestionIdx) ? "text-primary" : "text-muted-foreground/20 hover:text-foreground")} title="Bookmark Question">
     <Bookmark size={14} className={bookmarked.has(currentQuestionIdx) ? "fill-primary" : ""} />
   </button>
@@ -970,7 +1028,8 @@ const handleStartSession = async () => {
 
  {(!currentQuestion.type || ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) && (
   <div className="space-y-6">
-  {['debug', 'code', 'trace'].includes(currentQuestion.type) && ((currentQuestion as any).content || (currentQuestion as any).codeSnippet) && <div className="p-1 border border-border rounded-xl bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${(currentQuestion as any).content || (currentQuestion as any).codeSnippet}\n\`\`\``} /></div>}
+  {['debug', 'code'].includes(currentQuestion.type) && ((currentQuestion as any).content || (currentQuestion as any).codeSnippet) && <div className="p-1 border border-border rounded-xl bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${(currentQuestion as any).content || (currentQuestion as any).codeSnippet}\n\`\`\``} /></div>}
+  {['trace', 'calculation', 'data_analysis', 'scenario', 'synthesis', 'writing'].includes(currentQuestion.type) && ((currentQuestion as any).content) && <div className="p-4 border border-border/10 rounded-xl bg-muted/5 text-sm text-foreground/80"><MarkdownBlock content={(currentQuestion as any).content} /></div>}
   <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-muted/5 border-2 border-border rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
   {isRevealed && (
     <div className="p-4 border-2 border-primary/20 bg-primary/5 rounded-lg space-y-2">
@@ -1112,9 +1171,19 @@ const handleStartSession = async () => {
   <div className="p-4 sm:p-6 border-t border-border/10 bg-background/80 backdrop-blur-md">
  <div className="max-w-2xl mx-auto flex items-center justify-between">
  <Button variant="ghost" onClick={resetSession} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Exit</Button>
- <div className="flex items-center gap-4">
+ <div className="flex items-center gap-2">
+  <Button
+    variant="ghost"
+    onClick={handleExplainMore}
+    className="h-10 px-4 text-[9px] font-black uppercase tracking-widest border border-border/30 hover:border-border/60 text-muted-foreground/50 hover:text-foreground rounded-md flex items-center gap-2 transition-colors"
+    title="Get a detailed lesson on this question's concept"
+  >
+    <BookOpen size={12} />
+    Explain More
+  </Button>
+  <div className="flex items-center gap-2">
  {!isRevealed ? (
- <Button onClick={handleSubmitAnswer} disabled={!userAnswers[currentQuestion.id] && currentQuestion.type !== 'debug'} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md">Check</Button>
+ <Button onClick={handleSubmitAnswer} disabled={!userAnswers[currentQuestion.id] && !['writing','synthesis','debug','trace','calculation','data_analysis','scenario','code'].includes(currentQuestion.type)} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md">Check</Button>
  ) : (
  <div className="flex gap-2">
  {gradedAnswers[currentQuestion.id] === undefined && ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type) && (
@@ -1133,6 +1202,7 @@ const handleStartSession = async () => {
  )}
  </div>
  )}
+  </div>
  </div>
  </div>
  </div>

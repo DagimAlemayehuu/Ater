@@ -23,7 +23,7 @@ An integrated synthesis of these concepts reveals that the mathematical relation
 
 ## Unit Objectives
 
-- [ ] Master core technical definitions for [[Time_And_Eligibility]], [[Arc_Elasticity_Of_Demand]], [[Elasticity_And_Total_Revenue]].
+- [ ] Master core technical definitions for [[Determinants_Of_Price_Elasticity_Of_Demand]], [[Arc_Elasticity_Of_Demand]], [[Elasticity_And_Total_Revenue]].
 - [ ] Internalize the mental models and professional analogies for each unit concept.
 - [ ] Trace and understand every source-anchored worked example and walkthrough.
 - [ ] Complete all Socratic Probes and verify with the Answer Key.
@@ -48,7 +48,9 @@ An integrated synthesis of these concepts reveals that the mathematical relation
 - [ ] [[Point_Elasticity_Of_Demand]]
     - [ ] [[Arc_Elasticity_Of_Demand]]
     - [ ] [[Elasticity_And_Total_Revenue]]
-    - [ ] [[Substitutes_And_Eligibility]]
+    - [ ] [[Determinants_Of_Price_Elasticity_Of_Demand]]
+    - [ ] [[Income_Elasticity_Of_Demand]]
+    - [ ] [[Cross_Price_Elasticity_Of_Demand]]
 - [ ] [[Supply]]
     - [ ] [[Law_Of_Supply]]
     - [ ] [[Market_Supply]]
@@ -56,7 +58,6 @@ An integrated synthesis of these concepts reveals that the mathematical relation
     - [ ] [[Elasticity_Of_Supply]]
         - [ ] [[Price_Elasticity_Of_Supply]]
         - [ ] [[Determinants_Of_Elasticity_Of_Supply]]
-    - [ ] [[Time_And_Eligibility]]
 - [ ] [[Market_Equilibrium]]
     - [ ] [[Equilibrium_Price]]
     - [ ] [[Equilibrium_Quantity]]

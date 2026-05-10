@@ -18,6 +18,8 @@ export interface AdvancedPracticeConfig {
     trace: number;
     calculation: number;
     data_analysis: number;
+    scenario: number;
+    code: number;
   };
 
   // 3. Cognitive Constraints
@@ -48,6 +50,8 @@ export type QuestionType =
   | "trace"
   | "scenario"
   | "code"
+  | "calculation"
+  | "data_analysis"
   | "find_error";
 
 export interface BaseQuestion {
@@ -128,6 +132,18 @@ export interface TraceQuestion extends BaseQuestion {
   answer: string;
 }
 
+export interface CalculationQuestion extends BaseQuestion {
+  type: "calculation";
+  content: string;
+  answer: string;
+}
+
+export interface DataAnalysisQuestion extends BaseQuestion {
+  type: "data_analysis";
+  content: string;
+  answer: string;
+}
+
 export type Question = 
   | MCQQuestion 
   | TrueFalseQuestion 
@@ -140,4 +156,6 @@ export type Question =
   | ScenarioQuestion
   | CodeQuestion
   | FindErrorQuestion
-  | TraceQuestion;
+  | TraceQuestion
+  | CalculationQuestion
+  | DataAnalysisQuestion;

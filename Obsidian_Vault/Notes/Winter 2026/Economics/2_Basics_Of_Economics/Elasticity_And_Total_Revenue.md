@@ -32,7 +32,7 @@ The effect of a price change on total revenue can be understood through the conc
 
 ## 3. Limitations & Edge Cases
 
-The concept of elasticity and total revenue assumes that other factors affecting demand, such as consumer income and prices of [[Substitute_Goods]], remain constant. In reality, these factors can change, influencing demand elasticity and the impact of price changes on total revenue. Additionally, the concept of elasticity may not apply uniformly across different time periods, as [[Time_And_Eligibility]] can affect demand responsiveness. Furthermore, businesses may face limitations in adjusting prices due to market competition or contractual obligations.
+The concept of elasticity and total revenue assumes that other factors affecting demand, such as consumer income and prices of [[Substitute_Goods]], remain constant. In reality, these factors can change, influencing demand elasticity and the impact of price changes on total revenue. Additionally, the responsiveness of demand may vary over time, as explained in the [[Determinants_Of_Price_Elasticity_Of_Demand]]. Furthermore, businesses may face limitations in adjusting prices due to market competition or contractual obligations.
 
 ## 4. Elasticity and Total Revenue Analysis
 

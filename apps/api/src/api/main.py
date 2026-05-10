@@ -38,7 +38,7 @@ import uvicorn
 import uuid
 from datetime import datetime
 import sqlite3
-from fastapi import FastAPI, Depends, HTTPException, Body, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, Body, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
@@ -101,17 +101,23 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
-# ── Vault Path Cache Middleware ──────────────────────────────────────────────
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request as _SR
+# ── Vault Path Cache Middleware (pure ASGI — does NOT touch request body) ────
+from starlette.types import ASGIApp as _ASGIApp, Receive as _Receive, Send as _Send, Scope as _Scope
 
-class _VaultPathCacheMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: _SR, call_next):
-        global _cached_vault_path
-        vp = request.headers.get("x-vault-path") or request.headers.get("X-Vault-Path")
-        if vp and vp.strip():
-            _cached_vault_path = vp.strip()
-        return await call_next(request)
+class _VaultPathCacheMiddleware:
+    def __init__(self, app: _ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: _Scope, receive: _Receive, send: _Send):
+        if scope["type"] == "http":
+            global _cached_vault_path
+            for k, v in scope.get("headers", []):
+                if k.lower() == b"x-vault-path":
+                    vp = v.decode("utf-8", errors="ignore").strip()
+                    if vp:
+                        _cached_vault_path = vp
+                    break
+        await self.app(scope, receive, send)
 
 app.add_middleware(_VaultPathCacheMiddleware)
 
@@ -648,6 +654,54 @@ async def oka_list_hub_notes(
     """Lists atomic notes for a specific hub."""
     service = OkaService(secrets)
     return {"notes": service.list_atomic_notes(hub_id)}
+
+@app.post("/api/practice/explain")
+async def explain_question(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Generates a detailed mini-lesson for a given quiz question using the configured AI."""
+    from src.domains.ai.factory import ModelFactory
+    ai_key = secrets.planner_key or secrets.ai_key
+    if not ai_key:
+        raise HTTPException(status_code=400, detail="AI Key required")
+
+    question = payload.get("question", "")
+    q_type = payload.get("type", "")
+    answer = payload.get("answer", "")
+    explanation = payload.get("explanation", "")
+    context = payload.get("context", "")
+
+    provider = secrets.planner_provider or secrets.ai_provider or "google"
+    model = secrets.planner_model or secrets.ai_model or "gemini-2.0-flash"
+
+    try:
+        llm = ModelFactory.get_model(provider=provider, model_name=model, api_key=ai_key, temperature=0.7, max_tokens=2000)
+
+        sys_prompt = """You are a world-class tutor. A student just answered a quiz question and wants a deep, crystal-clear explanation of the underlying concept.
+
+Your mini-lesson must:
+1. EXPLAIN the core concept tested — assume the student struggles with it
+2. USE clear analogies and real-world examples to make it intuitive
+3. BREAK DOWN the reasoning step by step
+4. HIGHLIGHT common mistakes and misconceptions
+5. END with a 1-sentence memory hook (bold it)
+
+Format your response in clean markdown. Use headers, bullet points, and bold text effectively. Be thorough but engaging — no fluff."""
+
+        human_prompt = f"""Quiz Question: {question}
+
+Question Type: {q_type}
+Correct Answer: {answer}
+{f'Existing Explanation: {explanation}' if explanation else ''}
+{f'Additional Context: {context}' if context else ''}
+
+Generate the mini-lesson now."""
+
+        res = await llm.ainvoke([("system", sys_prompt), ("human", human_prompt)])
+        return {"lesson": res.content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/practice/generate")
 async def generate_practice_session(
@@ -1607,22 +1661,25 @@ async def vault_upload_source(
 
 @app.post("/api/practice/vault/upload-file")
 async def vault_upload_file(
-    hub_id: str,
+    hub_id: str = Query(..., description="Hub ID to store questions under"),
     file: UploadFile = File(...),
     secrets: AppSecrets = Depends(get_app_secrets),
 ):
     """Accepts a binary file upload (PDF/image/txt), extracts text, then runs the pipeline."""
+    import tempfile, os, base64
+    from src.domains.ai.factory import ModelFactory
+    from src.domains.oka.reference_vault import ReferenceVaultPipeline
+    from src.domains.oka.governor import governor
+    from langchain_core.messages import HumanMessage
+
     if not secrets.ai_key:
         raise HTTPException(status_code=400, detail="AI Key required (configure in Settings)")
 
-    vault_path = secrets.vault_path
-    if not vault_path:
-        vault_path = _cached_vault_path
+    vault_path = secrets.vault_path or _cached_vault_path
     if not vault_path:
         raise HTTPException(status_code=400, detail="Vault Path not configured. Open Settings and set your Obsidian vault path.")
 
     suffix = Path(file.filename or "upload.txt").suffix.lower()
-    import tempfile, os
 
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -1630,43 +1687,77 @@ async def vault_upload_file(
             tmp_path = tmp.name
 
         source_text = ""
+
         if suffix == ".pdf":
+            # Attempt 1: pypdf (fast, pure-python, no deps)
             try:
-                from langchain_community.document_loaders import PyPDFLoader
-                loader = PyPDFLoader(tmp_path)
-                pages = loader.load_and_split()
-                source_text = "\n\n".join(p.page_content for p in pages)
-            except Exception as e:
-                raise HTTPException(status_code=422, detail=f"PDF extraction failed: {e}")
+                import pypdf
+                reader = pypdf.PdfReader(tmp_path)
+                pages_text = [page.extract_text() or "" for page in reader.pages]
+                source_text = "\n\n".join(t for t in pages_text if t.strip())
+            except Exception:
+                source_text = ""
+            # Attempt 2: pdfminer
+            if not source_text.strip():
+                try:
+                    from pdfminer.high_level import extract_text as _pdfminer
+                    source_text = _pdfminer(tmp_path) or ""
+                except Exception:
+                    source_text = ""
+            # Attempt 3: langchain PyPDFLoader
+            if not source_text.strip():
+                try:
+                    from langchain_community.document_loaders import PyPDFLoader
+                    pages = PyPDFLoader(tmp_path).load_and_split()
+                    source_text = "\n\n".join(p.page_content for p in pages)
+                except Exception:
+                    source_text = ""
+            # Attempt 4: Vision LLM for scanned PDFs
+            if not source_text.strip():
+                try:
+                    with open(tmp_path, "rb") as _fh:
+                        b64 = base64.b64encode(_fh.read()).decode()
+                    _vision_llm = ModelFactory.get_model(
+                        provider="google",
+                        model_name="gemini-1.5-flash",
+                        api_key=secrets.ai_key,
+                        temperature=0.1,
+                    )
+                    _res = await _vision_llm.ainvoke([HumanMessage(content=[
+                        {"type": "text", "text": "Extract ALL visible text from this PDF verbatim. Preserve question numbering and structure."},
+                        {"type": "image_url", "image_url": {"url": f"data:application/pdf;base64,{b64}"}},
+                    ])])
+                    source_text = _res.content or ""
+                except Exception:
+                    source_text = ""
+            if not source_text.strip():
+                raise HTTPException(status_code=422, detail="Could not extract text from PDF. Try a text-based PDF or paste the content manually.")
+
         elif suffix in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
-            # Use Gemini vision via base64 if text not extractable
-            import base64
             with open(tmp_path, "rb") as f_img:
                 b64 = base64.b64encode(f_img.read()).decode()
-            from src.domains.ai.factory import ModelFactory
-            from langchain_core.messages import HumanMessage
-            llm = ModelFactory.get_model(
+            _vision_llm = ModelFactory.get_model(
                 provider=secrets.ai_provider or "google",
                 model_name=secrets.ai_model or "gemini-1.5-flash",
                 api_key=secrets.ai_key,
                 temperature=0.1,
             )
-            msg = HumanMessage(content=[
+            _res = await _vision_llm.ainvoke([HumanMessage(content=[
                 {"type": "text", "text": "Extract ALL text from this image verbatim. Preserve all questions and numbering."},
                 {"type": "image_url", "image_url": {"url": f"data:image/{suffix[1:]};base64,{b64}"}},
-            ])
-            res = await llm.ainvoke([msg])
-            source_text = res.content
+            ])])
+            source_text = _res.content or ""
+
         else:
             source_text = open(tmp_path, encoding="utf-8", errors="ignore").read()
 
-        os.unlink(tmp_path)
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
 
         if not source_text.strip():
             raise HTTPException(status_code=422, detail="Could not extract text from file.")
-
-        from src.domains.oka.reference_vault import ReferenceVaultPipeline
-        from src.domains.oka.governor import governor
 
         llm = ModelFactory.get_model(
             provider=secrets.ai_provider or "google",
@@ -1677,6 +1768,7 @@ async def vault_upload_file(
         pipeline = ReferenceVaultPipeline(llm, Path(vault_path), governor)
         result = await pipeline.run(hub_id, file.filename or "upload", source_text)
         return result
+
     except HTTPException:
         raise
     except Exception as e:

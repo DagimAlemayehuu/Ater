@@ -1218,56 +1218,55 @@ class QuestionAgent:
     async def generate(self, note_schema, source_text: str, mechanics: str, academic_level: str, count: int = 3, prof_domain: str = "General", q_type: str = None, seed: str = None) -> list:
         title_readable = note_schema.title.replace("_", " ")
         persona = self.domain.get("persona", "Subject Matter Expert")
-        
-        # S-TIER EXAMINER LAWS:
-        # 1. CAUSAL TRACING: Quizzes must include "trace" questions with 4-6 step perturbation chains.
-        # 2. SCENARIO PERSISTENCE: Use the professional domain "{prof_domain}" for all scenarios.
-        
         axioms = self.domain.get("quiz_axioms", "Test core principles.")
-        
         q_type_str = f" Ensure ALL {count} questions are of type '{q_type}'." if q_type else ""
-        
         schemas = {
-            "mcq": '"type": "mcq", "question": "...", "options": {"A": "...", "B": "..."}, "answer": "A", "explanation": "..."',
-            "true_false": '"type": "true_false", "question": "...", "answer": "True", "explanation": "..."',
-            "writing": '"type": "writing", "question": "...", "answer": "...", "explanation": "..."',
-            "scenario": '"type": "scenario", "question": "...", "answer": "...", "explanation": "..."',
-            "synthesis": '"type": "synthesis", "question": "...", "answer": "...", "explanation": "..."',
-            "trace": '"type": "trace", "question": "...", "answer": "...", "explanation": "..."',
-            "fill_in": '"type": "fill_in", "question": "...", "textWithBlanks": "Text containing [[blank]]", "answer": ["expected"], "explanation": "..."',
-            "matching": '"type": "matching", "question": "...", "pairs": [{"left": "...", "right": "..."}, {"left": "...", "right": "..."}], "explanation": "..."',
-            "order": '"type": "order", "question": "...", "steps": ["Step 1", "Step 2", "Step 3"], "answer": ["Correct Step 1", "Correct Step 2", "Correct Step 3"], "explanation": "..."',
-            "debug": '"type": "debug", "question": "...", "content": "buggy text or process", "answer": "...", "explanation": "..."',
-            "find_error": '"type": "find_error", "question": "...", "buggyCode": "buggy snippet", "answer": "...", "explanation": "..."',
-            "code": '"type": "code", "question": "...", "codeSnippet": "...", "language": "python", "answer": "...", "explanation": "..."',
-            "calculation": '"type": "calculation", "question": "...", "content": "...", "answer": "...", "explanation": "..."',
-            "data_analysis": '"type": "data_analysis", "question": "...", "content": "...", "answer": "...", "explanation": "..."'
+            "mcq": '"type": "mcq", "question": "...", "options": {"A": "plausible distractor", "B": "plausible distractor", "C": "correct or plausible", "D": "plausible distractor"}, "answer": "A", "explanation": "..."',
+            "true_false": '"type": "true_false", "question": "A clear True/False statement...", "answer": true, "explanation": "..."',
+            "writing": '"type": "writing", "question": "...", "answer": "Model answer with full explanation...", "required_keywords": ["keyword1", "keyword2"], "explanation": "..."',
+            "scenario": '"type": "scenario", "question": "...", "answer": "...", "required_keywords": ["keyword1"], "explanation": "..."',
+            "synthesis": '"type": "synthesis", "question": "...", "answer": "...", "required_keywords": ["keyword1", "keyword2"], "explanation": "..."',
+            "trace": '"type": "trace", "question": "...", "answer": "Step-by-step trace answer...", "explanation": "..."',
+            "fill_in": '"type": "fill_in", "question": "Short title of topic", "textWithBlanks": "Full sentence with [[blank]] markers for each gap.", "answer": ["word1", "word2"], "explanation": "..."',
+            "matching": '"type": "matching", "question": "...", "pairs": [{"left": "Term A", "right": "Definition A"}, {"left": "Term B", "right": "Definition B"}, {"left": "Term C", "right": "Definition C"}, {"left": "Term D", "right": "Definition D"}], "explanation": "..."',
+            "order": '"type": "order", "question": "...", "steps": ["Step A (shuffled)", "Step B (shuffled)", "Step C (shuffled)"], "answer": ["Step 1 (correct)", "Step 2 (correct)", "Step 3 (correct)"], "explanation": "..."',
+            "debug": '"type": "debug", "question": "What is wrong with the following reasoning/process?", "content": "Flawed reasoning or buggy process text here", "answer": "Identification and correction of the flaw", "explanation": "..."',
+            "code": '"type": "code", "question": "...", "codeSnippet": "# Python or pseudocode here", "language": "python", "answer": "Corrected/expected output or explanation", "explanation": "..."',
+            "calculation": '"type": "calculation", "question": "...", "content": "Given: ... Find: ...", "answer": "Numeric or formula answer", "explanation": "Step-by-step working..."',
+            "data_analysis": '"type": "data_analysis", "question": "...", "content": "Data table or dataset description", "answer": "...", "explanation": "..."'
         }
         type_schema = schemas.get(q_type, schemas["mcq"])
 
+        # For MCQ: explicitly require 4 options
+        mcq_extra = ""
+        if q_type == "mcq":
+            mcq_extra = "\nCRITICAL FOR MCQ: You MUST provide EXACTLY 4 options (A, B, C, D). Never generate only 2 options. All 4 distractors must be plausible but only one is correct."
+
         sys_prompt = f"""You are a Senior Examiner in {persona}.
-Generate EXACTLY {count} high-fidelity interactive quiz questions for {title_readable}. DO NOT stop early. You MUST generate exactly {count} items.
-{q_type_str}
+Generate EXACTLY {count} high-fidelity interactive quiz questions for {title_readable}. DO NOT stop early.
+{q_type_str}{mcq_extra}
 
 S-TIER EXAMINER LAWS:
-1. CAUSAL TRACING: At least one question must involve a "System Perturbation Trace" (e.g., "If X increases, then Y drops, which forces Z to...").
-2. CONTEXT LOCK: Use the professional domain "{prof_domain}" for all scenario-based questions.
-3. NO RECALL: Avoid "What is X?" Instead, use "In scenario Y, what happens to X when Z occurs?".
+1. CAUSAL TRACING: At least one question must involve a System Perturbation Trace (e.g. If X increases then Y drops which forces Z to...).
+2. CONTEXT LOCK: Use the professional domain {prof_domain} for all scenario-based questions.
+3. NO RECALL: Avoid What is X. Instead use In scenario Y what happens to X when Z occurs.
+4. JSON ONLY: Output ONLY a valid JSON array inside <QUIZ_JSON> tags. No text outside the tags. No markdown inside JSON strings - use plain text only.
+5. EXACT COUNT: The array must contain EXACTLY {count} objects. No more, no less.
 
-Output format:
-Wrap your JSON in <QUIZ_JSON> tags.
+Output format - a JSON array of {count} objects wrapped in <QUIZ_JSON> tags:
+<QUIZ_JSON>
 [
   {{
     {type_schema}
-  }},
-  ... (EXACTLY {count} objects)
+  }}
 ]
+</QUIZ_JSON>
 
 Axioms for this domain:
 {axioms}"""
 
 
-        for attempt in range(3):
+        for attempt in range(4):
             try:
                 # Precision Pacing: Estimate tokens based on count
                 estimated_tokens = (count * 300) + 1000
@@ -1292,10 +1291,62 @@ Axioms for this domain:
                     raw_json = match.group(1).strip()
 
                 data = None
+                # Attempt 1: direct parse
                 try:
                     data = json.loads(raw_json, strict=False)
                 except Exception:
-                    data = ArchitectAgent._parse_json(raw_json)
+                    pass
+
+                # Attempt 2: extract [...] array from response
+                if data is None:
+                    arr_start = raw_json.find("[")
+                    arr_end = raw_json.rfind("]")
+                    if arr_start != -1 and arr_end != -1 and arr_end > arr_start:
+                        candidate = raw_json[arr_start:arr_end + 1]
+                        # Fix trailing commas
+                        candidate = re.sub(r",\s*([\]\}])", r"\1", candidate)
+                        # Replace literal unescaped newlines inside strings with \n
+                        candidate = re.sub(r'(?<=")([^"]*)\n([^"]*?)(?=")', lambda m: m.group(1) + "\\n" + m.group(2), candidate)
+                        try:
+                            data = json.loads(candidate, strict=False)
+                        except Exception:
+                            try:
+                                data = json.loads(candidate.replace("\n", " ").replace("\r", ""), strict=False)
+                            except Exception:
+                                pass
+
+                # Attempt 3: extract individual {...} objects and build list
+                if data is None:
+                    objects = []
+                    depth = 0
+                    buf = []
+                    for ch in raw_json:
+                        if ch == "{":
+                            depth += 1
+                        if depth > 0:
+                            buf.append(ch)
+                        if ch == "}" and depth > 0:
+                            depth -= 1
+                            if depth == 0:
+                                obj_str = "".join(buf)
+                                obj_str = re.sub(r",\s*([}\]])", r"\1", obj_str)
+                                try:
+                                    obj = json.loads(obj_str, strict=False)
+                                    if isinstance(obj, dict) and "type" in obj and "question" in obj:
+                                        objects.append(obj)
+                                except Exception:
+                                    pass
+                                buf = []
+                    if objects:
+                        data = objects
+
+                # Attempt 4: dict-based fallback
+                if data is None:
+                    try:
+                        data = ArchitectAgent._parse_json(raw_json)
+                    except Exception:
+                        print(f"[QuestionAgent] RAW CONTENT DUMP (first 800 chars):\n{content[:800]}")
+                        raise Exception("All JSON parse attempts failed for quiz output.")
 
                 if isinstance(data, dict) and "questions" in data:
                     data = data["questions"]
@@ -1322,10 +1373,10 @@ Axioms for this domain:
                     governor.report_error(wait_seconds=wait_sec)
                 
                 print(f"[QuestionAgent] Attempt {attempt+1} failed: {e}")
-                if attempt == 2:
+                if attempt == 3:
                     raise e
-                
-                wait_time = _extract_wait_time(err_msg, default=2 * (attempt + 1)) if is_429 else 1
+
+                wait_time = _extract_wait_time(err_msg, default=2 * (attempt + 1)) if is_429 else (attempt + 1)
                 await asyncio.sleep(wait_time)
 
 class CriticAgent:

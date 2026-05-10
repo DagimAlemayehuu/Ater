@@ -11,7 +11,6 @@ source: '[[Inbox/Generated/Winter 2026/Economics/Chapter_2.pdf]]'
 date: '2026-05-10'
 prerequisites:
 - '[[Technological_Advancement]]'
-- '[[Time_And_Eligibility]]'
 - '[[Determinants_Of_Elasticity_Of_Supply]]'
 source_pages:
 - 46
@@ -27,7 +26,7 @@ The manager of a local coffee shop, anticipating a rise in demand during the hol
 
 ## 2. Causal Mechanism
 
-The Law of Supply states that, ceteris paribus, as the price of a good increases, the quantity supplied also increases. This relationship can be measured by the price elasticity of supply, $E_S$, which is calculated as $E_S = \frac{\Delta Q}{\Delta P} \times \frac{P}{Q}$. Alternatively, the arc elasticity of supply can be expressed as $E_S = \frac{Q_1 - Q_0}{Q_0 + Q_1} \div \frac{P_1 - P_0}{P_0 + P_1} = \frac{\Delta Q}{\Delta P} \times \frac{P_0 + P_1}{Q_0 + Q_1}$. The supply can be elastic, inelastic, unitary elastic, perfectly elastic, or perfectly inelastic. A technological advancement enables a firm to produce and supply more in the market, affecting the elasticity of supply [[Technological_Advancement]]. The more time a producer has to respond to price changes, the more elastic the supply [[Time_And_Eligibility]].
+The Law of Supply states that, ceteris paribus, as the price of a good increases, the quantity supplied also increases. This relationship can be measured by the price elasticity of supply, $E_S$, which is calculated as $E_S = \frac{\Delta Q}{\Delta P} \times \frac{P}{Q}$. Alternatively, the arc elasticity of supply can be expressed as $E_S = \frac{Q_1 - Q_0}{Q_0 + Q_1} \div \frac{P_1 - P_0}{P_0 + P_1} = \frac{\Delta Q}{\Delta P} \times \frac{P_0 + P_1}{Q_0 + Q_1}$. The supply can be elastic, inelastic, unitary elastic, perfectly elastic, or perfectly inelastic. A technological advancement enables a firm to produce and supply more in the market, affecting the elasticity of supply [[Technological_Advancement]]. The more time a producer has to respond to price changes, the more elastic the supply (see [[Determinants_Of_Elasticity_Of_Supply]]).
 
 ### Key Takeaways:
 

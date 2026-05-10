@@ -12,7 +12,7 @@ date: '2026-05-10'
 prerequisites:
 - '[[Determinants_Of_Elasticity_Of_Supply]]'
 - '[[Market_Equilibrium]]'
-- '[[Time_And_Eligibility]]'
+- '[[Determinants_Of_Elasticity_Of_Supply]]'
 source_pages:
 - 46
 generated: true
@@ -36,7 +36,7 @@ A manufacturing firm, producing widgets, implements a new robotic assembly line 
 
 ## 3. Limitations & Edge Cases
 
-However, there are limitations to consider. For instance, the implementation of new technology can be costly, and the benefits may not be immediate. Additionally, technological advancements can lead to job displacement if not managed properly. Furthermore, the assumption that technological advancement always leads to an increase in supply may not hold in cases where the new technology is used to improve product quality rather than quantity. The impact of technological advancement on supply can also be influenced by factors such as [[Time_And_Eligibility]] and government policies.
+However, there are limitations to consider. For instance, the implementation of new technology can be costly, and the benefits may not be immediate. Additionally, technological advancements can lead to job displacement if not managed properly. Furthermore, the assumption that technological advancement always leads to an increase in supply may not hold in cases where the new technology is used to improve product quality rather than quantity. The impact of technological advancement on supply can also be influenced by factors such as time horizons (see [[Determinants_Of_Elasticity_Of_Supply]]) and government policies.
 
 ## 4. Technological Advancement Impact on Supply Elasticity
 

@@ -507,4 +507,10 @@ export const sidecarApi = {
             ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
         })
     },
+
+    explainQuestion: (payload: { question: string; type: string; answer: any; explanation?: string; context?: string }) =>
+        request<{ lesson: string }>('/api/practice/explain', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
 }
