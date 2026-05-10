@@ -1,90 +1,110 @@
 ---
+
 title: Normative_Economics
-course: "[[Economics]]"
+course: Economics
 unit: '1'
-semester: "[[Winter 2026]]"
+semester: Winter 2026
 mode: ECON-MICRO
 type: atomic_note
-hub: "[[1_Basics_Of_Economics_Hub]]"
-source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
-date: '2026-05-09'
-prerequisites: []
+hub: '[[1_Basics_Of_Economics_Hub]]'
+source: '[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]'
+date: '2026-05-10'
+prerequisites:
+- '[[Scarcity]]'
+- '[[Definition_Of_Economics]]'
+- '[[Positive_Economics]]'
+- '[[Deductive_Reasoning]]'
+- '[[Inductive_Reasoning]]'
 source_pages:
 - 18
 generated: true
+
 ---
 
+
 ## 1. Mental Model
-Imagine you're at a town hall meeting where community members are discussing how to allocate the town's budget. Some argue for more funding for schools, while others believe that infrastructure projects are more important. This debate reflects normative economics, as it involves value judgments about what is best for the community. Just as the town must prioritize its spending based on the needs and wants of its residents, economists and policymakers must make similar decisions when considering how to address [[Market_Failure]] or promote economic growth.
+
+Imagine you're at a coffee shop, and you have to decide how to distribute the coffee among the customers. Some people might think it's fair to give everyone an equal amount, while others might think it's fair to give more to those who need it most. This is similar to how normative economics works, as it involves making value judgments about how resources should be allocated in society. Just as you have to consider different perspectives at the coffee shop, economists have to consider different perspectives on what's fair and equitable when making normative economic decisions.
 
 ## 2. Foundational Concept
-Normative economics is a branch of economics that deals with value judgments and opinions. It is concerned with what the economy 'should' be like, rather than simply describing how it functions. The science of economics, which is about two hundred years old, encompasses both [[Positive_Economics]], which focuses on factual analysis, and normative economics, which involves subjective evaluations. At its core, normative economics grapples with fundamental questions such as [[Basic_Economic_Questions]] (what to produce, how to produce, and for whom to produce). These questions are deeply philosophical and involve considerations of [[Human_Wants]] and the most effective [[Economic_Systems]] to satisfy them. Normative economics also intersects with [[Microeconomics]], as it often involves analyzing individual economic units and their interactions. A key aspect of normative economics is its reliance on Deductive Reasoning to construct theories about how the economy should operate, ideally leading to policies that promote the well-being of society.
+
+Normative economics is a branch of economics that involves making value judgments about how the economy should function. It is concerned with [[Scarcity]] and how resources should be allocated in society. Following the [[Definition_Of_Economics]], economists study how to make decisions about how to allocate resources in a way that is fair and efficient. Normative economics is distinct from [[Positive_Economics]], which focuses on describing how the economy works. In normative economics, economists use [[Deductive_Reasoning]] and [[Inductive_Reasoning]] to make arguments about how the economy should be organized. The core facts of normative economics include the idea that economics is a science that is about two hundred years old, and that it is concerned with understanding how to make decisions about how to allocate resources in a way that is fair and efficient, given Unlimited Wants and Limited Resources.
 
 ### Key Takeaways:
+
 - Normative economics involves value judgments and opinions.
 - Economics as a science is about two hundred years old.
 - Normative economics is distinct from positive economics.
 
 ## 3. Limitations & Edge Cases
-One limitation of normative economics is that it can be subjective and influenced by personal biases. For instance, when considering [[Economic_Systems]], the notion of a 'fair' distribution of resources can vary greatly among individuals. Another limitation is that normative economics often relies on [[Inductive_Reasoning]], which can lead to generalizations that may not always hold true in every specific case. Furthermore, normative economics can be context-dependent, meaning that what is considered 'good' or 'bad' can change based on the [[Human_Wants]] and needs of a society at a given time. Lastly, the field struggles with the challenge of [[Scarcity]], as choices must be made about how to allocate limited resources, leading to inevitable trade-offs.
+
+One limitation of normative economics is that it can be subjective and influenced by personal biases. For instance, what one person considers a fair distribution of wealth might be different for another. This subjectivity can make it challenging to reach a consensus on economic policies. Additionally, normative economics often involves making value judgments about how the economy should function, which can be difficult to quantify or measure. Another limitation is that normative economics can be context-dependent, meaning that what is considered normative in one culture or society might not be in another. Furthermore, normative economics can be criticized for being overly focused on ideals rather than practical realities, which can lead to unrealistic expectations about how the economy can be managed.
 
 ## 4. Case Study Analysis Table
-Normative economics involves value judgments about what is best for the community, prioritizing spending based on needs and wants.
 
-| **Project** | **Funding Allocation** | **Community Impact** |
-| --- | --- | --- |
-| Schools | $500,000 | Improved education |
-| Infrastructure | $300,000 | Enhanced transportation |
-| Community Center | $200,000 | Increased social activities |
+No mathematical equation represents Normative Economics. It involves making value judgments about resource allocation.
+
+| Perspective | Fairness Criterion |
+| --- | --- |
+| Utilitarian | Maximize overall happiness |
+| Egalitarian | Equal distribution |
+| Libertarian | Individual freedom and rights |
 
 ## 5. Walkthrough
-1. The town hall meeting involves community members discussing how to allocate the town's budget.
-2. Some argue for more funding for schools, while others believe infrastructure projects are more important.
-3. The decision reflects normative economics, as it involves value judgments about what is best for the community.
-4. The community must prioritize its spending based on the needs and wants of its residents.
-5. The funding allocations are as follows: $500,000 for schools, $300,000 for infrastructure, and $200,000 for the community center.
-6. These allocations will have different impacts on the community, such as improved education, enhanced transportation, and increased social activities.
-7. The town's budget allocation decision is a reflection of normative economics in action.
 
----
+**Step 1:** Consider the coffee shop scenario where coffee needs to be distributed among customers.
+
+**Step 2:** The utilitarian perspective would prioritize giving more coffee to those who will benefit the most, maximizing overall happiness.
+
+**Step 3:** In contrast, the egalitarian perspective would advocate for an equal amount of coffee for everyone, regardless of individual needs or benefits.
+
+**Step 4:** The libertarian perspective would focus on individual freedom and rights, possibly supporting a system where customers can buy or earn coffee based on their choices and abilities.
+
+**Step 5:** These perspectives demonstrate how different value judgments lead to different conclusions about fair resource allocation.
+
+**Step 6:** Normative economics involves evaluating and comparing such perspectives to inform policy decisions.
+
+**Step 7:** Ultimately, the choice of fairness criterion depends on societal values and ethical considerations.
 
 ## 6. The Proving Grounds
+
 ```interactive-quiz
 [
   {
     "type": "fill_in",
     "difficulty": "L1",
-    "question": "Normative economics deals with value judgments and opinions about what the economy [[blank]].",
+    "question": "Normative economics involves making value judgments about how the economy should function in relation to?",
     "content": "",
-    "text_with_blanks": "Normative economics deals with value judgments and opinions about what the economy [[blank]].",
+    "text_with_blanks": "Normative economics is concerned with [[Scarcity]] and how resources should be allocated in society.",
     "options": {},
-    "answer": "should be",
-    "explanation": "Normative economics is concerned with what the economy 'should' be like, rather than simply describing how it functions. This involves value judgments and opinions on the ideal state of the economy."
+    "answer": "Scarcity",
+    "explanation": "The question requires the test-taker to understand the core concept of normative economics, which involves making value judgments about how the economy should function in relation to scarcity and resource allocation. The correct answer is 'Scarcity' because it is explicitly mentioned in the note text as a key concern of normative economics."
   },
   {
     "type": "mcq",
     "difficulty": "L2",
-    "question": "Which of the following is a key aspect of normative economics?",
+    "question": "What is the primary difference between normative economics and positive economics?",
     "content": "",
     "text_with_blanks": "",
     "options": {
-      "A": "Factual analysis",
-      "B": "Subjective evaluations",
-      "C": "Mathematical modeling",
-      "D": "Historical data analysis"
+      "A": "Normative economics focuses on describing how the economy works, while positive economics focuses on making value judgments.",
+      "B": "Normative economics involves making value judgments about how the economy should function, while positive economics focuses on describing how the economy works.",
+      "C": "Normative economics is concerned with understanding how to make decisions about resource allocation, while positive economics is concerned with understanding how to make decisions about economic growth.",
+      "D": "Normative economics is a science that is about two hundred years old, while positive economics is a relatively new field."
     },
     "answer": "B",
-    "explanation": "Normative economics involves subjective evaluations and value judgments about the economy, making option B the correct answer."
+    "explanation": "The question requires the test-taker to understand the key difference between normative economics and positive economics. The correct answer is B because it accurately reflects the distinction between the two fields, as stated in the note text."
   },
   {
     "type": "trace",
     "difficulty": "L3",
-    "question": "If the primary goal of an economy is to maximize the well-being of its citizens, and it currently produces mostly luxury goods, what should be the likely outcome of a shift in focus towards addressing basic needs?",
+    "question": "Suppose a society has unlimited wants and limited resources. How would a normative economist approach the problem of resource allocation?",
     "content": "",
     "text_with_blanks": "",
     "options": {},
-    "answer": "Increased well-being",
-    "explanation": "If the economy shifts its focus from producing luxury goods to addressing basic needs, it is likely to lead to an increase in the well-being of its citizens. This is because basic needs such as food, shelter, and healthcare are fundamental to human survival and well-being. By prioritizing these needs, the economy can ensure that its citizens have access to essential goods and services, thereby increasing their overall well-being."
+    "answer": "Fair",
+    "explanation": "A normative economist would approach the problem of resource allocation by considering how to allocate resources in a way that is fair and efficient, given the constraints of unlimited wants and limited resources. This would involve making value judgments about how resources should be allocated to meet the needs of society. The correct answer is 'Fair' because it reflects the normative economist's goal of achieving a fair allocation of resources."
   }
 ]
+
 ```

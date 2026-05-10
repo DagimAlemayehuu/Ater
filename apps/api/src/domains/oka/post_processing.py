@@ -68,18 +68,33 @@ def sanitize_body(text: str) -> Tuple[str, List[str]]:
     # 4. Normalize Walkthrough Headers deterministically
     def rewrite_steps(match):
         walkthrough_body = match.group(1)
-        step_count = [0]
-        def increment_step(m):
-            step_count[0] += 1
-            return f"## Step {step_count[0]}:"
         
-        normalized = re.sub(
-            r'^(?:#{1,3}\s*)?(?:Step\s+)?(\d+)[\.:\s]',
-            increment_step,
+        # Strip redundant "Step X:", "1. ", and "**Step X:**" prefixes inside the content
+        # before we apply our own formatting. This allows for re-processing.
+        # Uses a non-capturing group with '+' to strip multiple levels of hallucinated prefixes.
+        cleaned_body = re.sub(
+            r'^\s*(?:(?:#{1,3}\s*)?(?:\*\*|__)?(?:Step\s+)?\d+[\.:\s]*(?:\*\*|__)?[\.:\s]*)+',
+            '',
             walkthrough_body,
             flags=re.MULTILINE
         )
-        return f"## 5. Walkthrough{normalized}"
+        
+        step_count = [0]
+        def format_step(line):
+            s_line = line.strip()
+            if not s_line or s_line.startswith('---') or s_line.startswith('#'): 
+                return None # Skip rules and headers in the walkthrough body
+            step_count[0] += 1
+            # Use bold text instead of headers for steps to prevent TOC pollution
+            # and resolve the "all headings" complaint.
+            content = s_line.lstrip('.: ')
+            return f"**Step {step_count[0]}:** {content}"
+        
+        lines = [format_step(l) for l in cleaned_body.strip().split('\n') if l.strip()]
+        # Filter out empty lines or None
+        lines = [l for l in lines if l]
+        normalized = "\n\n".join(lines)
+        return f"## 5. Walkthrough\n\n{normalized}\n\n"
     
     walk_fixed = re.sub(
         r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)',
@@ -90,6 +105,50 @@ def sanitize_body(text: str) -> Tuple[str, List[str]]:
     if walk_fixed != text:
         fixes.append('normalized_walkthrough_steps')
     text = walk_fixed
+
+    # 5. LaTeX Auto-Wrapping for standalone equations and variables
+    # Wrap lines that are pure math like "Qd = 100 - 2P" or "Opportunity Cost = ..."
+    def wrap_math(m):
+        math_content = m.group(0).strip()
+        # Skip if already wrapped
+        if math_content.startswith('$') or math_content.startswith('\\('):
+            return m.group(0)
+        # Skip if it's a markdown table or list item or header or horizontal rule
+        if math_content.startswith('|') or math_content.startswith('- ') or math_content.startswith('#') or math_content.startswith('---'):
+            return m.group(0)
+        # Avoid wrapping very short strings that might be titles unless they contain '=' or symbols
+        if len(math_content) < 5 and '=' not in math_content and not any(s in math_content for s in ['\\', 'Δ', 'Δ', 'Σ']):
+            return m.group(0)
+            
+        return f"$${math_content}$$"
+
+    # Match lines that look like equations: "Alpha = Beta + Gamma" or "P = 10" or "100 - 90 = 10"
+    # and not prose. Allowing Greek letters and Delta.
+    math_pattern = re.compile(r'^[A-Za-z0-9\s\\Delta\u0394\u03A3\u03C3\*\+\-\/\^]+ = [^#\n]+$', re.MULTILINE)
+    text = math_pattern.sub(wrap_math, text)
+
+    # 6. Mermaid Cleanup
+    # Ensure mermaid blocks are clean and have the correct language tag
+    def clean_mermaid(m):
+        code = m.group(1).strip()
+        # Remove leading/trailing pipes often leaked by agents
+        code = re.sub(r'^\|+|\|+$', '', code, flags=re.MULTILINE).strip()
+        return f"```mermaid\n{code}\n```"
+    
+    text = re.sub(r'```(?:mermaid|CODE)?\s*\n(.*?)\n```', clean_mermaid, text, flags=re.DOTALL)
+
+    # 7. Quiz Sanitization: Convert "Blank" or "___" to [[blank]]
+    def fix_quiz_blanks(m):
+        quiz_json = m.group(1)
+        # Convert "Blank", "___", or "..." in text_with_blanks to [[blank]]
+        # Using a more aggressive regex that handles punctuation and multiple placeholders
+        fixed_json = re.sub(r'(?i)\bBlank\b|___+|\.{3,}', '[[blank]]', quiz_json)
+        return f"```interactive-quiz\n{fixed_json}\n```"
+
+    quiz_fixed = re.compile(r'```interactive-quiz\s*\n(.*?)\n```', re.DOTALL).sub(fix_quiz_blanks, text)
+    if quiz_fixed != text:
+        fixes.append('sanitized_quiz_blanks')
+    text = quiz_fixed
 
     return text, fixes
 
@@ -334,28 +393,55 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path):
                     for p in raw_prereqs:
                         m = re.search(r'\[\[(.*?)\]\]', str(p))
                         if m:
-                            prereq_stems.append(m.group(1).split('|')[0].strip())
+                            # Normalize case for matching
+                            p_stem = m.group(1).split('|')[0].strip()
+                            if p_stem in deployed_stems:
+                                prereq_stems.append(p_stem)
             note_data[stem] = prereq_stems
         except Exception:
             note_data[stem] = []
 
-    lines = []
-    for stem in deployed_stems:
-        lines.append(f"  - [ ] [[{stem}]]")
+    # ── HIERARCHICAL TREE BUILDER ──
+    roots = [s for s in deployed_stems if not note_data[s]]
+    # If everything has a prereq (cycle or external), take the first few as roots
+    if not roots and deployed_stems:
+        roots = deployed_stems[:1]
+
+    processed = set()
+    tree_lines = []
+
+    def build_tree(stem, depth=0):
+        if stem in processed: return
+        processed.add(stem)
+        
+        indent = "    " * depth
+        tree_lines.append(f"{indent}- [ ] [[{stem}]]")
+        
+        # Find children
+        children = sorted([s for s, prereqs in note_data.items() if prereqs and prereqs[0] == stem])
+        for child in children:
+            build_tree(child, depth + 1)
+
+    for root in sorted(roots):
+        build_tree(root, 0)
+    
+    # Add any orphans that were missed due to complex prereq webs
+    orphans = [s for s in deployed_stems if s not in processed]
+    for orphan in sorted(orphans):
+        build_tree(orphan, 0)
 
     hub_text = hub_file.read_text(encoding="utf-8")
-
-    hub_title = hub_file.stem.replace("_Hub", "").replace("_", " ")
-    hub_title = re.sub(r"^\d+[\s\-_]*", "", hub_title)
-
-    connection_lines = "\n".join(lines)
-    new_connections_block = f"## Connections\n\n- {hub_title}\n{connection_lines}\n"
+    connection_lines = "\n".join(tree_lines)
+    
+    # The user requested NO redundant bullet point for the Hub title itself.
+    # Connections section should start directly with the first-level topics.
+    new_connections_block = f"## Connections\n\n{connection_lines}\n"
 
     # Replace or append the Connections section
     if "## Connections" in hub_text:
-        # Replace everything from ## Connections to end of file
+        # Replace everything from ## Connections to end of file or next header
         hub_text = re.sub(
-            r"## Connections.*$",
+            r"## Connections.*?(?=##|$)",
             new_connections_block,
             hub_text,
             flags=re.DOTALL
@@ -364,7 +450,7 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path):
         hub_text = hub_text.rstrip() + f"\n\n{new_connections_block}"
 
     hub_file.write_text(hub_text, encoding="utf-8")
-    print(f"[HubSync] Rebuilt connections for {hub_file.name}: {len(deployed_stems)} notes linked in tree format.")
+    print(f"[HubSync] Rebuilt hierarchical connections for {hub_file.name}: {len(deployed_stems)} nodes.")
 
 def reconcile_broken_links(unit_dir: Path):
     """

@@ -172,7 +172,7 @@ export function ObsidianGraphView({
 
     const getNodeColor = (group: string) => {
         if (group === "unresolved") return colors.nodeUnresolved
-        if (group === "0-Bases" || group === "3-Database" || group === "root") return colors.nodeRoot
+        if (group === "0-Bases" || group === "Database" || group === "root") return colors.nodeRoot
         return colors.nodeDefault
     }
 

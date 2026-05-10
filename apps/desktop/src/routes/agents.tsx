@@ -3,7 +3,7 @@ import {
  ShieldCheck, RefreshCw, 
  FileText, Activity, 
  Zap,
- User, BookOpen, DollarSign, Bot, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, Bot, CheckCircle, CheckCircle2
+ User, BookOpen, DollarSign, Bot, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, CheckCircle, CheckCircle2
 } from 'lucide-react'
 import {sidecarApi} from '@/lib/sidecarApi'
 import {cn} from '@/lib/utils'

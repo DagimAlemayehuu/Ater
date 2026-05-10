@@ -18,7 +18,7 @@ from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgen
 from .router import router
 from .templates import render_atomic_note
 from .healer import LogicHealer
-from .governor import TokenGovernor
+from .governor import governor
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
 import ruamel.yaml
 import logging
@@ -29,7 +29,7 @@ logger = logging.getLogger("LifeOS")
 OKA_TIMEOUT = 600       # 10 minutes — headroom for large PDFs
 OKA_MAX_RETRIES = 10     # Retry on transient failures (524, timeout, rate-limit)
 OKA_RETRY_BACKOFF = 15  # Seconds between retries (doubles each attempt)
-MAX_SOURCE_CHARS = 150000  # Characters to include in prompt
+MAX_SOURCE_CHARS = 80000  # Characters to include in prompt (Lowered for 30k TPM Free Tier)
 
 
 class OkaService:
@@ -96,7 +96,7 @@ class OkaService:
         self.epistemic_classifier_agent = EpistemicClassifierAgent(llm=self.llm) if self.llm else None
         self.verifier_agent = VerifierAgent(llm=self.llm) if self.llm else None
         self.meta_scanner_agent = MetaScannerAgent(llm=self.llm) if self.llm else None
-        self.governor = TokenGovernor()
+        self.governor = governor
         
         from .validator import OkaValidator
         self.validator = OkaValidator()
@@ -187,12 +187,16 @@ class OkaService:
         while attempt < OKA_MAX_RETRIES:
             try:
                 attempt += 1
-                OkaService._status[session_id] = f"{phase} (Attempt {attempt}/{OKA_MAX_RETRIES})..."
-                
                 # Length continuation loop for models that cut off
                 current_messages = list(messages)
                 final_content = ""
+
                 while True:
+                    # Get permit from governor before EACH chunk request
+                    # Estimate tokens: (Current Context / 4) + prompt overhead
+                    estimated_tokens = (len(str(current_messages)) // 4) + 1000
+                    await self.governor.get_permit(expected_tokens=estimated_tokens)
+
                     res = await self.llm.ainvoke(current_messages)
                     final_content += res.content
                     
@@ -209,6 +213,10 @@ class OkaService:
                 print(f"[OKA Service] AI Attempt {attempt} failed: {error_str[:200]}")
 
                 is_rate_limit = "429" in error_str or "rate_limit" in error_str.lower()
+                
+                if is_rate_limit:
+                    # Notify governor to trigger a hard cooldown for all workers
+                    self.governor.report_error(wait_seconds=60.0)
                 is_transient = is_rate_limit or any(
                     c in error_str for c in ["503", "524", "timeout", "overloaded"]
                 )
@@ -308,7 +316,17 @@ class OkaService:
 
     def _get_planner_path(self) -> Path:
         """Resolves the absolute path to the Study Planner database."""
-        return Path(self.secrets.vault_path) / "Database" / "06 - Study Planner"
+        # Check standard location
+        path = Path(self.secrets.vault_path) / "Database" / "06 - Study Planner"
+        if path.exists():
+            return path
+            
+        # Check alternate location (Notes/Database)
+        path = Path(self.secrets.vault_path) / "Notes" / "Database" / "06 - Study Planner"
+        if path.exists():
+            return path
+            
+        return Path(self.secrets.vault_path) / "Database" / "06 - Study Planner" # Return default
 
     def list_available_options(self) -> Dict[str, List[str]]:
         """Returns all available options for Course, Semester, Year, Hubs, and Units from the vault."""
@@ -392,24 +410,31 @@ class OkaService:
         unit_prefix = f"{unit_num}_" if unit_num else ""
         unit_folder_name = f"{unit_prefix}{canonical_hub}"
         
-        # 1. Try direct path
+        # 1. Try direct path (Academic Root)
         academic_unit_dir = self.vm.academic_root / semester / self.vm.get_canonical_title(course) / unit_folder_name
         if academic_unit_dir.exists():
             return academic_unit_dir
             
-        # 2. Try without semester (search inside academic root)
-        # Search for a folder matching unit_folder_name inside 2-Academic
+        # 2. Try alternate path (Notes/Academic Root)
+        alt_academic_root = Path(self.secrets.vault_path) / "Notes" / "Winter 2026"
+        academic_unit_dir = alt_academic_root / semester / self.vm.get_canonical_title(course) / unit_folder_name
+        if academic_unit_dir.exists():
+            return academic_unit_dir
+
+        # 3. Try without semester (search inside academic root)
         try:
             matches = list(self.vm.academic_root.rglob(unit_folder_name))
+            if not matches and alt_academic_root.exists():
+                matches = list(alt_academic_root.rglob(unit_folder_name))
+                
             if matches:
-                # Return the first directory match
                 for m in matches:
                     if m.is_dir():
                         return m
         except Exception:
             pass
 
-        # 3. Fallback to hub directory (though unlikely to have atomic notes there)
+        # 4. Fallback to hub directory
         return hub_path.parent
 
     def list_atomic_notes(self, hub_id: str) -> List[Dict[str, Any]]:
@@ -1810,7 +1835,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         
                         # ── IDEMPOTENCY CHECK (v32.1 Singularity) ──
                         # Compute target path and check if it already exists
-                        target_path = self.vm.get_note_path({"title": current_note_title, "type": "atomic_note"}, session_metadata=session)
+                        target_path = self.vm.get_note_path({"title": current_note_title, "type": "atomic_note"}, session_metadata=session["metadata"])
                         if target_path.exists():
                             print(f"[OKA Service] Idempotency Hit: [[{current_note_title}]] already exists. Skipping.")
                             if current_note_title not in session.get("processed_notes", []):
@@ -2244,8 +2269,6 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             if n.source_pages:
                 all_pages.extend(n.source_pages)
         
-        page_range = f"{min(all_pages)}-{max(all_pages)}" if all_pages else "Full Unit"
-
         metadata = {
             "title": plan.hub_note.title,
             "type": "Hub",
@@ -2253,7 +2276,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             "semester": plan.semester,
             "unit": str(plan.unit),
             "source": source_link,
-            "source_pages": [page_range],
+            "source_pages": [1], # Always jump to page 1 for Hubs to avoid NaN range errors
             "status": "Not Started",
             "confidence": None,
             "study_date": None,
@@ -2275,7 +2298,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         body += "- [ ] Trace and understand every source-anchored worked example and walkthrough.\n"
         body += "- [ ] Complete all Socratic Probes and verify with the Answer Key.\n\n"
         
-        body += "## Connections\n"
+        body += "## Connections\n\n"
         
         # Build tree structure using prerequisites if available
         tree = {}
@@ -2286,9 +2309,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         for note in plan.atomic_notes:
             parent_found = False
             if hasattr(note, 'prerequisites') and note.prerequisites:
+                # Find the first prerequisite that is also in this unit to act as the 'parent'
                 for prereq in note.prerequisites:
                     for potential_parent in tree:
-                        # Avoid self-referencing
                         if potential_parent == note.title: continue
                         if prereq.lower() in potential_parent.lower() or potential_parent.lower() in prereq.lower():
                             tree[potential_parent]["children"].append(note.title)
@@ -2305,15 +2328,13 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             
             node_data = tree[title]
             canonical = self.vm.get_canonical_title(title)
-            # Cap the depth to 3 levels (0, 1, 2)
-            actual_indent = min(indent_level, 2)
-            indent = "    " * actual_indent
+            indent = "    " * indent_level
             res = f"{indent}- [ ] [[{canonical}]]\n"
-            for child in node_data["children"]:
+            for child in sorted(node_data["children"]):
                 res += render_node(child, indent_level + 1, visited.copy())
             return res
             
-        for root in roots:
+        for root in sorted(roots):
             body += render_node(root)
             
         return f"---\n{yaml_frontmatter}---\n\n{body}\n"

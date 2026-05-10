@@ -140,7 +140,17 @@ class VaultManager:
             clean = self.super_clean(raw_title)
             canonical_name = self.get_canonical_title(clean)
             filename = f"{unit_num}_{canonical_name}_Hub.md" if unit_num else f"{canonical_name}_Hub.md"
-            return target_dir / filename
+            
+            # Smart Redirect: Hubs MUST live in the Study Planner for Academic Dashboard visibility
+            planner_dir = self.vault_path / "Database" / "06 - Study Planner"
+            
+            # Existence check (case-insensitive) to prevent "of" vs "Of" duplicates
+            if planner_dir.exists():
+                for existing_file in planner_dir.glob("*.md"):
+                    if existing_file.name.lower() == filename.lower():
+                        return existing_file
+            
+            return planner_dir / filename
 
         # ── 2. Possible Questions (Academic Root) ──
         if is_questions:

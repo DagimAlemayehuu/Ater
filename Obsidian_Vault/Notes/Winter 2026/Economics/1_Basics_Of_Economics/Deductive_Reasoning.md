@@ -1,90 +1,104 @@
 ---
+
 title: Deductive_Reasoning
-course: "[[Economics]]"
+course: Economics
 unit: '1'
-semester: "[[Winter 2026]]"
+semester: Winter 2026
 mode: ECON-MICRO
 type: atomic_note
-hub: "[[1_Basics_Of_Economics_Hub]]"
-source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
-date: '2026-05-09'
-prerequisites: []
+hub: '[[1_Basics_Of_Economics_Hub]]'
+source: '[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]'
+date: '2026-05-10'
+prerequisites:
+- '[[Opportunity_Cost]]'
+- '[[Scarcity]]'
 source_pages:
 - 21
 generated: true
+
 ---
+
 
 ## 1. Mental Model
-Imagine a market where the price of a good increases. Using deductive reasoning, an economist might conclude that the increase in price will lead to a decrease in demand. This conclusion is based on the general principle that as price increases, demand decreases. A simple physical analogy is a lever: if you apply a certain amount of force to one end, the other end will move in a predictable way. In deductive reasoning, the force applied is the general principle, and the movement of the other end is the conclusion.
 
-## 2. Process Architecture
-Deductive reasoning [[Deductive_Reasoning]] is a method of reasoning that involves drawing specific conclusions from general principles General Principles. It starts with a general statement or hypothesis Hypothesis and leads to a certain conclusion Conclusion. In economics, deductive reasoning is often used to build models Economic Models and make predictions Predictions. For example, if an economist assumes that the Law Of Demand applies, they can use deductive reasoning to conclude that an increase in price will lead to a decrease in demand. This process involves applying general principles to specific situations, making it a powerful tool for economists to understand and analyze markets Market Analysis. The core facts of deductive reasoning include: (1) a general principle or hypothesis, (2) a specific situation or set of circumstances, and (3) a conclusion drawn from the principle and circumstances. By using deductive reasoning, economists can build [[Theory_Of_Economics]] and make informed decisions about [[What_To_Produce]], [[How_To_Produce]], and [[Basic_Economic_Questions]].
+Imagine a coffee shop owner who wants to determine the total cost of producing a certain number of cups of coffee. Using deductive reasoning, the owner starts with the general principle that the total cost is equal to the fixed costs plus the variable costs. The owner then assumes that the variable costs are directly proportional to the number of cups produced. Based on this, the owner can conclude that if the variable cost per cup is $1 and the fixed cost is $100, producing 100 cups of coffee will cost $200. This mental model illustrates how deductive reasoning can be used to make predictions or decisions based on assumptions.
+
+## 2. Foundational Concept
+
+Deductive reasoning is a method of reasoning that involves drawing specific conclusions from general principles. It starts with a general statement or hypothesis and leads to a certain conclusion. In economics, deductive reasoning is often used to make predictions or decisions based on assumptions. For example, the concept of [[Opportunity_Cost]] is based on deductive reasoning, where the cost of choosing one option is compared to the cost of choosing another option. The Law Of Demand is another example of deductive reasoning, where the general principle that as price increases, quantity demanded decreases is used to predict consumer behavior. Additionally, [[Scarcity]] is a fundamental concept in economics that is based on deductive reasoning, where the limited availability of resources is used to explain the need for choice. By using deductive reasoning, economists can develop theories and models that help explain economic phenomena and make predictions about future trends.
 
 ### Key Takeaways:
+
 - Deductive reasoning involves drawing specific conclusions from general principles
 - It starts with a general statement or hypothesis and leads to a certain conclusion
-- Deductive reasoning is often used in economics to build models and make predictions
+- Deductive reasoning is often used in economics to make predictions or decisions based on assumptions
 
 ## 3. Limitations & Edge Cases
-A limitation of deductive reasoning is that it relies on the accuracy of the initial general principle. If the principle is flawed, the conclusion will be incorrect. For example, if an economist assumes that consumers always act rationally, but in reality, consumers can be irrational, the conclusions drawn from this assumption will be incorrect. Another limitation is that deductive reasoning can be sensitive to the assumptions made. For instance, if an economist assumes that a market is perfectly competitive, but in reality, there are barriers to entry, the conclusions drawn from this assumption will not accurately reflect the market. Furthermore, deductive reasoning can be limited by the complexity of real-world situations. Economic models often simplify complex relationships, but in reality, these relationships can be non-linear and influenced by many factors.
 
-## 4. Market Process Flow
-Qd = 100 - 2P
+One limitation of deductive reasoning is that it relies heavily on the accuracy of the initial general statement or hypothesis. If the premise is flawed, the conclusion will also be flawed. Additionally, deductive reasoning assumes that the relationships between variables are linear and consistent, which may not always be the case in real-world scenarios. For instance, in economics, the assumption of perfect information may not hold, leading to deviations from predicted outcomes. Furthermore, deductive reasoning may not account for external factors or anomalies that can affect the outcome. For example, in a market with a sudden change in consumer preferences, a deductive reasoning approach may not be able to adapt quickly enough to capture the new trend.
 
-graph TD
-    A[Initial Price] --> B(Increase Price)
-    B --> C[New Price $2]
-    C --> D(Demand Decreases)
-    D --> E[New Demand 80]
+## 4. Case Study Analysis Table
+$$TC = FC + VC * Q$$
+
+| Total Cost (TC) | Fixed Costs (FC) | Variable Costs (VC) | Quantity (Q) |
+| --- | --- | --- | --- |
+| $200 | $100 | $1 | 100 |
 
 ## 5. Walkthrough
-1. Step 1: The initial price of the good is $1. The demand at this price is 100 - 2*1 = 98.
-2. Step 2: The price increases to $2. We need to calculate the new demand.
-3. Step 3: Using the equation Qd = 100 - 2P, we substitute P = 2 to get Qd = 100 - 2*2.
-4. Step 4: 2*2 = 4.
-5. Step 5: 100 - 4 = 96, however we are told demand decreases to 80 due to price increase.
-6. Step 6: If plotted, the curve would show a downward slope, illustrating the inverse relationship between price and demand.
-7. Step 7: Therefore, the new demand at a price of $2 is 80.
 
----
+**Step 1:** The coffee shop owner starts with the general principle that the total cost is equal to the fixed costs plus the variable costs.
+
+**Step 2:** The owner assumes that the variable costs are directly proportional to the number of cups produced, which can be represented by the equation TC = FC + VC * Q.
+
+**Step 3:** Given that the fixed cost (FC) is $100, the variable cost per cup (VC) is $1, and the quantity (Q) is 100 cups, we can substitute these values into the equation.
+
+**Step 4:** First, calculate the total variable cost: 100 * $1 = $100.
+
+**Step 5:** Then, calculate the total cost: $100 (fixed cost) + $100 (variable cost) = $200.
+
+**Step 6:** Therefore, producing 100 cups of coffee will cost $200.
+
+**Step 7:** This demonstrates how deductive reasoning can be used to make predictions or decisions based on assumptions.
 
 ## 6. The Proving Grounds
+
 ```interactive-quiz
 [
   {
     "type": "fill_in",
     "difficulty": "L1",
-    "question": "Deductive reasoning involves drawing specific conclusions from [[blank]].",
+    "question": "Deductive reasoning involves drawing specific conclusions from Blank.",
     "content": "",
-    "text_with_blanks": "",
+    "text_with_blanks": "Deductive reasoning involves drawing specific conclusions from Blank.",
     "options": {},
     "answer": "general principles",
-    "explanation": "Deductive reasoning is a method of reasoning that involves drawing specific conclusions from general principles. This is stated in the note text as the definition of deductive reasoning."
+    "explanation": "Deductive reasoning is a method of reasoning that involves drawing specific conclusions from general principles. It starts with a general statement or hypothesis and leads to a certain conclusion."
   },
   {
     "type": "mcq",
     "difficulty": "L2",
-    "question": "What is often used in economics to build models and make predictions?",
+    "question": "Which of the following economic concepts is based on deductive reasoning?",
     "content": "",
     "text_with_blanks": "",
     "options": {
-      "A": "Inductive reasoning",
-      "B": "Deductive reasoning",
-      "C": "Abductive reasoning",
-      "D": "Intuitive reasoning"
+      "A": "Opportunity Cost",
+      "B": "Law of Demand",
+      "C": "Scarcity",
+      "D": "All of the above"
     },
-    "answer": "Deductive reasoning",
-    "explanation": "According to the note text, deductive reasoning is often used in economics to build models and make predictions. This is an application of deductive reasoning in the field of economics."
+    "answer": "D",
+    "explanation": "The concept of Opportunity Cost, Law of Demand, and Scarcity are all based on deductive reasoning. Opportunity Cost is based on comparing the cost of choosing one option to the cost of choosing another option. The Law of Demand is based on the general principle that as price increases, quantity demanded decreases. Scarcity is a fundamental concept in economics that is based on deductive reasoning, where the limited availability of resources is used to explain the need for choice."
   },
   {
     "type": "trace",
     "difficulty": "L3",
-    "question": "An economist assumes that the Law of Demand applies. If the price of a product increases by 20%, and the original demand was 100 units, what will be the new demand if the elasticity of demand is -1?",
+    "question": "If the price of a good increases, what happens to the quantity demanded according to the Law of Demand?",
     "content": "",
     "text_with_blanks": "",
     "options": {},
-    "answer": "80",
-    "explanation": "The Law of Demand states that as price increases, demand decreases. Given the elasticity of demand is -1, a 20% increase in price will lead to a 20% decrease in demand. So, the new demand will be 100 - (100 * 0.20) = 80 units."
+    "answer": "decreases",
+    "explanation": "According to the Law of Demand, as the price of a good increases, the quantity demanded decreases. This is a fundamental principle in economics that is based on deductive reasoning. The general principle is that as price increases, quantity demanded decreases, leading to a certain conclusion about consumer behavior."
   }
 ]
+
 ```

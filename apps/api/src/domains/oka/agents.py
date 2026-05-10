@@ -94,10 +94,10 @@ DYNAMIC_DOMAIN_MATRIX = {
             "h2": "Numerical Sensitivity",
             "artifact": "Demand/Supply Data Schedule",
             "walkthrough": "5-Step Calculation Trace",
-            "type": "Markdown Table",
-            "sanity_check": "Focus on horizontal summation, elasticity coefficients, and equilibrium shifts.",
+            "type": "Markdown Table (Demand/Supply Schedule) OR ASCII Text Graph. Do NOT use Mermaid flowcharts for plotting economic curves. Use a well-formatted Markdown Table showing Price and Quantity, accompanied by a LaTeX block explaining the coordinate shift, or a clear ASCII representation of a Cartesian graph.",
+            "sanity_check": "Focus on horizontal summation, elasticity coefficients, and equilibrium shifts. CALCULATIVE VERIFICATION LAW: All mathematical steps MUST be explicitly derived in LaTeX. No Mermaid graphs for curves.",
             "l3_law": "L3 MUST be a multi-step mathematical calculation (e.g. solving for P* and Q*).",
-            "prohibited_anti_patterns": "Avoid vague philosophical broadness. Do not skip calculations."
+            "prohibited_anti_patterns": "Avoid vague philosophical broadness. Do not skip calculations. DO NOT generate Python, R, or any programming code. Mathematical artifacts must be pure LaTeX or Markdown tables."
         },
         "Qualitative/Definitional": {
             "persona": "Economic Historian",
@@ -1037,13 +1037,15 @@ CORE LAWS:
 2. Source Anchoring Law: If the SOURCE CONTEXT provides specific data/scenarios, YOU MUST use them.
 3. Jargon Law: Use terminology appropriate for {academic_level}. Keep analogies physically grounded.
 4. Wikilink Law: YOU MUST INCLUDE EXACTLY 3 TO 5 [[Wikilinks]] in your prose. YOU MUST INTEGRATE THESE NATURALLY into your sentences; DO NOT append them at the end of sentences like citations (e.g., 'The law of demand [[Law_Of_Demand]]' is FORBIDDEN; 'Following the [[Law_Of_Demand]], we see...' is CORRECT). Wrap critical domain terms in double brackets.
-5. Closed Knowledge Graph Law: YOU ARE STRICTLY FORBIDDEN from linking to concepts that are not in the provided concept list: {all_concepts}. Hallucinating links to external ideas is a hard failure.
-6. PDF Quarantine Law: You are strictly quarantined to the concepts present in the SOURCE CONTEXT. Teach ONLY what is provided. Furthermore, DO NOT list core determinants or factors mentioned in the text as "limitations" (e.g., if Expectations or Taxes are determinants of supply, they are part of the model, NOT a limitation of it).
-7. Value-Additive Limitations Law: A limitation must be specific and value-additive. Do not just say a model 'might be inaccurate.' Instead, identify the specific underlying assumption (e.g., independence of buyers, perfect information) and explain a real-world edge case (e.g., network effects, bandwagon effects, irrationality) where that assumption fails.
-8. Terminology Fidelity Law: Strictly adhere to the language in the SOURCE CONTEXT. Do not invent or use obscure academic jargon (e.g., 'Aggregation Axiom') if it is not in the text. Use standard introductory terminology.
-9. Anti-Pattern Law: {self.domain.get("prohibited_anti_patterns", "None.")}
-10. Factual Primacy Law: The theory explanation MUST explicitly state and enumerate the core facts, rules, or lists found in the SOURCE CONTEXT. Do not rely entirely on the mental model; state the raw academic facts.
-11. Formatting: Return strict JSON matching the schema.
+5. LaTeX Enforcement Law: YOU MUST wrap ALL mathematical expressions, variables (e.g., $P$, $Q$, $x$), and equations in LaTeX delimiters. Use single `$` for inline math and double `$$` for standalone equations. NEVER write raw math like 'Qd = 100 - 2P'; ALWAYS write '$$Qd = 100 - 2P$$'.
+6. Closed Knowledge Graph Law: YOU ARE STRICTLY FORBIDDEN from linking to concepts that are not in the provided concept list: {all_concepts}. Hallucinating links to external ideas is a hard failure.
+7. PDF Quarantine Law: You are strictly quarantined to the concepts present in the SOURCE CONTEXT. Teach ONLY what is provided. Furthermore, DO NOT list core determinants or factors mentioned in the text as "limitations" (e.g., if Expectations or Taxes are determinants of supply, they are part of the model, NOT a limitation of it).
+8. Value-Additive Limitations Law: A limitation must be specific and value-additive. Do not just say a model 'might be inaccurate.' Instead, identify the specific underlying assumption (e.g., independence of buyers, perfect information) and explain a real-world edge case (e.g., network effects, bandwagon effects, irrationality) where that assumption fails.
+9. Terminology Fidelity Law: Strictly adhere to the language in the SOURCE CONTEXT. Do not invent or use obscure academic jargon (e.g., 'Aggregation Axiom') if it is not in the text. Use standard introductory terminology.
+10. Anti-Pattern Law: {self.domain.get("prohibited_anti_patterns", "None.")}
+11. Factual Primacy Law: The theory explanation MUST explicitly state and enumerate the core facts, rules, or lists found in the SOURCE CONTEXT. Do not rely entirely on the mental model; state the raw academic facts.
+12. Analogy Diversity Law: DO NOT use 'village', 'farm', or 'bakery' analogies unless they are explicitly in the source text. If no specific analogy is provided, invent a modern, sophisticated, or technically relevant professional scenario (e.g., cloud computing scaling, semiconductor yield, SaaS subscription tiers).
+13. Formatting: Return strict JSON matching the schema.
 
 DOMAIN AXIOMS (CRITICAL):
 {axioms}"""
@@ -1107,16 +1109,19 @@ PREVIOUS CONTEXT (MENTAL MODEL): {mental_model}
 CORE LAWS:
 1. Narrative Consistency: YOU MUST strictly use the characters, industry, and specific scenario defined in the MENTAL MODEL above (e.g., if the model mentions a coffee shop manager, your artifact and walkthrough MUST involve coffee prices and latte quantities). DO NOT revert to abstract variables (P, Q) or generic scenarios. Anchor the data to the story.
 2. Artifact Format: Your artifact MUST be: {artifact_format}.
-3. K.I.S.S. Math Law: Keep formulas incredibly simple. DO NOT use 3-term equations (like Qd = 100 - 2P - 0.5I). Use 2-term equations (like Qd = 100 - 2P) to prevent arithmetic failure. Keep constants small.
-4. Sub-Operation Math Law: You MUST break arithmetic into strict sub-steps on SEPARATE LINES or explicit sentences. NEVER chain multiple equals signs in a single line (e.g., NEVER write 100 - 2*1 = 98). Instead, write "Step 1: 2 * 1 = 2. Step 2: 100 - 2 = 98." Evaluate only two numbers per line.
-5. Visual Honesty: Do not say "as seen on graph". Use "If plotted, the curve would...".
-6. Table Integrity: Markdown tables MUST have start/end pipes `|`.
-8. Algorithmic Fidelity Law: You MUST explicitly demonstrate the UNIQUE mathematical mechanism of the concept based on the source text. For example, if the concept is "Market Demand," you CANNOT just show a generic demand equation; you MUST demonstrate the horizontal summation of multiple buyers. Do not use generic, default math if the concept requires a specific formula.
-9. Walkthrough Table Ban: DO NOT generate Markdown tables inside the `walkthrough` field. Reference the table from Section 4 using text only.
-11. Epistemic Alignment Law: You MUST match your application to the nature of the concept. If the concept is a "Determinant", "Factor", or "Qualitative Principle", your walkthrough MUST explain the "Why" and the logical cascade of those factors. Rote math calculation is FORBIDDEN for purely conceptual topics.
-12. Anti-Pattern Law: {self.domain.get("prohibited_anti_patterns", "None.")}
-13. Formatting: Return ONLY the structured output. You MUST provide EXACTLY 5 to 7 steps in the walkthrough array. If you provide fewer than 5 steps, the system will CRASH.
-14. String Integrity Law: You MUST return raw strings for the `artifact` and `primary_equation_or_logic` fields. DO NOT wrap them in objects like {{"type": "string", "value": "..."}}. Return only the text.
+3. LaTeX Enforcement Law: YOU MUST wrap ALL mathematical expressions, variables, and equations in LaTeX delimiters ($...$ or $$...$$). NEVER output raw equations like 'Qd = 100 - 2P'.
+4. Mermaid Enforcement Law: If your artifact is a Mermaid diagram, it MUST be a valid Mermaid code block starting with ```mermaid and ending with ```. DO NOT wrap the diagram in a "CODE" label or use leading/trailing pipe symbols `|`.
+5. K.I.S.S. Math Law: Keep formulas incredibly simple. DO NOT use 3-term equations (like Qd = 100 - 2P - 0.5I). Use 2-term equations (like Qd = 100 - 2P) to prevent arithmetic failure. Keep constants small.
+6. Sub-Operation Math Law: You MUST break arithmetic into strict sub-steps on SEPARATE LINES or explicit sentences. NEVER chain multiple equals signs in a single line (e.g., NEVER write 100 - 2*1 = 98). Instead, write "Step 1: 2 * 1 = 2. Step 2: 100 - 2 = 98." Evaluate only two numbers per line.
+7. Visual Honesty: Do not say "as seen on graph". Use "If plotted, the curve would...".
+8. Table Integrity: Markdown tables MUST have start/end pipes `|`.
+9. Algorithmic Fidelity Law: You MUST explicitly demonstrate the UNIQUE mathematical mechanism of the concept based on the source text. For example, if the concept is "Market Demand," you CANNOT just show a generic demand equation; you MUST demonstrate the horizontal summation of multiple buyers. Do not use generic, default math if the concept requires a specific formula.
+10. Walkthrough Content Law: The `walkthrough` steps MUST NOT contain markdown headings (e.g. no `## Step 1`). They should be plain text descriptions of the calculation or logic.
+11. Walkthrough Table Ban: DO NOT generate Markdown tables inside the `walkthrough` field. Reference the table from Section 4 using text only.
+12. Epistemic Alignment Law: You MUST match your application to the nature of the concept. If the concept is a "Determinant", "Factor", or "Qualitative Principle", your walkthrough MUST explain the "Why" and the logical cascade of those factors. Rote math calculation is FORBIDDEN for purely conceptual topics.
+13. Anti-Pattern Law: {self.domain.get("prohibited_anti_patterns", "None.")}
+14. Formatting: Return ONLY the structured output. You MUST provide EXACTLY 5 to 7 steps in the walkthrough array. If you provide fewer than 5 steps, the system will CRASH.
+15. String Integrity Law: You MUST return raw strings for the `artifact` and `primary_equation_or_logic` fields. DO NOT wrap them in objects like {{"type": "string", "value": "..."}}. Return only the text.
 
 DOMAIN AXIOMS (CRITICAL):
 {sanity_check}"""
@@ -1182,13 +1187,16 @@ CORE LAWS:
 1. Scope Constraint: DO NOT test formulas or concepts not in the NOTE TEXT.
 2. Difficulty: Q1=L1 (fill_in), Q2=L2 (mcq), Q3=L3 (trace).
 3. L3 Rule: {l3_law}.
-4. UI Syntax: 'fill_in' uses `[[blank]]`. Answer is 1-2 words.
+4. UI Syntax: 'fill_in' MUST use `[[blank]]` placeholders. Answer is 1-2 words. DO NOT use the word "Blank", "___", or any other text as a placeholder.
 5. Answer Formatting: For L3 Trace, the `answer` field MUST contain ONLY the final output (e.g., "80"). Scratchpad math goes ONLY in `explanation`.
 6. Math Sovereignty: Verify every arithmetic step. evaluating `2 * 10` MUST result in `20`. Once you calculate the final mathematical answer using your formula, YOU MUST STOP. DO NOT verify it with alternative methods. DO NOT add adjustments, interpolations, or corrections. The raw mathematical output of your equation is absolute law.
 7. Algorithmic Scope: MATCH the math format of the NOTE TEXT (Table vs. Function).
-8. Trace Diversity Law: The L3 Trace question is a test of logical progression. It is NOT limited to arithmetic. For conceptual notes (Determinants, Factors), present a complex scenario and force the user to 'trace' the outcome through 2-3 logical steps based on the theory. The answer must be a single specific word or scalar value.
+8. Trace Diversity Law: The L3 Trace question is a test of logical progression. It is NOT limited to arithmetic. For conceptual notes (Determinants, Factors), present a complex scenario and force the user to 'trace' the outcome through 2-3 logical steps based on the theory. The answer must be a single specific word or scalar value. YOU MUST NOT ask open-ended "Compare" or "Describe" questions that require a paragraph-style answer. If the question starts with "Compare" or "Describe", it is INVALID.
 9. Unique Answer Law: For 'fill_in' questions, YOU MUST ensure there is exactly ONE logically correct 1-2 word answer based on the NOTE TEXT. DO NOT create "mind-reading" lists (e.g., 'Determinants include A, B, and [[blank]]') where any synonym would fit. If a unique answer is not possible, YOU MUST use 'mcq' instead.
-10. Formatting: Return strict JSON matching the schema.
+10. LaTeX Enforcement Law: YOU MUST wrap ALL mathematical expressions, variables, and equations in LaTeX delimiters ($...$ or $$...$$).
+11. Calculative Verification Law (L3 Trace): You MUST perform a two-pass calculation for any trace question involving math. Pass 1: Derive the formula. Pass 2: Plug in the numbers and verify. If there is a contradiction, you MUST restart the generation. Your explanation MUST show the step-by-step math in LaTeX.
+12. Formatting: Return strict JSON matching the schema.
+13. Syntax Enforcement Law: YOU MUST use `[[blank]]` for 'fill_in' questions. DO NOT use the word "Blank", "___", or any other placeholder. If you fail this, the interface will break.
 
 DOMAIN AXIOMS (CRITICAL):
 {axioms}"""
@@ -1351,7 +1359,7 @@ For each question check:
 - DUPLICATE CHECK: Do any two questions test the same sub-topic using the same numerical setup? FAIL if duplicates found.
 - ANSWER CONSISTENCY: For trace/debug types, does the answer field value match the final computed value in the explanation? (e.g., if explanation says "Price = 10", answer must be "10").
 - SCAFFOLDING CHECK: Are there any 'internal monologues', 'AI signatures', or 'CoT leakage' in the explanation? (e.g. "Wait, let's correct that", "As an AI...", or "Let's simplify"). FAIL if found.
-- For fill_in: does 'textWithBlanks' use [[Blank1]] format (NOT wikilink names as blanks)?
+- For fill_in: does 'text_with_blanks' (or 'textWithBlanks') use the correct `[[blank]]` format? (FAIL if it uses the literal word "Blank", "___", or any other placeholder without double brackets).
 - Is the stated 'answer' definitively correct for the question asked?
 
 Output:

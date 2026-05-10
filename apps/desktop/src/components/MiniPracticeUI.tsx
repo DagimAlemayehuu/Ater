@@ -213,12 +213,12 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
               newAns[i] = e.target.value;
               handleSelectAnswer(newAns);
             }}
-            placeholder="..."
+            placeholder=""
             className={cn(
-              "mx-1 px-2 py-0.5 border-b-2 bg-transparent focus:outline-none  w-32 text-center placeholder:opacity-20 font-bold tracking-widest text-[12px] inline-block",
+              "mx-1 px-3 py-1 border-2 border-primary/40 bg-muted/20 rounded-lg focus:outline-none focus:border-primary w-40 text-center font-bold tracking-widest text-[14px] inline-block shadow-md",
               isRevealed 
-                ? "border-muted-foreground/30 text-foreground"
-                : "border-muted-foreground/20 focus:border-foreground text-foreground"
+                ? "border-muted-foreground/30 text-foreground/50 opacity-80"
+                : "border-primary/40 focus:border-primary text-foreground"
             )}
           />
         )}
@@ -400,8 +400,8 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       disabled={isRevealed}
                       value={userAnswers[currentQ.id] || ''}
                       onChange={(e) => handleSelectAnswer(e.target.value)}
-                      placeholder="Synthesize your analysis here..."
-                      className="w-full min-h-[140px] p-6 bg-muted/5 border-2 border-border/10 rounded-xl focus:outline-none focus:border-foreground/40 text-sm font-medium tracking-tight text-foreground/80  resize-y placeholder:opacity-20"
+                      placeholder=""
+                      className="w-full min-h-[160px] p-6 bg-muted/20 border-2 border-primary/20 rounded-xl focus:outline-none focus:border-primary text-[14px] font-medium tracking-tight text-foreground  resize-y shadow-md"
                   />
               </div>
               )}

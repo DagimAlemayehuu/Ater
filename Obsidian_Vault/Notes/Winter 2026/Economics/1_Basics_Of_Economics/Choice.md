@@ -1,91 +1,100 @@
 ---
+
 title: Choice
-course: "[[Economics]]"
+course: "Economics"
 unit: '1'
-semester: "[[Winter 2026]]"
+semester: "Winter 2026"
 mode: ECON-MICRO
 type: atomic_note
 hub: "[[1_Basics_Of_Economics_Hub]]"
 source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
-date: '2026-05-09'
+date: '2026-05-10'
 prerequisites:
 - "[[Scarcity]]"
 source_pages:
 - 38
 generated: true
+
 ---
 
 ## 1. Mental Model
-Imagine a small island with a fixed amount of land, labor, and capital. The islanders must decide how to allocate these resources to produce goods and services. They have to choose between producing food, shelter, and clothing, given the limited resources available. This scenario illustrates the concept of choice, where individuals must make decisions about how to use resources in the most efficient way possible, given the constraints they face.
+
+Imagine you are at a restaurant with a limited menu. You want to order your favorite dish, but it's not available. You must choose between two other options. This scenario illustrates the concept of scarcity and choice. You have unlimited wants (you want your favorite dish), but limited resources (the restaurant doesn't have it). You must make a decision about what to order, and this decision involves costs (you give up the opportunity to have your favorite dish).
 
 ## 2. Foundational Concept
-The concept of [[Choice]] is central to economics, as it deals with the decisions individuals make about how to allocate their resources. Given that the economy is operating at full employment and full production, the quantity and quality of economic resources available for use during the year is fixed. This means that individuals must make choices about how to spend their money and use their time, as there are limited resources available to satisfy their [[Human_Wants]]. The core facts of this concept include: individuals have limited resources, individuals have unlimited wants, and individuals must make choices about how to allocate their resources. These choices are fundamental to [[Microeconomics]], which studies the behavior of individual economic units, such as households and firms. The concept of choice is also related to [[Scarcity]], which refers to the idea that the needs and wants of individuals are unlimited, but the resources available to satisfy those needs and wants are limited. By understanding the concept of choice, economists can better analyze how individuals make decisions and how markets function.
+
+The concept of choice is rooted in the idea of [[Scarcity]], which implies that individuals have unlimited wants but limited resources. This leads to a fundamental economic problem: how to allocate limited resources to satisfy unlimited wants. Choice involves selecting one option over another, and this selection involves costs, as individuals must give up an opportunity to do something else. The core facts of choice are: (1) scarcity implies choice, (2) choice involves costs, and (3) limited resources lead to limited output. These facts are closely related to the concept of [[Limited_Resources]] and [[Unlimited_Wants]]. In making choices, individuals must consider the trade-offs involved, which is a key aspect of [[Basic_Economic_Questions]].
 
 ### Key Takeaways:
-- The economy operates at full employment and full production, with a fixed quantity and quality of economic resources.
-- Decision-making involves choices about how to spend money and use time.
-- The concept of choice is fundamental to economics, given the constraints of scarcity.
+
+- Scarcity implies choice
+- Choice involves costs
+- Limited resources lead to limited output
 
 ## 3. Limitations & Edge Cases
-One limitation of this economic model is that it assumes full employment and full production, which may not always be the case in real-world scenarios. For instance, during economic downturns, unemployment may rise, and production may decrease. Another limitation is that it does not account for external factors such as technological advancements or changes in government policies, which can impact the economy's operation. Furthermore, the model assumes that individuals make rational decisions, but in reality, people may make choices based on emotions or imperfect information. Additionally, the model does not consider the distribution of resources, which can lead to issues of inequality. Finally, the model assumes that resources are used efficiently, but in practice, there may be instances of waste or misallocation of resources.
+
+The concept of choice assumes that individuals have unlimited wants but limited resources. A limitation of this concept is that it assumes individuals can make rational decisions, but in reality, people may make impulsive or irrational choices. Additionally, the concept of choice does not account for external factors such as social pressures or cultural influences that may impact decision-making. Furthermore, the concept assumes that individuals have perfect information, but in reality, people may not have access to all relevant information. Finally, the concept of choice does not consider the impact of institutional or structural factors that may limit individual choices.
 
 ## 4. Case Study Analysis Table
-The islanders must allocate resources efficiently to produce goods and services.
+$$Opportunity Cost = Value of Next Best Alternative$$
 
-| Resource | Food | Shelter | Clothing |
-| --- | --- | --- | --- |
-| Land | 2 | 3 | 1 |
-| Labor | 4 | 2 | 3 |
-| Capital | 1 | 2 | 2 |
+| Scenario | Description | Cost |
+| --- | --- | --- |
+| Favorite Dish | Not Available | $0 |
+| Option A | Available | $10 |
+| Option B | Available | $12 |
 
 ## 5. Walkthrough
-1. The islanders have limited resources: land, labor, and capital.
-2. They must decide how to allocate these resources to produce food, shelter, and clothing.
-3. For example, producing food requires 2 units of land, 4 units of labor, and 1 unit of capital.
-4. Producing shelter requires 3 units of land, 2 units of labor, and 2 units of capital.
-5. Producing clothing requires 1 unit of land, 3 units of labor, and 2 units of capital.
-6. The islanders must weigh the trade-offs of producing one good over another.
-7. They must consider the opportunity costs of their choices.
 
----
+**Step 1:** You want to order your favorite dish, but it's not available.
+
+**Step 2:** You must choose between Option A ($10) and Option B ($12).
+
+**Step 3:** If you choose Option A, you give up the opportunity to have Option B.
+
+**Step 4:** The cost of choosing Option A is $10, and the cost of choosing Option B is $12.
+
+**Step 5:** You must decide which option is more valuable to you.
 
 ## 6. The Proving Grounds
+
 ```interactive-quiz
 [
   {
     "type": "fill_in",
     "difficulty": "L1",
-    "question": "The economy operates at full employment and full production, with a fixed quantity and quality of [[blank]].",
+    "question": "The concept of choice is rooted in the idea of Blank.",
     "content": "",
-    "text_with_blanks": "The economy operates at full employment and full production, with a fixed quantity and quality of [[blank]].",
+    "text_with_blanks": "The concept of choice is rooted in the idea of Blank.",
     "options": {},
-    "answer": "economic resources",
-    "explanation": "The note text states that 'the economy is operating at full employment and full production, the quantity and quality of economic resources available for use during the year is fixed.' This implies that the fixed quantity and quality refer to economic resources."
+    "answer": "Scarcity",
+    "explanation": "The concept of choice is rooted in the idea of scarcity, which implies that individuals have unlimited wants but limited resources. This leads to a fundamental economic problem: how to allocate limited resources to satisfy unlimited wants."
   },
   {
     "type": "mcq",
     "difficulty": "L2",
-    "question": "What is the relationship between the concept of choice and microeconomics?",
+    "question": "What is a key aspect of making choices?",
     "content": "",
     "text_with_blanks": "",
     "options": {
-      "A": "The concept of choice is unrelated to microeconomics",
-      "B": "The concept of choice is fundamental to microeconomics",
-      "C": "Microeconomics studies the behavior of individual economic units, but choice is not a key concept",
-      "D": "The concept of choice only applies to macroeconomics"
+      "A": "Maximizing profits",
+      "B": "Minimizing costs",
+      "C": "Ignoring opportunity costs",
+      "D": "Trade-offs"
     },
-    "answer": "B",
-    "explanation": "The note text states that 'The concept of choice is fundamental to Microeconomics, which studies the behavior of individual economic units, such as households and firms.' This indicates a direct relationship between the concept of choice and microeconomics."
+    "answer": "Trade-offs",
+    "explanation": "In making choices, individuals must consider the trade-offs involved, which is a key aspect of basic economic questions. This involves selecting one option over another, and this selection involves costs, as individuals must give up an opportunity to do something else."
   },
   {
     "type": "trace",
     "difficulty": "L3",
-    "question": "If individuals have unlimited wants and limited resources, what is the likely outcome for decision-making?",
+    "question": "If an individual has limited resources and unlimited wants, what is the likely outcome of their choice?",
     "content": "",
     "text_with_blanks": "",
     "options": {},
-    "answer": "trade-offs",
-    "explanation": "Given that individuals have unlimited wants and limited resources, they must make choices about how to allocate their resources. This leads to trade-offs, as individuals must prioritize some wants over others due to the scarcity of resources. For example, if an individual wants to spend money on a new phone and a vacation, but only has enough money for one, they must make a choice and prioritize one want over the other."
+    "answer": "Limited output",
+    "explanation": "Given that the individual has limited resources and unlimited wants, they must make choices that involve trade-offs. This means that they will have to give up some opportunities to satisfy their wants. As a result, the likely outcome of their choice is limited output, as they are unable to satisfy all of their unlimited wants with their limited resources."
   }
 ]
+
 ```

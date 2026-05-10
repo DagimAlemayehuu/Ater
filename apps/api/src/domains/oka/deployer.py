@@ -123,11 +123,27 @@ class OkaDeployer:
         cleaned_note = self.vm.process_code_blocks(content)
         meta, body, err = self.vm.extract_yaml_and_content(cleaned_note)
         
+        # ── HUB METADATA CLEANUP ──
+        meta["type"] = "Hub"
+        meta["source_pages"] = [1]      # Force jump to first page to avoid "NaN" range errors
+        meta.pop("prerequisites", None) # Hubs do not have prerequisites
+        meta.pop("mode", None)          # Hubs do not have a mode field
+        meta.setdefault("status", "Not Started")
+        meta.setdefault("confidence", None)
+        meta.setdefault("study_date", None)
+        meta.setdefault("generated", True)
+        meta.pop("hub", None)           # Hub doesn't backlink to itself
+
         # Path resolution (Hubs have specific logic)
         target_path = self.vm.get_note_path(meta, session_metadata=session_meta, anchored_hub_path=anchored_path)
         
-        # Physical Write
-        self.vm.write_note(target_path, cleaned_note)
+        # ── TITLE ENFORCEMENT ──
+        meta["title"] = target_path.stem
+
+        # ── WRITE ──
+        yaml_content = self.vm.dump_obsidian_yaml(meta).strip()
+        full_content = f"---\n{yaml_content}\n---\n\n{body.strip()}\n"
+        self.vm.write_note(target_path, full_content)
         
         try:
             display_path = str(target_path.relative_to(self.vm.vault_path))

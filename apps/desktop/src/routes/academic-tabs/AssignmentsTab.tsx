@@ -132,7 +132,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <div className="h-px flex-1 bg-border/20" />
  </div>
  <div className="flex flex-col gap-2">
- {overdue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="overdue" />)}
+ {overdue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="overdue" />)}
  </div>
  </section>
  )}
@@ -146,7 +146,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <div className="h-px flex-1 bg-border/10" />
  </div>
  <div className="flex flex-col gap-2">
- {todayDue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="today" />)}
+ {todayDue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="today" />)}
  </div>
  </section>
  )}
@@ -160,7 +160,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <div className="h-px flex-1 bg-border/10" />
  </div>
  <div className="flex flex-col gap-2">
- {thisWeek.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="week" />)}
+ {thisWeek.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="week" />)}
  </div>
  </section>
  )}
@@ -170,7 +170,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <section className="space-y-2">
  <SectionHeader title={`Upcoming — ${upcoming.length}`} />
  <div className="flex flex-col gap-2">
- {upcoming.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
+ {upcoming.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
  </div>
  </section>
  )}
@@ -180,7 +180,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <section className="space-y-2">
  <SectionHeader title={`No Due Date — ${undated.length}`} />
  <div className="flex flex-col gap-2">
- {undated.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
+ {undated.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
  </div>
  </section>
  )}
@@ -196,7 +196,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  </button>
  {showDone && (
  <div className="flex flex-col gap-2">
- {done.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={() => {}} onOpen={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="done" />)}
+ {done.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={() => {}} onOpen={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="done" />)}
  </div>
  )}
  </section>

@@ -1,8 +1,8 @@
 import React, {useState, useEffect} from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
- Database, Key, HardDrive, Trash2, Edit2, FolderOpen, ShieldCheck, Zap, Plus, X,
- User, BookOpen, DollarSign, Activity ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Check
+  Database, Key, HardDrive, Trash2, Edit2, FolderOpen, ShieldCheck, Zap, Plus, X,
+  User, BookOpen, DollarSign, Activity, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Check
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
 import {useConfig, SavedApiKey} from '@/lib/ConfigContext'

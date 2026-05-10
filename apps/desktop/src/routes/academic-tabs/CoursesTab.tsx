@@ -137,7 +137,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
 }} />
  <div className="flex flex-col gap-2">
  {pendingAssignments.slice(0, 5).map((a, idx) => (
- <div key={idx} onClick={() => onOpenNote(`3-Database/03 - Assignments/${a.id}.md`)}
+ <div key={idx} onClick={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)}
  className="flex items-center gap-3 p-3 border border-border rounded-xl cursor-pointer bg-background ">
  <div className="w-3 h-3 rounded-full border border-border shrink-0" />
  <span className="text-[11px] font-black uppercase flex-1">{cleanTitle(a.title)}</span>
@@ -157,7 +157,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  const hStatus = stripWL(getVal(hub, 'status', 'Status'))
  const isDone = hStatus.toLowerCase().includes('complet')
  return (
- <div key={idx} onClick={() => onOpenNote(`3-Database/06 - Study Planner/${hub.id}.md`)}
+ <div key={idx} onClick={() => onOpenNote(`Database/06 - Study Planner/${hub.id}.md`)}
  className={cn('p-3 border rounded-xl flex items-center gap-3 cursor-pointer hover:border-foreground/70 ',
  isDone ? 'border-border bg-muted/5 opacity-50' : 'border-border bg-background')}>
  <div className={cn('w-3 h-3 rounded-full border shrink-0', isDone ? 'bg-primary border-primary' : 'border-border')} />

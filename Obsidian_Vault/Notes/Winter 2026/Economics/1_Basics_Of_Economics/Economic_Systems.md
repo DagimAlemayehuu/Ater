@@ -1,89 +1,107 @@
 ---
+
 title: Economic_Systems
-course: "[[Economics]]"
+course: Economics
 unit: '1'
-semester: "[[Winter 2026]]"
+semester: Winter 2026
 mode: ECON-MICRO
 type: atomic_note
-hub: "[[1_Basics_Of_Economics_Hub]]"
-source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]"
-date: '2026-05-09'
-prerequisites: []
+hub: '[[1_Basics_Of_Economics_Hub]]'
+source: '[[Inbox/Generated/Winter 2026/Economics/Chapter_1.pdf]]'
+date: '2026-05-10'
+prerequisites:
+- '[[Basic_Economic_Questions]]'
+- '[[Efficiency]]'
+- '[[Scarcity]]'
+- '[[Unlimited_Wants]]'
 source_pages: []
 generated: true
+
 ---
+
 
 ## 1. Mental Model
-Imagine a small village where people trade goods and services with each other. This simple economy illustrates how different economic systems can function. In a capitalist system, individuals own businesses and resources, aiming to maximize profits. In a socialist system, the community collectively owns and manages resources, prioritizing social welfare. A mixed economy combines elements of both, with private enterprise and government intervention. This village scenario helps visualize the core principles of various economic systems.
 
-## 2. Foundational Concept
-The study of economics began to take shape as a distinct subject with Adam Smith's book, marking the beginning of economics as we know it today, which is about two hundred years old. The core facts of economic systems include the presence of various structures such as Capitalism, Socialism, and Mixed Economies. These systems aim to address fundamental economic questions like [[What_To_Produce]], [[How_To_Produce]], and [[Basic_Economic_Questions]]. Understanding these concepts is essential for analyzing the strengths and weaknesses of different economic systems, which are influenced by factors like [[Scarcity]] and [[Market_Failure]].
+Imagine a small village where people produce and trade goods. In a capitalist system, individuals own resources and make decisions about production and trade. In a socialist system, the community collectively owns resources and makes decisions. A mixed economy combines elements of both. For example, a village might have a community-owned farm (socialism) and private shops (capitalism).
+
+## 2. Comparative Framework
+
+The concept of [[Economic_Systems]] refers to the way an economy organizes its production, distribution, and exchange of goods and services. There are several types of economic systems, including Capitalism, Socialism, and Mixed Economies. Capitalism is characterized by private ownership of resources and the creation of goods and services for profit. Socialism is characterized by collective ownership of resources and the distribution of goods and services based on need. Mixed Economies combine elements of both Capitalism and Socialism. The chapter objectives highlight the importance of understanding these different systems, as well as the [[Basic_Economic_Questions]] that each system seeks to answer, such as what to produce, how to produce, and for whom to produce. By analyzing these systems, we can better understand the strengths and weaknesses of each approach and how they address issues of [[Efficiency]], Equity, and Stability.
 
 ### Key Takeaways:
-- Economics as a distinct subject began with Adam Smith's book.
-- The science of economics is about two hundred years old.
-- Various economic systems include capitalism, socialism, and mixed economies.
+
+- Economic systems are methods for organizing an economy's production, distribution, and exchange of goods and services.
+- The main types of economic systems are capitalism, socialism, and mixed economies.
+- Each system has its strengths and weaknesses in terms of efficiency, equity, and stability.
 
 ## 3. Limitations & Edge Cases
-The source context does not provide specific limitations of economic systems. However, it is essential to consider that economic systems can be influenced by various factors such as political ideologies, cultural values, and historical events. For instance, the success of a particular economic system can depend on the level of government intervention, the distribution of resources, and the degree of social welfare. Additionally, economic systems can be affected by external factors like globalization, technological advancements, and environmental concerns. Understanding these complexities is crucial for analyzing the strengths and weaknesses of different economic systems.
 
-## 4. Case Study Analysis Table
-The core principles of economic systems can be understood through the lens of a small village's economy, where individuals trade goods and services with each other.
+The chapter objectives outline what learners should understand after completing the chapter, but do not provide limitations. A limitation of the chapter is that it may not cover all types of economic systems, such as Command Economy or Traditional Economy. Additionally, the chapter's focus on introductory concepts may oversimplify complex issues, such as the role of Government Intervention in economic systems. The chapter also assumes that readers have a basic understanding of [[Scarcity]] and [[Unlimited_Wants]], which may not be the case for all readers. Furthermore, the chapter's discussion of economic systems may not account for real-world variations, such as Mixed Economy systems that combine elements of multiple systems.
 
-| Economic System | Ownership | Goals |
-| --- | --- | --- |
-| Capitalist | Individuals | Maximize Profits |
-| Socialist | Community | Social Welfare |
-| Mixed | Private & Public | Balance Profits & Welfare |
+## 4. Pros/Cons Matrix Table
+$$Qd = 100 - 2P$$
+
+| Price (P) | Quantity Demanded (Qd) |
+| --- | --- |
+| 10 | 80 |
+| 20 | 60 |
+| 30 | 40 |
 
 ## 5. Walkthrough
-1. The village scenario illustrates how different economic systems function.
-2. In a capitalist system, individuals own businesses and resources, aiming to maximize profits.
-3. In a socialist system, the community collectively owns and manages resources, prioritizing social welfare.
-4. A mixed economy combines elements of both, with private enterprise and government intervention.
-5. This helps visualize the core principles of various economic systems.
-6. The village economy demonstrates the role of ownership and goals in shaping economic systems.
-7. Understanding these principles is crucial for analyzing and comparing economic systems.
 
----
+**Step 1:** Understand the equation Qd = 100 - 2P, where Qd is the quantity demanded and P is the price.
+
+**Step 2:** Calculate the quantity demanded when the price is 10. Qd = 100 - 2*10 = 100 - 20 = 80.
+
+**Step 3:** Calculate the quantity demanded when the price is 20. Qd = 100 - 2*20 = 100 - 40 = 60.
+
+**Step 4:** Calculate the quantity demanded when the price is 30. Qd = 100 - 2*30 = 100 - 60 = 40.
+
+**Step 5:** Observe that as the price increases, the quantity demanded decreases.
+
+**Step 6:** Note that the demand curve is a straight line with a negative slope, indicating a downward-sloping demand curve.
+
+**Step 7:** If plotted, the curve would show that as the price increases, the quantity demanded decreases.
 
 ## 6. The Proving Grounds
+
 ```interactive-quiz
 [
   {
     "type": "fill_in",
     "difficulty": "L1",
-    "question": "The study of economics began to take shape as a distinct subject with whose book?",
+    "question": "The concept of economic systems refers to the way an economy organizes its production, distribution, and exchange of",
     "content": "",
-    "text_with_blanks": "The study of economics began to take shape as a distinct subject with [[blank]]'s book.",
+    "text_with_blanks": "The concept of economic systems refers to the way an economy organizes its production, distribution, and exchange of [[blank]]",
     "options": {},
-    "answer": "Adam Smith",
-    "explanation": "The study of economics began to take shape as a distinct subject with Adam Smith's book, marking the beginning of economics as we know it today."
+    "answer": "goods and services",
+    "explanation": "The concept of economic systems refers to the way an economy organizes its production, distribution, and exchange of goods and services. This definition is directly stated in the note text."
   },
   {
     "type": "mcq",
     "difficulty": "L2",
-    "question": "What are the core economic systems?",
+    "question": "Which of the following economic systems is characterized by private ownership of resources and the creation of goods and services for profit?",
     "content": "",
     "text_with_blanks": "",
     "options": {
-      "A": "Capitalism, Socialism, and Mixed Economies",
-      "B": "Capitalism and Socialism",
-      "C": "Socialism and Mixed Economies",
-      "D": "Capitalism and Mixed Economies"
+      "A": "Socialism",
+      "B": "Capitalism",
+      "C": "Mixed Economies",
+      "D": "Command Economy"
     },
-    "answer": "A",
-    "explanation": "The core facts of economic systems include the presence of various structures such as Capitalism, Socialism, and Mixed Economies."
+    "answer": "B",
+    "explanation": "Capitalism is characterized by private ownership of resources and the creation of goods and services for profit. This matches the description provided in the note text."
   },
   {
     "type": "trace",
     "difficulty": "L3",
-    "question": "If a country experiences scarcity, what is likely to happen to its economic system?",
+    "question": "If a society transitions from a Capitalist economic system to a Socialist system, what is the specific change in the primary ownership structure of resources?",
     "content": "",
     "text_with_blanks": "",
     "options": {},
-    "answer": "Inefficient",
-    "explanation": "If a country experiences scarcity, it is likely to lead to market failure, which in turn affects the efficiency of its economic system. Given that scarcity leads to market failure, and market failure impacts efficiency, the logical outcome is that the economic system becomes inefficient."
+    "answer": "Collective ownership",
+    "explanation": "In Capitalism, resources are privately owned. Transitioning to Socialism involves shifting to collective (state or social) ownership of resources. Therefore, the primary change is the shift to collective ownership."
   }
 ]
+
 ```

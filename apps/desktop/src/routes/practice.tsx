@@ -338,7 +338,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 
  const nextQuestion = async () => {
  if (currentQuestionIdx < questions.length - 1) {
- setCurrentQuestionIdx(prev => prev + 1); 
+ setCurrentQuestionIdx(currentQuestionIdx + 1); 
  setIsRevealed(false); 
  setKeywordChecks({});
  setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds || null);
@@ -404,7 +404,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
  <div className="flex bg-muted/5 p-1 rounded-lg border border-border w-full sm:w-auto">
  <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", view === 'dashboard' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>Dashboard</button>
- <button onClick={() => setView('history')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", view === 'history' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>History</button>
+ <button onClick={() => setView('history' as any)} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", (view as string) === 'history' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>History</button>
  </div>
  <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-muted/5 border border-border hover:border-foreground/50 text-foreground rounded-md font-black uppercase tracking-widest text-[9px] ">Start</Button>
  </div>

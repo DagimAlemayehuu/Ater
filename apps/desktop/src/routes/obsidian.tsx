@@ -465,14 +465,14 @@ function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox}: 
  >
  {/* Level Indentation Guide Lines */}
  {node.depth > 0 && (
- <div className="absolute left-0 top-0 bottom-0 flex" style={{width: node.depth * 12}}>
+ <div className="absolute left-0 top-0 bottom-0 flex" style={{width: node.depth * 24}}>
  {Array.from({length: node.depth}).map((_, i) => (
- <div key={i} className="w-[12px] border-r border-border/10 h-full" />
+ <div key={i} className="w-[24px] border-r border-border/20 h-full" />
  ))}
  </div>
  )}
 
- <div className="flex items-center gap-1.5 w-full" style={{marginLeft: node.depth * 12}}>
+ <div className="flex items-center gap-2 w-full" style={{marginLeft: node.depth * 24}}>
  <div 
  className="w-4 h-4 shrink-0 flex items-center justify-center"
  onClick={(e) => {e.stopPropagation(); toggleNode(node.label);}}
@@ -625,7 +625,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                  )}
                  {!isMobile && (
                    <button 
-                     onClick={() => saveConfig({ ...config, showProperties: !config.showProperties })}
+                     onClick={() => config && saveConfig({ ...config, showProperties: !config.showProperties })}
                      className={cn(
                        "w-8 h-8 flex items-center justify-center rounded-md border  shadow-sm",
                        config?.showProperties 
@@ -682,10 +682,10 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
      )
  
      return () => {
-      setCenterContent(null)
-      setRightContent(null)
-      setIsFullscreen(false)
-    }
+       setCenterContent(null)
+       setRightContent(null)
+       // setIsFullscreen(false) // REMOVED: This was causing the state to reset on every effect re-run
+     }
   }, [selectedPath, isEditing, isFullscreen, pdfState, noteMetadata, config, saveConfig, setCenterContent, setRightContent, isMobile, setIsFullscreen])
  
  // --- Sync & Topology Cache ---
@@ -846,10 +846,10 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  
  if (!topologies) {
  const searchPaths = [
- `3-Database/06 - Study Planner/${cleanHubName}.md`,
- `3-Database/06 - Study Planner/${cleanHubName}_Hub.md`,
- `3-Database/01 - Areas/${cleanHubName}.md`,
- `3-Database/01 - Areas/${cleanHubName}_Hub.md`,
+ `Database/06 - Study Planner/${cleanHubName}.md`,
+ `Database/06 - Study Planner/${cleanHubName}_Hub.md`,
+ `Database/01 - Areas/${cleanHubName}.md`,
+ `Database/01 - Areas/${cleanHubName}_Hub.md`,
  `${cleanHubName}_Hub.md`
  ]
  for (const p of searchPaths) {
@@ -1293,7 +1293,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  if (res.found && res.path) {
  selectFile(res.path, pageNumber, false, filterPages);
 } else if (res.found && res.type === 'database') {
- selectFile(`3-Database/${res.db_id}/${res.file_name}`, pageNumber, false, filterPages);
+ selectFile(`Database/${res.db_id}/${res.file_name}`, pageNumber, false, filterPages);
 } else {
   // If the pageName looks like a path (contains slashes), resolve it from root instead of current folder.
   let newPath = "";

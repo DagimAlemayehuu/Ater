@@ -134,27 +134,6 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
         return () => window.removeEventListener('message', handleMessage);
     }, []);
 
-    const handleExplain = async () => {
-        if (!selection) return;
-        setExplanationSelection(selection);
-        setIsQuizMode(false);
-        setShowPopover(false);
-        setSidebarOpen(true);
-    };
-
-    const handleQuickQuestions = async () => {
-        if (!selection) return;
-        setExplanationSelection(selection);
-        setIsQuizMode(true);
-        setShowPopover(false);
-        setSidebarOpen(true);
-    };
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(explanation);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
 
     const isDarkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     const resolvedTheme = isDarkMode ? 'dark' : 'light';

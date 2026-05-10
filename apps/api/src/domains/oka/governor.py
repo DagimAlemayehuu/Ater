@@ -20,10 +20,10 @@ class TokenGovernor:
         self._slot_event = asyncio.Event()
         self._slot_event.set()  # Initially unblocked
 
-        # Groq Free Tier limits
-        self.max_tpm = 60000
+        # Groq Free Tier limits (llama-4-scout-17b)
+        self.max_tpm = 30000
         self.max_rpm = 30
-        self.safety_margin = 0.92  # Never exceed 92% of limits
+        self.safety_margin = 0.85  # Increased safety margin for Free Tier
 
         # 60-second sliding windows
         self.request_window: deque = deque()   # request timestamps
@@ -31,9 +31,9 @@ class TokenGovernor:
 
         # Dynamic concurrency
         self.active_slots = 0
-        self.max_concurrency = 5
+        self.max_concurrency = 2
         self.min_concurrency = 1
-        self.current_concurrency_limit = 2   # start conservatively
+        self.current_concurrency_limit = 1   # start strictly sequential
 
         # Telemetry
         self.current_pressure = 0.0

@@ -1,7 +1,7 @@
 import React, {useState, useEffect, useCallback} from 'react'
 import {useNavigate, useSearchParams} from 'react-router-dom'
-import {RefreshCw, CalendarDays, GraduationCap, BookOpen, ClipboardList, FlaskConical, LayoutDashboard, Layers, ChevronLeft, ChevronRight} from 'lucide-react'
-import {format, subMonths, addMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, isToday, parseISO} from 'date-fns'
+import {RefreshCw, CalendarDays, GraduationCap, BookOpen, ClipboardList, FlaskConical, LayoutDashboard, Layers, ChevronLeft, ChevronRight, Activity} from 'lucide-react'
+import {format, subMonths, addMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, isToday, parseISO, startOfDay} from 'date-fns'
 import {cn} from '@/lib/utils'
 import {toast} from 'sonner'
 import {sidecarApi} from '@/lib/sidecarApi'
@@ -414,7 +414,7 @@ function MiniCalendar({events, onSelectEvent}: {events: any[]; onSelectEvent: (p
                   {dayEvents.map((ev, idx) => (
                     <button 
                       key={idx} 
-                      onClick={() => onSelectEvent(ev._type === 'Assignment' ? `3-Database/03 - Assignments/${ev.id}.md` : `3-Database/04 - Exams/${ev.id}.md`)}
+                      onClick={() => onSelectEvent(ev._type === 'Assignment' ? `Database/03 - Assignments/${ev.id}.md` : `Database/04 - Exams/${ev.id}.md`)}
                       className={cn(
                         'text-[8px] font-black uppercase px-2 py-1.5 rounded-lg border transition-all text-left truncate flex items-center gap-1.5 group/event',
                         ev._type === 'Exam' 
@@ -447,7 +447,7 @@ function MiniCalendar({events, onSelectEvent}: {events: any[]; onSelectEvent: (p
             .map((ev, idx) => (
               <button 
                 key={idx} 
-                onClick={() => onSelectEvent(ev._type === 'Assignment' ? `3-Database/03 - Assignments/${ev.id}.md` : `3-Database/04 - Exams/${ev.id}.md`)}
+                onClick={() => onSelectEvent(ev._type === 'Assignment' ? `Database/03 - Assignments/${ev.id}.md` : `Database/04 - Exams/${ev.id}.md`)}
                 className="flex flex-col gap-3 p-4 rounded-2xl border border-border/40 bg-muted/[0.02] hover:bg-muted/[0.05] hover:border-foreground/20 transition-all group text-left"
               >
                 <div className="flex items-center justify-between">
@@ -473,16 +473,5 @@ function MiniCalendar({events, onSelectEvent}: {events: any[]; onSelectEvent: (p
         </div>
       </div>
     </div>
-  )
-}
-ton key={idx} onClick={() => onSelectEvent(ev._type === 'Assignment' ? `3-Database/03 - Assignments/${ev.id}.md` : `3-Database/04 - Exams/${ev.id}.md`)}
- className="w-full flex items-center gap-3 text-left p-2 rounded-xl hover:bg-muted/20  group border border-transparent focus-visible:ring-1 focus-visible:ring-primary outline-none">
- <div className={cn('w-2 h-2 rounded-full shrink-0', ev._type === 'Exam' ? 'bg-primary' : 'bg-muted-foreground/20')} />
- <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground/70 group-hover:text-foreground ">{cleanTitle(ev.title)}</span>
- <span className="text-[9px] font-black text-muted-foreground/30 ml-auto shrink-0 uppercase tracking-widest">{ev._date ? format(parseISO(ev._date), 'MMM d') : ''}</span>
- </button>
- ))}
- </div>
- </div>
- )
-}
+   )
+ }
