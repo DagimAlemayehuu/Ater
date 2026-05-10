@@ -2064,7 +2064,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             except Exception as e:
                                 err_str = str(e)
                                 if "429" in err_str or "rate_limit" in err_str.lower():
-                                    self.governor.report_error() # Tell governor to scale down
+                                    import re
+                                    m = re.search(r"try again in (?:(\d+)m)?([\d\.]+)s", err_str)
+                                    if m:
+                                        mins = int(m.group(1)) if m.group(1) else 0
+                                        secs = float(m.group(2))
+                                        self.governor.report_error(wait_seconds=mins * 60 + secs + 2.0)
+                                    else:
+                                        self.governor.report_error()
                                     raise e # Propagate up to confirm_plan
                                 if generation_attempts >= max_attempts:
                                     import logging
@@ -2108,8 +2115,16 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     hub_retry += 1
                                     err_msg = str(e).lower()
                                     if "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg:
-                                        self.governor.report_error()
-                                        await asyncio.sleep(30)
+                                        import re
+                                        m = re.search(r"try again in (?:(\d+)m)?([\d\.]+)s", err_msg)
+                                        if m:
+                                            mins = int(m.group(1)) if m.group(1) else 0
+                                            secs = float(m.group(2))
+                                            self.governor.report_error(wait_seconds=mins * 60 + secs + 2.0)
+                                            await asyncio.sleep(mins * 60 + secs + 2.0)
+                                        else:
+                                            self.governor.report_error()
+                                            await asyncio.sleep(30)
                                     else:
                                         await asyncio.sleep(10)
                             

@@ -1016,6 +1016,15 @@ class ArchitectAgent:
         msg = str(e).lower()
         return "429" in msg or "rate_limit" in msg or "resource_exhausted" in msg
 
+def _extract_wait_time(err_msg: str, default: float = 5.0) -> float:
+    # Example: "Please try again in 2m19.104s" or "Please try again in 13.1328s"
+    m = re.search(r"try again in (?:(\d+)m)?([\d\.]+)s", err_msg)
+    if m:
+        mins = int(m.group(1)) if m.group(1) else 0
+        secs = float(m.group(2))
+        return mins * 60 + secs + 2.0  # Add 2 seconds buffer
+    return default
+
 class TheoryAgent:
     def __init__(self, llm: BaseChatModel, domain: dict):
         self.llm = llm
@@ -1037,12 +1046,12 @@ LAWS — FOLLOW EXACTLY:
 1. SOURCE LAW: Pull specific facts, examples, or scenarios directly from SOURCE. Do NOT invent.
 2. ANTI-PADDING LAW: FORBIDDEN openings — "X is a fundamental concept", "X is important", "In this section". Start with a concrete fact or scenario.
 3. SELF-LINK BAN: NEVER write [[{title_readable.replace(' ', '_')}]] or [[{title_readable}]]. You cannot wikilink to this note itself.
-4. WIKILINK LAW: Include EXACTLY 3 to 5 [[Wikilinks]]. Link ONLY to these concepts: {all_concepts}. Integrate naturally.
+4. WIKILINK LAW: Include EXACTLY 3 to 5 [[Wikilinks]]. Link ONLY to exact matches from these concepts: {all_concepts}. DO NOT hallucinate links or invent terms.
 5. LATEX LAW: Wrap ALL math in $ or $$. NEVER write raw math.
-6. FINISH LAW: Every section MUST end with a complete sentence ending in punctuation (. ! ?). Never cut off.
+6. TRUNCATION LAW: Every section MUST end with a complete sentence ending in punctuation (. ! ?). Never cut off. Ensure you fully close all XML tags before stopping.
 7. ACADEMIC LEVEL LAW: Your explanation must perfectly match the {academic_level} level. Do not oversimplify PhD topics, and do not over-complicate High School topics.
 
-OUTPUT FORMAT — use these exact XML tags:
+OUTPUT FORMAT (CRITICAL) — You MUST output ONLY the following XML tags. Do NOT output any conversational preamble or postamble. Your ENTIRE response MUST be enclosed within these tags:
 <MENTAL_MODEL>
 A vivid, concrete real-world scenario that makes {title_readable} tangible. 3-4 sentences max. Start with a scene, not a definition. Avoid clichés like "Imagine an island".
 </MENTAL_MODEL>
@@ -1060,6 +1069,8 @@ Academic definition grounded in SOURCE. Include 3-5 [[wikilinks]]. At least 4 co
 <LIMITATIONS>
 At least 3 complete sentences on edge cases, assumptions that break the concept, and real-world complications. End with a full sentence.
 </LIMITATIONS>
+
+CRITICAL REMINDER: You MUST include ALL 4 tags: <MENTAL_MODEL>, <THEORY_PROSE>, <TAKEAWAYS>, and <LIMITATIONS>. Do not skip any. Do not truncate the output. Ensure all tags are fully closed.
 
 {axioms}"""
 
@@ -1102,13 +1113,14 @@ At least 3 complete sentences on edge cases, assumptions that break the concept,
                 err_msg = str(e).lower()
                 is_429 = "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg
                 if is_429:
-                    governor.report_error(wait_seconds=5.0)
+                    wait_sec = _extract_wait_time(err_msg, default=5.0)
+                    governor.report_error(wait_seconds=wait_sec)
                 
                 print(f"[TheoryAgent] Attempt {attempt+1} failed: {e}")
                 if attempt == 2:
                     raise e
                 
-                wait_time = 2 * (attempt + 1) if is_429 else 1
+                wait_time = _extract_wait_time(err_msg, default=2 * (attempt + 1)) if is_429 else 1
                 await asyncio.sleep(wait_time)
 
     async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str, used_scenarios: list = None) -> str:
@@ -1160,6 +1172,7 @@ def generate():
 NO JAVASCRIPT: DO NOT use Javascript syntax. Use only valid Python.
 Walkthrough Law: Your walkthrough steps MUST NOT be redundant or circular. Each step MUST convey a distinct new piece of information or logic. Do not repeat the same concept across multiple steps.
 Artifact Purity Law: Do NOT include explanations, walkthroughs, or text descriptions inside the `artifact` string itself. The `artifact` string must ONLY contain the raw code block, table, or mermaid diagram. Put all explanations in the `walkthrough` array.
+Truncation Law: Do NOT truncate code. Output the FULL script. End the script with a complete dictionary inside the `<PYTHON_CODE>` tags. Ensure tags are fully closed.
 
 DOMAIN AXIOMS (CRITICAL):
 {sanity_check}"""
@@ -1228,13 +1241,14 @@ DOMAIN AXIOMS (CRITICAL):
                 last_error = str(e)
                 is_429 = "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg
                 if is_429:
-                    governor.report_error(wait_seconds=5.0)
+                    wait_sec = _extract_wait_time(err_msg, default=5.0)
+                    governor.report_error(wait_seconds=wait_sec)
                 
                 print(f"[PractitionerAgent] Attempt {attempt+1} failed: {e}")
                 if attempt == 2:
                     raise e
                 
-                wait_time = 2 * (attempt + 1) if is_429 else 1
+                wait_time = _extract_wait_time(err_msg, default=2 * (attempt + 1)) if is_429 else 1
                 await asyncio.sleep(wait_time)
 
     async def generate(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> str:
@@ -1356,13 +1370,14 @@ EXAMPLE of a GOOD quiz set:
                 err_msg = str(e).lower()
                 is_429 = "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg
                 if is_429:
-                    governor.report_error(wait_seconds=5.0)
+                    wait_sec = _extract_wait_time(err_msg, default=5.0)
+                    governor.report_error(wait_seconds=wait_sec)
                 
                 print(f"[QuestionAgent] Attempt {attempt+1} failed: {e}")
                 if attempt == 2:
                     raise e
                 
-                wait_time = 2 * (attempt + 1) if is_429 else 1
+                wait_time = _extract_wait_time(err_msg, default=2 * (attempt + 1)) if is_429 else 1
                 await asyncio.sleep(wait_time)
 
 class CriticAgent:
