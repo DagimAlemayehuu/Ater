@@ -1,5 +1,4 @@
 ---
-
 title: Equilibrium_Quantity
 course: "Economics"
 unit: '2'
@@ -11,9 +10,10 @@ source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_2.pdf]]"
 date: '2026-05-10'
 prerequisites:
 - "[[Market_Equilibrium]]"
-source_pages: []
+source_pages:
+- 51
+- 52
 generated: true
-
 ---
 
 ## 1. Mental Model

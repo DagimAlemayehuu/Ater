@@ -1,5 +1,4 @@
 ---
-
 title: Demand_Schedule
 course: Economics
 unit: '2'
@@ -17,8 +16,8 @@ prerequisites:
 - '[[Substitute_Goods]]'
 source_pages:
 - 6
+- 7
 generated: true
-
 ---
 
 

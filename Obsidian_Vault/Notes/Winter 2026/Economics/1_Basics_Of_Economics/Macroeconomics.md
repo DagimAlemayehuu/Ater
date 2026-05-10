@@ -1,5 +1,4 @@
 ---
-
 title: Macroeconomics
 course: Economics
 unit: '1'
@@ -16,7 +15,6 @@ prerequisites:
 source_pages:
 - 17
 generated: true
-
 ---
 
 

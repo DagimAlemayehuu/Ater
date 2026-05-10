@@ -1,5 +1,4 @@
 ---
-
 title: Demand_Function
 course: Economics
 unit: '2'
@@ -18,7 +17,6 @@ prerequisites:
 source_pages:
 - 8
 generated: true
-
 ---
 
 

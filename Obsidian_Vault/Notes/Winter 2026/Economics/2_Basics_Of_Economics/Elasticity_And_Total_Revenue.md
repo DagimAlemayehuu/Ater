@@ -1,5 +1,4 @@
 ---
-
 title: Elasticity_And_Total_Revenue
 course: "Economics"
 unit: '2'
@@ -13,8 +12,8 @@ prerequisites:
 - "Price Elasticity Of Demand"
 source_pages:
 - 30
+- 31
 generated: true
-
 ---
 
 ## 1. Mental Model

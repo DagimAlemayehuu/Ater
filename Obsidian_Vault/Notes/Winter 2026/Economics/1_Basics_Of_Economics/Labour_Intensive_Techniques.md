@@ -1,5 +1,4 @@
 ---
-
 title: Labour_Intensive_Techniques
 course: "Economics"
 unit: '1'
@@ -14,7 +13,6 @@ prerequisites:
 source_pages:
 - 53
 generated: true
-
 ---
 
 ## 1. Mental Model

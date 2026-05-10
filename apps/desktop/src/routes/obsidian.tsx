@@ -8,7 +8,7 @@ import {
  ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft,
   Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Network,
   Edit2, Edit3, Save, FolderPlus, Hash, CheckSquare, Link, List, Heart,
-  Activity, Play, SkipForward
+  Activity, Play, SkipForward, MapPin
 } from 'lucide-react'
 import {motion, AnimatePresence} from 'framer-motion'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -610,6 +610,8 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     sidebarOpen: false,
     isFullscreen: false
   })
+  const [waypoints, setWaypoints] = useState<number[]>([])
+  const [currentWaypointIndex, setCurrentWaypointIndex] = useState(0)
   const { push, history, currentIndex } = useNavigation()
   const { setCenterContent, setRightContent } = useHeader()
   const { isFullscreen, setIsFullscreen } = useLayout()
@@ -678,14 +680,24 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                  {(noteMetadata?.source_file || noteMetadata?.source) && (
                    <button 
                      onClick={() => {
-                       const src = noteMetadata.source_file || noteMetadata.source
-                       const cleanPath = typeof src === 'string' ? src.replace(/^\[\[/, '').replace(/\]\]$/, '') : src
-                       setSelectedPath(cleanPath)
-                       const pg = noteMetadata.source_page || (Array.isArray(noteMetadata.source_pages) ? noteMetadata.source_pages[0] : noteMetadata.source_pages)
-                       if (pg) {
-                         setSelectedPage(Number(pg))
-                       }
-                     }}
+                        const src = noteMetadata.source_file || noteMetadata.source
+                        const cleanPath = typeof src === 'string' ? src.replace(/^\[\[/, '').replace(/\]\]$/, '') : src
+                        
+                        // Extract all possible page waypoints
+                        const wps = Array.isArray(noteMetadata.source_pages) 
+                          ? noteMetadata.source_pages 
+                          : (noteMetadata.source_pages ? [noteMetadata.source_pages] : (noteMetadata.source_page ? [noteMetadata.source_page] : []))
+                        
+                        const numericWaypoints = wps.map(Number).filter(n => !isNaN(n))
+                        
+                        setSelectedPath(cleanPath)
+                        setWaypoints(numericWaypoints)
+                        setCurrentWaypointIndex(0)
+                        
+                        if (numericWaypoints.length > 0) {
+                          setSelectedPage(numericWaypoints[0])
+                        }
+                      }}
                      className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary  shadow-sm"
                      title="Jump to Source PDF"
                    >
@@ -712,7 +724,35 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
          )}
  
          {selectedPath && selectedPath.toLowerCase().endsWith('.pdf') && (
-           <div className="flex items-center gap-1 bg-muted/30 px-2 py-0.5 rounded border border-border/50 h-8">
+            <div className="flex items-center gap-1.5">
+              {/* Waypoint Navigation (if multiple) */}
+              {waypoints.length > 1 && (
+                <div className="flex items-center gap-1.5 bg-primary/5 px-2 py-0.5 rounded border border-primary/20 h-8">
+                  <MapPin size={10} className="text-primary opacity-50 mr-0.5" />
+                  <div className="flex items-center gap-1">
+                    {waypoints.map((page, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setCurrentWaypointIndex(idx);
+                          pdfRef.current?.handleJump(page);
+                        }}
+                        className={cn(
+                          "w-5 h-5 flex items-center justify-center text-[10px] font-black rounded border transition-all",
+                          currentWaypointIndex === idx 
+                            ? "bg-primary border-primary text-primary-foreground shadow-sm" 
+                            : "bg-background/50 border-primary/20 text-primary/60 hover:border-primary/40 hover:text-primary"
+                        )}
+                        title={`Jump to Page ${page}`}
+                      >
+                        {idx + 1}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-1 bg-muted/30 px-2 py-0.5 rounded border border-border/50 h-8">
              <button 
                onClick={() => pdfRef.current?.handlePrev()}
                className="p-1 hover:bg-background rounded  text-muted-foreground hover:text-foreground"
@@ -731,6 +771,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                <ChevronRight size={12} />
              </button>
            </div>
+            </div>
          )}
  
          {selectedPath && (

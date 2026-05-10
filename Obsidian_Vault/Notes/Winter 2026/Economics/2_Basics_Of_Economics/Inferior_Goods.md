@@ -1,5 +1,4 @@
 ---
-
 title: Inferior_Goods
 course: Economics
 unit: '2'
@@ -17,8 +16,8 @@ prerequisites:
 - '[[Technological_Advancement]]'
 source_pages:
 - 17
+- 18
 generated: true
-
 ---
 
 

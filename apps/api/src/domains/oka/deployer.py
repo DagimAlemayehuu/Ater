@@ -262,18 +262,29 @@ class OkaDeployer:
             page_matches = re.findall(r"\[PAGE\s+(\d+)\]", content, re.IGNORECASE)
             if page_matches:
                 meta["source_pages"] = sorted(set(int(p) for p in page_matches))
-            elif isinstance(meta.get("source_pages"), list):
-                try:
-                    meta["source_pages"] = sorted(set(int(p) for p in meta["source_pages"] if str(p).strip().isdigit()))
-                except Exception:
-                    meta["source_pages"] = []
-            elif meta.get("source_page") is not None:
-                try:
-                    meta["source_pages"] = [int(meta["source_page"])]
-                except Exception:
-                    meta["source_pages"] = []
             else:
-                meta.setdefault("source_pages", [])
+                # Robust flattening for nested list artifacts (e.g., [[8, 9]])
+                raw_pages = meta.get("source_pages") or meta.get("source_page")
+                if raw_pages is not None:
+                    def flatten_to_ints(val):
+                        if isinstance(val, list):
+                            res = []
+                            for item in val:
+                                res.extend(flatten_to_ints(item))
+                            return res
+                        try:
+                            s = str(val).strip()
+                            if s.isdigit():
+                                return [int(s)]
+                        except:
+                            pass
+                        return []
+                    
+                    flattened = flatten_to_ints(raw_pages)
+                    meta["source_pages"] = sorted(set(flattened))
+                else:
+                    meta.setdefault("source_pages", [])
+            
             meta.pop("source_page", None)
 
             # ── NOTE TYPE + RELATIONAL LINKS ──

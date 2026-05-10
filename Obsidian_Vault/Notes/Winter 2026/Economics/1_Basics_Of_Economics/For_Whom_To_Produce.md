@@ -11,7 +11,8 @@ date: "2026-05-10"
 prerequisites:
  - "[[Basic_Economic_Questions]]"
 source_pages:
- - "54"
+- 2
+- 3
 generated: true
 read: false
 ---

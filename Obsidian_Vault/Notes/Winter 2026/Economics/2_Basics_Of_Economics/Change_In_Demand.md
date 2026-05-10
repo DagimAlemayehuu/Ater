@@ -1,5 +1,4 @@
 ---
-
 title: Change_In_Demand
 course: "Economics"
 unit: '2'
@@ -13,8 +12,8 @@ prerequisites:
 - "[[Demand_Curve]]"
 source_pages:
 - 14
+- 15
 generated: true
-
 ---
 
 ## 1. Mental Model

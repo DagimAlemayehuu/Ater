@@ -1,5 +1,4 @@
 ---
-
 title: Normal_Goods
 course: Economics
 unit: '2'
@@ -15,8 +14,8 @@ prerequisites:
 - '[[Market_Demand]]'
 source_pages:
 - 17
+- 18
 generated: true
-
 ---
 
 

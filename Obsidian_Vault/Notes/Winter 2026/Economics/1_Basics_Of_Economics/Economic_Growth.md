@@ -1,5 +1,4 @@
 ---
-
 title: Economic_Growth
 course: "Economics"
 unit: '1'
@@ -13,8 +12,8 @@ prerequisites:
 - "Production Possibilities Frontier (ppf)"
 source_pages:
 - 48
+- 49
 generated: true
-
 ---
 
 ## 1. Mental Model

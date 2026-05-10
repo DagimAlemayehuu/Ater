@@ -1,5 +1,4 @@
 ---
-
 title: Point_Elasticity_Of_Demand
 course: "Economics"
 unit: '2'
@@ -13,8 +12,8 @@ prerequisites:
 - "Price Elasticity Of Demand"
 source_pages:
 - 26
+- 27
 generated: true
-
 ---
 
 ## 1. Mental Model

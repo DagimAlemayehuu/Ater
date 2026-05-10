@@ -1,5 +1,4 @@
 ---
-
 title: Opportunity_Cost
 course: "Economics"
 unit: '1'
@@ -14,8 +13,9 @@ prerequisites:
 - "[[Choice]]"
 source_pages:
 - 2
+- 3
+- 4
 generated: true
-
 ---
 
 ## 1. Mental Model

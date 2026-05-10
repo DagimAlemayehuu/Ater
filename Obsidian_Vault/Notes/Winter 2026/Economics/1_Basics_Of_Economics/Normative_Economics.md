@@ -1,5 +1,4 @@
 ---
-
 title: Normative_Economics
 course: Economics
 unit: '1'
@@ -17,8 +16,8 @@ prerequisites:
 - '[[Inductive_Reasoning]]'
 source_pages:
 - 18
+- 19
 generated: true
-
 ---
 
 

@@ -1,5 +1,4 @@
 ---
-
 title: Efficient_Allocation
 course: "Economics"
 unit: '1'
@@ -14,8 +13,8 @@ prerequisites:
 - "Unlimited Wants"
 source_pages:
 - 9
+- 10
 generated: true
-
 ---
 
 ## 1. Mental Model

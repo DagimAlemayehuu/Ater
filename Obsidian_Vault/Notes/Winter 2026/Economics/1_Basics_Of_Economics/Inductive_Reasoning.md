@@ -1,5 +1,4 @@
 ---
-
 title: Inductive_Reasoning
 course: Economics
 unit: '1'
@@ -17,8 +16,8 @@ prerequisites:
 - '[[Deductive_Reasoning]]'
 source_pages:
 - 21
+- 22
 generated: true
-
 ---
 
 

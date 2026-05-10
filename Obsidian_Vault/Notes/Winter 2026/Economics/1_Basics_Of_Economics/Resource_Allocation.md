@@ -1,5 +1,4 @@
 ---
-
 title: Resource_Allocation
 course: "Economics"
 unit: '1'
@@ -13,8 +12,8 @@ prerequisites:
 - "[[Scarcity]]"
 source_pages:
 - 2
+- 3
 generated: true
-
 ---
 
 ## 1. Mental Model

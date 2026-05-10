@@ -1,5 +1,4 @@
 ---
-
 title: Elasticity_Of_Supply
 course: Economics
 unit: '2'
@@ -16,8 +15,8 @@ prerequisites:
 - '[[Time_And_Eligibility]]'
 source_pages:
 - 48
+- 49
 generated: true
-
 ---
 
 

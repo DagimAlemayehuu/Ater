@@ -15,7 +15,8 @@ prerequisites:
  - "[[Economic_Growth]]"
  - "[[Market_Failure]]"
 source_pages:
- - "50"
+- 2
+- 3
 generated: true
 read: false
 ---

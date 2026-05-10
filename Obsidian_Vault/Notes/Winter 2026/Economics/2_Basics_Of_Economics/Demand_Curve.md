@@ -1,5 +1,4 @@
 ---
-
 title: Demand_Curve
 course: Economics
 unit: '2'
@@ -16,8 +15,8 @@ prerequisites:
 - '[[Normal_Goods]]'
 source_pages:
 - 7
+- 8
 generated: true
-
 ---
 
 

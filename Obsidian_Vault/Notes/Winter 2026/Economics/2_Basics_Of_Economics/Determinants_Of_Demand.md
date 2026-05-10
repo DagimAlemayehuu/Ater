@@ -1,5 +1,4 @@
 ---
-
 title: Determinants_Of_Demand
 course: Economics
 unit: '2'
@@ -17,8 +16,9 @@ prerequisites:
 - '[[Ceteris_Paribus]]'
 source_pages:
 - 13
+- 14
+- 15
 generated: true
-
 ---
 
 

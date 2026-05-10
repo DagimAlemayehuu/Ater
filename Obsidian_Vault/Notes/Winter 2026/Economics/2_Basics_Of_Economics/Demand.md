@@ -1,5 +1,4 @@
 ---
-
 title: Demand
 course: Economics
 unit: '2'
@@ -15,9 +14,11 @@ prerequisites:
 - '[[Substitute_Goods]]'
 - '[[Technological_Advancement]]'
 - '[[Market_Demand]]'
-source_pages: []
+source_pages:
+- 7
+- 8
+- 9
 generated: true
-
 ---
 
 

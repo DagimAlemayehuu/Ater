@@ -1,5 +1,4 @@
 ---
-
 title: Positive_Economics
 course: Economics
 unit: '1'
@@ -16,8 +15,8 @@ prerequisites:
 - '[[Market_Failure]]'
 source_pages:
 - 18
+- 19
 generated: true
-
 ---
 
 

@@ -1,5 +1,4 @@
 ---
-
 title: Market_Supply
 course: "Economics"
 unit: '2'
@@ -11,9 +10,10 @@ source: "[[Inbox/Generated/Winter 2026/Economics/Chapter_2.pdf]]"
 date: '2026-05-10'
 prerequisites:
 - "[[Supply]]"
-source_pages: []
+source_pages:
+- 46
+- 47
 generated: true
-
 ---
 
 ## 1. Mental Model

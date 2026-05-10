@@ -1,5 +1,4 @@
 ---
-
 title: Supply
 course: Economics
 unit: '2'
@@ -15,9 +14,10 @@ prerequisites:
 - '[[Market_Equilibrium]]'
 - '[[Time_And_Eligibility]]'
 - '[[Substitute_Goods]]'
-source_pages: []
+source_pages:
+- 46
+- 47
 generated: true
-
 ---
 
 

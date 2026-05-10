@@ -23,6 +23,7 @@ export interface PdfViewerState {
 export interface PdfViewerRef {
     handleNext: () => void;
     handlePrev: () => void;
+    handleJump: (page: number) => void;
     toggleFullscreen: () => void;
     toggleSidebar: () => void;
 }
@@ -77,6 +78,12 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
         }
     };
 
+    const handleJump = (page: number) => {
+        if (iframeRef.current?.contentWindow) {
+            iframeRef.current.contentWindow.postMessage({ type: 'jump', page }, '*');
+        }
+    };
+
     const toggleFullscreen = () => {
         const el = containerRef.current;
         if (!el) return;
@@ -95,6 +102,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     useImperativeHandle(ref, () => ({
         handleNext,
         handlePrev,
+        handleJump,
         toggleFullscreen,
         toggleSidebar: () => {}
     }));

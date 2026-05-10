@@ -1,5 +1,4 @@
 ---
-
 title: Limited_Resources
 course: Economics
 unit: '1'
@@ -17,8 +16,8 @@ prerequisites:
 - '[[Positive_Economics]]'
 source_pages:
 - 12
+- 13
 generated: true
-
 ---
 
 

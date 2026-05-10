@@ -1,5 +1,4 @@
 ---
-
 title: Price_Elasticity_Of_Supply
 course: "Economics"
 unit: '2'
@@ -13,8 +12,8 @@ prerequisites:
 - "[[Elasticity_Of_Supply]]"
 source_pages:
 - 48
+- 49
 generated: true
-
 ---
 
 ## 1. Mental Model

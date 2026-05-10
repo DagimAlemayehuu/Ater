@@ -1,5 +1,4 @@
 ---
-
 title: Arc_Elasticity_Of_Demand
 course: "Economics"
 unit: '2'
@@ -13,8 +12,8 @@ prerequisites:
 - "Price Elasticity Of Demand"
 source_pages:
 - 27
+- 28
 generated: true
-
 ---
 
 ## 1. Mental Model

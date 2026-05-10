@@ -1,5 +1,4 @@
 ---
-
 title: Definition_Of_Economics
 course: Economics
 unit: '1'
@@ -16,8 +15,8 @@ prerequisites:
 - '[[Inductive_Reasoning]]'
 source_pages:
 - 7
+- 8
 generated: true
-
 ---
 
 

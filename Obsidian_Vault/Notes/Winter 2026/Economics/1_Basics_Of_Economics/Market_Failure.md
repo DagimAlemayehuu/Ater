@@ -1,5 +1,4 @@
 ---
-
 title: Market_Failure
 course: "Economics"
 unit: '1'
@@ -13,8 +12,8 @@ prerequisites:
 - "[[Role_Of_Government_In_Market_Economy]]"
 source_pages:
 - 61
+- 62
 generated: true
-
 ---
 
 ## 1. Mental Model

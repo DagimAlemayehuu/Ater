@@ -1,5 +1,4 @@
 ---
-
 title: Scarcity
 course: Economics
 unit: '1'
@@ -17,8 +16,9 @@ prerequisites:
 - '[[Capital_Intensive_Techniques]]'
 source_pages:
 - 12
+- 13
+- 14
 generated: true
-
 ---
 
 

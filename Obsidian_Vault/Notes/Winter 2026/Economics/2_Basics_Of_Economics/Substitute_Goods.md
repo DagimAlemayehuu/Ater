@@ -1,5 +1,4 @@
 ---
-
 title: Substitute_Goods
 course: Economics
 unit: '2'
@@ -17,8 +16,8 @@ prerequisites:
 - '[[Law_Of_Supply]]'
 source_pages:
 - 15
+- 16
 generated: true
-
 ---
 
 

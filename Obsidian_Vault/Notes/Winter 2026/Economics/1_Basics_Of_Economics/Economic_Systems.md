@@ -1,5 +1,4 @@
 ---
-
 title: Economic_Systems
 course: Economics
 unit: '1'
@@ -15,9 +14,10 @@ prerequisites:
 - '[[Economic_Growth]]'
 - '[[Macroeconomics]]'
 - '[[Scarcity]]'
-source_pages: []
+source_pages:
+- 17
+- 18
 generated: true
-
 ---
 
 

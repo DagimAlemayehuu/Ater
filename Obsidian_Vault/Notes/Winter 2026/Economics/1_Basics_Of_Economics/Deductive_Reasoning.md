@@ -1,5 +1,4 @@
 ---
-
 title: Deductive_Reasoning
 course: Economics
 unit: '1'
@@ -17,8 +16,8 @@ prerequisites:
 - '[[Economic_Growth]]'
 source_pages:
 - 21
+- 22
 generated: true
-
 ---
 
 

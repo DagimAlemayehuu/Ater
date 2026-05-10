@@ -1,5 +1,4 @@
 ---
-
 title: Surplus_And_Shortage
 course: "Economics"
 unit: '2'
@@ -13,8 +12,8 @@ prerequisites:
 - "[[Market_Equilibrium]]"
 source_pages:
 - 55
+- 56
 generated: true
-
 ---
 
 ## 1. Mental Model

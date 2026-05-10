@@ -1,5 +1,4 @@
 ---
-
 title: Production_Possibilities_Frontier
 course: "Economics"
 unit: '1'
@@ -12,9 +11,10 @@ date: '2026-05-10'
 prerequisites:
 - "[[Scarcity]]"
 - "[[Resource_Allocation]]"
-source_pages: []
+source_pages:
+- 15
+- 16
 generated: true
-
 ---
 
 ## 1. Mental Model
