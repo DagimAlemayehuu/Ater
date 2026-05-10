@@ -358,7 +358,7 @@ def audit_intra_links(unit_dir: Path) -> List[str]:
     
     return weak_notes
 
-def sync_hub_connections(hub_file: Path, unit_dir: Path):
+def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] = None):
     """
     Rebuild the hub's ## Connections section from the actual deployed atomic notes.
     Scans unit_dir for all .md files and writes them as checklist items into the hub.
@@ -391,21 +391,42 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path):
                 raw_prereqs = fm.get("prerequisites", [])
                 if isinstance(raw_prereqs, list):
                     for p in raw_prereqs:
-                        m = re.search(r'\[\[(.*?)\]\]', str(p))
+                        p_str = str(p).strip()
+                        # Extract from [[Link]] or "Link" or 'Link' or Link
+                        m = re.search(r'\[\[(.*?)\]\]', p_str)
                         if m:
-                            # Normalize case for matching
-                            p_stem = m.group(1).split('|')[0].strip()
-                            if p_stem in deployed_stems:
-                                prereq_stems.append(p_stem)
+                            p_stem = m.group(1).split('|')[0].strip().replace(" ", "_")
+                        else:
+                            p_stem = p_str.strip("'\"").replace(" ", "_")
+                        
+                        # Case-insensitive match against deployed stems
+                        for s in deployed_stems:
+                            if s.lower() == p_stem.lower():
+                                prereq_stems.append(s)
+                                break
             note_data[stem] = prereq_stems
         except Exception:
             note_data[stem] = []
 
-    # ── HIERARCHICAL TREE BUILDER ──
-    roots = [s for s in deployed_stems if not note_data[s]]
-    # If everything has a prereq (cycle or external), take the first few as roots
-    if not roots and deployed_stems:
-        roots = deployed_stems[:1]
+    # ── HIERARCHICAL TREE BUILDER (Plan-Driven Topological) ──
+    # 1. Map full relationships
+    parents_to_children = {s: [] for s in deployed_stems}
+    child_to_parents = {s: [] for s in deployed_stems}
+    
+    for child in deployed_stems:
+        prereqs = note_data.get(child, [])
+        valid_parents = [p for p in prereqs if p in deployed_stems and p != child]
+        child_to_parents[child] = valid_parents
+        for p in valid_parents:
+            parents_to_children[p].append(child)
+
+    # 2. Sorting weights based on plan_order
+    if plan_order:
+        order_map = {title: i for i, title in enumerate(plan_order)}
+    else:
+        order_map = {s: i for i, s in enumerate(sorted(list(deployed_stems)))}
+    
+    all_stems_sorted = sorted(list(deployed_stems), key=lambda s: order_map.get(s, 999))
 
     processed = set()
     tree_lines = []
@@ -417,18 +438,46 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path):
         indent = "    " * depth
         tree_lines.append(f"{indent}- [ ] [[{stem}]]")
         
-        # Find children
-        children = sorted([s for s, prereqs in note_data.items() if prereqs and prereqs[0] == stem])
-        for child in children:
-            build_tree(child, depth + 1)
+        # Children are notes that have this stem as their "Best" parent.
+        # "Best" = the parent with the lowest index in plan_order.
+        potential_children = parents_to_children.get(stem, [])
+        potential_children.sort(key=lambda s: order_map.get(s, 999))
+            
+        for child in potential_children:
+            if child not in processed:
+                p_list = child_to_parents.get(child, [])
+                if not p_list: continue
+                
+                # Robust selection: pick the parent that appears EARLIEST in the plan
+                best_parent = min(p_list, key=lambda p: order_map.get(p, 999))
+                if best_parent == stem:
+                    build_tree(child, depth + 1)
 
-    for root in sorted(roots):
-        build_tree(root, 0)
-    
-    # Add any orphans that were missed due to complex prereq webs
-    orphans = [s for s in deployed_stems if s not in processed]
-    for orphan in sorted(orphans):
-        build_tree(orphan, 0)
+    # 3. Main Loop: Follow the Plan Order
+    for stem in all_stems_sorted:
+        if stem in processed: continue
+        
+        # Check if we should be a child of someone else who isn't processed yet
+        p_list = child_to_parents.get(stem, [])
+        is_truly_root = True
+        for p in p_list:
+            if p in deployed_stems and p not in processed:
+                # We have a parent in this unit that hasn't been placed yet.
+                # However, if there's a cycle, we might be the "entry point".
+                # If our parent comes AFTER us in the plan, we are the leader.
+                if order_map.get(p, 999) > order_map.get(stem, 999):
+                    continue 
+                else:
+                    is_truly_root = False
+                    break
+        
+        if is_truly_root:
+            build_tree(stem, 0)
+
+    # 4. Final Safety Pass
+    for stem in all_stems_sorted:
+        if stem not in processed:
+            build_tree(stem, 0)
 
     hub_text = hub_file.read_text(encoding="utf-8")
     connection_lines = "\n".join(tree_lines)

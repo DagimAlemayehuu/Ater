@@ -1050,6 +1050,8 @@ LAWS — FOLLOW EXACTLY:
 5. LATEX LAW: Wrap ALL math in $ or $$. NEVER write raw math.
 6. TRUNCATION LAW: Every section MUST end with a complete sentence ending in punctuation (. ! ?). Never cut off. Ensure you fully close all XML tags before stopping.
 7. ACADEMIC LEVEL LAW: Your explanation must perfectly match the {academic_level} level. Do not oversimplify PhD topics, and do not over-complicate High School topics.
+8. ANTI-LAZINESS LAW (CRITICAL): FORBIDDEN strings: "Refer to source material", "Refer to the book", "Beyond the scope". You ARE the source. If the source is thin, derive the logical theoretical edge cases based on your PhD-level knowledge of {persona}.
+9. NO-TAUTOLOGY LAW: Never start a sentence with "This concept is about" or "X refers to". Start with the mechanics or the impact.
 
 OUTPUT FORMAT (CRITICAL) — You MUST output ONLY the following XML tags. Do NOT output any conversational preamble or postamble. Your ENTIRE response MUST be enclosed within these tags:
 <MENTAL_MODEL>
@@ -1083,23 +1085,35 @@ CRITICAL REMINDER: You MUST include ALL 4 tags: <MENTAL_MODEL>, <THEORY_PROSE>, 
                 
                 content = res.content
                 
-                def extract(tag):
+                def extract(tag, required=False):
+                    # Try perfect match first
                     m = re.search(f"<{tag}>(.*?)</{tag}>", content, re.DOTALL)
-                    return m.group(1).strip() if m else ""
+                    if m:
+                        return m.group(1).strip()
+                    
+                    # Fallback: if tag exists but closing is missing (often for the last tag)
+                    m_open = re.search(f"<{tag}>(.*)", content, re.DOTALL)
+                    if m_open:
+                        val = m_open.group(1).strip()
+                        # If there's a subsequent tag start, stop before it
+                        next_tag = re.search(r"<[A-Z_]+>", val)
+                        if next_tag:
+                            return val[:next_tag.start()].strip()
+                        return val
+                    return ""
 
                 mental_model = extract("MENTAL_MODEL")
-                theory_prose = extract("THEORY_PROSE")
+                theory_prose = extract("THEORY_PROSE", required=True)
                 takeaways_raw = extract("TAKEAWAYS")
                 limitations = extract("LIMITATIONS")
 
                 if not theory_prose:
-                    raise Exception(f"LLM failed to provide required <THEORY_PROSE> tag in the response. Received: {content[:200]}...")
+                    # Log the first 500 chars for debugging
+                    snippet = content[:500].replace("\n", " ")
+                    raise Exception(f"LLM failed to provide required <THEORY_PROSE> tag. Received: {snippet}...")
 
-                # Graceful fallbacks for optional sections
-                if not mental_model:
-                    mental_model = theory_prose[:500]
-                if not limitations:
-                    limitations = "Refer to source material for boundary conditions and edge cases."
+                if not limitations or "refer to source" in limitations.lower():
+                    raise Exception("LLM provided a lazy placeholder for <LIMITATIONS>. Retrying with strict enforcement.")
 
                 assembled_tech = f"{theory_prose}\n\n### Key Takeaways:\n{takeaways_raw}"
 
@@ -1172,6 +1186,7 @@ def generate():
 NO JAVASCRIPT: DO NOT use Javascript syntax. Use only valid Python.
 Walkthrough Law: Your walkthrough steps MUST NOT be redundant or circular. Each step MUST convey a distinct new piece of information or logic. Do not repeat the same concept across multiple steps.
 Artifact Purity Law: Do NOT include explanations, walkthroughs, or text descriptions inside the `artifact` string itself. The `artifact` string must ONLY contain the raw code block, table, or mermaid diagram. Put all explanations in the `walkthrough` array.
+Walkthrough Action Law: FORBIDDEN: "Step 1: Understand X" or "Step 1: Read the problem". Every step MUST be an ACTION (Calculate, Draw, Compare, Derive). Step 1 MUST be the first logical operation.
 Truncation Law: Do NOT truncate code. Output the FULL script. End the script with a complete dictionary inside the `<PYTHON_CODE>` tags. Ensure tags are fully closed.
 
 DOMAIN AXIOMS (CRITICAL):
@@ -1290,7 +1305,8 @@ QUIZ LAWS (obey all):
    GOOD EXAMPLE: "The characteristic that makes scarcity an economic problem is that resources are [[blank]] while wants are unlimited."
 5. MCQ DISTRACTOR LAW: The 3 wrong options MUST be plausible domain concepts — not obviously wrong. A student who did NOT study should have a real chance of picking the wrong answer.
 6. TRACE LAW: 'steps' must be a CAUSAL CHAIN of 4-6 strings. 'answer' must be the FINAL LOGICAL CONCLUSION/OUTCOME of the chain. 'explanation' must explain WHY the chain holds together.
-7. FINISH LAW: Every explanation must end with a complete sentence.
+7. ACTIONABLE EXPLANATION LAW: Explanations must explain WHY the correct answer is right AND why the most plausible distractor is wrong.
+8. FINISH LAW: Every explanation must end with a complete sentence.
 
 OUTPUT: Return a JSON array in <QUIZ_JSON>...</QUIZ_JSON> tags.
 Each object needs: 'type', 'question', 'answer', 'explanation'.

@@ -2064,7 +2064,6 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             except Exception as e:
                                 err_str = str(e)
                                 if "429" in err_str or "rate_limit" in err_str.lower():
-                                    import re
                                     m = re.search(r"try again in (?:(\d+)m)?([\d\.]+)s", err_str)
                                     if m:
                                         mins = int(m.group(1)) if m.group(1) else 0
@@ -2074,8 +2073,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                         self.governor.report_error()
                                     raise e # Propagate up to confirm_plan
                                 if generation_attempts >= max_attempts:
-                                    import logging
-                                    logging.getLogger("LifeOS").warning(f"[OKA Service] Error for '{current_note_title}': {e}.")
+                                    logger.warning(f"[OKA Service] Error for '{current_note_title}': {e}.")
                                     break
                                 await asyncio.sleep(5)
                         
@@ -2115,7 +2113,6 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     hub_retry += 1
                                     err_msg = str(e).lower()
                                     if "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg:
-                                        import re
                                         m = re.search(r"try again in (?:(\d+)m)?([\d\.]+)s", err_msg)
                                         if m:
                                             mins = int(m.group(1)) if m.group(1) else 0
@@ -2170,7 +2167,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 audit_walkthroughs(unit_dir)
                                 audit_intra_links(unit_dir)
                                 if hub_file.exists():
-                                    sync_hub_connections(hub_file, unit_dir)
+                                    plan_titles = [n.get("title") for n in meta.get("atomic_notes", [])]
+                                    sync_hub_connections(hub_file, unit_dir, plan_order=plan_titles)
                                 OkaService._status[session_id] = "Post-Processing Complete"
                             else:
                                 print(f"[OKA Service] Post-processing skipped: unit dir not found: {unit_dir}")

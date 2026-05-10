@@ -36,7 +36,10 @@ Macroeconomics is a branch of economics that analyzes the whole economy, looking
 
 ## 3. Limitations & Edge Cases
 
-Refer to source material for boundary conditions and edge cases.
+Macroeconomic analysis faces three critical structural limitations:
+1. **Fallacy of Composition**: Macroeconomics assumes that the sum of individual behaviors equals the total, but this is often false; for example, if one person saves more, they are wealthier, but if the *entire* nation saves more (Paradox of Thrift), total demand collapses, potentially leading to a recession.
+2. **Aggregation Bias**: By focusing on "big picture" averages like GDP or Unemployment, macroeconomics can mask severe regional or sector-specific collapses, leading to "one-size-fits-all" policies that fail to address localized crises.
+3. **Transmission Lags**: Macroeconomic policy (like changing interest rates) has "long and variable lags." It can take 6–18 months for a policy decision to actually affect the economy, making it extremely difficult to time interventions perfectly during a crisis like a drought.
 
 ## 4. Zambia Drought Crisis: A Macroeconomic Perspective
 
@@ -53,15 +56,13 @@ graph LR
 
 ## 5. Walkthrough
 
-**Step 1:** The severe drought in Zambia has led to food shortages, affecting the agricultural sector and the overall economy.
+**Step 1:** Aggregate individual market data into national-level indicators (e.g., calculating the drought's impact on total Agricultural Output vs. National GDP).
 
-**Step 2:** The government must intervene to address the crisis, making difficult decisions about resource allocation.
+**Step 2:** Identify the systemic shock to Aggregate Supply ($AS$) caused by the resource shortage, shifting the national supply curve inward.
 
-**Step 3:** Effective resource allocation is crucial for promoting economic growth and maintaining market stability.
+**Step 3:** Analyze the multiplier effect—tracing how reduced income for farmers leads to reduced spending in other sectors, cascading through the entire economy.
 
-**Step 4:** By understanding the macroeconomic implications of the drought, the government can make informed decisions to mitigate its effects.
-
-**Step 5:** The goal is to achieve economic stability and ensure the well-being of the population.
+**Step 4:** Evaluate counter-cyclical policy options (e.g., food subsidies or infrastructure spending) to offset the multiplier and stabilize Aggregate Demand ($AD$).
 
 ## 6. The Proving Grounds
 

@@ -37,7 +37,10 @@ Economics is a social science that studies the efficient allocation of scarce re
 
 ## 3. Limitations & Edge Cases
 
-Refer to source material for boundary conditions and edge cases.
+The standard definition of economics faces three primary theoretical hurdles:
+1. **Interpersonal Utility Comparison**: Since human wants are subjective, economists cannot mathematically prove that a specific resource allocation "maximizes" total societal fulfillment without making controversial value judgments.
+2. **Resource Immobility**: The assumption of "efficient allocation" often ignores the friction of moving resources; for instance, labor specialized in manufacturing cannot be instantly reallocated to healthcare without significant deadweight loss.
+3. **Static vs. Dynamic Scarcity**: Traditional definitions often treat resources as a fixed pie, failing to account for how technological innovation and entrepreneurship can "expand the pie," effectively pushing the boundaries of what is considered scarce.
 
 ## 4. The Economic Problem
 
@@ -58,13 +61,13 @@ graph LR
 
 ## 5. Walkthrough
 
-**Step 1:** The town has a limited budget, illustrating the concept of scarce resources.
+**Step 1:** Quantify the total available resources (e.g., the $10M fixed budget) to establish the hard constraint of scarcity.
 
-**Step 2:** The residents have various desires, such as better healthcare, recreational spaces, and social facilities, representing unlimited human wants.
+**Step 2:** Categorize the vector of unlimited human wants into discrete priorities (Healthcare vs. Recreation) to identify competing ends.
 
-**Step 3:** The town must decide how to allocate its resources to meet these wants, highlighting the fundamental problem of economics.
+**Step 3:** Perform a marginal analysis of each project to determine which allocation provides the highest marginal utility for the community.
 
-**Step 4:** Economics studies how individuals, businesses, and governments make decisions about resource allocation to maximize the fulfillment of human wants.
+**Step 4:** Execute the allocation decision and identify the opportunity cost—the specific wants (e.g., the park) that remain unfulfilled due to the resource constraint.
 
 ## 6. The Proving Grounds
 
