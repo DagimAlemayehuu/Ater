@@ -656,8 +656,8 @@ class OkaService:
         practice_dir.mkdir(exist_ok=True)
         
         # 1. Gather Context
-        # Budget: 20,000 chars total for the prompt context to fit in low TPM limits
-        PRACTICE_MAX_CHARS = 20_000
+        # Budget: 12,000 chars total for the prompt context to fit in low TPM limits
+        PRACTICE_MAX_CHARS = 12_000
         context_parts = []
         
         # Filter files based on config
@@ -810,15 +810,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 current_diff = config.difficulty if config.difficulty != "Mixed" else "Mixed"
 
                 tasks.append(lambda a=agent, h=hub, c=tight_context, d=current_diff, m=hub_mode, p=prof_domain, c_out=count, hint=hint, qt=q_type, s=seed: a.generate(
-                    h['title'], 
-                    f"SEED: {s}\n" + c, 
-                    d,
-                    mode=m,
+                    note_schema=NoteSchema(title=h['title'], description="", type="Atomic", source_pages=[1]), 
+                    source_text=f"SEED: {s}\n" + c, 
+                    mechanics=hint,
+                    academic_level=d,
+                    count=c_out,
                     prof_domain=p,
-                    index=1,
-                    num_questions=c_out,
-                    topic_hint=hint,
-                    q_type=qt
+                    q_type=qt,
+                    seed=str(s)
                 ))
                 
         # Limit concurrency and rate to avoid groq/ollama rate limits
@@ -876,7 +875,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         # --- CRITICAL POST-PROCESSING ---
         # Ensure every question has a valid 'type' for the frontend to render
         processed_questions = []
-        for q in questions:
+        for q in all_questions:
             if not isinstance(q, dict): continue
             # Normalizing type field
             q_raw_type = (q.get("type") or q.get("questionType") or q.get("question_type") or "").lower().replace("_", "")

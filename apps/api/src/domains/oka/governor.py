@@ -30,17 +30,17 @@ class TokenGovernor:
         self.max_rpm = 30
         self.max_tpd = 500000
         self.max_rpd = 1000
-        self.safety_margin = 0.85  # Increased safety margin for Free Tier
-
+        self.safety_margin = 0.70  # Conservative margin for Free Tier stability
+        
         # 60-second sliding windows
         self.request_window: deque = deque()   # request timestamps
         self.token_window: deque = deque()     # (timestamp, tokens) tuples
 
         # Dynamic concurrency
         self.active_slots = 0
-        self.max_concurrency = 1   # Forced sequential for Free Tier stability
+        self.max_concurrency = 1   # STRICT SEQUENTIAL for Free Tier to avoid TPM spikes
         self.min_concurrency = 1
-        self.current_concurrency_limit = 1   # start strictly sequential
+        self.current_concurrency_limit = 1
 
         # Telemetry
         self.current_pressure = 0.0

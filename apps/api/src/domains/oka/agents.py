@@ -1030,112 +1030,109 @@ class TheoryAgent:
         self.llm = llm
         self.domain = domain
 
-    async def generate_micro(self, note_schema, source_text: str, all_concepts: str, used_scenarios: list = None, academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 1500) -> Dict[str, str]:
-        persona = self.domain.get("persona", "Subject Matter Expert")
+    async def generate_mental_model(self, note_schema, source_text: str, academic_level: str, used_scenarios: list = None) -> str:
+        """
+        The 'Analogy Specialist' pass. 
+        Focus: Simple mental model, perfect core idea, industry-specific.
+        """
         title_readable = note_schema.title.replace("_", " ")
-        axioms = self.domain.get("sanity_check", "Ensure logical consistency.")
+        persona = self.domain.get("persona", "Subject Matter Expert")
+        
+        # S-TIER ANALOGY LAWS:
+        sys_prompt = f"""You are a world-class Pedagogue and Expert in {persona}.
+Your goal is to explain {title_readable} using a single, perfect mental model.
 
-        sys_prompt = f"""You are a Hostile Senior Expert in {persona}. Brutal. Authoritative. Technically precise.
+S-TIER ANALOGY LAWS:
+1. NO CLICHÉS: Prohibited: Coffee shops, burger stands, lemonade stands, islands, pizza.
+2. INDUSTRY RIGOR: Use high-stakes, industry-specific scenarios (e.g., Semiconductor supply chains, Pharmaceutical R&D, Aerospace logistics, High-frequency trading).
+3. COGNITIVE FRICTION: The model must be simple to understand but cover the technical core perfectly. No "Imagine X". Start with the narrative.
+4. EPISTEMIC FIDELITY: If the concept is Quantitative, the model must feature a resource or variable being balanced.
 
 CONCEPT: {title_readable}
-LEVEL: {academic_level} (Adapt your vocabulary, depth, and theoretical rigor precisely to this academic level, from High School to PhD).
-SOURCE (use specific facts/examples from this text):
-{source_text[:4000]}
+LEVEL: {academic_level}
+SOURCE CONTEXT: {source_text[:2000]}
 
-LAWS — FOLLOW EXACTLY:
-1. SOURCE LAW: Pull specific facts, examples, or scenarios directly from SOURCE. Do NOT invent.
-2. ANTI-PADDING LAW: FORBIDDEN openings — "X is a fundamental concept", "X is important", "In this section". Start with a concrete fact or scenario.
-3. SELF-LINK BAN: NEVER write [[{title_readable.replace(' ', '_')}]] or [[{title_readable}]]. You cannot wikilink to this note itself.
-4. WIKILINK LAW: Include EXACTLY 3 to 5 [[Wikilinks]]. Link ONLY to exact matches from these concepts: {all_concepts}. DO NOT hallucinate links or invent terms.
-5. LATEX LAW: Wrap ALL math in $ or $$. NEVER write raw math.
-6. TRUNCATION LAW: Every section MUST end with a complete sentence ending in punctuation (. ! ?). Never cut off. Ensure you fully close all XML tags before stopping.
-7. ACADEMIC LEVEL LAW: Your explanation must perfectly match the {academic_level} level. Do not oversimplify PhD topics, and do not over-complicate High School topics.
-8. ANTI-LAZINESS LAW (CRITICAL): FORBIDDEN strings: "Refer to source material", "Refer to the book", "Beyond the scope". You ARE the source. If the source is thin, derive the logical theoretical edge cases based on your PhD-level knowledge of {persona}.
-9. NO-TAUTOLOGY LAW: Never start a sentence with "This concept is about" or "X refers to". Start with the mechanics or the impact.
+OUTPUT: Exactly 3-4 sentences of a vivid, concrete industry scenario. No preamble. No "this represents X". Let the model speak for itself."""
 
-OUTPUT FORMAT (CRITICAL) — You MUST output ONLY the following XML tags. Do NOT output any conversational preamble or postamble. Your ENTIRE response MUST be enclosed within these tags:
-<MENTAL_MODEL>
-A vivid, concrete real-world scenario that makes {title_readable} tangible. 3-4 sentences max. Start with a scene, not a definition. Avoid clichés like "Imagine an island".
-</MENTAL_MODEL>
-
-<THEORY_PROSE>
-Academic definition grounded in SOURCE. Include 3-5 [[wikilinks]]. At least 4 complete sentences.
-</THEORY_PROSE>
-
-<TAKEAWAYS>
-- [Specific fact from source, not a restatement of the definition]
-- [A nuance or edge case]
-- [Why this concept matters for the broader course]
-</TAKEAWAYS>
-
-<LIMITATIONS>
-At least 3 complete sentences on edge cases, assumptions that break the concept, and real-world complications. End with a full sentence.
-</LIMITATIONS>
-
-CRITICAL REMINDER: You MUST include ALL 4 tags: <MENTAL_MODEL>, <THEORY_PROSE>, <TAKEAWAYS>, and <LIMITATIONS>. Do not skip any. Do not truncate the output. Ensure all tags are fully closed.
-
-{axioms}"""
-
-        for attempt in range(3):
+        for attempt in range(2):
             try:
-                res = await self.llm.ainvoke([
-                    ("system", sys_prompt),
-                    ("human", f"Generate the v28.0 theory core for {title_readable} based on the source.")
-                ])
-                
-                content = res.content
-                
-                def extract(tag, required=False):
-                    # Try perfect match first
-                    m = re.search(f"<{tag}>(.*?)</{tag}>", content, re.DOTALL)
-                    if m:
-                        return m.group(1).strip()
-                    
-                    # Fallback: if tag exists but closing is missing (often for the last tag)
-                    m_open = re.search(f"<{tag}>(.*)", content, re.DOTALL)
-                    if m_open:
-                        val = m_open.group(1).strip()
-                        # If there's a subsequent tag start, stop before it
-                        next_tag = re.search(r"<[A-Z_]+>", val)
-                        if next_tag:
-                            return val[:next_tag.start()].strip()
-                        return val
-                    return ""
-
-                mental_model = extract("MENTAL_MODEL")
-                theory_prose = extract("THEORY_PROSE", required=True)
-                takeaways_raw = extract("TAKEAWAYS")
-                limitations = extract("LIMITATIONS")
-
-                if not theory_prose:
-                    # Log the first 500 chars for debugging
-                    snippet = content[:500].replace("\n", " ")
-                    raise Exception(f"LLM failed to provide required <THEORY_PROSE> tag. Received: {snippet}...")
-
-                if not limitations or "refer to source" in limitations.lower():
-                    raise Exception("LLM provided a lazy placeholder for <LIMITATIONS>. Retrying with strict enforcement.")
-
-                assembled_tech = f"{theory_prose}\n\n### Key Takeaways:\n{takeaways_raw}"
-
-                return {
-                    "h1_title": self.domain.get("h1", "Technical Architecture"),
-                    "mental_model": mental_model.replace('\\\\n', '\\n'),
-                    "technical_definition": assembled_tech.replace('\\\\n', '\\n'),
-                    "limitations": limitations.replace('\\\\n', '\\n')
-                }
+                await governor.get_permit(expected_tokens=600)
+                res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Generate the perfect S-Tier mental model for {title_readable}.")])
+                return res.content.strip()
             except Exception as e:
-                err_msg = str(e).lower()
-                is_429 = "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg
-                if is_429:
-                    wait_sec = _extract_wait_time(err_msg, default=5.0)
-                    governor.report_error(wait_seconds=wait_sec)
-                
-                print(f"[TheoryAgent] Attempt {attempt+1} failed: {e}")
-                if attempt == 2:
-                    raise e
-                
-                wait_time = _extract_wait_time(err_msg, default=2 * (attempt + 1)) if is_429 else 1
-                await asyncio.sleep(wait_time)
+                if attempt == 1: return f"A scenario involving the resource constraints of {title_readable} in a production environment."
+                await asyncio.sleep(governor._rpm_wait_seconds(time.time()) or 1)
+        return ""
+
+    async def generate_theory_core(self, note_schema, source_text: str, all_concepts: str, academic_level: str) -> Dict[str, str]:
+        """
+        The 'Technical Expert' pass.
+        Focus: Definition, Wikilinks, and Takeaways.
+        """
+        title_readable = note_schema.title.replace("_", " ")
+        persona = self.domain.get("persona", "Subject Matter Expert")
+        axioms = self.domain.get("sanity_check", "Ensure logical consistency.")
+
+        sys_prompt = f"""You are a Hostile Senior Expert in {persona}. Technically precise.
+Generate the technical core of {title_readable}.
+
+LAWS:
+1. SOURCE LAW: Pull specific facts from SOURCE. Do NOT invent.
+2. WIKILINK LAW: Include EXACTLY 3 to 5 [[Wikilinks]] to these concepts ONLY: {all_concepts}.
+3. NO PADDING: No "X is important". Start with mechanics.
+4. LATEX: All math in $ or $$.
+
+CONCEPT: {title_readable}
+LEVEL: {academic_level}
+SOURCE: {source_text[:3000]}
+{axioms}
+
+OUTPUT FORMAT:
+<THEORY_PROSE>Academic definition with 3-5 wikilinks.</THEORY_PROSE>
+<TAKEAWAYS>
+- [Fact 1]
+- [Fact 2]
+- [Fact 3]
+</TAKEAWAYS>"""
+
+        for attempt in range(2):
+            try:
+                await governor.get_permit(expected_tokens=1000)
+                res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Generate the theory core.")])
+                content = res.content
+                theory = re.search(r"<THEORY_PROSE>(.*?)</THEORY_PROSE>", content, re.DOTALL)
+                takeaways = re.search(r"<TAKEAWAYS>(.*?)</TAKEAWAYS>", content, re.DOTALL)
+                return {
+                    "theory_prose": theory.group(1).strip() if theory else "Definition pending.",
+                    "takeaways": takeaways.group(1).strip() if takeaways else "- Key facts pending."
+                }
+            except Exception:
+                if attempt == 1: return {"theory_prose": "Definition failed.", "takeaways": "- Facts failed."}
+                await asyncio.sleep(1)
+        return {}
+
+    async def generate_limitations(self, note_schema, source_text: str, persona: str) -> str:
+        sys_prompt = f"""You are an Expert in {persona}. Explain the limitations, edge cases, and assumptions of {note_schema.title}.
+Be brutal. What breaks this concept?
+OUTPUT: 3 complete sentences. No preamble."""
+        await governor.get_permit(expected_tokens=400)
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Source: {source_text[:1000]}")])
+        return res.content.strip()
+
+    async def generate_micro(self, note_schema, source_text: str, all_concepts: str, used_scenarios: list = None, academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 1500) -> Dict[str, str]:
+        # Orchestrate the modular passes
+        mental_model = await self.generate_mental_model(note_schema, source_text, academic_level, used_scenarios)
+        theory_data = await self.generate_theory_core(note_schema, source_text, all_concepts, academic_level)
+        limitations = await self.generate_limitations(note_schema, source_text, self.domain.get("persona", "Expert"))
+
+        assembled_tech = f"{theory_data.get('theory_prose', '')}\n\n### Key Takeaways:\n{theory_data.get('takeaways', '')}"
+
+        return {
+            "h1_title": self.domain.get("h1", "Technical Architecture"),
+            "mental_model": mental_model,
+            "technical_definition": assembled_tech,
+            "limitations": limitations
+        }
 
     async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str, used_scenarios: list = None) -> str:
         title_readable = note_schema.title.replace("_", " ")
@@ -1150,121 +1147,56 @@ class PractitionerAgent:
         self.llm = llm
         self.domain = domain
 
+    async def generate_artifact_code(self, note_title: str, theory_body: str, mental_model: str, sanity_check: str, persona: str) -> str:
+        sys_prompt = f"""You are a Senior Engineer in {persona}.
+Generate a Python script to create a pedagogical artifact for {note_title}.
+
+LAWS:
+1. NARRATIVE CONSISTENCY: Use the characters/industry from this Mental Model: {mental_model}
+2. RESULT TABLE LAW: If this domain is Quantitative, the script MUST perform a calculation and output a 'Result Table' showing inputs, derivations, and final values.
+3. EPISTEMIC RIGOR: Mathematical artifacts must use pure LaTeX. No Mermaid for plots.
+4. VISUAL EXCELLENCE: Tables must be high-density and technically precise.
+
+<PYTHON_CODE>
+def generate():
+    return {{
+        'equation': '$...$',
+        'artifact_title': '...',
+        'artifact': 'Markdown Table or Mermaid...',
+        'walkthrough': ['Step 1', 'Step 2', 'Step 3']
+    }}
+</PYTHON_CODE>
+{sanity_check}"""
+        await governor.get_permit(expected_tokens=1500)
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Generate artifact code.")])
+        return res.content
+
     async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "", source_text: str = "", academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 2500, mental_model: str = "") -> Dict[str, str]:
         persona = self.domain.get("persona", "Senior Expert")
         sanity_check = self.domain.get("sanity_check", "Ensure logical consistency.")
-        title_readable = note_title.replace("_", " ")
-
-        sys_prompt = f"""You are a Hostile Senior Expert in {persona}. 
-
-CONCEPT: {title_readable}
-PREVIOUS CONTEXT (MENTAL MODEL): {mental_model}
-TECHNICAL THEORY: {theory_body}
-
-CORE LAWS:
-1. Narrative Consistency: YOU MUST strictly use the characters, industry, and specific scenario defined in the MENTAL MODEL above.
-2. Dynamic Artifact: You MUST dynamically select the most pedagogically effective format for this specific concept (choose from: Markdown Table, Mermaid Flowchart, Mermaid State Diagram, Python/C++/etc Code Block, Block LaTeX Proof/Derivation, ASCII Diagram). Do NOT force a table if a flowchart, code block, or equation is better. Provide an appropriate 'artifact_title'.
-3. LaTeX Enforcement Law: wrap ALL mathematical expressions, variables, and equations in LaTeX delimiters ($...$ or $$...$$).
-4. Mermaid Enforcement Law: If a Mermaid diagram, output a valid ```mermaid code block.
-
-5. PYTHON SANDBOX LAW (CRITICAL): 
-You MUST provide a pure Python script wrapped in `<PYTHON_CODE>...</PYTHON_CODE>` tags. 
-The script MUST define a function `generate()` that returns a dictionary with 4 keys: 'equation', 'artifact_title', 'artifact', and 'walkthrough'.
-
-EXAMPLE OUTPUT:
-<PYTHON_CODE>
-def generate():
-    budget = 10000; dev = 6000; mkt = 3000; rem = budget - dev - mkt
-    return {{
-        'equation': '$Remaining = Budget - Dev - Mkt$',
-        'artifact_title': 'Budget Allocation Ledger',
-        'artifact': '| Item | Cost |\\n|---|---|\\n| Budget | 10000 |\\n| Dev | 6000 |\\n| Mkt | 3000 |\\n| Rem | 1000 |',
-        'walkthrough': ['Step 1: Budget is 10000', 'Step 2: Spend 6000', 'Step 3: 10000-6000=4000', 'Step 4: Spend 3000', 'Step 5: Final is 1000']
-    }}
-</PYTHON_CODE>
-
-NO JAVASCRIPT: DO NOT use Javascript syntax. Use only valid Python.
-Walkthrough Law: Your walkthrough steps MUST NOT be redundant or circular. Each step MUST convey a distinct new piece of information or logic. Do not repeat the same concept across multiple steps.
-Artifact Purity Law: Do NOT include explanations, walkthroughs, or text descriptions inside the `artifact` string itself. The `artifact` string must ONLY contain the raw code block, table, or mermaid diagram. Put all explanations in the `walkthrough` array.
-Walkthrough Action Law: FORBIDDEN: "Step 1: Understand X" or "Step 1: Read the problem". Every step MUST be an ACTION (Calculate, Draw, Compare, Derive). Step 1 MUST be the first logical operation.
-Truncation Law: Do NOT truncate code. Output the FULL script. End the script with a complete dictionary inside the `<PYTHON_CODE>` tags. Ensure tags are fully closed.
-
-DOMAIN AXIOMS (CRITICAL):
-{sanity_check}"""
-
-        last_error = ""
+        
+        # Modular Artifact Pass
         for attempt in range(3):
             try:
-                retry_msg = f"\n\nYOUR PREVIOUS PYTHON SCRIPT FAILED:\n{last_error}\nFix the code and return it inside <PYTHON_CODE> tags." if last_error else ""
-                res = await self.llm.ainvoke([
-                    ("system", sys_prompt + retry_msg),
-                    ("human", f"Generate the v28.0 practitioner artifact for {title_readable}.")
-                ])
+                content = await self.generate_artifact_code(note_title, theory_body, mental_model, sanity_check, persona)
                 
-                content = res.content
-                # Extraction logic
                 match = re.search(r"<PYTHON_CODE>(.*?)</PYTHON_CODE>", content, re.DOTALL)
-                if not match:
-                    # Fallback: check for code blocks
-                    match = re.search(r"```python\s*(.*?)\s*```", content, re.DOTALL)
+                if not match: match = re.search(r"```python\s*(.*?)\s*```", content, re.DOTALL)
+                if not match: raise Exception("No Python code found.")
                 
-                if not match:
-                    raise Exception("LLM failed to provide <PYTHON_CODE> tags in the response.")
-                
-                raw_code = match.group(1).strip()
-
-                # Clean up Javascript artifacts and ensure it is a string
-                code_str = str(raw_code).strip()
-                if "() =>" in code_str or "return {" in code_str:
-                     code_str = code_str.replace("() =>", "").replace("return {", "return {\n").strip()
-
-                # Execute the python sandbox script locally
                 from .sandbox import execute_sandboxed_code
-                success, artifact_md, payload = execute_sandboxed_code(code_str)
-                
-                if not success:
-                    raise Exception(f"Python Sandbox Execution Failed:\n{artifact_md}")
-                
-                eq = payload.get("equation") or ""  # guard against Python None → 'None'
-                art_title_from_payload = payload.get("artifact_title") or ""
-                art = payload.get("artifact") or ""
-                steps = payload.get("walkthrough") or []
-                
-                # Deduplicate steps preserving order
-                unique_steps = []
-                seen = set()
-                for s in steps:
-                    s_clean = str(s).replace('\\n', '\n').strip()
-                    if s_clean not in seen:
-                        seen.add(s_clean)
-                        unique_steps.append(s_clean)
+                success, artifact_md, payload = execute_sandboxed_code(match.group(1).strip())
+                if not success: raise Exception(f"Sandbox failed: {artifact_md}")
 
-                clean_artifact = art.replace('\\n', '\n')
-                clean_steps = unique_steps
-
-                h1_title = self.domain.get("h1", "Technical Architecture")
-                # Use dynamic artifact title if provided, else fallback to domain default
-                artifact_title = str(art_title_from_payload).strip() if art_title_from_payload else self.domain.get("artifact", "Artifact")
                 return {
-                    "h1_title": h1_title,
-                    "artifact_title": artifact_title,
-                    "artifact_content": f"{eq}\n\n{clean_artifact}".strip(),
-                    "walkthrough": "\n".join([f"{step}" if step.strip()[0].isdigit() else f"{i+1}. {step}" for i, step in enumerate(clean_steps)])
+                    "h1_title": self.domain.get("h1", "Technical Architecture"),
+                    "artifact_title": payload.get("artifact_title", "Artifact"),
+                    "artifact_content": f"{payload.get('equation', '')}\n\n{payload.get('artifact', '')}".strip(),
+                    "walkthrough": "\n".join([f"{i+1}. {s}" for i, s in enumerate(payload.get("walkthrough", []))])
                 }
             except Exception as e:
-                err_msg = str(e).lower()
-                last_error = str(e)
-                is_429 = "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg
-                if is_429:
-                    wait_sec = _extract_wait_time(err_msg, default=5.0)
-                    governor.report_error(wait_seconds=wait_sec)
-                
-                print(f"[PractitionerAgent] Attempt {attempt+1} failed: {e}")
-                if attempt == 2:
-                    raise e
-                
-                wait_time = _extract_wait_time(err_msg, default=2 * (attempt + 1)) if is_429 else 1
-                await asyncio.sleep(wait_time)
+                if attempt == 2: raise e
+                await asyncio.sleep(1)
 
     async def generate(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> str:
         title_readable = note_title.replace("_", " ")
@@ -1275,60 +1207,54 @@ DOMAIN AXIOMS (CRITICAL):
         return await self.generate(note_title, theory_body, primary_language)
 
 class QuestionAgent:
-    def __init__(self, llm, q_type: Optional[str] = None):
+    """The 'Examiner' pass. Generates the interactive quiz."""
+    def __init__(self, llm: BaseChatModel, domain: dict):
         self.llm = llm
-        self.q_type = q_type
+        self.domain = domain
 
-    async def generate(self, note_title: str, context: str, difficulty: str = "L1", mode: str = "ECON-MACRO", academic_level: str = "Undergraduate", course_title: str = "Unknown", modality: str = "Qualitative/Definitional", max_tokens: int = 2000, num_questions: int = 3, q_type: Optional[str] = None, topic_hint: Optional[str] = None, index: int = 1, prof_domain: Optional[str] = None, **kwargs) -> List[Dict]:
-        target_type = q_type or self.q_type
-        domain = get_persona(mode, modality)
-        persona = prof_domain or domain.get("persona", "Senior Assessment Engineer")
-        l3_law = domain.get("l3_law", "L3 must test critical analysis.")
-        title_readable = note_title.replace("_", " ")
-
-        axioms = domain.get("sanity_check", "Ensure logical consistency.")
-        hint_str = f"FOCUS AREA: {topic_hint}" if topic_hint else ""
-        type_constraint = f"ALL questions MUST be of type: '{target_type}'." if target_type else "Difficulty: Q1=L1 (fill_in), Q2=L2 (mcq), Q3=L3 (trace)."
+    async def generate(self, note_schema, source_text: str, mechanics: str, academic_level: str, count: int = 3, prof_domain: str = "General", q_type: str = None, seed: str = None) -> list:
+        title_readable = note_schema.title.replace("_", " ")
+        persona = self.domain.get("persona", "Subject Matter Expert")
         
-        sys_prompt = f"""You are a Hostile Senior Assessment Engineer in {persona}. Create a {num_questions}-question quiz.
-{hint_str}
+        # S-TIER EXAMINER LAWS:
+        # 1. CAUSAL TRACING: Quizzes must include "trace" questions with 4-6 step perturbation chains.
+        # 2. SCENARIO PERSISTENCE: Use the professional domain "{prof_domain}" for all scenarios.
+        
+        axioms = self.domain.get("quiz_axioms", "Test core principles.")
+        
+        sys_prompt = f"""You are a Senior Examiner in {persona}.
+Generate {count} high-fidelity interactive quiz questions for {title_readable}.
 
-NOTE TEXT:
-{context[:5000]}
+S-TIER EXAMINER LAWS:
+1. CAUSAL TRACING: At least one question must be a 'trace' type, requiring a 4-6 step "System Perturbation Trace" (e.g., "If X increases, then Y drops, which forces Z to...").
+2. CONTEXT LOCK: Use the professional domain "{prof_domain}" for all scenario-based questions.
+3. NO RECALL: Avoid "What is X?" Instead, use "In scenario Y, what happens to X when Z occurs?".
 
-QUIZ LAWS (obey all):
-1. SOURCE LAW: Base ALL questions on facts in NOTE TEXT. No outside knowledge.
-2. TYPE LAW: {type_constraint}
-3. DIFFICULTY: {difficulty}.
-4. FILL-IN LAW: Use `[[blank]]` placeholder. FORBIDDEN: The answer word must NOT appear in the question text before the blank. The blank must test recall of a key term.
-   BAD EXAMPLE: "Human wants are considered [[unlimited]] in nature" — answer is in the question.
-   GOOD EXAMPLE: "The characteristic that makes scarcity an economic problem is that resources are [[blank]] while wants are unlimited."
-5. MCQ DISTRACTOR LAW: The 3 wrong options MUST be plausible domain concepts — not obviously wrong. A student who did NOT study should have a real chance of picking the wrong answer.
-6. TRACE LAW: 'steps' must be a CAUSAL CHAIN of 4-6 strings. 'answer' must be the FINAL LOGICAL CONCLUSION/OUTCOME of the chain. 'explanation' must explain WHY the chain holds together.
-7. ACTIONABLE EXPLANATION LAW: Explanations must explain WHY the correct answer is right AND why the most plausible distractor is wrong.
-8. FINISH LAW: Every explanation must end with a complete sentence.
-
-OUTPUT: Return a JSON array in <QUIZ_JSON>...</QUIZ_JSON> tags.
-Each object needs: 'type', 'question', 'answer', 'explanation'.
-MCQ needs: 'options' (dict with keys 'a', 'b', 'c', 'd'). 'answer' must be the key (a, b, c, or d).
-fill_in needs: 'textWithBlanks' (sentence with [[blank]]).
-
-EXAMPLE of a GOOD quiz set:
-<QUIZ_JSON>
+Output format:
+Wrap your JSON in <QUIZ_JSON> tags.
 [
-  {{"type": "fill_in", "question": "The method of drawing general conclusions from specific cases is called [[blank]] reasoning.", "answer": "inductive", "explanation": "Inductive reasoning moves from specific observations to general conclusions.", "textWithBlanks": "The method of drawing general conclusions from specific cases is called [[blank]] reasoning."}},
-  {{"type": "mcq", "question": "Which of the following is a limitation of inductive reasoning?", "options": {{"a": "It cannot handle quantitative data", "b": "Conclusions are probabilistic, not certain", "c": "It requires deductive proof first", "d": "It only applies to natural sciences"}}, "answer": "b", "explanation": "Inductive conclusions are generalizations based on evidence — new data can always contradict them."}},
-  {{"type": "trace", "question": "Trace the causal chain from scarcity to economic choice.", "steps": ["Resources are limited", "Human wants exceed available resources", "Scarcity arises", "Choices must be made about allocation"], "answer": "The necessity of economic choice", "explanation": "Scarcity is the fundamental cause of economic choice — without scarcity, all wants could be satisfied and no allocation decisions would be required."}}
+  {{
+    "type": "mcq",
+    "question": "...",
+    "options": ["...", "..."],
+    "answer": "...",
+    "explanation": "..."
+  }},
+  ...
 ]
-</QUIZ_JSON>
 
+Axioms for this domain:
 {axioms}"""
 
         for attempt in range(3):
             try:
+                # Precision Pacing: Estimate tokens based on count
+                estimated_tokens = (count * 300) + 1000
+                await governor.get_permit(expected_tokens=estimated_tokens)
+                
                 res = await self.llm.ainvoke([
                     ("system", sys_prompt),
-                    ("human", f"Generate the v28.0 mastery quiz for {title_readable}.")
+                    ("human", f"Generate the S-Tier mastery quiz for {title_readable}. Count: {count}. Seed: {seed or 'None'}")
                 ])
                 
                 content = res.content
@@ -1337,44 +1263,30 @@ EXAMPLE of a GOOD quiz set:
                     match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
                 
                 if not match:
-                    raise Exception("LLM failed to provide <QUIZ_JSON> tags in the response.")
-                
-                raw_json = match.group(1).strip()
+                    if content.strip().startswith("["):
+                        raw_json = content.strip()
+                    else:
+                        raise Exception("LLM failed to provide <QUIZ_JSON> tags or bare JSON.")
+                else:
+                    raw_json = match.group(1).strip()
 
-                # Try direct array parse first (LLM often returns bare [...])
                 data = None
-                # Check if it looks like an array
-                stripped = raw_json.lstrip()
-                if stripped.startswith("["):
-                    try:
-                        # Find the matching closing bracket
-                        arr_start = raw_json.find("[")
-                        arr_end = raw_json.rfind("]")
-                        if arr_start != -1 and arr_end != -1:
-                            arr_str = raw_json[arr_start:arr_end+1]
-                            arr_str = re.sub(r",\s*([\]\}])", r"\1", arr_str)  # remove trailing commas
-                            data = json.loads(arr_str, strict=False)
-                    except Exception:
-                        pass
-
-                # Fallback: use ArchitectAgent's robust dict parser
-                if data is None:
+                try:
+                    data = json.loads(raw_json, strict=False)
+                except Exception:
                     data = ArchitectAgent._parse_json(raw_json)
 
                 if isinstance(data, dict) and "questions" in data:
                     data = data["questions"]
                 elif isinstance(data, dict):
-                    # Maybe the dict IS a single question — wrap it
                     if "type" in data and "question" in data:
                         data = [data]
 
                 if not isinstance(data, list):
                     raise Exception("Extracted quiz data is not a list.")
 
-                # Sanitize
                 sanitized_qs = []
                 for q in data:
-                    # Ensure escaped newlines render correctly
                     for field in ["question", "explanation", "answer", "content"]:
                         if q.get(field) and isinstance(q[field], str):
                             q[field] = q[field].replace('\\\\n', '\\n').replace('\\n', '\n')
@@ -1411,6 +1323,7 @@ class CriticAgent:
             f"Failed checks: {errors}\n"
             f"Content that failed: {content[:800]}"
         )
+        await governor.get_permit(expected_tokens=300)
         res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Provide diagnosis.")])
         try:
             data = ArchitectAgent._parse_json(res.content)
@@ -1433,6 +1346,7 @@ class HubAgent:
             "Output ONLY the text of the overview. Do not include markdown headers or greetings."
         )
         user_msg = f"Unit: {unit_title}\n\nConcepts in this unit:\n" + "\n".join(descriptions)
+        await governor.get_permit(expected_tokens=1200)
         res = await self.llm.ainvoke([("system", sys_prompt), ("human", user_msg)])
         
         # Robust regex: Find ## Overview and replace everything until the next ## header
