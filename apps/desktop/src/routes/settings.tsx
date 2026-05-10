@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Database, Key, HardDrive, Trash2, Edit2, FolderOpen, ShieldCheck, Zap, Plus, X,
-  User, BookOpen, DollarSign, Activity, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Check
+  User, BookOpen, DollarSign, Activity, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Check, Timer
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
 import {useConfig, SavedApiKey} from '@/lib/ConfigContext'
@@ -13,7 +13,8 @@ import RateLimitMonitor from '@/components/intelligence/RateLimitMonitor'
 
 /* ─────────────────────── Types ─────────────────────── */
 
-type SettingsSection = 'general'
+type SettingsSection = 'general' | 'intelligence' | 'vault' | 'pomodoro'
+type AiTier = 'primary' | 'planner' | 'utility'
 
 /* ─────────────────── Components ─────────────────── */
 
@@ -100,16 +101,80 @@ export default function Settings() {
  setEditValue(current)
 }
 
- const handleSave = async () => {
- if (!editingKey) return
- try {
- await saveConfig({[editingKey]: editValue})
- setEditingKey(null)
-} catch (err) {
- console.error(err);
- alert('Failed to save setting')
-}
-}
+  const [aiEdit, setAiEdit] = useState({
+    provider: 'google',
+    key: '',
+    model: ''
+  })
+
+  const [pomodoroEdit, setPomodoroEdit] = useState({
+    work: 25,
+    short: 5,
+    long: 15,
+    sessions: 4
+  })
+
+  const startAiEdit = (tier: AiTier) => {
+    setEditingKey(`${tier}_engine`)
+    if (tier === 'primary') {
+      setAiEdit({
+        provider: config?.aiProvider || 'google',
+        key: config?.aiApiKey || '',
+        model: config?.aiModel || ''
+      })
+    } else if (tier === 'planner') {
+      setAiEdit({
+        provider: config?.plannerProvider || 'google',
+        key: config?.plannerApiKey || '',
+        model: config?.plannerModel || ''
+      })
+    } else {
+      setAiEdit({
+        provider: config?.utilityProvider || 'google',
+        key: config?.utilityApiKey || '',
+        model: config?.utilityModel || ''
+      })
+    }
+  }
+
+  const startPomodoroEdit = () => {
+    setEditingKey('pomodoro_engine')
+    setPomodoroEdit({
+      work: config?.pomodoroWorkDuration || 25,
+      short: config?.pomodoroShortBreakDuration || 5,
+      long: config?.pomodoroLongBreakDuration || 15,
+      sessions: config?.pomodoroSessionsBeforeLongBreak || 4
+    })
+  }
+
+  const handleSave = async () => {
+    if (!editingKey) return
+    try {
+      if (editingKey === 'pomodoro_engine') {
+        await saveConfig({
+          pomodoroWorkDuration: pomodoroEdit.work,
+          pomodoroShortBreakDuration: pomodoroEdit.short,
+          pomodoroLongBreakDuration: pomodoroEdit.long,
+          pomodoroSessionsBeforeLongBreak: pomodoroEdit.sessions
+        })
+      } else if (editingKey.endsWith('_engine')) {
+        const tier = editingKey.replace('_engine', '')
+        if (tier === 'primary') {
+          await saveConfig({ aiProvider: aiEdit.provider, aiApiKey: aiEdit.key, aiModel: aiEdit.model })
+        } else if (tier === 'planner') {
+          await saveConfig({ plannerProvider: aiEdit.provider, plannerApiKey: aiEdit.key, plannerModel: aiEdit.model })
+        } else {
+          await saveConfig({ utilityProvider: aiEdit.provider, utilityApiKey: aiEdit.key, utilityModel: aiEdit.model })
+        }
+      } else {
+        await saveConfig({[editingKey]: editValue})
+      }
+      setEditingKey(null)
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save setting')
+    }
+  }
 
  const handleTestConnection = async (target: 'primary' | 'planner' | 'utility' = 'primary') => {
  setTestTarget(target)
@@ -248,17 +313,35 @@ export default function Settings() {
  </CardContent>
  </Card>
 
-  {/* AI Engine */}
+  {/* Intelligence (AI Engines) */}
   <SettingsCard
-    title="AI Engine"
+    title="Intelligence Engine"
     icon={<Activity size={18} />}
-    value="Configure your primary intelligence carrier"
-    isEditing={editingKey === 'aiApiKey'}
-    onEdit={() => startEditing('aiApiKey', config?.aiApiKey || '')}
+    value={`Configure ${aiTab.charAt(0).toUpperCase() + aiTab.slice(1)} Intelligence`}
+    isEditing={editingKey === `${aiTab}_engine`}
+    onEdit={() => startAiEdit(aiTab)}
     onSave={handleSave}
     onCancel={() => setEditingKey(null)}
   >
     <div className="space-y-6 text-foreground">
+      {/* Tier Switcher */}
+      <div className="flex p-1 bg-muted/30 rounded-lg border border-border/50">
+        {(['primary', 'planner', 'utility'] as AiTier[]).map((tier) => (
+          <button
+            key={tier}
+            onClick={() => setAiTab(tier)}
+            className={cn(
+              "flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all",
+              aiTab === tier 
+                ? "bg-background text-foreground shadow-sm border border-border/50" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {tier}
+          </button>
+        ))}
+      </div>
+
       {/* Saved Key Selection */}
       <div className="space-y-2 pb-4 border-b border-border/50">
         <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -269,11 +352,16 @@ export default function Settings() {
             <p className="text-[11px] text-muted-foreground/40 italic">No keys saved in vault yet.</p>
           )}
           {config?.savedApiKeys?.map(k => {
-            const isSelected = config.aiApiKey === k.key;
+            const currentKey = aiTab === 'primary' ? config.aiApiKey : aiTab === 'planner' ? config.plannerApiKey : config.utilityApiKey;
+            const isSelected = currentKey === k.key;
             return (
               <button
                 key={k.id}
-                onClick={() => saveConfig({aiProvider: k.provider, aiApiKey: k.key})}
+                onClick={() => {
+                  if (aiTab === 'primary') saveConfig({aiProvider: k.provider, aiApiKey: k.key});
+                  else if (aiTab === 'planner') saveConfig({plannerProvider: k.provider, plannerApiKey: k.key});
+                  else saveConfig({utilityProvider: k.provider, utilityApiKey: k.key});
+                }}
                 className={cn(
                   "px-2 py-1 rounded text-[10px] font-bold border  flex items-center gap-1.5",
                   isSelected 
@@ -293,7 +381,8 @@ export default function Settings() {
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Provider</label>
           <select
-            value={config?.aiProvider || 'google'}
+            value={editingKey === `${aiTab}_engine` ? aiEdit.provider : (aiTab === 'primary' ? config?.aiProvider : aiTab === 'planner' ? config?.plannerProvider : config?.utilityProvider) || 'google'}
+            disabled={editingKey !== `${aiTab}_engine`}
             onChange={(e) => {
               const provider = e.target.value;
               let defaultModel = 'gemini-2.0-flash';
@@ -301,7 +390,7 @@ export default function Settings() {
               if (provider === 'anthropic') defaultModel = 'claude-3-5-sonnet-latest';
               if (provider === 'groq') defaultModel = 'llama-3.3-70b-versatile';
               if (provider === 'openrouter') defaultModel = 'google/gemini-2.0-flash-001';
-              saveConfig({aiProvider: provider, aiModel: defaultModel});
+              setAiEdit({...aiEdit, provider, model: defaultModel});
             }}
             className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
           >
@@ -315,18 +404,23 @@ export default function Settings() {
 
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">API Key</label>
-          {editingKey === 'aiApiKey' ? (
+          {editingKey === `${aiTab}_engine` ? (
             <input
               type="password"
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
+              value={aiEdit.key}
+              onChange={(e) => setAiEdit({...aiEdit, key: e.target.value})}
               className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring font-mono"
               autoFocus
-              placeholder={`Enter ${config?.aiProvider.toUpperCase()} Key`}
+              placeholder={`Enter ${aiEdit.provider.toUpperCase()} Key`}
             />
           ) : (
             <div className="px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent">
-              <span>{config?.aiApiKey ? '••••••••' + config?.aiApiKey.slice(-4) : 'Not configured'}</span>
+              <span>
+                {aiTab === 'primary' && config?.aiApiKey ? '••••••••' + config?.aiApiKey.slice(-4) : 
+                 aiTab === 'planner' && config?.plannerApiKey ? '••••••••' + config?.plannerApiKey.slice(-4) :
+                 aiTab === 'utility' && config?.utilityApiKey ? '••••••••' + config?.utilityApiKey.slice(-4) :
+                 'Not configured'}
+              </span>
               <Key size={14} className="text-muted-foreground" />
             </div>
           )}
@@ -336,16 +430,17 @@ export default function Settings() {
           <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Model ID</label>
           <input
             type="text"
-            value={config?.aiModel || ''}
-            onChange={(e) => saveConfig({aiModel: e.target.value})}
+            disabled={editingKey !== `${aiTab}_engine`}
+            value={editingKey === `${aiTab}_engine` ? aiEdit.model : (aiTab === 'primary' ? config?.aiModel : aiTab === 'planner' ? config?.plannerModel : config?.utilityModel) || ''}
+            onChange={(e) => setAiEdit({...aiEdit, model: e.target.value})}
             className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
         <div className="pt-2">
           <button
-            onClick={() => handleTestConnection('primary')}
-            disabled={testStatus.loading || !config?.aiApiKey}
+            onClick={() => handleTestConnection(aiTab)}
+            disabled={testStatus.loading || (aiTab === 'primary' ? !config?.aiApiKey : aiTab === 'planner' ? !config?.plannerApiKey : !config?.utilityApiKey)}
             className={cn(
               "w-full flex items-center justify-center gap-2 px-3 py-2 rounded text-[12px] font-medium  border",
               testStatus.loading ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
@@ -374,67 +469,194 @@ export default function Settings() {
 
       {/* Real-time Rate Limit Tracker */}
       <div className="pt-6 border-t border-border/50 mt-6">
-        <RateLimitMonitor config={config || undefined} activeTier="primary" />
+        <RateLimitMonitor config={config || undefined} activeTier={aiTab} />
       </div>
     </div>
   </SettingsCard>
 
- {/* Vault Configuration */}
- <div className="flex flex-col gap-6">
+  {/* Vault Configuration */}
+  <div className="flex flex-col gap-6">
+    <SettingsCard
+      title="Vault Configuration"
+      icon={<HardDrive size={18} />}
+      value="Configure storage paths and automation"
+      isEditing={editingKey === 'vault_config'}
+      onEdit={() => setEditingKey('vault_config')}
+      onSave={handleSave}
+      onCancel={() => setEditingKey(null)}
+    >
+      <div className="space-y-6">
+        {/* Obsidian Path */}
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Obsidian Vault Root</label>
+          <div className="flex gap-2">
+            <div className="flex-1 px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent overflow-hidden">
+              <span className="truncate pr-2">{config?.obsidianVaultPath || 'Not selected'}</span>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  const selected = await open({directory: true, multiple: false, title: 'Select Vault Folder'});
+                  if (selected) await saveConfig({obsidianVaultPath: selected as string});
+                } catch (err) {console.error(err);}
+              }}
+              className="inline-flex items-center justify-center rounded bg-background text-muted-foreground  hover:bg-muted border border-border px-3 py-2 shrink-0"
+            >
+              <FolderOpen size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Inbox Path */}
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Inbox Folder (PDF Ingestion)</label>
+          <div className="flex gap-2">
+            <div className="flex-1 px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent overflow-hidden">
+              <span className="truncate pr-2">{config?.inboxPath || 'Default (Inbox/)'}</span>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  const selected = await open({directory: true, multiple: false, title: 'Select Inbox Folder'});
+                  if (selected) await saveConfig({inboxPath: selected as string});
+                } catch (err) {console.error(err);}
+              }}
+              className="inline-flex items-center justify-center rounded bg-background text-muted-foreground  hover:bg-muted border border-border px-3 py-2 shrink-0"
+            >
+              <FolderOpen size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Academic Path */}
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Academic Folder Name</label>
+          <input 
+            type="text"
+            value={config?.academicFolderPath || ''}
+            onChange={(e) => saveConfig({academicFolderPath: e.target.value})}
+            className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+
+        <div className="flex items-center justify-between p-3 rounded border border-border bg-muted/30">
+          <div className="space-y-0.5">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Auto-Deploy</label>
+            <p className="text-[11px] text-muted-foreground/60 text-[9px] uppercase tracking-widest opacity-40">Process Inbox automatically</p>
+          </div>
+          <button
+            onClick={async () => {
+              const newVal = !config?.autoDeploy;
+              await saveConfig({autoDeploy: newVal});
+              try {await sidecarApi.okaWatcherToggle();} catch(e) {console.error(e);}
+            }}
+            className={cn(
+              "relative inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full ",
+              config?.autoDeploy ? "bg-primary" : "bg-muted-foreground/20"
+            )}
+          >
+            <span className={cn(
+              "pointer-events-none block h-3 w-3 rounded-full bg-background shadow-sm ring-0 transition-transform",
+              config?.autoDeploy ? "translate-x-4" : "translate-x-1"
+            )} />
+          </button>
+        </div>
+      </div>
+    </SettingsCard>
+  </div>
+
  <SettingsCard
- title="Vault Folder"
- icon={<HardDrive size={18} />}
- value="Local root for your life data"
- isEditing={editingKey === 'obsidianVaultPath'}
- onEdit={() => startEditing('obsidianVaultPath', config?.obsidianVaultPath || '')}
+ title="Pomodoro Engine"
+ icon={<Timer size={18} />}
+ value="Custom focus & break intervals"
+ isEditing={editingKey === 'pomodoro_engine'}
+ onEdit={startPomodoroEdit}
  onSave={handleSave}
  onCancel={() => setEditingKey(null)}
  >
- <div className="space-y-4">
- <div className="flex gap-2">
- <div className="flex-1 px-3 py-2 rounded bg-muted text-[13px] font-mono text-muted-foreground flex items-center justify-between border border-transparent overflow-hidden">
- <span className="truncate pr-2">{editingKey === 'obsidianVaultPath' ? editValue : (config?.obsidianVaultPath || 'Not selected')}</span>
- </div>
- {editingKey === 'obsidianVaultPath' && (
- <button
- onClick={async () => {
- try {
- const selected = await open({directory: true, multiple: false, title: 'Select Vault Folder'});
- if (selected) setEditValue(selected as string);
-} catch (err) {console.error(err);}
-}}
- className="inline-flex items-center justify-center rounded bg-background text-muted-foreground  hover:bg-muted border border-border px-3 py-2 shrink-0"
- >
- <FolderOpen size={16} />
- </button>
- )}
- </div>
+ <div className="grid grid-cols-2 gap-4">
+ <datalist id="focus-durations">
+ <option value="15" />
+ <option value="25" />
+ <option value="45" />
+ <option value="50" />
+ <option value="60" />
+ <option value="90" />
+ </datalist>
+ <datalist id="short-durations">
+ <option value="3" />
+ <option value="5" />
+ <option value="10" />
+ <option value="15" />
+ </datalist>
+ <datalist id="long-durations">
+ <option value="15" />
+ <option value="20" />
+ <option value="30" />
+ <option value="45" />
+ </datalist>
+ <datalist id="session-counts">
+ <option value="2" />
+ <option value="3" />
+ <option value="4" />
+ <option value="5" />
+ <option value="6" />
+ </datalist>
 
- <div className="flex items-center justify-between p-3 rounded border border-border bg-muted/30">
- <div className="space-y-0.5">
- <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Auto-Deploy</label>
- <p className="text-[11px] text-muted-foreground/60 text-[9px] uppercase tracking-widest opacity-40">Process Inbox automatically</p>
+ <div className="space-y-1.5">
+ <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Focus (min)</label>
+ <input 
+ type="number" 
+ list="focus-durations"
+ disabled={editingKey !== 'pomodoro_engine'}
+ value={editingKey === 'pomodoro_engine' ? pomodoroEdit.work : config?.pomodoroWorkDuration}
+ onChange={(e) => setPomodoroEdit({...pomodoroEdit, work: parseInt(e.target.value) || 0})}
+ className="w-full px-3 py-2 rounded bg-muted/50 border border-border/50 text-[13px] font-mono focus:outline-none focus:border-primary/30"
+ />
  </div>
- <button
- onClick={async () => {
- const newVal = !config?.autoDeploy;
- await saveConfig({autoDeploy: newVal});
- try {await sidecarApi.okaWatcherToggle();} catch(e) {console.error(e);}
-}}
- className={cn(
- "relative inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full ",
- config?.autoDeploy ? "bg-primary" : "bg-muted-foreground/20"
- )}
- >
- <span className={cn(
- "pointer-events-none block h-3 w-3 rounded-full bg-background shadow-sm ring-0 transition-transform",
- config?.autoDeploy ? "translate-x-4" : "translate-x-1"
- )} />
- </button>
+ <div className="space-y-1.5">
+ <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Short Break (min)</label>
+ <input 
+ type="number" 
+ list="short-durations"
+ disabled={editingKey !== 'pomodoro_engine'}
+ value={editingKey === 'pomodoro_engine' ? pomodoroEdit.short : config?.pomodoroShortBreakDuration}
+ onChange={(e) => setPomodoroEdit({...pomodoroEdit, short: parseInt(e.target.value) || 0})}
+ className="w-full px-3 py-2 rounded bg-muted/50 border border-border/50 text-[13px] font-mono focus:outline-none focus:border-primary/30"
+ />
+ </div>
+ <div className="space-y-1.5">
+ <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Long Break (min)</label>
+ <input 
+ type="number" 
+ list="long-durations"
+ disabled={editingKey !== 'pomodoro_engine'}
+ value={editingKey === 'pomodoro_engine' ? pomodoroEdit.long : config?.pomodoroLongBreakDuration}
+ onChange={(e) => setPomodoroEdit({...pomodoroEdit, long: parseInt(e.target.value) || 0})}
+ className="w-full px-3 py-2 rounded bg-muted/50 border border-border/50 text-[13px] font-mono focus:outline-none focus:border-primary/30"
+ />
+ </div>
+ <div className="space-y-1.5">
+ <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Sessions before Long</label>
+ <input 
+ type="number" 
+ min="1"
+ max="10"
+ disabled={editingKey !== 'pomodoro_engine'}
+ value={editingKey === 'pomodoro_engine' ? pomodoroEdit.sessions : config?.pomodoroSessionsBeforeLongBreak}
+ onChange={(e) => {
+   const val = parseInt(e.target.value);
+   if (!isNaN(val)) {
+     setPomodoroEdit({...pomodoroEdit, sessions: Math.max(1, Math.min(10, val))});
+   } else {
+     setPomodoroEdit({...pomodoroEdit, sessions: 1});
+   }
+ }}
+ className="w-full px-3 py-2 rounded bg-muted/50 border border-border/50 text-[13px] font-mono focus:outline-none focus:border-primary/30"
+ />
  </div>
  </div>
  </SettingsCard>
- </div>
  </div>
 
  <div className="mt-12">
