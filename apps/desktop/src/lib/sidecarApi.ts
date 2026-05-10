@@ -467,4 +467,12 @@ export const sidecarApi = {
     
     getStudyHistory: () =>
         request<{ sessions: any[]; telemetry: any[]; practice: any[] }>('/api/study/history'),
+
+    // ── Generic passthrough (for vault & other ad-hoc endpoints) ─────────
+    request: async (method: string, path: string, body?: any): Promise<any> => {
+        return request<any>(path, {
+            method,
+            ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        })
+    },
 }

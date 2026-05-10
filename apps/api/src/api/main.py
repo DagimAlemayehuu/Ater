@@ -1532,6 +1532,314 @@ async def sync_notion_mirror(secrets: AppSecrets = Depends(get_app_secrets)):
     return {"status": "mirror_started", "message": "Notion mirror sync started in the background."}
 
 
+
+# ── Reference Vault Endpoints ─────────────────────────────────────────────────
+
+# Track in-progress vault generations
+_vault_status: Dict[str, str] = {}
+
+@app.post("/api/practice/vault/upload")
+async def vault_upload_source(
+    hub_id: str = Body(...),
+    source_name: str = Body(...),
+    source_text: str = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets),
+):
+    """
+    Runs the full extract→classify→solve→write pipeline on provided text.
+    Returns the vault file path and question count.
+    """
+    if not secrets.ai_key or not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="AI Key and Vault Path required")
+
+    try:
+        from src.domains.oka.reference_vault import ReferenceVaultPipeline
+        from src.domains.oka.governor import governor
+        from src.domains.ai.factory import ModelFactory
+
+        llm = ModelFactory.get_model(
+            provider=secrets.ai_provider or "google",
+            model_name=secrets.ai_model or "gemini-1.5-flash",
+            api_key=secrets.ai_key,
+            temperature=0.1,
+        )
+
+        job_id = f"vault_{hub_id}_{int(time.time())}"
+        _vault_status[job_id] = "Starting..."
+
+        pipeline = ReferenceVaultPipeline(llm, Path(secrets.vault_path), governor)
+
+        def _cb(msg: str):
+            _vault_status[job_id] = msg
+
+        result = await pipeline.run(hub_id, source_name, source_text, _cb)
+        _vault_status.pop(job_id, None)
+        return {**result, "job_id": job_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/practice/vault/upload-file")
+async def vault_upload_file(
+    hub_id: str,
+    file: UploadFile = File(...),
+    secrets: AppSecrets = Depends(get_app_secrets),
+):
+    """Accepts a binary file upload (PDF/image/txt), extracts text, then runs the pipeline."""
+    if not secrets.ai_key or not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="AI Key and Vault Path required")
+
+    suffix = Path(file.filename or "upload.txt").suffix.lower()
+    import tempfile, os
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(await file.read())
+            tmp_path = tmp.name
+
+        source_text = ""
+        if suffix == ".pdf":
+            try:
+                from langchain_community.document_loaders import PyPDFLoader
+                loader = PyPDFLoader(tmp_path)
+                pages = loader.load_and_split()
+                source_text = "\n\n".join(p.page_content for p in pages)
+            except Exception as e:
+                raise HTTPException(status_code=422, detail=f"PDF extraction failed: {e}")
+        elif suffix in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
+            # Use Gemini vision via base64 if text not extractable
+            import base64
+            with open(tmp_path, "rb") as f_img:
+                b64 = base64.b64encode(f_img.read()).decode()
+            from src.domains.ai.factory import ModelFactory
+            from langchain_core.messages import HumanMessage
+            llm = ModelFactory.get_model(
+                provider=secrets.ai_provider or "google",
+                model_name=secrets.ai_model or "gemini-1.5-flash",
+                api_key=secrets.ai_key,
+                temperature=0.1,
+            )
+            msg = HumanMessage(content=[
+                {"type": "text", "text": "Extract ALL text from this image verbatim. Preserve all questions and numbering."},
+                {"type": "image_url", "image_url": {"url": f"data:image/{suffix[1:]};base64,{b64}"}},
+            ])
+            res = await llm.ainvoke([msg])
+            source_text = res.content
+        else:
+            source_text = open(tmp_path, encoding="utf-8", errors="ignore").read()
+
+        os.unlink(tmp_path)
+
+        if not source_text.strip():
+            raise HTTPException(status_code=422, detail="Could not extract text from file.")
+
+        from src.domains.oka.reference_vault import ReferenceVaultPipeline
+        from src.domains.oka.governor import governor
+
+        llm = ModelFactory.get_model(
+            provider=secrets.ai_provider or "google",
+            model_name=secrets.ai_model or "gemini-1.5-flash",
+            api_key=secrets.ai_key,
+            temperature=0.1,
+        )
+        pipeline = ReferenceVaultPipeline(llm, Path(secrets.vault_path), governor)
+        result = await pipeline.run(hub_id, file.filename or "upload", source_text)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/practice/vault/list")
+async def vault_list(
+    hub_id: str,
+    secrets: AppSecrets = Depends(get_app_secrets),
+):
+    """Lists all reference vault files for a hub."""
+    if not secrets.vault_path:
+        return {"vaults": []}
+    try:
+        from src.domains.oka.reference_vault import VaultWriter
+        writer = VaultWriter(Path(secrets.vault_path))
+        return {"vaults": writer.list_vaults(hub_id)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/practice/vault/questions")
+async def vault_get_questions(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets),
+):
+    """
+    Loads questions from a vault .md file.
+    Supports filters: difficulty (list), q_type (list), limit (int).
+    """
+    vault_path = payload.get("vault_path")
+    difficulties = payload.get("difficulties", [])
+    q_types = payload.get("q_types", [])
+    limit = payload.get("limit", 200)
+    hard_only = payload.get("hard_only", False)  # L3+L4 only
+
+    if not vault_path:
+        raise HTTPException(status_code=400, detail="vault_path required")
+
+    try:
+        from src.domains.oka.reference_vault import VaultWriter
+        writer = VaultWriter(Path(secrets.vault_path or "/"))
+        questions = writer.load_questions(vault_path)
+
+        if hard_only:
+            questions = [q for q in questions if q.get("difficulty") in ("L3", "L4")]
+        if difficulties:
+            questions = [q for q in questions if q.get("difficulty") in difficulties]
+        if q_types:
+            questions = [q for q in questions if q.get("type") in q_types]
+        if limit:
+            questions = questions[:limit]
+
+        return {"questions": questions, "total": len(questions)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/practice/vault/generate")
+async def vault_generate_session(
+    payload: Dict[str, Any],
+    secrets: AppSecrets = Depends(get_app_secrets),
+):
+    """
+    Generates an advanced practice session mixing vault questions + AI-generated variants.
+    Modes:
+      - "vault_only"     : Only real extracted questions
+      - "hard_only"      : Only L3/L4 vault questions
+      - "ai_variants"    : AI generates harder variants of vault questions
+      - "mixed"          : Mix of vault + hub-generated AI questions
+      - "weak_spots"     : Focus on previously incorrect question types (uses analytics)
+      - "exam_sim"       : Full exam simulation from vault (random sample, timed)
+    """
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault Path required")
+
+    hub_id = payload.get("hub_id", "")
+    vault_paths = payload.get("vault_paths", [])  # list of vault .md paths
+    mode = payload.get("mode", "vault_only")
+    limit = payload.get("limit", 20)
+    config = payload.get("config", {})
+
+    try:
+        from src.domains.oka.reference_vault import VaultWriter
+        import random
+
+        writer = VaultWriter(Path(secrets.vault_path))
+
+        # Collect from all selected vaults
+        all_questions = []
+        for vp in vault_paths:
+            qs = writer.load_questions(vp)
+            all_questions.extend(qs)
+
+        if not all_questions:
+            raise HTTPException(status_code=404, detail="No questions found in selected vaults.")
+
+        # Apply mode filters
+        if mode == "hard_only":
+            filtered = [q for q in all_questions if q.get("difficulty") in ("L3", "L4")]
+        elif mode == "exam_sim":
+            filtered = all_questions
+            random.shuffle(filtered)
+        elif mode == "weak_spots" and secrets.inbox_path:
+            # Pull worst-performing types from analytics DB
+            weak_types = []
+            db_path = Path(secrets.inbox_path) / "oka_queue.db"
+            if db_path.exists():
+                import sqlite3 as _sq
+                conn = _sq.connect(str(db_path))
+                rows = conn.execute("""
+                    SELECT question_type, COUNT(*) as a, SUM(CASE WHEN is_correct THEN 1 ELSE 0 END) as c
+                    FROM practice_log GROUP BY question_type ORDER BY c*1.0/a ASC LIMIT 5
+                """).fetchall()
+                conn.close()
+                weak_types = [r[0] for r in rows]
+            if weak_types:
+                filtered = [q for q in all_questions if q.get("type") in weak_types]
+                if not filtered:
+                    filtered = all_questions
+            else:
+                filtered = all_questions
+        else:
+            filtered = all_questions
+
+        # Shuffle and limit
+        random.shuffle(filtered)
+        selected = filtered[:limit]
+
+        # Re-assign sequential IDs
+        for i, q in enumerate(selected):
+            q["id"] = i + 1
+
+        # For ai_variants mode: generate harder versions via AI
+        if mode == "ai_variants" and secrets.ai_key:
+            try:
+                from src.domains.ai.factory import ModelFactory
+                from src.domains.oka.governor import governor
+
+                llm = ModelFactory.get_model(
+                    provider=secrets.ai_provider or "google",
+                    model_name=secrets.ai_model or "gemini-1.5-flash",
+                    api_key=secrets.ai_key,
+                    temperature=0.4,
+                )
+                variant_qs = []
+                for q in selected[:10]:  # Limit variants to control tokens
+                    prompt = (
+                        f"Original question ({q.get('type','writing')}, {q.get('difficulty','L1')}):\n"
+                        f"{q.get('question','')}\n\n"
+                        f"Generate ONE harder variant (L3 or L4) of the same concept.\n"
+                        f'Return: {{"question":"...","answer":"...","explanation":"...","difficulty":"L3"}}\n'
+                        f"ONLY JSON."
+                    )
+                    try:
+                        await governor.get_permit(expected_tokens=400)
+                        res = await llm.ainvoke([("human", prompt)])
+                        from src.domains.oka.reference_vault import _parse_json_safe
+                        data = _parse_json_safe(res.content)
+                        if data and isinstance(data, dict):
+                            variant = {
+                                **q,
+                                "id": len(selected) + len(variant_qs) + 1,
+                                "question": data.get("question", q["question"]),
+                                "answer": data.get("answer", q["answer"]),
+                                "explanation": data.get("explanation", q["explanation"]),
+                                "difficulty": data.get("difficulty", "L3"),
+                                "is_variant": True,
+                            }
+                            variant_qs.append(variant)
+                    except Exception:
+                        pass
+                selected = selected + variant_qs
+            except Exception as e:
+                logger.warning(f"[VaultGenerate] Variant generation failed: {e}")
+
+        return {
+            "questions": selected,
+            "total": len(selected),
+            "mode": mode,
+            "hub_id": hub_id,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/practice/vault/status")
+async def vault_generation_status():
+    """Returns current vault generation job statuses."""
+    return {"status": _vault_status}
+
+
 def handle_shutdown(signum, frame):
     """Clean shutdown handler for when Tauri terminates the process."""
     sys.exit(0)

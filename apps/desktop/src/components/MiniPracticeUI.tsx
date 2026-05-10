@@ -211,23 +211,28 @@ export default function MiniPracticeUI({ question, notePath }: MiniPracticeUIPro
       <React.Fragment key={i}>
         <div className="inline-block align-middle"><MarkdownBlock content={part} /></div>
         {i < parts.length - 1 && (
-          <input
-            type="text"
-            disabled={isRevealed}
-            value={(userAnswers[currentQ.id] || [])[i] || ''}
-            onChange={(e) => {
-              const newAns = [...(userAnswers[currentQ.id] || [])];
-              newAns[i] = e.target.value;
-              handleSelectAnswer(newAns);
-            }}
-            placeholder=""
-            className={cn(
-              "mx-0.5 px-2 py-0.5 border border-primary/40 bg-muted/10 rounded focus:outline-none focus:border-primary w-32 text-center font-bold tracking-widest text-[12px] inline-block",
-              isRevealed 
-                ? "border-muted-foreground/30 text-foreground/50 opacity-80"
-                : "border-primary/40 focus:border-primary text-foreground"
+          <div className="inline-flex flex-col items-center">
+            <input
+              type="text"
+              disabled={isRevealed}
+              value={(userAnswers[currentQ.id] || [])[i] || ''}
+              onChange={(e) => {
+                const newAns = [...(userAnswers[currentQ.id] || [])];
+                newAns[i] = e.target.value;
+                handleSelectAnswer(newAns);
+              }}
+              placeholder=""
+              className={cn(
+                "mx-0.5 px-2 py-0.5 border border-primary/40 bg-muted/10 rounded focus:outline-none focus:border-primary w-32 text-center font-bold tracking-widest text-[12px] inline-block",
+                isRevealed 
+                  ? "border-muted-foreground/30 text-foreground/50 opacity-80"
+                  : "border-primary/40 focus:border-primary text-foreground"
+              )}
+            />
+            {isRevealed && String((userAnswers[currentQ.id] || [])[i] || '').toLowerCase() !== String((currentQ.answer || [])[i] || '').toLowerCase() && (
+               <div className="text-[10px] text-primary font-bold mt-1">Correct: {String((currentQ.answer || [])[i] || '')}</div>
             )}
-          />
+          </div>
         )}
       </React.Fragment>
     ));
@@ -446,7 +451,7 @@ export default function MiniPracticeUI({ question, notePath }: MiniPracticeUIPro
                     <div className="w-4 h-4 rounded-full bg-foreground/10 flex items-center justify-center">
                       <Check size={10} />
                     </div>
-                    <span>Mastery Solution & Logic</span>
+                    <span>Correct Answer</span>
                   </div>
                   <div className="space-y-1">
                     <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Definitive Answer</div>
@@ -456,7 +461,7 @@ export default function MiniPracticeUI({ question, notePath }: MiniPracticeUIPro
                   </div>
  
                   <div className="space-y-1 pt-2 border-t border-border/10">
-                    <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mechanism Explanation</div>
+                    <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Explanation</div>
                     <div className="text-xs font-medium leading-relaxed text-foreground/80">
                       <MarkdownBlock content={currentQ.explanation || "No explanation provided."} />
                     </div>
@@ -476,7 +481,7 @@ export default function MiniPracticeUI({ question, notePath }: MiniPracticeUIPro
                     </div>
                   )}
                   
-                  {['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQ.type) && currentQ.required_keywords && currentQ.required_keywords.length > 0 && (
+                  {['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQ.type) && Array.isArray(currentQ.required_keywords) && currentQ.required_keywords.length > 0 && (
                     <div className="space-y-3 pt-4 border-t border-border/10">
                       <div className="flex items-center justify-between">
                         <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mandatory Concepts Checklist</div>
@@ -516,9 +521,9 @@ export default function MiniPracticeUI({ question, notePath }: MiniPracticeUIPro
                               </Button>
                               <Button 
                                 onClick={() => handleSelfGrade(true)} 
-                                disabled={currentQ.required_keywords && currentQ.required_keywords.length > 0 && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw])}
+                                disabled={Array.isArray(currentQ.required_keywords) && currentQ.required_keywords.length > 0 && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw])}
                                 className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-9 rounded-lg  hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                title={currentQ.required_keywords && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
+                                title={Array.isArray(currentQ.required_keywords) && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
                               >
                                   Correct
                               </Button>

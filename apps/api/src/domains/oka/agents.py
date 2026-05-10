@@ -1239,7 +1239,9 @@ class QuestionAgent:
             "order": '"type": "order", "question": "...", "steps": ["Step 1", "Step 2", "Step 3"], "answer": ["Correct Step 1", "Correct Step 2", "Correct Step 3"], "explanation": "..."',
             "debug": '"type": "debug", "question": "...", "content": "buggy text or process", "answer": "...", "explanation": "..."',
             "find_error": '"type": "find_error", "question": "...", "buggyCode": "buggy snippet", "answer": "...", "explanation": "..."',
-            "code": '"type": "code", "question": "...", "codeSnippet": "...", "language": "python", "answer": "...", "explanation": "..."'
+            "code": '"type": "code", "question": "...", "codeSnippet": "...", "language": "python", "answer": "...", "explanation": "..."',
+            "calculation": '"type": "calculation", "question": "...", "content": "...", "answer": "...", "explanation": "..."',
+            "data_analysis": '"type": "data_analysis", "question": "...", "content": "...", "answer": "...", "explanation": "..."'
         }
         type_schema = schemas.get(q_type, schemas["mcq"])
 

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, {useState, useEffect, useRef} from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {sidecarApi} from '@/lib/sidecarApi'
@@ -16,7 +15,15 @@ import {
  X,
  TrendingUp,
  BarChart2,
- Plus
+ Plus,
+ Upload,
+ BookOpen,
+ FlameKindling,
+ Shuffle,
+ Target,
+ Trophy,
+ FileText,
+ ChevronDown
 } from 'lucide-react'
 import {
  LineChart, 
@@ -135,6 +142,16 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
+  // ── Reference Vault state ──────────────────────────────────────────────────
+  const [vaultFiles, setVaultFiles] = useState<any[]>([])
+  const [vaultLoading, setVaultLoading] = useState(false)
+  const [vaultStatus, setVaultStatus] = useState('')
+  const [vaultSourceText, setVaultSourceText] = useState('')
+  const [vaultSourceName, setVaultSourceName] = useState('')
+  const [vaultSelectedFiles, setVaultSelectedFiles] = useState<string[]>([])
+  const [vaultMode, setVaultMode] = useState<'vault_only'|'hard_only'|'ai_variants'|'mixed'|'weak_spots'|'exam_sim'>('vault_only')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const globalTimeLeftRef = useRef(globalTimeLeft);
   const questionTimeLeftRef = useRef(questionTimeLeft);
   const isRevealedRef = useRef(isRevealed);
@@ -240,8 +257,91 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
     }
   }, [questions, view])
 
- const loadPastPractices = async () => {try {const res = await sidecarApi.listPractices(); setPastPractices(res.practices);} catch {console.error("Error");}}
- const loadHubs = async () => {try {const res = await sidecarApi.listHubs(); setHubs(res.hubs); if (res.hubs.length > 0) setSelectedHub(res.hubs[0].id);} catch {console.error("Error");}}
+  const loadPastPractices = async () => {try {const res = await sidecarApi.listPractices(); setPastPractices(res.practices);} catch {console.error("Error");}}
+  const loadHubs = async () => {try {const res = await sidecarApi.listHubs(); setHubs(res.hubs); if (res.hubs.length > 0) setSelectedHub(res.hubs[0].id);} catch {console.error("Error");}}
+
+  // ── Vault loaders ──────────────────────────────────────────────────────────
+  const loadVaultFiles = async (hubId: string) => {
+    if (!hubId) return
+    try {
+      const res = await sidecarApi.request('GET', `/api/practice/vault/list?hub_id=${encodeURIComponent(hubId)}`)
+      setVaultFiles(Array.isArray(res?.vaults) ? res.vaults : [])
+    } catch { setVaultFiles([]) }
+  }
+
+  const handleVaultUploadText = async () => {
+    if (!selectedHub || !vaultSourceText.trim() || !vaultSourceName.trim()) {
+      toast.error('Select a hub, enter a name and paste your source text.')
+      return
+    }
+    setVaultLoading(true)
+    setVaultStatus('Uploading...')
+    try {
+      const res = await sidecarApi.request('POST', '/api/practice/vault/upload', {
+        hub_id: selectedHub, source_name: vaultSourceName, source_text: vaultSourceText
+      })
+      if (res?.total > 0) {
+        toast.success(`Extracted ${res.total} questions!`)
+        setVaultSourceText('')
+        setVaultSourceName('')
+        loadVaultFiles(selectedHub)
+      } else {
+        toast.error(res?.error || 'No questions found.')
+      }
+    } catch (e: any) { toast.error(e?.message || 'Upload failed') }
+    finally { setVaultLoading(false); setVaultStatus('') }
+  }
+
+  const handleVaultFileUpload = async (file: File) => {
+    if (!selectedHub) { toast.error('Select a hub first.'); return }
+    setVaultLoading(true)
+    setVaultStatus(`Extracting from ${file.name}...`)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('hub_id', selectedHub)
+      const res = await fetch(`http://localhost:8765/api/practice/vault/upload-file?hub_id=${encodeURIComponent(selectedHub)}`, {
+        method: 'POST', body: formData
+      })
+      const data = await res.json()
+      if (data?.total > 0) {
+        toast.success(`Extracted ${data.total} questions from ${file.name}!`)
+        loadVaultFiles(selectedHub)
+      } else {
+        toast.error(data?.error || data?.detail || 'No questions found in file.')
+      }
+    } catch (e: any) { toast.error(e?.message || 'File upload failed') }
+    finally { setVaultLoading(false); setVaultStatus('') }
+  }
+
+  const handleVaultPracticeGenerate = async () => {
+    if (!selectedHub || vaultSelectedFiles.length === 0) {
+      toast.error('Select vault files first.')
+      return
+    }
+    setVaultLoading(true)
+    try {
+      const res = await sidecarApi.request('POST', '/api/practice/vault/generate', {
+        hub_id: selectedHub,
+        vault_paths: vaultSelectedFiles,
+        mode: vaultMode,
+        limit: 20,
+      })
+      if (res?.questions?.length > 0) {
+        setQuestions(res.questions)
+        setCurrentPracticePath(null)
+        setCurrentQuestionIdx(0)
+        setUserAnswers({})
+        setIsRevealed(false)
+        setGradedAnswers({})
+        setView('session')
+        toast.success(`${res.questions.length} questions loaded — ${vaultMode.replace('_', ' ')} mode`)
+      } else {
+        toast.error('No questions generated.')
+      }
+    } catch (e: any) { toast.error(e?.message || 'Generation failed') }
+    finally { setVaultLoading(false) }
+  }
 
  const handleStartSession = async () => {
  if (!selectedHub) {toast.error('Choose a topic.'); return;}
@@ -420,6 +520,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="flex bg-muted/5 p-1 rounded-lg border border-border w-full sm:w-auto">
  <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", view === 'dashboard' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>Dashboard</button>
  <button onClick={() => setView('history' as any)} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", (view as string) === 'history' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>History</button>
+ <button onClick={() => { setView('vault' as any); if (selectedHub) loadVaultFiles(selectedHub) }} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md flex items-center gap-1", (view as string) === 'vault' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}><BookOpen size={10}/>Reference Vault</button>
  </div>
  <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-muted/5 border border-border hover:border-foreground/50 text-foreground rounded-md font-black uppercase tracking-widest text-[9px] ">Start</Button>
  </div>
@@ -522,6 +623,110 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
  );
 }
+
+ // ──────────────────────────────────────────────────────────────────────────
+ // REFERENCE VAULT RENDERER
+ // ──────────────────────────────────────────────────────────────────────────
+ if ((view as string) === 'vault') {
+  const MODES = [
+   { id: 'vault_only', label: 'All Questions', icon: <BookOpen size={11}/>, desc: 'Every extracted question from selected sources' },
+   { id: 'hard_only', label: 'Hard Only', icon: <FlameKindling size={11}/>, desc: 'Only L3 & L4 difficulty questions' },
+   { id: 'ai_variants', label: 'AI Variants', icon: <Zap size={11}/>, desc: 'AI generates harder versions of real questions' },
+   { id: 'weak_spots', label: 'Weak Spots', icon: <Target size={11}/>, desc: 'Focus on your historically worst question types' },
+   { id: 'exam_sim', label: 'Exam Simulation', icon: <Trophy size={11}/>, desc: 'Random sample mimicking real exam conditions' },
+  ]
+  return (
+   <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-4 sm:p-10 space-y-8">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+     <div className="flex bg-muted/5 p-1 rounded-lg border border-border w-full sm:w-auto">
+      <button onClick={() => setView('dashboard')} className="flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted/5">Dashboard</button>
+      <button onClick={() => setView('history' as any)} className="flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted/5">History</button>
+      <button className="flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md bg-muted/20 text-foreground border border-border flex items-center gap-1"><BookOpen size={10}/>Reference Vault</button>
+     </div>
+     <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-muted/5 border border-border hover:border-foreground/50 text-foreground rounded-md font-black uppercase tracking-widest text-[9px]">New Session</Button>
+    </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+     <div className="lg:col-span-1 space-y-4">
+      <div className="p-4 bg-muted/5 border border-border rounded-lg space-y-3">
+       <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Hub</div>
+       <Select value={selectedHub} onValueChange={(val) => { setSelectedHub(val); loadVaultFiles(val) }}>
+        <SelectTrigger className="w-full h-9 bg-muted/5 border-border rounded-md px-3 text-[10px] font-black uppercase tracking-tight"><SelectValue placeholder="Select Hub..." /></SelectTrigger>
+        <SelectContent className="border-border bg-popover">{hubs.map(hub => <SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>)}</SelectContent>
+       </Select>
+      </div>
+      <div className="p-4 bg-muted/5 border border-border rounded-lg space-y-3">
+       <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Add Source</div>
+       <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.txt,.md,.png,.jpg,.jpeg,.webp"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVaultFileUpload(f); e.target.value = '' }} />
+       <button onClick={() => fileInputRef.current?.click()} disabled={vaultLoading}
+        className="w-full p-4 border-2 border-dashed border-border/40 rounded-lg flex flex-col items-center gap-2 hover:border-foreground/30 hover:bg-muted/5 transition-all disabled:opacity-40 text-muted-foreground/50">
+        <Upload size={16}/>
+        <span className="text-[9px] font-black uppercase tracking-widest">PDF / Image / Text</span>
+        <span className="text-[8px] text-muted-foreground/30">Click to upload</span>
+       </button>
+       <div className="flex items-center gap-2"><div className="flex-1 h-px bg-border/20"/><span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/20">or paste text</span><div className="flex-1 h-px bg-border/20"/></div>
+       <input value={vaultSourceName} onChange={e => setVaultSourceName(e.target.value)} placeholder="Source name (e.g. Midterm 2024)"
+        className="w-full px-3 py-2 bg-background border border-border/40 rounded-md text-[10px] font-medium focus:outline-none focus:border-foreground/30"/>
+       <textarea value={vaultSourceText} onChange={e => setVaultSourceText(e.target.value)}
+        placeholder="Paste exam questions, worksheet text here..." rows={5}
+        className="w-full px-3 py-2 bg-background border border-border/40 rounded-md text-[10px] font-medium focus:outline-none focus:border-foreground/30 resize-y"/>
+       <Button onClick={handleVaultUploadText} disabled={vaultLoading || !vaultSourceText.trim() || !vaultSourceName.trim()} className="w-full h-9 font-black uppercase tracking-widest text-[9px]">
+        {vaultLoading ? <><Loader2 size={12} className="mr-2 animate-spin"/>{vaultStatus || 'Processing...'}</> : 'Extract & Solve Questions'}
+       </Button>
+      </div>
+     </div>
+     <div className="lg:col-span-2 space-y-4">
+      <div className="p-4 bg-muted/5 border border-border rounded-lg space-y-3">
+       <div className="flex items-center justify-between">
+        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Question Banks</div>
+        <span className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{vaultSelectedFiles.length} selected</span>
+       </div>
+       {vaultFiles.length === 0 ? (
+        <div className="py-8 text-center text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">{selectedHub ? 'No vaults yet — upload a source above' : 'Select a hub first'}</div>
+       ) : (
+        <div className="space-y-2">
+         {vaultFiles.map((vf: any) => {
+          const isSel = vaultSelectedFiles.includes(vf.path)
+          return (
+           <button key={vf.path} onClick={() => setVaultSelectedFiles(prev => isSel ? prev.filter(p => p !== vf.path) : [...prev, vf.path])}
+            className={cn("w-full text-left p-3 border rounded-lg flex items-center justify-between transition-all", isSel ? "border-foreground/40 bg-foreground/5" : "border-border/40 bg-muted/5 hover:border-foreground/20")}>
+            <div className="flex items-center gap-3">
+             <div className={cn("w-4 h-4 rounded border flex items-center justify-center", isSel ? "bg-foreground border-foreground" : "border-border/40")}>{isSel && <Check size={10} className="text-background"/>}</div>
+             <div><div className="text-[10px] font-black uppercase tracking-tight">{vf.name}</div><div className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-widest">{vf.total_questions} questions</div></div>
+            </div>
+            <FileText size={12} className="text-muted-foreground/20"/>
+           </button>
+          )
+         })}
+        </div>
+       )}
+      </div>
+      {vaultFiles.length > 0 && (
+       <div className="p-4 bg-muted/5 border border-border rounded-lg space-y-4">
+        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Practice Mode</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+         {MODES.map(m => (
+          <button key={m.id} onClick={() => setVaultMode(m.id as any)}
+           className={cn("p-3 border rounded-lg text-left transition-all", vaultMode === m.id ? "border-foreground/40 bg-foreground/5" : "border-border/40 hover:border-foreground/20 hover:bg-muted/5")}>
+           <div className="flex items-center gap-2 mb-1">
+            <span className="text-muted-foreground/60">{m.icon}</span>
+            <span className="text-[10px] font-black uppercase tracking-tight">{m.label}</span>
+            {vaultMode === m.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-foreground"/>}
+           </div>
+           <p className="text-[8px] text-muted-foreground/40 leading-relaxed">{m.desc}</p>
+          </button>
+         ))}
+        </div>
+        <Button onClick={handleVaultPracticeGenerate} disabled={vaultLoading || vaultSelectedFiles.length === 0} className="w-full h-10 font-black uppercase tracking-widest text-[9px]">
+         {vaultLoading ? <><Loader2 size={12} className="mr-2 animate-spin"/>Generating...</> : <>Practice from Vault <ArrowRight size={13} className="ml-2"/></>}
+        </Button>
+       </div>
+      )}
+     </div>
+    </div>
+   </div>
+  )
+ }
 
  // ──────────────────────────────────────────────────────────────────────────
  // CONFIGURATION RENDERER
@@ -729,7 +934,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="space-y-6">
  {currentQuestion.type === 'mcq' && (
  <div className="grid grid-cols-1 gap-2">
- {Object.entries(currentQuestion.options!).map(([key, val]) => {
+ {Object.entries(currentQuestion.options || {}).map(([key, val]) => {
  const isSelected = userAnswers[currentQuestion.id] === key; 
  const isCorrect = isRevealed && (key === currentQuestion.answer || String(val).toLowerCase() === String(currentQuestion.answer).toLowerCase());
  return (
@@ -743,11 +948,11 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 
  {(!currentQuestion.type || ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) && (
   <div className="space-y-6">
-  {['debug', 'code', 'trace'].includes(currentQuestion.type) && currentQuestion.content && <div className="p-1 border border-border rounded-xl bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${currentQuestion.content}\n\`\`\``} /></div>}
+  {['debug', 'code', 'trace'].includes(currentQuestion.type) && (currentQuestion.content || currentQuestion.codeSnippet) && <div className="p-1 border border-border rounded-xl bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${currentQuestion.content || currentQuestion.codeSnippet}\n\`\`\``} /></div>}
   <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-muted/5 border-2 border-border rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
   {isRevealed && (
     <div className="p-4 border-2 border-primary/20 bg-primary/5 rounded-lg space-y-2">
-      <div className="text-[9px] font-black uppercase tracking-[0.3em] text-primary mb-1">Mastery Solution</div>
+      <div className="text-[9px] font-black uppercase tracking-[0.3em] text-primary mb-1">Correct Answer</div>
       <div className="text-xs font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap"><MarkdownBlock content={String(currentQuestion.answer)} /></div>
     </div>
   )}
@@ -830,7 +1035,12 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <React.Fragment key={i}>
  <div className="inline-block align-middle"><MarkdownBlock content={part} /></div>
  {i < parts.length - 1 && (
- <input type="text" disabled={isRevealed} value={(userAnswers[currentQuestion.id] || [])[i] || ''} onChange={(e) => {const newAns = [...(userAnswers[currentQuestion.id] || [])]; newAns[i] = e.target.value; handleSelectAnswer(newAns);}} className={cn("mx-2 border-b-2 bg-transparent outline-none w-32 text-center text-sm font-black uppercase shrink-0 self-center", isRevealed ? (String((userAnswers[currentQuestion.id] || [])[i] || '').toLowerCase() === String((currentQuestion.answer || [])[i] || '').toLowerCase() ? "border-primary text-primary" : "border-destructive text-destructive") : "border-muted/30 focus:border-primary")} />
+ <div className="inline-flex flex-col items-center">
+   <input type="text" disabled={isRevealed} value={(userAnswers[currentQuestion.id] || [])[i] || ''} onChange={(e) => {const newAns = [...(userAnswers[currentQuestion.id] || [])]; newAns[i] = e.target.value; handleSelectAnswer(newAns);}} className={cn("mx-2 border-b-2 bg-transparent outline-none w-32 text-center text-sm font-black uppercase shrink-0 self-center", isRevealed ? (String((userAnswers[currentQuestion.id] || [])[i] || '').toLowerCase() === String((currentQuestion.answer || [])[i] || '').toLowerCase() ? "border-primary text-primary" : "border-destructive text-destructive") : "border-muted/30 focus:border-primary")} />
+   {isRevealed && String((userAnswers[currentQuestion.id] || [])[i] || '').toLowerCase() !== String((currentQuestion.answer || [])[i] || '').toLowerCase() && (
+     <div className="text-[10px] text-primary font-bold mt-1">Correct: {String((currentQuestion.answer || [])[i] || '')}</div>
+   )}
+ </div>
  )}
  </React.Fragment>
  ));
@@ -840,12 +1050,12 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 
    {isRevealed && currentQuestion.explanation && (
      <div className="p-5 border border-border/10 rounded-xl bg-muted/5 text-[13px] font-medium text-muted-foreground/80 italic leading-relaxed   ">
-         <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30 mb-2 not-italic">Mechanism Insight</div>
+         <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30 mb-2 not-italic">Explanation</div>
          <MarkdownBlock content={currentQuestion.explanation} />
      </div>
    )}
 
-  {isRevealed && ['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQuestion.type) && currentQuestion.required_keywords && currentQuestion.required_keywords.length > 0 && (
+  {isRevealed && ['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQuestion.type) && Array.isArray(currentQuestion.required_keywords) && currentQuestion.required_keywords.length > 0 && (
     <div className="p-8 border border-border/10 rounded-2xl bg-muted/5 space-y-4   ">
       <div className="flex items-center justify-between">
         <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mandatory Concepts Checklist</div>
@@ -890,9 +1100,9 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <Button onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: false})); nextQuestion(false);}} variant="outline" className="h-10 px-6 text-[9px] font-black uppercase border-destructive/20 text-destructive/40">Wrong</Button>
  <Button 
     onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: true})); nextQuestion(true);}} 
-    disabled={currentQuestion.required_keywords && currentQuestion.required_keywords.length > 0 && currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw])}
+    disabled={Array.isArray(currentQuestion.required_keywords) && currentQuestion.required_keywords.length > 0 && currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw])}
     className="h-10 px-6 bg-primary text-primary-foreground text-[9px] font-black uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-    title={currentQuestion.required_keywords && currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
+    title={Array.isArray(currentQuestion.required_keywords) && currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
  >Correct</Button>
  </>
  )} 
