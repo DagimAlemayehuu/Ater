@@ -97,8 +97,9 @@ class OkaService:
         self.verifier_agent = VerifierAgent(llm=self.llm) if self.llm else None
         self.meta_scanner_agent = MetaScannerAgent(llm=self.llm) if self.llm else None
         self.governor = governor
-        
-        from .validator import OkaValidator
+        # Register the active key with the governor so daily quota is tracked per-key
+        if secrets.ai_key:
+            self.governor.set_api_key(secrets.ai_key)
         self.validator = OkaValidator()
         
         # Initialize YAML compiler
@@ -281,6 +282,8 @@ class OkaService:
                     )
                 except Exception:
                     pass
+            # Register new key with governor — resets sliding windows for fresh pacing
+            self.governor.set_api_key(new_api_key)
             print("[OKA Service] API key swapped successfully.")
         except Exception as e:
             print(f"[OKA Service] Key swap failed: {e}")
@@ -1586,11 +1589,6 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             OkaService._status[session_id] = f"Architecting Plan (Chunk {idx+1}/{len(text_chunks)})..."
             print(f"[OKA Service] Processing chunk {idx+1}/{len(text_chunks)}")
             try:
-                # region agent log
-                with open("/Users/dabodestroyer/code/Antigravity/LifeOs/.cursor/debug-18a97e.log", "a", encoding="utf-8") as _f: _f.write(json.dumps({"sessionId":"18a97e","runId":"pre-fix","hypothesisId":"H2","location":"service.py:generate_plan","message":"About to request governor permit for chunk","data":{"sessionId":session_id,"chunkIndex":idx+1,"chunkCount":len(text_chunks),"chunkLen":len(chunk),"expectedTokens":len(chunk)+1000,"course":course,"semester":semester},"timestamp":int(time.time()*1000)}) + "\n")
-                # endregion
-                # SOVEREIGN GOVERNOR ENFORCEMENT
-                # Ensure the planning phase is properly paced and respects the token budget
                 await self.governor.get_permit(expected_tokens=len(chunk) + 1000)
 
                 partial_plan = await self.architect_agent.generate_partial_plan(

@@ -2,6 +2,7 @@ import time
 import asyncio
 import sqlite3
 import json
+import hashlib
 from pathlib import Path
 from collections import deque
 
@@ -45,6 +46,15 @@ class TokenGovernor:
         self.current_pressure = 0.0
         self.last_throttle_event = None
         self.cooldown_until = 0.0
+        
+        # API Key management
+        self._current_key_hash = "default"
+
+    def set_api_key(self, api_key: str):
+        """Hashes the key and resets windows to prevent leaking pacing info between keys."""
+        self._current_key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+        self.request_window.clear()
+        self.token_window.clear()
 
     def _init_db(self):
         with sqlite3.connect(self.db_path) as conn:
@@ -104,13 +114,13 @@ class TokenGovernor:
             return max(0.0, (self.request_window[0] + 60.0) - now + 0.05)
         return 0.0
 
-    def _check_daily_limits_sync(self, expected_tokens: int, expected_requests: int, api_key_hash: str = 'default') -> tuple[bool, str]:
-        """Synchronous check of daily limits against SQLite DB for a specific API key."""
+    def _check_daily_limits_sync(self, expected_tokens: int, expected_requests: int) -> tuple[bool, str]:
+        """Synchronous check of daily limits against SQLite DB for the current API key."""
         cutoff_24h = time.time() - (24 * 3600)
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND api_key_hash = ?', (cutoff_24h, api_key_hash))
+                cursor.execute('SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND api_key_hash = ?', (cutoff_24h, self._current_key_hash))
                 row = cursor.fetchone()
                 used_tpd = (row[0] or 0) + expected_tokens
                 used_rpd = (row[1] or 0) + expected_requests
@@ -124,14 +134,14 @@ class TokenGovernor:
             print(f"[Governor] DB Error checking daily limit: {e}")
             return True, ""
 
-    async def get_permit(self, expected_tokens: int = 2000, expected_requests: int = 1, api_key_hash: str = 'default'):
+    async def get_permit(self, expected_tokens: int = 2000, expected_requests: int = 1):
         """
         Precision Pacing: grants permits immediately when budget is available,
         sleeps the EXACT duration needed when the window is full.
         No fixed-time spin loops.
         """
         # First, ensure we haven't blown the daily budget for this specific key
-        is_ok, err_msg = await asyncio.to_thread(self._check_daily_limits_sync, expected_tokens, expected_requests, api_key_hash)
+        is_ok, err_msg = await asyncio.to_thread(self._check_daily_limits_sync, expected_tokens, expected_requests)
         if not is_ok:
             raise DailyLimitExceededException(err_msg)
 
@@ -203,24 +213,24 @@ class TokenGovernor:
             self.active_slots = max(0, self.active_slots - 1)
         self._slot_event.set()
 
-    def _record_usage_db_sync(self, tokens: int, requests: int, api_key_hash: str):
+    def _record_usage_db_sync(self, tokens: int, requests: int):
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute(
                     'INSERT INTO usage (timestamp, tokens, requests, api_key_hash) VALUES (?, ?, ?, ?)',
-                    (time.time(), tokens, requests, api_key_hash)
+                    (time.time(), tokens, requests, self._current_key_hash)
                 )
                 conn.commit()
         except Exception as e:
             print(f"[Governor] Failed to record usage: {e}")
 
-    def _record_usage_db(self, tokens: int, requests: int, api_key_hash: str = 'default'):
+    def _record_usage_db(self, tokens: int, requests: int):
         # Fire and forget database write off the main event loop
         try:
             loop = asyncio.get_running_loop()
-            loop.create_task(asyncio.to_thread(self._record_usage_db_sync, tokens, requests, api_key_hash))
+            loop.create_task(asyncio.to_thread(self._record_usage_db_sync, tokens, requests))
         except RuntimeError:
-            self._record_usage_db_sync(tokens, requests, api_key_hash)
+            self._record_usage_db_sync(tokens, requests)
 
     def report_error(self, wait_seconds: float = 10.0):
         """Force a hard cooldown on 429 detection from any agent."""
