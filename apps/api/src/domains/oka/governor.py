@@ -23,6 +23,8 @@ class TokenGovernor:
         # Groq Free Tier limits (llama-4-scout-17b)
         self.max_tpm = 30000
         self.max_rpm = 30
+        self.max_tpd = 500000
+        self.max_rpd = 1000
         self.safety_margin = 0.85  # Increased safety margin for Free Tier
 
         # 60-second sliding windows
@@ -92,12 +94,37 @@ class TokenGovernor:
             return max(0.0, (self.request_window[0] + 60.0) - now + 0.05)
         return 0.0
 
+    def _check_daily_limits_sync(self, expected_tokens: int, expected_requests: int) -> tuple[bool, str]:
+        """Synchronous check of daily limits against SQLite DB."""
+        cutoff_24h = time.time() - (24 * 3600)
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ?', (cutoff_24h,))
+                row = cursor.fetchone()
+                used_tpd = (row[0] or 0) + expected_tokens
+                used_rpd = (row[1] or 0) + expected_requests
+                
+                if used_tpd >= self.max_tpd:
+                    return False, f"Daily Token Limit reached ({int(used_tpd)}/{self.max_tpd} TPD)"
+                if used_rpd >= self.max_rpd:
+                    return False, f"Daily Request Limit reached ({int(used_rpd)}/{self.max_rpd} RPD)"
+                return True, ""
+        except Exception as e:
+            print(f"[Governor] DB Error checking daily limit: {e}")
+            return True, ""
+
     async def get_permit(self, expected_tokens: int = 2000, expected_requests: int = 1):
         """
         Precision Pacing: grants permits immediately when budget is available,
         sleeps the EXACT duration needed when the window is full.
         No fixed-time spin loops.
         """
+        # First, ensure we haven't blown the daily budget
+        is_ok, err_msg = await asyncio.to_thread(self._check_daily_limits_sync, expected_tokens, expected_requests)
+        if not is_ok:
+            raise DailyLimitExceededException(err_msg)
+
         async with self._lock:
             while True:
                 now = time.time()
@@ -200,6 +227,12 @@ class TokenGovernor:
     def current_rpm(self) -> int:
         now = time.time()
         cutoff = now - 60.0
+        return sum(1 for ts in self.request_window if ts >= cutoff)
+
+
+# Global singleton — shared across all agents and the service
+governor = TokenGovernor()
+now - 60.0
         return sum(1 for ts in self.request_window if ts >= cutoff)
 
 

@@ -208,6 +208,12 @@ class OkaService:
                         res.content = final_content
                         return res
             except Exception as e:
+                if type(e).__name__ == "DailyLimitExceededException":
+                    print(f"[OKA Service] Daily Limit Hit: {e}")
+                    OkaService._rate_limited[session_id] = time.time()
+                    OkaService._status[session_id] = f"Paused (Daily Limit Exceeded): {str(e)}"
+                    raise e # Break out completely immediately
+                
                 last_error = e
                 error_str = str(e)
                 print(f"[OKA Service] AI Attempt {attempt} failed: {error_str[:200]}")
