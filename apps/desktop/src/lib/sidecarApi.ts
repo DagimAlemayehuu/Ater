@@ -468,6 +468,38 @@ export const sidecarApi = {
     getStudyHistory: () =>
         request<{ sessions: any[]; telemetry: any[]; practice: any[] }>('/api/study/history'),
 
+    // ── Reference Vault ─────────────────────────────────────────────────────
+    vaultList: (hubId: string) =>
+        request<{ vaults: any[] }>(`/api/practice/vault/list?hub_id=${encodeURIComponent(hubId)}`),
+
+    vaultUploadText: (hubId: string, sourceName: string, sourceText: string) =>
+        request<{ vault_path: string; total_questions: number }>('/api/practice/vault/upload', {
+            method: 'POST',
+            body: JSON.stringify({ hub_id: hubId, source_name: sourceName, source_text: sourceText })
+        }),
+
+    vaultGenerate: (vaultPaths: string[], mode: string, hubId: string) =>
+        request<{ questions: any[]; quiz_path: string }>('/api/practice/vault/generate', {
+            method: 'POST',
+            body: JSON.stringify({ vault_paths: vaultPaths, mode, hub_id: hubId })
+        }),
+
+    vaultUploadFile: async (hubId: string, file: File): Promise<{ vault_path: string; total_questions: number }> => {
+        const authHeaders = await getAuthHeaders()
+        const formData = new FormData()
+        formData.append('file', file)
+        const response = await fetch(`${SIDECAR_BASE_URL}/api/practice/vault/upload-file?hub_id=${encodeURIComponent(hubId)}`, {
+            method: 'POST',
+            headers: { ...authHeaders },
+            body: formData,
+        })
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ detail: 'Upload failed' }))
+            throw new Error(err.detail || 'File upload failed')
+        }
+        return response.json()
+    },
+
     // ── Generic passthrough (for vault & other ad-hoc endpoints) ─────────
     request: async (method: string, path: string, body?: any): Promise<any> => {
         return request<any>(path, {

@@ -23,7 +23,8 @@ import {
  Target,
  Trophy,
  FileText,
- ChevronDown
+ ChevronDown,
+ Bookmark
 } from 'lucide-react'
 import {
  LineChart, 
@@ -78,33 +79,33 @@ const cleanTitle = (val: any): string => {
   return String(val).replace(/\[\[(.*?)\]\]/g, '$1').replace(/_/g, ' ').trim()
 }
 
+const ZERO_DISTRIBUTION = { mcq:0, true_false:0, writing:0, fill_in:0, matching:0, order:0, debug:0, synthesis:0, trace:0, calculation:0, data_analysis:0, scenario:0, code:0 }
+
+const PRESETS: Record<string, Partial<typeof ZERO_DISTRIBUTION> & {label:string}> = {
+  balanced:   { label:'Balanced',    mcq:2, true_false:2, writing:1, fill_in:2, matching:1, order:1, synthesis:1, calculation:1, data_analysis:1 },
+  mcq_blitz:  { label:'MCQ Blitz',  mcq:15, true_false:5 },
+  deep_write: { label:'Deep Write', writing:4, synthesis:3, trace:2, debug:2 },
+  math_mode:  { label:'Math Mode',  calculation:6, data_analysis:4, trace:3 },
+  recall:     { label:'Recall',     mcq:5, true_false:5, fill_in:5 },
+  hard_mode:  { label:'Hard Mode',  writing:2, synthesis:3, calculation:3, debug:2, trace:2, data_analysis:2 },
+  exam_sim:   { label:'Exam Sim',   mcq:5, true_false:3, writing:2, fill_in:3, calculation:2, matching:2, order:1 },
+}
+
 const DEFAULT_CONFIG: AdvancedPracticeConfig = {
- hubId: '',
- selectedAtomicNotes: [],
- questionDistribution: {
- mcq: 1,
- true_false: 1,
- writing: 1,
- fill_in: 1,
- matching: 1,
- order: 1,
- debug: 1,
- synthesis: 1,
- trace: 1,
- calculation: 1,
- data_analysis: 1
-},
- difficulty: 'L1',
- gradingStrictness: 'Lenient',
- distractorPlausibility: 'High',
- injectTrickAnswers: false,
- prioritizeWeaknesses: false,
- progressionGatekeeper: false,
- enableProgressiveHints: false,
- requireConfidenceWager: false,
- globalTimeLimitMinutes: null,
- perQuestionTimeLimitSeconds: null,
- timeBoundDays: null
+  hubId: '',
+  selectedAtomicNotes: [],
+  questionDistribution: { ...ZERO_DISTRIBUTION },
+  difficulty: 'Mixed',
+  gradingStrictness: 'Lenient',
+  distractorPlausibility: 'High',
+  injectTrickAnswers: false,
+  prioritizeWeaknesses: false,
+  progressionGatekeeper: false,
+  enableProgressiveHints: false,
+  requireConfidenceWager: false,
+  globalTimeLimitMinutes: null,
+  perQuestionTimeLimitSeconds: null,
+  timeBoundDays: null
 }
 
 export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
@@ -152,6 +153,11 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
   const [vaultMode, setVaultMode] = useState<'vault_only'|'hard_only'|'ai_variants'|'mixed'|'weak_spots'|'exam_sim'>('vault_only')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // ── Session enhancement state ───────────────────────────────────────────────
+  const [streak, setStreak] = useState(0)
+  const [bookmarked, setBookmarked] = useState<Set<number>>(new Set())
+  const [confidenceWager, setConfidenceWager] = useState<Record<number,number>>({})
+
   const globalTimeLeftRef = useRef(globalTimeLeft);
   const questionTimeLeftRef = useRef(questionTimeLeft);
   const isRevealedRef = useRef(isRevealed);
@@ -162,7 +168,57 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
   useEffect(() => { isRevealedRef.current = isRevealed; }, [isRevealed]);
   useEffect(() => { currentQuestionRef.current = currentQuestion; }, [currentQuestion]);
 
+  // ── Reference Vault handlers ─────────────────────────────────────────────
+  const loadVaultFiles = async (hubId: string) => {
+    if (!hubId) return
+    try {
+      const res = await sidecarApi.vaultList(hubId)
+      setVaultFiles(res.vaults || [])
+    } catch { setVaultFiles([]) }
+  }
+
+  const handleVaultUploadText = async () => {
+    if (!vaultSourceText.trim() || !vaultSourceName.trim() || !selectedHub) return
+    setVaultLoading(true); setVaultStatus('Extracting questions...')
+    try {
+      await sidecarApi.vaultUploadText(selectedHub, vaultSourceName, vaultSourceText)
+      toast.success('Vault created — questions extracted and solved')
+      setVaultSourceText(''); setVaultSourceName('')
+      await loadVaultFiles(selectedHub)
+    } catch (e: any) {
+      toast.error(e.message || 'Upload failed')
+    } finally { setVaultLoading(false); setVaultStatus('') }
+  }
+
+  const handleVaultFileUpload = async (file: File) => {
+    if (!selectedHub) { toast.error('Select a hub first'); return }
+    setVaultLoading(true); setVaultStatus(`Reading ${file.name}...`)
+    try {
+      await sidecarApi.vaultUploadFile(selectedHub, file)
+      toast.success('File processed — vault updated')
+      await loadVaultFiles(selectedHub)
+    } catch (e: any) {
+      toast.error(e.message || 'File upload failed')
+    } finally { setVaultLoading(false); setVaultStatus('') }
+  }
+
+  const handleVaultPracticeGenerate = async () => {
+    if (!vaultSelectedFiles.length) return
+    setIsLoading(true)
+    try {
+      const res = await sidecarApi.vaultGenerate(vaultSelectedFiles, vaultMode, selectedHub)
+      setQuestions(res.questions || [])
+      setCurrentPracticePath(res.quiz_path || null)
+      setCurrentQuestionIdx(0); setUserAnswers({}); setIsRevealed(false)
+      setGradedAnswers({}); setStreak(0); setBookmarked(new Set())
+      setView('session')
+    } catch (e: any) {
+      toast.error(e.message || 'Generation failed')
+    } finally { setIsLoading(false) }
+  }
+
   useEffect(() => {loadHubs(); loadPastPractices();}, [])
+
 
  useEffect(() => {
  const searchParams = new URLSearchParams(window.location.search);
@@ -260,90 +316,8 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
   const loadPastPractices = async () => {try {const res = await sidecarApi.listPractices(); setPastPractices(res.practices);} catch {console.error("Error");}}
   const loadHubs = async () => {try {const res = await sidecarApi.listHubs(); setHubs(res.hubs); if (res.hubs.length > 0) setSelectedHub(res.hubs[0].id);} catch {console.error("Error");}}
 
-  // ── Vault loaders ──────────────────────────────────────────────────────────
-  const loadVaultFiles = async (hubId: string) => {
-    if (!hubId) return
-    try {
-      const res = await sidecarApi.request('GET', `/api/practice/vault/list?hub_id=${encodeURIComponent(hubId)}`)
-      setVaultFiles(Array.isArray(res?.vaults) ? res.vaults : [])
-    } catch { setVaultFiles([]) }
-  }
-
-  const handleVaultUploadText = async () => {
-    if (!selectedHub || !vaultSourceText.trim() || !vaultSourceName.trim()) {
-      toast.error('Select a hub, enter a name and paste your source text.')
-      return
-    }
-    setVaultLoading(true)
-    setVaultStatus('Uploading...')
-    try {
-      const res = await sidecarApi.request('POST', '/api/practice/vault/upload', {
-        hub_id: selectedHub, source_name: vaultSourceName, source_text: vaultSourceText
-      })
-      if (res?.total > 0) {
-        toast.success(`Extracted ${res.total} questions!`)
-        setVaultSourceText('')
-        setVaultSourceName('')
-        loadVaultFiles(selectedHub)
-      } else {
-        toast.error(res?.error || 'No questions found.')
-      }
-    } catch (e: any) { toast.error(e?.message || 'Upload failed') }
-    finally { setVaultLoading(false); setVaultStatus('') }
-  }
-
-  const handleVaultFileUpload = async (file: File) => {
-    if (!selectedHub) { toast.error('Select a hub first.'); return }
-    setVaultLoading(true)
-    setVaultStatus(`Extracting from ${file.name}...`)
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('hub_id', selectedHub)
-      const res = await fetch(`http://localhost:8765/api/practice/vault/upload-file?hub_id=${encodeURIComponent(selectedHub)}`, {
-        method: 'POST', body: formData
-      })
-      const data = await res.json()
-      if (data?.total > 0) {
-        toast.success(`Extracted ${data.total} questions from ${file.name}!`)
-        loadVaultFiles(selectedHub)
-      } else {
-        toast.error(data?.error || data?.detail || 'No questions found in file.')
-      }
-    } catch (e: any) { toast.error(e?.message || 'File upload failed') }
-    finally { setVaultLoading(false); setVaultStatus('') }
-  }
-
-  const handleVaultPracticeGenerate = async () => {
-    if (!selectedHub || vaultSelectedFiles.length === 0) {
-      toast.error('Select vault files first.')
-      return
-    }
-    setVaultLoading(true)
-    try {
-      const res = await sidecarApi.request('POST', '/api/practice/vault/generate', {
-        hub_id: selectedHub,
-        vault_paths: vaultSelectedFiles,
-        mode: vaultMode,
-        limit: 20,
-      })
-      if (res?.questions?.length > 0) {
-        setQuestions(res.questions)
-        setCurrentPracticePath(null)
-        setCurrentQuestionIdx(0)
-        setUserAnswers({})
-        setIsRevealed(false)
-        setGradedAnswers({})
-        setView('session')
-        toast.success(`${res.questions.length} questions loaded — ${vaultMode.replace('_', ' ')} mode`)
-      } else {
-        toast.error('No questions generated.')
-      }
-    } catch (e: any) { toast.error(e?.message || 'Generation failed') }
-    finally { setVaultLoading(false) }
-  }
-
- const handleStartSession = async () => {
+  
+const handleStartSession = async () => {
  if (!selectedHub) {toast.error('Choose a topic.'); return;}
  if (advancedConfig.selectedAtomicNotes.length === 0) {toast.error('Select notes.'); return;}
  
@@ -449,10 +423,21 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
    );
   }
   setGradedAnswers(prev => ({...prev, [q.id]: isCorrect}));
+  setStreak(prev => isCorrect ? prev + 1 : 0);
  }
 }
 
+ const toggleBookmark = (idx: number) => {
+   setBookmarked(prev => {
+     const next = new Set(prev)
+     if (next.has(idx)) next.delete(idx)
+     else next.add(idx)
+     return next
+   })
+ }
+
   const nextQuestion = async (latestGrade?: boolean) => {
+  if (latestGrade !== undefined) setStreak(prev => latestGrade ? prev + 1 : 0);
   if (currentQuestionIdx < questions.length - 1) {
   setCurrentQuestionIdx(currentQuestionIdx + 1); 
   setIsRevealed(false); 
@@ -498,6 +483,28 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const updateDistribution = (type: keyof AdvancedPracticeConfig['questionDistribution'], val: number) => {
  setAdvancedConfig(prev => ({...prev, questionDistribution: {...prev.questionDistribution, [type]: val}}))
 }
+
+  const applyPreset = (key: string) => {
+    const p = PRESETS[key]
+    if (!p) return
+    const { label: _l, ...dist } = p
+    setAdvancedConfig(prev => ({ ...prev, questionDistribution: { ...ZERO_DISTRIBUTION, ...dist } }))
+  }
+
+  const randomizeDistribution = () => {
+    const types = Object.keys(ZERO_DISTRIBUTION) as (keyof typeof ZERO_DISTRIBUTION)[]
+    const count = Math.floor(Math.random() * 4) + 3  // 3-6 active types
+    const shuffled = [...types].sort(() => Math.random() - 0.5).slice(0, count)
+    const dist = { ...ZERO_DISTRIBUTION }
+    let remaining = Math.floor(Math.random() * 10) + 10  // 10-20 total
+    shuffled.forEach((t, i) => {
+      const share = i === shuffled.length - 1 ? remaining : Math.max(1, Math.floor(Math.random() * (remaining / (shuffled.length - i) * 1.5)))
+      dist[t] = Math.min(share, remaining)
+      remaining = Math.max(0, remaining - dist[t])
+    })
+    setAdvancedConfig(prev => ({ ...prev, questionDistribution: dist }))
+    toast.success('Randomized!')
+  }
 
  // ──────────────────────────────────────────────────────────────────────────
  // DASHBOARD RENDERER
@@ -815,7 +822,19 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
 
  <div className="p-6 bg-muted/5 border border-border rounded-lg flex flex-col min-h-0">
- <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 border-b border-border pb-4 mb-4">Types</h3>
+ <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
+  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Types</h3>
+  <div className="flex items-center gap-2">
+   <div className="flex gap-1 overflow-x-auto custom-scrollbar pb-1 max-w-[200px] sm:max-w-xs">
+    {Object.entries(PRESETS).map(([k, p]) => (
+     <button key={k} onClick={() => applyPreset(k)} className="shrink-0 px-2 py-1 text-[8px] font-black uppercase tracking-widest bg-muted/10 hover:bg-muted/20 border border-border rounded text-muted-foreground hover:text-foreground transition-colors" title={p.label}>
+      {p.label}
+     </button>
+    ))}
+   </div>
+   <Button variant="outline" size="sm" onClick={randomizeDistribution} className="h-6 px-2 text-[8px] font-black uppercase border-border/40 hover:bg-foreground/5"><Zap size={10} className="mr-1"/>Random</Button>
+  </div>
+ </div>
  <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
  {[
  {key: 'mcq', label: 'Multiple Choice'}, 
@@ -927,6 +946,9 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
           'code': 'Code / Implementation'
       } as any)[currentQuestion.type as string] || (currentQuestion.type || '').replace('_', ' ')
   }</span>
+  <button onClick={() => toggleBookmark(currentQuestionIdx)} className={cn("ml-auto transition-colors", bookmarked.has(currentQuestionIdx) ? "text-primary" : "text-muted-foreground/20 hover:text-foreground")} title="Bookmark Question">
+    <Bookmark size={14} className={bookmarked.has(currentQuestionIdx) ? "fill-primary" : ""} />
+  </button>
  </div>
  <div className="text-xl sm:text-2xl font-black tracking-tight leading-snug text-foreground/90"><MarkdownBlock content={currentQuestion.question} /></div>
  </div>
@@ -948,12 +970,12 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 
  {(!currentQuestion.type || ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) && (
   <div className="space-y-6">
-  {['debug', 'code', 'trace'].includes(currentQuestion.type) && (currentQuestion.content || currentQuestion.codeSnippet) && <div className="p-1 border border-border rounded-xl bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${currentQuestion.content || currentQuestion.codeSnippet}\n\`\`\``} /></div>}
+  {['debug', 'code', 'trace'].includes(currentQuestion.type) && ((currentQuestion as any).content || (currentQuestion as any).codeSnippet) && <div className="p-1 border border-border rounded-xl bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${(currentQuestion as any).content || (currentQuestion as any).codeSnippet}\n\`\`\``} /></div>}
   <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-muted/5 border-2 border-border rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
   {isRevealed && (
     <div className="p-4 border-2 border-primary/20 bg-primary/5 rounded-lg space-y-2">
       <div className="text-[9px] font-black uppercase tracking-[0.3em] text-primary mb-1">Correct Answer</div>
-      <div className="text-xs font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap"><MarkdownBlock content={String(currentQuestion.answer)} /></div>
+      <div className="text-xs font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap"><MarkdownBlock content={String((currentQuestion as any).answer || '')} /></div>
     </div>
   )}
   </div>
@@ -1122,24 +1144,103 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  // RESULTS RENDERER
  // ──────────────────────────────────────────────────────────────────────────
  if (view === 'results') {
- const {score, correct, total} = calculateScore();
- return (
- <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground items-center justify-center p-10 space-y-12">
- <div className="text-center space-y-2">
- <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Finished</span>
- <h1 className="text-6xl sm:text-8xl font-black tracking-tighter">{score}%</h1>
- </div>
- <div className="flex flex-col sm:flex-row gap-6 sm:gap-12 text-center border-y border-border/10 py-8 px-6 sm:px-12 w-full sm:w-auto items-center justify-center">
- <div className="space-y-1"><div className="text-2xl font-black tracking-tight">{correct}/{total}</div><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Correct</div></div>
- <div className="space-y-1 hidden sm:block h-8 w-px bg-border"></div>
- <div className="space-y-1"><div className="text-2xl font-black tracking-tight">{total}</div><div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total</div></div>
- </div>
- <div className="flex gap-4">
- <Button onClick={() => setView('configuring')} className="h-12 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md">Again</Button>
- <Button variant="outline" onClick={() => setView('dashboard')} className="h-12 px-10 border-border/10 text-muted-foreground/40 text-[10px] font-black uppercase tracking-widest rounded-md">Done</Button>
- </div>
- </div>
- );
+  const {score, correct, total} = calculateScore();
+  const elapsedSec = Math.round((Date.now() - (window as any).__practiceStartTime || 0) / 1000);
+  const avgTime = total > 0 ? Math.round(elapsedSec / total) : 0;
+
+  // Per-type breakdown
+  const typeMap: Record<string,{correct:number,total:number}> = {};
+  questions.forEach(q => {
+    const t = q.type || 'other';
+    if (!typeMap[t]) typeMap[t] = {correct:0, total:0};
+    typeMap[t].total++;
+    if (gradedAnswers[q.id] === true) typeMap[t].correct++;
+  });
+
+  const TYPE_LABELS: Record<string,string> = {
+    mcq:'MCQ', true_false:'True/False', writing:'Writing', fill_in:'Fill Blank',
+    debug:'Debug', trace:'Trace', order:'Order', matching:'Matching',
+    synthesis:'Synthesis', calculation:'Calculation', data_analysis:'Data Analysis',
+    scenario:'Scenario', code:'Code'
+  };
+
+  const bookmarkedQuestions = questions.filter((_,i) => bookmarked.has(i));
+
+  return (
+   <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar">
+    <div className="max-w-3xl mx-auto w-full p-6 sm:p-10 space-y-8">
+     {/* Score hero */}
+     <div className="flex items-end justify-between border-b border-border/10 pb-6">
+      <div>
+       <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mb-1">Session Complete</div>
+       <h1 className="text-7xl sm:text-9xl font-black tracking-tighter leading-none">{score}<span className="text-3xl text-muted-foreground/30">%</span></h1>
+      </div>
+      <div className="flex flex-col items-end gap-2 pb-2">
+       <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">{correct} / {total} correct</div>
+       {avgTime > 0 && <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">{avgTime}s avg per question</div>}
+       {bookmarkedQuestions.length > 0 && <div className="text-[9px] font-black uppercase tracking-widest text-primary/60">{bookmarkedQuestions.length} bookmarked</div>}
+      </div>
+     </div>
+
+     {/* Progress bar */}
+     <div className="h-1.5 w-full bg-muted/20 rounded-full overflow-hidden">
+      <div className="h-full bg-foreground/80 rounded-full transition-all duration-700" style={{width:`${score}%`}}/>
+     </div>
+
+     {/* Type breakdown */}
+     {Object.entries(typeMap).length > 0 && (
+      <div className="space-y-3">
+       <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Breakdown by Type</div>
+       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {Object.entries(typeMap).map(([t, s]) => {
+          const pct = Math.round((s.correct/s.total)*100);
+          return (
+           <div key={t} className="p-3 bg-muted/5 border border-border/40 rounded-lg space-y-2">
+            <div className="flex items-center justify-between">
+             <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{TYPE_LABELS[t]||t}</span>
+             <span className="text-[10px] font-black tabular-nums">{pct}%</span>
+            </div>
+            <div className="h-0.5 w-full bg-muted/20 rounded-full overflow-hidden">
+             <div className="h-full rounded-full" style={{width:`${pct}%`, background: pct >= 80 ? 'hsl(var(--foreground)/0.8)' : pct >= 50 ? 'hsl(var(--foreground)/0.4)' : 'hsl(var(--destructive)/0.6)'}}/>
+            </div>
+            <div className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{s.correct}/{s.total} correct</div>
+           </div>
+          )
+        })}
+       </div>
+      </div>
+     )}
+
+     {/* Bookmarked questions review */}
+     {bookmarkedQuestions.length > 0 && (
+      <div className="space-y-3">
+       <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Bookmarked for Review</div>
+       <div className="space-y-2">
+        {bookmarkedQuestions.map((q,i) => (
+         <div key={i} className="p-4 bg-muted/5 border border-border/40 rounded-lg space-y-2">
+          <div className="flex items-center gap-2">
+           <Badge variant="outline" className="text-[8px] border-border/40 rounded px-1.5">{q.difficulty||'?'}</Badge>
+           <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{TYPE_LABELS[q.type]||q.type}</span>
+           {gradedAnswers[q.id] === true && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-foreground/40">Correct</span>}
+           {gradedAnswers[q.id] === false && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-destructive/60">Wrong</span>}
+          </div>
+          <div className="text-[11px] font-bold text-foreground/80 leading-relaxed">{q.question}</div>
+           {(q as any).answer && <div className="text-[9px] font-black text-muted-foreground/40 border-t border-border/20 pt-2 mt-1">Answer: <span className="text-foreground/60">{String((q as any).answer)}</span></div>}
+         </div>
+        ))}
+       </div>
+      </div>
+     )}
+
+     {/* Actions */}
+     <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-border/10">
+      <Button onClick={() => { setStreak(0); setBookmarked(new Set()); setView('configuring'); }} className="h-11 flex-1 bg-foreground text-background text-[10px] font-black uppercase tracking-widest rounded-md">Practice Again</Button>
+      <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setAdvancedConfig({...DEFAULT_CONFIG, questionDistribution: Object.fromEntries(Object.entries(typeMap).map(([t,s]) => [t, Math.max(0, s.total - s.correct)])) as any }); setView('configuring'); }} className="h-11 flex-1 border-border/40 text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-md">Retry Wrong Only</Button>
+      <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setView('dashboard'); }} className="h-11 px-6 border-border/20 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-md">Done</Button>
+     </div>
+    </div>
+   </div>
+  );
 }
 
  return (

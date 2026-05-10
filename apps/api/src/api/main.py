@@ -61,6 +61,9 @@ from src.domains.academics.router import router as academics_router
 oka_watcher: Optional[OkaQueueManager] = None
 rag_watcher: Optional[RAGWatcherService] = None
 
+# Cache the last-seen vault_path so vault endpoints can fall back to it
+_cached_vault_path: Optional[str] = None
+
 def _update_rag_status(state: Dict[str, Any]):
     global rag_sync_status
     rag_sync_status.update(state)
@@ -98,6 +101,20 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+# ── Vault Path Cache Middleware ──────────────────────────────────────────────
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as _SR
+
+class _VaultPathCacheMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: _SR, call_next):
+        global _cached_vault_path
+        vp = request.headers.get("x-vault-path") or request.headers.get("X-Vault-Path")
+        if vp and vp.strip():
+            _cached_vault_path = vp.strip()
+        return await call_next(request)
+
+app.add_middleware(_VaultPathCacheMiddleware)
+
 
 # --- Vault Path Auto-Sync Logic ---
 
@@ -1549,8 +1566,15 @@ async def vault_upload_source(
     Runs the full extract→classify→solve→write pipeline on provided text.
     Returns the vault file path and question count.
     """
-    if not secrets.ai_key or not secrets.vault_path:
-        raise HTTPException(status_code=400, detail="AI Key and Vault Path required")
+    if not secrets.ai_key:
+        raise HTTPException(status_code=400, detail="AI Key required (configure in Settings)")
+
+    # Derive vault_path from header or from settings store
+    vault_path = secrets.vault_path
+    if not vault_path:
+        vault_path = _cached_vault_path
+    if not vault_path:
+        raise HTTPException(status_code=400, detail="Vault Path not configured. Open Settings and set your Obsidian vault path.")
 
     try:
         from src.domains.oka.reference_vault import ReferenceVaultPipeline
@@ -1567,7 +1591,7 @@ async def vault_upload_source(
         job_id = f"vault_{hub_id}_{int(time.time())}"
         _vault_status[job_id] = "Starting..."
 
-        pipeline = ReferenceVaultPipeline(llm, Path(secrets.vault_path), governor)
+        pipeline = ReferenceVaultPipeline(llm, Path(vault_path), governor)
 
         def _cb(msg: str):
             _vault_status[job_id] = msg
@@ -1575,6 +1599,8 @@ async def vault_upload_source(
         result = await pipeline.run(hub_id, source_name, source_text, _cb)
         _vault_status.pop(job_id, None)
         return {**result, "job_id": job_id}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1586,8 +1612,14 @@ async def vault_upload_file(
     secrets: AppSecrets = Depends(get_app_secrets),
 ):
     """Accepts a binary file upload (PDF/image/txt), extracts text, then runs the pipeline."""
-    if not secrets.ai_key or not secrets.vault_path:
-        raise HTTPException(status_code=400, detail="AI Key and Vault Path required")
+    if not secrets.ai_key:
+        raise HTTPException(status_code=400, detail="AI Key required (configure in Settings)")
+
+    vault_path = secrets.vault_path
+    if not vault_path:
+        vault_path = _cached_vault_path
+    if not vault_path:
+        raise HTTPException(status_code=400, detail="Vault Path not configured. Open Settings and set your Obsidian vault path.")
 
     suffix = Path(file.filename or "upload.txt").suffix.lower()
     import tempfile, os
@@ -1642,7 +1674,7 @@ async def vault_upload_file(
             api_key=secrets.ai_key,
             temperature=0.1,
         )
-        pipeline = ReferenceVaultPipeline(llm, Path(secrets.vault_path), governor)
+        pipeline = ReferenceVaultPipeline(llm, Path(vault_path), governor)
         result = await pipeline.run(hub_id, file.filename or "upload", source_text)
         return result
     except HTTPException:
@@ -1719,8 +1751,9 @@ async def vault_generate_session(
       - "weak_spots"     : Focus on previously incorrect question types (uses analytics)
       - "exam_sim"       : Full exam simulation from vault (random sample, timed)
     """
-    if not secrets.vault_path:
-        raise HTTPException(status_code=400, detail="Vault Path required")
+    vault_path = secrets.vault_path or _cached_vault_path
+    if not vault_path:
+        raise HTTPException(status_code=400, detail="Vault Path not configured. Set it in Settings.")
 
     hub_id = payload.get("hub_id", "")
     vault_paths = payload.get("vault_paths", [])  # list of vault .md paths
@@ -1732,7 +1765,7 @@ async def vault_generate_session(
         from src.domains.oka.reference_vault import VaultWriter
         import random
 
-        writer = VaultWriter(Path(secrets.vault_path))
+        writer = VaultWriter(Path(vault_path))
 
         # Collect from all selected vaults
         all_questions = []
