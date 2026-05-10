@@ -1207,10 +1207,13 @@ def generate():
         return await self.generate(note_title, theory_body, primary_language)
 
 class QuestionAgent:
-    """The 'Examiner' pass. Generates the interactive quiz."""
-    def __init__(self, llm: BaseChatModel, domain: dict):
+    def __init__(self, llm: BaseChatModel, domain: Union[dict, str]):
         self.llm = llm
-        self.domain = domain
+        # Ensure domain is a dict for the .get() calls in generate()
+        if isinstance(domain, str):
+            self.domain = DOMAIN_MATRIX.get(domain, DOMAIN_MATRIX["ACADEMIC-GENERAL"])
+        else:
+            self.domain = domain or DOMAIN_MATRIX["ACADEMIC-GENERAL"]
 
     async def generate(self, note_schema, source_text: str, mechanics: str, academic_level: str, count: int = 3, prof_domain: str = "General", q_type: str = None, seed: str = None) -> list:
         title_readable = note_schema.title.replace("_", " ")
@@ -1222,11 +1225,30 @@ class QuestionAgent:
         
         axioms = self.domain.get("quiz_axioms", "Test core principles.")
         
+        q_type_str = f" Ensure ALL {count} questions are of type '{q_type}'." if q_type else ""
+        
+        schemas = {
+            "mcq": '"type": "mcq", "question": "...", "options": {"A": "...", "B": "..."}, "answer": "A", "explanation": "..."',
+            "true_false": '"type": "true_false", "question": "...", "answer": "True", "explanation": "..."',
+            "writing": '"type": "writing", "question": "...", "answer": "...", "explanation": "..."',
+            "scenario": '"type": "scenario", "question": "...", "answer": "...", "explanation": "..."',
+            "synthesis": '"type": "synthesis", "question": "...", "answer": "...", "explanation": "..."',
+            "trace": '"type": "trace", "question": "...", "answer": "...", "explanation": "..."',
+            "fill_in": '"type": "fill_in", "question": "...", "textWithBlanks": "Text containing [[blank]]", "answer": ["expected"], "explanation": "..."',
+            "matching": '"type": "matching", "question": "...", "pairs": [{"left": "...", "right": "..."}, {"left": "...", "right": "..."}], "explanation": "..."',
+            "order": '"type": "order", "question": "...", "steps": ["Step 1", "Step 2", "Step 3"], "answer": ["Correct Step 1", "Correct Step 2", "Correct Step 3"], "explanation": "..."',
+            "debug": '"type": "debug", "question": "...", "content": "buggy text or process", "answer": "...", "explanation": "..."',
+            "find_error": '"type": "find_error", "question": "...", "buggyCode": "buggy snippet", "answer": "...", "explanation": "..."',
+            "code": '"type": "code", "question": "...", "codeSnippet": "...", "language": "python", "answer": "...", "explanation": "..."'
+        }
+        type_schema = schemas.get(q_type, schemas["mcq"])
+
         sys_prompt = f"""You are a Senior Examiner in {persona}.
-Generate {count} high-fidelity interactive quiz questions for {title_readable}.
+Generate EXACTLY {count} high-fidelity interactive quiz questions for {title_readable}. DO NOT stop early. You MUST generate exactly {count} items.
+{q_type_str}
 
 S-TIER EXAMINER LAWS:
-1. CAUSAL TRACING: At least one question must be a 'trace' type, requiring a 4-6 step "System Perturbation Trace" (e.g., "If X increases, then Y drops, which forces Z to...").
+1. CAUSAL TRACING: At least one question must involve a "System Perturbation Trace" (e.g., "If X increases, then Y drops, which forces Z to...").
 2. CONTEXT LOCK: Use the professional domain "{prof_domain}" for all scenario-based questions.
 3. NO RECALL: Avoid "What is X?" Instead, use "In scenario Y, what happens to X when Z occurs?".
 
@@ -1234,17 +1256,14 @@ Output format:
 Wrap your JSON in <QUIZ_JSON> tags.
 [
   {{
-    "type": "mcq",
-    "question": "...",
-    "options": ["...", "..."],
-    "answer": "...",
-    "explanation": "..."
+    {type_schema}
   }},
-  ...
+  ... (EXACTLY {count} objects)
 ]
 
 Axioms for this domain:
 {axioms}"""
+
 
         for attempt in range(3):
             try:
@@ -1394,6 +1413,7 @@ Source context: {source_context[:400]}"""
         last_error = None
         for attempt in range(2):
             try:
+                await governor.get_permit(expected_tokens=1000)
                 retry_note = f"\n\nFIX PREVIOUS ERROR: {last_error}\nReturn ONLY pure JSON.\n" if last_error else ""
                 res = await self.llm.ainvoke([("system", sys_prompt + retry_note), ("human", user_msg)])
                 data = ArchitectAgent._parse_json(res.content)
@@ -1447,6 +1467,7 @@ Key facts about "{title_readable}": {theory_summary[:2500]}"""
         last_error = None
         for attempt in range(2):
             try:
+                await governor.get_permit(expected_tokens=1500)
                 retry_note = f"\n\nFIX PREVIOUS ERROR: {last_error}\nReturn ONLY pure JSON.\n" if last_error else ""
                 res = await self.llm.ainvoke([("system", sys_prompt + retry_note), ("human", user_msg)])
                 data = ArchitectAgent._parse_json(res.content)
@@ -1530,6 +1551,7 @@ Return ONLY pure JSON. No markdown. No explanation."""
             if len(full_text) > 40000:
                 sample = full_text[:15000] + "\n...[MIDDLE]...\n" + full_text[len(full_text)//2 - 5000 : len(full_text)//2 + 5000] + "\n...[END]...\n" + full_text[-10000:]
 
+            await governor.get_permit(expected_tokens=400)
             res = await self.llm.ainvoke([
                 ("system", system), 
                 ("human", f"DOCUMENT TEXT:\n{sample}")

@@ -797,7 +797,29 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             ]
             
             if count > 0:
-                agent = QuestionAgent(self.planner_llm, q_type)
+                # Map q_type to modality for the Dynamic Matrix
+                modality_map = {
+                    "mcq": "Qualitative/Definitional",
+                    "true_false": "Qualitative/Definitional",
+                    "writing": "Qualitative/Definitional",
+                    "fill_in": "Qualitative/Definitional",
+                    "calculation": "Quantitative",
+                    "data_analysis": "Causal/Historical",
+                    "trace": "Procedural",
+                    "order": "Procedural",
+                    "debug": "Procedural",
+                    "scenario": "Comparative",
+                    "matching": "Comparative",
+                    "theoretical": "Qualitative/Definitional",
+                    "calculative": "Quantitative",
+                    "applied": "Procedural",
+                    "case_study": "Comparative"
+                }
+                modality = modality_map.get(q_type, "Qualitative/Definitional")
+                
+                # Fetch domain dict for the agent
+                domain_dict = get_persona(hub_mode, modality)
+                agent = QuestionAgent(self.planner_llm, domain_dict)
                 import random
                 seed = random.random()
                 
@@ -1983,15 +2005,16 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 OkaService._status[session_id] = f"{phase_prefix} Assessment: [[{current_note_title}]]..."
                                 await self.governor.get_permit(expected_tokens=3000)
                                 
-                                q_agent = QuestionAgent(self.planner_llm)
+                                q_agent = QuestionAgent(self.planner_llm, domain)
                                 q_context = f"THEORY:\n{note_data.get('technical_definition', '')}\n\nARTIFACT:\n{prac_parts.get('artifact_content', '')}\n\nWALKTHROUGH:\n{prac_parts.get('walkthrough', '')}"
+                                prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
                                 valid_qs = await q_agent.generate(
-                                    note_schema.title, 
-                                    q_context, 
-                                    mode=note_schema.mode,
+                                    note_schema=note_schema, 
+                                    source_text=q_context, 
+                                    mechanics="Focus on multi-step causal tracing and artifact verification.",
                                     academic_level=plan_obj.academic_level,
-                                    course_title=plan_obj.course_title,
-                                    modality=modality
+                                    count=3,
+                                    prof_domain=prof_domain
                                 )
                                 
                                 note_data["possible_questions"] = "\n```interactive-quiz\n" + json.dumps(valid_qs, indent=2) + "\n```"
