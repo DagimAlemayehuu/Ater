@@ -1,6 +1,7 @@
 import time
 import asyncio
 import sqlite3
+import json
 from pathlib import Path
 from collections import deque
 
@@ -215,7 +216,11 @@ class TokenGovernor:
 
     def _record_usage_db(self, tokens: int, requests: int, api_key_hash: str = 'default'):
         # Fire and forget database write off the main event loop
-        asyncio.create_task(asyncio.to_thread(self._record_usage_db_sync, tokens, requests, api_key_hash))
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(asyncio.to_thread(self._record_usage_db_sync, tokens, requests, api_key_hash))
+        except RuntimeError:
+            self._record_usage_db_sync(tokens, requests, api_key_hash)
 
     def report_error(self, wait_seconds: float = 10.0):
         """Force a hard cooldown on 429 detection from any agent."""

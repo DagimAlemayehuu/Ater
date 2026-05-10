@@ -265,7 +265,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
               <div className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-2">
     <Badge variant="outline" className="text-[7px] border-border/40 bg-muted/20 text-muted-foreground rounded-md px-1.5 py-0">{currentQ.difficulty || '1'}</Badge>
     <div className="w-0.5 h-0.5 rounded-full bg-muted-foreground/20" />
-    <span>{
+    <span>{(
         {
             'mcq': 'Multiple Choice',
             'true_false': 'True or False',
@@ -280,7 +280,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
             'data_analysis': 'Data Analysis',
             'scenario': 'Scenario Analysis',
             'code': 'Code / Implementation'
-        }[currentQ.type] || (currentQ.type || '').replace('_', ' ')
+        } as any)[currentQ.type as string] || (currentQ.type || '').replace('_', ' ')
     }</span>
     </div>
               {currentQ.type !== 'fill_in' && (

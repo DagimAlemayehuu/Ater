@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { 
   CheckCircle2, XCircle, RefreshCw, BrainCircuit, Target,
@@ -63,7 +63,7 @@ export default function Practice() {
   const [isLoading, setIsLoading] = useState(false)
   const [view, setView] = useState<'dashboard' | 'history' | 'configuring' | 'loading' | 'session' | 'results'>('dashboard')
   
-  const [questions, setQuestions] = useState<Question[]>([])
+  const [questions, setQuestions] = useState<any[]>([])
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0)
   const currentQuestion = questions[currentQuestionIdx]
   const [userAnswers, setUserAnswers] = useState<Record<number, any>>({})
@@ -683,13 +683,13 @@ export default function Practice() {
                                                     value={(userAnswers[currentQuestion.id] || [])[i] || ''}
                                                     disabled={isRevealed}
                                                     onChange={(e) => {
-                                                        const newAns = [...(userAnswers[currentQuestion.id] || [])];
+                                                        const newAns = [...((userAnswers as any)[currentQuestion.id] || [])];
                                                         newAns[i] = e.target.value;
                                                         handleSelectAnswer(newAns);
                                                     }}
                                                     className={cn(
                                                         "mx-1 px-3 py-1 bg-background border-b-2 border-primary/30 focus:border-primary outline-none text-center min-w-[80px] transition-all",
-                                                        isRevealed && (currentQuestion.answer || [])[i]?.toLowerCase() === (userAnswers[currentQuestion.id] || [])[i]?.toLowerCase() ? "text-green-500 border-green-500" : 
+                                                        isRevealed && (currentQuestion.answer || [])[i]?.toLowerCase() === ((userAnswers as any)[currentQuestion.id] || [])[i]?.toLowerCase() ? "text-green-500 border-green-500" : 
                                                         isRevealed ? "text-red-500 border-red-500" : ""
                                                     )}
                                                     placeholder="..."

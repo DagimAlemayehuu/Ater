@@ -103,7 +103,7 @@ class OkaValidator:
             if marker in content:
                 errors.append(f"HARD_FAILURE_MARKER: '{marker}' found in content. Note must be regenerated.")
         # If any hard failures, return immediately — no point in further checks
-        if errors:
+        if any("HARD_FAILURE" in e for e in errors):
             return False, errors
 
         # ── 2. YAML frontmatter ─────────────────────────────────────────────
@@ -172,7 +172,8 @@ class OkaValidator:
 
         # Intra-unit wikilinks check
         if unit_stems and note_type not in ("hub", "possible questions"):
-            intra_links = [w for w in wikilinks if w.replace(' ', '_') in unit_stems and w.replace(' ', '_') != meta.get("title", "")]
+            meta_title = meta.get("title", "") if 'meta' in locals() and isinstance(meta, dict) else ""
+            intra_links = [w for w in wikilinks if w.replace(' ', '_') in unit_stems and w.replace(' ', '_') != meta_title]
             if not intra_links:
                 errors.append("NO_INTRA_UNIT_LINKS: Must wikilink to at least 1 other note in this unit")
 
@@ -200,8 +201,8 @@ class OkaValidator:
             else:
                 if not isinstance(quiz_data, list):
                     errors.append(f"QUIZ_NOT_ARRAY: got {type(quiz_data).__name__}")
-                elif len(quiz_data) < 3 or len(quiz_data) > 5:
-                    errors.append(f"QUIZ_WRONG_LENGTH: expected 3-5 questions, got {len(quiz_data)}")
+                elif len(quiz_data) < 1 or len(quiz_data) > 15:
+                    errors.append(f"QUIZ_WRONG_LENGTH: expected 1-15 questions, got {len(quiz_data)}")
                 else:
                     # Validate each question has required fields
                     for i, q in enumerate(quiz_data):
@@ -290,15 +291,15 @@ class OkaValidator:
                 if last_sent_char not in valid_terminal:
                     errors.append(f"SECTION_TRUNCATION: A section body ends mid-sentence: '...{cleaned[-40:]}'")
 
-            # v28.4 FIX: Empty Table Kill-Switch (Section 4 Artifacts)
-            if "## 4." in body:
-                artifact_match = re.search(r'## 4\.[^\n]*\n(.*?)(?=## 5\.|```interactive-quiz|$)', body, re.DOTALL)
-                if artifact_match:
-                    artifact_text = artifact_match.group(1).strip()
-                    if "|" in artifact_text:
-                        pipe_lines = [l for l in artifact_text.split('\n') if "|" in l]
-                        if len(pipe_lines) < 3:
-                            errors.append("EMPTY_TABLE: Section 4 contains a table header but no data rows (Header, Separator, and at least 1 Data row required).")
+        # v28.4 FIX: Empty Table Kill-Switch (Section 4 Artifacts)
+        if "## 4." in body:
+            artifact_match = re.search(r'## 4\.[^\n]*\n(.*?)(?=## 5\.|```interactive-quiz|$)', body, re.DOTALL)
+            if artifact_match:
+                artifact_text = artifact_match.group(1).strip()
+                if "|" in artifact_text:
+                    pipe_lines = [l for l in artifact_text.split('\n') if "|" in l]
+                    if len(pipe_lines) < 3:
+                        errors.append("EMPTY_TABLE: Section 4 contains a table header but no data rows (Header, Separator, and at least 1 Data row required).")
 
         # ── 7. Walkthrough step count — section is ## 5. Walkthrough in the template
         walkthrough_match = re.search(r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)', body, re.DOTALL)

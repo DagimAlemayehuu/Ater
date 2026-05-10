@@ -4,6 +4,7 @@ import time
 import asyncio
 import logging
 import traceback
+import json
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict, Any
@@ -357,6 +358,9 @@ class OkaQueueManager:
 
         except Exception as e:
             watcher_logger.error(f"Critical worker failure for {path.name}: {e}")
+            # region agent log
+            with open("/Users/dabodestroyer/code/Antigravity/LifeOs/.cursor/debug-18a97e.log", "a", encoding="utf-8") as _f: _f.write(json.dumps({"sessionId":"18a97e","runId":"pre-fix","hypothesisId":"H4","location":"watcher.py:process_file","message":"Worker hit critical failure","data":{"file":path.name,"errorType":type(e).__name__,"error":str(e)[:240],"lastAction":self.last_action},"timestamp":int(time.time()*1000)}) + "\n")
+            # endregion
             self._mark_error(file_path_str)
             self.last_action = f"Error: {str(e)}"
 

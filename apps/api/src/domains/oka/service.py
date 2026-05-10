@@ -277,7 +277,7 @@ class OkaService:
                 self.architect_agent.llm = self.llm
                 try:
                     self.architect_agent.llm_structured = self.llm.with_structured_output(
-                        type(self.architect_agent.llm_structured).__mro__[0]
+                        SovereignPlan
                     )
                 except Exception:
                     pass
@@ -338,11 +338,17 @@ class OkaService:
         """Returns all available options for Course, Semester, Year, Hubs, and Units from the vault."""
         base_path = Path(self.secrets.vault_path) / "Database"
         
-        courses = [f.stem for f in (base_path / "07 - Courses").glob("*.md") if not f.name.startswith("_")]
-        semesters = [f.stem for f in (base_path / "08 - Semesters").glob("*.md") if not f.name.startswith("_")]
-        years = [f.stem for f in (base_path / "09 - Years").glob("*.md") if not f.name.startswith("_")]
-        hubs = [f.stem for f in (base_path / "06 - Study Planner").glob("*.md") if not f.name.startswith("_")]
-        units = [f.stem for f in (base_path / "06 - Study Planner" / "_Units").glob("*.md")]
+        def safe_glob(path, pattern):
+            try: return [f.stem for f in path.glob(pattern) if not f.name.startswith("_")]
+            except Exception: return []
+
+        courses = safe_glob(base_path / "07 - Courses", "*.md")
+        semesters = safe_glob(base_path / "08 - Semesters", "*.md")
+        years = safe_glob(base_path / "09 - Years", "*.md")
+        hubs = safe_glob(base_path / "06 - Study Planner", "*.md")
+        units = []
+        try: units = [f.stem for f in (base_path / "06 - Study Planner" / "_Units").glob("*.md")]
+        except Exception: pass
         
         # Sort units numerically if possible
         try: units.sort(key=lambda x: int(x))
@@ -422,7 +428,7 @@ class OkaService:
             return academic_unit_dir
             
         # 2. Try alternate path (Notes/Academic Root)
-        alt_academic_root = Path(self.secrets.vault_path) / "Notes" / "Winter 2026"
+        alt_academic_root = Path(self.secrets.vault_path) / "Notes" / semester
         academic_unit_dir = alt_academic_root / semester / self.vm.get_canonical_title(course) / unit_folder_name
         if academic_unit_dir.exists():
             return academic_unit_dir
@@ -584,7 +590,7 @@ class OkaService:
                 import yaml
                 data = yaml.safe_load(yaml_match.group(1))
                 if data:
-                    data["score"] = f"{score}%"
+                    data["score"] = score
                     data["completed"] = True
                     new_yaml = yaml.dump(data, sort_keys=False)
                     new_content = f"---\n{new_yaml}---\n" + content[yaml_match.end():]
@@ -657,7 +663,7 @@ class OkaService:
         for note_path in atomic_notes:
             if note_path.name == hub_path.name or "Possible_Questions" in note_path.name or "Practice" in note_path.name or note_path.name.startswith("_"):
                 continue
-            if selected_notes and note_path.stem not in selected_notes:
+            if selected_notes and note_path.stem not in selected_notes and note_path.name not in selected_notes:
                 continue
             notes_to_process.append(note_path)
 
@@ -767,12 +773,13 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         tasks = []
         
         # Detect Dominant Mode for the Hub
-        hub_mode = "ECON-MACRO" # Default
-        hub_title_low = hub['title'].lower()
-        if any(kw in hub_title_low for kw in ["micro", "demand", "supply", "consumer", "elasticity", "firm", "market_structure"]):
-            hub_mode = "ECON-MICRO"
-        elif any(kw in hub_title_low for kw in ["macro", "gdp", "inflation", "monetary", "fiscal", "central_bank", "aggregate"]):
-            hub_mode = "ECON-MACRO"
+        hub_mode = hub.get("mode", "ECON-MACRO") # Default
+        if "mode" not in hub:
+            hub_title_low = hub['title'].lower()
+            if any(kw in hub_title_low for kw in ["micro", "demand", "supply", "consumer", "elasticity", "firm", "market_structure"]):
+                hub_mode = "ECON-MICRO"
+            elif any(kw in hub_title_low for kw in ["macro", "gdp", "inflation", "monetary", "fiscal", "central_bank", "aggregate"]):
+                hub_mode = "ECON-MACRO"
             
         for q_type, count in target_distribution.items():
             # Get common hints to prevent duplication within the same type
@@ -793,13 +800,13 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 random.shuffle(shuffled_parts)
                 tight_context = "\n\n".join(shuffled_parts)
                 
-                hint = "Generate a diverse set of distinct questions covering different subtopics."
+                hint = random.choice(hints)
                 prof_domain = get_professional_domain(hub['title'] + str(q_type), mode=hub_mode)
                 current_diff = config.difficulty if config.difficulty != "Mixed" else "Mixed"
 
-                tasks.append(lambda a=agent, h=hub, c=tight_context, d=current_diff, m=hub_mode, p=prof_domain, c_out=count, hint=hint, qt=q_type: a.generate(
+                tasks.append(lambda a=agent, h=hub, c=tight_context, d=current_diff, m=hub_mode, p=prof_domain, c_out=count, hint=hint, qt=q_type, s=seed: a.generate(
                     h['title'], 
-                    f"SEED: {seed}\n" + c, 
+                    f"SEED: {s}\n" + c, 
                     d,
                     mode=m,
                     prof_domain=p,
@@ -859,8 +866,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             else:
                 logger.error(f"[OKA Service] Failed to generate a question: {res}")
 
-        # FINAL HARD SLICE: Ensure total count matches configuration exactly
-        questions = all_questions[:total_q]
+        # FINAL HARD SLICE removed from here, done after post-processing
         
         # --- CRITICAL POST-PROCESSING ---
         # Ensure every question has a valid 'type' for the frontend to render
@@ -909,35 +915,30 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 if isinstance(q.get("answer"), str):
                     q["answer"] = q["answer"].lower() == "true"
                     
-            if q["type"] == "mcq" and isinstance(q.get("options"), dict):
-                ans = str(q.get("answer", "")).upper()
-                if ans not in q["options"]:
-                    q["answer"] = list(q["options"].keys())[0] if q["options"] else "A"
-                    
-            if q["type"] == "fill_in":
-                if "[[blank]]" not in str(q.get("textWithBlanks", "")).lower():
-                    q["type"] = "writing"
-            
-            if q["type"] == "fill_in" and not q.get("textWithBlanks"):
-                q["type"] = "writing"
-            if q["type"] == "matching" and not q.get("pairs"):
-                q["type"] = "writing"
-            if q["type"] == "order" and (not q.get("steps") or not q.get("answer")):
-                q["type"] = "writing"
-            if q["type"] == "debug" and not q.get("content"):
-                q["type"] = "writing"
-            
-            # MCQ Option labeling
+            # MCQ Option labeling and answer validation
             if q["type"] == "mcq" and isinstance(q.get("options"), (list, dict)):
                 options = q["options"]
                 if isinstance(options, list):
-                    q["options"] = {chr(65+i): v for i, v in enumerate(options)}
+                    q["options"] = {chr(65+i): str(v) for i, v in enumerate(options)}
                 elif isinstance(options, dict):
                     new_opts = {}
                     for i, (k, v) in enumerate(options.items()):
                         new_key = chr(65+i) if len(k) > 1 or k.isdigit() else k.upper()
-                        new_opts[new_key] = v
+                        new_opts[new_key] = str(v)
                     q["options"] = new_opts
+
+                ans = str(q.get("answer", "")).upper()
+                # Check if original answer matches one of the option values
+                if ans not in q["options"]:
+                    value_match = None
+                    for k, v in q["options"].items():
+                        if str(v).upper() == ans:
+                            value_match = k
+                            break
+                    if value_match:
+                        q["answer"] = value_match
+                    else:
+                        q["answer"] = list(q["options"].keys())[0] if q["options"] else "A"
 
             processed_questions.append(q)
         
@@ -1585,6 +1586,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             OkaService._status[session_id] = f"Architecting Plan (Chunk {idx+1}/{len(text_chunks)})..."
             print(f"[OKA Service] Processing chunk {idx+1}/{len(text_chunks)}")
             try:
+                # region agent log
+                with open("/Users/dabodestroyer/code/Antigravity/LifeOs/.cursor/debug-18a97e.log", "a", encoding="utf-8") as _f: _f.write(json.dumps({"sessionId":"18a97e","runId":"pre-fix","hypothesisId":"H2","location":"service.py:generate_plan","message":"About to request governor permit for chunk","data":{"sessionId":session_id,"chunkIndex":idx+1,"chunkCount":len(text_chunks),"chunkLen":len(chunk),"expectedTokens":len(chunk)+1000,"course":course,"semester":semester},"timestamp":int(time.time()*1000)}) + "\n")
+                # endregion
                 # SOVEREIGN GOVERNOR ENFORCEMENT
                 # Ensure the planning phase is properly paced and respects the token budget
                 await self.governor.get_permit(expected_tokens=len(chunk) + 1000)
@@ -1642,6 +1646,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     
             except Exception as e:
                 err_trace = traceback.format_exc()
+                # region agent log
+                with open("/Users/dabodestroyer/code/Antigravity/LifeOs/.cursor/debug-18a97e.log", "a", encoding="utf-8") as _f: _f.write(json.dumps({"sessionId":"18a97e","runId":"pre-fix","hypothesisId":"H3","location":"service.py:generate_plan","message":"Chunk planning failed","data":{"sessionId":session_id,"chunkIndex":idx+1,"errorType":type(e).__name__,"error":str(e)[:240]},"timestamp":int(time.time()*1000)}) + "\n")
+                # endregion
                 print(f"[OKA Service] CRITICAL: Chunk {idx+1} failed validation: {e}\n{err_trace}")
                 OkaService._status[session_id] = f"Load Failed during Architecting: {str(e)}"
                 raise e

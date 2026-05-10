@@ -43,10 +43,10 @@ class BaseQuestion(BaseModel):
 
     @field_validator('answer', mode='after', check_fields=False)
     @classmethod
-    def clean_answer_string(cls, v: str, info: ValidationInfo) -> str:
+    def clean_answer_string(cls, v: Any, info: ValidationInfo) -> Any:
         q_type = info.data.get('type')
         if q_type == 'trace':
-            if "=" in v and len(v) > 15:
+            if isinstance(v, str) and "=" in v and len(v) > 15:
                 raise ValueError("Trace answers MUST NOT contain scratchpad math. Only output the final number or final short equation (e.g., 'Qd = 100').")
         return v
 
@@ -170,7 +170,11 @@ def get_all_domain_keys() -> List[str]:
     return list(set(keys)) # Ensure uniqueness
 
 # Dynamically create the Literal type from the single source of truth
-VALID_MODES_LITERAL = Literal[tuple(get_all_domain_keys())]
+try:
+    _keys = tuple(get_all_domain_keys())
+    VALID_MODES_LITERAL = Literal[_keys]
+except Exception:
+    VALID_MODES_LITERAL = Literal["ACADEMIC-GENERAL", "DOMAIN-UNKNOWN"]
 
 class AtomicNoteSchema(NoteSchema):
     prerequisites: List[str] = Field(default_factory=list)

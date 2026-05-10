@@ -85,9 +85,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  synthesis: 1,
  trace: 1,
  calculation: 1,
- data_analysis: 1,
- scenario: 1,
- code: 1
+ data_analysis: 1
 },
  difficulty: 'L1',
  gradingStrictness: 'Lenient',
@@ -133,11 +131,21 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const [currentPracticePath, setCurrentPracticePath] = useState<string | null>(null)
  const [genStatus, setGenStatus] = useState<string>('Initializing...')
  const [availableNotes, setAvailableNotes] = useState<any[]>([])
- const [globalTimeLeft, setGlobalTimeLeft] = useState<number | null>(null)
- const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null)
- const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const [globalTimeLeft, setGlobalTimeLeft] = useState<number | null>(null)
+  const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
 
- useEffect(() => {loadHubs(); loadPastPractices();}, [])
+  const globalTimeLeftRef = useRef(globalTimeLeft);
+  const questionTimeLeftRef = useRef(questionTimeLeft);
+  const isRevealedRef = useRef(isRevealed);
+  const currentQuestionRef = useRef(currentQuestion);
+
+  useEffect(() => { globalTimeLeftRef.current = globalTimeLeft; }, [globalTimeLeft]);
+  useEffect(() => { questionTimeLeftRef.current = questionTimeLeft; }, [questionTimeLeft]);
+  useEffect(() => { isRevealedRef.current = isRevealed; }, [isRevealed]);
+  useEffect(() => { currentQuestionRef.current = currentQuestion; }, [currentQuestion]);
+
+  useEffect(() => {loadHubs(); loadPastPractices();}, [])
 
  useEffect(() => {
  const searchParams = new URLSearchParams(window.location.search);
@@ -191,43 +199,46 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
   }
  }, [view, questions]);
 
- useEffect(() => {
- if (questions.length > 0 && view === 'session') {
- timerRef.current = setInterval(() => {
- // Handle Global Timer
- if (globalTimeLeft !== null) {
- if (globalTimeLeft <= 1) {
- clearInterval(timerRef.current!);
- setGlobalTimeLeft(0);
- toast.error("Total session time expired!");
- setView('results');
- return;
-}
- setGlobalTimeLeft(prev => (prev! > 0 ? prev! - 1 : 0));
-}
+  useEffect(() => {
+    if (questions.length > 0 && view === 'session') {
+      const interval = setInterval(() => {
+        // Handle Global Timer
+        if (globalTimeLeftRef.current !== null) {
+          if (globalTimeLeftRef.current <= 1) {
+            clearInterval(interval);
+            setGlobalTimeLeft(0);
+            toast.error("Total session time expired!");
+            setView('results');
+            return;
+          }
+          setGlobalTimeLeft(prev => (prev! > 0 ? prev! - 1 : 0));
+        }
 
- // Handle Per-Question Timer
- if (questionTimeLeft !== null) {
- if (questionTimeLeft <= 1) {
- setQuestionTimeLeft(0);
- // Automatic "Wrong" mark and next question
- if (!isRevealed) {
- handleSubmitAnswer(); // Reveal the answer first
- toast.warning("Question time expired! Marked as incorrect.");
- setGradedAnswers(prev => ({...prev, [currentQuestion.id]: false}));
- // Add a small delay before moving to next so the user sees it's wrong
- setTimeout(() => {
- nextQuestion();
-}, 1500);
-}
-} else {
- setQuestionTimeLeft(prev => (prev! > 0 ? prev! - 1 : 0));
-}
-}
-}, 1000);
-}
- return () => {if (timerRef.current) clearInterval(timerRef.current!)}
-}, [questions, view, globalTimeLeft, questionTimeLeft, isRevealed])
+        // Handle Per-Question Timer
+        if (questionTimeLeftRef.current !== null) {
+          if (questionTimeLeftRef.current <= 1) {
+            setQuestionTimeLeft(0);
+            // Automatic "Wrong" mark and next question
+            if (!isRevealedRef.current) {
+              handleSubmitAnswer(); // Reveal the answer first
+              toast.warning("Question time expired! Marked as incorrect.");
+              if (currentQuestionRef.current) {
+                setGradedAnswers(prev => ({...prev, [currentQuestionRef.current.id]: false}));
+              }
+              // Add a small delay before moving to next so the user sees it's wrong
+              setTimeout(() => {
+                nextQuestion();
+              }, 1500);
+            }
+          } else {
+            setQuestionTimeLeft(prev => (prev! > 0 ? prev! - 1 : 0));
+          }
+        }
+      }, 1000);
+      timerRef.current = interval;
+      return () => clearInterval(interval);
+    }
+  }, [questions, view])
 
  const loadPastPractices = async () => {try {const res = await sidecarApi.listPractices(); setPastPractices(res.practices);} catch {console.error("Error");}}
  const loadHubs = async () => {try {const res = await sidecarApi.listHubs(); setHubs(res.hubs); if (res.hubs.length > 0) setSelectedHub(res.hubs[0].id);} catch {console.error("Error");}}
@@ -341,28 +352,35 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  }
 }
 
- const nextQuestion = async () => {
- if (currentQuestionIdx < questions.length - 1) {
- setCurrentQuestionIdx(currentQuestionIdx + 1); 
- setIsRevealed(false); 
- setKeywordChecks({});
- setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds || null);
-} else {
- setView('results'); 
- const {score} = calculateScore(); 
- if (currentPracticePath) await sidecarApi.updatePracticeScore(currentPracticePath, score); 
- loadPastPractices(); 
-}
-}
-
- const calculateScore = () => {
+  const nextQuestion = async (latestGrade?: boolean) => {
+  if (currentQuestionIdx < questions.length - 1) {
+  setCurrentQuestionIdx(currentQuestionIdx + 1); 
+  setIsRevealed(false); 
+  setKeywordChecks({});
+  setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds || null);
+ } else {
+  const newGradedAnswers = latestGrade !== undefined ? {...gradedAnswers, [questions[currentQuestionIdx].id]: latestGrade} : gradedAnswers;
   let correct = 0;
   const total = questions.length;
   questions.forEach(q => {
-   if (gradedAnswers[q.id] === true) correct++;
+   if (newGradedAnswers[q.id] === true) correct++;
   });
-  return {score: Math.round((correct / (total || 1)) * 100), correct, total};
+  const score = Math.round((correct / (total || 1)) * 100);
+
+  if (currentPracticePath) await sidecarApi.updatePracticeScore(currentPracticePath, score); 
+  loadPastPractices(); 
+  setView('results'); 
  }
+ }
+
+  const calculateScore = () => {
+   let correct = 0;
+   const total = questions.length;
+   questions.forEach(q => {
+    if (gradedAnswers[q.id] === true) correct++;
+   });
+   return {score: Math.round((correct / (total || 1)) * 100), correct, total};
+  }
 
  const resetSession = () => {setQuestions([]); setView('dashboard');}
  const handleSelectAnswer = (val: any) => {if (!isRevealed) setUserAnswers(prev => ({...prev, [questions[currentQuestionIdx].id]: val}));}
@@ -687,7 +705,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/40 flex items-center gap-2">
  <Badge variant="outline" className="text-[8px] border-primary/20 bg-primary/5 text-primary rounded-md px-1.5 py-0">{currentQuestion.difficulty || '1'}</Badge>
  <div className="w-1 h-1 rounded-full bg-primary/20" />
- <span>{
+ <span>{(
       {
           'mcq': 'Multiple Choice',
           'true_false': 'True or False',
@@ -702,7 +720,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
           'data_analysis': 'Data Analysis',
           'scenario': 'Scenario Analysis',
           'code': 'Code / Implementation'
-      }[currentQuestion.type] || (currentQuestion.type || '').replace('_', ' ')
+      } as any)[currentQuestion.type as string] || (currentQuestion.type || '').replace('_', ' ')
   }</span>
  </div>
  <div className="text-xl sm:text-2xl font-black tracking-tight leading-snug text-foreground/90"><MarkdownBlock content={currentQuestion.question} /></div>
@@ -869,9 +887,9 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <div className="flex gap-2">
  {gradedAnswers[currentQuestion.id] === undefined && ['writing', 'synthesis', 'debug', 'trace'].includes(currentQuestion.type) && (
  <>
- <Button onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: false})); nextQuestion();}} variant="outline" className="h-10 px-6 text-[9px] font-black uppercase border-destructive/20 text-destructive/40">Wrong</Button>
+ <Button onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: false})); nextQuestion(false);}} variant="outline" className="h-10 px-6 text-[9px] font-black uppercase border-destructive/20 text-destructive/40">Wrong</Button>
  <Button 
-    onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: true})); nextQuestion();}} 
+    onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: true})); nextQuestion(true);}} 
     disabled={currentQuestion.required_keywords && currentQuestion.required_keywords.length > 0 && currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw])}
     className="h-10 px-6 bg-primary text-primary-foreground text-[9px] font-black uppercase disabled:opacity-50 disabled:cursor-not-allowed"
     title={currentQuestion.required_keywords && currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
@@ -879,7 +897,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </>
  )} 
  {((!['writing', 'synthesis', 'debug', 'trace'].includes(currentQuestion.type)) || gradedAnswers[currentQuestion.id] !== undefined) && (
- <Button onClick={nextQuestion} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md">Next</Button>
+ <Button onClick={() => nextQuestion()} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md">Next</Button>
  )}
  </div>
  )}
