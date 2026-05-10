@@ -31,7 +31,7 @@ class TokenGovernor:
 
         # Dynamic concurrency
         self.active_slots = 0
-        self.max_concurrency = 2
+        self.max_concurrency = 1   # Forced sequential for Free Tier stability
         self.min_concurrency = 1
         self.current_concurrency_limit = 1   # start strictly sequential
 
@@ -177,15 +177,15 @@ class TokenGovernor:
         except Exception:
             pass  # DB contention must never block a permit
 
-    def report_error(self, wait_seconds: float = 15.0):
+    def report_error(self, wait_seconds: float = 10.0):
         """Force a hard cooldown on 429 detection from any agent."""
         now = time.time()
         self.cooldown_until = now + wait_seconds
         self.current_concurrency_limit = self.min_concurrency
-        # Inject heavy token/request penalty to prevent immediate re-bursting
-        for _ in range(8):
+        # Inject moderate token/request penalty
+        for _ in range(3):
             self.request_window.append(now)
-        self.token_window.append((now, int(self.max_tpm * 0.85)))
+        self.token_window.append((now, int(self.max_tpm * 0.50)))
         print(f"[Governor] 💥 429 received. Dropping to {self.min_concurrency} worker. "
               f"Hard cooldown for {wait_seconds}s...")
         self._slot_event.set()  # Wake blocked workers so they re-evaluate

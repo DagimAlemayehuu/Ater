@@ -276,8 +276,8 @@ export default function AcademicDashboard() {
     {/* ── Main Content ── */}
     <main className="flex-1 flex flex-col overflow-hidden min-w-0">
      {/* Top bar */}
-     <div className={cn("shrink-0 px-4 sm:px-6 lg:px-10 pt-5 pb-0 border-b border-border bg-background/95 backdrop-blur-xl sticky top-0 z-30 ", activeTab === 'CALENDAR' && "hidden")}>
-      <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide mb-4">
+     <div className={cn("shrink-0 px-4 sm:px-6 lg:px-10 pt-3 pb-0 border-b border-border bg-background/95 backdrop-blur-xl sticky top-0 z-30 ", activeTab === 'CALENDAR' && "hidden")}>
+      <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide mb-2">
        {tabs.map(t => (
         <TabButton key={t.id} active={activeTab === t.id} onClick={() => setActiveTab(t.id)} icon={t.icon} label={t.label} />
        ))}

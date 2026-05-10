@@ -229,7 +229,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
   if (!currentQ && !showScore) return null;
 
   return (
-    <div className="my-4 border border-border rounded-xl overflow-hidden bg-background shadow-sm not-prose">
+    <div className="my-2 border border-border rounded-xl overflow-hidden bg-background shadow-sm not-prose">
       {/* Header bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/5">
         <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
@@ -243,31 +243,47 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
       </div>
       
       {showScore ? (
-        <div className="p-12 flex flex-col items-center justify-center space-y-8 text-center   zoom-in ">
-          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20">
-            <Check size={40} className="text-primary" />
+        <div className="p-6 sm:p-8 flex flex-col items-center justify-center space-y-4 text-center   zoom-in ">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20">
+            <Check size={32} className="text-primary" />
           </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-black tracking-tight text-foreground/90">Challenge Complete</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">You have completed the active recall sequence</p>
+          <div className="space-y-1">
+            <h2 className="text-xl font-black tracking-tight text-foreground/90">Challenge Complete</h2>
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Active recall sequence finished</p>
           </div>
-          <div className="text-6xl font-black text-primary tabular-nums">
-            {Object.values(scores).filter(Boolean).length} <span className="text-3xl text-muted-foreground/30">/ {questions.length}</span>
+          <div className="text-4xl font-black text-primary tabular-nums">
+            {Object.values(scores).filter(Boolean).length} <span className="text-2xl text-muted-foreground/30">/ {questions.length}</span>
           </div>
-          <Button onClick={resetQuiz} className="mt-8 font-black uppercase tracking-[0.2em] text-[10px] h-12 px-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20  active:scale-95">
-            <RotateCcw size={14} className="mr-3" /> Restart Challenge
+          <Button onClick={resetQuiz} className="mt-4 font-black uppercase tracking-[0.2em] text-[10px] h-10 px-8 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20  active:scale-95">
+            <RotateCcw size={12} className="mr-2" /> Restart Challenge
           </Button>
         </div>
       ) : (
-        <div className="p-6 lg:p-8 flex flex-col justify-center space-y-6 min-h-[350px]">
-          <div className="space-y-4  slide-in-from-top-4  duration-700" key={`header-${currentQ.id}`}>
-              <div className="text-[10px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-3">
+        <div className="p-4 lg:p-5 flex flex-col justify-center space-y-3 min-h-[200px]">
+          <div className="space-y-3  slide-in-from-top-4  duration-700" key={`header-${currentQ.id}`}>
+              <div className="text-[9px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-2">
     <Badge variant="outline" className="text-[8px] border-border/40 bg-muted/20 text-muted-foreground rounded-md px-2 py-0">{currentQ.difficulty || '1'}</Badge>
     <div className="w-1 h-1 rounded-full bg-muted-foreground/20" />
-    <span>{(currentQ.type || '').replace('_', ' ')}</span>
+    <span>{
+        {
+            'mcq': 'Multiple Choice',
+            'true_false': 'True or False',
+            'writing': 'Writing / Essay',
+            'fill_in': 'Fill in the Blank',
+            'debug': 'Debugging / Error Finding',
+            'trace': 'Logic / Calculation Trace',
+            'order': 'Ordering / Steps',
+            'matching': 'Matching Pairs',
+            'synthesis': 'Synthesis / Scenario',
+            'calculation': 'Math / Calculation',
+            'data_analysis': 'Data Analysis',
+            'scenario': 'Scenario Analysis',
+            'code': 'Code / Implementation'
+        }[currentQ.type] || (currentQ.type || '').replace('_', ' ')
+    }</span>
     </div>
               {currentQ.type !== 'fill_in' && (
-                <div className="text-lg lg:text-xl font-bold tracking-tight leading-tight text-foreground/90 max-w-3xl">
+                <div className="text-base lg:text-lg font-bold tracking-tight leading-snug text-foreground/90 max-w-3xl">
                   <MarkdownBlock content={currentQ.question} />
                 </div>
               )}
@@ -288,7 +304,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       disabled={isRevealed} 
                       onClick={() => handleSelectAnswer(key)} 
                       className={cn(
-                          "group flex items-center gap-4 p-3 border-2 rounded-lg text-left  ", 
+                          "group flex items-center gap-3 p-2 border-2 rounded-lg text-left  ", 
                           isCorrectHighlight 
                           ? "border-foreground bg-muted/20 shadow-sm" 
                           : isSelected && !isRevealed 
@@ -305,7 +321,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       )}>
                           {key}
                       </div>
-                      <div className="text-[13px] font-medium tracking-tight text-foreground/80 group-hover:text-foreground flex-1">
+                       <div className="text-[12px] font-medium tracking-tight text-foreground/80 group-hover:text-foreground flex-1 text-left">
                           <MarkdownBlock content={String(val)} />
                       </div>
                       </button>
@@ -316,8 +332,8 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
 
               {/* Fill In Blank */}
               
-              {currentQ.type === 'order' && (
-              <div className="space-y-2 max-w-2xl mx-auto">
+               {currentQ.type === 'order' && (
+              <div className="space-y-1.5 max-w-2xl mx-auto">
               {(userAnswers[currentQ.id] || currentQ.steps || []).map((step: string, i: number) => {
                   const list = userAnswers[currentQ.id] || currentQ.steps || [];
                   const moveUp = () => { if(i>0) { const n = [...list]; [n[i-1], n[i]] = [n[i], n[i-1]]; handleSelectAnswer(n); } };
@@ -325,16 +341,16 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                   const isCorrect = isRevealed && step === (currentQ.answer || [])[i];
                   return (
                       <div key={i} className={cn(
-                          "group flex items-center gap-3 p-3 border rounded-xl ",
+                          "group flex items-center gap-2 p-2 border rounded-lg ",
                           isCorrect 
                             ? "border-foreground bg-muted/20" 
                             : "border-border/40 bg-muted/5 hover:border-foreground/20"
                       )}>
-                          <div className="flex flex-col gap-2 border-r border-border/10 pr-4">
-                              <button disabled={isRevealed || i===0} onClick={moveUp} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-foreground  disabled:opacity-5">▲</button>
-                              <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-foreground  disabled:opacity-5">▼</button>
+                          <div className="flex flex-col gap-1 border-r border-border/10 pr-2">
+                              <button disabled={isRevealed || i===0} onClick={moveUp} className="text-[10px] p-0.5 opacity-20 hover:opacity-100 hover:text-foreground  disabled:opacity-5">▲</button>
+                              <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-[10px] p-0.5 opacity-20 hover:opacity-100 hover:text-foreground  disabled:opacity-5">▼</button>
                           </div>
-                          <div className="text-sm font-bold tracking-tight text-foreground/80 pl-2">{step}</div>
+                          <div className="text-xs font-bold tracking-tight text-foreground/80 pl-1">{step}</div>
                       </div>
                   )
               })}
@@ -349,16 +365,16 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                   const isCorrect = isRevealed && selected === pair.right;
                   return (
                       <div key={i} className={cn(
-                          "flex items-center gap-4 p-4 border rounded-xl ",
+                          "flex items-center gap-2 p-1.5 border rounded-lg ",
                           isCorrect ? "border-foreground bg-muted/20" : "border-border/40 bg-muted/5"
                       )}>
-                          <div className="flex-1 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60">{pair.left}</div>
+                          <div className="flex-1 font-black uppercase tracking-widest text-[8px] text-muted-foreground/60">{pair.left}</div>
                           <div className="flex-1">
                               <select 
                                 disabled={isRevealed} 
                                 value={selected} 
                                 onChange={(e) => handleSelectAnswer({...userAnswers[currentQ.id], [pair.left]: e.target.value})} 
-                                className="w-full px-4 py-3 bg-background border border-border/10 rounded-lg outline-none focus:border-foreground/50 text-[10px] font-black uppercase tracking-widest  appearance-none cursor-pointer hover:border-border/40"
+                                className="w-full px-3 py-2 bg-background border border-border/10 rounded-lg outline-none focus:border-foreground/50 text-[10px] font-black uppercase tracking-widest  appearance-none cursor-pointer hover:border-border/40"
                               >
                                   <option value="">Select Match...</option>
                                   {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
@@ -377,16 +393,16 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
               )}
 
               {currentQ.type === 'fill_in' && (
-                <div className="p-5 bg-muted/5 border border-border/50 rounded-lg leading-[2] text-xs font-medium tracking-tight text-foreground/70 shadow-inner">
+                <div className="p-3 bg-muted/5 border border-border/50 rounded-lg leading-relaxed text-xs font-medium tracking-tight text-foreground/70 shadow-inner">
                   {renderFillInBlanks()}
                 </div>
               )}
 
               {/* Writing / Scenario / Code / Debug / Synthesis */}
-              {(!currentQ.type || ['debug', 'writing', 'scenario', 'code', 'synthesis', 'trace'].includes(currentQ.type)) && (
+              {(!currentQ.type || ['debug', 'writing', 'scenario', 'code', 'synthesis', 'trace', 'calculation', 'data_analysis'].includes(currentQ.type)) && (
               <div className="space-y-3">
-                  {(currentQ.content || currentQ.codeSnippet) && (
-                  <div className="p-4 bg-muted/5 border border-border/50 rounded-lg shadow-inner">
+                   {(currentQ.content || currentQ.codeSnippet) && (
+                  <div className="p-2 bg-muted/5 border border-border/50 rounded-lg shadow-inner">
                       <MarkdownBlock 
                         content={
                           ['debug', 'code', 'trace'].includes(currentQ.type) && !(currentQ.content || currentQ.codeSnippet).includes('```') 
@@ -396,46 +412,45 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       />
                   </div>
                   )}
-                  <textarea
+                   <textarea
                       disabled={isRevealed}
                       value={userAnswers[currentQ.id] || ''}
                       onChange={(e) => handleSelectAnswer(e.target.value)}
                       placeholder=""
-                      className="w-full min-h-[160px] p-6 bg-muted/20 border-2 border-primary/20 rounded-xl focus:outline-none focus:border-primary text-[14px] font-medium tracking-tight text-foreground  resize-y shadow-md"
+                      className="w-full min-h-[70px] p-3 bg-muted/20 border-2 border-primary/20 rounded-xl focus:outline-none focus:border-primary text-[12px] font-medium tracking-tight text-foreground  resize-y shadow-md"
                   />
               </div>
               )}
 
               {!isRevealed ? (
               <div className="pt-2">
-                  <Button 
-                  onClick={checkAnswer} 
-                  disabled={userAnswers[currentQ.id] === undefined || userAnswers[currentQ.id] === '' || (Array.isArray(userAnswers[currentQ.id]) && userAnswers[currentQ.id].length === 0)}
-                  className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-lg "
-                  >
-                  Verify Understanding
-                  </Button>
+                   <Button 
+                   onClick={checkAnswer} 
+                   disabled={userAnswers[currentQ.id] === undefined || userAnswers[currentQ.id] === '' || (Array.isArray(userAnswers[currentQ.id]) && userAnswers[currentQ.id].length === 0)}
+                   className="w-full font-black tracking-widest uppercase text-[10px] h-9 rounded-lg "
+                   >
+                   Verify Understanding
+                   </Button>
               </div>
               ) : (
-              <div className="mt-4 space-y-4   slide-in-from-top-4 ">
-                <div className="p-8 border-2 border-border bg-muted/10 rounded-2xl space-y-6 shadow-xl shadow-foreground/5">
-                  <div className="flex items-center gap-3 text-foreground/80 font-black uppercase text-[11px] tracking-[0.2em]">
-                    <div className="w-5 h-5 rounded-full bg-foreground/10 flex items-center justify-center">
-                      <Check size={12} />
+                <div className="mt-2 space-y-2   slide-in-from-top-4 ">
+                <div className="p-3 sm:p-4 border-2 border-border bg-muted/10 rounded-xl space-y-3 shadow-xl shadow-foreground/5">
+                  <div className="flex items-center gap-2 text-foreground/80 font-black uppercase text-[10px] tracking-[0.2em]">
+                    <div className="w-4 h-4 rounded-full bg-foreground/10 flex items-center justify-center">
+                      <Check size={10} />
                     </div>
                     <span>Mastery Solution & Logic</span>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Definitive Answer</div>
-                    <div className="text-sm font-bold text-foreground/90 leading-relaxed">
+                  <div className="space-y-1">
+                    <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Definitive Answer</div>
+                    <div className="text-xs font-bold text-foreground/90 leading-relaxed">
                       {Array.isArray(currentQ.answer) ? currentQ.answer.join(', ') : currentQ.answer}
                     </div>
                   </div>
-
-                  <div className="space-y-2 pt-4 border-t border-border/10">
-                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mechanism Explanation</div>
-                    <div className="text-sm font-medium leading-relaxed text-foreground/80">
+ 
+                  <div className="space-y-1 pt-2 border-t border-border/10">
+                    <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mechanism Explanation</div>
+                    <div className="text-xs font-medium leading-relaxed text-foreground/80">
                       <MarkdownBlock content={currentQ.explanation || "No explanation provided."} />
                     </div>
                   </div>
@@ -475,13 +490,13 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
               <div className="flex gap-3">
                       {['fill_in', 'writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQ.type || 'writing') ? (
                           <>
-                              <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-12 rounded-xl  border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 active:scale-95">
+                              <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-10 rounded-lg  border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 active:scale-95">
                                   Wrong
                               </Button>
                               <Button 
                                 onClick={() => handleSelfGrade(true)} 
                                 disabled={currentQ.required_keywords && currentQ.required_keywords.length > 0 && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw])}
-                                className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-12 rounded-xl  hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-10 rounded-lg  hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title={currentQ.required_keywords && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
                               >
                                   Correct

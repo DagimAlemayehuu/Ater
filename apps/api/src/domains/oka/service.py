@@ -797,31 +797,32 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 diff_schedule = ["L1", "L2", "L3"]
                 current_diff = config.difficulty if config.difficulty != "Mixed" else diff_schedule[i % 3]
 
-                tasks.append(agent.generate(
-                    hub['title'], 
-                    f"SEED: {seed}\n" + tight_context, 
-                    current_diff,
-                    mode=hub_mode,
-                    prof_domain=prof_domain,
-                    index=i+1,
-                    total=count,
-                    topic_hint=hint
+                tasks.append(lambda a=agent, h=hub, c=tight_context, d=current_diff, m=hub_mode, p=prof_domain, idx=i+1, hint=hint, qt=q_type: a.generate(
+                    h['title'], 
+                    f"SEED: {seed}\n" + c, 
+                    d,
+                    mode=m,
+                    prof_domain=p,
+                    index=idx,
+                    num_questions=1,
+                    topic_hint=hint,
+                    q_type=qt
                 ))
                 
         # Limit concurrency and rate to avoid groq/ollama rate limits
         from aiolimiter import AsyncLimiter
         # Scanned Active Context
         
-        # Groq limits are often ~30 RPM on free tier, but TPM is easily hit. Limit to 5 per minute for wide safety.
-        rate_limiter = AsyncLimiter(5, 60)
+        # Groq limits are often ~30 RPM on free tier. Limit to 20 per minute for speed with safety.
+        rate_limiter = AsyncLimiter(20, 60)
         
-        async def run_agent(agent_task):
+        async def run_agent(task_fn):
             max_retries = 5
             base_delay = 3.0
             for attempt in range(max_retries):
                 try:
                     async with rate_limiter:
-                        return await agent_task
+                        return await task_fn()
                 except Exception as e:
                     err_msg = str(e)
                     if "429" in err_msg or "rate limit" in err_msg.lower():
@@ -846,13 +847,20 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         
         all_questions = []
         for idx, res in enumerate(results):
-            if isinstance(res, dict) and "error" not in res and res.get("answer") != "N/A":
+            # QuestionAgent returns a list of questions (usually 1 in practice, 3 in batch)
+            if isinstance(res, list):
+                for q in res:
+                    if isinstance(q, dict) and "error" not in q and q.get("answer") != "N/A":
+                        q["id"] = len(all_questions) + 1
+                        all_questions.append(q)
+            elif isinstance(res, dict) and "error" not in res and res.get("answer") != "N/A":
                 res["id"] = len(all_questions) + 1
                 all_questions.append(res)
             else:
                 logger.error(f"[OKA Service] Failed to generate a question: {res}")
 
-        questions = all_questions
+        # FINAL HARD SLICE: Ensure total count matches configuration exactly
+        questions = all_questions[:total_q]
         
         # --- CRITICAL POST-PROCESSING ---
         # Ensure every question has a valid 'type' for the frontend to render

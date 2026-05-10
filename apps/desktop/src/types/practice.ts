@@ -15,6 +15,9 @@ export interface AdvancedPracticeConfig {
     order: number;
     debug: number;
     synthesis: number;
+    trace: number;
+    calculation: number;
+    data_analysis: number;
   };
 
   // 3. Cognitive Constraints

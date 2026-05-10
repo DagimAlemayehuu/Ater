@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator, ValidationInfo
-from typing import List, Dict, Optional, Union, Literal
+from typing import List, Dict, Optional, Union, Literal, Any, Annotated
 
 class AdvancedPracticeConfig(BaseModel):
     hubId: str
@@ -7,8 +7,9 @@ class AdvancedPracticeConfig(BaseModel):
     timeBoundDays: Optional[int] = None
     prioritizeWeaknesses: bool = False
     questionDistribution: Dict[str, int] = Field(default_factory=lambda: {
-        "mcq": 0, "true_false": 0, "writing": 0, "fill_in": 0,
-        "matching": 0, "order": 0, "debug": 0, "synthesis": 0, "trace": 0
+        "mcq": 1, "true_false": 1, "writing": 1, "fill_in": 1,
+        "matching": 1, "order": 1, "debug": 1, "synthesis": 1, "trace": 1,
+        "calculation": 1, "data_analysis": 1, "scenario": 1, "code": 1
     })
     difficulty: Literal["L0", "L1", "L2", "L3", "L4", "Mixed"] = "L1"
     distractorPlausibility: Literal["Low", "Medium", "High"] = "Medium"
@@ -21,18 +22,38 @@ class AdvancedPracticeConfig(BaseModel):
     requireConfidenceWager: bool = False
 
 class BaseQuestion(BaseModel):
-    id: int
+    id: Optional[int] = None
     type: str
-    difficulty: str
+    difficulty: str = Field(default="L1", description="Conceptual depth (L1-L3).")
     question: str
-    explanation: str
+    explanation: str = Field(default="Analysis complete.", description="Step-by-step logic.")
     hints: List[str] = Field(default_factory=list)
+    required_keywords: List[str] = Field(default_factory=list)
+    content: str = ""
+    text_with_blanks: str = ""
+    answer: Any = "" # Base answer field, refined in subclasses
+
+    @field_validator('explanation', check_fields=False)
+    @classmethod
+    def check_punctuation(cls, v: str) -> str:
+        v = v.strip()
+        if not v.endswith(('.', '!', '?', '"', "'")):
+            v += "."
+        return v
+
+    @field_validator('answer', mode='after', check_fields=False)
+    @classmethod
+    def clean_answer_string(cls, v: str, info: ValidationInfo) -> str:
+        q_type = info.data.get('type')
+        if q_type == 'trace':
+            if "=" in v and len(v) > 15:
+                raise ValueError("Trace answers MUST NOT contain scratchpad math. Only output the final number or final short equation (e.g., 'Qd = 100').")
+        return v
 
 class MCQQuestion(BaseQuestion):
     type: Literal["mcq"]
     options: Dict[str, str]
     answer: str
-    required_keywords: List[str] = Field(default_factory=list)
 
 class TrueFalseQuestion(BaseQuestion):
     type: Literal["true_false"]
@@ -41,30 +62,25 @@ class TrueFalseQuestion(BaseQuestion):
 class WritingQuestion(BaseQuestion):
     type: Literal["writing"]
     answer: str
-    required_keywords: List[str] = Field(default_factory=list)
 
 class ScenarioQuestion(BaseQuestion):
     type: Literal["scenario"]
     answer: str
-    required_keywords: List[str] = Field(default_factory=list)
 
 class CodeQuestion(BaseQuestion):
     type: Literal["code"]
     codeSnippet: str
     answer: str
-    required_keywords: List[str] = Field(default_factory=list)
     language: str
 
 class FillInQuestion(BaseQuestion):
     type: Literal["fill_in"]
-    textWithBlanks: str
-    answer: List[str]
+    answer: Union[str, List[str]]
 
 class FindErrorQuestion(BaseQuestion):
     type: Literal["find_error"]
     buggyCode: str
     answer: str
-    required_keywords: List[str] = Field(default_factory=list)
 
 class MatchingPair(BaseModel):
     left: str
@@ -73,33 +89,52 @@ class MatchingPair(BaseModel):
 class MatchingQuestion(BaseQuestion):
     type: Literal["matching"]
     pairs: List[MatchingPair]
+    answer: str = "See pairs for correct matching."
 
 class OrderQuestion(BaseQuestion):
     type: Literal["order"]
     steps: List[str]
     answer: List[str]
 
+    @field_validator('answer', 'steps', mode='before')
+    @classmethod
+    def ensure_list(cls, v):
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(',') if s.strip()]
+        return v
+
 class DebugQuestion(BaseQuestion):
     type: Literal["debug"]
     content: str
     answer: str
-    required_keywords: List[str] = Field(default_factory=list)
 
 class SynthesisQuestion(BaseQuestion):
     type: Literal["synthesis"]
     answer: str
-    required_keywords: List[str] = Field(default_factory=list)
+
+class CalculationQuestion(BaseQuestion):
+    type: Literal["calculation"]
+    content: str
+    answer: str
+
+class DataAnalysisQuestion(BaseQuestion):
+    type: Literal["data_analysis"]
+    content: str
+    answer: str
 
 class TraceQuestion(BaseQuestion):
     type: Literal["trace"]
     content: str
     answer: str
-    required_keywords: List[str] = Field(default_factory=list)
 
-Question = Union[
-    MCQQuestion, TrueFalseQuestion, WritingQuestion, FillInQuestion,
-    MatchingQuestion, OrderQuestion, DebugQuestion, SynthesisQuestion,
-    TraceQuestion
+Question = Annotated[
+    Union[
+        MCQQuestion, TrueFalseQuestion, WritingQuestion, ScenarioQuestion,
+        CodeQuestion, FillInQuestion, FindErrorQuestion, MatchingQuestion,
+        OrderQuestion, DebugQuestion, SynthesisQuestion, TraceQuestion,
+        CalculationQuestion, DataAnalysisQuestion
+    ],
+    Field(discriminator='type')
 ]
 
 class PracticeBatch(BaseModel):
@@ -206,33 +241,5 @@ class PractitionerResponse(BaseModel):
     artifact: str = Field(..., description="GENERATE THIS SECOND. MUST be valid Markdown. MUST contain a fully populated Markdown table with a header row AND at least 3 rows of numerical data. Generating a header row without data rows is STRICTLY FORBIDDEN. If a table, MUST have outer pipes (e.g., | X | Y |). If code, use a markdown code block. MUST strictly use the logic defined in primary_equation_or_logic.")
     walkthrough: List[str] = Field(..., min_length=3, description="An array of EXACTLY 3-7 numbered steps. MUST execute a step-by-step breakdown using the exact data from the artifact. You MUST explicitly write out the arithmetic sub-operations. DO NOT just say 'which results in 10'. You MUST write '130 - 120 = 10'. Make the math visible. You MUST use the EXACT SAME equation and numbers generated in the Artifact table. DO NOT generate Markdown tables inside this field; if you need to reference data, use text only. Introduction of new equations is FORBIDDEN.")
 
-class Question(BaseModel):
-    type: str = Field(..., description="The type of question (mcq, fill_in, trace, etc.)")
-    difficulty: Literal["L1", "L2", "L3"]
-    question: str = Field(..., description="The question text. Must be 100% self-contained.")
-    content: str = Field(default="", description="Optional context, baseline data, or starting code. NEVER put the answer or hints in this field.")
-    text_with_blanks: str = Field(default="", description="If type is fill_in, MUST contain the exact literal string '[[blank]]'. ABSOLUTELY NO UNDERSCORES. Example: 'The curve slopes [[blank]].' If not fill_in, leave empty.")
-    options: Dict[str, str] = Field(default_factory=dict, description="If type is mcq, provide A, B, C, D options. Otherwise leave empty.")
-    answer: str = Field(..., description="For fill_in: EXACTLY 1-2 words. For trace: ONLY the final scalar value, equation, or code output. NO scratchpad math or explanations here.")
-    explanation: str = Field(..., min_length=15, description="The step-by-step derivation, proof, or reasoning proving why the answer is correct. MUST contain a detailed sentence explaining the logic. MUST end with a period, exclamation, or question mark.")
-    
-    @field_validator('explanation')
-    @classmethod
-    def check_punctuation(cls, v: str) -> str:
-        if not v.strip().endswith(('.', '!', '?')):
-            raise ValueError("Explanation MUST end with proper terminal punctuation (., !, ?). Do not truncate the sentence.")
-        return v
-
-    @field_validator('answer', mode='after')
-    @classmethod
-    def clean_answer_string(cls, v: str, info: ValidationInfo) -> str:
-        # info.data might be empty in some validation modes, check carefully
-        q_type = info.data.get('type')
-        if q_type == 'trace':
-            # If it contains an equals sign and is suspicious in length, it's likely scratchpad math
-            if "=" in v and len(v) > 15:
-                raise ValueError("Trace answers MUST NOT contain scratchpad math. Only output the final number or final short equation (e.g., 'Qd = 100').")
-        return v
-
 class QuizResponse(BaseModel):
-    questions: List[Question] = Field(..., min_length=3, max_length=3)
+    questions: List[Question] = Field(..., min_length=1, max_length=5)

@@ -75,14 +75,19 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  hubId: '',
  selectedAtomicNotes: [],
  questionDistribution: {
- mcq: 4,
- true_false: 3,
+ mcq: 1,
+ true_false: 1,
  writing: 1,
- fill_in: 2,
- matching: 0,
- order: 0,
- debug: 0,
- synthesis: 0
+ fill_in: 1,
+ matching: 1,
+ order: 1,
+ debug: 1,
+ synthesis: 1,
+ trace: 1,
+ calculation: 1,
+ data_analysis: 1,
+ scenario: 1,
+ code: 1
 },
  difficulty: 'L1',
  gradingStrictness: 'Lenient',
@@ -230,7 +235,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  try {
  const cleanDistribution = Object.fromEntries(
  Object.entries(advancedConfig.questionDistribution).filter(([k]) => 
- ['mcq', 'true_false', 'writing', 'fill_in', 'matching', 'order', 'debug', 'synthesis', 'trace'].includes(k)
+ ['mcq', 'true_false', 'writing', 'fill_in', 'matching', 'order', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(k)
  )
  );
 
@@ -351,7 +356,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 }
 
  const calculateScore = () => {
-  const selfGradedTypes = ['writing', 'synthesis', 'debug', 'trace'];
+  const selfGradedTypes = ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis'];
   let correct = 0;
   const total = questions.length;
   questions.forEach(q => {
@@ -598,15 +603,19 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 border-b border-border pb-4 mb-4">Types</h3>
  <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
  {[
- {key: 'mcq', label: 'Choice'}, 
- {key: 'true_false', label: 'T/F'}, 
- {key: 'writing', label: 'Write'}, 
- {key: 'fill_in', label: 'Fill'},
- {key: 'debug', label: 'Debug'},
- {key: 'trace', label: 'Trace'},
- {key: 'order', label: 'Order'},
- {key: 'matching', label: 'Match'},
- {key: 'synthesis', label: 'Synth'}
+ {key: 'mcq', label: 'Multiple Choice'}, 
+ {key: 'true_false', label: 'True or False'}, 
+ {key: 'writing', label: 'Writing / Essay'}, 
+ {key: 'fill_in', label: 'Fill in the Blank'},
+ {key: 'debug', label: 'Debugging / Error Finding'},
+ {key: 'trace', label: 'Logic / Calculation Trace'},
+ {key: 'order', label: 'Ordering / Steps'},
+ {key: 'matching', label: 'Matching Pairs'},
+ {key: 'synthesis', label: 'Synthesis / Scenario'},
+ {key: 'calculation', label: 'Math / Calculation'},
+ {key: 'data_analysis', label: 'Data Analysis'},
+ {key: 'scenario', label: 'Scenario Analysis'},
+ {key: 'code', label: 'Code / Implementation'}
  ].map(type => (
  <div key={type.key} className="space-y-2">
  <div className="flex justify-between items-center">
@@ -646,60 +655,76 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const progress = ((currentQuestionIdx + 1) / questions.length) * 100;
  return (
  <div className="h-full w-full flex flex-col bg-background text-foreground overflow-hidden">
- <div className="px-4 sm:px-10 py-4 sm:py-6 border-b border-border flex flex-col lg:flex-row items-start sm:items-center justify-between gap-4">
- <div className="flex flex-col sm:flex-row lg:w-auto sm:items-center gap-4 sm:gap-10 w-full sm:w-auto">
+ <div className="px-4 sm:px-8 py-3 border-b border-border flex flex-col lg:flex-row items-start sm:items-center justify-between gap-3">
+ <div className="flex flex-col sm:flex-row lg:w-auto sm:items-center gap-4 sm:gap-8 w-full sm:w-auto">
  <div className="flex flex-col gap-0.5">
  <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Practice</span>
  <div className="text-xs font-black uppercase tracking-tight truncate max-w-[200px]">{cleanTitle(hubs.find(h => h.id === selectedHub)?.title || '')}</div>
  </div>
  <div className="flex-1 sm:w-64 h-1 bg-muted/20 rounded-full overflow-hidden">
- <div className="h-full bg-primary  " style={{width: `${progress}%`}} />
+ <div className="h-full bg-primary" style={{width: `${progress}%`}} />
  </div>
  </div>
- <div className="flex items-center justify-between lg:justify-end w-full sm:w-auto gap-4 sm:gap-10 text-[9px] font-black uppercase tracking-widest">
+ <div className="flex items-center justify-between lg:justify-end w-full sm:w-auto gap-4 sm:gap-6 text-[9px] font-black uppercase tracking-widest">
  {globalTimeLeft !== null && (
- <div className="flex flex-col items-end gap-1">
+ <div className="flex flex-col items-end gap-0.5">
  <span className="text-muted-foreground/20 text-[7px]">Total</span>
- <div className={cn("px-3 py-1 rounded border", globalTimeLeft < 60 ? "border-destructive text-destructive" : "border-border text-muted-foreground/60")}>
+ <div className={cn("px-2 py-0.5 rounded border", globalTimeLeft < 60 ? "border-destructive text-destructive" : "border-border text-muted-foreground/60")}>
  {Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}
  </div>
  </div>
  )}
  {questionTimeLeft !== null && (
- <div className="flex flex-col items-end gap-1">
+ <div className="flex flex-col items-end gap-0.5">
  <span className="text-muted-foreground/20 text-[7px]">Q-Time</span>
- <div className={cn("px-3 py-1 rounded border", questionTimeLeft < 10 ? "border-destructive text-destructive" : "border-border text-primary")}>
+ <div className={cn("px-2 py-0.5 rounded border", questionTimeLeft < 10 ? "border-destructive text-destructive" : "border-border text-primary")}>
  {Math.floor(questionTimeLeft / 60)}:{String(questionTimeLeft % 60).padStart(2, '0')}
  </div>
  </div>
  )}
- <div className="flex flex-col items-end gap-1">
+ <div className="flex flex-col items-end gap-0.5">
  <span className="text-muted-foreground/20 text-[7px]">Progress</span>
- <div className="px-3 py-1 rounded border border-border">{currentQuestionIdx + 1} / {questions.length}</div>
+ <div className="px-2 py-0.5 rounded border border-border">{currentQuestionIdx + 1} / {questions.length}</div>
  </div>
  </div>
  </div>
 
- <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center py-16 px-10">
- <div className="max-w-3xl w-full space-y-16    ">
- <div className="space-y-8">
- <div className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/40 flex items-center gap-3">
- <Badge variant="outline" className="text-[8px] border-primary/20 bg-primary/5 text-primary rounded-md px-2 py-0">{currentQuestion.difficulty || '1'}</Badge>
+ <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center py-8 px-6 sm:px-10">
+ <div className="max-w-3xl w-full space-y-8">
+ <div className="space-y-4">
+ <div className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/40 flex items-center gap-2">
+ <Badge variant="outline" className="text-[8px] border-primary/20 bg-primary/5 text-primary rounded-md px-1.5 py-0">{currentQuestion.difficulty || '1'}</Badge>
  <div className="w-1 h-1 rounded-full bg-primary/20" />
- <span>{(currentQuestion.type || '').replace('_', ' ')}</span>
+ <span>{
+      {
+          'mcq': 'Multiple Choice',
+          'true_false': 'True or False',
+          'writing': 'Writing / Essay',
+          'fill_in': 'Fill in the Blank',
+          'debug': 'Debugging / Error Finding',
+          'trace': 'Logic / Calculation Trace',
+          'order': 'Ordering / Steps',
+          'matching': 'Matching Pairs',
+          'synthesis': 'Synthesis / Scenario',
+          'calculation': 'Math / Calculation',
+          'data_analysis': 'Data Analysis',
+          'scenario': 'Scenario Analysis',
+          'code': 'Code / Implementation'
+      }[currentQuestion.type] || (currentQuestion.type || '').replace('_', ' ')
+  }</span>
  </div>
- <div className="text-3xl font-black tracking-tight leading-tight text-foreground/90"><MarkdownBlock content={currentQuestion.question} /></div>
+ <div className="text-xl sm:text-2xl font-black tracking-tight leading-snug text-foreground/90"><MarkdownBlock content={currentQuestion.question} /></div>
  </div>
 
- <div className="space-y-10">
+ <div className="space-y-6">
  {currentQuestion.type === 'mcq' && (
  <div className="grid grid-cols-1 gap-2">
  {Object.entries(currentQuestion.options!).map(([key, val]) => {
  const isSelected = userAnswers[currentQuestion.id] === key; 
  const isCorrect = isRevealed && (key === currentQuestion.answer || String(val).toLowerCase() === String(currentQuestion.answer).toLowerCase());
  return (
- <button key={key} disabled={isRevealed} onClick={() => handleSelectAnswer(key)} className={cn("p-5 border rounded-md text-left  text-[13px] font-black uppercase tracking-tight", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10")}>
- <span className="text-muted-foreground/20 shrink-0 mt-0.5 mr-4">{key}</span> <div className="flex-1 overflow-x-auto"><MarkdownBlock content={String(val)} /></div>
+ <button key={key} disabled={isRevealed} onClick={() => handleSelectAnswer(key)} className={cn("p-3 sm:p-4 border rounded-md text-left text-[12px] font-black uppercase tracking-tight", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10")}>
+ <span className="text-muted-foreground/20 shrink-0 mt-0.5 mr-3">{key}</span> <div className="flex-1 overflow-x-auto"><MarkdownBlock content={String(val)} /></div>
  </button>
  );
 })}
@@ -707,13 +732,13 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  )}
 
  {(currentQuestion.type === 'writing' || currentQuestion.type === 'synthesis' || currentQuestion.type === 'debug' || currentQuestion.type === 'trace') && (
-  <div className="space-y-8">
+  <div className="space-y-6">
   {currentQuestion.type === 'debug' && <div className="p-1 border border-border rounded-xl bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${currentQuestion.content}\n\`\`\``} /></div>}
-  <textarea rows={8} disabled={isRevealed} className="w-full p-8 bg-muted/5 border-2 border-border rounded-2xl text-base font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none  placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
+  <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-muted/5 border-2 border-border rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
   {isRevealed && (
-    <div className="p-8 border-2 border-primary/20 bg-primary/5 rounded-2xl space-y-4   slide-in-from-top-4 ">
-      <div className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-2">Mastery Solution</div>
-      <div className="text-sm font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap"><MarkdownBlock content={String(currentQuestion.answer)} /></div>
+    <div className="p-4 border-2 border-primary/20 bg-primary/5 rounded-lg space-y-2">
+      <div className="text-[9px] font-black uppercase tracking-[0.3em] text-primary mb-1">Mastery Solution</div>
+      <div className="text-xs font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap"><MarkdownBlock content={String(currentQuestion.answer)} /></div>
     </div>
   )}
   </div>
@@ -725,7 +750,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const isSelected = userAnswers[currentQuestion.id] === v; 
  const isCorrect = isRevealed && v.toLowerCase() === String(currentQuestion.answer).toLowerCase(); 
  return (
- <button key={v} disabled={isRevealed} onClick={() => handleSelectAnswer(v)} className={cn("h-32 border rounded-md text-[10px] font-black uppercase tracking-widest ", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale text-muted-foreground/40" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10 text-muted-foreground/40")}>{v}</button>
+ <button key={v} disabled={isRevealed} onClick={() => handleSelectAnswer(v)} className={cn("h-20 sm:h-24 border rounded-md text-[10px] font-black uppercase tracking-widest ", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale text-muted-foreground/40" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10 text-muted-foreground/40")}>{v}</button>
  );
 })}
  </div>
@@ -742,14 +767,14 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
      const isWrong = isRevealed && step !== (currentQuestion.answer || [])[i];
      return (
          <div key={i} className={cn(
-             "flex items-center gap-6 p-5 border rounded-2xl ",
+             "flex items-center gap-4 p-3 border rounded-2xl ",
              isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border bg-muted/5 hover:border-foreground/20"
          )}>
-             <div className="flex flex-col gap-2 border-r border-border/10 pr-6">
+             <div className="flex flex-col gap-1.5 border-r border-border/10 pr-4">
                  <button disabled={isRevealed || i===0} onClick={moveUp} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-primary  disabled:opacity-0">▲</button>
                  <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-primary  disabled:opacity-0">▼</button>
              </div>
-             <div className="text-base font-bold tracking-tight text-foreground/80 pl-2">{step}</div>
+             <div className="text-sm font-bold tracking-tight text-foreground/80 pl-1">{step}</div>
          </div>
      )
   })}
@@ -765,12 +790,12 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
      const isWrong = isRevealed && selected !== pair.right;
      return (
          <div key={i} className={cn(
-             "flex items-center gap-8 p-6 border rounded-2xl ",
+             "flex items-center gap-4 p-3 border rounded-2xl ",
              isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border bg-muted/5 hover:border-foreground/20"
          )}>
-             <div className="flex-1 font-black uppercase tracking-[0.2em] text-[11px] text-muted-foreground/60">{pair.left}</div>
+             <div className="flex-1 font-black uppercase tracking-[0.2em] text-[10px] text-muted-foreground/60">{pair.left}</div>
              <div className="flex-1">
-                 <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-4 bg-background border border-border rounded-xl outline-none focus:border-primary/50 text-[11px] font-black uppercase tracking-widest  appearance-none cursor-pointer">
+                 <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-3 bg-background border border-border rounded-xl outline-none focus:border-primary/50 text-[10px] font-black uppercase tracking-widest  appearance-none cursor-pointer">
                      <option value="">Select match...</option>
                      {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
                  </select>
