@@ -12,6 +12,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { MermaidWrapper } from './obsidian/MarkdownViewer';
 
+// Density optimized CodeBlock
 const CodeBlock = ({ language, value }: { language: string | null, value: string }) => {
     const [copied, setCopied] = useState(false);
     const isDark = document.documentElement.classList.contains('dark');
@@ -23,25 +24,25 @@ const CodeBlock = ({ language, value }: { language: string | null, value: string
     };
 
     return (
-        <div className="relative group my-4 rounded-xl border border-border/20 overflow-hidden bg-transparent  hover:border-border/40 not-prose">
+        <div className="relative group my-2 rounded-lg border border-border/20 overflow-hidden bg-transparent  hover:border-border/40 not-prose">
             <div className={cn(
-                "flex items-center justify-between px-5 py-1.5 border-b border-border/5 bg-muted/5 ",
+                "flex items-center justify-between px-3 py-1 border-b border-border/5 bg-muted/5 ",
                 !language && "opacity-0 group-hover:opacity-100"
             )}>
                 <div className="flex items-center">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30 select-none">
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30 select-none">
                         {language || 'code'}
                     </span>
                 </div>
                 <button 
                     onClick={handleCopy}
-                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-muted/20 rounded-md  text-muted-foreground/50 hover:text-foreground group/copy"
+                    className="flex items-center gap-1 px-1.5 py-0.5 hover:bg-muted/20 rounded text-muted-foreground/50 hover:text-foreground group/copy"
                     title="Copy Code"
                 >
-                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-0 group-hover/copy:opacity-100 ">
+                    <span className="text-[8px] font-bold uppercase tracking-widest opacity-0 group-hover/copy:opacity-100 ">
                         {copied ? 'Copied' : 'Copy'}
                     </span>
-                    {copied ? <Check size={12} className="text-primary" /> : <Copy size={12} className="group-hover/copy:scale-110 transition-transform" />}
+                    {copied ? <Check size={10} className="text-primary" /> : <Copy size={10} className="group-hover/copy:scale-110 transition-transform" />}
                 </button>
             </div>
             
@@ -52,10 +53,10 @@ const CodeBlock = ({ language, value }: { language: string | null, value: string
                     PreTag="div"
                     customStyle={{
                         background: 'transparent',
-                        padding: language ? '1.25rem 1.5rem' : '1.5rem',
+                        padding: '0.75rem 1rem',
                         margin: 0,
-                        fontSize: '13px',
-                        lineHeight: '1.7',
+                        fontSize: '11px',
+                        lineHeight: '1.5',
                         fontFamily: 'JetBrains Mono, Fira Code, Menlo, monospace',
                         overflowX: 'auto',
                         WebkitFontSmoothing: 'antialiased'
@@ -215,7 +216,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
             }}
             placeholder=""
             className={cn(
-              "mx-1 px-3 py-1 border-2 border-primary/40 bg-muted/20 rounded-lg focus:outline-none focus:border-primary w-40 text-center font-bold tracking-widest text-[14px] inline-block shadow-md",
+              "mx-0.5 px-2 py-0.5 border border-primary/40 bg-muted/10 rounded focus:outline-none focus:border-primary w-32 text-center font-bold tracking-widest text-[12px] inline-block",
               isRevealed 
                 ? "border-muted-foreground/30 text-foreground/50 opacity-80"
                 : "border-primary/40 focus:border-primary text-foreground"
@@ -229,41 +230,41 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
   if (!currentQ && !showScore) return null;
 
   return (
-    <div className="my-2 border border-border rounded-xl overflow-hidden bg-background shadow-sm not-prose">
+    <div className="my-1 border border-border rounded-xl overflow-hidden bg-background shadow-sm not-prose">
       {/* Header bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/5">
-        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
-          <span>Active Recall Challenge</span>
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/50 bg-muted/5">
+        <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">
+          <span>Recall Challenge</span>
         </div>
         {questions.length > 1 && !showScore && (
-          <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
-            Progress: <span className="text-foreground">{currentIdx + 1} / {questions.length}</span>
+          <div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">
+            <span className="text-foreground">{currentIdx + 1} / {questions.length}</span>
           </div>
         )}
       </div>
       
       {showScore ? (
-        <div className="p-6 sm:p-8 flex flex-col items-center justify-center space-y-4 text-center   zoom-in ">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20">
-            <Check size={32} className="text-primary" />
+        <div className="p-4 flex flex-col items-center justify-center space-y-3 text-center   zoom-in ">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20">
+            <Check size={24} className="text-primary" />
           </div>
-          <div className="space-y-1">
-            <h2 className="text-xl font-black tracking-tight text-foreground/90">Challenge Complete</h2>
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Active recall sequence finished</p>
+          <div className="space-y-0.5">
+            <h2 className="text-lg font-black tracking-tight text-foreground/90">Challenge Complete</h2>
+            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Active recall sequence finished</p>
           </div>
-          <div className="text-4xl font-black text-primary tabular-nums">
-            {Object.values(scores).filter(Boolean).length} <span className="text-2xl text-muted-foreground/30">/ {questions.length}</span>
+          <div className="text-3xl font-black text-primary tabular-nums">
+            {Object.values(scores).filter(Boolean).length} <span className="text-xl text-muted-foreground/30">/ {questions.length}</span>
           </div>
-          <Button onClick={resetQuiz} className="mt-4 font-black uppercase tracking-[0.2em] text-[10px] h-10 px-8 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20  active:scale-95">
-            <RotateCcw size={12} className="mr-2" /> Restart Challenge
+          <Button onClick={resetQuiz} className="mt-2 font-black uppercase tracking-[0.2em] text-[10px] h-9 px-6 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20  active:scale-95">
+            <RotateCcw size={12} className="mr-2" /> Restart
           </Button>
         </div>
       ) : (
-        <div className="p-4 lg:p-5 flex flex-col justify-center space-y-3 min-h-[200px]">
-          <div className="space-y-3  slide-in-from-top-4  duration-700" key={`header-${currentQ.id}`}>
-              <div className="text-[9px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-2">
-    <Badge variant="outline" className="text-[8px] border-border/40 bg-muted/20 text-muted-foreground rounded-md px-2 py-0">{currentQ.difficulty || '1'}</Badge>
-    <div className="w-1 h-1 rounded-full bg-muted-foreground/20" />
+        <div className="p-3 flex flex-col justify-center space-y-2 min-h-[120px]">
+          <div className="space-y-2  slide-in-from-top-4  duration-700" key={`header-${currentQ.id}`}>
+              <div className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-2">
+    <Badge variant="outline" className="text-[7px] border-border/40 bg-muted/20 text-muted-foreground rounded-md px-1.5 py-0">{currentQ.difficulty || '1'}</Badge>
+    <div className="w-0.5 h-0.5 rounded-full bg-muted-foreground/20" />
     <span>{
         {
             'mcq': 'Multiple Choice',
@@ -283,7 +284,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
     }</span>
     </div>
               {currentQ.type !== 'fill_in' && (
-                <div className="text-base lg:text-lg font-bold tracking-tight leading-snug text-foreground/90 max-w-3xl">
+                <div className="text-[13px] font-bold tracking-tight leading-snug text-foreground/90 max-w-3xl">
                   <MarkdownBlock content={currentQ.question} />
                 </div>
               )}
@@ -304,25 +305,25 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       disabled={isRevealed} 
                       onClick={() => handleSelectAnswer(key)} 
                       className={cn(
-                          "group flex items-center gap-3 p-2 border-2 rounded-lg text-left  ", 
+                          "group flex items-center gap-2 p-1.5 border rounded-lg text-left  ", 
                           isCorrectHighlight 
-                          ? "border-foreground bg-muted/20 shadow-sm" 
+                          ? "border-primary bg-primary/5 shadow-sm" 
                           : isSelected && !isRevealed 
-                              ? "border-foreground bg-foreground/5 shadow-md scale-[1.01]" 
+                              ? "border-foreground bg-foreground/5 shadow-md" 
                               : "border-border/40 hover:border-foreground/20 hover:bg-muted/5", 
-                          isRevealed && !isCorrectHighlight ? "opacity-30 grayscale scale-[0.98]" : ""
+                          isRevealed && !isCorrectHighlight ? "opacity-30 grayscale" : ""
                       )}
                       >
                       <div className={cn(
-                          "flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-[10px] font-black border ", 
+                          "flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-[9px] font-black border ", 
                           isCorrectHighlight || (isSelected && !isRevealed) 
-                          ? "bg-foreground text-background border-foreground" 
-                          : "bg-muted/10 border-border/50 text-muted-foreground/40 group-hover:border-foreground/40 group-hover:text-foreground/60"
+                          ? "bg-primary text-primary-foreground border-primary" 
+                          : "border-border text-muted-foreground/40 group-hover:border-foreground/30"
                       )}>
                           {key}
                       </div>
-                       <div className="text-[12px] font-medium tracking-tight text-foreground/80 group-hover:text-foreground flex-1 text-left">
-                          <MarkdownBlock content={String(val)} />
+                      <div className="flex-1 text-[11px] font-bold leading-tight tracking-tight text-foreground/80">
+                        <MarkdownBlock content={String(val)} />
                       </div>
                       </button>
                   );
@@ -490,13 +491,13 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
               <div className="flex gap-3">
                       {['fill_in', 'writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQ.type || 'writing') ? (
                           <>
-                              <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-10 rounded-lg  border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 active:scale-95">
+                              <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-9 rounded-lg  border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 active:scale-95 transition-all">
                                   Wrong
                               </Button>
                               <Button 
                                 onClick={() => handleSelfGrade(true)} 
                                 disabled={currentQ.required_keywords && currentQ.required_keywords.length > 0 && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw])}
-                                className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-10 rounded-lg  hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-9 rounded-lg  hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                 title={currentQ.required_keywords && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
                               >
                                   Correct

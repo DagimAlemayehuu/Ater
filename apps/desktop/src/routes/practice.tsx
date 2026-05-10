@@ -518,17 +518,17 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  // ──────────────────────────────────────────────────────────────────────────
  if (view === 'configuring') {
  const totalQuestions = Object.values(advancedConfig.questionDistribution).reduce((a, b) => a + b, 0)
- return (
- <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-hidden p-4 sm:p-10">
+  return (
+  <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-hidden p-3 sm:p-6">
  <div className="flex items-center justify-between mb-8">
  <button onClick={() => setView('dashboard')} className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border rounded-md bg-muted/5 ">Cancel</button>
  <div className="text-xl font-black tracking-tight">{totalQuestions} Questions</div>
  </div>
 
  <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0">
- <div className="lg:col-span-3 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
- <div className="p-6 bg-muted/5 border border-border rounded-lg space-y-8">
- <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div className="lg:col-span-3 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+  <div className="p-4 bg-muted/5 border border-border rounded-lg space-y-6">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
  <Select value={selectedHub} onValueChange={(val) => {setSelectedHub(val); loadHubNotes(val);}}>
@@ -813,7 +813,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
   )}
 
  {currentQuestion.type === 'fill_in' && (
- <div className="p-8 bg-muted/5 border border-border/10 rounded-lg text-lg font-medium leading-relaxed flex flex-wrap items-center gap-y-4">
+  <div className="p-5 bg-muted/5 border border-border/10 rounded-lg text-base font-medium leading-relaxed flex flex-wrap items-center gap-y-3">
  {(() => {
  const parts = (currentQuestion.textWithBlanks || '').split(/\[\[.*?\]\]/);
  return parts.map((part: string, i: number) => (
@@ -828,12 +828,12 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
  )}
 
-  {isRevealed && currentQuestion.explanation && (
-    <div className="p-8 border border-border/10 rounded-2xl bg-muted/5 text-sm font-medium text-muted-foreground/80 italic leading-relaxed   ">
-        <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30 mb-4 not-italic">Mechanism Insight</div>
-        <MarkdownBlock content={currentQuestion.explanation} />
-    </div>
-  )}
+   {isRevealed && currentQuestion.explanation && (
+     <div className="p-5 border border-border/10 rounded-xl bg-muted/5 text-[13px] font-medium text-muted-foreground/80 italic leading-relaxed   ">
+         <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30 mb-2 not-italic">Mechanism Insight</div>
+         <MarkdownBlock content={currentQuestion.explanation} />
+     </div>
+   )}
 
   {isRevealed && ['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQuestion.type) && currentQuestion.required_keywords && currentQuestion.required_keywords.length > 0 && (
     <div className="p-8 border border-border/10 rounded-2xl bg-muted/5 space-y-4   ">
@@ -867,7 +867,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
  </div>
 
- <div className="p-6 sm:p-10 border-t border-border/10 bg-background/80 backdrop-blur-md">
+  <div className="p-4 sm:p-6 border-t border-border/10 bg-background/80 backdrop-blur-md">
  <div className="max-w-2xl mx-auto flex items-center justify-between">
  <Button variant="ghost" onClick={resetSession} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Exit</Button>
  <div className="flex items-center gap-4">

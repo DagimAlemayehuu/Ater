@@ -2,7 +2,7 @@ import json
 import re
 import asyncio
 import hashlib
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Union
 from langchain_core.language_models.chat_models import BaseChatModel
 from .schemas import PartialPlan, TheoryResponse, PractitionerResponse, QuizResponse, Question, ContextBriefing
 from .governor import governor
@@ -1168,35 +1168,42 @@ DOMAIN AXIOMS (CRITICAL):
         return await self.generate(note_title, theory_body, primary_language)
 
 class QuestionAgent:
-    def __init__(self, llm):
+    def __init__(self, llm, q_type: Optional[str] = None):
         self.llm = llm
+        self.q_type = q_type
 
-    async def generate(self, note_title: str, context: str, mode: str = "ECON-MACRO", academic_level: str = "Undergraduate", course_title: str = "Unknown", modality: str = "Qualitative/Definitional", max_tokens: int = 2000) -> List[Dict]:
+    async def generate(self, note_title: str, context: str, difficulty: str = "L1", mode: str = "ECON-MACRO", academic_level: str = "Undergraduate", course_title: str = "Unknown", modality: str = "Qualitative/Definitional", max_tokens: int = 2000, num_questions: int = 3, q_type: Optional[str] = None, topic_hint: Optional[str] = None, index: int = 1, prof_domain: Optional[str] = None, **kwargs) -> List[Dict]:
+        target_type = q_type or self.q_type
         domain = get_persona(mode, modality)
-        persona = domain.get("persona", "Senior Assessment Engineer")
+        persona = prof_domain or domain.get("persona", "Senior Assessment Engineer")
         l3_law = domain.get("l3_law", "L3 must test critical analysis.")
         title_readable = note_title.replace("_", " ")
 
         axioms = domain.get("sanity_check", "Ensure logical consistency.")
-        sys_prompt = f"""You are a Hostile Senior Assessment Engineer in {persona}. Create a 3-question quiz for the following note.
+        hint_str = f"FOCUS AREA: {topic_hint}" if topic_hint else ""
+        type_constraint = f"ALL questions MUST be of type: '{target_type}'." if target_type else "Difficulty: Q1=L1 (fill_in), Q2=L2 (mcq), Q3=L3 (trace)."
+        
+        sys_prompt = f"""You are a Hostile Senior Assessment Engineer in {persona}. Create a {num_questions}-question quiz for the following note.
+{hint_str}
 
 NOTE TEXT:
 {context[:6000]}
 
 CORE LAWS:
 1. Scope Constraint: DO NOT test formulas or concepts not in the NOTE TEXT.
-2. Difficulty: Q1=L1 (fill_in), Q2=L2 (mcq), Q3=L3 (trace).
-3. L3 Rule: {l3_law}.
-4. UI Syntax: 'fill_in' MUST use `[[blank]]` placeholders. Answer is 1-2 words. DO NOT use the word "Blank", "___", or any other text as a placeholder.
-5. Answer Formatting: For L3 Trace, the `answer` field MUST contain ONLY the final output (e.g., "80"). Scratchpad math goes ONLY in `explanation`.
-6. Math Sovereignty: Verify every arithmetic step. evaluating `2 * 10` MUST result in `20`. Once you calculate the final mathematical answer using your formula, YOU MUST STOP. DO NOT verify it with alternative methods. DO NOT add adjustments, interpolations, or corrections. The raw mathematical output of your equation is absolute law.
-7. Algorithmic Scope: MATCH the math format of the NOTE TEXT (Table vs. Function).
-8. Trace Diversity Law: The L3 Trace question is a test of logical progression. It is NOT limited to arithmetic. For conceptual notes (Determinants, Factors), present a complex scenario and force the user to 'trace' the outcome through 2-3 logical steps based on the theory. The answer must be a single specific word or scalar value. YOU MUST NOT ask open-ended "Compare" or "Describe" questions that require a paragraph-style answer. If the question starts with "Compare" or "Describe", it is INVALID.
-9. Unique Answer Law: For 'fill_in' questions, YOU MUST ensure there is exactly ONE logically correct 1-2 word answer based on the NOTE TEXT. DO NOT create "mind-reading" lists (e.g., 'Determinants include A, B, and [[blank]]') where any synonym would fit. If a unique answer is not possible, YOU MUST use 'mcq' instead.
-10. LaTeX Enforcement Law: YOU MUST wrap ALL mathematical expressions, variables, and equations in LaTeX delimiters ($...$ or $$...$$).
-11. Calculative Verification Law (L3 Trace): You MUST perform a two-pass calculation for any trace question involving math. Pass 1: Derive the formula. Pass 2: Plug in the numbers and verify. If there is a contradiction, you MUST restart the generation. Your explanation MUST show the step-by-step math in LaTeX.
-12. Formatting: Return strict JSON matching the schema.
-13. Syntax Enforcement Law: YOU MUST use `[[blank]]` for 'fill_in' questions. DO NOT use the word "Blank", "___", or any other placeholder. If you fail this, the interface will break.
+2. Type Requirement: {type_constraint}
+3. Difficulty Target: {difficulty}.
+4. L3 Rule: {l3_law}.
+5. UI Syntax: 'fill_in' MUST use `[[blank]]` placeholders. Answer is 1-2 words. DO NOT use the word "Blank", "___", or any other text as a placeholder.
+6. Answer Formatting: For L3 Trace, the `answer` field MUST contain ONLY the final output (e.g., "80"). Scratchpad math goes ONLY in `explanation`.
+7. Math Sovereignty: Verify every arithmetic step. evaluating `2 * 10` MUST result in `20`. Once you calculate the final mathematical answer using your formula, YOU MUST STOP. DO NOT verify it with alternative methods. DO NOT add adjustments, interpolations, or corrections. The raw mathematical output of your equation is absolute law.
+8. Algorithmic Scope: MATCH the math format of the NOTE TEXT (Table vs. Function).
+9. Trace Diversity Law: The L3 Trace question is a test of logical progression. It is NOT limited to arithmetic. For conceptual notes (Determinants, Factors), present a complex scenario and force the user to 'trace' the outcome through 2-3 logical steps based on the theory. The answer must be a single specific word or scalar value. YOU MUST NOT ask open-ended "Compare" or "Describe" questions that require a paragraph-style answer. If the question starts with "Compare" or "Describe", it is INVALID.
+10. Unique Answer Law: For 'fill_in' questions, YOU MUST ensure there is exactly ONE logically correct 1-2 word answer based on the NOTE TEXT. DO NOT create "mind-reading" lists (e.g., 'Determinants include A, B, and [[blank]]') where any synonym would fit. If a unique answer is not possible, YOU MUST use 'mcq' instead.
+11. LaTeX Enforcement Law: YOU MUST wrap ALL mathematical expressions, variables, and equations in LaTeX delimiters ($...$ or $$...$$).
+12. Calculative Verification Law (L3 Trace): You MUST perform a two-pass calculation for any trace question involving math. Pass 1: Derive the formula. Pass 2: Plug in the numbers and verify. If there is a contradiction, you MUST restart the generation. Your explanation MUST show the step-by-step math in LaTeX.
+13. Formatting: Return strict JSON matching the schema.
+14. Syntax Enforcement Law: YOU MUST use `[[blank]]` for 'fill_in' questions. DO NOT use the word "Blank", "___", or any other placeholder. If you fail this, the interface will break.
 
 DOMAIN AXIOMS (CRITICAL):
 {axioms}"""

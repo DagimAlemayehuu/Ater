@@ -607,9 +607,9 @@ class OkaService:
             config = AdvancedPracticeConfig(
                 hubId=hub_id,
                 questionDistribution={
-                    "multipleChoice": config_raw.get("question_count", 5) if config_raw.get("question_type") == "Multiple Choice" else 0,
-                    "trueFalse": config_raw.get("question_count", 5) if config_raw.get("question_type") == "True/False" else 0,
-                    "shortAnswer": config_raw.get("question_count", 5) if config_raw.get("question_type") == "Short Answer" else 0,
+                    "mcq": config_raw.get("question_count", 5) if config_raw.get("question_type") == "Multiple Choice" else 0,
+                    "true_false": config_raw.get("question_count", 5) if config_raw.get("question_type") == "True/False" else 0,
+                    "writing": config_raw.get("question_count", 5) if config_raw.get("question_type") == "Short Answer" else 0,
                     "scenario": config_raw.get("question_count", 5) if config_raw.get("question_type") == "Scenario-Based" else 0
                 },
                 difficulty=config_raw.get("difficulty", "L1") if config_raw.get("difficulty") != "Mixed" else "L2"
@@ -893,7 +893,12 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 "diagnosticerror": "debug",
                 "synthesis": "synthesis",
                 "socratic": "synthesis",
-                "socraticsynthesis": "synthesis"
+                "socraticsynthesis": "synthesis",
+                "calculation": "calculation",
+                "data_analysis": "data_analysis",
+                "scenario": "scenario",
+                "code": "code",
+                "trace": "trace"
             }
             
             q["type"] = mapping.get(q_raw_type, "writing")
@@ -936,10 +941,16 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
             processed_questions.append(q)
         
-        questions = processed_questions
+        # Ensure strict distribution by slicing per type
+        final_questions = []
+        for q_type, count in target_distribution.items():
+            type_qs = [q for q in processed_questions if q.get("type") == q_type]
+            final_questions.extend(type_qs[:count])
+        
+        questions = final_questions
             
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        quiz_title = f"{hub['title']} - {config.difficulty} Session"
+        quiz_title = f"{hub['title']} - {config.difficulty} Mastery Session"
         quiz_filename = f"Practice_{timestamp}.md"
         quiz_path = practice_dir / quiz_filename
         
@@ -956,44 +967,65 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         }
         yaml_frontmatter = f"---\n{yaml.dump(yaml_data, sort_keys=False)}---\n"
         
-        # Create Readable Markdown
-        md_content = ""
+        # Create Premium Readable Markdown
+        md_content = f"# 🧠 OKA MASTERY SESSION: {hub['title'].upper()}\n\n"
+        md_content += f"> **Session ID:** `{session_id}` | **Date:** {datetime.now().strftime('%Y-%m-%d')} | **Difficulty:** {config.difficulty}\n"
+        md_content += f"> **Scope:** {selected_scope_str}\n\n"
+        
+        md_content += "## 🎯 THE CHALLENGE\n\n"
+        
         for idx, q in enumerate(questions, 1):
-            # Resolve question text
             q_text = q.get('question', '')
             if not q_text and q.get('type') == 'writing':
-                q_text = q.get('answer', 'Answer the following:')
+                q_text = q.get('answer', 'Analyze the following concept:')
             
-            md_content += f"### Q{idx} [{q.get('type')}]: {q_text}\n"
+            md_content += f"### Q{idx} | {q.get('type').replace('_', ' ').upper()}\n"
+            md_content += f"{q_text}\n\n"
             
             if q.get('type') == 'mcq' and q.get('options'):
                 options = q.get('options')
-                if isinstance(options, dict):
-                    for k, v in options.items():
-                        md_content += f"- **{k})** {v}\n"
-                elif isinstance(options, list):
-                    for i, v in enumerate(options):
-                        label = chr(65 + i) # A, B, C...
-                        md_content += f"- **{label})** {v}\n"
+                for k, v in options.items():
+                    md_content += f"- [ ] **{k})** {v}\n"
+            elif q.get('type') == 'true_false':
+                md_content += "- [ ] True\n- [ ] False\n"
             elif q.get('type') == 'fill_in':
-                md_content += f"\n{q.get('textWithBlanks', '')}\n"
+                md_content += f"> {q.get('textWithBlanks', '')}\n"
             elif q.get('type') == 'debug':
-                md_content += f"\n```\n{q.get('content', '')}\n```\n"
+                md_content += f"```{(q.get('language') or 'text')}\n{q.get('content', '')}\n```\n"
             elif q.get('type') == 'order' and q.get('steps'):
-                for i, step in enumerate(q.get('steps')):
+                for step in q.get('steps'):
                     md_content += f"- [ ] {step}\n"
             elif q.get('type') == 'matching' and q.get('pairs'):
                 lefts = [p.get('left') for p in q.get('pairs') if p.get('left')]
                 rights = [p.get('right') for p in q.get('pairs') if p.get('right')]
                 import random
                 random.shuffle(rights)
+                md_content += "| Concept | Match |\n| :--- | :--- |\n"
                 for left, right in zip(lefts, rights):
-                    md_content += f"- {left}  <-->  {right}\n"
+                    md_content += f"| {left} | `__________` |\n"
+                md_content += "\n**Options:** " + ", ".join([f"`{r}`" for r in rights]) + "\n"
             elif q.get('type') == 'code':
-                md_content += f"\n```\n{q.get('codeSnippet', '')}\n```\n"
-            md_content += "\n***\n\n"
+                md_content += f"```{(q.get('language') or 'text')}\n{q.get('codeSnippet', '')}\n```\n"
+            
+            md_content += "\n---\n\n"
         
-        md_content += "## Session Data\n"
+        md_content += "\n## 🔐 SOLUTION KEY (DO NOT PEEK)\n\n"
+        md_content += "<details>\n<summary>Click to reveal answers and technical logic</summary>\n\n"
+        
+        for idx, q in enumerate(questions, 1):
+            md_content += f"#### Q{idx} Logic\n"
+            ans_val = q.get('answer')
+            if isinstance(ans_val, list):
+                ans_str = ", ".join([str(x) for x in ans_val])
+            else:
+                ans_str = str(ans_val)
+            
+            md_content += f"- **Definitive Answer:** `{ans_str}`\n"
+            md_content += f"- **Mechanism:** {q.get('explanation', 'No explanation provided.')}\n\n"
+        
+        md_content += "</details>\n\n"
+        
+        md_content += "## 📊 Session Data\n"
         md_content += "```json\n"
         md_content += json.dumps(questions, indent=2)
         md_content += "\n```\n"
