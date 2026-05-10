@@ -1029,7 +1029,7 @@ class TheoryAgent:
         sys_prompt = f"""You are a Hostile Senior Expert in {persona}. Brutal. Authoritative. Technically precise.
 
 CONCEPT: {title_readable}
-LEVEL: {academic_level}
+LEVEL: {academic_level} (Adapt your vocabulary, depth, and theoretical rigor precisely to this academic level, from High School to PhD).
 SOURCE (use specific facts/examples from this text):
 {source_text[:4000]}
 
@@ -1040,10 +1040,11 @@ LAWS — FOLLOW EXACTLY:
 4. WIKILINK LAW: Include EXACTLY 3 to 5 [[Wikilinks]]. Link ONLY to these concepts: {all_concepts}. Integrate naturally.
 5. LATEX LAW: Wrap ALL math in $ or $$. NEVER write raw math.
 6. FINISH LAW: Every section MUST end with a complete sentence ending in punctuation (. ! ?). Never cut off.
+7. ACADEMIC LEVEL LAW: Your explanation must perfectly match the {academic_level} level. Do not oversimplify PhD topics, and do not over-complicate High School topics.
 
 OUTPUT FORMAT — use these exact XML tags:
 <MENTAL_MODEL>
-A vivid, concrete real-world scenario that makes {title_readable} tangible. 3-4 sentences max. Start with a scene, not a definition.
+A vivid, concrete real-world scenario that makes {title_readable} tangible. 3-4 sentences max. Start with a scene, not a definition. Avoid clichés like "Imagine an island".
 </MENTAL_MODEL>
 
 <THEORY_PROSE>
@@ -1125,7 +1126,6 @@ class PractitionerAgent:
 
     async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "", source_text: str = "", academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 2500, mental_model: str = "") -> Dict[str, str]:
         persona = self.domain.get("persona", "Senior Expert")
-        artifact_format = self.domain.get("type", "Markdown Table")
         sanity_check = self.domain.get("sanity_check", "Ensure logical consistency.")
         title_readable = note_title.replace("_", " ")
 
@@ -1137,13 +1137,13 @@ TECHNICAL THEORY: {theory_body}
 
 CORE LAWS:
 1. Narrative Consistency: YOU MUST strictly use the characters, industry, and specific scenario defined in the MENTAL MODEL above.
-2. Artifact Format: Your artifact MUST be: {artifact_format}.
+2. Dynamic Artifact: You MUST dynamically select the most pedagogically effective format for this specific concept (choose from: Markdown Table, Mermaid Flowchart, Mermaid State Diagram, Python/C++/etc Code Block, Block LaTeX Proof/Derivation, ASCII Diagram). Do NOT force a table if a flowchart, code block, or equation is better. Provide an appropriate 'artifact_title'.
 3. LaTeX Enforcement Law: wrap ALL mathematical expressions, variables, and equations in LaTeX delimiters ($...$ or $$...$$).
 4. Mermaid Enforcement Law: If a Mermaid diagram, output a valid ```mermaid code block.
 
 5. PYTHON SANDBOX LAW (CRITICAL): 
 You MUST provide a pure Python script wrapped in `<PYTHON_CODE>...</PYTHON_CODE>` tags. 
-The script MUST define a function `generate()` that returns a dictionary with 3 keys: 'equation', 'artifact', and 'walkthrough'.
+The script MUST define a function `generate()` that returns a dictionary with 4 keys: 'equation', 'artifact_title', 'artifact', and 'walkthrough'.
 
 EXAMPLE OUTPUT:
 <PYTHON_CODE>
@@ -1151,12 +1151,14 @@ def generate():
     budget = 10000; dev = 6000; mkt = 3000; rem = budget - dev - mkt
     return {{
         'equation': '$Remaining = Budget - Dev - Mkt$',
+        'artifact_title': 'Budget Allocation Ledger',
         'artifact': '| Item | Cost |\\n|---|---|\\n| Budget | 10000 |\\n| Dev | 6000 |\\n| Mkt | 3000 |\\n| Rem | 1000 |',
         'walkthrough': ['Step 1: Budget is 10000', 'Step 2: Spend 6000', 'Step 3: 10000-6000=4000', 'Step 4: Spend 3000', 'Step 5: Final is 1000']
     }}
 </PYTHON_CODE>
 
 NO JAVASCRIPT: DO NOT use Javascript syntax. Use only valid Python.
+Walkthrough Law: Your walkthrough steps MUST NOT be redundant or circular. Each step MUST convey a distinct new piece of information or logic. Do not repeat the same concept across multiple steps.
 
 DOMAIN AXIOMS (CRITICAL):
 {sanity_check}"""
@@ -1195,18 +1197,29 @@ DOMAIN AXIOMS (CRITICAL):
                     raise Exception(f"Python Sandbox Execution Failed:\n{artifact_md}")
                 
                 eq = payload.get("equation") or ""  # guard against Python None → 'None'
+                art_title_from_payload = payload.get("artifact_title") or ""
                 art = payload.get("artifact") or ""
                 steps = payload.get("walkthrough") or []
                 
+                # Deduplicate steps preserving order
+                unique_steps = []
+                seen = set()
+                for s in steps:
+                    s_clean = str(s).replace('\\n', '\n').strip()
+                    if s_clean not in seen:
+                        seen.add(s_clean)
+                        unique_steps.append(s_clean)
+
                 clean_artifact = art.replace('\\n', '\n')
-                clean_steps = [str(s).replace('\\n', '\n') for s in steps]
+                clean_steps = unique_steps
 
                 h1_title = self.domain.get("h1", "Technical Architecture")
-                artifact_title = self.domain.get("artifact", "Artifact")
+                # Use dynamic artifact title if provided, else fallback to domain default
+                artifact_title = str(art_title_from_payload).strip() if art_title_from_payload else self.domain.get("artifact", "Artifact")
                 return {
                     "h1_title": h1_title,
                     "artifact_title": artifact_title,
-                    "artifact_content": f"{eq}\n\n{clean_artifact}",
+                    "artifact_content": f"{eq}\n\n{clean_artifact}".strip(),
                     "walkthrough": "\n".join([f"{step}" if step.strip()[0].isdigit() else f"{i+1}. {step}" for i, step in enumerate(clean_steps)])
                 }
             except Exception as e:
