@@ -283,6 +283,13 @@ export default function AcademicDashboard() {
       _type: 'Note Visit',
       _date: t.timestamp,
       duration: t.duration_seconds
+    })),
+    ...(studyHistory.practice || []).map(p => ({
+      id: p.id,
+      title: `Recall: ${p.note_path?.split('/').pop()?.replace('.md', '') || p.hub_id}`,
+      _type: 'Practice',
+      _date: p.timestamp,
+      isCorrect: p.is_correct
     }))
   ]
 

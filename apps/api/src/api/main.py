@@ -898,6 +898,39 @@ async def log_study_session(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/study/log-practice")
+async def log_practice_result(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Logs a practice summary performance."""
+    if not secrets.inbox_path:
+        raise HTTPException(status_code=400, detail="Inbox Path not configured")
+    
+    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    if not db_path.exists():
+        return {"status": "ignored", "reason": "db not initialized"}
+    
+    try:
+        conn = sqlite3.connect(str(db_path))
+        # Simple summary log for now
+        conn.execute(
+            "INSERT INTO practice_log (id, hub_id, note_path, question_type, is_correct, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                str(uuid.uuid4()),
+                payload.get("hub_id", "unknown"),
+                payload.get("note_path", "unknown"),
+                "summary",
+                1 if payload.get("score", 0) == payload.get("total_questions", 1) else 0,
+                datetime.now().isoformat()
+            )
+        )
+        conn.commit()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/practice/analytics")
 async def get_practice_analytics(
     secrets: AppSecrets = Depends(get_app_secrets)
@@ -970,11 +1003,13 @@ async def get_study_history(
         
         sessions = [dict(r) for r in conn.execute("SELECT * FROM study_sessions ORDER BY timestamp DESC").fetchall()]
         telemetry = [dict(r) for r in conn.execute("SELECT * FROM study_telemetry ORDER BY timestamp DESC LIMIT 100").fetchall()]
+        practice = [dict(r) for r in conn.execute("SELECT * FROM practice_log ORDER BY timestamp DESC LIMIT 100").fetchall()]
         
         conn.close()
         return {
             "sessions": sessions,
-            "telemetry": telemetry
+            "telemetry": telemetry,
+            "practice": practice
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

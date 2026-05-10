@@ -458,6 +458,12 @@ export const sidecarApi = {
             method: 'POST',
             body: JSON.stringify({ hub_id: hubId, duration_seconds: durationSeconds, mode })
         }),
+
+    logPracticeResult: (hubId: string, score: number, total: number, notePath?: string) =>
+        request<{ status: string }>('/api/study/log-practice', {
+            method: 'POST',
+            body: JSON.stringify({ hub_id: hubId, score, total_questions: total, note_path: notePath })
+        }),
     
     getStudyHistory: () =>
         request<{ sessions: any[]; telemetry: any[] }>('/api/study/history'),

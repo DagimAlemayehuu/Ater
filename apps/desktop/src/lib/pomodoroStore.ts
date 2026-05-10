@@ -107,20 +107,26 @@ export const usePomodoroStore = create<PomodoroState>()(
         };
       }),
 
-      addPracticeResult: (hub, score, total, notePath) => set((state) => ({
-        history: [
-          ...state.history,
-          {
-            id: Math.random().toString(36).substr(2, 9),
-            type: 'practice',
-            hub,
-            score,
-            totalQuestions: total,
-            notePath,
-            timestamp: Date.now()
-          }
-        ]
-      })),
+      addPracticeResult: (hub, score, total, notePath) => set((state) => {
+        const id = Math.random().toString(36).substr(2, 9);
+        // Async API call
+        sidecarApi.logPracticeResult(hub, score, total, notePath).catch(console.error);
+
+        return {
+          history: [
+            ...state.history,
+            {
+              id,
+              type: 'practice',
+              hub,
+              score,
+              totalQuestions: total,
+              notePath,
+              timestamp: Date.now()
+            }
+          ]
+        };
+      }),
       
       tick: () => set((state) => ({ timeLeft: Math.max(0, state.timeLeft - 1) })),
       
