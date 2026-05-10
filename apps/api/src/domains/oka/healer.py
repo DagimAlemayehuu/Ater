@@ -106,7 +106,7 @@ class LogicHealer:
             r"(?i)(?:Note|Tip|Hint|Important|Pro Tip):\s*",
             r"(?i)Hope this (?:helps|is useful|clarifies).*?\.?$",
             r"(?i)(?:If you have|Feel free to).*?\.?$",
-            r"(?i)(?:Analysis|Explanation|Walkthrough|Summary):\s*",
+            r"(?i)^(?:\*\*?)?(?:Analysis|Explanation|Walkthrough|Summary)(?:\*\*?)?:\s+",
             r"(?i)(?:Here's a|I have created).*?\.?$",
             r"(?i)Let me know if you need any further.*\.?$",
             r"(?i)I hope this academic note meets your expectations.*?\.?$",
@@ -115,7 +115,6 @@ class LogicHealer:
             r"(?i)Let's break this down step-by-step.*?\.?$",
             r"(?i)I'll focus on the core concept.*?\.?$"
         ]
-        sanitized = text
         for pattern in patterns:
             sanitized = re.sub(pattern, "", sanitized, flags=re.IGNORECASE | re.MULTILINE).strip()
         
@@ -147,6 +146,16 @@ class LogicHealer:
                     q["explanation"] = self.verify_arithmetic(self.sanitize_prose(q["explanation"]))
                 if "question" in q:
                     q["question"] = self.verify_arithmetic(q["question"])
+                    
+                # Fix any hallucinatory 'blank' usage for fill_in questions
+                if q.get("type") == "fill_in":
+                    q["question"] = re.sub(r"(?i)\b_+\b|\bblank\b(?!\]\])|\[\[?_?blank_?\]?\]", "[[blank]]", q.get("question", ""))
+                    if "textWithBlanks" in q:
+                        q["textWithBlanks"] = re.sub(r"(?i)\b_+\b|\bblank\b(?!\]\])|\[\[?_?blank_?\]?\]", "[[blank]]", q.get("textWithBlanks", ""))
+                    elif "text_with_blanks" in q:
+                        q["textWithBlanks"] = re.sub(r"(?i)\b_+\b|\bblank\b(?!\]\])|\[\[?_?blank_?\]?\]", "[[blank]]", q.get("text_with_blanks", ""))
+                    else:
+                        q["textWithBlanks"] = q["question"]
                     
                 # Specific check for math-based answers
                 # If question is "What is 5*5?" and answer is "24", we heal it.

@@ -4,6 +4,9 @@ import sqlite3
 from pathlib import Path
 from collections import deque
 
+class DailyLimitExceededException(Exception):
+    pass
+
 class TokenGovernor:
     """
     Intelligent Air Traffic Controller for LLM traffic.
@@ -49,9 +52,15 @@ class TokenGovernor:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     timestamp REAL,
                     tokens INTEGER,
-                    requests INTEGER
+                    requests INTEGER,
+                    api_key_hash TEXT DEFAULT 'default'
                 )
             ''')
+            try:
+                conn.execute("ALTER TABLE usage ADD COLUMN api_key_hash TEXT DEFAULT 'default'")
+            except sqlite3.OperationalError:
+                pass
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON usage(timestamp)")
             conn.commit()
 
     def _clear_old_windows(self, now: float):
@@ -94,34 +103,34 @@ class TokenGovernor:
             return max(0.0, (self.request_window[0] + 60.0) - now + 0.05)
         return 0.0
 
-    def _check_daily_limits_sync(self, expected_tokens: int, expected_requests: int) -> tuple[bool, str]:
-        """Synchronous check of daily limits against SQLite DB."""
+    def _check_daily_limits_sync(self, expected_tokens: int, expected_requests: int, api_key_hash: str = 'default') -> tuple[bool, str]:
+        """Synchronous check of daily limits against SQLite DB for a specific API key."""
         cutoff_24h = time.time() - (24 * 3600)
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ?', (cutoff_24h,))
+                cursor.execute('SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND api_key_hash = ?', (cutoff_24h, api_key_hash))
                 row = cursor.fetchone()
                 used_tpd = (row[0] or 0) + expected_tokens
                 used_rpd = (row[1] or 0) + expected_requests
                 
                 if used_tpd >= self.max_tpd:
-                    return False, f"Daily Token Limit reached ({int(used_tpd)}/{self.max_tpd} TPD)"
+                    return False, f"Daily Token Limit reached ({int(used_tpd)}/{self.max_tpd} TPD for this key)"
                 if used_rpd >= self.max_rpd:
-                    return False, f"Daily Request Limit reached ({int(used_rpd)}/{self.max_rpd} RPD)"
+                    return False, f"Daily Request Limit reached ({int(used_rpd)}/{self.max_rpd} RPD for this key)"
                 return True, ""
         except Exception as e:
             print(f"[Governor] DB Error checking daily limit: {e}")
             return True, ""
 
-    async def get_permit(self, expected_tokens: int = 2000, expected_requests: int = 1):
+    async def get_permit(self, expected_tokens: int = 2000, expected_requests: int = 1, api_key_hash: str = 'default'):
         """
         Precision Pacing: grants permits immediately when budget is available,
         sleeps the EXACT duration needed when the window is full.
         No fixed-time spin loops.
         """
-        # First, ensure we haven't blown the daily budget
-        is_ok, err_msg = await asyncio.to_thread(self._check_daily_limits_sync, expected_tokens, expected_requests)
+        # First, ensure we haven't blown the daily budget for this specific key
+        is_ok, err_msg = await asyncio.to_thread(self._check_daily_limits_sync, expected_tokens, expected_requests, api_key_hash)
         if not is_ok:
             raise DailyLimitExceededException(err_msg)
 
@@ -193,16 +202,20 @@ class TokenGovernor:
             self.active_slots = max(0, self.active_slots - 1)
         self._slot_event.set()
 
-    def _record_usage_db(self, tokens: int, requests: int):
+    def _record_usage_db_sync(self, tokens: int, requests: int, api_key_hash: str):
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute(
-                    'INSERT INTO usage (timestamp, tokens, requests) VALUES (?, ?, ?)',
-                    (time.time(), tokens, requests)
+                    'INSERT INTO usage (timestamp, tokens, requests, api_key_hash) VALUES (?, ?, ?, ?)',
+                    (time.time(), tokens, requests, api_key_hash)
                 )
                 conn.commit()
-        except Exception:
-            pass  # DB contention must never block a permit
+        except Exception as e:
+            print(f"[Governor] Failed to record usage: {e}")
+
+    def _record_usage_db(self, tokens: int, requests: int, api_key_hash: str = 'default'):
+        # Fire and forget database write off the main event loop
+        asyncio.create_task(asyncio.to_thread(self._record_usage_db_sync, tokens, requests, api_key_hash))
 
     def report_error(self, wait_seconds: float = 10.0):
         """Force a hard cooldown on 429 detection from any agent."""
@@ -228,13 +241,6 @@ class TokenGovernor:
         now = time.time()
         cutoff = now - 60.0
         return sum(1 for ts in self.request_window if ts >= cutoff)
-
-
-# Global singleton — shared across all agents and the service
-governor = TokenGovernor()
-now - 60.0
-        return sum(1 for ts in self.request_window if ts >= cutoff)
-
 
 # Global singleton — shared across all agents and the service
 governor = TokenGovernor()

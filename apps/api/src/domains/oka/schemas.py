@@ -237,9 +237,7 @@ class TheoryResponse(BaseModel):
     limitations: str = Field(..., description="Minimum 5 sentences. Analyze edge cases, exceptions, and limitations. DO NOT output placeholder text.")
 
 class PractitionerResponse(BaseModel):
-    primary_equation_or_logic: str = Field(..., description="GENERATE THIS FIRST. If computational, write the exact LaTeX equation. If theoretical/code, state the core logical rule or function signature.")
-    artifact: str = Field(..., description="GENERATE THIS SECOND. MUST be valid Markdown. MUST contain a fully populated Markdown table with a header row AND at least 3 rows of numerical data. Generating a header row without data rows is STRICTLY FORBIDDEN. If a table, MUST have outer pipes (e.g., | X | Y |). If code, use a markdown code block. MUST strictly use the logic defined in primary_equation_or_logic.")
-    walkthrough: List[str] = Field(..., min_length=3, description="An array of EXACTLY 3-7 numbered steps. MUST execute a step-by-step breakdown using the exact data from the artifact. You MUST explicitly write out the arithmetic sub-operations. DO NOT just say 'which results in 10'. You MUST write '130 - 120 = 10'. Make the math visible. You MUST use the EXACT SAME equation and numbers generated in the Artifact table. DO NOT generate Markdown tables inside this field; if you need to reference data, use text only. Introduction of new equations is FORBIDDEN.")
+    python_code: str = Field(..., description="A pure Python script defining a generate() function.")
 
 class QuizResponse(BaseModel):
-    questions: List[Question] = Field(..., min_length=1, max_length=5)
+    questions: List[Question] = Field(..., min_length=1, max_length=30)

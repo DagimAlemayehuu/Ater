@@ -18,7 +18,7 @@ from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgen
 from .router import router
 from .templates import render_atomic_note
 from .healer import LogicHealer
-from .governor import governor
+from .governor import governor, DailyLimitExceededException
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
 import ruamel.yaml
 import logging
@@ -784,33 +784,27 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 "Focus on causal links and process flow."
             ]
             
-            for i in range(count):
+            if count > 0:
                 agent = QuestionAgent(self.planner_llm, q_type)
                 import random
                 seed = random.random()
                 
-                # To prevent redundancy, physically shuffle the context for each agent
                 shuffled_parts = list(context_parts)
                 random.shuffle(shuffled_parts)
                 tight_context = "\n\n".join(shuffled_parts)
                 
-                hint = hints[i % len(hints)]
-                
-                # Assign professional domain dynamically
-                prof_domain = get_professional_domain(hub['title'] + str(q_type) + str(i), mode=hub_mode)
-                
-                # Bloom's Adaptive Schedule for Practice mode
-                diff_schedule = ["L1", "L2", "L3"]
-                current_diff = config.difficulty if config.difficulty != "Mixed" else diff_schedule[i % 3]
+                hint = "Generate a diverse set of distinct questions covering different subtopics."
+                prof_domain = get_professional_domain(hub['title'] + str(q_type), mode=hub_mode)
+                current_diff = config.difficulty if config.difficulty != "Mixed" else "Mixed"
 
-                tasks.append(lambda a=agent, h=hub, c=tight_context, d=current_diff, m=hub_mode, p=prof_domain, idx=i+1, hint=hint, qt=q_type: a.generate(
+                tasks.append(lambda a=agent, h=hub, c=tight_context, d=current_diff, m=hub_mode, p=prof_domain, c_out=count, hint=hint, qt=q_type: a.generate(
                     h['title'], 
                     f"SEED: {seed}\n" + c, 
                     d,
                     mode=m,
                     prof_domain=p,
-                    index=idx,
-                    num_questions=1,
+                    index=1,
+                    num_questions=c_out,
                     topic_hint=hint,
                     q_type=qt
                 ))
@@ -1984,9 +1978,10 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 await self.governor.get_permit(expected_tokens=3000)
                                 
                                 q_agent = QuestionAgent(self.planner_llm)
+                                q_context = f"THEORY:\n{note_data.get('technical_definition', '')}\n\nARTIFACT:\n{prac_parts.get('artifact_content', '')}\n\nWALKTHROUGH:\n{prac_parts.get('walkthrough', '')}"
                                 valid_qs = await q_agent.generate(
                                     note_schema.title, 
-                                    note_data["technical_definition"], 
+                                    q_context, 
                                     mode=note_schema.mode,
                                     academic_level=plan_obj.academic_level,
                                     course_title=plan_obj.course_title,

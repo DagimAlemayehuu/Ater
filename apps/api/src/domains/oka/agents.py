@@ -1050,24 +1050,71 @@ CORE LAWS:
 DOMAIN AXIOMS (CRITICAL):
 {axioms}"""
 
-        theory_llm = self.llm.with_structured_output(TheoryResponse)
-        
+        sys_prompt = f"""You are a Hostile Senior Expert in {persona}. Your tone is brutal, authoritative, and technically rigorous. 
+
+CONCEPT TO TEACH: {title_readable}
+ACADEMIC LEVEL: {academic_level}
+SOURCE CONTEXT: {source_text[:5000]}
+
+CORE LAWS:
+1. Confidence Law: DO NOT self-correct or apologize. State facts with absolute authority.
+2. Source Anchoring Law: If the SOURCE CONTEXT provides specific data/scenarios, YOU MUST use them.
+3. Wikilink Law: YOU MUST INCLUDE EXACTLY 3 TO 5 [[Wikilinks]] in your prose. INTEGRATE THEM NATURALLY.
+4. LaTeX Enforcement Law: wrap ALL math in LaTeX delimiters ($ or $$). NEVER write raw math like 'Qd = 100 - 2P'.
+5. PDF Quarantine Law: Teach ONLY what is provided.
+6. Closed Knowledge Graph Law: Link only to: {all_concepts}.
+
+OUTPUT FORMAT (CRITICAL):
+You MUST wrap your response in these specific tags:
+<MENTAL_MODEL>
+(Real-world physical scenario, min 5 sentences)
+</MENTAL_MODEL>
+
+<THEORY_PROSE>
+(Academic definition with fact extraction, min 6 sentences, includes 3-5 wikilinks)
+</THEORY_PROSE>
+
+<TAKEAWAYS>
+- Fact 1
+- Fact 2
+- Fact 3
+</TAKEAWAYS>
+
+<LIMITATIONS>
+(Edge cases and assumptions, min 5 sentences)
+</LIMITATIONS>
+
+DOMAIN AXIOMS (CRITICAL):
+{axioms}"""
+
         for attempt in range(3):
             try:
-                res: TheoryResponse = await theory_llm.ainvoke([
+                res = await self.llm.ainvoke([
                     ("system", sys_prompt),
                     ("human", f"Generate the v28.0 theory core for {title_readable} based on the source.")
                 ])
                 
-                assembled_tech = f"{res.theory_prose.strip()}\n\n### Key Takeaways:\n"
-                for tk in res.key_takeaways:
-                    assembled_tech += f"- {tk.strip()}\n"
+                content = res.content
+                
+                def extract(tag):
+                    m = re.search(f"<{tag}>(.*?)</{tag}>", content, re.DOTALL)
+                    return m.group(1).strip() if m else ""
+
+                mental_model = extract("MENTAL_MODEL")
+                theory_prose = extract("THEORY_PROSE")
+                takeaways_raw = extract("TAKEAWAYS")
+                limitations = extract("LIMITATIONS")
+
+                if not (mental_model and theory_prose and limitations):
+                    raise Exception("LLM failed to provide required <TAGS> in the response.")
+
+                assembled_tech = f"{theory_prose}\n\n### Key Takeaways:\n{takeaways_raw}"
 
                 return {
                     "h1_title": self.domain.get("h1", "Technical Architecture"),
-                    "mental_model": res.mental_model.strip().replace('\\\\n', '\\n'),
-                    "technical_definition": assembled_tech.strip().replace('\\\\n', '\\n'),
-                    "limitations": res.limitations.strip().replace('\\\\n', '\\n')
+                    "mental_model": mental_model.replace('\\\\n', '\\n'),
+                    "technical_definition": assembled_tech.replace('\\\\n', '\\n'),
+                    "limitations": limitations.replace('\\\\n', '\\n')
                 }
             except Exception as e:
                 err_msg = str(e).lower()
@@ -1105,49 +1152,85 @@ class PractitionerAgent:
 
 CONCEPT: {title_readable}
 PREVIOUS CONTEXT (MENTAL MODEL): {mental_model}
+TECHNICAL THEORY: {theory_body}
 
 CORE LAWS:
-1. Narrative Consistency: YOU MUST strictly use the characters, industry, and specific scenario defined in the MENTAL MODEL above (e.g., if the model mentions a coffee shop manager, your artifact and walkthrough MUST involve coffee prices and latte quantities). DO NOT revert to abstract variables (P, Q) or generic scenarios. Anchor the data to the story.
+1. Narrative Consistency: YOU MUST strictly use the characters, industry, and specific scenario defined in the MENTAL MODEL above.
 2. Artifact Format: Your artifact MUST be: {artifact_format}.
-3. LaTeX Enforcement Law: YOU MUST wrap ALL mathematical expressions, variables, and equations in LaTeX delimiters ($...$ or $$...$$). NEVER output raw equations like 'Qd = 100 - 2P'.
-4. Mermaid Enforcement Law: If your artifact is a Mermaid diagram, it MUST be a valid Mermaid code block starting with ```mermaid and ending with ```. DO NOT wrap the diagram in a "CODE" label or use leading/trailing pipe symbols `|`.
-5. K.I.S.S. Math Law: Keep formulas incredibly simple. DO NOT use 3-term equations (like Qd = 100 - 2P - 0.5I). Use 2-term equations (like Qd = 100 - 2P) to prevent arithmetic failure. Keep constants small.
-6. Sub-Operation Math Law: You MUST break arithmetic into strict sub-steps on SEPARATE LINES or explicit sentences. NEVER chain multiple equals signs in a single line (e.g., NEVER write 100 - 2*1 = 98). Instead, write "Step 1: 2 * 1 = 2. Step 2: 100 - 2 = 98." Evaluate only two numbers per line.
-7. Visual Honesty: Do not say "as seen on graph". Use "If plotted, the curve would...".
-8. Table Integrity: Markdown tables MUST have start/end pipes `|`.
-9. Algorithmic Fidelity Law: You MUST explicitly demonstrate the UNIQUE mathematical mechanism of the concept based on the source text. For example, if the concept is "Market Demand," you CANNOT just show a generic demand equation; you MUST demonstrate the horizontal summation of multiple buyers. Do not use generic, default math if the concept requires a specific formula.
-10. Walkthrough Content Law: The `walkthrough` steps MUST NOT contain markdown headings (e.g. no `## Step 1`). They should be plain text descriptions of the calculation or logic.
-11. Walkthrough Table Ban: DO NOT generate Markdown tables inside the `walkthrough` field. Reference the table from Section 4 using text only.
-12. Epistemic Alignment Law: You MUST match your application to the nature of the concept. If the concept is a "Determinant", "Factor", or "Qualitative Principle", your walkthrough MUST explain the "Why" and the logical cascade of those factors. Rote math calculation is FORBIDDEN for purely conceptual topics.
-13. Anti-Pattern Law: {self.domain.get("prohibited_anti_patterns", "None.")}
-14. Formatting: Return ONLY the structured output. You MUST provide EXACTLY 5 to 7 steps in the walkthrough array. If you provide fewer than 5 steps, the system will CRASH.
-15. String Integrity Law: You MUST return raw strings for the `artifact` and `primary_equation_or_logic` fields. DO NOT wrap them in objects like {{"type": "string", "value": "..."}}. Return only the text.
+3. LaTeX Enforcement Law: wrap ALL mathematical expressions, variables, and equations in LaTeX delimiters ($...$ or $$...$$).
+4. Mermaid Enforcement Law: If a Mermaid diagram, output a valid ```mermaid code block.
+
+5. PYTHON SANDBOX LAW (CRITICAL): 
+You MUST provide a pure Python script wrapped in `<PYTHON_CODE>...</PYTHON_CODE>` tags. 
+The script MUST define a function `generate()` that returns a dictionary with 3 keys: 'equation', 'artifact', and 'walkthrough'.
+
+EXAMPLE OUTPUT:
+<PYTHON_CODE>
+def generate():
+    budget = 10000; dev = 6000; mkt = 3000; rem = budget - dev - mkt
+    return {{
+        'equation': '$Remaining = Budget - Dev - Mkt$',
+        'artifact': '| Item | Cost |\\n|---|---|\\n| Budget | 10000 |\\n| Dev | 6000 |\\n| Mkt | 3000 |\\n| Rem | 1000 |',
+        'walkthrough': ['Step 1: Budget is 10000', 'Step 2: Spend 6000', 'Step 3: 10000-6000=4000', 'Step 4: Spend 3000', 'Step 5: Final is 1000']
+    }}
+</PYTHON_CODE>
+
+NO JAVASCRIPT: DO NOT use Javascript syntax. Use only valid Python.
 
 DOMAIN AXIOMS (CRITICAL):
 {sanity_check}"""
 
-        prac_llm = self.llm.with_structured_output(PractitionerResponse)
-
+        last_error = ""
         for attempt in range(3):
             try:
-                res: PractitionerResponse = await prac_llm.ainvoke([
-                    ("system", sys_prompt),
+                retry_msg = f"\n\nYOUR PREVIOUS PYTHON SCRIPT FAILED:\n{last_error}\nFix the code and return it inside <PYTHON_CODE> tags." if last_error else ""
+                res = await self.llm.ainvoke([
+                    ("system", sys_prompt + retry_msg),
                     ("human", f"Generate the v28.0 practitioner artifact for {title_readable}.")
                 ])
                 
-                clean_artifact = res.artifact.replace('\\n', '\n')
-                clean_steps = [s.replace('\\n', '\n') for s in res.walkthrough]
+                content = res.content
+                # Extraction logic
+                match = re.search(r"<PYTHON_CODE>(.*?)</PYTHON_CODE>", content, re.DOTALL)
+                if not match:
+                    # Fallback: check for code blocks
+                    match = re.search(r"```python\s*(.*?)\s*```", content, re.DOTALL)
+                
+                if not match:
+                    raise Exception("LLM failed to provide <PYTHON_CODE> tags in the response.")
+                
+                raw_code = match.group(1).strip()
+
+                # Clean up Javascript artifacts and ensure it is a string
+                code_str = str(raw_code).strip()
+                if "() =>" in code_str or "return {" in code_str:
+                     code_str = code_str.replace("() =>", "").replace("return {", "return {\n").strip()
+
+                # Execute the python sandbox script locally
+                from .sandbox import execute_sandboxed_code
+                success, artifact_md, payload = execute_sandboxed_code(code_str)
+                
+                if not success:
+                    raise Exception(f"Python Sandbox Execution Failed:\n{artifact_md}")
+                
+                eq = payload.get("equation", "")
+                art = payload.get("artifact", "")
+                steps = payload.get("walkthrough", [])
+                
+                clean_artifact = art.replace('\\n', '\n')
+                clean_steps = [str(s).replace('\\n', '\n') for s in steps]
 
                 h1_title = self.domain.get("h1", "Technical Architecture")
                 artifact_title = self.domain.get("artifact", "Artifact")
                 return {
                     "h1_title": h1_title,
                     "artifact_title": artifact_title,
-                    "artifact_content": f"{res.primary_equation_or_logic}\n\n{clean_artifact}",
+                    "artifact_content": f"{eq}\n\n{clean_artifact}",
                     "walkthrough": "\n".join([f"{step}" if step.strip()[0].isdigit() else f"{i+1}. {step}" for i, step in enumerate(clean_steps)])
                 }
             except Exception as e:
                 err_msg = str(e).lower()
+                last_error = str(e)
                 is_429 = "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg
                 if is_429:
                     governor.report_error(wait_seconds=5.0)
@@ -1190,42 +1273,67 @@ NOTE TEXT:
 {context[:6000]}
 
 CORE LAWS:
-1. Scope Constraint: DO NOT test formulas or concepts not in the NOTE TEXT.
+1. Ground Truth Law: YOU MUST base all questions STRICTLY on the numbers and facts in the NOTE TEXT.
 2. Type Requirement: {type_constraint}
 3. Difficulty Target: {difficulty}.
-4. L3 Rule: {l3_law}.
-5. UI Syntax: 'fill_in' MUST use `[[blank]]` placeholders. Answer is 1-2 words. DO NOT use the word "Blank", "___", or any other text as a placeholder.
-6. Answer Formatting: For L3 Trace, the `answer` field MUST contain ONLY the final output (e.g., "80"). Scratchpad math goes ONLY in `explanation`.
-7. Math Sovereignty: Verify every arithmetic step. evaluating `2 * 10` MUST result in `20`. Once you calculate the final mathematical answer using your formula, YOU MUST STOP. DO NOT verify it with alternative methods. DO NOT add adjustments, interpolations, or corrections. The raw mathematical output of your equation is absolute law.
-8. Algorithmic Scope: MATCH the math format of the NOTE TEXT (Table vs. Function).
-9. Trace Diversity Law: The L3 Trace question is a test of logical progression. It is NOT limited to arithmetic. For conceptual notes (Determinants, Factors), present a complex scenario and force the user to 'trace' the outcome through 2-3 logical steps based on the theory. The answer must be a single specific word or scalar value. YOU MUST NOT ask open-ended "Compare" or "Describe" questions that require a paragraph-style answer. If the question starts with "Compare" or "Describe", it is INVALID.
-10. Unique Answer Law: For 'fill_in' questions, YOU MUST ensure there is exactly ONE logically correct 1-2 word answer based on the NOTE TEXT. DO NOT create "mind-reading" lists (e.g., 'Determinants include A, B, and [[blank]]') where any synonym would fit. If a unique answer is not possible, YOU MUST use 'mcq' instead.
-11. LaTeX Enforcement Law: YOU MUST wrap ALL mathematical expressions, variables, and equations in LaTeX delimiters ($...$ or $$...$$).
-12. Calculative Verification Law (L3 Trace): You MUST perform a two-pass calculation for any trace question involving math. Pass 1: Derive the formula. Pass 2: Plug in the numbers and verify. If there is a contradiction, you MUST restart the generation. Your explanation MUST show the step-by-step math in LaTeX.
-13. Formatting: Return strict JSON matching the schema.
-14. Syntax Enforcement Law: YOU MUST use `[[blank]]` for 'fill_in' questions. DO NOT use the word "Blank", "___", or any other placeholder. If you fail this, the interface will break.
+4. UI Syntax: 'fill_in' MUST use exactly `[[blank]]` placeholders. Answer is 1-2 words.
+5. Answer Formatting: For L3 Trace, the `answer` field MUST contain ONLY the final output (e.g., "80" or "Decrease").
+6. LaTeX Enforcement Law: wrap ALL math in LaTeX delimiters ($...$ or $$...$$).
+
+OUTPUT FORMAT (CRITICAL):
+You MUST return a single JSON array of question objects wrapped in `<QUIZ_JSON>...</QUIZ_JSON>` tags.
+Each object MUST have: 'type', 'question', 'answer', 'explanation'. 
+Optional: 'options' (for mcq), 'pairs' (for matching), 'steps' (for order), 'content' (for debug), 'textWithBlanks' (for fill_in).
+
+EXAMPLE:
+<QUIZ_JSON>
+[
+  {{
+    "type": "mcq",
+    "question": "What is 2+2?",
+    "options": ["3", "4", "5"],
+    "answer": "4",
+    "explanation": "2+2 equals 4."
+  }}
+]
+</QUIZ_JSON>
 
 DOMAIN AXIOMS (CRITICAL):
 {axioms}"""
 
-        quiz_llm = self.llm.with_structured_output(QuizResponse)
-        
         for attempt in range(3):
             try:
-                res: QuizResponse = await quiz_llm.ainvoke([
+                res = await self.llm.ainvoke([
                     ("system", sys_prompt),
                     ("human", f"Generate the v28.0 mastery quiz for {title_readable}.")
                 ])
                 
-                # Convert Pydantic models to dicts and sanitize
+                content = res.content
+                match = re.search(r"<QUIZ_JSON>(.*?)</QUIZ_JSON>", content, re.DOTALL)
+                if not match:
+                    match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
+                
+                if not match:
+                    raise Exception("LLM failed to provide <QUIZ_JSON> tags in the response.")
+                
+                raw_json = match.group(1).strip()
+                # Use ArchitectAgent's robust parser
+                data = ArchitectAgent._parse_json(raw_json)
+                
+                if isinstance(data, dict) and "questions" in data:
+                    data = data["questions"]
+                
+                if not isinstance(data, list):
+                    raise Exception("Extracted quiz data is not a list.")
+
+                # Sanitize
                 sanitized_qs = []
-                for q in res.questions:
-                    q_dict = q.model_dump()
+                for q in data:
                     # Ensure escaped newlines render correctly
                     for field in ["question", "explanation", "answer", "content"]:
-                        if q_dict.get(field) and isinstance(q_dict[field], str):
-                            q_dict[field] = q_dict[field].replace('\\\\n', '\\n').replace('\\n', '\n')
-                    sanitized_qs.append(q_dict)
+                        if q.get(field) and isinstance(q[field], str):
+                            q[field] = q[field].replace('\\\\n', '\\n').replace('\\n', '\n')
+                    sanitized_qs.append(q)
                 return sanitized_qs
 
             except Exception as e:
