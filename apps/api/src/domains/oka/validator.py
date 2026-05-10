@@ -200,8 +200,8 @@ class OkaValidator:
             else:
                 if not isinstance(quiz_data, list):
                     errors.append(f"QUIZ_NOT_ARRAY: got {type(quiz_data).__name__}")
-                elif len(quiz_data) < 3 or len(quiz_data) > 6:
-                    errors.append(f"QUIZ_WRONG_LENGTH: expected 3-6 questions, got {len(quiz_data)}")
+                elif len(quiz_data) < 3 or len(quiz_data) > 5:
+                    errors.append(f"QUIZ_WRONG_LENGTH: expected 3-5 questions, got {len(quiz_data)}")
                 else:
                     # Validate each question has required fields
                     for i, q in enumerate(quiz_data):
@@ -304,9 +304,8 @@ class OkaValidator:
         walkthrough_match = re.search(r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)', body, re.DOTALL)
         if walkthrough_match:
             steps = re.findall(r'^[\-\*]|^\d+\.', walkthrough_match.group(1), re.MULTILINE)
-            if len(steps) < 3:
-                import logging
-                logging.getLogger("LifeOS").warning(f"[OkaValidator] WALKTHROUGH_TOO_SHORT: {len(steps)} steps, need 3+")
+            if len(steps) < 5:
+                errors.append(f"WALKTHROUGH_TOO_SHORT: Found {len(steps)} steps, need ≥ 5.")
 
         # ── 8. Gutter law defense (No longer logged; fixed proactively in VaultManager)
         # We previously warned here, but now we silenty accept and fix during the write phase.

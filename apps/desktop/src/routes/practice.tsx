@@ -186,6 +186,12 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 }, [view]);
 
  useEffect(() => {
+  if (view === 'session' && questions.length === 0) {
+   setView('configuring');
+  }
+ }, [view, questions]);
+
+ useEffect(() => {
  if (questions.length > 0 && view === 'session') {
  timerRef.current = setInterval(() => {
  // Handle Global Timer
@@ -298,45 +304,39 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const q = questions[currentQuestionIdx];
  let isCorrect = false;
 
- if (q.type === 'mcq' || q.type === 'true_false' || q.type === 'writing' || q.type === 'debug' || q.type === 'synthesis') {
- const userVal = String(userAnswers[q.id] || '').trim();
- const correctVal = String(q.answer || '').trim();
- 
- if (q.type === 'true_false') {
- const userBool = userVal.toLowerCase() === 'true';
- const correctBool = typeof q.answer === 'boolean' ? q.answer : String(q.answer).toLowerCase() === 'true';
- isCorrect = userBool === correctBool;
- } else if (q.type === 'mcq') {
-  // Match only by key letter to avoid false positives from similar option text
-  isCorrect = userVal.trim().toUpperCase() === String(q.answer || '').trim().toUpperCase();
- } else if (q.type === 'debug') {
-  const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
-  isCorrect = norm(userVal) === norm(correctVal);
- } else {
-  isCorrect = userVal.toLowerCase() === correctVal.toLowerCase();
- }
-} else if (q.type === 'fill_in') {
- const answers = userAnswers[q.id] || [];
- const correctAnswers = q.answer || [];
- isCorrect = Array.isArray(correctAnswers) && correctAnswers.every((ans: string, idx: number) => 
- String(answers[idx] || '').trim().toLowerCase() === String(ans || '').trim().toLowerCase()
- );
-} else if (q.type === 'matching') {
- const userPairs = userAnswers[q.id] || {};
- const correctPairs = q.pairs || [];
- isCorrect = Array.isArray(correctPairs) && correctPairs.every((p: any) => 
- String(userPairs[p.left] || '').trim().toLowerCase() === String(p.right || '').trim().toLowerCase()
- );
-} else if (q.type === 'order') {
- const userOrder = userAnswers[q.id] || (q as any).steps || [];
- const correctOrder = (q as any).answer || [];
- isCorrect = Array.isArray(correctOrder) && correctOrder.every((step: string, idx: number) => 
- String(userOrder[idx] || '').trim().toLowerCase() === String(step).trim().toLowerCase()
- );
-}
-
  const isSelfGraded = ['writing', 'synthesis', 'debug', 'trace'].includes(q.type);
+
  if (!isSelfGraded) {
+  if (q.type === 'mcq' || q.type === 'true_false') {
+   const userVal = String(userAnswers[q.id] || '').trim();
+   const correctVal = String(q.answer || '').trim();
+   
+   if (q.type === 'true_false') {
+   const userBool = userVal.toLowerCase() === 'true';
+   const correctBool = typeof q.answer === 'boolean' ? q.answer : String(q.answer).toLowerCase() === 'true';
+   isCorrect = userBool === correctBool;
+   } else if (q.type === 'mcq') {
+    isCorrect = userVal.trim().toUpperCase() === String(q.answer || '').trim().toUpperCase();
+   }
+  } else if (q.type === 'fill_in') {
+   const answers = userAnswers[q.id] || [];
+   const correctAnswers = q.answer || [];
+   isCorrect = Array.isArray(correctAnswers) && correctAnswers.every((ans: string, idx: number) => 
+   String(answers[idx] || '').trim().toLowerCase() === String(ans || '').trim().toLowerCase()
+   );
+  } else if (q.type === 'matching') {
+   const userPairs = userAnswers[q.id] || {};
+   const correctPairs = q.pairs || [];
+   isCorrect = Array.isArray(correctPairs) && correctPairs.every((p: any) => 
+   String(userPairs[p.left] || '').trim().toLowerCase() === String(p.right || '').trim().toLowerCase()
+   );
+  } else if (q.type === 'order') {
+   const userOrder = userAnswers[q.id] || (q as any).steps || [];
+   const correctOrder = (q as any).answer || [];
+   isCorrect = Array.isArray(correctOrder) && correctOrder.every((step: string, idx: number) => 
+   String(userOrder[idx] || '').trim().toLowerCase() === String(step).trim().toLowerCase()
+   );
+  }
   setGradedAnswers(prev => ({...prev, [q.id]: isCorrect}));
  }
 }
@@ -356,18 +356,10 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 }
 
  const calculateScore = () => {
-  const selfGradedTypes = ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis'];
   let correct = 0;
   const total = questions.length;
   questions.forEach(q => {
-   const isSG = selfGradedTypes.includes(q.type);
-   if (isSG) {
-    // Self-graded: only counted correct if user explicitly marked it correct
-    if (gradedAnswers[q.id] === true) correct++;
-   } else {
-    // Objective: graded[q.id] is true/false; undefined = unanswered = wrong
-    if (gradedAnswers[q.id] === true) correct++;
-   }
+   if (gradedAnswers[q.id] === true) correct++;
   });
   return {score: Math.round((correct / (total || 1)) * 100), correct, total};
  }

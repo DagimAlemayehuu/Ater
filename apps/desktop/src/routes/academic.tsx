@@ -71,7 +71,7 @@ export default function AcademicDashboard() {
 } catch {}
 }
  return () => es.close()
-}, [])
+}, [fetchData, fetchDatabases])
 
  useEffect(() => {
   setIsFullscreen(false)
@@ -84,15 +84,13 @@ export default function AcademicDashboard() {
  setData(prev => {
  if (!prev) return prev
  const next = {...prev}
- const dbMap: Record<string, keyof AcademicData> = {
- '09 - Years': 'years',
- '08 - Semesters': 'semesters',
- '07 - Courses': 'courses',
- '06 - Study Planner': 'study_sessions',
- '04 - Exams': 'exams',
- '03 - Assignments': 'assignments'
-}
- const key = dbMap[dbId]
+ let key: keyof AcademicData | undefined;
+ if (dbId.includes('Years')) key = 'years';
+ else if (dbId.includes('Semesters')) key = 'semesters';
+ else if (dbId.includes('Courses')) key = 'courses';
+ else if (dbId.includes('Study Planner')) key = 'study_sessions';
+ else if (dbId.includes('Exams')) key = 'exams';
+ else if (dbId.includes('Assignments')) key = 'assignments';
  if (key && Array.isArray(next[key])) {
  next[key] = (next[key] as any[]).map(item => {
  if (item.id === itemId) {
@@ -124,15 +122,13 @@ export default function AcademicDashboard() {
  setData(prev => {
  if (!prev) return prev
  const next = {...prev}
- const dbMap: Record<string, keyof AcademicData> = {
- '09 - Years': 'years',
- '08 - Semesters': 'semesters',
- '07 - Courses': 'courses',
- '06 - Study Planner': 'study_sessions',
- '04 - Exams': 'exams',
- '03 - Assignments': 'assignments'
-}
- const key = dbMap[dbId]
+ let key: keyof AcademicData | undefined;
+ if (dbId.includes('Years')) key = 'years';
+ else if (dbId.includes('Semesters')) key = 'semesters';
+ else if (dbId.includes('Courses')) key = 'courses';
+ else if (dbId.includes('Study Planner')) key = 'study_sessions';
+ else if (dbId.includes('Exams')) key = 'exams';
+ else if (dbId.includes('Assignments')) key = 'assignments';
  if (key && Array.isArray(next[key])) {
  const newItem = {id: title, title, ...props}
  next[key] = [...(next[key] as any[]), newItem]
@@ -205,14 +201,14 @@ export default function AcademicDashboard() {
  }, [handleSync, activeTab, setRightContent])
 
  // ── Tab definitions ────────────────────────────────────────────────────────
- const tabs: {id: AcademicTab; label: string; icon: React.ReactNode}[] = [
- {id: 'PROGRAM', label: 'Program', icon: <GraduationCap size={11} />},
- {id: 'COURSES', label: 'Courses', icon: <BookOpen size={11} />},
- {id: 'PLANNER', label: 'Planner', icon: <LayoutDashboard size={11} />},
- {id: 'ASSIGNMENTS', label: 'Assignments', icon: <ClipboardList size={11} />},
- {id: 'EXAMS', label: 'Exams', icon: <FlaskConical size={11} />},
- {id: 'PRACTICE', label: 'Practice', icon: <Layers size={11} />},
- ]
+ const tabs = React.useMemo(() => [
+ {id: 'PROGRAM' as AcademicTab, label: 'Program', icon: <GraduationCap size={11} />},
+ {id: 'COURSES' as AcademicTab, label: 'Courses', icon: <BookOpen size={11} />},
+ {id: 'PLANNER' as AcademicTab, label: 'Planner', icon: <LayoutDashboard size={11} />},
+ {id: 'ASSIGNMENTS' as AcademicTab, label: 'Assignments', icon: <ClipboardList size={11} />},
+ {id: 'EXAMS' as AcademicTab, label: 'Exams', icon: <FlaskConical size={11} />},
+ {id: 'PRACTICE' as AcademicTab, label: 'Practice', icon: <Layers size={11} />},
+ ], [])
 
  // ── Keyboard Shortcuts ─────────────────────────────────────────────────────
  useEffect(() => {

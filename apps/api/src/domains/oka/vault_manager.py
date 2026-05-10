@@ -269,31 +269,82 @@ class VaultManager:
         # Catches every form of quoted wikilinks regardless of where they appear.
         content = VaultManager._nuclear_wikilink_clean(content)
         # 2. PROACTIVE GUTTER DEFENSE: Ensure headings and rules have a blank line above them
+        # (also Setext double-newline defense and table/codeblock gutters)
         lines = content.split('\n')
         fixed_lines = []
         in_frontmatter = False
+        in_code_block = False
+        in_table = False
         
         for i, line in enumerate(lines):
             stripped = line.strip()
-            # Track frontmatter boundary
-            if stripped == "---":
-                if i == 0:
-                    in_frontmatter = True
-                elif in_frontmatter:
+            
+            if i == 0 and stripped == "---":
+                in_frontmatter = True
+                fixed_lines.append(line)
+                continue
+                
+            if in_frontmatter:
+                fixed_lines.append(line)
+                if stripped == "---":
                     in_frontmatter = False
-                else:
-                    # Horizontal rule outside frontmatter: ensure gutter above
-                    if fixed_lines and fixed_lines[-1].strip() != "":
-                        fixed_lines.append("")
-            
-            # Heading Defense (only outside frontmatter)
-            elif stripped.startswith("#") and not in_frontmatter:
-                # If the line is a heading (e.g., "## Title"), ensure it has a blank line above it
-                if fixed_lines and fixed_lines[-1].strip() != "":
+                continue
+
+            # Outside frontmatter checks
+            is_hr = (stripped == "---")
+            is_heading = stripped.startswith("#")
+            is_code_fence = stripped.startswith("```")
+            is_table_row = stripped.startswith("|") and stripped.endswith("|")
+
+            # Handling transitions into blocks/elements
+            if is_hr:
+                # Setext defense: Needs EXACTLY double newlines before it
+                while len(fixed_lines) > 0 and fixed_lines[-1].strip() == "":
+                    fixed_lines.pop()
+                fixed_lines.append("")
+                fixed_lines.append("")
+                fixed_lines.append(line)
+                fixed_lines.append("") # Gutter after
+                continue
+                
+            if is_heading:
+                if len(fixed_lines) > 0 and fixed_lines[-1].strip() != "":
                     fixed_lines.append("")
-            
-            fixed_lines.append(line)
-        
+                fixed_lines.append(line)
+                fixed_lines.append("") # Gutter after
+                continue
+                
+            if is_code_fence:
+                if not in_code_block:
+                    if len(fixed_lines) > 0 and fixed_lines[-1].strip() != "":
+                        fixed_lines.append("")
+                    fixed_lines.append(line)
+                    in_code_block = True
+                else:
+                    fixed_lines.append(line)
+                    fixed_lines.append("") # Gutter after
+                    in_code_block = False
+                continue
+                
+            if is_table_row:
+                if not in_table:
+                    if len(fixed_lines) > 0 and fixed_lines[-1].strip() != "":
+                        fixed_lines.append("")
+                    in_table = True
+                fixed_lines.append(line)
+                continue
+            else:
+                if in_table:
+                    if len(fixed_lines) > 0 and fixed_lines[-1].strip() != "":
+                        fixed_lines.append("")
+                    in_table = False
+
+            if not (is_hr or is_heading or is_code_fence or is_table_row):
+                # Avoid appending duplicate empty lines
+                if stripped == "" and len(fixed_lines) > 0 and fixed_lines[-1].strip() == "":
+                    continue
+                fixed_lines.append(line)
+
         final_content = "\n".join(fixed_lines)
         
         # Perform an atomic swap write
