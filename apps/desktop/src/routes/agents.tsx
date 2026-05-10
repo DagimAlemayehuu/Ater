@@ -665,7 +665,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  : "bg-background border-border text-muted-foreground"
  )}>
  <p className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60 mb-2">Last Action</p>
- <p className="text-[11px] font-bold currentColor">{queueStatus?.last_action || 'Waking up agent...'}</p>
+ <p className="text-[11px] font-bold">{queueStatus?.last_action ? cleanTitle(queueStatus.last_action) : 'Waking up agent...'}</p>
  </div>
 
  {queueStatus?.planned_batches?.length > 0 && (

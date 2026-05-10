@@ -1159,6 +1159,7 @@ def generate():
 
 NO JAVASCRIPT: DO NOT use Javascript syntax. Use only valid Python.
 Walkthrough Law: Your walkthrough steps MUST NOT be redundant or circular. Each step MUST convey a distinct new piece of information or logic. Do not repeat the same concept across multiple steps.
+Artifact Purity Law: Do NOT include explanations, walkthroughs, or text descriptions inside the `artifact` string itself. The `artifact` string must ONLY contain the raw code block, table, or mermaid diagram. Put all explanations in the `walkthrough` array.
 
 DOMAIN AXIOMS (CRITICAL):
 {sanity_check}"""

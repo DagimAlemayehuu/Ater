@@ -315,7 +315,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  const q = questions[currentQuestionIdx];
  let isCorrect = false;
 
- const isSelfGraded = ['writing', 'synthesis', 'debug', 'trace'].includes(q.type);
+ const isSelfGraded = ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(q.type);
 
  if (!isSelfGraded) {
   if (q.type === 'mcq' || q.type === 'true_false') {
@@ -741,9 +741,9 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  </div>
  )}
 
- {(currentQuestion.type === 'writing' || currentQuestion.type === 'synthesis' || currentQuestion.type === 'debug' || currentQuestion.type === 'trace') && (
+ {(!currentQuestion.type || ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) && (
   <div className="space-y-6">
-  {currentQuestion.type === 'debug' && <div className="p-1 border border-border rounded-xl bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${currentQuestion.content}\n\`\`\``} /></div>}
+  {['debug', 'code', 'trace'].includes(currentQuestion.type) && currentQuestion.content && <div className="p-1 border border-border rounded-xl bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${currentQuestion.content}\n\`\`\``} /></div>}
   <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-muted/5 border-2 border-border rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
   {isRevealed && (
     <div className="p-4 border-2 border-primary/20 bg-primary/5 rounded-lg space-y-2">
@@ -885,7 +885,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  <Button onClick={handleSubmitAnswer} disabled={!userAnswers[currentQuestion.id] && currentQuestion.type !== 'debug'} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md">Check</Button>
  ) : (
  <div className="flex gap-2">
- {gradedAnswers[currentQuestion.id] === undefined && ['writing', 'synthesis', 'debug', 'trace'].includes(currentQuestion.type) && (
+ {gradedAnswers[currentQuestion.id] === undefined && ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type) && (
  <>
  <Button onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: false})); nextQuestion(false);}} variant="outline" className="h-10 px-6 text-[9px] font-black uppercase border-destructive/20 text-destructive/40">Wrong</Button>
  <Button 
@@ -896,7 +896,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  >Correct</Button>
  </>
  )} 
- {((!['writing', 'synthesis', 'debug', 'trace'].includes(currentQuestion.type)) || gradedAnswers[currentQuestion.id] !== undefined) && (
+ {((!['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) || gradedAnswers[currentQuestion.id] !== undefined) && (
  <Button onClick={() => nextQuestion()} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md">Next</Button>
  )}
  </div>

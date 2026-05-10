@@ -489,7 +489,7 @@ export default function MiniPracticeUI({ question }: MiniPracticeUIProps) {
                       )}
               
               <div className="flex gap-3">
-                      {['fill_in', 'writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQ.type || 'writing') ? (
+                      {['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis'].includes(currentQ.type || 'writing') ? (
                           <>
                               <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-9 rounded-lg  border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 active:scale-95 transition-all">
                                   Wrong
