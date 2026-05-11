@@ -494,7 +494,7 @@ const handleStartSession = async () => {
      })
      setExplainLesson(res.lesson)
    } catch (e: any) {
-     setExplainLesson('Failed to generate lesson. Please check your API key in Settings.')
+     setExplainLesson(`**Error:** ${e.message || 'Failed to generate lesson. Please check your API key in Settings.'}`)
    } finally {
      setExplainLoading(false)
    }

@@ -4,14 +4,15 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
 import { cn } from '@/lib/utils'
-import React, { useState, useEffect, useMemo, useRef, memo } from 'react'
+import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { WikiLink, renderWikiLinks } from './WikiLink'
 import mermaid from 'mermaid'
-import { Check, RefreshCw, Copy } from 'lucide-react'
+import { Check, RefreshCw, Copy, Sparkles } from 'lucide-react'
 import MiniPracticeUI from '../MiniPracticeUI'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { ExplainSidebar } from './ExplainSidebar'
 
 mermaid.initialize({
   startOnLoad: false,
@@ -199,7 +200,7 @@ const CodeRenderer = memo((props: any) => {
 });
 
 export function MarkdownViewer({ content, onNavigate, path, components }: MarkdownViewerProps) {
-    // Use refs to keep callbacks stable for the useMemo dependency array
+    // Keep callbacks stable
     const onNavigateRef = useRef(onNavigate);
     const pathRef = useRef(path);
     const componentsRef = useRef(components);
@@ -208,6 +209,65 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
         pathRef.current = path;
         componentsRef.current = components;
     }, [onNavigate, path, components]);
+
+    // Selection → Explain state
+    const wrapperRef = useRef<HTMLDivElement>(null)
+    const [selectedText, setSelectedText] = useState('')
+    const [floatPos, setFloatPos] = useState<{ x: number; y: number } | null>(null)
+    const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [sidebarSelection, setSidebarSelection] = useState('')
+    const floatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    // Use native document listener — React's synthetic onMouseUp fires BEFORE
+    // the browser finalises the selection, so getSelection() returns stale data.
+    useEffect(() => {
+        const onMouseUp = (e: MouseEvent) => {
+            if (floatTimerRef.current) clearTimeout(floatTimerRef.current)
+            floatTimerRef.current = setTimeout(() => {
+                const sel = window.getSelection()
+                const text = sel?.toString().trim() || ''
+                const wrapper = wrapperRef.current
+                if (!wrapper || !sel?.rangeCount) return
+
+                // Only act on selections inside our content wrapper
+                const range = sel.getRangeAt(0)
+                if (!wrapper.contains(range.commonAncestorContainer)) {
+                    setFloatPos(null)
+                    setSelectedText('')
+                    return
+                }
+
+                if (text.length > 3) {
+                    const rect = range.getBoundingClientRect()
+                    const wRect = wrapper.getBoundingClientRect()
+                    // scrollTop accounts for the overflow-y-auto scroll offset
+                    const scrollEl = wrapper.querySelector('.overflow-y-auto') as HTMLElement | null
+                    const scrollTop = scrollEl ? scrollEl.scrollTop : 0
+                    setSelectedText(text)
+                    setFloatPos({
+                        x: rect.left - wRect.left + rect.width / 2,
+                        y: rect.top - wRect.top + scrollTop - 44,
+                    })
+                } else {
+                    setSelectedText('')
+                    setFloatPos(null)
+                }
+            }, 20)
+        }
+        document.addEventListener('mouseup', onMouseUp)
+        return () => {
+            document.removeEventListener('mouseup', onMouseUp)
+            if (floatTimerRef.current) clearTimeout(floatTimerRef.current)
+        }
+    }, [])
+
+    const handleClickExplain = useCallback(() => {
+        setSidebarSelection(selectedText)
+        setSidebarOpen(true)
+        setFloatPos(null)
+        setSelectedText('')
+        window.getSelection()?.removeAllRanges()
+    }, [selectedText])
 
     const markdownComponents = useMemo(() => ({
         ...(componentsRef.current || {}),
@@ -238,7 +298,6 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
         li: ({ children, className }: any) => {
             const isTask = className?.includes('task-list-item');
             
-            // Separate children into inline content and nested blocks (like sub-lists)
             const childrenArray = React.Children.toArray(children);
             const nestedBlocks: any[] = [];
             const inlineContent: any[] = [];
@@ -415,12 +474,41 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
     }), []);
 
     return (
-        <div className="relative h-full flex flex-row bg-background text-foreground">
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 relative">
-                <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 text-foreground">
-                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]} components={markdownComponents}>{content}</ReactMarkdown>
+        <>
+            <div
+                ref={wrapperRef}
+                className="relative h-full flex flex-row bg-background text-foreground"
+            >
+                <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 relative select-text">
+                    <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 text-foreground select-text cursor-text">
+                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]} components={markdownComponents}>{content}</ReactMarkdown>
+                    </div>
                 </div>
+
+                {/* Floating explain button */}
+                {floatPos && selectedText && (
+                    <button
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={handleClickExplain}
+                        className="absolute z-30 flex items-center gap-1.5 px-3 py-1.5 bg-background border border-border/60 shadow-lg rounded-full text-[10px] font-black uppercase tracking-widest text-foreground/70 hover:text-foreground hover:border-foreground/30 hover:bg-muted/10 transition-all"
+                        style={{
+                            left: Math.max(0, floatPos.x - 60),
+                            top: Math.max(0, floatPos.y),
+                            pointerEvents: 'all',
+                        }}
+                    >
+                        <Sparkles size={11} className="text-primary/60" />
+                        Explain More
+                    </button>
+                )}
             </div>
-        </div>
+
+            <ExplainSidebar
+                isOpen={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
+                selection={sidebarSelection}
+                path={path}
+            />
+        </>
     )
 }

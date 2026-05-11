@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Sparkles } from 'lucide-react';
 import { useConfig } from '@/lib/ConfigContext';
 import { useTheme } from '@/context/theme-provider';
+import { ExplainSidebar } from './ExplainSidebar';
 
 interface PdfViewerProps {
     path: string;
@@ -36,6 +37,10 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     const [filteredList, setFilteredList] = useState<number[]>([]);
     const [pageCount, setPageCount] = useState<number | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+
+    // Explain sidebar state
+    const [explainOpen, setExplainOpen] = useState(false);
+    const [explainSelection, setExplainSelection] = useState('');
 
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -136,6 +141,10 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                     setPageCount(event.data.pageCount);
                     setFilteredList(event.data.filterList);
                 }
+            } else if (event.data.type === 'selection' && event.data.text?.trim()) {
+                // iframe sends selected text via postMessage
+                setExplainSelection(event.data.text.trim())
+                setExplainOpen(true)
             }
         };
         window.addEventListener('message', handleMessage);
@@ -148,19 +157,48 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
 
     const pdfUrl = `http://127.0.0.1:8765/api/obsidian/viewer/${encodeURI(path)}?vault_path=${encodeURIComponent(config?.obsidianVaultPath || '')}&page=${initialPage}${filterPages && filterPages.length > 0 ? `&filter_pages=${filterPages.join(',')}` : ''}&theme=${resolvedTheme}`;
 
+    const handleAskAI = () => {
+        // Use the page title and page number as context since we can't get iframe selection
+        const pageContext = `Page ${page}${pageCount ? ` of ${pageCount}` : ''} from "${title}"`;
+        setExplainSelection(pageContext);
+        setExplainOpen(true);
+    };
+
     return (
-        <div ref={containerRef} className="flex flex-row h-full bg-background relative overflow-hidden">
-            <div className="flex-1 flex flex-col min-w-0 relative bg-background">
-                <div className="flex-1 w-full h-full overflow-hidden flex items-center justify-center">
-                    <iframe 
-                        ref={iframeRef} 
-                        src={pdfUrl} 
-                        className="w-full h-full border-none overflow-hidden bg-background" 
-                        title={title} 
-                        allowFullScreen 
-                    />
+        <>
+            <div ref={containerRef} className="flex flex-row h-full bg-background relative overflow-hidden">
+                <div className="flex-1 flex flex-col min-w-0 relative bg-background">
+                    {/* Ask AI button overlay */}
+                    <div className="absolute top-3 right-3 z-20">
+                        <button
+                            onClick={handleAskAI}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-background/80 backdrop-blur border border-border/50 shadow-md rounded-full text-[9px] font-black uppercase tracking-widest text-foreground/50 hover:text-foreground hover:border-foreground/30 hover:bg-background transition-all"
+                            title="Ask AI about this page"
+                        >
+                            <Sparkles size={10} className="text-primary/60" />
+                            Ask AI
+                        </button>
+                    </div>
+
+                    <div className="flex-1 w-full h-full overflow-hidden flex items-center justify-center">
+                        <iframe 
+                            ref={iframeRef} 
+                            src={pdfUrl} 
+                            className="w-full h-full border-none overflow-hidden bg-background" 
+                            title={title} 
+                            allowFullScreen 
+                        />
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <ExplainSidebar
+                isOpen={explainOpen}
+                onClose={() => setExplainOpen(false)}
+                selection={explainSelection}
+                path={path}
+                page={page}
+            />
+        </>
     );
 });

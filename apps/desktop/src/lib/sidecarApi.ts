@@ -97,7 +97,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const authHeaders = await getAuthHeaders()
     
     // Guard: AI routes require a key configured in Settings
-    const isAiRoute = path.includes('/api/ai/') || path.includes('/api/oka/')
+    const isAiRoute = path.includes('/api/ai/') || path.includes('/api/oka/') || path.includes('/api/practice/explain') || path.includes('/api/practice/vault/')
     if (isAiRoute && !authHeaders['X-AI-Key']) {
         throw new Error('AI API Key is not configured. Go to Settings > AI Configuration to add your key.')
     }
@@ -424,6 +424,12 @@ export const sidecarApi = {
 
     generateQuickQuestions: (payload: { path: string, selection: string, page?: number }) =>
         request<{ answer: string; detail?: string }>('/api/oka/quick-questions', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
+    okaExplain: (payload: { path: string, selection: string, page?: number, question?: string }) =>
+        request<{ answer: string }>('/api/oka/explain', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
