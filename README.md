@@ -54,7 +54,7 @@ Ater is a local-first application built as a polyglot monorepo. It operates full
 ## Changelog
 
 ### 2026-05-12 — Ater v1.0 "Sovereign Brevity"
-- **Evolutionary Rebrand**: Transitioned from Life OS to Ater, focusing on surgical brevity and precision.
+- **Evolutionary Rebrand**: Transitioned from Ater to Ater, focusing on surgical brevity and precision.
 - **Domain Matrix Hardening**: Fully decoupled `ECON-MICRO` from `ECON-MACRO` with domain-specific agent protocols to prevent conceptual drift.
 - **Pedagogical Casing Law**: Enforced Sentence Case across all generated questions and options to ensure professional, non-aggressive UI content.
 - **Stateful Entropy**: Implemented batch-level topic hinting in `QuestionAgent` to guarantee 100% semantic diversity within practice sets.

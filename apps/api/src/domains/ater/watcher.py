@@ -10,17 +10,17 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from .service import OkaService
+from .service import AterService
 from .governor import governor
 
-file_handler = logging.FileHandler("/tmp/oka_watcher.log")
+file_handler = logging.FileHandler("/tmp/ater_watcher.log")
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-watcher_logger = logging.getLogger("OkaQueueManager")
+watcher_logger = logging.getLogger("AterQueueManager")
 watcher_logger.setLevel(logging.INFO)
 watcher_logger.addHandler(file_handler)
 
 class InboxHandler(FileSystemEventHandler):
-    def __init__(self, manager: 'OkaQueueManager'):
+    def __init__(self, manager: 'AterQueueManager'):
         self.manager = manager
         self.logger = watcher_logger
 
@@ -53,12 +53,12 @@ class InboxHandler(FileSystemEventHandler):
             self.logger.info(f"New file detected: {src_path.name}")
             self.manager.add_to_queue(src_path)
 
-class OkaQueueManager:
+class AterQueueManager:
     """
     Watches the Inbox, maintains a queue, and processes files autonomously if enabled.
     Supports parallel file processing via asynchronous tasks.
     """
-    def __init__(self, service: OkaService, inbox_path: str, system_instruction_path: str):
+    def __init__(self, service: AterService, inbox_path: str, system_instruction_path: str):
         self.service = service
         self.inbox_path = Path(inbox_path)
         self.si_path = system_instruction_path
@@ -79,7 +79,7 @@ class OkaQueueManager:
         if not self.inbox_path.exists():
             self.inbox_path.mkdir(parents=True, exist_ok=True)
             
-        self.db_path = str(self.inbox_path.absolute() / "oka_queue.db")
+        self.db_path = str(self.inbox_path.absolute() / "ater_queue.db")
         self._init_db()
         self._lock = asyncio.Lock()
 
@@ -104,7 +104,7 @@ class OkaQueueManager:
         self.observer.schedule(event_handler, str(self.inbox_path), recursive=False)
         self.observer.start()
         
-        print(f"[OKA Queue] Monitoring: {self.inbox_path} | Auto Process: {self.auto_process}")
+        print(f"[Ater Queue] Monitoring: {self.inbox_path} | Auto Process: {self.auto_process}")
         
         self.scan_existing_files()
         
@@ -113,7 +113,7 @@ class OkaQueueManager:
 
     def update_settings(self, auto_process: bool):
         self.auto_process = auto_process
-        print(f"[OKA Queue] Auto process updated to: {self.auto_process}")
+        print(f"[Ater Queue] Auto process updated to: {self.auto_process}")
 
     def scan_existing_files(self):
         """Scans the inbox for existing files, adds them to the database, and resets errors."""
@@ -128,7 +128,7 @@ class OkaQueueManager:
                 if item.is_file() and not item.name.startswith('.') and item.suffix.lower() in supported:
                     self.add_to_queue(item)
         except Exception as e:
-            print(f"[OKA Queue] Error scanning files: {e}")
+            print(f"[Ater Queue] Error scanning files: {e}")
 
     def _get_conn(self):
         """Returns a connection and ensures the schema exists."""
@@ -248,7 +248,7 @@ class OkaQueueManager:
 
     async def _worker_loop(self):
         """Monitor the queue and spawn parallel workers for pending files."""
-        watcher_logger.info("OKA Parallel Worker Loop Started.")
+        watcher_logger.info("Ater Parallel Worker Loop Started.")
         
         while True:
             try:
@@ -281,7 +281,7 @@ class OkaQueueManager:
                 await asyncio.sleep(5)
 
             except Exception as e:
-                watcher_logger.error(f"Error in OKA worker loop: {e}")
+                watcher_logger.error(f"Error in Ater worker loop: {e}")
                 await asyncio.sleep(10)
 
     async def process_file(self, file_path_str: str):
@@ -405,7 +405,7 @@ class OkaQueueManager:
         except Exception as e:
             watcher_logger.error(f"Critical worker failure for {path.name}: {e}")
             # region agent log
-            with open("/Users/dabodestroyer/code/Antigravity/LifeOs/.cursor/debug-18a97e.log", "a", encoding="utf-8") as _f: _f.write(json.dumps({"sessionId":"18a97e","runId":"pre-fix","hypothesisId":"H4","location":"watcher.py:process_file","message":"Worker hit critical failure","data":{"file":path.name,"errorType":type(e).__name__,"error":str(e)[:240],"lastAction":self.last_action},"timestamp":int(time.time()*1000)}) + "\n")
+            with open("/Users/dabodestroyer/code/Antigravity/Ater/.cursor/debug-18a97e.log", "a", encoding="utf-8") as _f: _f.write(json.dumps({"sessionId":"18a97e","runId":"pre-fix","hypothesisId":"H4","location":"watcher.py:process_file","message":"Worker hit critical failure","data":{"file":path.name,"errorType":type(e).__name__,"error":str(e)[:240],"lastAction":self.last_action},"timestamp":int(time.time()*1000)}) + "\n")
             # endregion
             self._mark_error(file_path_str)
             self.last_action = f"Error: {str(e)}"
@@ -436,12 +436,12 @@ class OkaQueueManager:
         
         # Pull granular status from service if available
         if session_id:
-            svc_status = OkaService._status.get(session_id)
+            svc_status = AterService._status.get(session_id)
             if svc_status:
                 display_action = f"{self.last_action} | {svc_status}"
             
             # Pull real-time processed notes from service session
-            session = OkaService._sessions.get(session_id)
+            session = AterService._sessions.get(session_id)
             if session:
                 svc_processed = session.get("processed_notes", [])
                 # Combine local (completed batches) with session (in-progress parallel notes)
@@ -482,4 +482,4 @@ class OkaQueueManager:
             self.observer.stop()
         if self.worker_task:
             self.worker_task.cancel()
-        print("[OKA Queue] Stopped.")
+        print("[Ater Queue] Stopped.")

@@ -1,6 +1,6 @@
-# Life OS Sidecar (Python API)
+# Ater Sidecar (Python API)
 
-This is the high-performance reasoning and data orchestration layer for Life OS. It is a FastAPI application that handles heavy-duty API integrations and local knowledge processing.
+This is the high-performance reasoning and data orchestration layer for Ater. It is a FastAPI application that handles heavy-duty API integrations and local knowledge processing.
 
 ## Core Responsibilities
 
@@ -8,7 +8,7 @@ This is the high-performance reasoning and data orchestration layer for Life OS.
     - **Instruction Injection**: Dynamic system prompt management.
     - **Multimodal Context**: Real-time file processing via Gemini Files API.
     - **Role Mapping**: Automatic conversion between frontend and SDK messaging schemas.
-- **OKA Engine**: Refined academic knowledge synthesis. The system is designed to generate a complete Knowledge Asset Cluster (Unit Hub, Questions, and all Atomic Notes) across multiple batches for seamless integration into Obsidian.
+- **Ater Engine**: Refined academic knowledge synthesis. The system is designed to generate a complete Knowledge Asset Cluster (Unit Hub, Questions, and all Atomic Notes) across multiple batches for seamless integration into Obsidian.
 - **Notion Synapse**: High-speed connectors for Goals, Academics, and Task databases.
 - **Obsidian Vault Hub**: Filesystem-based reader and hierarchical structure parser for local Markdown vaults.
 

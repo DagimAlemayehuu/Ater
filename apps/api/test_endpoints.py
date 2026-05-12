@@ -16,7 +16,7 @@ def test_srs_flow():
     }
     
     # Clean DB if exists
-    db_path = os.path.join(inbox_path, "oka_queue.db")
+    db_path = os.path.join(inbox_path, "ater_queue.db")
     if os.path.exists(db_path):
         os.remove(db_path)
         

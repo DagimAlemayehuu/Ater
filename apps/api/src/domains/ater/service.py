@@ -12,7 +12,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, Base
 from langchain_community.document_loaders import PyPDFLoader
 
 from .vault_manager import VaultManager
-from .deployer import OkaDeployer
+from .deployer import AterDeployer
 from src.domains.ai.factory import ModelFactory
 from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgent, CriticAgent, HubAgent, VerifierAgent, QuizAuditorAgent, EpistemicClassifierAgent, MetaScannerAgent, DOMAIN_MATRIX, get_professional_domain, get_persona
 from .router import router
@@ -23,38 +23,38 @@ from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, P
 import ruamel.yaml
 import logging
 
-logger = logging.getLogger("LifeOS")
+logger = logging.getLogger("Ater")
 
-# OKA-specific constants
-OKA_TIMEOUT = 600       # 10 minutes — headroom for large PDFs
-OKA_MAX_RETRIES = 10     # Retry on transient failures (524, timeout, rate-limit)
-OKA_RETRY_BACKOFF = 15  # Seconds between retries (doubles each attempt)
+# Ater-specific constants
+ATER_TIMEOUT = 600       # 10 minutes — headroom for large PDFs
+ATER_MAX_RETRIES = 10     # Retry on transient failures (524, timeout, rate-limit)
+ATER_RETRY_BACKOFF = 15  # Seconds between retries (doubles each attempt)
 MAX_SOURCE_CHARS = 80000  # Characters to include in prompt (Lowered for 30k TPM Free Tier)
 
 
-class OkaService:
+class AterService:
     """
-    Main orchestrator for OKA.
+    Main orchestrator for Ater.
     """
     _sessions: Dict[str, Dict[str, Any]] = {}
     _status: Dict[str, str] = {}  # Global status map
     _rate_limited: Dict[str, float] = {}  # session_id → timestamp when rate-limit hit
-    _session_file = Path.home() / ".lifeos" / "oka" / "sessions.json"
+    _session_file = Path.home() / ".ater" / "ater" / "sessions.json"
 
     def __init__(self, secrets):
         self.secrets = secrets
         self.vm = VaultManager(secrets.vault_path, academic_root=secrets.academic_path)
-        self.deployer = OkaDeployer(self.vm)
+        self.deployer = AterDeployer(self.vm)
         self._ensure_session_dir()
 
-        # Initialize LLM with extended timeout for OKA workloads
+        # Initialize LLM with extended timeout for Ater workloads
         self.llm = ModelFactory.get_model(
             provider=secrets.ai_provider,
             model_name=secrets.ai_model,
             api_key=secrets.ai_key,
             temperature=0.0, # ZERO temperature for strict structural planning
-            timeout=OKA_TIMEOUT,
-            request_timeout=OKA_TIMEOUT,
+            timeout=ATER_TIMEOUT,
+            request_timeout=ATER_TIMEOUT,
             max_retries=0,
             max_tokens=4096,
         ) if secrets.ai_key else None
@@ -72,8 +72,8 @@ class OkaService:
             model_name=planner_model,
             api_key=planner_key,
             temperature=0.0, # ZERO temperature for planning
-            timeout=OKA_TIMEOUT,
-            request_timeout=OKA_TIMEOUT,
+            timeout=ATER_TIMEOUT,
+            request_timeout=ATER_TIMEOUT,
             max_retries=0,
             max_tokens=4096,
         ) if planner_key else self.llm
@@ -84,8 +84,8 @@ class OkaService:
             model_name=secrets.ai_model,
             api_key=secrets.ai_key,
             temperature=0.0, # 0.0 for strict template execution
-            timeout=OKA_TIMEOUT,
-            request_timeout=OKA_TIMEOUT,
+            timeout=ATER_TIMEOUT,
+            request_timeout=ATER_TIMEOUT,
             max_retries=0,
             max_tokens=4096,
         ) if secrets.ai_key else None
@@ -101,8 +101,8 @@ class OkaService:
         if secrets.ai_key:
             self.governor.set_api_key(secrets.ai_key)
 
-        from .validator import OkaValidator
-        self.validator = OkaValidator()
+        from .validator import AterValidator
+        self.validator = AterValidator()
         
         # Initialize YAML compiler
         self.yaml = ruamel.yaml.YAML()
@@ -132,11 +132,11 @@ class OkaService:
             with open(self._session_file, "w") as f:
                 json.dump(existing, f)
         except Exception as e:
-            print(f"[OKA Service] Session persistence failed: {e}")
+            print(f"[Ater Service] Session persistence failed: {e}")
 
     async def _get_or_restore_session(self, session_id: str) -> Optional[Dict[str, Any]]:
-        if session_id in OkaService._sessions:
-            return OkaService._sessions[session_id]
+        if session_id in AterService._sessions:
+            return AterService._sessions[session_id]
         
         # Try to restore from disk
         if self._session_file.exists():
@@ -146,33 +146,33 @@ class OkaService:
                 if session_id in existing:
                     data = existing[session_id]
                     # We need to re-initialize messages from SI and initial prompt
-                    # This is a bit tricky for multi-turn, but for OKA batches it's predictable
+                    # This is a bit tricky for multi-turn, but for Ater batches it's predictable
                     si_path = self.resolve_si_path()
                     si = await self._get_si(str(si_path))
                     data["messages"] = [SystemMessage(content=si)]
-                    OkaService._sessions[session_id] = data
+                    AterService._sessions[session_id] = data
                     return data
             except Exception: pass
         return None
 
     @staticmethod
     def resolve_si_path() -> Path:
-        # Resolve absolute root (LifeOs/)
-        # Current file is apps/api/src/domains/oka/service.py
-        # parent 1: oka/
+        # Resolve absolute root (Ater/)
+        # Current file is apps/api/src/domains/ater/service.py
+        # parent 1: ater/
         # parent 2: domains/
         # parent 3: src/
         # parent 4: api/
         # parent 5: apps/
-        # parent 6: LifeOs/
+        # parent 6: Ater/
         root = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
         paths = [
-            root / "OKA.md",
-            root / ".system/prompts/OKA_System_Instruction.md"
+            root / "Ater.md",
+            root / ".system/prompts/ATER_System_Instruction.md"
         ]
         for p in paths:
             if p.exists(): return p
-        raise FileNotFoundError(f"OKA System Instruction not found in: {[str(p) for p in paths]}")
+        raise FileNotFoundError(f"Ater System Instruction not found in: {[str(p) for p in paths]}")
 
     async def _get_si(self, path: str) -> str:
         with open(path, "r", encoding="utf-8") as f:
@@ -187,7 +187,7 @@ class OkaService:
         attempt = 0
         last_error = None
 
-        while attempt < OKA_MAX_RETRIES:
+        while attempt < ATER_MAX_RETRIES:
             try:
                 attempt += 1
                 # Length continuation loop for models that cut off
@@ -212,14 +212,14 @@ class OkaService:
                         return res
             except Exception as e:
                 if type(e).__name__ == "DailyLimitExceededException":
-                    print(f"[OKA Service] Daily Limit Hit: {e}")
-                    OkaService._rate_limited[session_id] = time.time()
-                    OkaService._status[session_id] = f"Paused (Daily Limit Exceeded): {str(e)}"
+                    print(f"[Ater Service] Daily Limit Hit: {e}")
+                    AterService._rate_limited[session_id] = time.time()
+                    AterService._status[session_id] = f"Paused (Daily Limit Exceeded): {str(e)}"
                     raise e # Break out completely immediately
                 
                 last_error = e
                 error_str = str(e)
-                print(f"[OKA Service] AI Attempt {attempt} failed: {error_str[:200]}")
+                print(f"[Ater Service] AI Attempt {attempt} failed: {error_str[:200]}")
 
                 is_rate_limit = "429" in error_str or "rate_limit" in error_str.lower()
                 
@@ -230,17 +230,17 @@ class OkaService:
                     c in error_str for c in ["503", "524", "timeout", "overloaded"]
                 )
 
-                if is_transient and attempt < OKA_MAX_RETRIES:
+                if is_transient and attempt < ATER_MAX_RETRIES:
                     # Rate limits get much longer waits: 30s, 60s, 120s, 240s...
                     if is_rate_limit:
                         backoff = min(30 * (2 ** (attempt - 1)), 300)  # cap at 5 min
-                        label = f"Rate Limited (429). Waiting {backoff}s before retry {attempt+1}/{OKA_MAX_RETRIES}..."
+                        label = f"Rate Limited (429). Waiting {backoff}s before retry {attempt+1}/{ATER_MAX_RETRIES}..."
                     else:
-                        backoff = OKA_RETRY_BACKOFF * (2 ** (attempt - 1))
-                        label = f"{self._classify_error(error_str)}. Retrying in {backoff}s ({attempt}/{OKA_MAX_RETRIES})..."
+                        backoff = ATER_RETRY_BACKOFF * (2 ** (attempt - 1))
+                        label = f"{self._classify_error(error_str)}. Retrying in {backoff}s ({attempt}/{ATER_MAX_RETRIES})..."
 
-                    OkaService._status[session_id] = label
-                    print(f"[OKA Service] {label}")
+                    AterService._status[session_id] = label
+                    print(f"[Ater Service] {label}")
                     await asyncio.sleep(backoff)
                 else:
                     break
@@ -260,14 +260,14 @@ class OkaService:
         The next LLM call will use the new key immediately.
         """
         try:
-            print("[OKA Service] Swapping API key...")
+            print("[Ater Service] Swapping API key...")
             self.llm = ModelFactory.get_model(
                 provider=self.secrets.ai_provider,
                 model_name=self.secrets.ai_model,
                 api_key=new_api_key,
                 temperature=0.0,
-                timeout=OKA_TIMEOUT,
-                request_timeout=OKA_TIMEOUT,
+                timeout=ATER_TIMEOUT,
+                request_timeout=ATER_TIMEOUT,
                 max_retries=0,
                 max_tokens=4096,
             )
@@ -286,21 +286,21 @@ class OkaService:
                     pass
             # Register new key with governor — resets sliding windows for fresh pacing
             self.governor.set_api_key(new_api_key)
-            print("[OKA Service] API key swapped successfully.")
+            print("[Ater Service] API key swapped successfully.")
         except Exception as e:
-            print(f"[OKA Service] Key swap failed: {e}")
+            print(f"[Ater Service] Key swap failed: {e}")
 
     def get_paused_sessions(self) -> List[Dict[str, Any]]:
         """Returns all sessions that were paused due to a rate limit."""
         paused = []
-        for sid, ts in OkaService._rate_limited.items():
-            session = OkaService._sessions.get(sid, {})
+        for sid, ts in AterService._rate_limited.items():
+            session = AterService._sessions.get(sid, {})
             paused.append({
                 "session_id": sid,
                 "paused_at": ts,
                 "current_batch": session.get("current_batch", 0),
                 "total_batches": session.get("total_batches", 0),
-                "status": OkaService._status.get(sid, "rate_limited"),
+                "status": AterService._status.get(sid, "rate_limited"),
             })
         return paused
 
@@ -311,7 +311,7 @@ class OkaService:
         Resumes a session that was paused due to a rate limit.
         Safe to call even if the session is not paused (idempotent).
         """
-        OkaService._rate_limited.pop(session_id, None)
+        AterService._rate_limited.pop(session_id, None)
         return await self.confirm_plan(
             session_id=session_id,
             command="Resume",
@@ -407,7 +407,7 @@ class OkaService:
                         metadata["unit"] = self._clean_prop(data.get("unit") or data.get("Unit"))
                         metadata["semester"] = self._clean_prop(data.get("semester") or data.get("Semester"))
             except Exception as e:
-                print(f"[OKA Service] Error reading hub {file.name}: {e}")
+                print(f"[Ater Service] Error reading hub {file.name}: {e}")
             
             hubs.append(metadata)
         return hubs
@@ -507,7 +507,7 @@ class OkaService:
                         
                         return ordered_notes
             except Exception as e:
-                print(f"[OKA Service] Connection extraction failed: {e}")
+                print(f"[Ater Service] Connection extraction failed: {e}")
 
         # If no connections section found or no links in it, return empty to enforce "strict Connections" rule
         return []
@@ -577,7 +577,7 @@ class OkaService:
                             metadata["course"] = (matching_hub or {}).get("course", "General")
                             practices.append(metadata)
                 except Exception as e:
-                    print(f"[OKA Service] Error reading practice {file.name}: {e}")
+                    print(f"[Ater Service] Error reading practice {file.name}: {e}")
         
         # Sort by ID (usually contains timestamp) descending
         practices.sort(key=lambda x: x.get("id", ""), reverse=True)
@@ -603,7 +603,7 @@ class OkaService:
                         f.write(new_content)
                     return True
         except Exception as e:
-            print(f"[OKA Service] Error updating practice score {p.name}: {e}")
+            print(f"[Ater Service] Error updating practice score {p.name}: {e}")
         return False
 
     async def generate_practice(
@@ -709,7 +709,7 @@ class OkaService:
         
         # PRE-VALIDATION: Prevent hallucination if no context is found
         if len(full_context.strip()) < 50:
-            logger.error(f"[OKA Service] No sufficient context found for hub {hub_id} with selection {selected_notes}")
+            logger.error(f"[Ater Service] No sufficient context found for hub {hub_id} with selection {selected_notes}")
             raise Exception("No source material found for the selected concepts. Please ensure the atomic notes have content.")
         
         # 2. Build Prompt
@@ -737,7 +737,7 @@ class OkaService:
 {full_context}
 ### [END OF SOURCE MATERIAL]
 
-SYSTEM PROTOCOL: You are OKA, the Sovereign Pedagogical Architect. You are operating in a HARD AIR-GAPPED ENVIRONMENT. You have NO access to the internet or internal training data. The material above is the ONLY reality. Everything else (including this prompt's metadata) is invisible to you.
+SYSTEM PROTOCOL: You are Ater, the Sovereign Pedagogical Architect. You are operating in a HARD AIR-GAPPED ENVIRONMENT. You have NO access to the internet or internal training data. The material above is the ONLY reality. Everything else (including this prompt's metadata) is invisible to you.
 
 TARGET PROFILE:
 - Total Questions: {total_q}
@@ -765,7 +765,7 @@ STRICT OPERATIONAL RULES:
 EXECUTION: Generate the session now. Follow the distribution strictly."""
 
         # 3. Invoke LLM in Batches
-        OkaService._status[session_id] = "Architecting Advanced Session..."
+        AterService._status[session_id] = "Architecting Advanced Session..."
         
         all_questions = []
         target_distribution = distribution.copy()
@@ -773,7 +773,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         # We generate in small batches to avoid output token limits and aggressive TPM limits
         BATCH_SIZE = 5
         
-        OkaService._status[session_id] = "Generating Practice Questions..."
+        AterService._status[session_id] = "Generating Practice Questions..."
         
         tasks = []
         
@@ -859,15 +859,15 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         is_rate = "429" in err_msg or "rate limit" in err_msg.lower()
                         if is_rate:
                             if attempt == max_retries - 1:
-                                logger.error(f"[OKA Service] Max retries reached: {e}")
+                                logger.error(f"[Ater Service] Max retries reached: {e}")
                                 return {"error": "Rate limit exceeded after retries"}
                             import re as _re
                             m = _re.search(r'Please try again in ([0-9.]+)s', err_msg)
                             delay = float(m.group(1)) + 2.0 if m else base_delay * (2 ** attempt)
-                            logger.warning(f"[OKA Service] 429 – waiting {delay:.1f}s (attempt {attempt+1})")
+                            logger.warning(f"[Ater Service] 429 – waiting {delay:.1f}s (attempt {attempt+1})")
                             await asyncio.sleep(delay)
                         else:
-                            logger.error(f"[OKA Service] Non-retryable error during generation: {e}")
+                            logger.error(f"[Ater Service] Non-retryable error during generation: {e}")
                             return {"error": str(e)}
 
         results = await asyncio.gather(*(run_agent(t) for t in tasks), return_exceptions=True)
@@ -884,7 +884,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 res["id"] = len(all_questions) + 1
                 all_questions.append(res)
             else:
-                logger.error(f"[OKA Service] Failed to generate a question: {res}")
+                logger.error(f"[Ater Service] Failed to generate a question: {res}")
 
         # FINAL HARD SLICE removed from here, done after post-processing
         
@@ -989,7 +989,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         yaml_frontmatter = f"---\n{yaml.dump(yaml_data, sort_keys=False)}---\n"
 
         # Clean academic markdown — no emojis, no decorations
-        md_content = f"# OKA MASTERY SESSION: {hub['title'].upper()}\n\n"
+        md_content = f"# Ater MASTERY SESSION: {hub['title'].upper()}\n\n"
         md_content += f"> Session ID: `{session_id}` | Date: {datetime.now().strftime('%Y-%m-%d')} | Difficulty: {config.difficulty}\n"
         md_content += f"> Scope: {selected_scope_str}\n\n"
         md_content += "## THE CHALLENGE\n\n"
@@ -1047,7 +1047,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         with open(quiz_path, "w", encoding="utf-8") as f:
             f.write(yaml_frontmatter + md_content)
 
-        OkaService._status[session_id] = "Completed"
+        AterService._status[session_id] = "Completed"
         return {"session_id": session_id, "questions": questions, "quiz_path": str(quiz_path)}
 
     def find_best_hub_match(self, source_text: str) -> Optional[Dict[str, Any]]:
@@ -1106,7 +1106,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             highest_score -= 20 # Knock it below threshold
         
         if highest_score >= 15:
-            print(f"[OKA Service] Best hub match: {best_match['id']} (Score: {highest_score})")
+            print(f"[Ater Service] Best hub match: {best_match['id']} (Score: {highest_score})")
             return best_match
         
         return None
@@ -1148,7 +1148,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         sorted_titles = {n["title"] for n in sorted_notes}
         remaining = [n for n in notes if n["title"] not in sorted_titles]
         for r in remaining:
-            print(f"[OKA] Circular prereq detected for '{r['title']}' — stripping prerequisites.")
+            print(f"[Ater] Circular prereq detected for '{r['title']}' — stripping prerequisites.")
             r["prerequisites"] = []
         sorted_notes.extend(remaining)
 
@@ -1218,7 +1218,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             
             return {"semester": active_sem or "", "year": active_year or ""}
         except Exception as e:
-            print(f"[OKA Service] Failed to retrieve academic context: {e}")
+            print(f"[Ater Service] Failed to retrieve academic context: {e}")
             return {}
 
     # ── Phase 1: Detection ──────────────────────────────────────
@@ -1254,7 +1254,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 
                 # If units explicitly mismatch, don't anchor to this hub
                 if h_unit and ai_unit and h_unit != ai_unit:
-                    print(f"[OKA Service] Unit mismatch detected (Hub: {h_unit}, AI: {ai_unit}). Dropping anchored hub.")
+                    print(f"[Ater Service] Unit mismatch detected (Hub: {h_unit}, AI: {ai_unit}). Dropping anchored hub.")
                     target_hub = None
                 else:
                     h_course = target_hub.get("course")
@@ -1265,7 +1265,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     if h_semester: detected_curriculum["semester"] = h_semester
                     if h_year: detected_curriculum["year"] = h_year
                     
-                    print(f"[OKA Service] Smart-Anchor: Inherited metadata from Hub '{target_hub['id']}' -> {detected_curriculum['course']} | {detected_curriculum['semester']}")
+                    print(f"[Ater Service] Smart-Anchor: Inherited metadata from Hub '{target_hub['id']}' -> {detected_curriculum['course']} | {detected_curriculum['semester']}")
 
             # 2. If we have a course (from AI or Hub) but missing semester/year, look at the Course Master
             if detected_curriculum.get("course"):
@@ -1288,9 +1288,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 if v_year:
                                     detected_curriculum["year"] = v_year
                                     
-                                print(f"[OKA Service] Smart-Aware: Synced Course '{clean_course_name}' settings from Vault (Priority).")
+                                print(f"[Ater Service] Smart-Aware: Synced Course '{clean_course_name}' settings from Vault (Priority).")
                     except Exception as e:
-                        print(f"[OKA Service] Recursive course lookup failed: {e}")
+                        print(f"[Ater Service] Recursive course lookup failed: {e}")
 
             # 3. Final Reconciliation: Ensure no 'Unknown' or empty values if we can help it
             if not detected_curriculum.get("semester") or detected_curriculum["semester"] == "Unknown":
@@ -1317,7 +1317,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     
                     # Create stub hub in Study Planner if it doesn't already exist
                     if not hub_file_path.exists():
-                        print(f"[OKA Service] Creating smart-synced stub hub: {hub_filename}")
+                        print(f"[Ater Service] Creating smart-synced stub hub: {hub_filename}")
                         stub_yaml = (
                             f"---\n"
                             f"title: {hub_filename[:-3]}\n"
@@ -1333,7 +1333,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             f"study_date: null\n"
                             f"generated: false\n"
                             f"---\n\n"
-                            f"> Auto-created smart-synced stub by OKA.\n"
+                            f"> Auto-created smart-synced stub by Ater.\n"
                         )
                         with open(hub_file_path, "w", encoding="utf-8") as f:
                             f.write(stub_yaml)
@@ -1347,7 +1347,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         "semester": semester,
                         "year": year
                     }
-                    print(f"[OKA Service] Anchored to smart-synced hub: {hub_filename}")
+                    print(f"[Ater Service] Anchored to smart-synced hub: {hub_filename}")
 
             return {
                 "anchored_hub": target_hub,
@@ -1358,7 +1358,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             }
         except Exception as e:
             err_trace = traceback.format_exc()
-            print(f"[OKA Service] Detection failed: {e}\n{err_trace}")
+            print(f"[Ater Service] Detection failed: {e}\n{err_trace}")
             return {
                 "status": "error",
                 "message": f"Detection Failed: {str(e)}",
@@ -1455,30 +1455,30 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             if final_course not in options['courses'] and final_course.lower() not in ("unknown", "general", ""):
                 try:
                     from .agents import TaxonomyExtenderAgent
-                    print(f"[OKA Service] New Domain Detected: '{final_course}'. Activating Cartographer Prime...")
+                    print(f"[Ater Service] New Domain Detected: '{final_course}'. Activating Cartographer Prime...")
                     cartographer = TaxonomyExtenderAgent()
                     # Analyze first few chunks to understand the domain
                     growth_res = await cartographer.analyze_new_domain(final_course, text[:15000])
                     
                     if growth_res.get("status") == "success":
                         domain_logic = growth_res.get("domain_logic", {})
-                        print(f"[OKA Service] Taxonomy Extended for '{final_course}': {domain_logic.get('persona', 'Standard Librarian')}")
+                        print(f"[Ater Service] Taxonomy Extended for '{final_course}': {domain_logic.get('persona', 'Standard Librarian')}")
                         # In a real system, we'd persist this to keywords.py or a dynamic DB.
                         # For now, we log the success and use the suggested persona in planning.
                 except Exception as e:
-                    print(f"[OKA Service] Cartographer Prime failed: {e}")
+                    print(f"[Ater Service] Cartographer Prime failed: {e}")
 
             # --- SMART FALLBACK ---
             # If AI is unsure, use the Active Academic Context (Dashboard)
             if academic_hint:
                 if final_semester.lower() in ("unknown", "general", "") and academic_hint.get("semester"):
                     final_semester = academic_hint["semester"]
-                    print(f"[OKA Service] Fallback: Using Dashboard Semester -> {final_semester}")
+                    print(f"[Ater Service] Fallback: Using Dashboard Semester -> {final_semester}")
                 if final_year.lower() in ("unknown", "general", "") and academic_hint.get("year"):
                     final_year = academic_hint["year"]
-                    print(f"[OKA Service] Fallback: Using Dashboard Year -> {final_year}")
+                    print(f"[Ater Service] Fallback: Using Dashboard Year -> {final_year}")
 
-            print(f"[OKA Service] AI detected: year='{final_year}', course='{final_course}', semester='{final_semester}', unit='{data.get('unit')}', hub='{data.get('hub_title')}', language='{data.get('primary_language', 'General')}'")
+            print(f"[Ater Service] AI detected: year='{final_year}', course='{final_course}', semester='{final_semester}', unit='{data.get('unit')}', hub='{data.get('hub_title')}', language='{data.get('primary_language', 'General')}'")
             
             return {
                 "year": final_year,
@@ -1490,7 +1490,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             }
 
         except Exception as e:
-            print(f"[OKA Service] AI Metadata detection failed: {e}")
+            print(f"[Ater Service] AI Metadata detection failed: {e}")
             return {"course": "", "semester": "", "unit": "", "hub_title": "", "primary_language": "General"}
 
     # ── Phase 2: Planning ──────────────────────────────────────
@@ -1502,7 +1502,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         session_id = str(path.absolute())
         
         # Clear any existing session
-        OkaService._sessions.pop(session_id, None)
+        AterService._sessions.pop(session_id, None)
         
         # Read full content for planning
         full_text = ""
@@ -1539,30 +1539,30 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
         # Phase 1.4: Intelligent Routing Selection
         # We try the fast deterministic router first to save time and tokens.
-        OkaService._status[session_id] = "Analyzing Domain (Fast Track)..."
+        AterService._status[session_id] = "Analyzing Domain (Fast Track)..."
         fast_mode = router.route(full_text, course=course)
         
-        OkaService._status[session_id] = "Oracle Context Briefing..."
+        AterService._status[session_id] = "Oracle Context Briefing..."
         context_briefing_data = await self.meta_scanner_agent.scan_full_text(full_text)
         from .schemas import ContextBriefing
         context_briefing = ContextBriefing(**context_briefing_data)
-        print(f"[OKA Service] Oracle Briefing: {context_briefing.primary_discipline}")
+        print(f"[Ater Service] Oracle Briefing: {context_briefing.primary_discipline}")
 
         if fast_mode != "DOMAIN-UNKNOWN":
             detected_mode = fast_mode
-            print(f"[OKA Service] Fast Router Confirmed: {detected_mode}")
+            print(f"[Ater Service] Fast Router Confirmed: {detected_mode}")
         else:
-            OkaService._status[session_id] = "Oracle Domain Routing..."
+            AterService._status[session_id] = "Oracle Domain Routing..."
             detected_mode = await router.route_with_oracle(
                 self.planner_llm, 
                 context_briefing.model_dump(), 
                 full_text, 
                 course=course
             )
-            print(f"[OKA Service] Oracle Router Detected: {detected_mode}")
+            print(f"[Ater Service] Oracle Router Detected: {detected_mode}")
 
         # Invoke Architect Agent
-        OkaService._status[session_id] = "Architecting Sovereign Plan..."
+        AterService._status[session_id] = "Architecting Sovereign Plan..."
         
         # Build prompt enrichment with metadata and healing info
         context_enrichment = (
@@ -1596,8 +1596,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         extracted_epistemic_stance = "Unknown"
         
         for idx, chunk in enumerate(text_chunks):
-            OkaService._status[session_id] = f"Architecting Plan (Chunk {idx+1}/{len(text_chunks)})..."
-            print(f"[OKA Service] Processing chunk {idx+1}/{len(text_chunks)}")
+            AterService._status[session_id] = f"Architecting Plan (Chunk {idx+1}/{len(text_chunks)})..."
+            print(f"[Ater Service] Processing chunk {idx+1}/{len(text_chunks)}")
             try:
                 await self.governor.get_permit(expected_tokens=len(chunk) + 1000)
 
@@ -1613,7 +1613,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     extracted_epistemic_stance = partial_plan.epistemic_stance or "Unknown"
                 
                 if not partial_plan.atomic_notes:
-                    print(f"[OKA Service] Chunk {idx+1} returned zero notes. Context might be irrelevant.")
+                    print(f"[Ater Service] Chunk {idx+1} returned zero notes. Context might be irrelevant.")
                     continue
 
                 # Merge notes, avoiding duplicates
@@ -1634,49 +1634,49 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         if chunk_supplement and chunk_supplement not in arch_context:
                             note_dict["source_context"] = f"{arch_context}\n\n[SOURCE EXCERPT]\n{chunk_supplement}"
                         
-                        print(f"[OKA Service] Adding concept: {note.title} (Mode: {note.mode})")
+                        print(f"[Ater Service] Adding concept: {note.title} (Mode: {note.mode})")
                         all_atomic_notes.append(note_dict)
                         seen_titles.add(norm_title)
                     else:
-                        print(f"[OKA Service] Cross-session idempotency: '{note.title}' already in vault or plan. Skipping.")
+                        print(f"[Ater Service] Cross-session idempotency: '{note.title}' already in vault or plan. Skipping.")
 
 
                 for pq in partial_plan.possible_questions:
                     if pq.title not in seen_titles:
-                        print(f"[OKA Service] Adding PQ: {pq.title}")
+                        print(f"[Ater Service] Adding PQ: {pq.title}")
                         all_pq_notes.append(pq.model_dump())
                         seen_titles.add(pq.title)
                         
                 # Hard limit to avoid rate-limit death
                 if len(all_atomic_notes) >= 25:
-                    print("[OKA Service] Reached maximum atomic notes (25), stopping chunking.")
+                    print("[Ater Service] Reached maximum atomic notes (25), stopping chunking.")
                     break
                     
             except Exception as e:
                 err_trace = traceback.format_exc()
                 # region agent log
-                with open("/Users/dabodestroyer/code/Antigravity/LifeOs/.cursor/debug-18a97e.log", "a", encoding="utf-8") as _f: _f.write(json.dumps({"sessionId":"18a97e","runId":"pre-fix","hypothesisId":"H3","location":"service.py:generate_plan","message":"Chunk planning failed","data":{"sessionId":session_id,"chunkIndex":idx+1,"errorType":type(e).__name__,"error":str(e)[:240]},"timestamp":int(time.time()*1000)}) + "\n")
+                with open("/Users/dabodestroyer/code/Antigravity/Ater/.cursor/debug-18a97e.log", "a", encoding="utf-8") as _f: _f.write(json.dumps({"sessionId":"18a97e","runId":"pre-fix","hypothesisId":"H3","location":"service.py:generate_plan","message":"Chunk planning failed","data":{"sessionId":session_id,"chunkIndex":idx+1,"errorType":type(e).__name__,"error":str(e)[:240]},"timestamp":int(time.time()*1000)}) + "\n")
                 # endregion
-                print(f"[OKA Service] CRITICAL: Chunk {idx+1} failed validation: {e}\n{err_trace}")
-                OkaService._status[session_id] = f"Load Failed during Architecting: {str(e)}"
+                print(f"[Ater Service] CRITICAL: Chunk {idx+1} failed validation: {e}\n{err_trace}")
+                AterService._status[session_id] = f"Load Failed during Architecting: {str(e)}"
                 raise e
 
         # Deduplicate Plan
         try:
             from .post_processing import deduplicate_plan
-            print(f"[OKA Service] Deduplicating {len(all_atomic_notes)} concepts...")
+            print(f"[Ater Service] Deduplicating {len(all_atomic_notes)} concepts...")
             all_atomic_notes = deduplicate_plan(all_atomic_notes)
             all_atomic_notes = self._topological_sort_prerequisites(all_atomic_notes)
 
             # Phase 1.5: Epistemic Classification (HYDRA)
-            OkaService._status[session_id] = "Classifying Concept Modalities..."
+            AterService._status[session_id] = "Classifying Concept Modalities..."
             classifications = await self.epistemic_classifier_agent.classify_batch(all_atomic_notes)
             for note in all_atomic_notes:
                 modality = classifications.get(note["title"], "Qualitative/Definitional")
                 note["concept_modality"] = modality
-                print(f"[OKA Service] Epistemic Congruence: {note['title']} -> {modality}")
+                print(f"[Ater Service] Epistemic Congruence: {note['title']} -> {modality}")
         except Exception as e:
-            print(f"[OKA Service] Deduplication / Sorting / Classification failed: {e}")
+            print(f"[Ater Service] Deduplication / Sorting / Classification failed: {e}")
 
         # Synthesize the Hub Note with strict Title_Case_With_Underscores
         hub_base = self.validator.sanitize_title(hub_title.replace(" Hub", "").replace("_Hub", ""))
@@ -1753,7 +1753,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             "messages": [] # We don't need to persist messages anymore if we use the Agent pattern
         }
         
-        OkaService._sessions[session_id] = session_data
+        AterService._sessions[session_id] = session_data
         self._persist_session(session_id, session_data)
         
         # Synthesize Legacy Raw Plan for UI visibility
@@ -1789,7 +1789,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         
         # Apply overrides if provided (usually on Batch 1)
         if curriculum_override:
-            print(f"[OKA Service] Applying Curriculum Overrides & Syncing to Vault: {curriculum_override}")
+            print(f"[Ater Service] Applying Curriculum Overrides & Syncing to Vault: {curriculum_override}")
             # Guard: only overwrite if the override value is non-empty
             if curriculum_override.get("course"):
                 session["metadata"]["course"] = curriculum_override["course"]
@@ -1827,9 +1827,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             yaml_content = self.vm.dump_obsidian_yaml(meta)
                             full_content = f"---\n{yaml_content}\n---\n\n{body.strip()}\n"
                             self.vm.write_note(hub_path, full_content)
-                            print(f"[OKA Service] Synchronized properties to {hub_path.name}")
+                            print(f"[Ater Service] Synchronized properties to {hub_path.name}")
                     except Exception as e:
-                        print(f"[OKA Service] Hub sync failed: {e}")
+                        print(f"[Ater Service] Hub sync failed: {e}")
         
         if anchored_hub_id:
             session["metadata"]["anchored_hub_id"] = anchored_hub_id
@@ -1892,7 +1892,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         # Compute target path and check if it already exists
                         target_path = self.vm.get_note_path({"title": current_note_title, "type": "atomic_note"}, session_metadata=session["metadata"])
                         if target_path.exists():
-                            print(f"[OKA Service] Idempotency Hit: [[{current_note_title}]] already exists. Skipping.")
+                            print(f"[Ater Service] Idempotency Hit: [[{current_note_title}]] already exists. Skipping.")
                             if current_note_title not in session.get("processed_notes", []):
                                 session.setdefault("processed_notes", []).append(current_note_title)
                             return True
@@ -1937,7 +1937,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 }
 
                                 # 1. Micro-Theory Pass
-                                OkaService._status[session_id] = f"{phase_prefix} Theory: [[{current_note_title}]]..."
+                                AterService._status[session_id] = f"{phase_prefix} Theory: [[{current_note_title}]]..."
                                 await self.governor.get_permit(expected_tokens=4000)
                                 
                                 # THIN CONTEXT: Limit concept list to immediate prerequisites + unit neighbors
@@ -1974,7 +1974,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                         session["used_scenarios"].append(" ".join(words[:3]))
                                 
                                 # 2. Micro-Practitioner Pass
-                                OkaService._status[session_id] = f"{phase_prefix} Execution: [[{current_note_title}]]..."
+                                AterService._status[session_id] = f"{phase_prefix} Execution: [[{current_note_title}]]..."
                                 await self.governor.get_permit(expected_tokens=3000)
                                 prac_parts = await practitioner_agent.generate_micro(
                                     note_schema.title, 
@@ -1989,7 +1989,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 )
                                 note_data.update(prac_parts)
                                 # 3. Micro-Question Pass (Dynamic Assessment)
-                                OkaService._status[session_id] = f"{phase_prefix} Assessment: [[{current_note_title}]]..."
+                                AterService._status[session_id] = f"{phase_prefix} Assessment: [[{current_note_title}]]..."
                                 await self.governor.get_permit(expected_tokens=3000)
                                 
                                 q_agent = QuestionAgent(self.planner_llm, domain)
@@ -2037,13 +2037,13 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 
                                 if not is_valid:
                                     error_msg = f"Validation failed for [[{current_note_title}]]: {', '.join(validation_errors)}"
-                                    logger.warning(f"[OkaService] {error_msg}")
-                                    OkaService._status[session_id] = f"⚠️ Healing Failed: Regenerating [[{current_note_title}]]..."
+                                    logger.warning(f"[AterService] {error_msg}")
+                                    AterService._status[session_id] = f"⚠️ Healing Failed: Regenerating [[{current_note_title}]]..."
                                     continue
 
                                 # 5.1 Semantic Validation (Hydra)
                                 if self.verifier_agent:
-                                    OkaService._status[session_id] = f"{phase_prefix} Semantic Validation: [[{current_note_title}]]..."
+                                    AterService._status[session_id] = f"{phase_prefix} Semantic Validation: [[{current_note_title}]]..."
                                     await self.governor.get_permit(expected_tokens=2000)
                                     v_res = await self.verifier_agent.verify(
                                         note_schema.title, 
@@ -2055,8 +2055,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     if not v_res["passed"]:
                                         failures = v_res["failures"]
                                         diag = "; ".join([f"{f['check']}: {f['issue']}" for f in failures])
-                                        print(f"[OKA Service] Semantic Validation Failed: {diag}")
-                                        OkaService._status[session_id] = f"⚠️ Semantic Healing: [[{current_note_title}]]..."
+                                        print(f"[Ater Service] Semantic Validation Failed: {diag}")
+                                        AterService._status[session_id] = f"⚠️ Semantic Healing: [[{current_note_title}]]..."
                                         # Update note_schema.source_context with fix instructions for the next attempt
                                         if failures:
                                             note_schema.source_context = (note_schema.source_context or "") + f"\n\nFIX INSTRUCTION: {failures[0]['fix_instruction']}"
@@ -2082,7 +2082,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                         self.governor.report_error()
                                     raise e # Propagate up to confirm_plan
                                 if generation_attempts >= max_attempts:
-                                    logger.warning(f"[OKA Service] Error for '{current_note_title}': {e}.")
+                                    logger.warning(f"[Ater Service] Error for '{current_note_title}': {e}.")
                                     break
                                 await asyncio.sleep(5)
                         
@@ -2093,7 +2093,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         
                         from .schemas import NoteSchema
                         note_schema = NoteSchema(**note_schema_raw)
-                        OkaService._status[session_id] = f"Synthesizing Master Question Bank: [[{current_note_title}]]..."
+                        AterService._status[session_id] = f"Synthesizing Master Question Bank: [[{current_note_title}]]..."
                         
                         all_note_probes = session.get("all_note_probes", {})
                         pq_output = self._compile_pq_note(
@@ -2106,7 +2106,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         local_results = self.deployer.deploy_atomic_notes(session_id, [current_note_title], [pq_output], plan_obj, session.get("path", ""))
 
                     elif b_type == "hub":
-                        OkaService._status[session_id] = "Compiling Unit Mastery Hub..."
+                        AterService._status[session_id] = "Compiling Unit Mastery Hub..."
                         ai_output = self._compile_hub_note(plan_obj, session_path=session.get("path", ""))
                         
                         if self.hub_agent:
@@ -2178,11 +2178,11 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 if hub_file.exists():
                                     plan_titles = [n.get("title") for n in meta.get("atomic_notes", [])]
                                     sync_hub_connections(hub_file, unit_dir, plan_order=plan_titles)
-                                OkaService._status[session_id] = "Post-Processing Complete"
+                                AterService._status[session_id] = "Post-Processing Complete"
                             else:
-                                print(f"[OKA Service] Post-processing skipped: unit dir not found: {unit_dir}")
+                                print(f"[Ater Service] Post-processing skipped: unit dir not found: {unit_dir}")
                         except Exception as pp_e:
-                            print(f"[OKA Service] Post-processing failed: {pp_e}")
+                            print(f"[Ater Service] Post-processing failed: {pp_e}")
 
                     deployment_results.extend(local_results)
                     return True
@@ -2196,7 +2196,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 atomic_batches = [b for b in session["metadata"]["batches"] if b["type"] == "atomic"]
                 other_batches = [b for b in session["metadata"]["batches"] if b["type"] != "atomic"]
                 
-                print(f"[OKA Service] Hyperdrive Activated: Spawning {len(atomic_batches)} parallel atomic workers.")
+                print(f"[Ater Service] Hyperdrive Activated: Spawning {len(atomic_batches)} parallel atomic workers.")
                 
                 # 1. Run all atomic notes in parallel
                 # They will compete for governor slots (max 5 by default)
@@ -2208,7 +2208,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 if exceptions:
                     first_err = str(exceptions[0])
                     if "429" in first_err or "rate_limit" in first_err.lower():
-                        print(f"[OKA Service] Hyperdrive Batch throttled (429). {len(exceptions)} tasks failed.")
+                        print(f"[Ater Service] Hyperdrive Batch throttled (429). {len(exceptions)} tasks failed.")
                         # We return a specific status to help the watcher
                         return {"status": "rate_limited", "error": first_err}
                     else:
@@ -2228,10 +2228,10 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 return has_more
 
             if not has_more:
-                OkaService._sessions.pop(session_id, None)
-                OkaService._status[session_id] = "Deployment Complete"
+                AterService._sessions.pop(session_id, None)
+                AterService._status[session_id] = "Deployment Complete"
             else:
-                OkaService._status[session_id] = f"Awaiting Batch {session['current_batch'] + 1}"
+                AterService._status[session_id] = f"Awaiting Batch {session['current_batch'] + 1}"
 
             return {
                 "results": deployment_results,
@@ -2244,8 +2244,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         except Exception as e:
             err_trace = traceback.format_exc()
             error_msg = self._format_user_error(e)
-            print(f"[OKA Service] Execution failed: {e}\n{err_trace}")
-            OkaService._status[session_id] = f"Architecture Load Failed: {error_msg}"
+            print(f"[Ater Service] Execution failed: {e}\n{err_trace}")
+            AterService._status[session_id] = f"Architecture Load Failed: {error_msg}"
             return {
                 "status": "error",
                 "detail": str(e),

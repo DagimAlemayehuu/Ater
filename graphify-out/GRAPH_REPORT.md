@@ -1,4 +1,4 @@
-# Graph Report - LifeOs  (2026-05-09)
+# Graph Report - Ater  (2026-05-09)
 
 ## Corpus Check
 - 176 files · ~140,480 words
@@ -59,28 +59,28 @@
 - [[_COMMUNITY_Community 107|Community 107]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `OkaService` - 128 edges
+1. `AterService` - 128 edges
 2. `ModelFactory` - 78 edges
-3. `OkaQueueManager` - 69 edges
+3. `AterQueueManager` - 69 edges
 4. `VaultIndexer` - 68 edges
 5. `AppSecrets` - 68 edges
 6. `ChromaManager` - 65 edges
 7. `ObsidianClient` - 62 edges
 8. `RAGWatcherService` - 60 edges
-9. `OkaValidator` - 52 edges
+9. `AterValidator` - 52 edges
 10. `LogicHealer` - 52 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Self-healing engine for OKA notes. Fixes wikilinks, sanitizes LLM-speak,     and` --uses--> `OkaValidator`  [INFERRED]
-  apps/api/src/domains/oka/healer.py → apps/api/src/domains/oka/validator.py
-- `Fixes broken wikilinks by fuzzy matching against known titles in the current hub` --uses--> `OkaValidator`  [INFERRED]
-  apps/api/src/domains/oka/healer.py → apps/api/src/domains/oka/validator.py
-- `Enforces wikilink density: removes excess links beyond max, keeping the most con` --uses--> `OkaValidator`  [INFERRED]
-  apps/api/src/domains/oka/healer.py → apps/api/src/domains/oka/validator.py
-- `Violently removes LLM conversational filler and metatalk.` --uses--> `OkaValidator`  [INFERRED]
-  apps/api/src/domains/oka/healer.py → apps/api/src/domains/oka/validator.py
-- `Sandbox for verifying arithmetic.          DEPRECATED: Prompt-based 'Math Sovere` --uses--> `OkaValidator`  [INFERRED]
-  apps/api/src/domains/oka/healer.py → apps/api/src/domains/oka/validator.py
+- `Self-healing engine for ATER notes. Fixes wikilinks, sanitizes LLM-speak,     and` --uses--> `AterValidator`  [INFERRED]
+  apps/api/src/domains/ater/healer.py → apps/api/src/domains/ater/validator.py
+- `Fixes broken wikilinks by fuzzy matching against known titles in the current hub` --uses--> `AterValidator`  [INFERRED]
+  apps/api/src/domains/ater/healer.py → apps/api/src/domains/ater/validator.py
+- `Enforces wikilink density: removes excess links beyond max, keeping the most con` --uses--> `AterValidator`  [INFERRED]
+  apps/api/src/domains/ater/healer.py → apps/api/src/domains/ater/validator.py
+- `Violently removes LLM conversational filler and metatalk.` --uses--> `AterValidator`  [INFERRED]
+  apps/api/src/domains/ater/healer.py → apps/api/src/domains/ater/validator.py
+- `Sandbox for verifying arithmetic.          DEPRECATED: Prompt-based 'Math Sovere` --uses--> `AterValidator`  [INFERRED]
+  apps/api/src/domains/ater/healer.py → apps/api/src/domains/ater/validator.py
 
 ## Communities
 
@@ -102,7 +102,7 @@ Nodes (25): NativeBackend, cn(), fetchImg(), if(), load(), MermaidWrapper(), fet
 
 ### Community 4 - "Community 4"
 Cohesion: 0.06
-Nodes (44): Adaptive Pacing: Grants permits instantly under low load,         throttles inte, LogicHealer, Sandbox for verifying arithmetic.          DEPRECATED: Prompt-based 'Math Sovere, Parses the interactive-quiz JSON and heals internal math inconsistencies., Ensures all markdown tables have strict outer pipes.         Fixes lines like 'P, Fixes broken wikilinks by fuzzy matching against known titles in the current hub, Self-healing engine for OKA notes. Fixes wikilinks, sanitizes LLM-speak,     and, Enforces wikilink density: removes excess links beyond max, keeping the most con (+36 more)
+Nodes (44): Adaptive Pacing: Grants permits instantly under low load,         throttles inte, LogicHealer, Sandbox for verifying arithmetic.          DEPRECATED: Prompt-based 'Math Sovere, Parses the interactive-quiz JSON and heals internal math inconsistencies., Ensures all markdown tables have strict outer pipes.         Fixes lines like 'P, Fixes broken wikilinks by fuzzy matching against known titles in the current hub, Self-healing engine for ATER notes. Fixes wikilinks, sanitizes LLM-speak,     and, Enforces wikilink density: removes excess links beyond max, keeping the most con (+36 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.08
@@ -273,7 +273,7 @@ Cohesion: 1.0
 Nodes (1): Safety check:          1. Must be a valid PDF.         2. Must be low resolution
 
 ## Knowledge Gaps
-- **55 isolated node(s):** `Manages the local ChromaDB instance and the local embedding model.     Uses 'all`, `Embeds and adds documents to the vector store.`, `Queries the vector store for the most relevant chunks.`, `Deletes all chunks associated with a specific file path.         This is crucial`, `Nuclear-grade validation suite for OKA notes.     Checks structure, wikilink den` (+50 more)
+- **55 isolated node(s):** `Manages the local ChromaDB instance and the local embedding model.     Uses 'all`, `Embeds and adds documents to the vector store.`, `Queries the vector store for the most relevant chunks.`, `Deletes all chunks associated with a specific file path.         This is crucial`, `Nuclear-grade validation suite for ATER notes.     Checks structure, wikilink den` (+50 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **Thin community `Community 16`** (8 nodes): `EditableCell.tsx`, `ButtonCell()`, `fetchOptions()`, `getBadgeColor()`, `handleCreateOption()`, `renderInlineMarkdown()`, `RollupCell()`, `TypeIcon()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -329,16 +329,16 @@ Nodes (1): Safety check:          1. Must be a valid PDF.         2. Must be low
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `OkaService` connect `Community 0` to `Community 1`, `Community 2`, `Community 4`, `Community 6`, `Community 8`?**
+- **Why does `AterService` connect `Community 0` to `Community 1`, `Community 2`, `Community 4`, `Community 6`, `Community 8`?**
   _High betweenness centrality (0.124) - this node is a cross-community bridge._
 - **Why does `AppSecrets` connect `Community 2` to `Community 0`?**
   _High betweenness centrality (0.033) - this node is a cross-community bridge._
-- **Are the 93 inferred relationships involving `OkaService` (e.g. with `VaultManager` and `OkaDeployer`) actually correct?**
-  _`OkaService` has 93 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 76 inferred relationships involving `ModelFactory` (e.g. with `OkaService` and `Main orchestrator for OKA.`) actually correct?**
+- **Are the 93 inferred relationships involving `AterService` (e.g. with `VaultManager` and `AterDeployer`) actually correct?**
+  _`AterService` has 93 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 76 inferred relationships involving `ModelFactory` (e.g. with `AterService` and `Main orchestrator for ATER.`) actually correct?**
   _`ModelFactory` has 76 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 52 inferred relationships involving `OkaQueueManager` (e.g. with `OkaService` and `Life OS - FastAPI Sidecar Entry Point  This process is spawned by Tauri on deskt`) actually correct?**
-  _`OkaQueueManager` has 52 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 52 inferred relationships involving `AterQueueManager` (e.g. with `AterService` and `Ater - FastAPI Sidecar Entry Point  This process is spawned by Tauri on deskt`) actually correct?**
+  _`AterQueueManager` has 52 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 59 inferred relationships involving `VaultIndexer` (e.g. with `ChromaManager` and `VaultSyncHandler`) actually correct?**
   _`VaultIndexer` has 59 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 65 inferred relationships involving `AppSecrets` (e.g. with `ObsidianDumper` and `UpdateRowRequest`) actually correct?**

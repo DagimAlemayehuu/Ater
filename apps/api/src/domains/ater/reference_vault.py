@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 
-logger = logging.getLogger("LifeOS")
+logger = logging.getLogger("Ater")
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

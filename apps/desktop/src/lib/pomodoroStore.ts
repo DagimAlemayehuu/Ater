@@ -139,7 +139,7 @@ export const usePomodoroStore = create<PomodoroState>()(
       }))
     }),
     {
-      name: 'life-os-pomodoro-state',
+      name: 'ater-pomodoro-state',
     }
   )
 );

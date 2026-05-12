@@ -2,7 +2,7 @@
 
 This file tracks the step-by-step technical implementation path.
 
-## Sprint: Ironclad Ingestion (OKA v22.0)
+## Sprint: Ironclad Ingestion (Ater v22.0)
 - [x] Implement Validation-Regeneration Loop (3-attempt limit).
 - [x] Fix "Load Failed" API crashes via global try-except in `main.py`.
 - [x] Implement Setext Heading Defense in `VaultManager`.
@@ -20,14 +20,14 @@ This file tracks the step-by-step technical implementation path.
 
 ## Sprint: Direct-Entry & Terminology Audit
 - [x] Flatten Settings module (remove sidebar, single-page "General").
-- [x] Implement Direct-Entry for Agents (bypass list, direct OKA Dashboard).
+- [x] Implement Direct-Entry for Agents (bypass list, direct Ater Dashboard).
 - [x] Linguistic Audit: Replace "Binary" with "True/False" across app.
 - [x] Linguistic Audit: Replace "Master Unit Hub" with "Topic" (UI).
 - [x] Linguistic Audit: Replace "Architectural Fragments" with "Notes" (UI).
 - [x] Linguistic Audit: Replace "Note Properties" with "Info" and "Topologies" with "Map".
 - [x] Linguistic Audit: Standardize "Direct English" across Practice and Database views.
 
-## Sprint: Sovereign Perfection & Graph Density (OKA v25.5)
+## Sprint: Sovereign Perfection & Graph Density (Ater v25.5)
 - [x] Implement **Hostile Senior Persona** across all generation prompts.
 - [x] Enforce **100% Technical Accuracy** (Ban Big-O hallucinations & runtime-compile conflation).
 - [x] Mandate **Internal Obsidian Knowledge Graph Interlinking** within note prose.

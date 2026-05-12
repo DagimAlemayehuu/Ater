@@ -1,4 +1,4 @@
-# LifeOS Design System — Ground Truth Specification
+# Ater Design System — Ground Truth Specification
 
 > **North Star:** "The Living Blueprint" — A surgical, monochromatic pro-tool. Every pixel earns its place. No decoration for decoration's sake.
 
@@ -6,7 +6,7 @@
 
 ## 1. Philosophy
 
-LifeOS is built on one non-negotiable constraint: **the palette is white, black, and grey only.** No blue, no green, no purple, no indigo. Every interactive state, every status indicator, every emphasis — all achieved through tonal contrast within the greyscale spectrum.
+Ater is built on one non-negotiable constraint: **the palette is white, black, and grey only.** No blue, no green, no purple, no indigo. Every interactive state, every status indicator, every emphasis — all achieved through tonal contrast within the greyscale spectrum.
 
 The aesthetic borrows from:
 - **Apple Pro apps** — extreme density with zero clutter
@@ -131,7 +131,7 @@ The type scale is built on **extreme weight contrast** — not size contrast.
 The primary page is a horizontal flex of three resizable columns:
 
 ```
-[ Explorer Sidebar ] | [ Map/Connections ] | [ Content Area ] | [ OKA Panel (optional) ]
+[ Explorer Sidebar ] | [ Map/Connections ] | [ Content Area ] | [ Ater Panel (optional) ]
   default: 520px         default: 220px         flex-1               400px fixed
   min: 160px             min: 160px                                   
   max: 800px             max: 500px             
@@ -408,7 +408,7 @@ Available variants:
 - Content panels on mount: `animate-in fade-in slide-in-from-bottom-4 duration-500`
 - Popovers / floating: `animate-in fade-in zoom-in duration-200`
 - Workspace transitions: `animate-in fade-in slide-in-from-bottom-2`
-- OKA plan reveal: `animate-in fade-in slide-in-from-bottom-4 duration-500`
+- Ater plan reveal: `animate-in fade-in slide-in-from-bottom-4 duration-500`
 - **Do NOT** animate structural layout elements (sidebar, toolbar)
 
 ### Transition Utilities
@@ -424,7 +424,7 @@ Available variants:
 
 No traditional box shadows except:
 - Floating panels: `shadow-sm` (cards, toolbar buttons)
-- OKA side panel: `shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]` (left-edge shadow, dark mode only)
+- Ater side panel: `shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]` (left-edge shadow, dark mode only)
 - Modals: `shadow-2xl` with low opacity
 
 **Primary depth technique:** Tonal layering — `bg-muted/10` → `bg-muted/30` → `bg-muted` → `bg-background` creates physical sense of depth without shadows.

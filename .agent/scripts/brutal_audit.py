@@ -103,5 +103,5 @@ def brutal_audit(dir_path: str):
         print(f"| {name} | {score:.2f} | {issues_str} |")
 
 if __name__ == "__main__":
-    audit_dir = sys.argv[1] if len(sys.argv) > 1 else "/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault/2-Academic/Winter 2026/Economics/1_Basics_Of_Economics"
+    audit_dir = sys.argv[1] if len(sys.argv) > 1 else "/Users/dabodestroyer/code/Antigravity/Ater/Obsidian_Vault/2-Academic/Winter 2026/Economics/1_Basics_Of_Economics"
     brutal_audit(audit_dir)

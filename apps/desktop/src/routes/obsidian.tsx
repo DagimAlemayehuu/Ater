@@ -877,7 +877,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const [searchQuery, setSearchQuery] = useState('')
  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
 
- // --- OKA Agent State ---
+ // --- Ater Agent State ---
  const [queueStatus, setQueueStatus] = useState<any>(null)
  const [inboxFiles, setInboxFiles] = useState<InboxFile[]>([])
  const [loadingInbox, setLoadingInbox] = useState(false)
@@ -891,7 +891,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const [totalBatches, setTotalBatches] = useState<number>(0)
  const [isCompleted, setIsCompleted] = useState(false)
  const [batchFeed, setBatchFeed] = useState<any[]>([])
- const [okaError, setOkaError] = useState<string | null>(null)
+ const [aterError, setAterError] = useState<string | null>(null)
  const [hubConnections, setHubConnections] = useState<string | null>(null)
  const studyTree = useMemo(() => parseHubTree(hubConnections || ''), [hubConnections])
 
@@ -1260,7 +1260,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 
  const fetchStatus = async () => {
  try {
- const res = await sidecarApi.okaQueueStatus()
+ const res = await sidecarApi.aterQueueStatus()
  setQueueStatus(res)
 } catch (err) {console.error(err)}
 }
@@ -1268,7 +1268,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const fetchInbox = async () => {
  setLoadingInbox(true)
  try {
- const res = await sidecarApi.okaListInbox()
+ const res = await sidecarApi.aterListInbox()
  setInboxFiles(res.files || [])
 } finally {setLoadingInbox(false)}
 }
@@ -1485,11 +1485,11 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 
  const toggleAutoDeploy = async () => {
  await saveConfig({autoDeploy: !config?.autoDeploy})
- await sidecarApi.okaWatcherToggle()
+ await sidecarApi.aterWatcherToggle()
  fetchStatus()
 }
 
- const resetOkaSession = () => {
+ const resetAterSession = () => {
  setSessionId(null)
  setIsAwaitingConfirmation(false)
  setIsCompleted(false)
@@ -1497,21 +1497,21 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  setPlanData(null)
  setBatchFeed([])
  setSelectedInboxFile(null)
- setOkaError(null)
+ setAterError(null)
  fetchInbox()
 }
 
  const processSelectedFile = async () => {
  if (!selectedInboxFile) return
  setProcessing(true)
- setOkaError(null)
+ setAterError(null)
  setActivePlan(null)
  setBatchFeed([])
  setIsCompleted(false)
  setIsAwaitingConfirmation(false)
  
  try {
- const res = await sidecarApi.okaProcess({file_path: selectedInboxFile.path})
+ const res = await sidecarApi.aterProcess({file_path: selectedInboxFile.path})
  setActivePlan(res.plan_raw)
  setPlanData(res.plan_structured)
  setSessionId(res.session_id)
@@ -1526,7 +1526,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  setIsAwaitingConfirmation(true)
 }
 } catch (err: any) {
- setOkaError(err.message || 'Workflow failed')
+ setAterError(err.message || 'Workflow failed')
 } finally {setProcessing(false)}
 }
 
@@ -1541,7 +1541,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  let currentHasMore = true
  let tempBatch = 0
  while (currentHasMore) {
- const res = await sidecarApi.okaConfirm({session_id: targetId})
+ const res = await sidecarApi.aterConfirm({session_id: targetId})
  
  if (res.status === 'error') {
  throw new Error((res as any).message || (res as any).detail || "Backend generation failed.");
@@ -1556,7 +1556,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  setIsCompleted(true)
  fetchFiles() // Refresh explorer
 } catch (err: any) {
- setOkaError(err.message) 
+ setAterError(err.message) 
 } finally {
  setProcessing(false) 
 }
@@ -1565,14 +1565,14 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   const handleRegenerateNote = async (path: string | null) => {
     if (!path) return
     setProcessing(true)
-    setOkaError(null)
+    setAterError(null)
     setActivePlan(null)
     setBatchFeed([])
     setIsCompleted(false)
     setIsAwaitingConfirmation(false)
     
     try {
-      const res = await sidecarApi.okaProcess({file_path: path})
+      const res = await sidecarApi.aterProcess({file_path: path})
       setActivePlan(res.plan_raw)
       setPlanData(res.plan_structured)
       setSessionId(res.session_id)
@@ -1586,7 +1586,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
       }
       toast.success("Regeneration started")
     } catch (err: any) {
-      setOkaError(err.message || 'Regeneration failed')
+      setAterError(err.message || 'Regeneration failed')
       toast.error("Regeneration failed")
     } finally {
       setProcessing(false)

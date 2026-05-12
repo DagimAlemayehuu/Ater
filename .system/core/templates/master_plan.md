@@ -1,4 +1,4 @@
-# Master Plan (The Life OS Strategic Framework)
+# Master Plan (The Ater Strategic Framework)
 
 ## 0. THE VISION (The North Star)
 [Define your 10-year, 5-year, and 1-year mission here in one cohesive sentence.]

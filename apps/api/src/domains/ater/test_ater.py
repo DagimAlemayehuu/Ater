@@ -1,9 +1,9 @@
 import pytest
 import json
-from src.domains.oka.router import DomainRouter
-from src.domains.oka.healer import LogicHealer
-from src.domains.oka.templates import render_atomic_note
-from src.domains.oka.agents import DOMAIN_MATRIX
+from src.domains.ater.router import DomainRouter
+from src.domains.ater.healer import LogicHealer
+from src.domains.ater.templates import render_atomic_note
+from src.domains.ater.agents import DOMAIN_MATRIX
 
 def test_domain_router():
     router = DomainRouter()
@@ -113,26 +113,26 @@ def test_render_atomic_note():
     assert "[[Elasticity]]" in result
     assert "10 * 10 = 100" in result
 
-def test_oka_validator_truncation():
-    from src.domains.oka.validator import OkaValidator
+def test_ater_validator_truncation():
+    from src.domains.ater.validator import AterValidator
     
     # Test valid ending (punctuation)
     valid_content = "---\ntitle: Test\ntype: test\ncourse: test\n---\nHere is a complete sentence. It has three links [[Link1]], [[Link2]], [[Link3]]."
-    is_valid, errors = OkaValidator.validate_structure(valid_content)
+    is_valid, errors = AterValidator.validate_structure(valid_content)
     assert not any("TRUNCATED_GENERATION" in e for e in errors)
     
     # Test valid ending (code block)
     valid_code = "---\ntitle: Test\ntype: test\ncourse: test\n---\nHere is a complete sentence. [[Link1]], [[Link2]], [[Link3]].\n```interactive-quiz\n[{\"type\": \"mcq\", \"question\": \"q\", \"answer\": \"a\"}, {\"type\": \"mcq\", \"question\": \"q2\", \"answer\": \"a2\"}, {\"type\": \"mcq\", \"question\": \"q3\", \"answer\": \"a3\"}]\n```"
-    is_valid, errors = OkaValidator.validate_structure(valid_code)
+    is_valid, errors = AterValidator.validate_structure(valid_code)
     assert not any("TRUNCATED_GENERATION" in e for e in errors)
     
     # Test truncated ending
     truncated_content = "---\ntitle: Test\ntype: test\ncourse: test\n---\nHere is a complete sentence. [[Link1]], [[Link2]], [[Link3]]. But this one is cut of"
-    is_valid, errors = OkaValidator.validate_structure(truncated_content)
+    is_valid, errors = AterValidator.validate_structure(truncated_content)
     assert any("TRUNCATED_GENERATION" in e for e in errors)
 
-def test_oka_validator_quiz_logic():
-    from src.domains.oka.validator import OkaValidator
+def test_ater_validator_quiz_logic():
+    from src.domains.ater.validator import AterValidator
     
     # Test Answer Divergence
     divergent_quiz = """---
@@ -148,7 +148,7 @@ Body content. [[Link1]], [[Link2]], [[Link3]].
   {"type": "writing", "question": "Q3", "answer": "10", "explanation": "The result is X = 10."}
 ]
 ```"""
-    is_valid, errors = OkaValidator.validate_structure(divergent_quiz)
+    is_valid, errors = AterValidator.validate_structure(divergent_quiz)
     assert any("ANSWER_DIVERGENCE" in e for e in errors)
 
     # Test Internal Truncation
@@ -165,11 +165,11 @@ Body content. [[Link1]], [[Link2]], [[Link3]].
   {"type": "writing", "question": "Q3", "answer": "10", "explanation": "Correct."}
 ]
 ```"""
-    is_valid, errors = OkaValidator.validate_structure(truncated_quiz)
+    is_valid, errors = AterValidator.validate_structure(truncated_quiz)
     assert any("TRUNCATED_EXPLANATION" in e for e in errors)
 
 def test_logic_healer_divergence_fix():
-    from src.domains.oka.healer import LogicHealer
+    from src.domains.ater.healer import LogicHealer
     import json
     healer = LogicHealer(canonical_titles=set())
     
@@ -189,7 +189,7 @@ def test_logic_healer_divergence_fix():
     assert '"answer": "12"' in healed_json_str
 
 def test_logic_healer_math_precision():
-    from src.domains.oka.healer import LogicHealer
+    from src.domains.ater.healer import LogicHealer
     healer = LogicHealer(canonical_titles=set())
     # Test precision
     text = "0.1 + 0.2 = 0.4"
@@ -197,7 +197,7 @@ def test_logic_healer_math_precision():
     assert "0.3" in healed
 
 def test_router_parent_anchor():
-    from src.domains.oka.router import DomainRouter
+    from src.domains.ater.router import DomainRouter
     router = DomainRouter()
     # 'strategy' usually lands in BIZ-STRATEGY
     text = "Market Equilibrium strategy"
@@ -209,7 +209,7 @@ def test_router_parent_anchor():
     assert mode2 == "ECON-MICRO"
 
 def test_router_economics_anchors():
-    from src.domains.oka.router import DomainRouter
+    from src.domains.ater.router import DomainRouter
     router = DomainRouter()
     assert router.route("National income and aggregate demand") == "ECON-MACRO"
     assert router.route("Perfect competition and marginal cost") == "ECON-MICRO"
@@ -221,7 +221,7 @@ def test_router_economics_anchors():
 def test_wikilink_density_enforcement():
     """enforce_wikilink_density must trim sections exceeding 5 wikilinks."""
     import re
-    from src.domains.oka.healer import LogicHealer
+    from src.domains.ater.healer import LogicHealer
     healer = LogicHealer(canonical_titles=set())
     body = (
         "## 2. Economic Theory\n"
@@ -243,7 +243,7 @@ def test_wikilink_density_enforcement():
 def test_walkthrough_normalization():
     """purge_pedagogical_artifacts must renumber walkthrough steps sequentially."""
     import re
-    from src.domains.oka.post_processing import sanitize_body
+    from src.domains.ater.post_processing import sanitize_body
     body = (
         "## 5. Walkthrough\n"
         "## Step 3: Do the first thing.\n"
@@ -259,7 +259,7 @@ def test_walkthrough_normalization():
 
 def test_section_truncation_guard():
     """Validator must catch a section body that ends mid-word without punctuation."""
-    from src.domains.oka.validator import OkaValidator
+    from src.domains.ater.validator import AterValidator
     truncated = (
         "---\ntitle: Test\ntype: test\ncourse: econ\n---\n"
         "## 1. Mental Model\n"
@@ -272,13 +272,13 @@ def test_section_truncation_guard():
         '{"type":"mcq","question":"Q3","answer":"A","explanation":"E."}]\n'
         "```"
     )
-    _, errors = OkaValidator.validate_structure(truncated)
+    _, errors = AterValidator.validate_structure(truncated)
     assert any("SECTION_TRUNCATION" in e or "TRUNCATED_GENERATION" in e for e in errors), \
         f"Expected truncation error, got: {errors}"
 
 
 def _run_kahn(notes):
-    """Run Kahn's topo sort inline (no OkaService instantiation)."""
+    """Run Kahn's topo sort inline (no AterService instantiation)."""
     title_set = {n["title"] for n in notes}
     note_map = {n["title"]: n for n in notes}
     graph = {}

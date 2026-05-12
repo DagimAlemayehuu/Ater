@@ -139,8 +139,8 @@ class ModelFactory:
             config["api_key"] = api_key
             config["base_url"] = "https://openrouter.ai/api/v1"
             config["default_headers"] = {
-                "HTTP-Referer": "https://github.com/LifeOS",
-                "X-Title": "Life OS"
+                "HTTP-Referer": "https://github.com/Ater",
+                "X-Title": "Ater"
             }
 
         # Merge additional kwargs

@@ -17,7 +17,7 @@ class TokenGovernor:
     """
     def __init__(self, db_path: str = None):
         if not db_path:
-            db_path = str(Path.home() / ".lifeos" / "oka" / "governor.db")
+            db_path = str(Path.home() / ".ater" / "ater" / "governor.db")
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self.db_path = db_path
         self._init_db()

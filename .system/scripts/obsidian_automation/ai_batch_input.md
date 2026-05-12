@@ -164,7 +164,7 @@ unit: "2_Recurrence_Relations"
 
 --- END_NOTE ---
 --- END_BATCH ---
-Obsidian Knowledge Architect (OKA) - Batch Complete
+Obsidian Knowledge Architect (Ater) - Batch Complete
 
 Batch **1** / **3** Generated.
 The following Knowledge Assets have been successfully constructed in your vault:

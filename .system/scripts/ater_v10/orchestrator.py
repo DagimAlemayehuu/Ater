@@ -4,8 +4,8 @@ from .llm_client import LLMClient
 from .cleaner import clean_llm_output
 from .deployer import deploy_single_note
 
-class OkaOrchestrator:
-    def __init__(self, system_prompt_path=".system/scripts/oka_v10/oka_system_prompt.xml"):
+class AterOrchestrator:
+    def __init__(self, system_prompt_path=".system/scripts/ater_v10/ater_system_prompt.xml"):
         with open(system_prompt_path, "r") as f:
             self.system_prompt = f.read()
         self.llm = LLMClient()
@@ -179,6 +179,6 @@ source_pages: [{{P1}}, {{P2}}]
             self.execute_state_2_hub()
             self.execute_state_3_pq()
             self.execute_state_4_atomic_notes()
-            print("\n✨ OKA v10 Pipeline Complete.")
+            print("\n✨ Ater v10 Pipeline Complete.")
         else:
             print("❌ Pipeline failed at Step 1.")

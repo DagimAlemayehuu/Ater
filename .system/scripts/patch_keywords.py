@@ -185,4 +185,4 @@ r'''    "CRAFTSMANSHIP": ["craftsmanship", "technique", "tool", "artisan", "hand
     "ASTROPHYSICS": ["astrophysics", "stellar", "fusion", "spectroscopy", "radiation", "luminosity"]'''
 )
 ]
-patch_file("apps/api/src/domains/oka/keywords.py", keywords_patches)
+patch_file("apps/api/src/domains/ater/keywords.py", keywords_patches)

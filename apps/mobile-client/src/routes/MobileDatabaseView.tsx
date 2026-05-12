@@ -57,7 +57,7 @@ export default function MobileDatabaseView() {
                 if (db) setDatabase(db)
 
                 // Load Views from LocalStorage
-                const stored = localStorage.getItem(`lifeos_mobile_db_views_${id}`);
+                const stored = localStorage.getItem(`ater_mobile_db_views_${id}`);
                 if (stored) {
                     try {
                         const parsed = JSON.parse(stored);
@@ -128,7 +128,7 @@ export default function MobileDatabaseView() {
     const saveCurrentView = (updates: any) => {
         setSavedViews(prev => {
             const newViews = prev.map(v => v.id === activeViewId ? { ...v, ...updates } : v);
-            safeStorage.setItem(`lifeos_mobile_db_views_${id}`, JSON.stringify({
+            safeStorage.setItem(`ater_mobile_db_views_${id}`, JSON.stringify({
                 views: newViews,
                 activeId: activeViewId
             }));

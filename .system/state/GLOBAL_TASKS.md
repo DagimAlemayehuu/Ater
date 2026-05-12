@@ -20,13 +20,13 @@
 *   [ ] **Conflict Resolution**: Logic for handling simultaneous edits in Notion and Obsidian.
 *   [ ] **Offline Mode**: Local caching of Notion data to allow limited offline access.
 *   [ ] **Attachment Sync**: Syncing images and PDFs from Notion pages to Obsidian attachment folder.
-*   [ ] Add image-to-text OCR for OKA ingestion.
+*   [ ] Add image-to-text OCR for Ater ingestion.
 
 ### Completed Epics
 *   [x] **Hierarchical Notion Mirror**: Rebuilt sync engine to mirror Notion structure into Obsidian folders.
 *   [x] **Sync Progress Tracking**: Implemented real-time callback-based progress reporting for long-running sync tasks.
 *   [x] **YAML Metadata Injection**: Automated extraction of Notion properties into Obsidian-compatible frontmatter.
-*   [x] **OKA v9.0 Sovereign Logic**: Implemented strict structural validation, 1-note-per-turn generation (Sniper Mode), and permissive yet robust delimiter extraction.
+*   [x] **Ater v9.0 Sovereign Logic**: Implemented strict structural validation, 1-note-per-turn generation (Sniper Mode), and permissive yet robust delimiter extraction.
 *   [x] **FastAPI Parity Parser**: Integrated real-time parity checking between the Generation Plan and the deployment queue.
 
 ---
@@ -40,7 +40,7 @@
 *   [x] **Notion Hub Overhaul**: Replicated Notion's macro-categorization UI.
 *   [x] **Deep Page View**: Built native block-based renderer for viewing Notion pages without a browser.
 *   [x] **Sync Progress UI**: Integrated real-time progress bars for RAG and Notion syncing in Settings.
-*   [x] **OKA Queue Manager**: High-fidelity dashboard for real-time plan visualization, status tracking, and batch confirmation.
+*   [x] **Ater Queue Manager**: High-fidelity dashboard for real-time plan visualization, status tracking, and batch confirmation.
 
 ---
 
@@ -54,18 +54,18 @@
 
 ---
 
-## 5. System Intelligence & OKA Pipeline
+## 5. System Intelligence & Ater Pipeline
 ### Pending Epics
-*   [ ] Finalize high-fidelity board views for OKA plan visualization.
+*   [ ] Finalize high-fidelity board views for Ater plan visualization.
 *   [ ] Implement advanced metadata auto-detection for PDF ingestion.
 
 ### Completed Epics
-*   [x] **OKA Autonomous Engine**: Pruned all legacy agent domains (Wealth, Gym, Chronos) to lock into a single high-fidelity pipeline.
+*   [x] **Ater Autonomous Engine**: Pruned all legacy agent domains (Wealth, Gym, Chronos) to lock into a single high-fidelity pipeline.
 *   [x] **Monochrome Design System**: Implemented a strict grayscale aesthetic for minimal visual distraction and premium feel.
-*   [x] **Single-Agent Registry**: Refactored the `/agents` page to exclusively feature the OKA dashboard.
+*   [x] **Single-Agent Registry**: Refactored the `/agents` page to exclusively feature the Ater dashboard.
 *   [x] **Absolute Atomicity**: Enforced 1-note-per-batch generation for maximum parsing reliability.
-*   [x] **OKA Hardening (v23.0)**: Fixed critical Hub deployment failure caused by signature mismatch and schema drift. Implemented `anchored_hub_id` persistence in `SovereignPlan` and eliminated destructive stub-overwriting logic in the service layer.
-*   [x] **OKA Pedagogy & Sync (v24.0)**: Evolution of the OKA pipeline into a pedagogically-driven learning engine. Implemented 18-persona specialist agents with Mental Model analogies and Worked Example artifacts. Integrated bidirectional checkbox synchronization between the Markdown Viewer and the atomic note's read status, with a strict 3-level tree nesting cap for Hub notes.
+*   [x] **Ater Hardening (v23.0)**: Fixed critical Hub deployment failure caused by signature mismatch and schema drift. Implemented `anchored_hub_id` persistence in `SovereignPlan` and eliminated destructive stub-overwriting logic in the service layer.
+*   [x] **Ater Pedagogy & Sync (v24.0)**: Evolution of the Ater pipeline into a pedagogically-driven learning engine. Implemented 18-persona specialist agents with Mental Model analogies and Worked Example artifacts. Integrated bidirectional checkbox synchronization between the Markdown Viewer and the atomic note's read status, with a strict 3-level tree nesting cap for Hub notes.
 *   [x] **Project Hygiene**: Performed comprehensive monorepo cleanup, removing 50+ junk files, build artifacts, and legacy macOS metadata. Centralized development scratch scripts.
 
 
@@ -109,7 +109,7 @@
 
 ### Completed Epics
 *   [x] **Manuscript Design System**: 100% visual parity with desktop editorial aesthetics.
-*   [x] **Academic Database Explorer**: High-fidelity mobile view for OKA databases with mastery metrics and unit navigation.
+*   [x] **Academic Database Explorer**: High-fidelity mobile view for Ater databases with mastery metrics and unit navigation.
 *   [x] **Binary Data Pipeline**: Hardened PDF and image rendering via native Scriptable bridge.
 *   [x] **Socratic Lab Stabilization**: Resolved UI crashes and implemented robust metric reduction logic.
 *   [x] **Global Sync Parity**: Real-time connection to sidecar for Vault, Registry, and Mastery data.

@@ -18,7 +18,7 @@ export function AppHeader() {
     const path = location.pathname
     const entry = history[currentIndex]
     
-    let module = 'LifeOS'
+    let module = 'Ater'
     let subPath = ''
 
     if (path.startsWith('/obsidian') || path.startsWith('/note/')) {

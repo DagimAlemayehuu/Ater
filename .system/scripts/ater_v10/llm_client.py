@@ -2,7 +2,7 @@ import openai
 import os
 
 class LLMClient:
-    def __init__(self, base_url="http://localhost:11434/v1", model="oka-v10"):
+    def __init__(self, base_url="http://localhost:11434/v1", model="ater-v10"):
         self.client = openai.OpenAI(base_url=base_url, api_key="ollama")
         self.model = model
 

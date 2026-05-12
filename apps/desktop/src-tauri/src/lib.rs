@@ -1,4 +1,4 @@
-// Life OS - Tauri Application Core
+// Ater - Tauri Application Core
 // Manages plugin registration and application lifecycle.
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

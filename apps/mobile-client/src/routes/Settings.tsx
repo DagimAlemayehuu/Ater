@@ -393,7 +393,7 @@ export default function Settings() {
                                         <Info size={12} /> Optimization_Note
                                     </p>
                                     <p className="text-[11px] font-medium text-primary/70 leading-relaxed italic">
-                                        LifeOS utilizes a direct bridge to your local Obsidian container. Ensure Scriptable has 'Always' access to your File Provider for real-time synchronization.
+                                        Ater utilizes a direct bridge to your local Obsidian container. Ensure Scriptable has 'Always' access to your File Provider for real-time synchronization.
                                     </p>
                                 </div>
                             </div>

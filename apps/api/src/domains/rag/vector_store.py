@@ -23,10 +23,10 @@ class ChromaManager:
     Uses 'all-MiniLM-L6-v2' to ensure peak memory usage remains under ~300MB.
     """
     def __init__(self, persist_directory: Optional[str] = None):
-        # Default to a .lifeos directory in the user's home folder if not provided
+        # Default to a .ater directory in the user's home folder if not provided
         if not persist_directory:
             home_dir = Path.home()
-            self.persist_dir = home_dir / ".lifeos" / "vector_store"
+            self.persist_dir = home_dir / ".ater" / "vector_store"
         else:
             self.persist_dir = Path(persist_directory)
             
@@ -53,7 +53,7 @@ class ChromaManager:
         )
         
         # We will use one main collection for the entire Obsidian Vault
-        self.collection_name = "lifeos_vault"
+        self.collection_name = "ater_vault"
         self.collection = self.client.get_or_create_collection(
             name=self.collection_name,
             metadata={"hnsw:space": "cosine"}

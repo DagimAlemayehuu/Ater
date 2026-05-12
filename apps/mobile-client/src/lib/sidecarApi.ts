@@ -1,5 +1,5 @@
 /**
- * Life OS - Mobile Scriptable API Client
+ * Ater - Mobile Scriptable API Client
  *
  * This client routes all requests through the iOS Scriptable bridge.
  */
@@ -30,7 +30,7 @@ export const sidecarApi = {
             
             const handler = (event: any) => {
                 if (event.detail.requestId === requestId) {
-                    window.removeEventListener('lifeos-api-response', handler)
+                    window.removeEventListener('ater-api-response', handler)
                     if (event.detail.error) {
                         reject(new Error(event.detail.error))
                     } else {
@@ -49,11 +49,11 @@ export const sidecarApi = {
                 }
             }
             
-            window.addEventListener('lifeos-api-response', (handler as any))
+            window.addEventListener('ater-api-response', (handler as any))
             
             // Timeout for bridge response
             setTimeout(() => {
-                window.removeEventListener('lifeos-api-response', (handler as any))
+                window.removeEventListener('ater-api-response', (handler as any))
                 reject(new Error(`Native bridge timeout: ${path}`))
             }, 60000)
 
@@ -61,9 +61,9 @@ export const sidecarApi = {
             if (path.includes('/api/ai/')) {
                 if (path === '/api/ai/brainstorm' || path === '/api/ai/execute') {
                     const body = options.body ? JSON.parse(options.body as string) : {}
-                    const config = JSON.parse(safeStorage.getItem('life-os-config') || '{}')
+                    const config = JSON.parse(safeStorage.getItem('ater-config') || '{}')
                     
-                    ;(window as any).LifeOS.send('api_request', {
+                    ;(window as any).Ater.send('api_request', {
                         path: '/api/ai/universal',
                         method: 'POST',
                         body: JSON.stringify({
@@ -78,7 +78,7 @@ export const sidecarApi = {
                 }
             }
 
-            ;(window as any).LifeOS.send('api_request', {
+            ;(window as any).Ater.send('api_request', {
                 path,
                 method: options.method || 'GET',
                 body: options.body,
@@ -154,10 +154,10 @@ export const sidecarApi = {
             body: JSON.stringify({ query })
         }),
 
-    // ── Practice & OKA ─────────────────────────
-    listHubs: () => sidecarApi.request<{ hubs: any[] }>('/api/oka/hubs'),
+    // ── Practice & Ater ─────────────────────────
+    listHubs: () => sidecarApi.request<{ hubs: any[] }>('/api/ater/hubs'),
     listHubNotes: (hubId: string) => 
-        sidecarApi.request<{ notes: any[] }>(`/api/oka/hubs/${hubId}/notes`),
+        sidecarApi.request<{ notes: any[] }>(`/api/ater/hubs/${hubId}/notes`),
     listPractices: () => sidecarApi.request<{ practices: any[] }>('/api/practice/list').catch(() => ({ practices: [] })),
     generatePractice: (hubId: string, config: any) => sidecarApi.request<any>('/api/practice/generate', {
         method: 'POST',

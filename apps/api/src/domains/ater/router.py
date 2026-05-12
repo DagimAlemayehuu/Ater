@@ -129,7 +129,7 @@ class DomainRouter:
         # Log for debugging low confidence
         if confidence < 0.40:
             import logging
-            logging.getLogger("LifeOS").warning(f"[Taxonomy Gap] Confidence: {confidence:.2f} for top_mode: {top_mode}. Text snippet: {text[:50]}...")
+            logging.getLogger("Ater").warning(f"[Taxonomy Gap] Confidence: {confidence:.2f} for top_mode: {top_mode}. Text snippet: {text[:50]}...")
 
         return top_mode
 

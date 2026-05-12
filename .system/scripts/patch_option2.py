@@ -59,7 +59,7 @@ r'''                                q_context = f"THEORY:\n{note_data.get('techn
                                 )'''
 )
 ]
-patch_file("apps/api/src/domains/oka/service.py", service_patches)
+patch_file("apps/api/src/domains/ater/service.py", service_patches)
 
 # AGENTS.PY PATCHES
 agents_patches = [
@@ -84,4 +84,4 @@ r'''14. Syntax Enforcement Law: YOU MUST use exactly `[[blank]]` for 'fill_in' q
 15. No Chain of Thought: The 'explanation' field MUST contain only the final, polished pedagogical explanation. You MUST NOT include internal scratchpad thoughts, self-corrections (e.g. "Wait, the correct calculation is..."), or conversational sludge.'''
 )
 ]
-patch_file("apps/api/src/domains/oka/agents.py", agents_patches)
+patch_file("apps/api/src/domains/ater/agents.py", agents_patches)

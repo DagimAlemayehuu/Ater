@@ -1,7 +1,7 @@
 [project]
-name = "life-os-api"
+name = "ater-api"
 version = "0.1.0"
-description = "Life OS Python FastAPI Sidecar - AI, Notion, and Obsidian logic layer"
+description = "Ater Python FastAPI Sidecar - AI, Notion, and Obsidian logic layer"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -32,6 +32,7 @@ dependencies = [
     "langchain-community>=0.3.0",
     "pypdf>=5.1.0",
     "ruamel-yaml>=0.19.1",
+    "langchain-core>=0.3.0",
 ]
 
 [project.scripts]

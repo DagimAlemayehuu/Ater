@@ -27,7 +27,7 @@ r'''        # ── 7. Walkthrough step count — section is ## 5. Walkthrough 
             steps = re.findall(r'^[\-\*]|^\d+\.', walkthrough_match.group(1), re.MULTILINE)
             if len(steps) < 3:
                 import logging
-                logging.getLogger("LifeOS").warning(f"[OkaValidator] WALKTHROUGH_TOO_SHORT: {len(steps)} steps, need 3+")''',
+                logging.getLogger("Ater").warning(f"[AterValidator] WALKTHROUGH_TOO_SHORT: {len(steps)} steps, need 3+")''',
 r'''        # ── 7. Walkthrough step count — section is ## 5. Walkthrough in the template
         walkthrough_match = re.search(r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)', body, re.DOTALL)
         if walkthrough_match:
@@ -36,7 +36,7 @@ r'''        # ── 7. Walkthrough step count — section is ## 5. Walkthrough 
                 errors.append(f"WALKTHROUGH_TOO_SHORT: Found {len(steps)} steps, need ≥ 5.")'''
 )
 ]
-patch_file("apps/api/src/domains/oka/validator.py", validator_patches)
+patch_file("apps/api/src/domains/ater/validator.py", validator_patches)
 
 # VAULT MANAGER
 vault_patches = [
@@ -148,7 +148,7 @@ r'''        # 2. PROACTIVE GUTTER DEFENSE: Ensure headings and rules have a blan
         final_content = "\n".join(fixed_lines)'''
 )
 ]
-patch_file("apps/api/src/domains/oka/vault_manager.py", vault_patches)
+patch_file("apps/api/src/domains/ater/vault_manager.py", vault_patches)
 
 # PRACTICE.TSX
 practice_patches = [

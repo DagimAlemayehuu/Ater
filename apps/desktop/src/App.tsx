@@ -23,11 +23,11 @@ function SidecarGate({ children }: { children: React.ReactNode }) {
       try {
         const res = await sidecarApi.health()
         if (res.status === 'ok') {
-          console.log('[Life OS] Sidecar Connected - version:', res.version)
+          console.log('[Ater] Sidecar Connected - version:', res.version)
           setStatus('connected')
         }
       } catch {
-        console.warn('[Life OS] Sidecar connection failed. Retrying in 2s...')
+        console.warn('[Ater] Sidecar connection failed. Retrying in 2s...')
         setTimeout(check, 2000)
       }
     }

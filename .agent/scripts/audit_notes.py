@@ -4,7 +4,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent.parent))
 
-from apps.api.src.domains.oka.post_processing import validate_quiz_stub_free, sanitize_body
+from apps.api.src.domains.ater.post_processing import validate_quiz_stub_free, sanitize_body
 
 def audit_directory(dir_path: str):
     unit_dir = Path(dir_path)
@@ -12,7 +12,7 @@ def audit_directory(dir_path: str):
         print(f"Directory not found: {unit_dir}")
         return
 
-    print(f"Auditing OKA unit: {unit_dir.name}\n")
+    print(f"Auditing Ater unit: {unit_dir.name}\n")
     
     broken_notes = []
     

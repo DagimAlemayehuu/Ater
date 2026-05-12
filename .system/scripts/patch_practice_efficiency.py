@@ -70,4 +70,4 @@ r'''            if count > 0:
                 ))'''
 )
 ]
-patch_file("apps/api/src/domains/oka/service.py", service_patches)
+patch_file("apps/api/src/domains/ater/service.py", service_patches)

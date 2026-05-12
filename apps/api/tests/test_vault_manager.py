@@ -1,4 +1,4 @@
-from src.domains.oka.vault_manager import VaultManager
+from src.domains.ater.vault_manager import VaultManager
 
 def test_vault_manager_dump_obsidian_yaml():
     vm = VaultManager("/tmp/mock_vault")

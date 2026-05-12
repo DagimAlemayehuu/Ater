@@ -1,11 +1,11 @@
-# System Architecture (Life OS)
+# System Architecture (Ater)
 
 ## 1. System Map & Technologies
 *   `apps/desktop`: Tauri v2 (Rust) + React/Vite (TS, Tailwind, shadcn/ui)
 *   `apps/mobile-client`: React/Vite (IIFE) + Scriptable Bridge
 *   `apps/api`: Python FastAPI Sidecar (Desktop Only)
 
-### Core Reasoning Engine: OKA v32.0 Oracle (Context-Aware & Massive Parallel)
+### Core Reasoning Engine: Ater v32.0 Oracle (Context-Aware & Massive Parallel)
 1.  **Oracle Context Briefing**: Document pre-processing via `MetaScannerAgent` generates a global context summary, primary discipline detection, and core keywords before any note generation begins. This eliminates "chunk-level amnesia."
 2.  **Law of Cognitive Anchoring**: Every atomic concept is anchored to a globally-detected domain mode during the planning phase. This prevents hallucinated domain modes (e.g., bio-ecology in a CS textbook) by enforcing strict persona compliance.
 3.  **Singularity Parallel Protocol**: Massively parallelized generation loop for atomic notes, governed by the `TokenGovernor`. High-throughput concurrency is balanced by deterministic rate-limit protection.
@@ -24,7 +24,7 @@
 
 ## 3. Storage Blueprint
 *   **Desktop State**: Tauri secure store.
-*   **Mobile State**: iOS Filesystem (`lifeos_config.json`).
+*   **Mobile State**: iOS Filesystem (`ater_config.json`).
 *   **Knowledge Base**: Local Obsidian Markdown files (iCloud or local).
 *   **Automation Queue**: SQLite-backed persistent queue (Desktop) or In-Memory Session (Mobile).
 

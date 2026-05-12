@@ -135,7 +135,7 @@ r'''    def _record_usage_db_sync(self, tokens: int, requests: int):
         asyncio.create_task(asyncio.to_thread(self._record_usage_db_sync, tokens, requests))'''
 )
 ]
-patch_file("apps/api/src/domains/oka/governor.py", governor_patches)
+patch_file("apps/api/src/domains/ater/governor.py", governor_patches)
 
 # SERVICE.PY PATCHES
 service_patches = [
@@ -155,18 +155,18 @@ r'''                while True:
 r'''            except Exception as e:
                 last_error = e
                 error_str = str(e)
-                print(f"[OKA Service] AI Attempt {attempt} failed: {error_str[:200]}")''',
+                print(f"[Ater Service] AI Attempt {attempt} failed: {error_str[:200]}")''',
 r'''            except Exception as e:
                 if type(e).__name__ == "DailyLimitExceededException":
-                    print(f"[OKA Service] Daily Limit Hit: {e}")
-                    OkaService._rate_limited[session_id] = time.time()
-                    OkaService._status[session_id] = f"Paused (Daily Limit Exceeded): {str(e)}"
+                    print(f"[Ater Service] Daily Limit Hit: {e}")
+                    AterService._rate_limited[session_id] = time.time()
+                    AterService._status[session_id] = f"Paused (Daily Limit Exceeded): {str(e)}"
                     raise e # Break out completely immediately
                 
                 last_error = e
                 error_str = str(e)
-                print(f"[OKA Service] AI Attempt {attempt} failed: {error_str[:200]}")'''
+                print(f"[Ater Service] AI Attempt {attempt} failed: {error_str[:200]}")'''
 )
 ]
-patch_file("apps/api/src/domains/oka/service.py", service_patches)
+patch_file("apps/api/src/domains/ater/service.py", service_patches)
 

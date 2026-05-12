@@ -91,7 +91,7 @@ r'''        prac_llm = self.llm.with_structured_output(PractitionerResponse)
                 }'''
 )
 ]
-patch_file("apps/api/src/domains/oka/agents.py", agents_patches)
+patch_file("apps/api/src/domains/ater/agents.py", agents_patches)
 
 sandbox_patches = [
 (
@@ -117,13 +117,13 @@ r'''            if "generate" not in local_env:
             return True, result["artifact"], result'''
 )
 ]
-patch_file("apps/api/src/domains/oka/sandbox.py", sandbox_patches)
+patch_file("apps/api/src/domains/ater/sandbox.py", sandbox_patches)
 
 healer_patches = [
 (
 r'''        # Aggressive patterns for LLM conversational sludge
         patterns = [
-            r"(?i)(?:Sure|Certainly|Here is|Great choice|Okay|As an?|Absolutely|I understand),?.*?(?:explaining|overview|analysis|help|note|here is).*?[:\.]\s*",
+            r"(?i)(?:Sure|Certainly|Here is|Great choice|Atery|As an?|Absolutely|I understand),?.*?(?:explaining|overview|analysis|help|note|here is).*?[:\.]\s*",
             r"(?i)(?:In this section|This note|The following).*?[:\.]\s*",
             r"(?i)(?:Note|Tip|Hint|Important|Pro Tip):\s*",
             r"(?i)Hope this (?:helps|is useful|clarifies).*?\.?$",
@@ -140,7 +140,7 @@ r'''        # Aggressive patterns for LLM conversational sludge
         ]''',
 r'''        # Aggressive patterns for LLM conversational sludge
         patterns = [
-            r"(?i)(?:Sure|Certainly|Here is|Great choice|Okay|As an?|Absolutely|I understand),?.*?(?:explaining|overview|analysis|help|note|here is).*?[:\.]\s*",
+            r"(?i)(?:Sure|Certainly|Here is|Great choice|Atery|As an?|Absolutely|I understand),?.*?(?:explaining|overview|analysis|help|note|here is).*?[:\.]\s*",
             r"(?i)(?:In this section|This note|The following).*?[:\.]\s*",
             r"(?i)(?:Note|Tip|Hint|Important|Pro Tip):\s*",
             r"(?i)Hope this (?:helps|is useful|clarifies).*?\.?$",
@@ -156,4 +156,4 @@ r'''        # Aggressive patterns for LLM conversational sludge
         ]'''
 )
 ]
-patch_file("apps/api/src/domains/oka/healer.py", healer_patches)
+patch_file("apps/api/src/domains/ater/healer.py", healer_patches)

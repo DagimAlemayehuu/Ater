@@ -6,11 +6,11 @@ import sys
 from pathlib import Path
 
 # Add the project root to sys.path to import our domains
-project_root = Path("/Users/dabodestroyer/code/Antigravity/LifeOs/apps/api")
+project_root = Path("/Users/dabodestroyer/code/Antigravity/Ater/apps/api")
 sys.path.append(str(project_root / "src"))
 sys.path.append(str(project_root))
 
-from src.domains.oka.agents import QuestionAgent, QuizAuditorAgent, DOMAIN_MATRIX
+from src.domains.ater.agents import QuestionAgent, QuizAuditorAgent, DOMAIN_MATRIX
 from src.domains.ai.factory import ModelFactory
 
 # Mock secrets class to satisfy ModelFactory if needed, or just use ModelFactory directly
@@ -27,7 +27,7 @@ def get_llm():
                     k, v = line.strip().split("=", 1)
                     env_vars[k] = v
     
-    # Try OpenRouter first as it's often used for OKA
+    # Try OpenRouter first as it's often used for Ater
     api_key = env_vars.get("OPENROUTER_KEY") or os.environ.get("OPENROUTER_KEY")
     if api_key and api_key != "your_openrouter_key_here":
         return ModelFactory.get_model(
@@ -127,7 +127,7 @@ async def main():
         print("Error: No API key found for repair.")
         return
         
-    target_dir = Path("/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault/2-Academic/Winter 2026/Economics/2_Theory_Of_Demand_And_Supply/")
+    target_dir = Path("/Users/dabodestroyer/code/Antigravity/Ater/Obsidian_Vault/2-Academic/Winter 2026/Economics/2_Theory_Of_Demand_And_Supply/")
     files = sorted(list(target_dir.glob("*.md")))
     
     # Filter out Hub notes

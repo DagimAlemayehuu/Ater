@@ -13,7 +13,7 @@ You must strictly ignore the following directories and files to preserve token e
 When asked to summarize the architecture or status of this monorepo, you must prioritize loading the following files in this exact order:
 1. `.system/state/STATE.md` (The macro-status of the project).
 2. `.system/architecture/architecture.md` (The fundamental system design, API contracts, and schema).
-3. `OKA.md` (The definitive protocol for the Obsidian Knowledge Architect).
+3. `Ater.md` (The definitive protocol for the Obsidian Knowledge Architect).
 4. `.system/design/design_rules.md` (If the query is related to the UI).
 5. `pnpm-workspace.yaml` (To understand the physical boundary between `apps/` and `packages/`).
 

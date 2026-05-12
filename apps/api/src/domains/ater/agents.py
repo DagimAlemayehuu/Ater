@@ -895,7 +895,7 @@ class ArchitectAgent:
             mode_instruction = f"mode: You MUST use `{forced_mode}` for all notes in this plan. This has been pre-verified by a domain specialist."
 
         system = (
-            "You are the OKA Curriculum Architect. Extract 15-25 atomic concepts from the text.\n"
+            "You are the Ater Curriculum Architect. Extract 15-25 atomic concepts from the text.\n"
             "First, evaluate the Domain and Academic Level of the entire document.\n"
             "RULES:\n"
             "1. Titles: 1-3 words, Title_Case_With_Underscores, never a question.\n"
@@ -1416,7 +1416,7 @@ class HubAgent:
 
     async def generate_hub(self, unit_title: str, descriptions: List[str], current_hub_text: str) -> str:
         sys_prompt = (
-            "You are the OKA Curriculum Architect. Synthesize a unified Hub overview.\n"
+            "You are the Ater Curriculum Architect. Synthesize a unified Hub overview.\n"
             "SYNTHESIS GAP PROTOCOL: If you detect multiple notes on the same core topic but with different modalities "
             "(e.g., a 'Quantitative' note and a 'Qualitative' note on the same law), you MUST include a specific "
             "'Integrated Synthesis' paragraph that bridges the math and the philosophy of that topic.\n\n"
@@ -1549,14 +1549,14 @@ class TaxonomyExtenderAgent:
         self.llm = llm
 
     async def propose_extension(self, document_text: str, unknown_context: str) -> dict:
-        system = """You are the 'Cartographer Prime' of the OKA system. 
+        system = """You are the 'Cartographer Prime' of the Ater system. 
 Your task is to meta-analyze a document that the system failed to classify into its existing taxonomy.
 You must propose a NEW DOMAIN ENTRY and associated KEYWORDS.
 
 ANALYSIS PROTOCOL:
 1. Identify the core academic or professional discipline (e.g., CS-BLOCKCHAIN, BIO-GENOMICS, LAW-ADMIRALTY).
 2. Propose a Persona: A high-level expert in this field.
-3. Propose H1 and H2 headers that follow the OKA 'Mechanism & Failure' philosophy.
+3. Propose H1 and H2 headers that follow the Ater 'Mechanism & Failure' philosophy.
 4. Propose an Artifact Type (e.g., Mermaid diagram, Code block, LaTeX proof).
 5. Extract 10-15 highly specific keywords that serve as deterministic anchors for this domain.
 

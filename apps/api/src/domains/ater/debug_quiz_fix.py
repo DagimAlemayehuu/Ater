@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 
-file_path = Path('/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault/Notes/Winter 2026/Economics/1_Basics_Of_Economics/Economic_Systems.md')
+file_path = Path('/Users/dabodestroyer/code/Antigravity/Ater/Obsidian_Vault/Notes/Winter 2026/Economics/1_Basics_Of_Economics/Economic_Systems.md')
 text = file_path.read_text()
 
 # Regex from post_processing.py

@@ -1,6 +1,6 @@
-# Life OS Desktop (Admin UI)
+# Ater Desktop (Admin UI)
 
-The frontend application for Life OS, built with Tauri v2 and React. It follows a professional monochromatic aesthetic and serves as the primary interface for personal intelligence.
+The frontend application for Ater, built with Tauri v2 and React. It follows a professional monochromatic aesthetic and serves as the primary interface for personal intelligence.
 
 ## Hubs
 

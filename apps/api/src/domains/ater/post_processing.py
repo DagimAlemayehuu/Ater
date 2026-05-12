@@ -244,7 +244,7 @@ def infer_unit_prerequisites(unit_dir: Path):
         if prereqs:
             frontmatter["prerequisites"] = list(dict.fromkeys(prereqs))[:5]  # max 5, deduped
             # Use ruamel.yaml-like output or safe_dump
-            # For simplicity, safe_dump is used here, but in OKA they use dump_obsidian_yaml, but for quick script safe_dump is okay
+            # For simplicity, safe_dump is used here, but in Ater they use dump_obsidian_yaml, but for quick script safe_dump is atery
             new_yaml = yaml.safe_dump(frontmatter, default_flow_style=False, sort_keys=False)
             note_file.write_text(f"---\n{new_yaml}---\n{body}", encoding="utf-8")
             print(f"[PrereqInfer] {note_file.stem}: {prereqs}")

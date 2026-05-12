@@ -1,5 +1,5 @@
 """
-Life OS - FastAPI Sidecar Entry Point
+Ater - FastAPI Sidecar Entry Point
 
 This process is spawned by Tauri on desktop launch and communicates
 exclusively via localhost HTTP. All secret keys are passed per-request
@@ -31,7 +31,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)]
 )
-logger = logging.getLogger("LifeOS")
+logger = logging.getLogger("Ater")
 
 from urllib.parse import unquote
 import uvicorn
@@ -44,8 +44,8 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.obsidian.client import ObsidianClient
-from src.domains.oka.service import OkaService
-from src.domains.oka.watcher import OkaQueueManager
+from src.domains.ater.service import AterService
+from src.domains.ater.watcher import AterQueueManager
 from src.domains.rag.watcher import RAGWatcherService
 from src.domains.rag.indexer import VaultIndexer
 from src.domains.rag.vector_store import ChromaManager
@@ -58,7 +58,7 @@ from src.domains.academics.router import router as academics_router
 # Global watcher instances
 
 # Global watcher instances
-oka_watcher: Optional[OkaQueueManager] = None
+ater_watcher: Optional[AterQueueManager] = None
 rag_watcher: Optional[RAGWatcherService] = None
 
 # Cache the last-seen vault_path so vault endpoints can fall back to it
@@ -72,17 +72,17 @@ def _update_rag_status(state: Dict[str, Any]):
 async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
     yield
-    if oka_watcher:
-        logger.info("[OKA] Stopping watcher during shutdown")
-        oka_watcher.stop()
+    if ater_watcher:
+        logger.info("[Ater] Stopping watcher during shutdown")
+        ater_watcher.stop()
     if rag_watcher:
         logger.info("[RAG] Stopping Vault Watcher during shutdown")
         rag_watcher.stop()
 
 
 app = FastAPI(
-    title="Life OS Python Sidecar",
-    description="FastAPI backend sidecar for Life OS. Handles AI, Notion, and Obsidian logic.",
+    title="Ater Python Sidecar",
+    description="FastAPI backend sidecar for Ater. Handles AI, Notion, and Obsidian logic.",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -249,8 +249,8 @@ async def save_persona_prompt(payload: Dict[str, str] = Body(...)):
     if not name or not content:
         raise HTTPException(status_code=400, detail="Missing name or content")
     try:
-        # Resolve the root project path (LifeOs directory)
-        # apps/api/src/api/main.py -> LifeOs
+        # Resolve the root project path (Ater directory)
+        # apps/api/src/api/main.py -> Ater
         root_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
         custom_prompts_dir = root_dir / "resources" / "prompts" / "custom prompts"
         custom_prompts_dir.mkdir(parents=True, exist_ok=True)
@@ -340,10 +340,10 @@ async def test_ai_connection(
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-# --- OKA (Autonomous Ingestion) Endpoints ---
+# --- Ater (Autonomous Ingestion) Endpoints ---
 
-@app.post("/api/oka/process")
-async def oka_process_manual(
+@app.post("/api/ater/process")
+async def ater_process_manual(
     payload: Dict[str, Any],
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
@@ -354,13 +354,13 @@ async def oka_process_manual(
     file_path = payload.get("file_path")
     
     try:
-        service = OkaService(secrets)
+        service = AterService(secrets)
         return await service.detect_curriculum(file_path)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/oka/plan")
-async def oka_generate_plan(
+@app.post("/api/ater/plan")
+async def ater_generate_plan(
     payload: Dict[str, Any],
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
@@ -369,8 +369,8 @@ async def oka_generate_plan(
         raise HTTPException(status_code=400, detail="AI Key and Vault Path are required")
     
     try:
-        si_path = OkaService.resolve_si_path()
-        service = OkaService(secrets)
+        si_path = AterService.resolve_si_path()
+        service = AterService(secrets)
         file_path = payload.get("file_path")
         curriculum = payload.get("curriculum", {})
         target_hub_id = payload.get("target_hub_id")
@@ -378,12 +378,12 @@ async def oka_generate_plan(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/oka/confirm")
-async def oka_confirm_plan(
+@app.post("/api/ater/confirm")
+async def ater_confirm_plan(
     payload: Dict[str, Any],
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
-    """Confirms an existing OKA plan and trigger deployment."""
+    """Confirms an existing Ater plan and trigger deployment."""
     session_id = payload.get("session_id")
     command = payload.get("command", "Confirm Final Plan & Proceed Batch 1")
     curriculum_override = payload.get("curriculum_override")
@@ -393,7 +393,7 @@ async def oka_confirm_plan(
         raise HTTPException(status_code=400, detail="session_id is required")
 
     try:
-        service = OkaService(secrets)
+        service = AterService(secrets)
         results = await service.confirm_plan(
             session_id, 
             command=command, 
@@ -417,18 +417,18 @@ async def oka_confirm_plan(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         error_details = traceback.format_exc()
-        raise HTTPException(status_code=500, detail=f"OKA Confirmation failed: {str(e)}\n\nTraceback:\n{error_details}")
+        raise HTTPException(status_code=500, detail=f"Ater Confirmation failed: {str(e)}\n\nTraceback:\n{error_details}")
 
-@app.get("/api/oka/paused-sessions")
-async def oka_get_paused_sessions(
+@app.get("/api/ater/paused-sessions")
+async def ater_get_paused_sessions(
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Returns all sessions that were paused due to a rate limit and have saved progress."""
-    service = OkaService(secrets)
+    service = AterService(secrets)
     return {"paused_sessions": service.get_paused_sessions()}
 
-@app.post("/api/oka/resume")
-async def oka_resume_paused_session(
+@app.post("/api/ater/resume")
+async def ater_resume_paused_session(
     payload: Dict[str, Any],
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
@@ -443,7 +443,7 @@ async def oka_resume_paused_session(
         raise HTTPException(status_code=400, detail="session_id is required")
 
     try:
-        service = OkaService(secrets)
+        service = AterService(secrets)
         result = await service.resume_paused_session(
             session_id=session_id,
             curriculum_override=curriculum_override,
@@ -462,15 +462,15 @@ async def oka_resume_paused_session(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"OKA Resume failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ater Resume failed: {str(e)}")
 
-@app.post("/api/oka/swap-key")
-async def oka_swap_api_key(
+@app.post("/api/ater/swap-key")
+async def ater_swap_api_key(
     payload: Dict[str, Any],
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """
-    Hot-swaps the AI API key on the live OkaService instance.
+    Hot-swaps the AI API key on the live AterService instance.
     Use this after a rate limit to switch to a backup key without restarting.
     The new key is used immediately for all subsequent LLM calls.
     """
@@ -478,90 +478,90 @@ async def oka_swap_api_key(
     if not new_key:
         raise HTTPException(status_code=400, detail="api_key is required")
     try:
-        service = OkaService(secrets)
+        service = AterService(secrets)
         service.swap_api_key(new_key)
         return {"status": "ok", "message": "API key swapped. Resume generation now."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/oka/watcher/toggle")
-async def oka_watcher_toggle(
+@app.post("/api/ater/watcher/toggle")
+async def ater_watcher_toggle(
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
-    """Starts or updates the OKA Queue Manager."""
-    global oka_watcher
+    """Starts or updates the Ater Queue Manager."""
+    global ater_watcher
     
     if not secrets.ai_key or not secrets.vault_path or not secrets.inbox_path:
         raise HTTPException(status_code=400, detail="AI Key, Vault Path, and Inbox Path are required")
     
     # If the watcher exists but the path changed, kill it.
-    if oka_watcher and str(oka_watcher.inbox_path.absolute()) != str(Path(secrets.inbox_path).absolute()):
-        oka_watcher.stop()
-        oka_watcher = None
+    if ater_watcher and str(ater_watcher.inbox_path.absolute()) != str(Path(secrets.inbox_path).absolute()):
+        ater_watcher.stop()
+        ater_watcher = None
 
     # Always keep the watcher alive if we have settings, just toggle its auto_process state
-    if not oka_watcher:
+    if not ater_watcher:
         try:
-            si_path = OkaService.resolve_si_path()
+            si_path = AterService.resolve_si_path()
         except FileNotFoundError as e:
             raise HTTPException(status_code=500, detail=str(e))
         
-        service = OkaService(secrets)
-        oka_watcher = OkaQueueManager(service, secrets.inbox_path, str(si_path))
+        service = AterService(secrets)
+        ater_watcher = AterQueueManager(service, secrets.inbox_path, str(si_path))
         
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = asyncio.get_event_loop()
             
-        oka_watcher.start(loop, auto_process=secrets.auto_deploy)
-        logger.info(f"[OKA] QueueManager started for inbox: {secrets.inbox_path} | Auto: {secrets.auto_deploy}")
+        ater_watcher.start(loop, auto_process=secrets.auto_deploy)
+        logger.info(f"[Ater] QueueManager started for inbox: {secrets.inbox_path} | Auto: {secrets.auto_deploy}")
     else:
-        oka_watcher.update_settings(auto_process=secrets.auto_deploy)
+        ater_watcher.update_settings(auto_process=secrets.auto_deploy)
         
     return {"status": "watcher_active", "auto_deploy": secrets.auto_deploy, "inbox": secrets.inbox_path}
 
-@app.get("/api/oka/queue/status")
-async def oka_queue_status(
+@app.get("/api/ater/queue/status")
+async def ater_queue_status(
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Returns the current detailed queue status."""
-    global oka_watcher
+    global ater_watcher
     
-    if oka_watcher and secrets.inbox_path and str(oka_watcher.inbox_path.absolute()) != str(Path(secrets.inbox_path).absolute()):
-        oka_watcher.stop()
-        oka_watcher = None
+    if ater_watcher and secrets.inbox_path and str(ater_watcher.inbox_path.absolute()) != str(Path(secrets.inbox_path).absolute()):
+        ater_watcher.stop()
+        ater_watcher = None
 
-    if not oka_watcher and secrets.ai_key and secrets.vault_path and secrets.inbox_path:
+    if not ater_watcher and secrets.ai_key and secrets.vault_path and secrets.inbox_path:
         try:
-            si_path = OkaService.resolve_si_path()
+            si_path = AterService.resolve_si_path()
         except FileNotFoundError:
-            return {"status": "offline", "pending_files": [], "manual_status": dict(OkaService._status), "error": "OKA.md not found"}
+            return {"status": "offline", "pending_files": [], "manual_status": dict(AterService._status), "error": "Ater.md not found"}
         
-        service = OkaService(secrets)
-        oka_watcher = OkaQueueManager(service, secrets.inbox_path, str(si_path))
+        service = AterService(secrets)
+        ater_watcher = AterQueueManager(service, secrets.inbox_path, str(si_path))
         
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = asyncio.get_event_loop()
             
-        oka_watcher.start(loop, auto_process=secrets.auto_deploy)
-        logger.info(f"[OKA] Watcher Auto-started for inbox: {secrets.inbox_path} | Auto: {secrets.auto_deploy}")
+        ater_watcher.start(loop, auto_process=secrets.auto_deploy)
+        logger.info(f"[Ater] Watcher Auto-started for inbox: {secrets.inbox_path} | Auto: {secrets.auto_deploy}")
         
-    if not oka_watcher:
-        return {"status": "offline", "pending_files": [], "manual_status": dict(OkaService._status)}
+    if not ater_watcher:
+        return {"status": "offline", "pending_files": [], "manual_status": dict(AterService._status)}
         
     # Sync settings only when the value actually changed (avoids log spam)
-    if oka_watcher.auto_process != secrets.auto_deploy:
-        oka_watcher.update_settings(auto_process=secrets.auto_deploy)
+    if ater_watcher.auto_process != secrets.auto_deploy:
+        ater_watcher.update_settings(auto_process=secrets.auto_deploy)
     
-    status_dict = oka_watcher.get_status()
-    status_dict["manual_status"] = dict(OkaService._status)
+    status_dict = ater_watcher.get_status()
+    status_dict["manual_status"] = dict(AterService._status)
     return status_dict
 
-@app.get("/api/oka/generated")
-async def oka_list_generated(
+@app.get("/api/ater/generated")
+async def ater_list_generated(
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Lists files that have been successfully generated."""
@@ -579,7 +579,7 @@ async def oka_list_generated(
         for f in generated_dir.iterdir():
             if f.is_file() and not f.name.startswith('.') and f.suffix.lower() in supported_extensions:
                 hub_path = None
-                meta_file = f.with_suffix(".oka.json")
+                meta_file = f.with_suffix(".ater.json")
                 if meta_file.exists():
                     try:
                         with open(meta_file, "r") as mf:
@@ -602,8 +602,8 @@ async def oka_list_generated(
     
     return {"files": files}
 
-@app.get("/api/oka/inbox")
-async def oka_list_inbox(
+@app.get("/api/ater/inbox")
+async def ater_list_inbox(
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Lists files currently in the Inbox folder."""
@@ -638,21 +638,21 @@ async def oka_list_inbox(
     
     return {"files": files}
 
-@app.get("/api/oka/hubs")
-async def oka_list_hubs(
+@app.get("/api/ater/hubs")
+async def ater_list_hubs(
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Lists available study hubs."""
-    service = OkaService(secrets)
+    service = AterService(secrets)
     return {"hubs": service.list_planner_hubs()}
 
-@app.get("/api/oka/hubs/{hub_id}/notes")
-async def oka_list_hub_notes(
+@app.get("/api/ater/hubs/{hub_id}/notes")
+async def ater_list_hub_notes(
     hub_id: str,
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Lists atomic notes for a specific hub."""
-    service = OkaService(secrets)
+    service = AterService(secrets)
     return {"notes": service.list_atomic_notes(hub_id)}
 
 @app.post("/api/practice/explain")
@@ -719,7 +719,7 @@ async def generate_practice_session(
     if not hub_id:
         raise HTTPException(status_code=400, detail="hub_id is required")
 
-    service = OkaService(secrets)
+    service = AterService(secrets)
     try:        return await service.generate_practice(hub_id, config)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -727,7 +727,7 @@ async def generate_practice_session(
 @app.get("/api/practice/status")
 async def get_practice_status():
     """Returns the current generation status for all active sessions."""
-    return {"status": dict(OkaService._status)}
+    return {"status": dict(AterService._status)}
 
 @app.get("/api/practice/list")
 async def list_practice_sessions(
@@ -737,7 +737,7 @@ async def list_practice_sessions(
     if not secrets.vault_path:
         return {"practices": [], "_debug": {"error": "vault_path missing"}}
     
-    service = OkaService(secrets)
+    service = AterService(secrets)
     try:
         practices = service.list_practices()
         return {"practices": practices}
@@ -841,7 +841,7 @@ async def log_practice(
     if not secrets.inbox_path:
         raise HTTPException(status_code=400, detail="Inbox Path not configured")
     
-    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    db_path = Path(secrets.inbox_path) / "ater_queue.db"
     if not db_path.exists():
         return {"status": "ignored", "reason": "db not initialized"}
     
@@ -918,7 +918,7 @@ async def log_note_visit(
     if not secrets.inbox_path:
         raise HTTPException(status_code=400, detail="Inbox Path not configured")
     
-    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    db_path = Path(secrets.inbox_path) / "ater_queue.db"
     if not db_path.exists():
         return {"status": "ignored", "reason": "db not initialized"}
     
@@ -948,7 +948,7 @@ async def log_study_session(
     if not secrets.inbox_path:
         raise HTTPException(status_code=400, detail="Inbox Path not configured")
     
-    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    db_path = Path(secrets.inbox_path) / "ater_queue.db"
     if not db_path.exists():
         return {"status": "ignored", "reason": "db not initialized"}
     
@@ -979,7 +979,7 @@ async def log_practice_result(
     if not secrets.inbox_path:
         raise HTTPException(status_code=400, detail="Inbox Path not configured")
     
-    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    db_path = Path(secrets.inbox_path) / "ater_queue.db"
     if not db_path.exists():
         return {"status": "ignored", "reason": "db not initialized"}
     
@@ -1011,7 +1011,7 @@ async def get_practice_analytics(
     if not secrets.inbox_path:
         raise HTTPException(status_code=400, detail="Inbox Path not configured")
     
-    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    db_path = Path(secrets.inbox_path) / "ater_queue.db"
     if not db_path.exists():
          return {"modalities": {}, "weakest_concepts": []}
     
@@ -1065,7 +1065,7 @@ async def get_study_history(
     if not secrets.inbox_path:
         return {"sessions": [], "telemetry": []}
     
-    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    db_path = Path(secrets.inbox_path) / "ater_queue.db"
     if not db_path.exists():
         return {"sessions": [], "telemetry": [], "practice": []}
     
@@ -1094,7 +1094,7 @@ async def get_srs_data(
     if not secrets.inbox_path:
         raise HTTPException(status_code=400, detail="Inbox Path not configured")
     
-    db_path = Path(secrets.inbox_path) / "oka_queue.db"
+    db_path = Path(secrets.inbox_path) / "ater_queue.db"
     if not db_path.exists():
          return {"srs": {}}
     
@@ -1108,8 +1108,8 @@ async def get_srs_data(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/oka/explain")
-async def oka_explain_concept(
+@app.post("/api/ater/explain")
+async def ater_explain_concept(
     payload: Dict[str, Any] = Body(...),
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
@@ -1195,8 +1195,8 @@ async def oka_explain_concept(
         logger.error(f"[AI Explain] Error: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/oka/quick-questions")
-async def oka_quick_questions(
+@app.post("/api/ater/quick-questions")
+async def ater_quick_questions(
     payload: Dict[str, Any] = Body(...),
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
@@ -1240,8 +1240,8 @@ async def oka_quick_questions(
         logger.error(f"[Quick Questions] Error: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/oka/chat")
-async def oka_chat(
+@app.post("/api/ater/chat")
+async def ater_chat(
     payload: Dict[str, Any],
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
@@ -1317,11 +1317,11 @@ Source Content: {context_content[:10000]}
         res = await llm.ainvoke(chat_messages)
         return {"answer": res.content}
     except Exception as e:
-        logger.error(f"Error in oka_chat: {str(e)}")
+        logger.error(f"Error in ater_chat: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/oka/interactive-quiz")
-async def oka_interactive_quiz(
+@app.post("/api/ater/interactive-quiz")
+async def ater_interactive_quiz(
     payload: Dict[str, Any],
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
@@ -1651,8 +1651,8 @@ async def vault_upload_source(
         raise HTTPException(status_code=400, detail="Vault Path not configured. Open Settings and set your Obsidian vault path.")
 
     try:
-        from src.domains.oka.reference_vault import ReferenceVaultPipeline
-        from src.domains.oka.governor import governor
+        from src.domains.ater.reference_vault import ReferenceVaultPipeline
+        from src.domains.ater.governor import governor
         from src.domains.ai.factory import ModelFactory
 
         llm = ModelFactory.get_model(
@@ -1688,8 +1688,8 @@ async def vault_upload_file(
     """Accepts a binary file upload (PDF/image/txt), extracts text, then runs the pipeline."""
     import tempfile, os, base64
     from src.domains.ai.factory import ModelFactory
-    from src.domains.oka.reference_vault import ReferenceVaultPipeline
-    from src.domains.oka.governor import governor
+    from src.domains.ater.reference_vault import ReferenceVaultPipeline
+    from src.domains.ater.governor import governor
     from langchain_core.messages import HumanMessage
 
     if not secrets.ai_key:
@@ -1799,7 +1799,7 @@ async def vault_list(
     if not secrets.vault_path:
         return {"vaults": []}
     try:
-        from src.domains.oka.reference_vault import VaultWriter
+        from src.domains.ater.reference_vault import VaultWriter
         writer = VaultWriter(Path(secrets.vault_path))
         return {"vaults": writer.list_vaults(hub_id)}
     except Exception as e:
@@ -1825,7 +1825,7 @@ async def vault_get_questions(
         raise HTTPException(status_code=400, detail="vault_path required")
 
     try:
-        from src.domains.oka.reference_vault import VaultWriter
+        from src.domains.ater.reference_vault import VaultWriter
         writer = VaultWriter(Path(secrets.vault_path or "/"))
         questions = writer.load_questions(vault_path)
 
@@ -1869,7 +1869,7 @@ async def vault_generate_session(
     config = payload.get("config", {})
 
     try:
-        from src.domains.oka.reference_vault import VaultWriter
+        from src.domains.ater.reference_vault import VaultWriter
         import random
 
         writer = VaultWriter(Path(vault_path))
@@ -1892,7 +1892,7 @@ async def vault_generate_session(
         elif mode == "weak_spots" and secrets.inbox_path:
             # Pull worst-performing types from analytics DB
             weak_types = []
-            db_path = Path(secrets.inbox_path) / "oka_queue.db"
+            db_path = Path(secrets.inbox_path) / "ater_queue.db"
             if db_path.exists():
                 import sqlite3 as _sq
                 conn = _sq.connect(str(db_path))
@@ -1923,7 +1923,7 @@ async def vault_generate_session(
         if mode == "ai_variants" and secrets.ai_key:
             try:
                 from src.domains.ai.factory import ModelFactory
-                from src.domains.oka.governor import governor
+                from src.domains.ater.governor import governor
 
                 llm = ModelFactory.get_model(
                     provider=secrets.ai_provider or "google",
@@ -1943,7 +1943,7 @@ async def vault_generate_session(
                     try:
                         await governor.get_permit(expected_tokens=400)
                         res = await llm.ainvoke([("human", prompt)])
-                        from src.domains.oka.reference_vault import _parse_json_safe
+                        from src.domains.ater.reference_vault import _parse_json_safe
                         data = _parse_json_safe(res.content)
                         if data and isinstance(data, dict):
                             variant = {

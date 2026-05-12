@@ -6,7 +6,7 @@ from pathlib import Path
 # Add current directory to path so we can import modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from orchestrator import OkaOrchestrator
+from orchestrator import AterOrchestrator
 
 def main():
     if len(sys.argv) < 2:
@@ -31,8 +31,8 @@ def main():
         print("Error: Source text is empty.")
         return
 
-    print("🚀 Initializing OKA v10 Orchestrator...")
-    orchestrator = OkaOrchestrator()
+    print("🚀 Initializing Ater v10 Orchestrator...")
+    orchestrator = AterOrchestrator()
     orchestrator.run_pipeline(source_text)
 
 if __name__ == "__main__":

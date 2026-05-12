@@ -1,5 +1,5 @@
 /**
- * Life OS - Configuration Context (Mobile Native Version)
+ * Ater - Configuration Context (Mobile Native Version)
  * 
  * Manages storage of API keys and paths via the Scriptable Native Bridge.
  */
@@ -61,7 +61,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 
                 const handler = (event: any) => {
                     if (event.detail.requestId === requestId) {
-                        window.removeEventListener('lifeos-api-response', handler);
+                        window.removeEventListener('ater-api-response', handler);
                         const nativeConfig = event.detail.data;
                         setConfig({ ...DEFAULT_CONFIG, ...nativeConfig });
                         configLoaded = true;
@@ -69,14 +69,14 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     }
                 };
                 
-                window.addEventListener('lifeos-api-response', (handler as any));
+                window.addEventListener('ater-api-response', (handler as any));
                 
                 // Timeout fallback to localStorage or default
                 setTimeout(() => {
-                    window.removeEventListener('lifeos-api-response', (handler as any));
+                    window.removeEventListener('ater-api-response', (handler as any));
                     if (!configLoaded) {
                         console.warn('[Config] Native bridge timed out, checking localStorage');
-                        const saved = safeStorage.getItem('life-os-config');
+                        const saved = safeStorage.getItem('ater-config');
                         if (saved) {
                             setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
                         } else {
@@ -86,16 +86,16 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     }
                 }, 3000);
 
-                if ((window as any).LifeOS && (window as any).LifeOS.send) {
-                    (window as any).LifeOS.send('api_request', {
+                if ((window as any).Ater && (window as any).Ater.send) {
+                    (window as any).Ater.send('api_request', {
                         path: '/api/config',
                         method: 'GET',
                         requestId
                     });
                 } else {
-                    console.warn('[Config] LifeOS bridge not found during init');
+                    console.warn('[Config] Ater bridge not found during init');
                     // Immediately trigger fallback if bridge doesn't exist
-                    const saved = safeStorage.getItem('life-os-config');
+                    const saved = safeStorage.getItem('ater-config');
                     if (saved) {
                         setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
                     } else {
@@ -122,12 +122,12 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setConfig(updatedConfig);
 
             // Persist to native storage
-            if ((window as any).LifeOS) {
-                (window as any).LifeOS.send('update_config', { ...updatedConfig, requestId: reqId });
+            if ((window as any).Ater) {
+                (window as any).Ater.send('update_config', { ...updatedConfig, requestId: reqId });
             }
 
             // Fallback persistence
-            safeStorage.setItem('life-os-config', JSON.stringify(updatedConfig));
+            safeStorage.setItem('ater-config', JSON.stringify(updatedConfig));
         } catch (err) {
             console.error('[Config] Save failed:', err);
             throw err;

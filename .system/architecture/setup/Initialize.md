@@ -67,7 +67,7 @@ Output EXACTLY this message and STOP:
 
 ---
 # PROJECT BRIEF
-**Name:** Life OS
+**Name:** Ater
 **Type:** Local-First Desktop Application (Tier 3)
 **Requirement:** A personal mentorship and management OS. It requires a Tauri v2 desktop shell to access the local file system (Obsidian), a React frontend (Vite), and a Python FastAPI sidecar to handle heavy AI logic using the Google Gemini 2.5 Flash API. It must be production-ready, configurable via a UI, and abstract complex API logic from the user. Begin Phase 1 immediately.
 ```
@@ -79,10 +79,10 @@ Output EXACTLY this message and STOP:
 *Once the AI halts and asks for `prompt.md`, create the file, paste the massive block below into it, and tell the AI "READY".*
 
 ```markdown
-# Life OS: Feature Blueprint & Architectural Directives
+# Ater: Feature Blueprint & Architectural Directives
 
 ## 1. System Overview & Deviation from Standard Tier 3
-This project is a localized Personal Artificial General Intelligence (Life OS) disguised as a professional admin dashboard. 
+This project is a localized Personal Artificial General Intelligence (Ater) disguised as a professional admin dashboard. 
 *   **NO SUPABASE:** Do not use Supabase. 
 *   **Database (Cloud):** The Notion API serves as our relational database (Tasks, Projects, Goals).
 *   **Database (Local):** Local Obsidian `.md` files act as our unstructured knowledge base.

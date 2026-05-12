@@ -1,5 +1,5 @@
 /**
- * Life OS - Python Sidecar API Client
+ * Ater - Python Sidecar API Client
  *
  * All heavy computation (Gemini, Notion) is executed in the Python sidecar.
  * This client is the ONLY interface between React and the Python backend.
@@ -8,7 +8,7 @@
 import { load } from '@tauri-apps/plugin-store'
 
 const SIDECAR_BASE_URL = 'http://127.0.0.1:8765'
-const STORE_FILENAME = 'life-os-config.json'
+const STORE_FILENAME = 'ater_config.json'
 
 export interface HealthResponse {
     status: string
@@ -97,7 +97,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const authHeaders = await getAuthHeaders()
     
     // Guard: AI routes require a key configured in Settings
-    const isAiRoute = path.includes('/api/ai/') || path.includes('/api/oka/') || path.includes('/api/practice/explain') || path.includes('/api/practice/vault/')
+    const isAiRoute = path.includes('/api/ai/') || path.includes('/api/ater/') || path.includes('/api/practice/explain') || path.includes('/api/practice/vault/')
     if (isAiRoute && !authHeaders['X-AI-Key']) {
         throw new Error('AI API Key is not configured. Go to Settings > AI Configuration to add your key.')
     }
@@ -159,7 +159,7 @@ export const sidecarApi = {
     listVaultTemplates: async () => {
         const res = await request<{ files: ObsidianFile[] }>('/api/obsidian/files');
         // Filter for files in templates folder. Usually .obsidian/templates or similar.
-        // For LifeOS, we might have a specific templates folder. 
+        // For Ater, we might have a specific templates folder. 
         // Based on the vault structure, they might be in resources/templates or 1-Meta/Templates.
         return { 
             templates: res.files
@@ -249,7 +249,7 @@ export const sidecarApi = {
             logs: string[];
         }>('/api/ai/orchestrator/status'),
 
-    // ── Obsidian & OKA ──────────────────────────────────────
+    // ── Obsidian & Ater ──────────────────────────────────────
     listObsidianFiles: () => request<{ files: ObsidianFile[] }>('/api/obsidian/files'),
     
     readObsidianNote: (path: string) =>
@@ -300,7 +300,7 @@ export const sidecarApi = {
         return response.json()
     },
 
-    okaProcess: (payload: { file_path?: string; text?: string; target_hub_id?: string }) =>
+    aterProcess: (payload: { file_path?: string; text?: string; target_hub_id?: string }) =>
         request<{ 
             session_id: string; 
             plan_raw: string; 
@@ -310,35 +310,35 @@ export const sidecarApi = {
             detected_curriculum?: any;
             available_hubs?: any[];
             available_options?: any;
-        }>('/api/oka/process', {
+        }>('/api/ater/process', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
 
-    okaGeneratePlan: (payload: { session_id?: string; file_path?: string; curriculum: any; target_hub_id?: string }) =>
-        request<{ session_id: string; plan_raw: string; plan_structured: any; status: string }>('/api/oka/plan', {
+    aterGeneratePlan: (payload: { session_id?: string; file_path?: string; curriculum: any; target_hub_id?: string }) =>
+        request<{ session_id: string; plan_raw: string; plan_structured: any; status: string }>('/api/ater/plan', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
 
-    okaConfirm: (payload: { session_id: string; command?: string; curriculum_override?: any; anchored_hub_id?: string }) =>
-        request<{ ai_output: string; results: any[]; count: number; has_more: boolean; next_batch?: number; current_batch?: number; total_batches?: number; status: string }>('/api/oka/confirm', {
+    aterConfirm: (payload: { session_id: string; command?: string; curriculum_override?: any; anchored_hub_id?: string }) =>
+        request<{ ai_output: string; results: any[]; count: number; has_more: boolean; next_batch?: number; current_batch?: number; total_batches?: number; status: string }>('/api/ater/confirm', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
 
-    okaWatcherToggle: () =>
-        request<{ status: string, inbox?: string }>('/api/oka/watcher/toggle', {
+    aterWatcherToggle: () =>
+        request<{ status: string, inbox?: string }>('/api/ater/watcher/toggle', {
             method: 'POST'
         }),
 
     getAiRateLimits: () =>
         request<Record<string, any>>('/api/ai/rate-limits'),
 
-    okaWatcherStatus: () =>
-        request<{ is_running: boolean, inbox: string | null }>('/api/oka/watcher/status'),
+    aterWatcherStatus: () =>
+        request<{ is_running: boolean, inbox: string | null }>('/api/ater/watcher/status'),
 
-    okaQueueStatus: () =>
+    aterQueueStatus: () =>
         request<{ 
             status: string, 
             auto_process: boolean, 
@@ -350,13 +350,13 @@ export const sidecarApi = {
             planned_batches: { id: number, notes: string[] }[],
             pending_count: number, 
             pending_files: string[] 
-        }>('/api/oka/queue/status'),
+        }>('/api/ater/queue/status'),
 
-    okaListInbox: () =>
-        request<{ files: any[] }>('/api/oka/inbox'),
+    aterListInbox: () =>
+        request<{ files: any[] }>('/api/ater/inbox'),
 
-    okaListGenerated: () =>
-        request<{ files: any[] }>('/api/oka/generated'),
+    aterListGenerated: () =>
+        request<{ files: any[] }>('/api/ater/generated'),
 
     // ── RAG & Mirror ────────────────────────────────────────
     ragWatcherToggle: () =>
@@ -381,9 +381,9 @@ export const sidecarApi = {
         request<{ status: string, progress: number, total: number, message: string }>('/api/notion/sync-mirror/status'),
 
     // ── Legacy / Specialists ────────────────────────────────
-    listHubs: () => request<{ hubs: any[] }>('/api/oka/hubs'),
+    listHubs: () => request<{ hubs: any[] }>('/api/ater/hubs'),
     listHubNotes: (hubId: string) => 
-        request<{ notes: any[] }>(`/api/oka/hubs/${hubId}/notes`),
+        request<{ notes: any[] }>(`/api/ater/hubs/${hubId}/notes`),
     generatePractice: (hubId: string, config: any) => 
         request<{ session_id: string; questions: any[]; quiz_path: string }>('/api/practice/generate', {
             method: 'POST',
@@ -417,31 +417,31 @@ export const sidecarApi = {
 
     // ── Scholar & AI ──────────────────────────────────────
     explainPdfSelection: (payload: { path: string, selection: string, page?: number }) =>
-        request<{ answer: string; detail?: string }>('/api/oka/explain', {
+        request<{ answer: string; detail?: string }>('/api/ater/explain', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
 
     generateQuickQuestions: (payload: { path: string, selection: string, page?: number }) =>
-        request<{ answer: string; detail?: string }>('/api/oka/quick-questions', {
+        request<{ answer: string; detail?: string }>('/api/ater/quick-questions', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
 
-    okaExplain: (payload: { path: string, selection: string, page?: number, question?: string }) =>
-        request<{ answer: string }>('/api/oka/explain', {
+    aterExplain: (payload: { path: string, selection: string, page?: number, question?: string }) =>
+        request<{ answer: string }>('/api/ater/explain', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
 
-    okaChat: (payload: { path: string, selection: string, page?: number, messages: { role: string, content: string }[] }) =>
-        request<{ answer: string }>('/api/oka/chat', {
+    aterChat: (payload: { path: string, selection: string, page?: number, messages: { role: string, content: string }[] }) =>
+        request<{ answer: string }>('/api/ater/chat', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
 
-    okaInteractiveQuiz: (payload: { selection: string }) =>
-        request<{ questions: any[] }>('/api/oka/interactive-quiz', {
+    aterInteractiveQuiz: (payload: { selection: string }) =>
+        request<{ questions: any[] }>('/api/ater/interactive-quiz', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),

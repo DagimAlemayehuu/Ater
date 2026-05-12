@@ -551,7 +551,7 @@ export default function Settings() {
             onClick={async () => {
               const newVal = !config?.autoDeploy;
               await saveConfig({autoDeploy: newVal});
-              try {await sidecarApi.okaWatcherToggle();} catch(e) {console.error(e);}
+              try {await sidecarApi.aterWatcherToggle();} catch(e) {console.error(e);}
             }}
             className={cn(
               "relative inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full ",

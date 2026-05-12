@@ -37,5 +37,5 @@ DO NOT put routing or page structures here. Put them in `app_structure.md`.
     *   `Binary` → `True/False`
     *   `Note Properties` → `Info`
     *   `Hub Connections` → `Map`
-*   **Direct-Entry Rule**: No intermediary list screens for primary modules. Clicking an icon (e.g., Agents) must resolve to the primary functional dashboard (e.g., OKA Dashboard) immediately.
+*   **Direct-Entry Rule**: No intermediary list screens for primary modules. Clicking an icon (e.g., Agents) must resolve to the primary functional dashboard (e.g., Ater Dashboard) immediately.
 

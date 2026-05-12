@@ -4,7 +4,7 @@ from typing import List, Set, Dict
 
 class LogicHealer:
     """
-    Self-healing engine for OKA notes. Fixes wikilinks, sanitizes LLM-speak,
+    Self-healing engine for Ater notes. Fixes wikilinks, sanitizes LLM-speak,
     and performs basic mathematical verification.
     """
     
@@ -12,9 +12,9 @@ class LogicHealer:
         # Store both original and underscored versions for flexible matching
         self.canonical_titles = {t.strip() for t in canonical_titles}
         self.normalized_titles = {t.replace(" ", "_").strip(): t.strip() for t in canonical_titles}
-        from .validator import OkaValidator
-        self.validator = OkaValidator()
-        self.logger = logging.getLogger("LifeOS")
+        from .validator import AterValidator
+        self.validator = AterValidator()
+        self.logger = logging.getLogger("Ater")
 
     def heal_wikilinks(self, text: str) -> str:
         """
@@ -101,7 +101,7 @@ class LogicHealer:
         """
         # Aggressive patterns for LLM conversational sludge
         patterns = [
-            r"(?i)(?:Sure|Certainly|Here is|Great choice|Okay|As an?|Absolutely|I understand),?.*?(?:explaining|overview|analysis|help|note|here is).*?[:\.]\s*",
+            r"(?i)(?:Sure|Certainly|Here is|Great choice|Atery|As an?|Absolutely|I understand),?.*?(?:explaining|overview|analysis|help|note|here is).*?[:\.]\s*",
             r"(?i)(?:In this section|This note|The following).*?[:\.]\s*",
             r"(?i)(?:Note|Tip|Hint|Important|Pro Tip):\s*",
             r"(?i)Hope this (?:helps|is useful|clarifies).*?\.?$",

@@ -3,13 +3,13 @@
 **Document Status:** Evolution Reference - v1.1 Refactored
 **Last Updated:** Phase 4 Refactor Complete
 **Tier:** TIER 3 (The Agency Standard / Offline-First)
-**Repo:** https://github.com/DagimAlemayehuu/LifeOs.git
+**Repo:** https://github.com/DagimAlemayehuu/Ater.git
 
 ---
 
 ## 1. THE PHILOSOPHY
 
-Life OS is a localized Personal Life Operating System designed as a professional intelligence hub. It orchestrates structured data from Notion, unstructured knowledge from Obsidian, and high-level reasoning from Google Gemini into a unified, offline-first experience.
+Ater is a localized Personal Life Operating System designed as a professional intelligence hub. It orchestrates structured data from Notion, unstructured knowledge from Obsidian, and high-level reasoning from Google Gemini into a unified, offline-first experience.
 
 ### The Core Quadrants
 

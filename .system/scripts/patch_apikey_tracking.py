@@ -146,7 +146,7 @@ r'''    def _record_usage_db_sync(self, tokens: int, requests: int, api_key_hash
         asyncio.create_task(asyncio.to_thread(self._record_usage_db_sync, tokens, requests, api_key_hash))'''
 )
 ]
-patch_file("apps/api/src/domains/oka/governor.py", governor_patches)
+patch_file("apps/api/src/domains/ater/governor.py", governor_patches)
 
 service_patches = [
 (
@@ -156,26 +156,26 @@ r'''                    estimated_tokens = (len(str(current_messages)) // 4) + 4
                     await self.governor.get_permit(expected_tokens=estimated_tokens, api_key=self.secrets.ai_key)'''
 ),
 (
-r'''                                OkaService._status[session_id] = f"{phase_prefix} Theory: [[{current_note_title}]]..."
+r'''                                AterService._status[session_id] = f"{phase_prefix} Theory: [[{current_note_title}]]..."
                                 await self.governor.get_permit(expected_tokens=4000)''',
-r'''                                OkaService._status[session_id] = f"{phase_prefix} Theory: [[{current_note_title}]]..."
+r'''                                AterService._status[session_id] = f"{phase_prefix} Theory: [[{current_note_title}]]..."
                                 await self.governor.get_permit(expected_tokens=4000, api_key=self.secrets.ai_key)'''
 ),
 (
 r'''                                # 2. Micro-Practitioner Pass
-                                OkaService._status[session_id] = f"{phase_prefix} Execution: [[{current_note_title}]]..."
+                                AterService._status[session_id] = f"{phase_prefix} Execution: [[{current_note_title}]]..."
                                 await self.governor.get_permit(expected_tokens=3000)''',
 r'''                                # 2. Micro-Practitioner Pass
-                                OkaService._status[session_id] = f"{phase_prefix} Execution: [[{current_note_title}]]..."
+                                AterService._status[session_id] = f"{phase_prefix} Execution: [[{current_note_title}]]..."
                                 await self.governor.get_permit(expected_tokens=3000, api_key=self.secrets.ai_key)'''
 ),
 (
 r'''                                # 3. Micro-Question Pass (Dynamic Assessment)
-                                OkaService._status[session_id] = f"{phase_prefix} Assessment: [[{current_note_title}]]..."
+                                AterService._status[session_id] = f"{phase_prefix} Assessment: [[{current_note_title}]]..."
                                 await self.governor.get_permit(expected_tokens=3000)''',
 r'''                                # 3. Micro-Question Pass (Dynamic Assessment)
-                                OkaService._status[session_id] = f"{phase_prefix} Assessment: [[{current_note_title}]]..."
+                                AterService._status[session_id] = f"{phase_prefix} Assessment: [[{current_note_title}]]..."
                                 await self.governor.get_permit(expected_tokens=3000, api_key=self.secrets.planner_key or self.secrets.ai_key)'''
 )
 ]
-patch_file("apps/api/src/domains/oka/service.py", service_patches)
+patch_file("apps/api/src/domains/ater/service.py", service_patches)

@@ -71,7 +71,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
         setQuizFeedback(null);
         setScore(0);
         try {
-            const data = await sidecarApi.okaInteractiveQuiz({ selection });
+            const data = await sidecarApi.aterInteractiveQuiz({ selection });
             setQuizQuestions(data.questions);
         } catch (e: unknown) {
             console.error(e);
@@ -98,7 +98,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
         setIsThinking(true);
 
         try {
-            const data = await sidecarApi.okaChat({ 
+            const data = await sidecarApi.aterChat({ 
                 path, 
                 selection, 
                 page, 

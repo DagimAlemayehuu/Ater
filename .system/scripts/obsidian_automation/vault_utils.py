@@ -17,7 +17,7 @@ if env_vault_path:
     VAULT_BASE_PATH = Path(env_vault_path)
 else:
     # Fallback to local project path if env var is missing
-    VAULT_BASE_PATH = Path("/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault")
+    VAULT_BASE_PATH = Path("/Users/dabodestroyer/code/Antigravity/Ater/Obsidian_Vault")
 
 INTERNAL_INDEX_FILE = VAULT_BASE_PATH / "2-Academic" / "vault_index.json"
 
@@ -126,7 +126,7 @@ def extract_yaml_and_content(note_block: str) -> Tuple[dict, str, bool]:
     yaml_match = re.search(r"^---\s*\n(.*?)\n---\s*(?=\n|$)", note_block, re.DOTALL)
     if not yaml_match:
         # If no YAML, the whole block is body content.
-        # This is okay for some files like raw AI output before deployer adds YAML.
+        # This is atery for some files like raw AI output before deployer adds YAML.
         return {}, note_block, False
     
     yaml_str = yaml_match.group(1)

@@ -14,7 +14,7 @@ Define the structure, content, and interactive states in extremely high detail.
 ## 2. Route Map (The Pages)
 *   `/obsidian` - **Knowledge Base**: The primary vault explorer and markdown reader.
 *   `/vault-sync` - **Vault Sync**: Management of knowledge clusters and database views.
-*   `/agents` - **Intelligence Hub**: Central registry for the OKA dashboard.
+*   `/agents` - **Intelligence Hub**: Central registry for the Ater dashboard.
 *   `/settings` - **System Settings**: Global configuration for Appearance, Identity Profiles, and LLM Intelligence.
 
 ## 3. Page Specifications
@@ -29,13 +29,13 @@ Define the structure, content, and interactive states in extremely high detail.
 *   **Persistence**: View states (filters, sorts, columns) persist via LocalStorage per-database.
 
 
-### Page: `/agents` (OKA Dashboard)
+### Page: `/agents` (Ater Dashboard)
 *   **Pipeline Control**: Inbox for raw documents, status tracking for generation plans.
 *   **Action Hub**: Plan visualization in card-view, batch execution controls.
 
 ### Page: `/settings` (System Settings)
 *   **Navigation**: Inner sidebar with "General", "Profiles", and "Intelligence".
 *   **General**: Theme toggle (Light/Dark) and Gemini API / LLM provider configuration.
-*   **Profiles**: Management of LifeOS domains (Personal, Academic, Financial, Fitness).
+*   **Profiles**: Management of Ater domains (Personal, Academic, Financial, Fitness).
 *   **Intelligence**: RAG engine management and vault synchronization trigger.
 

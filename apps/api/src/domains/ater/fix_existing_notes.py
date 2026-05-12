@@ -4,9 +4,9 @@ import re
 import yaml
 
 # Add the domains path to sys.path
-sys.path.append(str(Path('/Users/dabodestroyer/code/Antigravity/LifeOs/apps/api/src')))
+sys.path.append(str(Path('/Users/dabodestroyer/code/Antigravity/Ater/apps/api/src')))
 
-from domains.oka.post_processing import sanitize_body, canonicalize_unit
+from domains.ater.post_processing import sanitize_body, canonicalize_unit
 
 def fix_all_notes(unit_dir_path):
     unit_dir = Path(unit_dir_path)
@@ -38,4 +38,4 @@ def fix_all_notes(unit_dir_path):
     print("Done.")
 
 if __name__ == "__main__":
-    fix_all_notes("/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault/Notes/Winter 2026/Economics/1_Basics_Of_Economics")
+    fix_all_notes("/Users/dabodestroyer/code/Antigravity/Ater/Obsidian_Vault/Notes/Winter 2026/Economics/1_Basics_Of_Economics")

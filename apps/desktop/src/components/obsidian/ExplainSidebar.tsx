@@ -43,14 +43,14 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 320)
   }, [isOpen])
 
-  // Initial explain: uses /api/oka/explain which reads the actual document
+  // Initial explain: uses /api/ater/explain which reads the actual document
   // for context — efficient because it only fetches the relevant page/section.
   const triggerInitialExplain = async (sel: string) => {
     setLoading(true)
     const initMsg: Message = { role: 'user', content: `Explain: "${sel}"` }
     setMessages([initMsg])
     try {
-      const res = await sidecarApi.okaExplain({
+      const res = await sidecarApi.aterExplain({
         path: path || '',
         selection: sel,
         page: page ?? 1,
@@ -67,7 +67,7 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
     }
   }
 
-  // Follow-ups use /api/oka/chat — sends the full conversation history
+  // Follow-ups use /api/ater/chat — sends the full conversation history
   // with the original selection as context anchor.
   const sendMessage = async () => {
     if (!input.trim() || loading) return
@@ -77,7 +77,7 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
     setInput('')
     setLoading(true)
     try {
-      const res = await sidecarApi.okaChat({
+      const res = await sidecarApi.aterChat({
         path: path || '',
         selection,
         page,

@@ -1,8 +1,8 @@
 {
-  "name": "life-os",
+  "name": "ater",
   "private": true,
   "version": "0.0.1",
-  "description": "Life OS - Personal Intelligence Operating System (Tier 3: Agency Standard)",
+  "description": "Ater - Personal Intelligence Operating System (Tier 3: Agency Standard)",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -10,7 +10,7 @@
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules",
     "build:mobile": "cd apps/mobile-client && pnpm build && cd ../.. && python3 scratch/bundle_scriptable.py",
-    "sidecar:dev": "cd apps/api && uv run uvicorn src.api.main:app --host 127.0.0.1 --port 8765 --reload",
+    "sidecar:dev": "cd apps/api && uv run python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8765 --reload",
     "dev:mobile": "cd apps/mobile-client && pnpm vite",
     "dev:all": "concurrently --kill-others --kill-others-on-fail --names 'SIDECAR,MOBILE,TAURI' --prefix-colors 'blue,magenta,green' \"pnpm run sidecar:dev\" \"pnpm run dev:mobile\" \"cd apps/desktop && pnpm tauri:dev\"",
     "safe-commit": "bash ./.system/scripts/safe-commit.sh",

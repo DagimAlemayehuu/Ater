@@ -53,9 +53,9 @@ QUIZ_STUB_MARKERS = [
 ]
 
 
-class OkaValidator:
+class AterValidator:
     """
-    Nuclear-grade validation suite for OKA notes.
+    Nuclear-grade validation suite for Ater notes.
     Checks structure, wikilink density, error markers, and JSON integrity.
     """
 
@@ -70,7 +70,7 @@ class OkaValidator:
         if "discrete" not in course.lower() and mode != "MATH-PURE":
             return False
         body_lower = body.lower()
-        hits = sum(1 for signal in OkaValidator._CONTINUOUS_MATH_SIGNALS if signal in body_lower)
+        hits = sum(1 for signal in AterValidator._CONTINUOUS_MATH_SIGNALS if signal in body_lower)
         return hits >= 2
 
     @staticmethod
@@ -167,7 +167,7 @@ class OkaValidator:
             errors.append(f"BROKEN_WIKILINKS: {broken_wikilinks[:3]} have spaces inside brackets")
 
         # Math Domain Guard
-        if OkaValidator._has_math_domain_drift(body, course, mode):
+        if AterValidator._has_math_domain_drift(body, course, mode):
             errors.append("MATH_DOMAIN_DRIFT: Continuous math signals detected in discrete course.")
 
         # Intra-unit wikilinks check
@@ -186,8 +186,8 @@ class OkaValidator:
             # code examples inside artifacts; Obsidian renders this fine.
             # Log as a warning but do not block deployment.
             import logging
-            logging.getLogger("LifeOS").warning(
-                "[OkaValidator] Odd code fence count (%d); auto-accepted.", backtick_count
+            logging.getLogger("Ater").warning(
+                "[AterValidator] Odd code fence count (%d); auto-accepted.", backtick_count
             )
 
 
@@ -195,7 +195,7 @@ class OkaValidator:
         quiz_match = re.search(r"```interactive-quiz\s*(.*?)\s*```", body, re.DOTALL)
         if quiz_match:
             quiz_str = quiz_match.group(1).strip()
-            is_valid_json, quiz_data, json_err = OkaValidator.validate_json_robust(quiz_str)
+            is_valid_json, quiz_data, json_err = AterValidator.validate_json_robust(quiz_str)
             if not is_valid_json:
                 errors.append(f"QUIZ_INVALID_JSON: {json_err}")
             else:
@@ -417,7 +417,7 @@ class OkaValidator:
         """Normalise all prerequisite titles to [[Underscore_Title_Case]] format."""
         result = []
         for p in prereqs:
-            inner = OkaValidator.sanitize_title(str(p))
+            inner = AterValidator.sanitize_title(str(p))
             if inner:
                 result.append(f"[[{inner}]]")
         return result

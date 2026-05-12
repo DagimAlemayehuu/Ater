@@ -1,7 +1,7 @@
-# src/domains/oka/keywords.py
+# src/domains/ater/keywords.py
 
 """
-The definitive keyword map for the OKA Domain Router.
+The definitive keyword map for the Ater Domain Router.
 Covers the breadth of human knowledge across Natural Sciences, Formal Sciences, 
 Social Sciences, Humanities, Applied Sciences, and Arts.
 """

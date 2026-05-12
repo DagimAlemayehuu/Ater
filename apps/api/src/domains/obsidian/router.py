@@ -97,7 +97,7 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                             "source": str(sub.relative_to(vault_root))
                         }
 
-            # Pre-seed schema for Study Planner to guarantee OKA properties always exist
+            # Pre-seed schema for Study Planner to guarantee Ater properties always exist
             if "06 - Study Planner" in entry.name:
                 schema.update({
                     "course": {"type": "relation", "source": f"{DB_DIR_PREFIX}/07 - Courses"},

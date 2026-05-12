@@ -3,9 +3,9 @@ import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from .vault_manager import VaultManager
-from .validator import OkaValidator, HARD_FAILURE_MARKERS
+from .validator import AterValidator, HARD_FAILURE_MARKERS
 
-class OkaDeployer:
+class AterDeployer:
     """
     Handles the deployment of AI-generated notes into the Obsidian Vault.
     """
@@ -72,14 +72,14 @@ class OkaDeployer:
                     meta["course"] = session_metadata.get("course")
                 notes_to_deploy.append({"title": meta["title"], "content": body, "metadata": meta})
             else:
-                print(f"[OKA Deployer] Warning: Block {i+1} rejected - No title found.")
+                print(f"[Ater Deployer] Warning: Block {i+1} rejected - No title found.")
 
         if not notes_to_deploy:
-            print(f"[OKA Deployer] FAIL: 0 valid notes extracted from {len(blocks)} candidate blocks.")
+            print(f"[Ater Deployer] FAIL: 0 valid notes extracted from {len(blocks)} candidate blocks.")
             print(f"--- RAW OUTPUT PREVIEW ---\n{ai_output[:200]}...")
             return []
 
-        print(f"[OKA Deployer] Deploying {len(notes_to_deploy)} notes for: {session_metadata.get('hub_title', 'unknown')}")
+        print(f"[Ater Deployer] Deploying {len(notes_to_deploy)} notes for: {session_metadata.get('hub_title', 'unknown')}")
         return await self.deploy_batch(notes_to_deploy, session_metadata)
 
     def deploy_atomic_notes(self, session_id: str, titles: List[str], contents: List[str], plan: Any, session_path: str = "") -> List[Dict[str, str]]:
@@ -226,7 +226,7 @@ class OkaDeployer:
             # Never write a note that contains error markers from failed generation
             raw_content_check = note.get("content", "")
             if any(marker in raw_content_check for marker in HARD_FAILURE_MARKERS):
-                print(f"[OKA Deployer] BLOCKED '{note.get('title', 'unknown')}': contains error marker. Will be queued for regeneration.")
+                print(f"[Ater Deployer] BLOCKED '{note.get('title', 'unknown')}': contains error marker. Will be queued for regeneration.")
                 continue
             title = note.get("title", "Untitled")
             content = note.get("content", "")
@@ -319,14 +319,14 @@ class OkaDeployer:
                 # ── HIGH-PRIORITY LOGGING (v30.0 Pantheon) ──
                 if meta.get("mode") == "DOMAIN-UNKNOWN":
                     import logging
-                    logging.getLogger("LifeOS").warning(
+                    logging.getLogger("Ater").warning(
                         f"🚨 [HIGH_PRIORITY_WARNING] Taxonomy Gap Detected: '{title}' generated using UNIVERSAL FALLBACK. "
                         f"Architecture requires manual taxonomy update."
                     )
 
                 # ── Sanitise prerequisites: spaces → underscores ──
                 if meta.get("prerequisites"):
-                    meta["prerequisites"] = OkaValidator.sanitize_prerequisites(
+                    meta["prerequisites"] = AterValidator.sanitize_prerequisites(
                         meta["prerequisites"]
                     )
 

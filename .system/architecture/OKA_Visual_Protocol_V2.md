@@ -1,6 +1,6 @@
-# OKA VISUAL PROTOCOL V2.0 (Immutable)
+# Ater VISUAL PROTOCOL V2.0 (Immutable)
 
-This protocol establishes the mandatory visual asset standards for the Obsidian Knowledge Architect (OKA).
+This protocol establishes the mandatory visual asset standards for the Obsidian Knowledge Architect (Ater).
 
 ## Section 1: The "Bridge" Mechanics
 Every technical asset MUST be immediately followed by a "Bridge" that explains its contents:

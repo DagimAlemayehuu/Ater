@@ -30,7 +30,7 @@ def clean_llm_output(raw_text: str) -> str:
     
     # Convert closing ``` to --- END_CODE:lang ---
     # Since we don't easily know the lang here, we use a generic marker or try to match.
-    # The OKA parser is usually flexible, but let's try to be precise.
+    # The Ater parser is usually flexible, but let's try to be precise.
     payload = re.sub(r"```\n?", r"\n--- END_CODE:text ---\n", payload)
 
     # 4. Final Polish: Ensure single START_NOTE if it's an atomic note

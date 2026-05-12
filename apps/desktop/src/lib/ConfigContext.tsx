@@ -1,5 +1,5 @@
 /**
- * Life OS - Configuration Context
+ * Ater - Configuration Context
  * 
  * Manages secure storage of API keys and paths via Tauri Store.
  * Provides global state for the app and identifies if onboarding is required.
@@ -82,7 +82,7 @@ interface ConfigContextType {
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
-const STORE_FILENAME = 'life-os-config.json';
+const STORE_FILENAME = 'ater_config.json';
 
 export const DEFAULT_CONFIG: AppConfig = {
     aiProvider: 'google',
@@ -135,7 +135,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
                 let obsidianVaultPath = await store.get<string>('obsidianVaultPath');
                 if (!obsidianVaultPath || obsidianVaultPath.trim() === '') {
-                    obsidianVaultPath = '/Users/dabodestroyer/code/Antigravity/LifeOs/Obsidian_Vault';
+                    obsidianVaultPath = '/Users/dabodestroyer/code/Antigravity/Ater/Obsidian_Vault';
                     await store.set('obsidianVaultPath', obsidianVaultPath);
                     await store.save();
                 }

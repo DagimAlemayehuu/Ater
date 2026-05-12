@@ -1360,7 +1360,7 @@ def validate_single_note(raw_note_content: str, all_notes_metadata: List[Dict[st
 
 
 def main():
-    print("=== Obsidian Knowledge Architect (OKA) Validator (All Increments Active) ===\n")
+    print("=== Obsidian Knowledge Architect (Ater) Validator (All Increments Active) ===\n")
 
     all_notes_metadata_from_vault = vault_utils.load_all_notes_metadata(vault_utils.VAULT_BASE_PATH)
 

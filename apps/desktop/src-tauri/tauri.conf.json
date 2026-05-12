@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Life OS",
+  "productName": "Ater",
   "version": "0.1.0",
-  "identifier": "com.lifeos.app",
+  "identifier": "com.ater.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Life OS",
+        "title": "Ater",
         "width": 1280,
         "height": 800,
         "minWidth": 900,

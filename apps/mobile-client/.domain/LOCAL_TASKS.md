@@ -9,7 +9,7 @@
 ## 2. Feature Implementation
 *   [x] **Registry & Vault Sync**: High-fidelity dashboard for monitoring Notion mirrored databases.
 *   [x] **Obsidian Explorer**: Recursive folder navigation and file selection.
-*   [x] **Autonomous Pipeline Monitor**: Real-time status for the OKA ingestion queue.
+*   [x] **Autonomous Pipeline Monitor**: Real-time status for the Ater ingestion queue.
 *   [x] **Mastery Analysis**: Data visualization for pedagogical proficiency (Mastery Lab).
 *   [x] **Manuscript Reader**: Production-grade Markdown rendering with full metadata support.
 
@@ -18,7 +18,7 @@
 *   [x] **Context Robustness**: Hardened `ThemeProvider`, `ConfigProvider`, and `LayoutProvider` for mobile environments.
 *   [x] **Global Error Management**: Implemented premium Error Boundary system for fail-safe rendering.
 *   [x] **Socratic Lab Stabilization**: Resolved UI crashes and implemented robust metric reduction logic.
-*   [x] **Academic Database Explorer**: High-fidelity mobile view for OKA databases with mastery metrics and unit navigation.
+*   [x] **Academic Database Explorer**: High-fidelity mobile view for Ater databases with mastery metrics and unit navigation.
 *   [x] **Binary Data Pipeline**: Hardened PDF and image rendering via native Scriptable bridge.
 
 *   [x] **Desktop Parity (Obsidian)**: Implemented high-fidelity navigation history, compact structured properties UI, and vault graph visualization.
@@ -26,5 +26,5 @@
 *   [ ] **Search Optimization**: Fuzzy search across the entire vault using local index.
 *   [ ] **PWA Support**: Implement service worker for offline manuscript reading.
 *   [x] **Desktop Parity (Board Views)**: Implement high-fidelity board views for database visualization.
-*   [ ] **PDF Upload Flow**: Native mobile file picker for initiating OKA ingestion batches.
+*   [ ] **PDF Upload Flow**: Native mobile file picker for initiating Ater ingestion batches.
 *   [ ] **Biometric Lock**: Privacy layer for sovereign knowledge vaults.

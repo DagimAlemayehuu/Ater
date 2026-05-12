@@ -4,7 +4,7 @@ import datetime
 
 class ObsidianClient:
     """
-    Life OS Obsidian Vault Scanner.
+    Ater Obsidian Vault Scanner.
     Provides local access to Markdown knowledge files.
     """
 

@@ -3,9 +3,9 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 
-// Initialize LifeOS Scriptable Bridge
+// Initialize Ater Scriptable Bridge
 if (typeof window !== 'undefined') {
-  (window as any).LifeOS = (window as any).LifeOS || {
+  (window as any).Ater = (window as any).Ater || {
     send: (type: string, message: any) => {
       // @ts-ignore
       if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.scriptable) {
@@ -14,7 +14,7 @@ if (typeof window !== 'undefined') {
       }
     },
     onResponse: (requestId: string, data: any, error: any) => {
-      const event = new CustomEvent('lifeos-api-response', {
+      const event = new CustomEvent('ater-api-response', {
         detail: { requestId, data, error }
       });
       window.dispatchEvent(event);

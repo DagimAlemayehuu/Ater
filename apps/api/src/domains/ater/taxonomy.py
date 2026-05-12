@@ -1,7 +1,7 @@
-# src/domains/oka/taxonomy.py
+# src/domains/ater/taxonomy.py
 
 """
-The definitive structural map of the OKA Pantheon.
+The definitive structural map of the Ater Pantheon.
 Defines the hierarchical relationship between disciplines and domain keys.
 """
 

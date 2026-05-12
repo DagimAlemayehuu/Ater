@@ -357,8 +357,8 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  )
 }
 
-/* ─── AI Agents (OKA) Dashboard ─── */
-function OkaDashboard({onBack}: {onBack: () => void}) {
+/* ─── AI Agents (Ater) Dashboard ─── */
+function AterDashboard({onBack}: {onBack: () => void}) {
  const {config, saveConfig} = useConfig()
  const navigate = useNavigate()
  const [queueStatus, setQueueStatus] = useState<any>(null)
@@ -379,7 +379,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  const [totalBatches, setTotalBatches] = useState<number>(0)
  const [isCompleted, setIsCompleted] = useState(false)
  const [batchFeed, setBatchFeed] = useState<any[]>([])
- const [okaError, setOkaError] = useState<string | null>(null)
+ const [aterError, setAterError] = useState<string | null>(null)
 
  const [isAwaitingNextBatch, setIsAwaitingNextBatch] = useState(false)
 
@@ -387,7 +387,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
 
  const fetchStatus = async () => {
  try {
- const res = await sidecarApi.okaQueueStatus()
+ const res = await sidecarApi.aterQueueStatus()
  setQueueStatus(res)
 } catch (err) {console.error(err)}
 }
@@ -427,7 +427,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  const fetchInbox = async () => {
  setLoadingInbox(true)
  try {
- const res = await sidecarApi.okaListInbox()
+ const res = await sidecarApi.aterListInbox()
  setInboxFiles(res.files || [])
 } finally {setLoadingInbox(false)}
 }
@@ -454,11 +454,11 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
 
  const toggleAutoDeploy = async () => {
  await saveConfig({autoDeploy: !config?.autoDeploy})
- await sidecarApi.okaWatcherToggle()
+ await sidecarApi.aterWatcherToggle()
  fetchStatus()
 }
 
- const resetOkaSession = () => {
+ const resetAterSession = () => {
  setSessionId(null)
  setIsAwaitingConfirmation(false)
  setIsCurriculumReady(false)
@@ -468,14 +468,14 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  setStructuredPlan(null)
  setBatchFeed([])
  setSelectedInboxFile(null)
- setOkaError(null)
+ setAterError(null)
  fetchInbox()
 }
 
  const processSelectedFile = async (manualHubId?: string) => {
  if (!selectedInboxFile) return
  setProcessing(true)
- setOkaError(null)
+ setAterError(null)
  setActivePlan(null)
  setStructuredPlan(null)
  setIsCurriculumReady(false)
@@ -483,13 +483,13 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  
  try {
  // First pass: Just get hub detection and metadata list (NO AI)
- const res = await sidecarApi.okaProcess({
+ const res = await sidecarApi.aterProcess({
  file_path: selectedInboxFile.path,
  target_hub_id: manualHubId ? String(manualHubId) : undefined
 })
 
  if (res.status === 'error') {
-  setOkaError((res as any).message || 'Detection failed');
+  setAterError((res as any).message || 'Detection failed');
   setProcessing(false);
   return;
  }
@@ -513,17 +513,17 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
 })
  setIsCurriculumReady(true)
 } catch (err: any) {
- setOkaError(err.message || 'Detection failed')
+ setAterError(err.message || 'Detection failed')
 } finally {setProcessing(false)}
 }
 
  const startPlanning = async () => {
  if (!selectedInboxFile) return
  setProcessing(true)
- setOkaError(null)
+ setAterError(null)
  try {
  // Second pass: Now generate the full plan using the (finalized) curriculum
- const res = await sidecarApi.okaGeneratePlan({
+ const res = await sidecarApi.aterGeneratePlan({
  file_path: selectedInboxFile.path,
  curriculum: {
  course: String(curriculum.course || ""),
@@ -540,7 +540,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  setTotalBatches(res.plan_structured?.batches?.length || 1)
  setCurrentBatch(0)
 } catch (err: any) {
- setOkaError(err.message || 'Planning failed')
+ setAterError(err.message || 'Planning failed')
 } finally {setProcessing(false)}
 }
 
@@ -574,7 +574,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  ? "Confirm Final Plan & Proceed Batch 1" 
  : `Proceed Batch ${currentLocalBatch + 1}`);
 
- const res = await sidecarApi.okaConfirm({
+ const res = await sidecarApi.aterConfirm({
  session_id: sessionId, 
  command,
  curriculum_override: currentLocalBatch === 0 ? {
@@ -616,7 +616,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
 }
 }
 } catch (err: any) {
- setOkaError(err.message || 'Workflow failed')
+ setAterError(err.message || 'Workflow failed')
  setIsAwaitingNextBatch(true) // allow retry
 } finally {
  setProcessing(false) 
@@ -703,7 +703,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
     inboxFiles.map(f => (
     <div 
     key={f.path} 
-    onClick={() => {setSelectedInboxFile(f); setOkaError(null); setActivePlan(null); setIsAwaitingConfirmation(false); setIsCurriculumReady(false); setBatchFeed([]);}}
+    onClick={() => {setSelectedInboxFile(f); setAterError(null); setActivePlan(null); setIsAwaitingConfirmation(false); setIsCurriculumReady(false); setBatchFeed([]);}}
     className="p-8 rounded-lg border border-border bg-muted/5 hover:bg-muted/5 hover:border-foreground/30 cursor-pointer  group flex flex-col justify-between"
     >
     <div>
@@ -771,7 +771,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  </div>
  )}
  {isCompleted && (
- <button onClick={resetOkaSession} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg ">
+ <button onClick={resetAterSession} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg ">
  Reset
  </button>
  )}
@@ -858,7 +858,7 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  
  {b.results.length === 0 && (
  <div className="mb-4 mt-2 p-4 rounded-xl bg-destructive/5 border border-destructive/20">
- <p className="text-[10px] text-destructive font-black uppercase tracking-widest mb-3">No OKA Regions detected.</p>
+ <p className="text-[10px] text-destructive font-black uppercase tracking-widest mb-3">No Ater Regions detected.</p>
  <pre className="text-[9px] bg-background border border-border p-3 rounded-lg overflow-x-auto font-mono text-muted-foreground/60">
  {b.ai_output}
  </pre>
@@ -893,13 +893,13 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
  </div>
  )}
 
- {okaError && (
+ {aterError && (
  <div className="p-6 rounded-2xl bg-destructive/5 border border-destructive/20 mt-8">
  <div className="flex items-center gap-2 mb-3 text-[10px] font-black uppercase tracking-widest text-destructive">
  
  Error
  </div>
- <p className="text-[10px] font-mono text-destructive/80">{okaError}</p>
+ <p className="text-[10px] font-mono text-destructive/80">{aterError}</p>
  </div>
  )}
  </div>
@@ -912,5 +912,5 @@ function OkaDashboard({onBack}: {onBack: () => void}) {
 
 /* ─── Main Agents Hub ─── */
 export default function Agents() {
- return <OkaDashboard onBack={() => {}} />
+ return <AterDashboard onBack={() => {}} />
 }
