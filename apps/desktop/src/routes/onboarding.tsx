@@ -137,9 +137,9 @@ export default function Onboarding() {
 
         <button 
           onClick={selectVault}
-          className="w-full p-4 rounded bg-muted/5 border border-border hover:bg-muted/10 transition-all flex flex-col items-center gap-1"
+          className="h-8 px-3 flex flex-col items-center justify-center rounded-xl bg-background border border-border text-foreground/50 hover:text-foreground hover:bg-foreground/5 hover:border-foreground/40 transition-all active:scale-95 w-full"
         >
-          <span className="text-[9px] font-black uppercase tracking-widest text-foreground">
+          <span className="text-[10px] font-black uppercase tracking-widest text-foreground">
             {vaultPath ? vaultPath.split('/').pop() : 'Select Folder'}
           </span>
           {vaultPath && <span className="text-[7px] font-mono text-muted-foreground truncate max-w-full opacity-40">{vaultPath}</span>}
@@ -179,8 +179,8 @@ export default function Onboarding() {
               className={cn(
                 "px-2 py-1 rounded text-[7px] font-black uppercase tracking-widest border transition-all",
                 provider === p 
-                  ? "bg-muted/20 text-foreground border-border" 
-                  : "bg-transparent text-muted-foreground/40 border-transparent hover:text-foreground"
+                  ? "bg-foreground/10 text-foreground border-foreground/50 shadow-sm" 
+                  : "bg-transparent text-muted-foreground/40 border-transparent hover:text-foreground hover:bg-foreground/5"
               )}
             >
               {p}

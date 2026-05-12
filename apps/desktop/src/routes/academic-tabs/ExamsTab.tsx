@@ -102,7 +102,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  <div className="h-full overflow-y-auto custom-scrollbar p-6 lg:p-10 space-y-8">
  <div className="flex items-center justify-between">
  <div>
- <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Exam Detail</span>
+ <span className="text-[9px] font-black uppercase tracking-widest text-foreground/50">Exam Detail</span>
  <EditableTitle
  value={exam.title}
  className="text-2xl font-black uppercase"
@@ -111,11 +111,11 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  setSelectedId(next)
 }}
  />
- <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{cleanTitle(examCourse)}</span>
+ <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">{cleanTitle(examCourse)}</span>
  </div>
  <div className="flex items-center gap-2">
  <button onClick={() => {onDelete('04 - Exams', selectedId); setSelectedId(null)}}
- className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg ">
+ className="p-2 text-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-lg ">
  <Trash2 size={13} />
  </button>
  <button onClick={() => setSelectedId(null)} className="px-3 py-1.5 bg-muted/10 border border-border rounded-lg text-[9px] font-black uppercase hover:bg-muted/20 ">Back</button>
@@ -171,10 +171,10 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  {isDone && <Check size={9} strokeWidth={4} className="text-primary-foreground" />}
  </div>
  <div className="flex-1 min-w-0">
- <span className={cn('text-[10px] font-black uppercase truncate block', isDone ? 'text-muted-foreground' : 'text-foreground')}>
+ <span className={cn('text-[10px] font-black uppercase truncate block', isDone ? 'text-foreground/40' : 'text-foreground')}>
  {cleanTitle(hub.title || hub.id)}
  </span>
- <span className="text-[7px] font-black text-muted-foreground uppercase">Unit {getVal(hub, 'unit', 'Unit') || '?'}</span>
+ <span className="text-[7px] font-black text-foreground/50 uppercase">Unit {getVal(hub, 'unit', 'Unit') || '?'}</span>
  </div>
  </div>
  )
@@ -193,9 +193,9 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  <div className="mx-6 mt-6 mb-2 shrink-0">
  <div className="p-6 sm:p-8 border border-border bg-muted/5 rounded-2xl flex items-center justify-between gap-6">
  <div className="space-y-1">
- <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground">Next Exam</span>
+ <span className="text-[9px] font-black uppercase tracking-[0.3em] text-foreground/50">Next Exam</span>
  <h2 className="text-xl font-black uppercase tracking-tighter text-foreground">{cleanTitle(nextExam.title)}</h2>
- <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+ <p className="text-[10px] font-black uppercase tracking-widest text-foreground/50">
  {cleanTitle(stripWL(getVal(nextExam, 'Course', 'course')))} · {getVal(nextExam, 'date', 'Exam Date') ? format(parseISO(getVal(nextExam, 'date', 'Exam Date')), 'MMM dd, yyyy') : '--'}
  </p>
  </div>
@@ -203,7 +203,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  <div className="text-3xl font-black tracking-tighter text-foreground">
  {daysToNext ?? '--'}
  </div>
- <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Days Left</div>
+ <div className="text-[9px] font-black uppercase tracking-widest text-foreground/50">Days Left</div>
  </div>
  </div>
  </div>
@@ -214,15 +214,15 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
   <div className="flex items-center justify-between w-full">
    {/* Stats */}
    <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest">
-   {upcoming.length > 0 && <span className="text-foreground">{upcoming.length} <span className="text-muted-foreground">upcoming</span></span>}
-   {past.length > 0 && <span className="text-muted-foreground">{past.length} past</span>}
+   {upcoming.length > 0 && <span className="text-foreground">{upcoming.length} <span className="text-foreground/50">upcoming</span></span>}
+   {past.length > 0 && <span className="text-foreground/40">{past.length} past</span>}
    </div>
    
    {/* Filters */}
    <div className="flex items-center gap-2">
     <div className="flex bg-muted/5 p-1 rounded-lg border border-border">
-     <button onClick={() => setStatusFilter('Active')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md ", statusFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground  hover:bg-muted/5")}>Active</button>
-     <button onClick={() => setStatusFilter('All')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md ", statusFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground  hover:bg-muted/5")}>All</button>
+     <button onClick={() => setStatusFilter('Active')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md ", statusFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>Active</button>
+     <button onClick={() => setStatusFilter('All')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md ", statusFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>All</button>
     </div>
    </div>
   </div>
@@ -236,7 +236,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
   <button key={id} onClick={() => setCourseFilter(id)}
   className={cn(
   'px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wide whitespace-nowrap ',
-  courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-transparent bg-muted/5 text-muted-foreground  hover:border-border'
+  courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-transparent bg-muted/5 text-foreground/50  hover:border-border'
   )}>{label}</button>
   )
  })}
@@ -277,21 +277,21 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  <div className="flex items-start justify-between gap-3 mb-3">
  <div className="flex-1 min-w-0">
  <span className="text-[13px] font-black uppercase block truncate">{cleanTitle(exam.title)}</span>
- <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">{cleanTitle(examCourse)}</span>
+ <span className="text-[8px] font-black uppercase tracking-widest text-foreground/50">{cleanTitle(examCourse)}</span>
  </div>
  <div className="text-right shrink-0">
  <div className={cn('text-xl font-black')}>{days}</div>
- <div className="text-[7px] font-black uppercase text-muted-foreground">days</div>
+ <div className="text-[7px] font-black uppercase text-foreground/50">days</div>
  </div>
  </div>
- <div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+ <div className="text-[8px] font-black uppercase tracking-widest text-foreground/40 mb-2">
  {getVal(exam, 'date', 'Exam Date') ? format(parseISO(getVal(exam, 'date', 'Exam Date')), 'EEE, MMM dd') : 'No Date'}
  </div>
  {prepPct !== null && (
  <div className="space-y-1">
  <div className="flex justify-between items-center">
- <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground">Prep</span>
- <span className="text-[7px] font-black text-muted-foreground">{doneHubs}/{relatedHubs.length} hubs</span>
+ <span className="text-[7px] font-black uppercase tracking-widest text-foreground/50">Prep</span>
+ <span className="text-[7px] font-black text-foreground/50">{doneHubs}/{relatedHubs.length} hubs</span>
  </div>
  <div className="h-1 bg-muted/20 rounded-full overflow-hidden">
  <div className="h-full bg-foreground/70 " style={{width: `${prepPct}%`}} />
@@ -318,7 +318,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  <div className="flex items-start justify-between gap-3">
  <div className="flex-1 min-w-0">
  <span className="text-[13px] font-black uppercase block truncate">{cleanTitle(exam.title)}</span>
- <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">
+ <span className="text-[8px] font-black uppercase tracking-widest text-foreground/40">
  {cleanTitle(stripWL(getVal(exam, 'Course', 'course')))} · {getVal(exam, 'date', 'Exam Date') ? format(parseISO(getVal(exam, 'date', 'Exam Date')), 'MMM dd') : '--'}
  </span>
  </div>
@@ -334,7 +334,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  </div>
  ) : (
  <button onClick={() => {setEditingScore(exam.id); setScoreInput('')}}
- className="px-2 py-1 text-[8px] font-black uppercase tracking-wide text-muted-foreground border border-border rounded  ">
+ className="px-2 py-1 text-[8px] font-black uppercase tracking-wide text-foreground/50 border border-border rounded  ">
  + Score
  </button>
  )}

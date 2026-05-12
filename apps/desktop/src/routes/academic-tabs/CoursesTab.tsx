@@ -223,7 +223,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  className="p-5 border border-border rounded-xl cursor-pointer bg-background  group flex flex-col gap-3">
  {/* Title + Grade */}
  <div className="flex items-start justify-between gap-2">
- <h3 className="text-[13px] font-black uppercase leading-tight  cursor-pointer"
+ <h3 className="text-[13px] font-black uppercase leading-tight text-foreground cursor-pointer"
  onClick={(e) => {
  e.stopPropagation()
  const next = window.prompt('Rename Course', course.title || '')
@@ -236,7 +236,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  </div>
 
  {/* Meta */}
- <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-muted-foreground">
+ <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-foreground/50">
  {professor && <span>{professor}</span>}
  {professor && credits && <span>·</span>}
  {credits && <span>{credits} CR</span>}
@@ -245,7 +245,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  {/* Hub progress */}
  {courseHubs.length > 0 && (
  <div className="space-y-1">
- <div className="flex justify-between text-[7px] font-black uppercase text-muted-foreground">
+ <div className="flex justify-between text-[7px] font-black uppercase text-foreground/60">
  <span>Study Progress</span>
  <span>{doneHubs}/{courseHubs.length}</span>
  </div>
@@ -259,9 +259,9 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  <div className="flex items-center gap-3 text-[8px] font-black uppercase tracking-widest border-t border-border pt-2">
  {pending > 0 && <span className="text-foreground">{pending} due</span>}
  {daysToExam !== null && daysToExam >= 0 && (
- <span className={daysToExam <= 7 ? 'text-foreground font-black' : 'text-muted-foreground'}>exam in {daysToExam}d</span>
+ <span className={daysToExam <= 7 ? 'text-foreground font-black' : 'text-foreground/60'}>exam in {daysToExam}d</span>
  )}
- {pending === 0 && daysToExam === null && <span className="text-muted-foreground">All clear</span>}
+ {pending === 0 && daysToExam === null && <span className="text-foreground/40">All clear</span>}
  </div>
  </div>
  )

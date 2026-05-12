@@ -175,16 +175,16 @@ export default function AcademicDashboard() {
  useEffect(() => {
    setRightContent(
      <div className="flex items-center gap-2 shrink-0">
-       <button aria-label="Sync Vault Databases" onClick={handleSync} className="flex items-center justify-center w-7 h-7 bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary  shadow-sm focus-visible:ring-1 focus-visible:ring-primary outline-none" title="Sync Vault Databases">
+       <button aria-label="Sync Vault Databases" onClick={handleSync} className="h-8 px-3 flex items-center justify-center rounded-xl bg-background border border-border text-foreground/50 hover:text-foreground hover:bg-foreground/5 hover:border-foreground/40 transition-all active:scale-95 text-[10px] font-black uppercase tracking-widest" title="Sync Vault Databases">
          <RefreshCw size={12} />
        </button>
        <button onClick={() => setActiveTab(prev => prev === 'CALENDAR' ? 'PROGRAM' : 'CALENDAR')}
          title={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar (Cmd+C)'}
          aria-label={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar'}
          className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[8px] font-black uppercase tracking-widest  focus-visible:ring-1 focus-visible:ring-primary outline-none',
-         activeTab === 'CALENDAR' ? 'bg-primary text-primary-foreground' : 'bg-background border border-border text-muted-foreground hover:text-foreground hover:border-primary shadow-sm')}>
+         activeTab === 'CALENDAR' ? 'bg-foreground/10 text-foreground border border-border/50' : 'bg-background border border-border text-foreground/50 hover:text-foreground hover:border-primary shadow-sm')}>
          <CalendarDays size={11} />
-         <span className="hidden sm:inline">{activeTab === 'CALENDAR' ? 'Close' : 'Calendar'}</span>
+         <span className="hidden sm:inline">{activeTab === 'CALENDAR' ? 'Dashboard' : 'Calendar'}</span>
        </button>
      </div>
    )

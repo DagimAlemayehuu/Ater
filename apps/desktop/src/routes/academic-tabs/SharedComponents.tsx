@@ -15,7 +15,7 @@ export function TabButton({active, onClick, icon, label}: {
  'relative flex-none flex items-center gap-1.5 pb-2.5 pt-2 px-4 text-[9px] font-black uppercase tracking-widest  whitespace-nowrap border-b-2 focus-visible:ring-1 focus-visible:ring-primary outline-none',
  active
  ? 'text-foreground border-foreground'
- : 'text-muted-foreground border-transparent  hover:border-border'
+ : 'text-foreground/50 border-transparent  hover:border-border'
  )}>
  {icon}<span>{label}</span>
  </button>
@@ -28,7 +28,7 @@ export function SectionHeader({title, count, onAction, actionLabel}: {
 }) {
  return (
  <div className="flex items-center gap-3">
- <h2 className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground shrink-0">{title}</h2>
+ <h2 className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/60 shrink-0">{title}</h2>
  {count !== undefined && <span className="text-[8px] font-black text-muted-foreground">{count}</span>}
  <div className="h-px flex-1 bg-border" />
  {onAction && (
@@ -54,7 +54,7 @@ export function EmptyState({message, icon}: {message: string; icon?: React.React
 export function StatCard({label, value, accent, onClick}: {label: string; value: string | number; accent?: boolean; onClick?: () => void}) {
  return (
  <div onClick={onClick} className={cn('p-6 border border-border rounded-2xl bg-muted/5 flex flex-col gap-2 ', onClick && 'cursor-pointer hover:bg-muted/10 hover:border-foreground/70')}>
- <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">{label}</span>
+ <span className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/50">{label}</span>
  <span className={cn('text-xl font-black tracking-tighter truncate', accent ? 'text-primary' : 'text-foreground')}>{value}</span>
  </div>
  )
@@ -95,7 +95,7 @@ export function BigPropertyCard({label, value, schema, onUpdate}: {
  const isChecked = value === true || value === 'true'
  return (
  <div className="p-6 border border-border rounded-2xl bg-muted/5 flex flex-col justify-between gap-6 hover:border-foreground/70 ">
- <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">{displayLabel}</span>
+ <span className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/50">{displayLabel}</span>
  <div className="flex items-center justify-between">
  <span className="text-xl font-black uppercase tracking-tight">{isChecked ? 'Yes' : 'No'}</span>
  <button onClick={() => handleSave(!isChecked)} className={cn('w-8 h-8 flex items-center justify-center rounded-xl ', isChecked ? 'text-foreground border border-foreground bg-muted/5' : 'bg-muted/5 border border-border hover:bg-muted/10')}>
@@ -110,7 +110,7 @@ export function BigPropertyCard({label, value, schema, onUpdate}: {
  <div className="p-6 border border-border rounded-2xl bg-muted/5 flex flex-col gap-3 group/bigprop relative hover:bg-muted/10 hover:border-foreground/70  cursor-pointer"
  onClick={startEditing}>
  <div className="flex items-center justify-between">
- <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">{displayLabel}</span>
+ <span className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/50">{displayLabel}</span>
  <div className="flex items-center gap-2">
  {isEditing && <span className="text-[8px] font-black text-primary uppercase ">Editing</span>}
  <Edit3 size={11} className="text-muted-foreground/0 group-hover/bigprop:text-muted-foreground " />

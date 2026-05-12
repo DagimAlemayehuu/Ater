@@ -78,17 +78,17 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
   <div className="flex items-center justify-between w-full">
    {/* Stats */}
    <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest">
-   <span className="text-foreground">{pending.length} <span className="text-muted-foreground">pending</span></span>
-   {overdue.length > 0 && <span className="text-foreground font-black">{overdue.length} <span className="text-muted-foreground">overdue</span></span>}
-   {todayDue.length > 0 && <span className="text-foreground">{todayDue.length} <span className="text-muted-foreground">today</span></span>}
-   <span className="text-muted-foreground">{done.length} done</span>
+   <span className="text-foreground">{pending.length} <span className="text-foreground/50">pending</span></span>
+   {overdue.length > 0 && <span className="text-foreground font-black">{overdue.length} <span className="text-foreground/60">overdue</span></span>}
+   {todayDue.length > 0 && <span className="text-foreground">{todayDue.length} <span className="text-foreground/50">today</span></span>}
+   <span className="text-foreground/40">{done.length} done</span>
    </div>
    
    {/* Filters */}
    <div className="flex items-center gap-2">
     <div className="flex bg-muted/5 p-1 rounded-lg border border-border">
-     <button onClick={() => setStatusFilter('Active')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md ", statusFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground  hover:bg-muted/5")}>Active</button>
-     <button onClick={() => setStatusFilter('All')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md ", statusFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground  hover:bg-muted/5")}>All</button>
+     <button onClick={() => setStatusFilter('Active')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md ", statusFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>Active</button>
+     <button onClick={() => setStatusFilter('All')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md ", statusFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>All</button>
     </div>
    </div>
   </div>
@@ -102,7 +102,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <button key={id} onClick={() => setCourseFilter(id)}
  className={cn(
  'px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wide whitespace-nowrap ',
- courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-transparent bg-muted/5 text-muted-foreground  hover:border-border'
+ courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-transparent bg-muted/5 text-foreground/50  hover:border-border'
  )}>{label}</button>
  )
 })}
@@ -141,8 +141,8 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  {todayDue.length > 0 && (
  <section className="space-y-2">
  <div className="flex items-center gap-3">
- <Clock size={11} className="text-muted-foreground" />
- <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground">Due Today — {todayDue.length}</span>
+ <Clock size={11} className="text-foreground/60" />
+ <span className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/60">Due Today — {todayDue.length}</span>
  <div className="h-px flex-1 bg-border/10" />
  </div>
  <div className="flex flex-col gap-2">
@@ -155,8 +155,8 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  {thisWeek.length > 0 && (
  <section className="space-y-2">
  <div className="flex items-center gap-3">
- <CalendarDays size={11} className="text-muted-foreground" />
- <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground">This Week — {thisWeek.length}</span>
+ <CalendarDays size={11} className="text-foreground/60" />
+ <span className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/60">This Week — {thisWeek.length}</span>
  <div className="h-px flex-1 bg-border/10" />
  </div>
  <div className="flex flex-col gap-2">
@@ -189,10 +189,10 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  {done.length > 0 && (
  <section className="space-y-2 opacity-50">
  <button onClick={() => setShowDone(!showDone)} className="flex items-center gap-3 w-full group">
- <Check size={11} className="text-muted-foreground" />
- <span className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground">Done — {done.length}</span>
+ <Check size={11} className="text-foreground/40" />
+ <span className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/40">Done — {done.length}</span>
  <div className="h-px flex-1 bg-border/10" />
- {showDone ? <ChevronUp size={10} className="text-muted-foreground" /> : <ChevronDown size={10} className="text-muted-foreground" />}
+ {showDone ? <ChevronUp size={10} className="text-foreground/40" /> : <ChevronDown size={10} className="text-foreground/40" />}
  </button>
  {showDone && (
  <div className="flex flex-col gap-2">
@@ -226,7 +226,7 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  return `${days}d`
 }
 
- const daysColor = urgency === 'overdue' ? 'text-foreground font-black' : urgency === 'today' ? 'text-foreground' : 'text-muted-foreground'
+ const daysColor = urgency === 'overdue' ? 'text-foreground font-black' : urgency === 'today' ? 'text-foreground' : 'text-foreground/40'
 
  return (
   <div onClick={onOpen} className={cn(
@@ -247,10 +247,10 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  <div className="flex-1 min-w-0">
  <EditableTitle
  value={cleanTitle(a.title)}
- className={cn('text-[12px] font-black uppercase truncate block', isDone ? 'line-through text-muted-foreground' : 'text-foreground')}
+ className={cn('text-[12px] font-black uppercase truncate block', isDone ? 'line-through text-foreground/30' : 'text-foreground')}
  onSave={(next) => onUpdate('03 - Assignments', a.id, {title: next})}
  />
- {courseName && <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">{cleanTitle(courseName)}</span>}
+ {courseName && <span className="text-[8px] font-black uppercase tracking-widest text-foreground/40">{cleanTitle(courseName)}</span>}
  </div>
 
  {/* Badges & Actions */}
@@ -258,7 +258,7 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  <div className="relative">
  <button onClick={e => {e.stopPropagation(); setShowStatusMenu(!showStatusMenu)}}
  className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border ',
- statusColorClass(stripWL(getVal(a, 'Status', 'status'))) || 'text-muted-foreground bg-muted/10 border-border')}>
+ statusColorClass(stripWL(getVal(a, 'Status', 'status'))) || 'text-foreground/40 bg-muted/10 border-border')}>
  {cleanTitle(stripWL(getVal(a, 'Status', 'status')) || 'Planned')}
  </button>
  {showStatusMenu && (
@@ -275,7 +275,7 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  {priority && <span className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border', priorityColorClass(priority))}>{priority}</span>}
  {daysLabel() && <span className={cn('text-[9px] font-black uppercase tracking-widest', daysColor)}>{daysLabel()}</span>}
  <button onClick={(e) => {e.stopPropagation(); onDelete()}}
- className="p-1.5 text-muted-foreground/0 group-hover:text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md ">
+ className="p-1.5 text-foreground/0 group-hover:text-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-md ">
  <Trash2 size={11} />
  </button>
  </div>

@@ -10,7 +10,7 @@ import { Timer } from 'lucide-react'
 export function AppHeader() {
   const { goBack, goForward, canGoBack, canGoForward, history, currentIndex } = useNavigation()
   const { centerContent, rightContent } = useHeader()
-  const { timeLeft, setShowOverlay } = usePomodoroStore()
+  const { timeLeft, setShowOverlay, isActive: pomodoroActive } = usePomodoroStore()
   const location = useLocation()
 
   // Dynamic Breadcrumb Logic
@@ -70,23 +70,22 @@ export function AppHeader() {
           className={cn(
             "w-8 h-8 flex items-center justify-center rounded-xl border transition-all active:scale-90",
             canGoBack 
-              ? "text-foreground bg-background hover:border-foreground/40 shadow-sm border-border" 
+              ? "text-foreground bg-background hover:bg-foreground/5 hover:border-foreground/40 border-border" 
               : "text-muted-foreground/20 bg-muted/5 border-border/10 cursor-default"
           )}
-          title="Go Back"
         >
           <ChevronLeft size={16} />
         </button>
+
         <button 
-          onClick={goForward}
+          onClick={() => goForward()}
           disabled={!canGoForward}
           className={cn(
             "w-8 h-8 flex items-center justify-center rounded-xl border transition-all active:scale-90",
             canGoForward 
-              ? "text-foreground bg-background hover:border-foreground/40 shadow-sm border-border" 
+              ? "text-foreground bg-background hover:bg-foreground/5 hover:border-foreground/40 border-border" 
               : "text-muted-foreground/20 bg-muted/5 border-border/10 cursor-default"
           )}
-          title="Go Forward"
         >
           <ChevronRight size={16} />
         </button>
@@ -94,7 +93,10 @@ export function AppHeader() {
         {/* Timer Display (Academic Style) */}
         <button 
           onClick={() => setShowOverlay(true)}
-          className="ml-2 px-3 h-8 flex items-center justify-center rounded-xl border border-border bg-background hover:border-foreground/40 transition-all active:scale-95 text-[11px] font-black tabular-nums shadow-sm"
+          className={cn(
+            "ml-2 px-3 h-8 flex items-center justify-center rounded-xl border border-border transition-all active:scale-95 text-[11px] font-black tabular-nums shadow-sm",
+            pomodoroActive ? "bg-foreground/10 text-foreground border-border/50" : "bg-background hover:border-foreground/40"
+          )}
         >
           {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
         </button>

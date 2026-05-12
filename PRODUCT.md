@@ -5,13 +5,13 @@
 product
 
 ## Users
-Power users, researchers, and individuals seeking a disciplined, technical "LifeOS" for knowledge management. It serves both the creator's personal needs and a broader audience of organized professionals who value high-performance tools.
+Power users, researchers, and individuals seeking a disciplined, technical "Ater" system for knowledge management. It serves both the creator's personal needs and a broader audience of organized professionals who value high-performance tools.
 
 ## Product Purpose
-A surgical "Living Blueprint" for life and knowledge orchestration. It transforms raw information into a high-performance instrument for thought, enabling deep work through a focused, distraction-free interface.
+Ater: A surgical "Living Blueprint" for life and knowledge orchestration. It transforms raw information into a high-performance instrument for thought, enabling deep work through a focused, distraction-free interface. "Ater" (Shorter) reflects our commitment to brevity and essence.
 
 ## Brand Personality
-Minimal, Precise, Functional.
+Minimal, Precise, Functional, Brief.
 
 ## Anti-references
 Clutter, unnecessary decoration, distracting UI patterns (pop-ups, modals as first-thought), "SaaS-cream" aesthetics, and overloaded information density without clear hierarchy.

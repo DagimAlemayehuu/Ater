@@ -479,7 +479,7 @@ export const sidecarApi = {
         request<{ vaults: any[] }>(`/api/practice/vault/list?hub_id=${encodeURIComponent(hubId)}`),
 
     vaultUploadText: (hubId: string, sourceName: string, sourceText: string) =>
-        request<{ vault_path: string; total_questions: number }>('/api/practice/vault/upload', {
+        request<{ path: string; total: number }>('/api/practice/vault/upload', {
             method: 'POST',
             body: JSON.stringify({ hub_id: hubId, source_name: sourceName, source_text: sourceText })
         }),

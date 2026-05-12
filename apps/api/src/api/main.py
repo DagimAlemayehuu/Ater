@@ -1254,17 +1254,36 @@ async def oka_chat(
     try:
         # Resolve Context
         is_pdf = path.lower().endswith('.pdf')
-        context_content = ""
-        relative_path = os.path.relpath(path, secrets.vault_path) if secrets.vault_path else path
+        decoded_path = unquote(path)
+        full_path = Path(secrets.vault_path) / decoded_path
+        relative_path = path
         
-        if is_pdf:
-            pdf_service = PdfService(secrets.vault_path)
-            context_content = pdf_service.get_page_text(path, page_num)
-        else:
-            abs_path = os.path.join(secrets.vault_path, path) if secrets.vault_path else path
-            if os.path.exists(abs_path):
-                with open(abs_path, 'r', encoding='utf-8') as f:
-                    context_content = f.read()
+        if not full_path.exists():
+            # Case-insensitive fallback
+            parent = full_path.parent
+            if parent.exists():
+                for f in parent.iterdir():
+                    if f.name.lower() == full_path.name.lower():
+                        full_path = f
+                        break
+        
+        context_content = ""
+        if is_pdf and full_path.exists():
+            from langchain_community.document_loaders import PyPDFLoader
+            loader = PyPDFLoader(str(full_path))
+            pages = loader.load_and_split()
+            if page_num > len(pages):
+                context_content = pages[-1].page_content if pages else ""
+            else:
+                context_content = pages[page_num - 1].page_content
+        elif full_path.exists() and full_path.suffix == ".md":
+            context_content = full_path.read_text(encoding="utf-8")
+        elif full_path.exists():
+            # Fallback for other text files
+            try:
+                context_content = full_path.read_text(encoding="utf-8")
+            except Exception:
+                pass
 
         llm = ModelFactory.get_model(
             provider=secrets.ai_provider,
@@ -1690,31 +1709,25 @@ async def vault_upload_file(
         source_text = ""
 
         if suffix == ".pdf":
-            # Attempt 1: pypdf (fast, pure-python, no deps)
-            try:
-                import pypdf
-                reader = pypdf.PdfReader(tmp_path)
-                pages_text = [page.extract_text() or "" for page in reader.pages]
-                source_text = "\n\n".join(t for t in pages_text if t.strip())
-            except Exception:
-                source_text = ""
-            # Attempt 2: pdfminer
-            if not source_text.strip():
+            # Extract using pypdf in a separate thread so we don't block the async event loop
+            def _extract_pdf(path):
                 try:
-                    from pdfminer.high_level import extract_text as _pdfminer
-                    source_text = _pdfminer(tmp_path) or ""
-                except Exception:
-                    source_text = ""
-            # Attempt 3: langchain PyPDFLoader
+                    import pypdf
+                    reader = pypdf.PdfReader(path)
+                    pages_text = [page.extract_text() or "" for page in reader.pages]
+                    return "\n\n".join(t for t in pages_text if t.strip())
+                except Exception as e:
+                    return ""
+            
+            import asyncio
+            source_text = await asyncio.to_thread(_extract_pdf, tmp_path)
+
+            # Attempt 2: Vision LLM for scanned PDFs (only if PDF is reasonably sized to avoid OOM)
             if not source_text.strip():
-                try:
-                    from langchain_community.document_loaders import PyPDFLoader
-                    pages = PyPDFLoader(tmp_path).load_and_split()
-                    source_text = "\n\n".join(p.page_content for p in pages)
-                except Exception:
-                    source_text = ""
-            # Attempt 4: Vision LLM for scanned PDFs
-            if not source_text.strip():
+                file_size = os.path.getsize(tmp_path)
+                if file_size > 15 * 1024 * 1024: # 15MB limit for base64 vision fallback
+                    raise HTTPException(status_code=422, detail="PDF is a scanned image and too large (>15MB) for Vision extraction. Please use a text-based PDF.")
+                
                 try:
                     with open(tmp_path, "rb") as _fh:
                         b64 = base64.b64encode(_fh.read()).decode()
@@ -1731,6 +1744,7 @@ async def vault_upload_file(
                     source_text = _res.content or ""
                 except Exception:
                     source_text = ""
+                    
             if not source_text.strip():
                 raise HTTPException(status_code=422, detail="Could not extract text from PDF. Try a text-based PDF or paste the content manually.")
 

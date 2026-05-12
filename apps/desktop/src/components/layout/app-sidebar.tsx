@@ -11,8 +11,8 @@ export function AppSidebar() {
             <NavLink 
                 to="/academic"
                 className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-full transition-colors",
-                  isActive ? "text-foreground" : "text-foreground/40 hover:text-foreground/70"
+                  "relative flex items-center justify-center w-8 h-8 rounded-lg transition-all",
+                  isActive ? "text-foreground bg-foreground/10" : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/5"
                 )} 
                 title="Academic Dashboard"
             >
@@ -21,8 +21,8 @@ export function AppSidebar() {
             <NavLink 
                 to="/obsidian"
                 className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-full transition-colors",
-                  isActive ? "text-foreground" : "text-foreground/40 hover:text-foreground/70"
+                  "relative flex items-center justify-center w-8 h-8 rounded-lg transition-all",
+                  isActive ? "text-foreground bg-foreground/10" : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/5"
                 )} 
                 title="Obsidian Vault"
             >
@@ -31,8 +31,8 @@ export function AppSidebar() {
             <NavLink 
                 to="/agents"
                 className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-full transition-colors",
-                  isActive ? "text-foreground" : "text-foreground/40 hover:text-foreground/70"
+                  "relative flex items-center justify-center w-8 h-8 rounded-lg transition-all",
+                  isActive ? "text-foreground bg-foreground/10" : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/5"
                 )} 
                 title="AI Agents"
             >
@@ -46,8 +46,8 @@ export function AppSidebar() {
             <NavLink 
                 to="/onboarding"
                 className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-full transition-colors",
-                  isActive ? "text-foreground" : "text-foreground/40 hover:text-foreground/70"
+                  "relative flex items-center justify-center w-8 h-8 rounded-lg transition-all",
+                  isActive ? "text-foreground bg-foreground/10" : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/5"
                 )} 
                 title="Onboarding"
             >
@@ -56,8 +56,8 @@ export function AppSidebar() {
             <NavLink 
                 to="/settings"
                 className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-full transition-colors",
-                  isActive ? "text-foreground" : "text-foreground/40 hover:text-foreground/70"
+                  "relative flex items-center justify-center w-8 h-8 rounded-lg transition-all",
+                  isActive ? "text-foreground bg-foreground/10" : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/5"
                 )} 
                 title="Settings"
             >

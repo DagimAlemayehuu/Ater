@@ -41,7 +41,7 @@ The concepts of economics interlock to form a comprehensive system that guides t
 - [x] [[Basic_Economic_Questions]]
     - [x] [[For_Whom_To_Produce]]
 - [x] [[Resource_Allocation]]
-    - [ ] [[Efficient_Allocation]]
+    - [x] [[Efficient_Allocation]]
 - [ ] [[Economic_Systems]]
 - [ ] [[Positive_Economics]]
     - [ ] [[Normative_Economics]]

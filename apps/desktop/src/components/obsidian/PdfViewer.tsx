@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
 import { useConfig } from '@/lib/ConfigContext';
 import { useTheme } from '@/context/theme-provider';
 import { ExplainSidebar } from './ExplainSidebar';
@@ -175,7 +175,6 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-background/80 backdrop-blur border border-border/50 shadow-md rounded-full text-[9px] font-black uppercase tracking-widest text-foreground/50 hover:text-foreground hover:border-foreground/30 hover:bg-background transition-all"
                             title="Ask AI about this page"
                         >
-                            <Sparkles size={10} className="text-primary/60" />
                             Ask AI
                         </button>
                     </div>

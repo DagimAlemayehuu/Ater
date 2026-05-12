@@ -8,7 +8,7 @@ import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from '
 import { sidecarApi } from '@/lib/sidecarApi'
 import { WikiLink, renderWikiLinks } from './WikiLink'
 import mermaid from 'mermaid'
-import { Check, RefreshCw, Copy, Sparkles } from 'lucide-react'
+import { Check, RefreshCw, Copy } from 'lucide-react'
 import MiniPracticeUI from '../MiniPracticeUI'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -497,7 +497,6 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                             pointerEvents: 'all',
                         }}
                     >
-                        <Sparkles size={11} className="text-primary/60" />
                         Explain More
                     </button>
                 )}

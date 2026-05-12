@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { X, Send, Loader2, Sparkles, RotateCcw } from 'lucide-react'
+import { X, Send, Loader2, RotateCcw } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
@@ -116,8 +116,7 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/40 shrink-0">
           <div className="flex items-center gap-2">
-            <Sparkles size={13} className="text-primary/50" />
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground/60">
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground italic">
               AI Tutor
             </span>
           </div>
@@ -125,13 +124,13 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
             <button
               onClick={() => { prevSelectionRef.current = ''; triggerInitialExplain(selection) }}
               title="Restart explanation"
-              className="p-1.5 rounded-md text-muted-foreground/30 hover:text-foreground hover:bg-muted/20 transition-colors"
+              className="p-1.5 rounded-md text-muted-foreground/30 hover:text-foreground hover:bg-foreground/5 transition-all"
             >
               <RotateCcw size={12} />
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-md text-muted-foreground/30 hover:text-foreground hover:bg-muted/20 transition-colors"
+              className="p-1.5 rounded-md text-muted-foreground/30 hover:text-foreground hover:bg-foreground/5 transition-all"
             >
               <X size={14} />
             </button>
@@ -156,10 +155,10 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
             <div key={i} className={cn('flex flex-col', msg.role === 'user' ? 'items-end' : 'items-start')}>
               <div
                 className={cn(
-                  'max-w-[92%] rounded-xl px-4 py-3 text-[12px] leading-relaxed',
+                  'max-w-[95%] rounded-xl px-4 py-3 text-[12px] leading-relaxed',
                   msg.role === 'user'
-                    ? 'bg-foreground/8 border border-border/30 text-foreground/70'
-                    : 'bg-muted/5 border border-border/20 text-foreground/80'
+                    ? 'bg-foreground/10 border border-border/30 text-foreground'
+                    : 'bg-muted/30 border border-border/20 text-foreground/80'
                 )}
               >
                 {msg.role === 'assistant' ? (
@@ -188,27 +187,24 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
         </div>
 
         {/* Input */}
-        <div className="px-4 pb-4 pt-3 border-t border-border/20 shrink-0">
+        <div className="px-4 pb-6 pt-3 border-t border-border/20 shrink-0">
           <div className="flex items-end gap-2">
             <textarea
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask a follow-up question…"
-              rows={2}
-              className="flex-1 bg-muted/5 border border-border/30 rounded-xl px-4 py-2.5 text-[12px] text-foreground placeholder:text-muted-foreground/20 focus:outline-none focus:border-foreground/20 resize-none leading-relaxed custom-scrollbar"
+              placeholder="Ask follow-up..."
+              rows={1}
+              className="flex-1 bg-muted/40 border-border/40 rounded-xl px-4 py-2.5 text-[12px] text-foreground placeholder:text-muted-foreground/20 focus:outline-none focus:border-foreground/20 resize-none leading-relaxed custom-scrollbar"
             />
             <button
               onClick={sendMessage}
               disabled={!input.trim() || loading}
-              className="h-10 w-10 flex items-center justify-center rounded-xl bg-muted/5 border border-border/30 hover:border-foreground/30 hover:bg-muted/10 text-foreground/40 hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed transition-all shrink-0"
+              className="h-9 w-9 flex items-center justify-center rounded-xl bg-foreground/10 hover:bg-foreground/20 text-foreground border border-border/40 disabled:opacity-20 disabled:cursor-not-allowed transition-all shrink-0"
             >
               <Send size={13} />
             </button>
-          </div>
-          <div className="mt-2 text-[8px] font-black uppercase tracking-widest text-muted-foreground/20 text-center">
-            Enter to send · Shift+Enter for new line
           </div>
         </div>
       </div>

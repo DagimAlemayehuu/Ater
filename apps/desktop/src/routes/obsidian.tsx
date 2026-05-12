@@ -263,8 +263,8 @@ function NoteProperties({
  onClick={() => setSelectedType(opt.id)}
  title={opt.label}
  className={cn(
- "p-1.5 rounded ",
- selectedType === opt.id ? "bg-primary/10 text-primary" : "text-muted-foreground/20 hover:text-foreground"
+ "p-1.5 rounded transition-colors",
+ selectedType === opt.id ? "bg-foreground/10 text-foreground" : "text-muted-foreground/20 hover:text-foreground"
  )}
  >
  {opt.icon}
@@ -709,9 +709,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                      onClick={() => config && saveConfig({ ...config, showProperties: !config.showProperties })}
                      className={cn(
                        "w-8 h-8 flex items-center justify-center rounded-md border  shadow-sm",
-                       config?.showProperties 
-                       ? "bg-primary border-primary text-primary-foreground" 
-                       : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary"
+                        config?.showProperties 
+                        ? "bg-foreground/10 border-foreground/50 text-foreground" 
+                        : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
                      )}
                      title="Toggle Properties"
                    >
@@ -740,8 +740,8 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                         className={cn(
                           "w-5 h-5 flex items-center justify-center text-[10px] font-black rounded border transition-all",
                           currentWaypointIndex === idx 
-                            ? "bg-primary border-primary text-primary-foreground shadow-sm" 
-                            : "bg-background/50 border-primary/20 text-primary/60 hover:border-primary/40 hover:text-primary"
+                            ? "bg-foreground/10 border-foreground/50 text-foreground shadow-sm" 
+                            : "bg-background/50 border-border/40 text-muted-foreground/60 hover:border-foreground/40 hover:text-foreground"
                         )}
                         title={`Jump to Page ${page}`}
                       >
@@ -779,9 +779,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
              onClick={() => setIsFullscreen(!isFullscreen)}
              className={cn(
                "w-8 h-8 flex items-center justify-center rounded-md border  shadow-sm",
-               isFullscreen 
-               ? "bg-primary border-primary text-primary-foreground" 
-               : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary"
+                isFullscreen 
+                ? "bg-foreground/10 border-foreground/50 text-foreground" 
+                : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
              )}
              title={isFullscreen ? "Exit Focus Mode" : "Focus Mode"}
            >
@@ -1774,11 +1774,11 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }}
  onClick={() => node.isFolder ? toggleFolder(node.path) : selectFile(node.path)}
  className={cn(
-   "flex items-center gap-1.5 py-1 cursor-pointer  px-2 group relative rounded-sm mx-1",
+   "flex items-center gap-1.5 py-1 cursor-pointer px-2 group relative rounded-sm mx-1",
    isSelected 
-    ? "bg-primary/10 text-primary font-bold border-l-2 border-primary shadow-[inset_4px_0_10px_-4px_rgba(var(--primary),0.1)]" 
+    ? "bg-foreground/10 text-foreground font-bold border-l-2 border-foreground/50 shadow-sm" 
     : "hover:bg-foreground/[0.03] text-muted-foreground hover:text-foreground",
-   dragOverPath === node.path && "bg-primary/10 ring-2 ring-primary/40 ring-inset shadow-[0_0_15px_rgba(var(--primary),0.1)]",
+   dragOverPath === node.path && "bg-foreground/10 ring-2 ring-foreground/20 ring-inset",
    draggedPath === node.path && "opacity-40 grayscale"
   )}
  >

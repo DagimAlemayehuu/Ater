@@ -186,8 +186,8 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
     if (!vaultSourceText.trim() || !vaultSourceName.trim() || !selectedHub) return
     setVaultLoading(true); setVaultStatus('Extracting questions...')
     try {
-      await sidecarApi.vaultUploadText(selectedHub, vaultSourceName, vaultSourceText)
-      toast.success('Vault created — questions extracted and solved')
+      const res = await sidecarApi.vaultUploadText(selectedHub, vaultSourceName, vaultSourceText)
+      toast.success(`Vault created — ${res.total || 0} questions read and structured`)
       setVaultSourceText(''); setVaultSourceName('')
       await loadVaultFiles(selectedHub)
     } catch (e: any) {
@@ -691,16 +691,7 @@ const handleStartSession = async () => {
        </Select>
       </div>
       <div className="p-4 bg-muted/5 border border-border rounded-lg space-y-3">
-       <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Add Source</div>
-       <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.txt,.md,.png,.jpg,.jpeg,.webp"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVaultFileUpload(f); e.target.value = '' }} />
-       <button onClick={() => fileInputRef.current?.click()} disabled={vaultLoading}
-        className="w-full p-4 border-2 border-dashed border-border/40 rounded-lg flex flex-col items-center gap-2 hover:border-foreground/30 hover:bg-muted/5 transition-all disabled:opacity-40 text-muted-foreground/50">
-        <Upload size={16}/>
-        <span className="text-[9px] font-black uppercase tracking-widest">PDF / Image / Text</span>
-        <span className="text-[8px] text-muted-foreground/30">Click to upload</span>
-       </button>
-       <div className="flex items-center gap-2"><div className="flex-1 h-px bg-border/20"/><span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/20">or paste text</span><div className="flex-1 h-px bg-border/20"/></div>
+       <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Add Source Text</div>
        <input value={vaultSourceName} onChange={e => setVaultSourceName(e.target.value)} placeholder="Source name (e.g. Midterm 2024)"
         className="w-full px-3 py-2 bg-background border border-border/40 rounded-md text-[10px] font-medium focus:outline-none focus:border-foreground/30"/>
        <textarea value={vaultSourceText} onChange={e => setVaultSourceText(e.target.value)}
