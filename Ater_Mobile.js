@@ -72,7 +72,7 @@ const HTML_CONTENT = `
   <div id="root"></div>
   <div id="boot-loader" style="position:fixed; inset:0; background:#000; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10000; font-family:-apple-system, system-ui, sans-serif;">
     <div style="width:32px; height:32px; border:2px solid rgba(255,255,255,0.05); border-top-color:#fff; border-radius:50%; animation:spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;"></div>
-    <div style="margin-top:24px; font-size:10px; font-weight:700; letter-spacing:0.5em; color:#666; text-transform:uppercase;">Initializing_LifeOS</div>
+    <div style="margin-top:24px; font-size:10px; font-weight:700; letter-spacing:0.5em; color:#666; text-transform:uppercase;">Initializing_Ater</div>
   </div>
   <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
   <script>

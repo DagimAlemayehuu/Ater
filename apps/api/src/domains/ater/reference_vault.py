@@ -258,7 +258,7 @@ class VaultWriter:
         self.vault_path = vault_path
 
     def _vault_dir(self, hub_id: str) -> Path:
-        d = self.vault_path / "Notes" / "Practice" / "Reference_Vault" / hub_id
+        d = self.vault_path / "Database" / "06 - Study Planner" / "_Practice" / "Reference_Vault" / hub_id
         d.mkdir(parents=True, exist_ok=True)
         return d
 

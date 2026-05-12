@@ -1,4 +1,4 @@
-# EXECUTIVE BLUEPRINT: LIFE OS (PERSONAL AGI DASHBOARD)
+# EXECUTIVE BLUEPRINT: ATER (PERSONAL AGI DASHBOARD)
 **Document Status:** Immutable Project Specification
 **Target Architecture:** Tier 3 (Tauri v2 + React + FastAPI Sidecar)
 

@@ -65,7 +65,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 
         obsidianVaultPath,
         inboxPath: (await store.get<string>('inboxPath')) || '',
-        academicFolderPath: (await store.get<string>('academicFolderPath')) || '1-Academic',
+        academicFolderPath: (await store.get<string>('academicFolderPath')) || 'Database',
         autoDeploy: (await store.get<boolean>('autoDeploy')) || false,
     }
 
@@ -85,7 +85,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 
         'X-Vault-Path': config.obsidianVaultPath,
         'X-Inbox-Path': config.inboxPath || '',
-        'X-Academic-Path': config.academicFolderPath || '1-Academic',
+        'X-Academic-Path': config.academicFolderPath || 'Database',
         'X-Auto-Deploy': String(config.autoDeploy || false),
     };
 }

@@ -19,7 +19,7 @@ else:
     # Fallback to local project path if env var is missing
     VAULT_BASE_PATH = Path("/Users/dabodestroyer/code/Antigravity/Ater/Obsidian_Vault")
 
-INTERNAL_INDEX_FILE = VAULT_BASE_PATH / "2-Academic" / "vault_index.json"
+INTERNAL_INDEX_FILE = VAULT_BASE_PATH / "Database" / "00 - Meta" / "vault_index.json"
 
 # New: Define a mapping for note types to their expected subdirectories within unit folder
 # For this change, notes will go into the *unit folder*, and then if there were sub-types,
@@ -337,10 +337,10 @@ def generate_unique_uid():
 def clean_empty_dirs(path: Path, top_level_path: Path):
     """
     Recursively cleans up empty directories starting from 'path' up to 'top_level_path'.
-    Skips the '1-Academic' folder itself and ensures it doesn't try to delete the vault root.
+    Skips the 'Database' folder itself and ensures it doesn't try to delete the vault root.
     """
     current_path = path
-    academic_folder_path = top_level_path / "1-Academic"
+    academic_folder_path = top_level_path / "Database"
 
     while current_path != top_level_path and current_path != academic_folder_path and current_path != current_path.parent:
         try:

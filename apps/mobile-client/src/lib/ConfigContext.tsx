@@ -43,7 +43,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     aiModel: 'gemini-2.0-flash',
     obsidianVaultPath: '',
     inboxPath: '',
-    academicFolderPath: '1-Academic',
+    academicFolderPath: 'Database',
     autoDeploy: false,
     savedApiKeys: []
 };

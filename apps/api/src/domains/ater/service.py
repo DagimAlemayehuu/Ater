@@ -327,17 +327,9 @@ class AterService:
 
     def _get_planner_path(self) -> Path:
         """Resolves the absolute path to the Study Planner database."""
-        # Check standard location
+        # Standard location: Database/06 - Study Planner
         path = Path(self.secrets.vault_path) / "Database" / "06 - Study Planner"
-        if path.exists():
-            return path
-            
-        # Check alternate location (Notes/Database)
-        path = Path(self.secrets.vault_path) / "Notes" / "Database" / "06 - Study Planner"
-        if path.exists():
-            return path
-            
-        return Path(self.secrets.vault_path) / "Database" / "06 - Study Planner" # Return default
+        return path
 
     def list_available_options(self) -> Dict[str, List[str]]:
         """Returns all available options for Course, Semester, Year, Hubs, and Units from the vault."""
@@ -432,17 +424,19 @@ class AterService:
         if academic_unit_dir.exists():
             return academic_unit_dir
             
-        # 2. Try alternate path (Notes/Academic Root)
-        alt_academic_root = Path(self.secrets.vault_path) / "Notes" / semester
-        academic_unit_dir = alt_academic_root / semester / self.vm.get_canonical_title(course) / unit_folder_name
-        if academic_unit_dir.exists():
-            return academic_unit_dir
+        # 2. Try alternate path (Search inside academic root)
+        try:
+            matches = list(self.vm.academic_root.rglob(unit_folder_name))
+            if matches:
+                for m in matches:
+                    if m.is_dir():
+                        return m
+        except Exception:
+            pass
 
         # 3. Try without semester (search inside academic root)
         try:
             matches = list(self.vm.academic_root.rglob(unit_folder_name))
-            if not matches and alt_academic_root.exists():
-                matches = list(alt_academic_root.rglob(unit_folder_name))
                 
             if matches:
                 for m in matches:

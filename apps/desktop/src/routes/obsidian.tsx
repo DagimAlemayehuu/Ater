@@ -1410,7 +1410,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   if (pageName.includes('/')) {
   newPath = pageName.endsWith('.md') ? pageName : `${pageName}.md`;
   } else {
-  let folder = '0-Bases/Inbox'; 
+  let folder = 'Database/00 - Bases/Inbox'; 
   if (selectedPath && selectedPath.includes('/')) {
    folder = selectedPath.substring(0, selectedPath.lastIndexOf('/'));
   }
