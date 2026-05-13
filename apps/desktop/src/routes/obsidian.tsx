@@ -7,7 +7,7 @@ import {
  Database, Search, Archive,
  ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft,
   Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Network,
-  Edit2, Edit3, Save, FolderPlus, Hash, CheckSquare, Link, List, Heart,
+  Edit3, Save, FolderPlus, Hash, CheckSquare, Link, List, Heart,
   Activity, Play, SkipForward, MapPin
 } from 'lucide-react'
 import {motion, AnimatePresence} from 'framer-motion'
@@ -571,6 +571,7 @@ function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox}: 
 
 export default function ObsidianVaultPage() {
   const { config, saveConfig } = useConfig()
+  const navigate = useNavigate()
   const { 
     setCurrentHub, setIsActive, setShowOverlay, 
     setTimeLeft, setShowStats, mode, addNoteFocus, currentHub 
@@ -675,7 +676,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                    className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-md hover:text-foreground hover:border-primary  shadow-sm"
                    title="Edit Note"
                  >
-                   <Edit2 size={14} />
+                    <Edit3 size={14} />
                  </button>
                  {(noteMetadata?.source_file || noteMetadata?.source) && (
                    <button 
@@ -794,7 +795,6 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
      return () => {
        setCenterContent(null)
        setRightContent(null)
-       // setIsFullscreen(false) // REMOVED: This was causing the state to reset on every effect re-run
      }
   }, [selectedPath, isEditing, isFullscreen, pdfState, noteMetadata, config, saveConfig, setCenterContent, setRightContent, isMobile, setIsFullscreen])
  
@@ -1352,98 +1352,137 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
 }
 
- const selectFile = async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = []) => {
- selectRequestId.current += 1
- const currentReq = selectRequestId.current
- 
- setSelectedPath(path)
- setSelectedPage(page)
- setSelectedFilteredPages(filterPages)
- setLoadingNote(true)
- 
-  if (!fromHistory) {
-    // 1. Sync URL for browser history parity
-    const searchParams = new URLSearchParams(location.search);
-    searchParams.set('path', path);
-    if (page > 1) searchParams.set('page', page.toString());
-    else searchParams.delete('page');
-    
-    if (filterPages.length > 0) searchParams.set('filterPages', filterPages.join(','));
-    else searchParams.delete('filterPages');
-    
-    navigate({ search: searchParams.toString() }, { replace: false });
+  const selectFile = async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = []) => {
+    // 0. Skip if already loading the exact same thing
+    if (selectedPath === path && selectedPage === page && !fromHistory) {
+      console.log(`[selectFile] Skip: Already on ${path}`);
+      return;
+    }
 
-    // 2. Push to internal history stack for Ater navigation buttons
-    push({ 
-      type: 'file', 
-      path: path, 
-      metadata: { page, filterPages } 
-    }, false);
+    selectRequestId.current += 1
+    const currentReq = selectRequestId.current
+    
+    console.log(`[selectFile] START: ${path} (reqId: ${currentReq})`)
+    setSelectedPath(path)
+    setSelectedPage(page)
+    setSelectedFilteredPages(filterPages)
+
+    // Delayed loading state: Only show spinner if it takes > 150ms
+    const loadingTimeout = setTimeout(() => {
+      if (selectRequestId.current === currentReq) {
+        setLoadingNote(true)
+      }
+    }, 150);
+
+    // Safety timeout: 15 seconds max for any document load
+    const safetyTimeout = setTimeout(() => {
+      if (selectRequestId.current === currentReq) {
+        console.warn(`[selectFile] Safety timeout triggered for ${path} (reqId: ${currentReq})`);
+        setLoadingNote(false);
+      }
+    }, 15000);
+    
+    if (!fromHistory) {
+      const searchParams = new URLSearchParams(location.search);
+      searchParams.set('path', path);
+      if (page > 1) searchParams.set('page', page.toString());
+      else searchParams.delete('page');
+      
+      if (filterPages.length > 0) searchParams.set('filterPages', filterPages.join(','));
+      else searchParams.delete('filterPages');
+      
+      navigate({ search: searchParams.toString() }, { replace: false });
+
+      push({ 
+        type: 'file', 
+        path: path, 
+        metadata: { page, filterPages } 
+      }, false);
+    }
+
+    // PDFs are handled by an iframe, we don't need to read content here
+    if (path.toLowerCase().endsWith('.pdf')) {
+      console.log(`[selectFile] PDF detected: ${path}`);
+      setNoteMetadata({})
+      setNoteContent('')
+      setEditedContent('')
+      setIsEditing(false)
+      clearTimeout(loadingTimeout)
+      clearTimeout(safetyTimeout)
+      setLoadingNote(false)
+      return
+    }
+
+    try {
+      console.log(`[selectFile] Fetching content: ${path}`);
+      const res = await sidecarApi.readObsidianNote(path)
+      
+      // Prevent stale data from overwriting new request
+      if (selectRequestId.current !== currentReq) {
+        console.log(`[selectFile] Request ${currentReq} is stale, ignoring result.`);
+        return
+      }
+      
+      const content = res.content || '';
+      const metadata = res.metadata || {};
+      
+      setNoteMetadata(metadata);
+      setNoteContent(content);
+      noteContentRef.current = content;
+      setEditedContent(content);
+      setIsEditing(false);
+      
+      console.log(`[selectFile] SUCCESS: ${path} (${content.length} chars)`);
+    } catch (err) {
+      console.error(`[selectFile] ERROR: Failed to read note: ${path}`, err)
+      if (selectRequestId.current === currentReq) {
+        setNoteMetadata({})
+        setNoteContent('# Error\nFailed to load content. Please check if the file exists or the backend is running.')
+      }
+    } finally {
+      clearTimeout(loadingTimeout);
+      clearTimeout(safetyTimeout);
+      if (selectRequestId.current === currentReq) {
+        setLoadingNote(false) 
+      }
+    }
   }
-
- if (path.toLowerCase().endsWith('.pdf')) {
- setNoteMetadata({})
- setNoteContent('')
- setEditedContent('')
- setIsEditing(false)
- setLoadingNote(false)
- return
-}
-
- try {
- const res = await sidecarApi.readObsidianNote(path)
- if (selectRequestId.current !== currentReq) return
- 
- const metadata = res.metadata || {}
- setNoteMetadata(metadata)
- setNoteContent(res.content || '')
-  noteContentRef.current = res.content || ''
- setEditedContent(res.content || '')
- setIsEditing(false)
-
- // Auto-show logic removed for global persistence
-} catch (err) {
- if (selectRequestId.current !== currentReq) return
- console.error('Failed to read note:', err)
- setNoteMetadata({})
- setNoteContent('# Error\nFailed to load content.')
-} finally {
- if (selectRequestId.current === currentReq) {
- setLoadingNote(false) 
-}
-}
-}
 
   const handleWikiLinkClick = async (pageName: string, pageNumber?: number, filterPages: number[] = []) => {
- try {
- const res = await sidecarApi.findVaultPage(pageName);
- if (res.found && res.path) {
- selectFile(res.path, pageNumber, false, filterPages);
-} else if (res.found && res.type === 'database') {
- selectFile(`Database/${res.db_id}/${res.file_name}`, pageNumber, false, filterPages);
-} else {
-  // If the pageName looks like a path (contains slashes), resolve it from root instead of current folder.
-  let newPath = "";
-  if (pageName.includes('/')) {
-  newPath = pageName.endsWith('.md') ? pageName : `${pageName}.md`;
-  } else {
-  let folder = 'Database/00 - Bases/Inbox'; 
-  if (selectedPath && selectedPath.includes('/')) {
-   folder = selectedPath.substring(0, selectedPath.lastIndexOf('/'));
+    setLoadingNote(true);
+    try {
+      console.log(`[WikiLink] Finding page: ${pageName}`);
+      const res = await sidecarApi.findVaultPage(pageName);
+      if (res.found && res.path) {
+        await selectFile(res.path, pageNumber, false, filterPages);
+      } else if (res.found && res.type === 'database') {
+        await selectFile(`Database/${res.db_id}/${res.file_name}`, pageNumber, false, filterPages);
+      } else {
+        console.warn(`[WikiLink] Page not found: ${pageName}. Creating new...`);
+        // If the pageName looks like a path (contains slashes), resolve it from root instead of current folder.
+        let newPath = "";
+        if (pageName.includes('/')) {
+          newPath = pageName.endsWith('.md') ? pageName : `${pageName}.md`;
+        } else {
+          let folder = 'Database/00 - Bases/Inbox'; 
+          if (selectedPath && selectedPath.includes('/')) {
+            folder = selectedPath.substring(0, selectedPath.lastIndexOf('/'));
+          }
+          newPath = folder ? `${folder}/${pageName}.md` : `${pageName}.md`;
+        }
+        
+        const initialContent = `---\ntitle: ${pageName.split('/').pop()?.replace('.md', '')}\nread: false\n---\n\n# ${pageName.split('/').pop()?.replace('.md', '')}\n`;
+        
+        await sidecarApi.createObsidianFile(newPath, initialContent);
+        await fetchFiles(); 
+        await selectFile(newPath, 1, false, []);
+      }
+    } catch (err) {
+      console.error(`[WikiLink] Error:`, err);
+      toast.error("Failed to resolve link");
+      setLoadingNote(false);
+    }
   }
-  newPath = folder ? `${folder}/${pageName}.md` : `${pageName}.md`;
-  }
-  
-  const initialContent = `---\ntitle: ${pageName.split('/').pop()?.replace('.md', '')}\nread: false\n---\n\n# ${pageName.split('/').pop()?.replace('.md', '')}\n`;
-  
-  await sidecarApi.createObsidianFile(newPath, initialContent);
-  await fetchFiles(); 
-  selectFile(newPath, 1, false, []);
-}
-} catch (e) {
- console.error(e);
-}
-}
 
   const fetchHubs = async () => {
     setLoadingHubs(true)
@@ -2089,7 +2128,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
               >
                 <FileText size={14} className={cn(
                   "shrink-0 transition-colors",
-                  selectedPath === file.path ? "text-primary" : "text-red-500/30 group-hover/pdf:text-red-500/60"
+                  selectedPath === file.path ? "text-primary" : "text-muted-foreground/30 group-hover/pdf:text-muted-foreground/60"
                 )} />
                 <span className={cn(
                   "text-[12px] font-medium truncate transition-colors",
@@ -2190,15 +2229,19 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">Select an asset to visualize</p>
  </div>
  ) : (
- <div className={cn("mx-auto w-full max-w-full ", selectedPath.toLowerCase().endsWith('.pdf') ? "p-0 h-full overflow-hidden flex flex-col" : "py-12 px-6 sm:px-12 md:px-16 max-w-5xl")}>
-  {loadingNote ? (
-  <div className="h-64 flex flex-col items-center justify-center gap-4 text-muted-foreground">
-  <RefreshCw size={24} className="animate-spin" />
+  <div className={cn("mx-auto w-full max-w-full relative", selectedPath.toLowerCase().endsWith('.pdf') ? "p-0 h-full overflow-hidden flex flex-col" : "py-12 px-6 sm:px-12 md:px-16 max-w-5xl")}>
+  {loadingNote && (
+  <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background/60 backdrop-blur-[2px] animate-in fade-in duration-300">
+  <RefreshCw size={24} className="animate-spin text-primary/40" />
   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Loading Document...</p>
+  <button 
+    onClick={() => setLoadingNote(false)}
+    className="mt-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 hover:text-primary transition-colors border border-border/20 px-2 py-1 rounded"
+  >
+    Dismiss
+  </button>
   </div>
-  ) : (
-  <>
-  {/* Page Title - hidden in PDF mode */}
+  )}
   {!selectedPath.toLowerCase().endsWith('.pdf') && (
   <div className="flex items-start justify-between mb-8 sm:mb-12 group">
   <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-foreground tracking-tighter sm:tracking-tight leading-tight flex-1 break-words">
@@ -2235,7 +2278,6 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  />
  )}
 
- {/* Markdown Content */}
  <div className="mt-12">
  {isEditing ? (
  <textarea
@@ -2253,6 +2295,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  />
  ) : (
  <MarkdownViewer 
+ key={selectedPath}
  content={noteContent} 
  onNavigate={handleWikiLinkClick} 
  path={selectedPath || undefined}
@@ -2260,7 +2303,6 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  )}
  </div>
  
- {/* Knowledge Navigation integrated at the end of content */}
  <KnowledgeFooter 
  tree={studyTree} 
  activePath={selectedPath}
@@ -2274,18 +2316,15 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  />
  </>
  )}
- </>
- )}
  </div>
  )}
  </div>
  </>
  )}
-  </section>
- 
+ </section>
   </div>
   </main>
   </div>
   </div>
- )
+  )
 }

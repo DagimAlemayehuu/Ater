@@ -13,12 +13,13 @@ export default function PomodoroStats() {
   const [activeTab, setActiveTab] = useState<'OVERALL' | 'NOTES' | 'PRACTICE'>('OVERALL');
   const [timeFilter, setTimeFilter] = useState<'D' | 'W' | 'M' | 'Y'>('Y');
 
+  const [referenceNow] = useState(() => Date.now());
   const filteredHistory = useMemo(() => {
-    const now = Date.now();
+    const now = referenceNow;
     const dayMs = 24 * 60 * 60 * 1000;
     const filters = { D: dayMs, W: dayMs * 7, M: dayMs * 30, Y: dayMs * 365 };
     return (history || []).filter(s => (now - s.timestamp) <= filters[timeFilter]);
-  }, [history, timeFilter]);
+  }, [history, timeFilter, referenceNow]);
 
   const stats = useMemo(() => {
     // Basic metrics

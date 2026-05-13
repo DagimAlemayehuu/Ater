@@ -67,7 +67,7 @@ async def get_app_secrets(
 
         vault_path=x_vault_path,
         inbox_path=x_inbox_path,
-        academic_path="Notes" if x_academic_path == "1-Academic" else x_academic_path,
+        academic_path=x_academic_path,
         auto_deploy=x_auto_deploy.lower() == "true",
         google_calendar_token=x_google_calendar_token
     )

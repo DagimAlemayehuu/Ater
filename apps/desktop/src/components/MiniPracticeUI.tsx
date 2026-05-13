@@ -15,6 +15,7 @@ import vscDarkPlus from 'react-syntax-highlighter/dist/esm/styles/prism/vsc-dark
 import vs from 'react-syntax-highlighter/dist/esm/styles/prism/vs.js';
 import { MermaidWrapper } from './obsidian/MarkdownViewer';
 import { usePomodoroStore } from '@/lib/pomodoroStore';
+import { Question } from '@/types/practice';
 
 // Density optimized CodeBlock
 const CodeBlock = ({ language, value }: { language: string | null, value: string }) => {
@@ -108,16 +109,17 @@ export const MarkdownBlock = ({ content }: { content: string }) => {
 };
 
 interface MiniPracticeUIProps {
-  question: any;
-  notePath?: string;
+    question: Question | Question[];
+    notePath?: string;
+    onComplete?: (score: number, total: number) => void;
 }
 
-export default function MiniPracticeUI({ question, notePath }: MiniPracticeUIProps) {
+export default function MiniPracticeUI({ question, notePath, onComplete }: MiniPracticeUIProps) {
   const { addPracticeResult, currentHub } = usePomodoroStore();
   const questions = Array.isArray(question) ? question : [question];
 
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<Record<number | string, any>>({});
+  const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
   const [revealedStates, setRevealedStates] = useState<Record<number, boolean>>({});
   const [scores, setScores] = useState<Record<number, boolean>>({});
   const [showScore, setShowScore] = useState(false);
@@ -196,6 +198,7 @@ export default function MiniPracticeUI({ question, notePath }: MiniPracticeUIPro
   const finishQuiz = () => {
     const score = Object.values(scores).filter(Boolean).length;
     addPracticeResult(currentHub, score, questions.length, notePath);
+    if (onComplete) onComplete(score, questions.length);
     setShowScore(true);
   };
 
@@ -233,7 +236,7 @@ export default function MiniPracticeUI({ question, notePath }: MiniPracticeUIPro
               )}
             />
             {isRevealed && String((userAnswers[currentQ.id] || [])[i] || '').toLowerCase() !== String((currentQ.answer || [])[i] || '').toLowerCase() && (
-               <div className="text-[10px] text-primary font-bold mt-1">Correct: {String((currentQ.answer || [])[i] || '')}</div>
+               <div className="text-[10px] text-foreground font-black mt-1 uppercase tracking-widest bg-muted/30 px-1 rounded">Correct: {String((currentQ.answer || [])[i] || '')}</div>
             )}
           </div>
         )}
@@ -279,23 +282,7 @@ export default function MiniPracticeUI({ question, notePath }: MiniPracticeUIPro
               <div className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-2">
     <Badge variant="outline" className="text-[7px] border-border/40 bg-muted/20 text-muted-foreground rounded-md px-1.5 py-0">{currentQ.difficulty || '1'}</Badge>
     <div className="w-0.5 h-0.5 rounded-full bg-muted-foreground/20" />
-    <span>{(
-        {
-            'mcq': 'Multiple Choice',
-            'true_false': 'True or False',
-            'writing': 'Writing / Essay',
-            'fill_in': 'Fill in the Blank',
-            'debug': 'Debugging / Error Finding',
-            'trace': 'Logic / Calculation Trace',
-            'order': 'Ordering / Steps',
-            'matching': 'Matching Pairs',
-            'synthesis': 'Synthesis / Scenario',
-            'calculation': 'Math / Calculation',
-            'data_analysis': 'Data Analysis',
-            'scenario': 'Scenario Analysis',
-            'code': 'Code / Implementation'
-        } as any)[currentQ.type as string] || (currentQ.type || '').replace('_', ' ')
-    }</span>
+    <span>{currentQ.type.replace('_', ' ')}</span>
     </div>
               {currentQ.type !== 'fill_in' && (
                 <div className="text-[13px] font-bold tracking-tight leading-snug text-foreground/90 max-w-3xl">
@@ -420,9 +407,9 @@ export default function MiniPracticeUI({ question, notePath }: MiniPracticeUIPro
                   <div className="p-2 bg-muted/5 border border-border/50 rounded-lg shadow-inner">
                       <MarkdownBlock 
                         content={
-                          ['debug', 'code', 'trace'].includes(currentQ.type) && !(currentQ.content || currentQ.codeSnippet).includes('```') 
-                            ? `\`\`\`${currentQ.language || 'text'}\n${currentQ.content || currentQ.codeSnippet}\n\`\`\``
-                            : (currentQ.content || currentQ.codeSnippet)
+                          (['debug', 'code', 'trace'].includes(currentQ.type) && !(currentQ.content || currentQ.codeSnippet || "").includes('```')) 
+                            ? `\`\`\`${currentQ.language || 'text'}\n${currentQ.content || currentQ.codeSnippet || ""}\n\`\`\``
+                            : (currentQ.content || currentQ.codeSnippet || "")
                         } 
                       />
                   </div>
@@ -494,7 +481,7 @@ export default function MiniPracticeUI({ question, notePath }: MiniPracticeUIPro
                       </div>
                       
                       {currentQ.required_keywords.filter((kw: string) => !String(userAnswers[currentQ.id] || '').toLowerCase().includes(kw.toLowerCase())).length > 0 && (
-                        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-xs font-bold text-destructive/90 mb-4">
+                        <div className="p-3 text-xs font-bold text-destructive/90 mb-4">
                           Warning: Your answer is missing core concepts. Are you sure you mastered this?
                         </div>
                       )}
@@ -505,7 +492,7 @@ export default function MiniPracticeUI({ question, notePath }: MiniPracticeUIPro
                           return (
                             <label key={i} className={cn("flex items-center gap-3 p-3 border rounded-lg cursor-pointer ", isFound ? "border-primary/50 bg-primary/5" : "border-border/40 hover:bg-muted/10")}>
                               <input type="checkbox" checked={keywordChecks[kw] || false} onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} className="w-4 h-4 rounded border-border/50 text-primary focus:ring-primary" />
-                              <span className={cn("text-xs font-bold", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[9px] uppercase tracking-widest text-primary ml-2">(Found in your answer)</span>}</span>
+                              <span className={cn("text-xs font-bold", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[9px] uppercase tracking-widest text-foreground opacity-40 ml-2">(Found in your answer)</span>}</span>
                             </label>
                           );
                         })}

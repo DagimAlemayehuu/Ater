@@ -353,7 +353,7 @@ class NativeBackend {
 
   async practiceList() {
     const fm = this.getFM(this.vaultPath);
-    const practicePath = fm.joinPath(this.vaultPath, "9-Ater/Practice");
+    const practicePath = fm.joinPath(this.vaultPath, "Notes/Practice");
     if (!fm.fileExists(practicePath)) return { practices: [] };
     
     const files = fm.listContents(practicePath).filter(f => f.endsWith(".md"));
@@ -364,7 +364,7 @@ class NativeBackend {
       if (metadata.type === "practice") {
         practices.push({
           id: file,
-          path: "9-Ater/Practice/" + file,
+          path: "Notes/Practice/" + file,
           hub_id: metadata.hub_id,
           hub_title: metadata.hub_id ? metadata.hub_id.replace(".md", "").replace(/_/g, " ") : "Core Synthesis",
           date: metadata.date,
@@ -474,7 +474,7 @@ class NativeBackend {
       // 3. Save to vault for persistence
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const fileName = `Practice_${hubId.replace(".md", "")}_${timestamp}.md`;
-      const relPath = "9-Ater/Practice/" + fileName;
+      const relPath = "Notes/Practice/" + fileName;
       
       const mdContent = `---\ntype: practice\nhub_id: ${hubId}\ndate: ${new Date().toISOString().split('T')[0]}\ndifficulty: ${config.difficulty}\nscore: null\ncompleted: false\n---\n\n# Practice Session: ${hubId.replace(".md", "")}\n\n` +
                         "```json\n" + JSON.stringify({ questions }, null, 2) + "\n```";

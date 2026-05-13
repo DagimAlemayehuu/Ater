@@ -171,7 +171,7 @@ async def get_rate_limits():
     return tracker.get_all()
 
 @app.get("/api/obsidian/files")
-async def list_obsidian_files(secrets: AppSecrets = Depends(get_app_secrets)):
+def list_obsidian_files(secrets: AppSecrets = Depends(get_app_secrets)):
     """
     Lists files from the connected Obsidian vault.
     """
@@ -189,22 +189,26 @@ async def list_obsidian_files(secrets: AppSecrets = Depends(get_app_secrets)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/obsidian/files/{path:path}")
-async def read_obsidian_file(path: str, secrets: AppSecrets = Depends(get_app_secrets)):
+def read_obsidian_file(path: str, secrets: AppSecrets = Depends(get_app_secrets)):
     """Reads a file from the Obsidian vault."""
     if not secrets.vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
     try:
         client = ObsidianClient(secrets.vault_path)
         decoded_path = unquote(path)
+        logger.info(f"[Obsidian] Reading note: {decoded_path}")
         result = client.read_note(decoded_path)
         if result is None:
+            logger.warning(f"[Obsidian] Note not found: {decoded_path}")
             raise HTTPException(status_code=404, detail="File not found")
+        logger.info(f"[Obsidian] Successfully read note: {decoded_path}")
         return result
     except Exception as e:
+        logger.error(f"[Obsidian] Error reading note {path}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/obsidian/files/{path:path}")
-async def write_obsidian_file(
+def write_obsidian_file(
     path: str, 
     payload: Dict[str, str] = Body(...), 
     secrets: AppSecrets = Depends(get_app_secrets)
@@ -226,7 +230,7 @@ async def write_obsidian_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/obsidian/files/{path:path}")
-async def delete_obsidian_item(path: str, secrets: AppSecrets = Depends(get_app_secrets)):
+def delete_obsidian_item(path: str, secrets: AppSecrets = Depends(get_app_secrets)):
     """Deletes a file or directory from the Obsidian vault."""
     if not secrets.vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")

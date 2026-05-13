@@ -63,6 +63,15 @@ export interface BaseQuestion {
   hints?: string[];
   confidenceWager?: "Low" | "Medium" | "High";
   required_keywords?: string[];
+  // Shared optional fields for generic UI rendering
+  answer?: any;
+  options?: Record<string, string>;
+  steps?: string[];
+  content?: string;
+  codeSnippet?: string;
+  language?: string;
+  textWithBlanks?: string;
+  text_with_blanks?: string;
 }
 
 export interface MCQQuestion extends BaseQuestion {

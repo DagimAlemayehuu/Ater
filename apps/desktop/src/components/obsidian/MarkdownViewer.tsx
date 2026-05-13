@@ -46,6 +46,31 @@ mermaid.initialize({
   }
 });
 
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 border-2 border-destructive/20 bg-destructive/5 rounded-2xl text-center my-12">
+          <p className="text-sm font-black text-destructive/60 uppercase tracking-[0.2em]">Document Parsing Error</p>
+          <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-2">The content structure is malformed or contains illegal sequences.</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-6 px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive text-[9px] font-black uppercase tracking-widest rounded-lg border border-destructive/20 transition-all"
+          >
+            Reload Interface
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export const MermaidWrapper = ({ chart }: { chart: string }) => {
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<boolean>(false);
@@ -498,9 +523,11 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                 className="relative h-full flex flex-row bg-background text-foreground"
             >
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 relative select-text">
-                    <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 text-foreground select-text cursor-text">
-                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]} components={markdownComponents}>{content}</ReactMarkdown>
-                    </div>
+                    <ErrorBoundary>
+                      <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 text-foreground select-text cursor-text">
+                          <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]} components={markdownComponents}>{content}</ReactMarkdown>
+                      </div>
+                    </ErrorBoundary>
                 </div>
 
                 {/* Floating explain button */}

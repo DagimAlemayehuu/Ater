@@ -253,16 +253,16 @@ export const sidecarApi = {
     listObsidianFiles: () => request<{ files: ObsidianFile[] }>('/api/obsidian/files'),
     
     readObsidianNote: (path: string) =>
-        request<ObsidianNote>(`/api/obsidian/files/${path}`),
+        request<ObsidianNote>(`/api/obsidian/files/${encodeURIComponent(path)}`),
     
     updateObsidianNote: (path: string, content: string) =>
-        request<{ success: boolean }>(`/api/obsidian/files/${path}`, {
+        request<{ success: boolean }>(`/api/obsidian/files/${encodeURIComponent(path)}`, {
             method: 'PUT',
             body: JSON.stringify({ content })
         }),
 
     deleteObsidianItem: (path: string) =>
-        request<{ success: boolean }>(`/api/obsidian/files/${path}`, {
+        request<{ success: boolean }>(`/api/obsidian/files/${encodeURIComponent(path)}`, {
             method: 'DELETE'
         }),
 
