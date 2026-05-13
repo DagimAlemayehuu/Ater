@@ -83,7 +83,7 @@ class VaultManager:
             if c == prev: break
         return c
 
-    def get_note_path(self, meta: dict, session_metadata: Optional[dict] = None, anchored_hub_path: Optional[str] = None) -> Path:
+    def get_note_path(self, meta: dict, session_metadata: Optional[dict] = None, anchored_hub_path: Optional[str] = None, is_hub_override: Optional[bool] = None) -> Path:
         """
         Determines the hierarchical file path for a note with strict academic naming.
         """
@@ -103,7 +103,14 @@ class VaultManager:
             unit_num = ""
 
         # Identify note categories
-        is_hub = "hub" in note_type or "hub" in raw_title.lower()
+        # A Hub is identified by its type or title, OR if it matches the session hub context
+        is_hub = is_hub_override
+        if is_hub is None:
+            is_hub = (
+                "hub" in note_type or 
+                "hub" in raw_title.lower() or 
+                (session_metadata and session_metadata.get("hub_title") == raw_title)
+            )
         is_questions = "questions" in note_type or "possible_questions" in raw_title.lower()
 
         # ── Compute canonical path components upfront (needed by ALL branches) ──
@@ -195,7 +202,7 @@ class VaultManager:
         """
         import yaml
 
-        WIKILINK_SCALAR_FIELDS = {"hub", "parent", "source", "course", "semester"}
+        WIKILINK_SCALAR_FIELDS = {"hub", "parent", "source"}
         WIKILINK_LIST_FIELDS = {"prerequisites", "concepts"}
 
         def deep_clean_item(v, is_wikilink: bool = False) -> str:

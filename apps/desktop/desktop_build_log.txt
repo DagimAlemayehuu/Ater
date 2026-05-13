@@ -1,0 +1,21 @@
+
+> @ater/desktop@0.1.0 build /Users/dabodestroyer/code/Antigravity/LifeOs/apps/desktop
+> tsc -b && vite build
+
+src/components/intelligence/PomodoroStats.tsx(231,98): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/components/obsidian/EditableCell.tsx(31,8): error TS2307: Cannot find module '@/components/ui/command' or its corresponding type declarations.
+src/components/obsidian/EditableCell.tsx(36,8): error TS2307: Cannot find module '@/components/ui/popover' or its corresponding type declarations.
+src/components/obsidian/EditableCell.tsx(37,26): error TS2307: Cannot find module '@/components/ui/calendar' or its corresponding type declarations.
+src/components/obsidian/EditableCell.tsx(373,36): error TS7006: Parameter 'date' implicitly has an 'any' type.
+src/routes/practice.tsx(48,8): error TS2307: Cannot find module '@/components/ui/select' or its corresponding type declarations.
+src/routes/practice.tsx(49,22): error TS2307: Cannot find module '@/components/ui/slider' or its corresponding type declarations.
+src/routes/practice.tsx(54,8): error TS2307: Cannot find module '@/components/ui/popover' or its corresponding type declarations.
+src/routes/practice.tsx(62,8): error TS2307: Cannot find module '@/components/ui/command' or its corresponding type declarations.
+src/routes/practice.tsx(688,52): error TS7006: Parameter 'val' implicitly has an 'any' type.
+src/routes/practice.tsx(776,46): error TS7006: Parameter 'val' implicitly has an 'any' type.
+src/routes/settings.tsx(389,13): error TS2322: Type '(e: React.ChangeEvent<HTMLInputElement>) => void' is not assignable to type 'ChangeEventHandler<HTMLSelectElement, HTMLSelectElement>'.
+  Types of parameters 'e' and 'event' are incompatible.
+    Type 'ChangeEvent<HTMLSelectElement, HTMLSelectElement>' is not assignable to type 'ChangeEvent<HTMLInputElement, Element>'.
+      Type 'HTMLSelectElement' is missing the following properties from type 'HTMLInputElement': accept, align, alt, capture, and 38 more.
+ ELIFECYCLE  Command failed with exit code 1.

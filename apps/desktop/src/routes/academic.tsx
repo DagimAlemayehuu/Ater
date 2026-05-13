@@ -66,20 +66,45 @@ export default function AcademicDashboard() {
 } catch {}
 }, [])
 
- useEffect(() => {
- fetchData()
- fetchDatabases()
- // SSE for real-time vault changes
- const es = new EventSource(`${API_BASE}/api/vault/events`)
- es.onerror = () => es.close() // don't crash if not available
- es.onmessage = (ev) => {
- try {
- const d = JSON.parse(ev.data)
- if (['vault_change', 'file_create', 'file_delete'].includes(d.type)) fetchData()
-} catch {}
-}
- return () => es.close()
-}, [fetchData, fetchDatabases])
+  useEffect(() => {
+    fetchData()
+    fetchDatabases()
+    
+    let es: EventSource | null = null;
+
+    // SSE for real-time vault changes
+    const setupSSE = async () => {
+      try {
+        const config = await sidecarApi.getConfig()
+        const vaultPath = config.obsidianVaultPath
+        if (!vaultPath) return
+
+        es = new EventSource(`${API_BASE}/api/vault/events?vault_path=${encodeURIComponent(vaultPath)}`)
+        
+        es.onerror = () => {
+          if (es) {
+            es.close()
+            es = null
+          }
+        }
+
+        es.onmessage = (ev) => {
+          try {
+            const d = JSON.parse(ev.data)
+            if (['vault_change', 'file_create', 'file_delete'].includes(d.type)) fetchData()
+          } catch {}
+        }
+      } catch (err) {
+        console.error('[Academic] SSE Setup failed:', err)
+      }
+    }
+
+    setupSSE()
+    
+    return () => {
+      if (es) es.close()
+    }
+  }, [fetchData, fetchDatabases])
 
  useEffect(() => {
   setIsFullscreen(false)

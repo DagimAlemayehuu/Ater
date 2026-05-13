@@ -10,8 +10,26 @@ import { WikiLink, renderWikiLinks } from './WikiLink'
 import mermaid from 'mermaid'
 import { Check, RefreshCw, Copy } from 'lucide-react'
 import MiniPracticeUI from '../MiniPracticeUI'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-light'
+// @ts-ignore
+import vscDarkPlus from 'react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus.js'
+// @ts-ignore
+import vs from 'react-syntax-highlighter/dist/esm/styles/prism/vs.js'
+
+// Register languages to avoid dynamic import issues during build
+// @ts-ignore
+import js from 'react-syntax-highlighter/dist/esm/languages/prism/javascript.js'
+// @ts-ignore
+import ts from 'react-syntax-highlighter/dist/esm/languages/prism/typescript.js'
+// @ts-ignore
+import py from 'react-syntax-highlighter/dist/esm/languages/prism/python.js'
+// @ts-ignore
+import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash.js'
+
+SyntaxHighlighter.registerLanguage('javascript', js)
+SyntaxHighlighter.registerLanguage('typescript', ts)
+SyntaxHighlighter.registerLanguage('python', py)
+SyntaxHighlighter.registerLanguage('bash', bash)
 import { ExplainSidebar } from './ExplainSidebar'
 
 mermaid.initialize({

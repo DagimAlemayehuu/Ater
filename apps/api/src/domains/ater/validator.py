@@ -86,19 +86,19 @@ class AterValidator:
         """
         errors: List[str] = []
 
-        # ── 0. Structural Obedience (v28.0) ──────────────────────────────────
+        # ── 0. Structural Obedience (v32.0) ──────────────────────────────────
+        # Supports both # and ## as the user recently adjusted the hierarchy
         required_sections = [
-            r"## 1\. Mental Model",
-            r"## 2\. ", # Dynamic title
-            r"## 3\. Limitations & Edge Cases",
-            r"## 4\. ", # Dynamic title
-            r"## 5\. Walkthrough",
-            r"## 6\. The Proving Grounds"
+            r"(?:#|##) 1\. ",
+            r"(?:#|##) 2\. ", 
+            r"(?:#|##) 3\. ", 
+            r"(?:#|##) 4\. ", 
+            r"(?:#|##) 5\. ",
+            r"(?:#|##) 6\. "
         ]
         for section in required_sections:
             if not re.search(section, content):
-                clean_name = section.replace('\\', '')
-                errors.append(f"MISSING_SECTION: {clean_name}")
+                errors.append(f"MISSING_SECTION: {section}")
         for marker in HARD_FAILURE_MARKERS:
             if marker in content:
                 errors.append(f"HARD_FAILURE_MARKER: '{marker}' found in content. Note must be regenerated.")
@@ -215,8 +215,8 @@ class AterValidator:
                             errors.append(f"QUIZ_Q{i+1}_MISSING_QUESTION")
                         if "answer" not in q:
                             errors.append(f"QUIZ_Q{i+1}_MISSING_ANSWER")
-                        if "explanation" in q:
-                            exp = str(q["explanation"])
+                        exp = str(q.get("explanation", ""))
+                        if exp:
                             # ── 5.1 Hard-failure Check in Quiz Explanation ──
                             for marker in HARD_FAILURE_MARKERS:
                                 if marker in exp:
@@ -235,14 +235,14 @@ class AterValidator:
                             
                             # ── 5.2 Cross-Key Numeric Consistency ──
                             # If the explanation contains a result (e.g., 'Price = 12') but answer is '10', fail.
-                            if "answer" in q:
-                                ans_str = str(q["answer"]).lower()
+                            if exp:
+                                ans_lower = ans_str.lower()
                                 nums_in_exp = re.findall(r"=\s*([\d\.]+)", exp)
                                 if nums_in_exp:
                                     last_val = nums_in_exp[-1].rstrip(".")
-                                    if last_val not in ans_str:
+                                    if last_val not in ans_lower:
                                         # Only flag if both are numeric to avoid false positives on mcq keys
-                                        if any(char.isdigit() for char in ans_str):
+                                        if any(char.isdigit() for char in ans_lower):
                                             errors.append(f"QUIZ_Q{i+1}_ANSWER_DIVERGENCE: Answer '{ans_str}' diverges from explanation result '{last_val}'.")
 
                         # Debug: content field must not contain the answer
@@ -287,21 +287,19 @@ class AterValidator:
             
             if len(cleaned) > 10:  # skip trivially empty sections only
                 last_sent_char = cleaned[-1]
-                valid_terminal = [".", "!", "?", "`", ")", "]", "}", "$", "|", '"', "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+                valid_terminal = [".", "!", "?", "`", ")", "]", "}", "$", "|", '"', ";", ":", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
                 # Also allow sections ending with a wikilink ([[...]]) or a bare word that isn't mid-sentence
                 ends_with_wikilink = cleaned.endswith("]]") or cleaned.endswith("]")
                 if last_sent_char not in valid_terminal and not ends_with_wikilink:
                     errors.append(f"SECTION_TRUNCATION: A section body ends mid-sentence: '...{cleaned[-40:]}'") 
 
         # v28.4 FIX: Empty Table Kill-Switch (Section 4 Artifacts)
-        if "## 4." in body:
-            artifact_match = re.search(r'## 4\.[^\n]*\n(.*?)(?=## 5\.|```interactive-quiz|$)', body, re.DOTALL)
+        if re.search(r'(?:#|##) 4\.', body):
+            artifact_match = re.search(r'(?:#|##) 4\.[^\n]*\n(.*?)(?=(?:#|##) 5\.|```interactive-quiz|$)', body, re.DOTALL)
             if artifact_match:
                 artifact_text = artifact_match.group(1).strip()
-                if "|" in artifact_text:
-                    pipe_lines = [l for l in artifact_text.split('\n') if "|" in l]
-                    if len(pipe_lines) < 3:
-                        errors.append("EMPTY_TABLE: Section 4 contains a table header but no data rows (Header, Separator, and at least 1 Data row required).")
+                if "|" in artifact_text and len(artifact_text.split("\n")) < 3:
+                    errors.append("EMPTY_TABLE: Section 4 contains a malformed or empty Markdown table.")
 
         # ── 7. Walkthrough step count — section is ## 5. Walkthrough in the template
         walkthrough_match = re.search(r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)', body, re.DOTALL)

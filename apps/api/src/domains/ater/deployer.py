@@ -97,10 +97,19 @@ class AterDeployer:
             meta, body, err = self.vm.extract_yaml_and_content(cleaned_note)
             
             # Path resolution
-            target_path = self.vm.get_note_path(meta, session_metadata=session_meta, anchored_hub_path=anchored_path)
+            is_hub_note = "hub" in title.lower() or "hub" in str(meta.get("type", "")).lower()
+            target_path = self.vm.get_note_path(meta, session_metadata=session_meta, anchored_hub_path=anchored_path, is_hub_override=is_hub_note)
+            
+            # ── METADATA NORMALIZATION ──
+            meta.setdefault("read", False)
+            meta.setdefault("generated", True)
+            
+            # Re-assemble note with normalized YAML
+            yaml_content = self.vm.dump_obsidian_yaml(meta).strip()
+            full_content = f"---\n{yaml_content}\n---\n\n{body.strip()}\n"
             
             # Physical Write
-            self.vm.write_note(target_path, cleaned_note)
+            self.vm.write_note(target_path, full_content)
             
             try:
                 display_path = str(target_path.relative_to(self.vm.vault_path))
@@ -135,7 +144,7 @@ class AterDeployer:
         meta.pop("hub", None)           # Hub doesn't backlink to itself
 
         # Path resolution (Hubs have specific logic)
-        target_path = self.vm.get_note_path(meta, session_metadata=session_meta, anchored_hub_path=anchored_path)
+        target_path = self.vm.get_note_path(meta, session_metadata=session_meta, anchored_hub_path=anchored_path, is_hub_override=True)
         
         # ── TITLE ENFORCEMENT ──
         meta["title"] = target_path.stem
@@ -334,7 +343,8 @@ class AterDeployer:
             target_path = self.vm.get_note_path(
                 meta, 
                 session_metadata=session_metadata, 
-                anchored_hub_path=anchored_path
+                anchored_hub_path=anchored_path,
+                is_hub_override=is_hub
             )
 
             # ── TITLE ENFORCEMENT ──

@@ -1,7 +1,7 @@
 /**
  * Ater - Python Sidecar API Client
  *
- * All heavy computation (Gemini, Notion) is executed in the Python sidecar.
+ * All heavy computation (Gemini, RAG, Reranking) is executed in the Python sidecar.
  * This client is the ONLY interface between React and the Python backend.
  */
 
@@ -372,13 +372,6 @@ export const sidecarApi = {
     ragSyncStatus: () =>
         request<{ status: string, progress: number, total: number, message: string }>('/api/rag/sync-status'),
 
-    syncNotionMirror: () =>
-        request<{ status: string, message: string }>('/api/notion/sync-mirror', {
-            method: 'POST'
-        }),
-
-    syncNotionMirrorStatus: () =>
-        request<{ status: string, progress: number, total: number, message: string }>('/api/notion/sync-mirror/status'),
 
     // ── Legacy / Specialists ────────────────────────────────
     listHubs: () => request<{ hubs: any[] }>('/api/ater/hubs'),
@@ -512,6 +505,18 @@ export const sidecarApi = {
             method,
             ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
         })
+    },
+
+    // ── Configuration ───────────────────────────────────────
+    getConfig: async () => {
+        const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} })
+        return {
+            obsidianVaultPath: (await store.get<string>('obsidianVaultPath')) || '',
+            inboxPath: (await store.get<string>('inboxPath')) || '',
+            academicFolderPath: (await store.get<string>('academicFolderPath')) || 'Database',
+            aiProvider: (await store.get<string>('aiProvider')) || 'google',
+            aiModel: (await store.get<string>('aiModel')) || 'gemini-2.0-flash',
+        }
     },
 
     explainQuestion: (payload: { question: string; type: string; answer: any; explanation?: string; context?: string }) =>

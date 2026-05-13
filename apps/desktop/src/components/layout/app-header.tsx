@@ -15,33 +15,36 @@ export function AppHeader() {
 
   // Dynamic Breadcrumb Logic
   const renderBreadcrumbs = () => {
-    const path = location.pathname
     const entry = history[currentIndex]
+    if (!entry) return null
+
+    // Parse path and search from history entry
+    const [entryPath, entrySearch] = entry.path.split('?')
+    const searchParams = new URLSearchParams(entrySearch || '')
     
     let module = 'Ater'
     let subPath = ''
 
-    if (path.startsWith('/obsidian') || path.startsWith('/note/')) {
+    if (entryPath.startsWith('/obsidian') || entryPath.startsWith('/note/') || entry.type === 'file') {
       module = 'Knowledge Base'
-      if (entry && entry.type === 'file') {
-        subPath = entry.path.replace(/\.md$/, '').replace(/_/g, ' ')
+      if (entry.type === 'file') {
+        const parts = entryPath.split('/')
+        const fileName = parts[parts.length - 1]
+        subPath = fileName.replace(/\.md$/, '').replace(/_/g, ' ')
       }
-    } else if (path.startsWith('/academic')) {
+    } else if (entryPath.startsWith('/academic')) {
       module = 'Academic Dashboard'
-      const search = new URLSearchParams(location.search)
-      const tab = search.get('tab')
+      const tab = searchParams.get('tab')
       if (tab) subPath = tab.charAt(0) + tab.slice(1).toLowerCase()
-    } else if (path.startsWith('/practice')) {
+    } else if (entryPath.startsWith('/practice')) {
       module = 'Practice Hub'
-      const search = new URLSearchParams(location.search)
-      const view = search.get('view')
+      const view = searchParams.get('view')
       if (view) subPath = view.charAt(0) + view.slice(1).toLowerCase()
-    } else if (path.startsWith('/agents')) {
+    } else if (entryPath.startsWith('/agents')) {
       module = 'Agent Orchestrator'
-    } else if (path.startsWith('/settings')) {
+    } else if (entryPath.startsWith('/settings')) {
       module = 'System Settings'
-      const search = new URLSearchParams(location.search)
-      const tab = search.get('tab')
+      const tab = searchParams.get('tab')
       if (tab) subPath = tab.charAt(0) + tab.slice(1).toLowerCase()
     }
 
@@ -63,48 +66,53 @@ export function AppHeader() {
   return (
     <header className="relative h-12 w-full bg-background/80 backdrop-blur-md border-b border-border/40 flex items-center shrink-0 z-40 sticky top-0 px-4 select-none">
       {/* Left: Navigation */}
-      <div className="flex items-center gap-2.5 shrink-0 z-10">
-        <button 
-          onClick={goBack}
-          disabled={!canGoBack}
-          className={cn(
-            "w-8 h-8 flex items-center justify-center rounded-xl border transition-all active:scale-90",
-            canGoBack 
-              ? "text-foreground bg-background hover:bg-foreground/5 hover:border-foreground/40 border-border" 
-              : "text-muted-foreground/20 bg-muted/5 border-border/10 cursor-default"
-          )}
-        >
-          <ChevronLeft size={16} />
-        </button>
+      <div className="flex items-center gap-2 shrink-0 z-10">
+        <div className="flex items-center gap-1 bg-muted/20 p-0.5 rounded-xl border border-border/40 shadow-inner">
+          <button 
+            onClick={goBack}
+            disabled={!canGoBack}
+            title="Back (Cmd+[)"
+            className={cn(
+              "w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-90",
+              canGoBack 
+                ? "text-foreground bg-background hover:bg-foreground/5 hover:border-foreground/40 border-border shadow-sm" 
+                : "text-muted-foreground/10 bg-transparent border-transparent cursor-default"
+            )}
+          >
+            <ChevronLeft size={16} strokeWidth={2.5} />
+          </button>
 
-        <button 
-          onClick={() => goForward()}
-          disabled={!canGoForward}
-          className={cn(
-            "w-8 h-8 flex items-center justify-center rounded-xl border transition-all active:scale-90",
-            canGoForward 
-              ? "text-foreground bg-background hover:bg-foreground/5 hover:border-foreground/40 border-border" 
-              : "text-muted-foreground/20 bg-muted/5 border-border/10 cursor-default"
-          )}
-        >
-          <ChevronRight size={16} />
-        </button>
+          <button 
+            onClick={() => goForward()}
+            disabled={!canGoForward}
+            title="Forward (Cmd+])"
+            className={cn(
+              "w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-90",
+              canGoForward 
+                ? "text-foreground bg-background hover:bg-foreground/5 hover:border-foreground/40 border-border shadow-sm" 
+                : "text-muted-foreground/10 bg-transparent border-transparent cursor-default"
+            )}
+          >
+            <ChevronRight size={16} strokeWidth={2.5} />
+          </button>
+        </div>
         
         {/* Timer Display (Academic Style) */}
         <button 
           onClick={() => setShowOverlay(true)}
           className={cn(
-            "ml-2 px-3 h-8 flex items-center justify-center rounded-xl border border-border transition-all active:scale-95 text-[11px] font-black tabular-nums shadow-sm",
-            pomodoroActive ? "bg-foreground/10 text-foreground border-border/50" : "bg-background hover:border-foreground/40"
+            "ml-3 px-3 h-8 flex items-center justify-center rounded-xl border border-border/60 transition-all active:scale-95 text-[10px] font-black tabular-nums shadow-sm bg-background/50",
+            pomodoroActive ? "bg-primary/10 text-primary border-primary/20 ring-1 ring-primary/10" : "hover:border-foreground/40"
           )}
         >
+          <Timer size={12} className={cn("mr-1.5 opacity-50", pomodoroActive && "animate-pulse text-primary opacity-100")} />
           {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
         </button>
       </div>
 
       {/* Center: Breadcrumbs & Meta - Absolute Centered relative to window */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-40">
-        <div className="max-w-full flex flex-col items-center overflow-hidden pointer-events-auto">
+        <div className="max-w-full flex flex-col items-center overflow-hidden pointer-events-auto select-none">
           {renderBreadcrumbs()}
           {centerContent && <div className="mt-0.5 truncate max-w-full">{centerContent}</div>}
         </div>

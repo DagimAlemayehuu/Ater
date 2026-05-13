@@ -1199,37 +1199,42 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
 
  // --- Sync & Polling ---
- useEffect(() => {
- const searchParams = new URLSearchParams(location.search)
- const initSearch = searchParams.get('search')
- const initPath = searchParams.get('path')
- const initFullscreen = searchParams.get('fullscreen') === 'true'
- 
- if (initFullscreen) {
- setIsFullscreen(true)
-}
- 
- if (initPath) {
- selectFile(initPath)
- 
- // Expand parent folders
-  // Expand parent folders using functional update to avoid stale closure
-  const parts = initPath.split('/')
-  const toExpand: string[] = []
-  let current = ''
-  parts.slice(0, -1).forEach(part => {
-  current = current ? `${current}/${part}` : part
-  toExpand.push(current)
-})
-  setExpandedFolders(prev => {
-  const next = new Set(prev)
-  toExpand.forEach(p => next.add(p))
-  return next
-})
-} else if (initSearch) {
- setSearchQuery(initSearch)
-}
-}, [location.search])
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    const initSearch = searchParams.get('search')
+    const initPath = searchParams.get('path')
+    const initPage = parseInt(searchParams.get('page') || '1')
+    const initFilterRaw = searchParams.get('filterPages')
+    const initFilterPages = initFilterRaw ? initFilterRaw.split(',').map(Number) : []
+    const initFullscreen = searchParams.get('fullscreen') === 'true'
+    
+    if (initFullscreen) {
+      setIsFullscreen(true)
+    }
+    
+    if (initPath) {
+      // Sync state from URL if different
+      if (initPath !== selectedPath || initPage !== selectedPage) {
+        selectFile(initPath, initPage, true, initFilterPages)
+      }
+      
+      // Expand parent folders
+      const parts = initPath.split('/')
+      const toExpand: string[] = []
+      let current = ''
+      parts.slice(0, -1).forEach(part => {
+        current = current ? `${current}/${part}` : part
+        toExpand.push(current)
+      })
+      setExpandedFolders(prev => {
+        const next = new Set(prev)
+        toExpand.forEach(p => next.add(p))
+        return next
+      })
+    } else if (initSearch) {
+      setSearchQuery(initSearch)
+    }
+  }, [location.search, selectedPath, selectedPage])
 
  useEffect(() => {
  fetchFiles()
@@ -1357,11 +1362,23 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  setLoadingNote(true)
  
   if (!fromHistory) {
+    // 1. Sync URL for browser history parity
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.set('path', path);
+    if (page > 1) searchParams.set('page', page.toString());
+    else searchParams.delete('page');
+    
+    if (filterPages.length > 0) searchParams.set('filterPages', filterPages.join(','));
+    else searchParams.delete('filterPages');
+    
+    navigate({ search: searchParams.toString() }, { replace: false });
+
+    // 2. Push to internal history stack for Ater navigation buttons
     push({ 
       type: 'file', 
       path: path, 
       metadata: { page, filterPages } 
-    });
+    }, false);
   }
 
  if (path.toLowerCase().endsWith('.pdf')) {

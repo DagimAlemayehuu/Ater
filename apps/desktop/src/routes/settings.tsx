@@ -276,13 +276,13 @@ export default function Settings() {
  <input 
  placeholder="Key Name (e.g. My Gemini Pro)"
  value={newKeyName}
- onChange={(e) => setNewKeyName(e.target.value)}
+ onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyName(e.target.value)}
  className="w-full bg-background border border-border rounded px-2 py-1 text-[11px] focus:outline-none"
  autoFocus
  />
  <select
  value={newKeyProvider}
- onChange={(e) => setNewKeyProvider(e.target.value)}
+ onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setNewKeyProvider(e.target.value)}
  className="w-full bg-background border border-border rounded px-2 py-1 text-[11px] focus:outline-none"
  >
  <option value="google">Google</option>
@@ -295,7 +295,7 @@ export default function Settings() {
  type="password"
  placeholder="Paste API Key"
  value={newKeyValue}
- onChange={(e) => setNewKeyValue(e.target.value)}
+ onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyValue(e.target.value)}
  className="w-full bg-background border border-border rounded px-2 py-1 text-[11px] focus:outline-none font-mono"
  />
  <div className="flex gap-2 pt-1">
@@ -386,7 +386,7 @@ export default function Settings() {
           <select
             value={editingKey === `${aiTab}_engine` ? aiEdit.provider : (aiTab === 'primary' ? config?.aiProvider : aiTab === 'planner' ? config?.plannerProvider : config?.utilityProvider) || 'google'}
             disabled={editingKey !== `${aiTab}_engine`}
-            onChange={(e) => {
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
               const provider = e.target.value;
               let defaultModel = 'gemini-2.0-flash';
               if (provider === 'openai') defaultModel = 'gpt-4o';
@@ -411,7 +411,7 @@ export default function Settings() {
             <input
               type="password"
               value={aiEdit.key}
-              onChange={(e) => setAiEdit({...aiEdit, key: e.target.value})}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, key: e.target.value})}
               className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring font-mono"
               autoFocus
               placeholder={`Enter ${aiEdit.provider.toUpperCase()} Key`}
@@ -435,7 +435,7 @@ export default function Settings() {
             type="text"
             disabled={editingKey !== `${aiTab}_engine`}
             value={editingKey === `${aiTab}_engine` ? aiEdit.model : (aiTab === 'primary' ? config?.aiModel : aiTab === 'planner' ? config?.plannerModel : config?.utilityModel) || ''}
-            onChange={(e) => setAiEdit({...aiEdit, model: e.target.value})}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, model: e.target.value})}
             className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
@@ -537,7 +537,7 @@ export default function Settings() {
           <input 
             type="text"
             value={config?.academicFolderPath || ''}
-            onChange={(e) => saveConfig({academicFolderPath: e.target.value})}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => saveConfig({academicFolderPath: e.target.value})}
             className="w-full bg-background border border-border rounded px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
@@ -613,7 +613,7 @@ export default function Settings() {
  list="focus-durations"
  disabled={editingKey !== 'pomodoro_engine'}
  value={editingKey === 'pomodoro_engine' ? pomodoroEdit.work : config?.pomodoroWorkDuration}
- onChange={(e) => setPomodoroEdit({...pomodoroEdit, work: parseInt(e.target.value) || 0})}
+ onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, work: parseInt(e.target.value) || 0})}
  className="w-full px-3 py-2 rounded bg-muted/50 border border-border/50 text-[13px] font-mono focus:outline-none focus:border-primary/30"
  />
  </div>
@@ -624,7 +624,7 @@ export default function Settings() {
  list="short-durations"
  disabled={editingKey !== 'pomodoro_engine'}
  value={editingKey === 'pomodoro_engine' ? pomodoroEdit.short : config?.pomodoroShortBreakDuration}
- onChange={(e) => setPomodoroEdit({...pomodoroEdit, short: parseInt(e.target.value) || 0})}
+ onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, short: parseInt(e.target.value) || 0})}
  className="w-full px-3 py-2 rounded bg-muted/50 border border-border/50 text-[13px] font-mono focus:outline-none focus:border-primary/30"
  />
  </div>
@@ -635,7 +635,7 @@ export default function Settings() {
  list="long-durations"
  disabled={editingKey !== 'pomodoro_engine'}
  value={editingKey === 'pomodoro_engine' ? pomodoroEdit.long : config?.pomodoroLongBreakDuration}
- onChange={(e) => setPomodoroEdit({...pomodoroEdit, long: parseInt(e.target.value) || 0})}
+ onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, long: parseInt(e.target.value) || 0})}
  className="w-full px-3 py-2 rounded bg-muted/50 border border-border/50 text-[13px] font-mono focus:outline-none focus:border-primary/30"
  />
  </div>
@@ -647,7 +647,7 @@ export default function Settings() {
  max="10"
  disabled={editingKey !== 'pomodoro_engine'}
  value={editingKey === 'pomodoro_engine' ? pomodoroEdit.sessions : config?.pomodoroSessionsBeforeLongBreak}
- onChange={(e) => {
+ onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
    const val = parseInt(e.target.value);
    if (!isNaN(val)) {
      setPomodoroEdit({...pomodoroEdit, sessions: Math.max(1, Math.min(10, val))});

@@ -1,20 +1,20 @@
 from typing import Dict, Any
 
 ATOMIC_NOTE_TEMPLATE = """
-## 1. Mental Model
-{mental_model}
+## 1. The Plain English Explanation
+{plain_english_explanation}
 
 ## 2. {h1_title}
-{technical_definition}
+{detailed_breakdown}
 
-## 3. Limitations & Edge Cases
-{limitations}
+## 3. {h2_title}
+{academic_translation}
 
 ## 4. {artifact_title}
 {artifact_content}
 
-## 5. Walkthrough
-{walkthrough}
+## 5. Where It Breaks (Edge Cases & Flaws)
+{limitations}
 
 ---
 ## 6. The Proving Grounds
@@ -30,20 +30,21 @@ def render_atomic_note(data: Dict[str, Any], healer=None) -> str:
     
     # Pre-heal the individual parts if healer is present
     if healer:
-        data["mental_model"] = healer.heal_all(data.get("mental_model", ""))
-        data["technical_definition"] = healer.heal_all(data.get("technical_definition", ""))
-        data["limitations"] = healer.heal_all(data.get("limitations", ""))
+        data["plain_english_explanation"] = healer.heal_all(data.get("plain_english_explanation", ""))
+        data["detailed_breakdown"] = healer.heal_all(data.get("detailed_breakdown", ""))
+        data["academic_translation"] = healer.heal_all(data.get("academic_translation", ""))
         data["artifact_content"] = healer.heal_all(data.get("artifact_content", ""))
-        data["walkthrough"] = healer.heal_all(data.get("walkthrough", ""))
+        data["limitations"] = healer.heal_all(data.get("limitations", ""))
         data["possible_questions"] = healer.heal_all(data.get("possible_questions", ""), is_quiz=True)
 
     return ATOMIC_NOTE_TEMPLATE.format(
-        mental_model=data.get("mental_model", ""),
-        h1_title=data.get("h1_title", "Technical Architecture"),
-        technical_definition=data.get("technical_definition", ""),
-        limitations=data.get("limitations", ""),
+        plain_english_explanation=data.get("plain_english_explanation", ""),
+        h1_title=data.get("h1_title", "The Core Logic Explained"),
+        detailed_breakdown=data.get("detailed_breakdown", ""),
+        h2_title=data.get("h2_title", "The Textbook Translation"),
+        academic_translation=data.get("academic_translation", ""),
         artifact_title=data.get("artifact_title", "High-Fidelity Artifact"),
         artifact_content=data.get("artifact_content", ""),
-        walkthrough=data.get("walkthrough", ""),
+        limitations=data.get("limitations", ""),
         possible_questions=data.get("possible_questions", "")
     )

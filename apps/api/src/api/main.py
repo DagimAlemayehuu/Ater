@@ -506,8 +506,8 @@ async def ater_watcher_toggle(
         except FileNotFoundError as e:
             raise HTTPException(status_code=500, detail=str(e))
         
-        service = AterService(secrets)
-        ater_watcher = AterQueueManager(service, secrets.inbox_path, str(si_path))
+        effective_inbox = secrets.inbox_path or str(Path(secrets.vault_path) / "Inbox")
+        ater_watcher = AterQueueManager(service, effective_inbox, str(si_path))
         
         try:
             loop = asyncio.get_running_loop()
@@ -528,18 +528,32 @@ async def ater_queue_status(
     """Returns the current detailed queue status."""
     global ater_watcher
     
-    if ater_watcher and secrets.inbox_path and str(ater_watcher.inbox_path.absolute()) != str(Path(secrets.inbox_path).absolute()):
+    effective_vault = secrets.vault_path
+    effective_inbox = secrets.inbox_path
+    
+    # Fallback to defaults if missing from headers
+    if not effective_vault:
+        # Try to find a vault in the current workspace
+        effective_vault = str(Path.cwd().parent.parent.parent.parent.parent.parent) # Root of monorepo
+        # Actually better to just use the one from config if possible, but we don't have access to config here easily.
+        # However, the frontend SHOULD pass it. If it doesn't, we can try to guess or use a placeholder.
+        pass
+
+    if not effective_inbox and effective_vault:
+        effective_inbox = str(Path(effective_vault) / "Inbox")
+
+    if ater_watcher and effective_inbox and str(ater_watcher.inbox_path.absolute()) != str(Path(effective_inbox).absolute()):
         ater_watcher.stop()
         ater_watcher = None
 
-    if not ater_watcher and secrets.ai_key and secrets.vault_path and secrets.inbox_path:
+    if not ater_watcher and secrets.ai_key and effective_vault and effective_inbox:
         try:
             si_path = AterService.resolve_si_path()
         except FileNotFoundError:
             return {"status": "offline", "pending_files": [], "manual_status": dict(AterService._status), "error": "Ater.md not found"}
         
         service = AterService(secrets)
-        ater_watcher = AterQueueManager(service, secrets.inbox_path, str(si_path))
+        ater_watcher = AterQueueManager(service, effective_inbox, str(si_path))
         
         try:
             loop = asyncio.get_running_loop()
@@ -547,11 +561,14 @@ async def ater_queue_status(
             loop = asyncio.get_event_loop()
             
         ater_watcher.start(loop, auto_process=secrets.auto_deploy)
-        logger.info(f"[Ater] Watcher Auto-started for inbox: {secrets.inbox_path} | Auto: {secrets.auto_deploy}")
+        logger.info(f"[Ater] Watcher Auto-started for inbox: {effective_inbox} | Auto: {secrets.auto_deploy}")
         
     if not ater_watcher:
         return {"status": "offline", "pending_files": [], "manual_status": dict(AterService._status)}
         
+    # Real-time synchronization of API keys and provider settings
+    ater_watcher.service.sync_secrets(secrets)
+
     # Sync settings only when the value actually changed (avoids log spam)
     if ater_watcher.auto_process != secrets.auto_deploy:
         ater_watcher.update_settings(auto_process=secrets.auto_deploy)
@@ -1364,159 +1381,6 @@ async def ater_interactive_quiz(
         logger.error(f"Error in interactive quiz: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.patch("/api/notion/pages/{page_id}")
-async def update_notion_page(
-    page_id: str,
-    payload: Dict[str, Any] = Body(...),
-    secrets: AppSecrets = Depends(get_app_secrets)
-):
-    """
-    Updates properties for a specific Notion page.
-    Expects JSON body like: {"properties": {...}} OR just the property map if we match the client's internal wrapping.
-    Since NotionClient currently wraps it: json={"properties": properties}
-    we should expect 'payload' to be the property map itself.
-    """
-    if not secrets.notion_key:
-        raise HTTPException(status_code=401, detail="X-Notion-Key header missing")
-    
-    try:
-        # Extract properties from payload. If it has a 'properties' key, use it, else use payload as is.
-        properties = payload.get("properties", payload)
-        
-        client = NotionClient(secrets.notion_key)
-        updated_page = await client.update_page_properties(page_id, properties)
-        return {"page": updated_page}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/notion/databases/{database_id}/pages")
-async def create_notion_page(
-    database_id: str,
-    payload: Dict[str, Any] = Body(...),
-    secrets: AppSecrets = Depends(get_app_secrets)
-):
-    """
-    Creates a new page in a Notion database.
-    Expects JSON body with 'properties' key.
-    """
-    if not secrets.notion_key:
-        raise HTTPException(status_code=401, detail="X-Notion-Key header missing")
-    
-    try:
-        properties = payload.get("properties", payload)
-        client = NotionClient(secrets.notion_key)
-        new_page = await client.create_page_in_database(database_id, properties)
-        return {"page": new_page}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/notion/pages/{page_id}")
-async def delete_notion_page(
-    page_id: str,
-    secrets: AppSecrets = Depends(get_app_secrets)
-):
-    """Archives (deletes) a Notion page."""
-    if not secrets.notion_key:
-        raise HTTPException(status_code=401, detail="X-Notion-Key header missing")
-    try:
-        client = NotionClient(secrets.notion_key)
-        result = await client.archive_page(page_id)
-        return {"success": True, "page": result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/notion/pages/{page_id}/content")
-async def get_notion_page_content(
-    page_id: str,
-    secrets: AppSecrets = Depends(get_app_secrets)
-):
-    """
-    Fetches children blocks of a page.
-    """
-    if not secrets.notion_key:
-        raise HTTPException(status_code=401, detail="X-Notion-Key header missing")
-    
-    try:
-        client = NotionClient(secrets.notion_key)
-        blocks = await client.get_page_content(page_id)
-        return {"blocks": blocks}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.put("/api/notion/pages/{page_id}/content")
-async def update_notion_page_content(
-    page_id: str,
-    payload: Dict[str, Any] = Body(...),
-    secrets: AppSecrets = Depends(get_app_secrets)
-):
-    """
-    Updates page content. 
-    Simplification: Clears all current blocks and replaces them with the new markdown/text.
-    Expects payload: {"markdown": "..."}
-    """
-    if not secrets.notion_key:
-        raise HTTPException(status_code=401, detail="X-Notion-Key header missing")
-    
-    markdown = payload.get("markdown", "")
-    
-    try:
-        client = NotionClient(secrets.notion_key)
-        
-        # 1. Fetch current blocks to delete them
-        current_blocks = await client.get_page_content(page_id)
-        for block in current_blocks:
-            await client.delete_block(block["id"])
-            
-        # 2. Convert markdown into Notion blocks
-        lines = markdown.split("\n")
-        new_blocks = []
-        for line in lines:
-            line = line.strip()
-            if not line:
-                # Add empty paragraph for spacing
-                new_blocks.append({
-                    "object": "block",
-                    "type": "paragraph",
-                    "paragraph": {"rich_text": []}
-                })
-                continue
-            
-            # Simple Heading detection
-            if line.startswith("# "):
-                block_type = "heading_1"
-                text = line[2:]
-            elif line.startswith("## "):
-                block_type = "heading_2"
-                text = line[3:]
-            elif line.startswith("### "):
-                block_type = "heading_3"
-                text = line[4:]
-            # Simple Bullet List detection
-            elif line.startswith("- ") or line.startswith("* "):
-                block_type = "bulleted_list_item"
-                text = line[2:]
-            # Default to paragraph
-            else:
-                block_type = "paragraph"
-                text = line
-
-            new_blocks.append({
-                "object": "block",
-                "type": block_type,
-                block_type: {
-                    "rich_text": [{"type": "text", "text": {"content": text}}]
-                }
-            })
-            
-        if new_blocks:
-            # Batch blocks into groups of 100 to avoid Notion API limits
-            for i in range(0, len(new_blocks), 100):
-                await client.append_block_children(page_id, new_blocks[i:i+100])
-            
-        return {"success": True}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 # --- RAG Endpoints ---
 
 rag_sync_status = {"status": "idle", "progress": 0, "total": 0, "message": ""}
@@ -1586,43 +1450,6 @@ async def rag_sync_vault(secrets: AppSecrets = Depends(get_app_secrets)):
     # pyre-ignore[6]
     asyncio.create_task(asyncio.to_thread(run_sync, secrets.vault_path))
     return {"status": "sync_started", "message": "Vault force sync started in the background."}
-
-notion_mirror_status = {"status": "idle", "progress": 0, "total": 0, "message": ""}
-
-@app.get("/api/notion/sync-mirror/status")
-async def get_sync_notion_mirror_status():
-    """Returns the current status of the Notion mirror sync."""
-    return notion_mirror_status
-
-@app.post("/api/notion/sync-mirror")
-async def sync_notion_mirror(secrets: AppSecrets = Depends(get_app_secrets)):
-    """Triggers the background service to mirror Notion to Obsidian."""
-    if not secrets.notion_key or not secrets.vault_path:
-        raise HTTPException(status_code=400, detail="Notion Key and Vault Path are required")
-        
-    global notion_mirror_status
-    if notion_mirror_status.get("status") == "syncing":
-        return {"status": "mirror_started", "message": "A mirror sync is already in progress."}
-        
-    # Optimistically set status so immediate UI polls see it
-    notion_mirror_status.update({"status": "syncing", "message": "Preparing to mirror Notion..."})
-        
-    from src.domains.notion.mirror_service import NotionMirrorService
-    
-    def _status_callback(state: Dict[str, Any]):
-        global notion_mirror_status
-        notion_mirror_status.update(state)
-    
-    def run_mirror(key: str, path: str):
-        service = NotionMirrorService(key, path)
-        # Using asyncio.run inside the thread since sync_all_databases is async
-        asyncio.run(service.sync_all_databases(status_callback=_status_callback))
-        
-    # pyre-ignore[6]
-    asyncio.create_task(asyncio.to_thread(run_mirror, secrets.notion_key, secrets.vault_path))
-    return {"status": "mirror_started", "message": "Notion mirror sync started in the background."}
-
-
 
 # ── Reference Vault Endpoints ─────────────────────────────────────────────────
 

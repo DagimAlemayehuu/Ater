@@ -370,7 +370,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                     <Calendar
                         mode="single"
                         selected={dateValue || undefined}
-                        onSelect={(date) => {
+                        onSelect={(date: Date | undefined) => {
                             if (date) {
                                 const iso = date.toISOString().split('T')[0];
                                 setValue(iso);

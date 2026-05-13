@@ -96,7 +96,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     utilityModel: 'gemini-1.5-flash-8b',
     obsidianVaultPath: '',
     inboxPath: '',
-    academicFolderPath: 'Database',
+    academicFolderPath: 'Notes',
     autoDeploy: false,
     strategistPrompt: DEFAULT_SYSTEM_PROMPT_STRATEGIST,
     strategistSliders: '',

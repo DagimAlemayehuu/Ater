@@ -10,8 +10,17 @@ import { Sparkles, Copy, Check, RefreshCw, X, Quote, Table, ChevronRight, Info }
 import { sidecarApi } from '@/lib/sidecarApi'
 import { AiSidecar } from './AiSidecar'
 import mermaid from 'mermaid'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
+import js from 'react-syntax-highlighter/dist/esm/languages/prism/javascript'
+import python from 'react-syntax-highlighter/dist/esm/languages/prism/python'
+import ts from 'react-syntax-highlighter/dist/esm/languages/prism/typescript'
+import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash'
+import vscDarkPlus from 'react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus'
+
+SyntaxHighlighter.registerLanguage('javascript', js);
+SyntaxHighlighter.registerLanguage('python', python);
+SyntaxHighlighter.registerLanguage('typescript', ts);
+SyntaxHighlighter.registerLanguage('bash', bash);
 
 mermaid.initialize({
   startOnLoad: false,

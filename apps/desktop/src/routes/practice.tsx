@@ -685,7 +685,7 @@ const handleStartSession = async () => {
      <div className="lg:col-span-1 space-y-4">
       <div className="p-4 bg-muted/5 border border-border rounded-lg space-y-3">
        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Hub</div>
-       <Select value={selectedHub} onValueChange={(val) => { setSelectedHub(val); loadVaultFiles(val) }}>
+       <Select value={selectedHub} onValueChange={(val: string) => { setSelectedHub(val); loadVaultFiles(val) }}>
         <SelectTrigger className="w-full h-9 bg-muted/5 border-border rounded-md px-3 text-[10px] font-black uppercase tracking-tight"><SelectValue placeholder="Select Hub..." /></SelectTrigger>
         <SelectContent className="border-border bg-popover">{hubs.map(hub => <SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>)}</SelectContent>
        </Select>
@@ -773,14 +773,14 @@ const handleStartSession = async () => {
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
- <Select value={selectedHub} onValueChange={(val) => {setSelectedHub(val); loadHubNotes(val);}}>
+ <Select value={selectedHub} onValueChange={(val: string) => {setSelectedHub(val); loadHubNotes(val);}}>
  <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-md px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 "><SelectValue placeholder="Select Topic..." /></SelectTrigger>
  <SelectContent className="border-border bg-popover">{hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>))}</SelectContent>
  </Select>
  </div>
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Difficulty</Label>
- <RadioGroup value={advancedConfig.difficulty} onValueChange={(val) => setAdvancedConfig(prev => ({...prev, difficulty: val as any}))} className="grid grid-cols-4 gap-1">
+ <RadioGroup value={advancedConfig.difficulty} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, difficulty: val as any}))} className="grid grid-cols-4 gap-1">
  {[ {val: 'L1', label: '1'}, {val: 'L2', label: '2'}, {val: 'L3', label: '3'}, {val: 'Mixed', label: 'M'} ].map((level) => (
  <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-border rounded-md bg-muted/5 peer-data-[state=checked]:bg-foreground/10 peer-data-[state=checked]:border-foreground peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black  hover:bg-muted/10">{level.label}</Label></div>
  ))}
@@ -824,14 +824,14 @@ const handleStartSession = async () => {
  <div className="grid grid-cols-2 gap-4">
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total (Min)</Label>
- <Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val) => setAdvancedConfig(prev => ({...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val)}))}>
+ <Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val)}))}>
  <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-md px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
  <SelectContent className="border-border bg-popover">{[null, 5, 10, 15, 30, 60].map(m => (<SelectItem key={String(m)} value={String(m)} className="text-[10px] font-black uppercase">{m ? `${m}m` : 'None'}</SelectItem>))}</SelectContent>
  </Select>
  </div>
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Per Q (Sec)</Label>
- <Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val) => setAdvancedConfig(prev => ({...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val)}))}>
+ <Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val)}))}>
  <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-md px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
  <SelectContent className="border-border bg-popover">{[null, 15, 30, 60, 120].map(s => (<SelectItem key={String(s)} value={String(s)} className="text-[10px] font-black uppercase">{s ? `${s}s` : 'None'}</SelectItem>))}</SelectContent>
  </Select>
@@ -876,7 +876,7 @@ const handleStartSession = async () => {
  <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{type.label}</Label>
  <span className="text-[9px] font-black tabular-nums">{advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]}</span>
  </div>
- <Slider value={[advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]]} max={15} step={1} onValueChange={(vals) => updateDistribution(type.key as any, vals[0])} className="py-1" />
+ <Slider value={[advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]]} max={15} step={1} onValueChange={(vals: number[]) => updateDistribution(type.key as any, vals[0])} className="py-1" />
  </div>
  ))}
  </div>

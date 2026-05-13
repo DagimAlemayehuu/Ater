@@ -253,6 +253,82 @@ class AterService:
         if "524" in error_str or "timeout" in error_str.lower(): return "Gateway Timeout"
         return "Connection Error"
 
+    def sync_secrets(self, secrets):
+        """
+        Updates the service's internal LLM clients and agents with new secrets.
+        This allows the background worker to react to changes made in the UI
+        settings (like switching providers or updating keys) without a restart.
+        """
+        # 1. Check if anything actually changed to avoid redundant re-initialization
+        if (self.secrets.ai_key == secrets.ai_key and 
+            self.secrets.ai_provider == secrets.ai_provider and
+            self.secrets.ai_model == secrets.ai_model and
+            self.secrets.planner_provider == secrets.planner_provider and
+            self.secrets.planner_key == secrets.planner_key and
+            self.secrets.planner_model == secrets.planner_model):
+            return
+
+        print(f"[Ater Service] Syncing new secrets: AI={secrets.ai_provider}, Planner={secrets.planner_provider}")
+        self.secrets = secrets
+        
+        # 2. Update Governor
+        if secrets.ai_key:
+            self.governor.set_api_key(secrets.ai_key)
+
+        # 3. Re-initialize Core LLM
+        self.llm = ModelFactory.get_model(
+            provider=secrets.ai_provider,
+            model_name=secrets.ai_model,
+            api_key=secrets.ai_key,
+            temperature=0.0,
+            timeout=ATER_TIMEOUT,
+            request_timeout=ATER_TIMEOUT,
+            max_retries=0,
+            max_tokens=4096,
+        ) if secrets.ai_key else None
+
+        # 4. Re-initialize Planner LLM
+        planner_provider = secrets.planner_provider or secrets.ai_provider
+        planner_key = secrets.planner_key or secrets.ai_key
+        planner_model = secrets.planner_model or secrets.ai_model
+        
+        self.planner_llm = ModelFactory.get_model(
+            provider=planner_provider,
+            model_name=planner_model,
+            api_key=planner_key,
+            temperature=0.0,
+            timeout=ATER_TIMEOUT,
+            request_timeout=ATER_TIMEOUT,
+            max_retries=0,
+            max_tokens=4096,
+        ) if planner_key else self.llm
+
+        # 5. Re-initialize Creative/Writer LLM
+        self.llm_creative = ModelFactory.get_model(
+            provider=secrets.ai_provider,
+            model_name=secrets.ai_model,
+            api_key=secrets.ai_key,
+            temperature=0.0,
+            timeout=ATER_TIMEOUT,
+            request_timeout=ATER_TIMEOUT,
+            max_retries=0,
+            max_tokens=4096,
+        ) if secrets.ai_key else None
+
+        # 6. Update Agents
+        if self.architect_agent: self.architect_agent.llm = self.llm
+        if self.critic_agent: self.critic_agent.llm = self.llm_creative
+        if self.hub_agent: self.hub_agent.llm = self.llm
+        if self.epistemic_classifier_agent: self.epistemic_classifier_agent.llm = self.llm
+        if self.verifier_agent: self.verifier_agent.llm = self.llm
+        if self.meta_scanner_agent: self.meta_scanner_agent.llm = self.llm
+        
+        # Update structured output if needed
+        if self.architect_agent and self.llm:
+            try:
+                self.architect_agent.llm_structured = self.llm.with_structured_output(SovereignPlan)
+            except Exception: pass
+
     def swap_api_key(self, new_api_key: str) -> None:
         """
         Hot-swap the API key without restarting the server.
@@ -387,7 +463,7 @@ class AterService:
             metadata = {
                 "id": file.name,
                 "title": file.stem.replace("_", " "),
-                "path": str(file.absolute())
+                "path": str(file.relative_to(self.vm.vault_path))
             }
             
             try:
@@ -496,15 +572,32 @@ class AterService:
                                 ordered_notes.append({
                                     "id": file.stem,
                                     "title": file.stem.replace("_", " "),
-                                    "path": str(file.absolute())
+                                    "path": str(file.relative_to(self.vm.vault_path))
                                 })
                         
                         return ordered_notes
             except Exception as e:
                 print(f"[Ater Service] Connection extraction failed: {e}")
 
-        # If no connections section found or no links in it, return empty to enforce "strict Connections" rule
-        return []
+        # FALLBACK: If no connections section or extraction failed, list all files in the unit directory
+        all_notes = []
+        if unit_dir.exists():
+            for file in unit_dir.glob("*.md"):
+                # STRICT FILTER: Only atomic notes
+                if file.name.endswith("_Hub.md") or "Possible_Questions" in file.name or "Practice" in file.name or file.name.startswith("_"):
+                    continue
+                if file.name == hub_path.name:
+                    continue
+                    
+                all_notes.append({
+                    "id": file.stem,
+                    "title": file.stem.replace("_", " "),
+                    "path": str(file.relative_to(self.vm.vault_path))
+                })
+        
+        # Sort alphabetically if unsorted
+        all_notes.sort(key=lambda x: x["title"])
+        return all_notes
 
     def list_practices(self) -> List[Dict[str, Any]]:
         """Lists all existing practices by scanning known storage locations recursively."""
@@ -558,7 +651,7 @@ class AterService:
                             # Extract metadata
                             metadata = {
                                 "id": file.name,
-                                "path": str(file.absolute()),
+                                "path": str(file.relative_to(self.vm.vault_path)),
                                 "hub_id": h_id,
                                 "date": data.get("date"),
                                 "difficulty": data.get("difficulty"),
@@ -1335,7 +1428,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     target_hub = {
                         "id": hub_filename,
                         "title": f"{unit_num} {hub_title} Hub" if unit_num else f"{hub_title} Hub",
-                        "path": str(hub_file_path.absolute()),
+                        "path": str(hub_file_path.relative_to(self.vm.vault_path)),
                         "course": course,
                         "unit": unit_num,
                         "semester": semester,
@@ -1925,6 +2018,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     "prerequisites": note_schema.prerequisites,
                                     "source_pages": note_schema.source_pages,
                                     "h1_title": domain["h1"],
+                                    "h2_title": domain["h2"],
                                     "artifact_title": domain["artifact"],
                                     "hub": f"[[{plan_obj.hub_note.title}]]",
                                     "source": self._get_source_link(plan_obj, session.get("path", ""))
@@ -1961,25 +2055,25 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 # Track example/scenario to prevent reuse
                                 if source_snippet and len(source_snippet) > 50:
                                     session["used_examples"].append(source_snippet[:200])
-                                if "mental_model" in theory_parts:
+                                if "plain_english_explanation" in theory_parts:
                                     # Extract first 3 words of analogy as a 'scenario signature'
-                                    words = re.findall(r'\w+', theory_parts["mental_model"].lower())
+                                    words = re.findall(r'\w+', theory_parts["plain_english_explanation"].lower())
                                     if len(words) > 3:
                                         session["used_scenarios"].append(" ".join(words[:3]))
                                 
-                                # 2. Micro-Practitioner Pass
+                                # 2. Micro-Execution (The Systems Breaker)
                                 AterService._status[session_id] = f"{phase_prefix} Execution: [[{current_note_title}]]..."
                                 await self.governor.get_permit(expected_tokens=3000)
                                 prac_parts = await practitioner_agent.generate_micro(
                                     note_schema.title, 
-                                    note_data["technical_definition"], 
+                                    note_data.get("detailed_breakdown", ""), 
                                     primary_language, 
                                     note_schema.mode,
                                     note_schema.source_context or "No context",
                                     academic_level=plan_obj.academic_level,
                                     course_title=plan_obj.course_title,
                                     max_tokens=8000,
-                                    mental_model=note_data.get("mental_model", "")
+                                    plain_english=note_data.get("plain_english_explanation", "")
                                 )
                                 note_data.update(prac_parts)
                                 # 3. Micro-Question Pass (Dynamic Assessment)
@@ -1987,7 +2081,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 await self.governor.get_permit(expected_tokens=3000)
                                 
                                 q_agent = QuestionAgent(self.planner_llm, domain)
-                                q_context = f"THEORY:\n{note_data.get('technical_definition', '')}\n\nARTIFACT:\n{prac_parts.get('artifact_content', '')}\n\nWALKTHROUGH:\n{prac_parts.get('walkthrough', '')}"
+                                q_context = f"INTUITION:\n{note_data.get('plain_english_explanation', '')}\n\nCORE LOGIC:\n{note_data.get('detailed_breakdown', '')}\n\nACADEMIC:\n{note_data.get('academic_translation', '')}\n\nARTIFACT:\n{prac_parts.get('artifact_content', '')}"
                                 prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
                                 valid_qs = await q_agent.generate(
                                     note_schema=note_schema, 

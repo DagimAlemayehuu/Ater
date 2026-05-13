@@ -404,9 +404,19 @@ class AterQueueManager:
 
         except Exception as e:
             watcher_logger.error(f"Critical worker failure for {path.name}: {e}")
-            # region agent log
-            with open("/Users/dabodestroyer/code/Antigravity/Ater/.cursor/debug-18a97e.log", "a", encoding="utf-8") as _f: _f.write(json.dumps({"sessionId":"18a97e","runId":"pre-fix","hypothesisId":"H4","location":"watcher.py:process_file","message":"Worker hit critical failure","data":{"file":path.name,"errorType":type(e).__name__,"error":str(e)[:240],"lastAction":self.last_action},"timestamp":int(time.time()*1000)}) + "\n")
-            # endregion
+            # Workspace-relative debug logging
+            try:
+                debug_log = self.inbox_path / ".ater_debug.log"
+                with open(debug_log, "a", encoding="utf-8") as _f:
+                    _f.write(json.dumps({
+                        "sessionId": session_id,
+                        "location": "watcher.py:process_file",
+                        "message": "Worker hit critical failure",
+                        "data": {"file": path.name, "errorType": type(e).__name__, "error": str(e)[:240], "lastAction": self.last_action},
+                        "timestamp": int(time.time()*1000)
+                    }) + "\n")
+            except:
+                pass
             self._mark_error(file_path_str)
             self.last_action = f"Error: {str(e)}"
 

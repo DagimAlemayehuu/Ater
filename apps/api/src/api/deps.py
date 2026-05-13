@@ -19,7 +19,7 @@ class AppSecrets(BaseModel):
 
     vault_path: Optional[str] = None
     inbox_path: Optional[str] = None
-    academic_path: str = "Database"
+    academic_path: str = "Notes"
     auto_deploy: bool = False
     google_calendar_token: Optional[str] = None
 
@@ -40,7 +40,7 @@ async def get_app_secrets(
     
     x_vault_path: Optional[str] = Header(None),
     x_inbox_path: Optional[str] = Header(None),
-    x_academic_path: str = Header("Database"),
+    x_academic_path: str = Header("Notes"),
     x_auto_deploy: str = Header("false"),
     x_google_calendar_token: Optional[str] = Header(None)
 ) -> AppSecrets:
@@ -50,24 +50,24 @@ async def get_app_secrets(
     """
     primary_provider = x_ai_provider.lower()
     
+
     return AppSecrets(
         ai_provider=primary_provider,
         ai_key=x_ai_key,
         ai_model=x_ai_model,
         
-        # Level 2: Fallback to primary if not specified
-        planner_provider=(x_planner_provider or x_ai_provider).lower(),
-        planner_key=x_planner_key or x_ai_key,
-        planner_model=x_planner_model or x_ai_model,
+        # Consolidate all tiers to primary to enforce "Strict Single Provider" mode
+        planner_provider=primary_provider,
+        planner_key=x_ai_key,
+        planner_model=x_ai_model,
 
-        # Level 3: Fallback to planner if not specified
-        utility_provider=(x_utility_provider or x_planner_provider or x_ai_provider).lower(),
-        utility_key=x_utility_key or x_planner_key or x_ai_key,
-        utility_model=x_utility_model or "gemini-1.5-flash-8b",
+        utility_provider=primary_provider,
+        utility_key=x_ai_key,
+        utility_model=x_ai_model,
 
         vault_path=x_vault_path,
         inbox_path=x_inbox_path,
-        academic_path=x_academic_path,
+        academic_path="Notes" if x_academic_path == "1-Academic" else x_academic_path,
         auto_deploy=x_auto_deploy.lower() == "true",
         google_calendar_token=x_google_calendar_token
     )

@@ -84,15 +84,62 @@ DOMAIN_MATRIX = {
     "CS-WEB-DEV":         {"persona":"Web Developer","h1":"Frontend/Backend Architecture","h2":"Web Standards & Optimization","artifact":"UI Component or API Spec","type":"HTML/JS code block or Markdown Table","question_modes":["mcq", "fill_in", "debug", "trace"]},
 }
 
-# ── DYNAMIC DOMAIN MATRIX v29.0 (HYDRA) ───────────────────────────────────────
+# Apply Universal Feynman Hamburger Fallback (v32.0)
+FEYNMAN_MAPPINGS = {
+    "ECON-MICRO": {"h1": "How the Economics Actually Work", "h2": "The Formal Math & Models"},
+    "ECON-MACRO": {"h1": "The Global Economic Engine", "h2": "The Macro Model & Jargon"},
+    "CS-SOFTWARE": {"h1": "The Logic Behind the Code", "h2": "The Technical Implementation"},
+    "CS-SYSTEMS": {"h1": "The System Flow in Plain English", "h2": "The Architecture & Protocols"},
+    "CS-NETWORKING": {"h1": "The Packet's Journey in Plain English", "h2": "The Network Protocols & Stack"},
+    "CS-CYBERSECURITY": {"h1": "The Exploit Logic in Plain English", "h2": "The Security Protocols & Defense"},
+    "MATH-PURE": {"h1": "The Intuition Behind the Math", "h2": "The Formal Proof"},
+    "MATH-CALCULUS": {"h1": "The Motion & Change in Plain English", "h2": "The Formal Derivative & Integral"},
+    "PHYSICS-KINEMATICS": {"h1": "How the Objects Actually Move", "h2": "The Formal Laws & Equations"},
+    "CHEMISTRY": {"h1": "What the Molecules are Doing", "h2": "The Formal Reaction Equation"},
+    "CHEM-ORGANIC": {"h1": "The Molecular Dance in Plain English", "h2": "The Formal Synthesis Mechanism"},
+    "BIO-GENETICS": {"h1": "The Code of Life in Plain English", "h2": "The Biological Mechanism"},
+    "MED-PHYSIO": {"h1": "How the Body Actually Does This", "h2": "The Clinical Terminology"},
+    "LAW-CASE": {"h1": "The Common Sense Behind the Rule", "h2": "The Legal Precedent & Jargon"},
+    "PHILOSOPHY": {"h1": "The Core Argument in Plain English", "h2": "The Formal Logic & Counter-Arguments"},
+    "HIST-CATALYST": {"h1": "The Human Story Behind the Event", "h2": "The Historical Analysis & Impact"},
+}
+
+def apply_feynman_consistency(target_matrix: dict):
+    """Applies Feynman Hamburger headers and universal fallbacks to a matrix."""
+    for mode_id, config in target_matrix.items():
+        # Handle nested modality dicts in DYNAMIC_DOMAIN_MATRIX
+        if isinstance(config, dict) and any(isinstance(v, dict) for v in config.values()):
+            for modality, sub_config in config.items():
+                if isinstance(sub_config, dict):
+                    # 1. Apply specific Feynman headers if defined
+                    if mode_id in FEYNMAN_MAPPINGS:
+                        sub_config.update(FEYNMAN_MAPPINGS[mode_id])
+                    # 2. Apply universal fallback
+                    else:
+                        if "h1" not in sub_config or sub_config["h1"] == "Technical Architecture" or "Principle" in sub_config["h1"]:
+                            sub_config["h1"] = "The Core Logic Explained"
+                        if "h2" not in sub_config or sub_config["h2"] == "Context & Limitations" or "Context" in sub_config["h2"]:
+                            sub_config["h2"] = "The Textbook Translation"
+        else:
+            # Handle flat DOMAIN_MATRIX
+            if mode_id in FEYNMAN_MAPPINGS:
+                config.update(FEYNMAN_MAPPINGS[mode_id])
+            else:
+                if "h1" not in config or config["h1"] == "Technical Architecture" or "Principle" in config["h1"]:
+                    config["h1"] = "The Core Logic Explained"
+                if "h2" not in config or config["h2"] == "Context & Limitations" or "Context" in config["h2"]:
+                    config["h2"] = "The Textbook Translation"
+
+# Initial pass on DOMAIN_MATRIX
+apply_feynman_consistency(DOMAIN_MATRIX)
 # This matrix allows for modality-specific personas within a domain.
 DYNAMIC_DOMAIN_MATRIX = {
     "ECON-MICRO": {
         "Quantitative": {
             "persona": "Microeconomist",
-            "h1": "Quantitative Model",
-            "h2": "Numerical Sensitivity",
-            "artifact": "Demand/Supply Data Schedule",
+            "h1": "How the Economics Actually Work",
+            "h2": "The Formal Math & Models",
+            "artifact": "Calculation Schedule",
             "walkthrough": "5-Step Calculation Trace",
             "type": "Markdown Table (Demand/Supply Schedule) OR ASCII Text Graph. Do NOT use Mermaid flowcharts for plotting economic curves. Use a well-formatted Markdown Table showing Price and Quantity, accompanied by a LaTeX block explaining the coordinate shift, or a clear ASCII representation of a Cartesian graph.",
             "sanity_check": "Focus on horizontal summation, elasticity coefficients, and equilibrium shifts. CALCULATIVE VERIFICATION LAW: All mathematical steps MUST be explicitly derived in LaTeX. No Mermaid graphs for curves.",
@@ -100,9 +147,9 @@ DYNAMIC_DOMAIN_MATRIX = {
             "prohibited_anti_patterns": "Avoid vague philosophical broadness. Do not skip calculations. DO NOT generate Python, R, or any programming code. Mathematical artifacts must be pure LaTeX or Markdown tables."
         },
         "Qualitative/Definitional": {
-            "persona": "Economic Historian",
-            "h1": "Foundational Concept",
-            "h2": "Historical & Social Context",
+            "persona": "Feynman Economist",
+            "h1": "How the Economics Actually Work",
+            "h2": "The Formal Math & Models",
             "artifact": "Case Study Analysis Table",
             "walkthrough": "Application to Scenario",
             "type": "Markdown Table",
@@ -112,8 +159,8 @@ DYNAMIC_DOMAIN_MATRIX = {
         },
         "Procedural": {
             "persona": "Market Analyst",
-            "h1": "Process Architecture",
-            "h2": "Execution Risks",
+            "h1": "How the Economics Actually Work",
+            "h2": "The Formal Math & Models",
             "artifact": "Market Process Flow",
             "walkthrough": "Step-by-Step Execution",
             "type": "Basic Mermaid flowchart (graph TD)",
@@ -123,8 +170,8 @@ DYNAMIC_DOMAIN_MATRIX = {
         },
         "Comparative": {
             "persona": "Policy Advisor",
-            "h1": "Comparative Framework",
-            "h2": "Trade-offs & Efficiency",
+            "h1": "How the Economics Actually Work",
+            "h2": "The Formal Math & Models",
             "artifact": "Pros/Cons Matrix Table",
             "walkthrough": "Point-by-Point Contrast",
             "type": "Markdown Table",
@@ -134,8 +181,8 @@ DYNAMIC_DOMAIN_MATRIX = {
         },
         "Causal/Historical": {
             "persona": "Research Economist",
-            "h1": "Causal Mechanism",
-            "h2": "Long-term Equilibrium",
+            "h1": "How the Economics Actually Work",
+            "h2": "The Formal Math & Models",
             "artifact": "Causal Chain Timeline",
             "walkthrough": "Causal Chain Analysis",
             "type": "Basic Mermaid flowchart (graph LR)",
@@ -487,6 +534,9 @@ DYNAMIC_DOMAIN_MATRIX = {
         }
     }
 }
+
+# Apply Feynman consistency to the dynamic matrix
+apply_feynman_consistency(DYNAMIC_DOMAIN_MATRIX)
 
 # ── UNIVERSAL MODALITY PERSONAS (v30.0 PANTHEON) ──────────────────────────────
 # These are used when a concept falls outside the defined canonical taxonomy.
@@ -1062,52 +1112,70 @@ OUTPUT: Exactly 3-4 sentences of a vivid, concrete industry scenario. No preambl
             except Exception as e:
                 if attempt == 1: return f"A scenario involving the resource constraints of {title_readable} in a production environment."
                 await asyncio.sleep(governor._rpm_wait_seconds(time.time()) or 1)
-        return ""
+
+    @staticmethod
+    def _extract_xml(tag: str, text: str) -> str:
+        """Robustly extracts content between XML tags, handling markdown fences and filler."""
+        pattern = rf"<{tag}>(.*?)</{tag}>"
+        match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+        if match:
+            content = match.group(1).strip()
+            # Remove markdown code fences if the LLM wrapped the XML content in them
+            content = re.sub(r"^```[a-zA-Z]*\n?", "", content)
+            content = re.sub(r"\n?```$", "", content)
+            return content.strip()
+        return f"*[SYSTEM WARNING: The LLM failed to generate the <{tag}> block.]*"
 
     async def generate_theory_core(self, note_schema, source_text: str, all_concepts: str, academic_level: str) -> Dict[str, str]:
         """
-        The 'Technical Expert' pass.
-        Focus: Definition, Wikilinks, and Takeaways.
+        The 'Feynman Simplifier' pass.
+        Focus: Plain English, Intuitive Logic, and Academic Translation.
         """
         title_readable = note_schema.title.replace("_", " ")
-        persona = self.domain.get("persona", "Subject Matter Expert")
-        axioms = self.domain.get("sanity_check", "Ensure logical consistency.")
+        
+        sys_prompt = f"""You are a master teacher. Your mission is to take dense, poorly-written textbook material and make it impossible NOT to understand. 
 
-        sys_prompt = f"""You are a Hostile Senior Expert in {persona}. Technically precise.
-Generate the technical core of {title_readable}.
+SOURCE MATERIAL: {source_text[:3000]}
+CONCEPT TO TEACH: {title_readable}
+MANDATORY WIKILINKS: {all_concepts}
 
-LAWS:
-1. SOURCE LAW: Pull specific facts from SOURCE. Do NOT invent.
-2. WIKILINK LAW: Include EXACTLY 3 to 5 [[Wikilinks]] to these concepts ONLY: {all_concepts}.
-3. NO PADDING: No "X is important". Start with mechanics.
-4. LATEX: All math in $ or $$.
+S-TIER TEACHER LAWS:
+1. SOURCE LAW: You MUST only use information provided in the SOURCE MATERIAL. If a concept (like Adam Smith) is mentioned but not explained in detail, stick ONLY to what is there. Do NOT hallucinate pre-training data.
+2. FEYNMAN LAW: Explain as if to a 12-year-old. No jargon in the first block.
+3. WIKILINK LAW: Use exactly 3-5 [[Wikilinks]] in the CORE_BREAKDOWN.
 
-CONCEPT: {title_readable}
-LEVEL: {academic_level}
-SOURCE: {source_text[:3000]}
-{axioms}
+OUTPUT EXACTLY THESE THREE XML BLOCKS:
 
-OUTPUT FORMAT:
-<THEORY_PROSE>Academic definition with 3-5 wikilinks.</THEORY_PROSE>
-<TAKEAWAYS>
-- [Fact 1]
-- [Fact 2]
-- [Fact 3]
-</TAKEAWAYS>"""
+<PLAIN_ENGLISH>
+Explain the concept in 2-3 sentences as if speaking to a 12-year-old. Use a simple, relatable analogy.
+</PLAIN_ENGLISH>
+
+<CORE_BREAKDOWN>
+Explain the 'Why' and the 'How' of {title_readable}. Break down the main idea logically. Include WIKILINKS here.
+</CORE_BREAKDOWN>
+
+<ACADEMIC_TRANSLATION>
+Introduce the formal academic definitions or formulas from the SOURCE MATERIAL.
+</ACADEMIC_TRANSLATION>"""
 
         for attempt in range(2):
             try:
-                await governor.get_permit(expected_tokens=1000)
-                res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Generate the theory core.")])
+                await governor.get_permit(expected_tokens=1200)
+                res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Explain {title_readable} using the Feynman method.")])
                 content = res.content
-                theory = re.search(r"<THEORY_PROSE>(.*?)</THEORY_PROSE>", content, re.DOTALL)
-                takeaways = re.search(r"<TAKEAWAYS>(.*?)</TAKEAWAYS>", content, re.DOTALL)
+                
                 return {
-                    "theory_prose": theory.group(1).strip() if theory else "Definition pending.",
-                    "takeaways": takeaways.group(1).strip() if takeaways else "- Key facts pending."
+                    "plain_english": TheoryAgent._extract_xml("PLAIN_ENGLISH", content),
+                    "detailed_breakdown": TheoryAgent._extract_xml("CORE_BREAKDOWN", content),
+                    "academic_translation": TheoryAgent._extract_xml("ACADEMIC_TRANSLATION", content),
                 }
-            except Exception:
-                if attempt == 1: return {"theory_prose": "Definition failed.", "takeaways": "- Facts failed."}
+            except Exception as e:
+                if attempt == 1: 
+                    return {
+                        "plain_english": "Error.", 
+                        "detailed_breakdown": "Error.", 
+                        "academic_translation": "Error."
+                    }
                 await asyncio.sleep(1)
         return {}
 
@@ -1119,25 +1187,22 @@ OUTPUT: 3 complete sentences. No preamble."""
         res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Source: {source_text[:1000]}")])
         return res.content.strip()
 
-    async def generate_micro(self, note_schema, source_text: str, all_concepts: str, used_scenarios: list = None, academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 1500) -> Dict[str, str]:
-        # Orchestrate the modular passes
-        mental_model = await self.generate_mental_model(note_schema, source_text, academic_level, used_scenarios)
+    async def generate_micro(self, note_schema, source_text: str, all_concepts: str, used_scenarios: list = None, academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 1500) -> Dict[str, Any]:
+        # Orchestrate the modular Feynman passes
         theory_data = await self.generate_theory_core(note_schema, source_text, all_concepts, academic_level)
-        limitations = await self.generate_limitations(note_schema, source_text, self.domain.get("persona", "Expert"))
-
-        assembled_tech = f"{theory_data.get('theory_prose', '')}\n\n### Key Takeaways:\n{theory_data.get('takeaways', '')}"
 
         return {
-            "h1_title": self.domain.get("h1", "Technical Architecture"),
-            "mental_model": mental_model,
-            "technical_definition": assembled_tech,
-            "limitations": limitations
+            "plain_english_explanation": theory_data.get("plain_english", ""),
+            "h1_title": self.domain.get("h1", "The Core Logic Explained"),
+            "detailed_breakdown": theory_data.get("detailed_breakdown", ""),
+            "h2_title": self.domain.get("h2", "The Textbook Translation"),
+            "academic_translation": theory_data.get("academic_translation", ""),
         }
 
     async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str, used_scenarios: list = None) -> str:
-        title_readable = note_schema.title.replace("_", " ")
+        # Legacy direct string call - now redirects to render_atomic_note via service
         res = await self.generate_micro(note_schema, source_text, all_concepts, used_scenarios)
-        return f"## 1. Mental Model\n{res['mental_model']}\n\n## 2. {res['h1_title']}\n{res['technical_definition']}\n\n## 3. Limitations & Future Context\n{res['limitations']}"
+        return f"FEYNMAN_DATA:{json.dumps(res)}"
 
     async def retry(self, note_schema, source_text: str, primary_language: str, all_concepts: str, diagnosis: str) -> str:
         return await self.generate(note_schema, source_text, primary_language, all_concepts)
@@ -1147,64 +1212,64 @@ class PractitionerAgent:
         self.llm = llm
         self.domain = domain
 
-    async def generate_artifact_code(self, note_title: str, theory_body: str, mental_model: str, sanity_check: str, persona: str) -> str:
-        sys_prompt = f"""You are a Senior Engineer in {persona}.
-Generate a Python script to create a pedagogical artifact for {note_title}.
+    async def generate_artifact_code(self, note_title: str, theory_body: str, plain_english: str, sanity_check: str, persona: str) -> str:
+        sys_prompt = f"""You are a Systems Breaker and Technical Engineer in {persona}.
+Generate a pedagogical artifact and failure analysis for {note_title}.
 
 LAWS:
-1. NARRATIVE CONSISTENCY: Use the characters/industry from this Mental Model: {mental_model}
-2. RESULT TABLE LAW: If this domain is Quantitative, the script MUST perform a calculation and output a 'Result Table' showing inputs, derivations, and final values.
-3. EPISTEMIC RIGOR: Mathematical artifacts must use pure LaTeX. No Mermaid for plots.
-4. VISUAL EXCELLENCE: Tables must be high-density and technically precise.
+1. NARRATIVE CONSISTENCY: Use the industry/context from this explanation: {plain_english}
+2. RESULT TABLE LAW: If Quantitative, the artifact MUST be a calculation table.
+3. EPISTEMIC RIGOR: Use pure LaTeX for math. Use Mermaid for flows. 
+4. SYNTAX LAW: NEVER wrap Mermaid diagrams in Markdown table pipes. Mermaid must be in its own ```mermaid block.
 
-<PYTHON_CODE>
-def generate():
-    return {{
-        'equation': '$...$',
-        'artifact_title': '...',
-        'artifact': 'Markdown Table or Mermaid...',
-        'walkthrough': ['Step 1', 'Step 2', 'Step 3']
-    }}
-</PYTHON_CODE>
-{sanity_check}"""
+OUTPUT EXACTLY THESE TWO XML BLOCKS:
+
+<ARTIFACT>
+The Mermaid diagram, LaTeX equation, or Markdown table.
+</ARTIFACT>
+
+<LIMITATIONS>
+A dense, bulleted list of edge cases, traps, and real-world failure states for the concept. Be brutal. What breaks this?
+</LIMITATIONS>"""
         await governor.get_permit(expected_tokens=1500)
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Generate artifact code.")])
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Generate artifact for {note_title}.")])
         return res.content
 
-    async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "", source_text: str = "", academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 2500, mental_model: str = "") -> Dict[str, str]:
+    async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "", source_text: str = "", academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 2500, plain_english: str = "") -> Dict[str, Any]:
         persona = self.domain.get("persona", "Senior Expert")
         sanity_check = self.domain.get("sanity_check", "Ensure logical consistency.")
         
         # Modular Artifact Pass
-        for attempt in range(3):
+        for attempt in range(2):
             try:
-                content = await self.generate_artifact_code(note_title, theory_body, mental_model, sanity_check, persona)
+                content = await self.generate_artifact_code(note_title, theory_body, plain_english, sanity_check, persona)
                 
-                match = re.search(r"<PYTHON_CODE>(.*?)</PYTHON_CODE>", content, re.DOTALL)
-                if not match: match = re.search(r"```python\s*(.*?)\s*```", content, re.DOTALL)
-                if not match: raise Exception("No Python code found.")
+                artifact = TheoryAgent._extract_xml("ARTIFACT", content)
+                limitations = TheoryAgent._extract_xml("LIMITATIONS", content)
                 
-                from .sandbox import execute_sandboxed_code
-                success, artifact_md, payload = execute_sandboxed_code(match.group(1).strip())
-                if not success: raise Exception(f"Sandbox failed: {artifact_md}")
-
+                if not artifact: raise Exception("No artifact found.")
+                
                 return {
-                    "h1_title": self.domain.get("h1", "Technical Architecture"),
-                    "artifact_title": payload.get("artifact_title", "Artifact"),
-                    "artifact_content": f"{payload.get('equation', '')}\n\n{payload.get('artifact', '')}".strip(),
-                    "walkthrough": "\n".join([f"{i+1}. {s}" for i, s in enumerate(payload.get("walkthrough", []))])
+                    "artifact_title": self.domain.get("artifact", "Technical Artifact"),
+                    "artifact_content": artifact,
+                    "limitations": limitations
                 }
             except Exception as e:
-                if attempt == 2: raise e
+                if attempt == 1: 
+                    return {
+                        "artifact_title": "Technical Artifact",
+                        "artifact_content": "Artifact generation pending.",
+                        "limitations": "Edge cases pending."
+                    }
                 await asyncio.sleep(1)
 
     async def generate(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> str:
-        title_readable = note_title.replace("_", " ")
+        # Legacy direct string call - now redirects to render_atomic_note via service
         res = await self.generate_micro(note_title, theory_body, primary_language, mode=mode)
-        return f"## 4. {res['artifact_title']}\n{res['artifact_content']}\n\n## 5. Walkthrough\n{res['walkthrough']}"
+        return f"PRACTITIONER_DATA:{json.dumps(res)}"
 
     async def retry(self, note_title: str, theory_body: str, primary_language: str, diagnosis: str) -> str:
-        return await self.generate(note_title, theory_body, primary_language)
+        return await self.generate(note_title, theory_body, primary_language, mode="")
 
 class QuestionAgent:
     def __init__(self, llm: BaseChatModel, domain: Union[dict, str]):
@@ -1242,26 +1307,53 @@ class QuestionAgent:
         if q_type == "mcq":
             mcq_extra = "\nCRITICAL FOR MCQ: You MUST provide EXACTLY 4 options (A, B, C, D). Never generate only 2 options. All 4 distractors must be plausible but only one is correct."
 
-        sys_prompt = f"""You are a Senior Examiner in {persona}.
-Generate EXACTLY {count} high-fidelity interactive quiz questions for {title_readable}. DO NOT stop early.
-{q_type_str}{mcq_extra}
+        sys_prompt = f"""You are a hostile examiner. Your goal is to prove the student doesn't actually understand the mechanics of {title_readable}. 
+Generate EXACTLY 3 interactive questions based on the source text. 
+OUTPUT FORMAT MUST BE A STRICT JSON ARRAY OF 3 OBJECTS WRAPPED IN <QUIZ_JSON> TAGS.
+
+Question 1 Type: "mcq" (Test basic translation of the concept. Distractors must be extremely plausible).
+Question 2 Type: "fill_in" (Test a specific foundational term from the text. Use [[blank]] notation).
+Question 3 Type: "debug" (CRITICAL: You must present a flawed scenario, a broken equation, or a backwards logic chain. The user must identify the exact flaw).
+
+JSON SCHEMA FOR Q3 (Debug):
+{{
+  "type": "debug",
+  "question": "[Insert the flawed scenario/math here]",
+  "flawed_logic": "[Identify the exact error]",
+  "answer": "[The correct fix]",
+  "explanation": "[Why it was wrong]"
+}}
 
 S-TIER EXAMINER LAWS:
-1. ACADEMIC LEVEL: The questions MUST strictly match {academic_level} difficulty. If L1, test foundational mechanisms. If L2, test procedural application. If L3, test edge cases, systemic failures, and higher-order synthesis.
-2. MECHANICS: {mechanics}
-3. CONTEXT LOCK: Use the professional domain {prof_domain} for all scenario-based questions.
-4. NO RECALL: Avoid "What is X". Instead use "In scenario Y what happens to X when Z occurs".
-5. JSON ONLY: Output ONLY a valid JSON array inside <QUIZ_JSON> tags. No text outside the tags. No markdown inside JSON strings - use plain text only.
-6. EXACT COUNT: The array must contain EXACTLY {count} objects. No more, no less.
+1. ACADEMIC LEVEL: Match {academic_level} difficulty.
+2. CONTEXT LOCK: Use the professional domain {prof_domain}.
+3. NO RECALL: Avoid simple definition questions. Use application.
+4. JSON ONLY: Output ONLY the JSON array inside <QUIZ_JSON> tags.
+5. SOURCE LAW: Only test things present in or logically derived from the source text.
 
-Output format - a JSON array of {count} objects wrapped in <QUIZ_JSON> tags:
-<QUIZ_JSON>
+YOU MUST OUTPUT EXACTLY THIS JSON STRUCTURE AND NOTHING ELSE. DO NOT CHANGE THE KEYS:
 [
   {{
-    {type_schema}
+    "type": "mcq",
+    "question": "...",
+    "options": {{ "a": "...", "b": "...", "c": "...", "d": "..." }},
+    "answer": "a",
+    "explanation": "..."
+  }},
+  {{
+    "type": "fill_in",
+    "question": "... [[blank]] ...",
+    "answer": "...",
+    "textWithBlanks": "..."
+  }},
+  {{
+    "type": "debug",
+    "question": "...",
+    "flawed_logic": "...",
+    "answer": "...",
+    "explanation": "..."
   }}
 ]
-</QUIZ_JSON>
 
 Axioms for this domain:
 {axioms}"""
@@ -1455,16 +1547,14 @@ class VerifierAgent:
 Return ONLY a valid JSON object - no markdown fences, no commentary.
 
 CHECK ALL CRITERIA:
-- `clean_output`: No "Wait", "Let me think", or "As an AI". No all-caps text unless technically necessary.
-- `economic_laws`: STRICT for ECON: Demand curves MUST slope DOWNWARD.
-- `unique_scenario`: Is the scenario/analogy fresh? (FAIL if it uses 'Azura' or currency devaluation for Microeconomics).
-- `epistemic_congruence`: Does the content match the MODALITY "{modality}"? 
-  - FAIL if a 'Qualitative' note contains rote math formulas.
-  - FAIL if a 'Quantitative' note lacks a numerical schedule/table.
-  - FAIL if a 'Procedural' note lacks a step-by-step logic.
+- `clean_output`: No "Wait", "Let me think", or "As an AI". No all-caps text.
+- `feynman_integrity`: Does the note follow the 3-step ladder? (Plain English analogy -> Logical Breakdown -> Academic Translation).
+- `limitations_rigor`: Does the 'Where It Breaks' section contain brutal, specific failure states (not generic fluff)?
+- `wikilink_density`: Are there at least 3-5 distinct [[Wikilinks]] in the detailed breakdown?
+- `unique_scenario`: Is the analogy fresh and not a cliché?
 
 Output format - use EXACTLY this structure:
-{{"domain_lock":true,"epistemic_congruence":true,"quiz_topicality":true,"debug_validity":true,"arithmetic_correct":true,"mental_model_maps":true,"clean_output":true,"economic_laws":true,"unique_scenario":true,"failures":[{{"check":"domain_lock","issue":"exact description","fix_instruction":"exact fix"}}]}}
+{{"feynman_integrity":true,"limitations_rigor":true,"wikilink_density":true,"unique_scenario":true,"clean_output":true,"failures":[{{"check":"feynman_integrity","issue":"exact description","fix_instruction":"exact fix"}}]}}
 
 failures is an empty array [] if all checks pass.
 Source context: {source_context[:400]}"""
@@ -1478,11 +1568,9 @@ Source context: {source_context[:400]}"""
                 res = await self.llm.ainvoke([("system", sys_prompt + retry_note), ("human", user_msg)])
                 data = ArchitectAgent._parse_json(res.content)
                 passed = all([
-                    data.get("domain_lock", True), data.get("epistemic_congruence", True),
-                    data.get("quiz_topicality", True), data.get("debug_validity", True), 
-                    data.get("arithmetic_correct", True), data.get("mental_model_maps", True), 
-                    data.get("clean_output", True), data.get("economic_laws", True), 
-                    data.get("unique_scenario", True)
+                    data.get("feynman_integrity", True), data.get("limitations_rigor", True),
+                    data.get("wikilink_density", True), data.get("unique_scenario", True),
+                    data.get("clean_output", True)
                 ])
                 return {"passed": passed, "failures": data.get("failures", [])}
             except Exception as e:

@@ -27,11 +27,11 @@ export default function PomodoroStats() {
     const practices = filteredHistory.filter(h => h.type === 'practice');
 
     const totalSessions = sessions.length;
-    const totalMinutes = Math.round(filteredHistory.reduce((acc, s) => acc + s.duration, 0));
+    const totalMinutes = Math.round(filteredHistory.reduce((acc, s) => acc + (s.duration || 0), 0));
     
     // Hub Distribution
     const hubs: Record<string, number> = {};
-    sessions.forEach(s => { hubs[s.hub] = (hubs[s.hub] || 0) + 1; });
+    sessions.forEach(s => { hubs[s.hub || 'Unknown'] = (hubs[s.hub || 'Unknown'] || 0) + 1; });
     const categories = Object.entries(hubs)
       .map(([name, count]) => ({ 
         name, count, percent: Math.round((count / (totalSessions || 1)) * 100)
@@ -42,7 +42,7 @@ export default function PomodoroStats() {
     const noteTime: Record<string, number> = {};
     notes.forEach(n => {
       const name = n.notePath?.split('/').pop()?.replace('.md', '') || 'Unknown';
-      noteTime[name] = (noteTime[name] || 0) + n.duration;
+      noteTime[name] = (noteTime[name] || 0) + (n.duration || 0);
     });
     const noteData = Object.entries(noteTime)
       .map(([name, value]) => ({ name, value: Math.round(value) }))
@@ -228,7 +228,7 @@ export default function PomodoroStats() {
                  {stats.notes.slice(-10).reverse().map((n, i) => (
                    <div key={i} className="flex items-center justify-between p-4 bg-muted/10 border border-border/60 rounded-xl">
                      <span className="text-[10px] font-black uppercase truncate pr-4">{n.notePath?.split('/').pop()?.replace('.md', '')}</span>
-                     <span className="text-[10px] font-bold tabular-nums opacity-60">{Math.round(n.duration)}m</span>
+                     <span className="text-[10px] font-bold tabular-nums opacity-60">{Math.round(n.duration || 0)}m</span>
                    </div>
                  ))}
                </div>

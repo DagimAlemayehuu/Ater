@@ -38,7 +38,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": []
+    "externalBin": [
+      "binaries/ater-api"
+    ]
   },
   "plugins": {}
 }
