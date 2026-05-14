@@ -535,6 +535,60 @@ const handleStartSession = async () => {
     toast.success('Randomized!')
   }
 
+  const handleReviewDueCards = async () => {
+    if (!selectedHub) { toast.error("Select a topic first."); return; }
+    setIsLoading(true);
+    setView('loading');
+    try {
+      const dueRes = await sidecarApi.srsDue(selectedHub);
+      if (!dueRes.due_cards || dueRes.due_cards.length === 0) {
+        toast.info("No cards are due for this topic right now!");
+        setView('dashboard');
+        return;
+      }
+      
+      const duePaths = dueRes.due_cards.map((c: any) => c.note_path);
+      const cleanDistribution = Object.fromEntries(
+         Object.entries(advancedConfig.questionDistribution).filter(([k]) => 
+         ['mcq', 'true_false', 'writing', 'fill_in', 'matching', 'order', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(k)
+         )
+      );
+
+      const res = await sidecarApi.generatePractice(selectedHub, {
+         ...advancedConfig,
+         selectedAtomicNotes: duePaths,
+         hubId: selectedHub,
+         questionDistribution: cleanDistribution 
+      });
+
+      if (!res.questions || res.questions.length === 0) {
+         toast.error('No content generated for due cards.');
+         setView('dashboard');
+         return;
+      }
+      
+      setTimeout(() => {
+         setQuestions(res.questions); 
+         setCurrentPracticePath(res.quiz_path); 
+         setCurrentQuestionIdx(0); 
+         setUserAnswers({}); 
+         setIsRevealed(false); 
+         setGradedAnswers({}); 
+         setStreak(0); setBookmarked(new Set());
+         setView('session');
+         (window as any).__practiceStartTime = Date.now();
+         if (advancedConfig.globalTimeLimitMinutes) setGlobalTimeLeft(advancedConfig.globalTimeLimitMinutes * 60);
+         if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error generating practice from due cards");
+      setView('dashboard');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
  // ──────────────────────────────────────────────────────────────────────────
  // DASHBOARD RENDERER
  // ──────────────────────────────────────────────────────────────────────────
@@ -558,7 +612,10 @@ const handleStartSession = async () => {
  <button onClick={() => setView('history' as any)} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", (view as string) === 'history' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>History</button>
  <button onClick={() => { setView('vault' as any); if (selectedHub) loadVaultFiles(selectedHub) }} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md flex items-center gap-1", (view as string) === 'vault' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}><BookOpen size={10}/>Reference Vault</button>
  </div>
- <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-muted/5 border border-border hover:border-foreground/50 text-foreground rounded-md font-black uppercase tracking-widest text-[9px] ">Start</Button>
+ <div className="flex gap-2 w-full sm:w-auto">
+ <Button onClick={handleReviewDueCards} className="h-9 flex-1 sm:flex-none px-6 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 rounded-md font-black uppercase tracking-widest text-[9px]"><FlameKindling size={10} className="mr-1"/>Review Due</Button>
+ <Button onClick={() => setView('configuring')} className="h-9 flex-1 sm:flex-none px-6 bg-muted/5 border border-border hover:border-foreground/50 text-foreground rounded-md font-black uppercase tracking-widest text-[9px] ">Custom</Button>
+ </div>
  </div>
 
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

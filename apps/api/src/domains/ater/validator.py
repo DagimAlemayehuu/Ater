@@ -46,6 +46,17 @@ HARD_FAILURE_MARKERS = [
     "approximately, by correct interpolation",
 ]
 
+# Regex patterns for hallucinated system markers the LLM emits when XML extraction fails
+HARD_FAILURE_PATTERNS = [
+    re.compile(r'\*\[SYSTEM WARNING:.*?\]\*', re.IGNORECASE | re.DOTALL),
+    re.compile(r'\[SYSTEM WARNING.*?\]', re.IGNORECASE | re.DOTALL),
+    re.compile(r'\[LLM ERROR.*?\]', re.IGNORECASE),
+    re.compile(r'\[GENERATION FAILED.*?\]', re.IGNORECASE),
+    re.compile(r'\*?LLM failed to generate the <.*?> block\.?\*?', re.IGNORECASE),
+    re.compile(r'as an ai(,|\s)', re.IGNORECASE),
+    re.compile(r"i(?:'m| am) unable to", re.IGNORECASE),
+]
+
 # Quiz-specific stub patterns — a quiz block containing ONLY these is pedagogically dead
 QUIZ_STUB_MARKERS = [
     '"question": "Error generating question."',
@@ -286,12 +297,19 @@ class AterValidator:
             cleaned = re.sub(r'[\s\n\-\*_]+$', '', stripped)
             
             if len(cleaned) > 10:  # skip trivially empty sections only
-                last_sent_char = cleaned[-1]
-                valid_terminal = [".", "!", "?", "`", ")", "]", "}", "$", "|", '"', ";", ":", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
-                # Also allow sections ending with a wikilink ([[...]]) or a bare word that isn't mid-sentence
-                ends_with_wikilink = cleaned.endswith("]]") or cleaned.endswith("]")
-                if last_sent_char not in valid_terminal and not ends_with_wikilink:
-                    errors.append(f"SECTION_TRUNCATION: A section body ends mid-sentence: '...{cleaned[-40:]}'") 
+                # Only check for truncation if this section is the very last thing in the body.
+                # If it's not the last thing, the LLM successfully generated the next heading/block, so it's not truncated.
+                is_last_section = body.strip().endswith(section_body.strip())
+                if is_last_section:
+                    last_sent_char = cleaned[-1]
+                    valid_terminal = [".", "!", "?", "`", ")", "]", "}", "$", "|", '"', ";", ":", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+                    # Also allow sections ending with a wikilink ([[...]]) or a bare word that isn't mid-sentence
+                    ends_with_wikilink = cleaned.endswith("]]") or cleaned.endswith("]")
+                    # Also allow common math variables or symbols
+                    ends_with_math = re.search(r'[A-Za-z\+\-\=\%]$', cleaned) is not None
+                    
+                    if last_sent_char not in valid_terminal and not ends_with_wikilink and not ends_with_math:
+                        errors.append(f"SECTION_TRUNCATION: The final section ends mid-sentence: '...{cleaned[-40:]}'")
 
         # v28.4 FIX: Empty Table Kill-Switch (Section 4 Artifacts)
         if re.search(r'(?:#|##) 4\.', body):
@@ -311,7 +329,57 @@ class AterValidator:
         # ── 8. Gutter law defense (No longer logged; fixed proactively in VaultManager)
         # We previously warned here, but now we silenty accept and fix during the write phase.
 
+        # ── 9. Regex-based Hard Failure Pattern Check ─────────────────────────
+        for pattern in HARD_FAILURE_PATTERNS:
+            if pattern.search(content):
+                errors.append(f"REGEX_HARD_FAILURE: Pattern '{pattern.pattern[:60]}' matched — note contains hallucinated system marker.")
+
         return len(errors) == 0, errors
+
+    @staticmethod
+    def semantic_topic_lock(note_title: str, source_context: str, quiz_questions: list, min_keyword_hits: int = 1) -> Tuple[bool, str]:
+        """
+        Deterministic Semantic Topic Lock (v32.1).
+        Verifies that each quiz question contains at least one keyword derived from
+        the note's source_context. Prevents domain contamination / hallucinated quiz topics.
+
+        Returns (passed, diagnosis_string).
+        """
+        if not source_context or not quiz_questions:
+            return True, ""
+
+        # Extract meaningful keywords from source (3+ char, non-stopword tokens)
+        STOPWORDS = {
+            "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+            "have", "has", "had", "do", "does", "did", "will", "would", "could",
+            "should", "may", "might", "can", "to", "of", "in", "on", "at", "by",
+            "for", "with", "from", "and", "or", "but", "not", "it", "its", "this",
+            "that", "these", "those", "as", "if", "so", "yet", "nor", "than",
+        }
+        # Also extract keywords from the note title itself
+        title_tokens = set(w.lower() for w in re.findall(r'[a-zA-Z]{3,}', note_title) if w.lower() not in STOPWORDS)
+        source_tokens = set(w.lower() for w in re.findall(r'[a-zA-Z]{3,}', source_context) if w.lower() not in STOPWORDS)
+        valid_keywords = source_tokens | title_tokens
+
+        if len(valid_keywords) < 5:
+            # Not enough signal — skip check to avoid false positives
+            return True, ""
+
+        failed_questions = []
+        for i, q in enumerate(quiz_questions):
+            if not isinstance(q, dict):
+                continue
+            # Combine all text fields in the question
+            q_text = " ".join(str(v) for v in q.values() if isinstance(v, str)).lower()
+            q_tokens = set(re.findall(r'[a-zA-Z]{3,}', q_text))
+            hits = q_tokens & valid_keywords
+            if len(hits) < min_keyword_hits:
+                failed_questions.append(f"Q{i+1} (type={q.get('type','?')}): 0 source keywords found — possible domain contamination")
+
+        if failed_questions:
+            diagnosis = f"SEMANTIC_TOPIC_LOCK_FAIL: {len(failed_questions)}/{len(quiz_questions)} questions failed. " + "; ".join(failed_questions[:3])
+            return False, diagnosis
+        return True, ""
 
     @staticmethod
     def validate_json_robust(raw_json: str) -> Tuple[bool, Any, Optional[str]]:

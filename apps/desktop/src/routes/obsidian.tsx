@@ -860,6 +860,16 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }, [isResizing, isResizingConnections, sidebarWidth, isFullscreen])
 
 
+ const handleSRSRating = async (rating: number) => {
+   if (!selectedPath) return;
+   try {
+     await sidecarApi.srsReview(selectedPath, rating);
+     toast.success("SRS progress saved!");
+   } catch (e: any) {
+     toast.error("Failed to save SRS review: " + e.message);
+   }
+ };
+
  const handleSaveNote = async () => {
  if (!selectedPath) return
  setLoadingNote(true)
@@ -2314,6 +2324,16 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
 }}
  />
+
+ <div className="mt-8 mb-12 flex flex-col items-center gap-3">
+   <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Space Repetition Review</div>
+   <div className="flex flex-wrap justify-center gap-2">
+     <button onClick={() => handleSRSRating(1)} className="px-6 py-2 rounded-lg text-xs font-bold border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors">Again</button>
+     <button onClick={() => handleSRSRating(2)} className="px-6 py-2 rounded-lg text-xs font-bold border border-foreground/30 text-foreground hover:bg-muted transition-colors">Hard</button>
+     <button onClick={() => handleSRSRating(3)} className="px-6 py-2 rounded-lg text-xs font-bold border border-primary/50 text-primary hover:bg-primary/10 transition-colors">Good</button>
+     <button onClick={() => handleSRSRating(4)} className="px-6 py-2 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">Easy</button>
+   </div>
+ </div>
  </>
  )}
  </div>

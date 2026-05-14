@@ -1078,6 +1078,87 @@ async def get_practice_analytics(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/srs/review")
+async def srs_review(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.inbox_path:
+        raise HTTPException(status_code=400, detail="Inbox Path not configured")
+    from src.domains.ater.srs import SRSEngine
+    engine = SRSEngine(Path(secrets.inbox_path) / "ater_queue.db")
+    
+    note_path = payload.get("note_path")
+    rating = payload.get("rating", 3)
+    if not note_path:
+        raise HTTPException(status_code=400, detail="note_path required")
+    
+    try:
+        card = engine.review(note_path, rating)
+        return {"success": True, "card": {
+            "note_path": card.note_path,
+            "stability": card.stability,
+            "difficulty": card.difficulty,
+            "due": card.due.isoformat(),
+            "reps": card.reps,
+            "lapses": card.lapses
+        }}
+    except Exception as e:
+        logger.error(f"SRS Review Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/srs/due")
+async def get_srs_due(
+    hub_id: str = None,
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.inbox_path:
+        return {"due_cards": []}
+    from src.domains.ater.srs import SRSEngine
+    engine = SRSEngine(Path(secrets.inbox_path) / "ater_queue.db")
+    
+    hub_notes = []
+    if hub_id and secrets.vault_path:
+        service = AterService(secrets)
+        hub_notes = [n["path"] for n in service.list_atomic_notes(hub_id)]
+        
+    try:
+        cards = engine.get_due(hub_notes if hub_id else None)
+        return {"due_cards": [{
+            "note_path": c.note_path,
+            "due": c.due.isoformat(),
+            "difficulty": c.difficulty,
+            "reps": c.reps
+        } for c in cards]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/analytics/record")
+async def record_analytics(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.inbox_path:
+        raise HTTPException(status_code=400, detail="Inbox Path not configured")
+    from src.domains.ater.analytics import AnalyticsEngine
+    engine = AnalyticsEngine(Path(secrets.inbox_path) / "ater_queue.db")
+    
+    try:
+        engine.record(
+            note_path=payload.get("note_path", "unknown"),
+            was_correct=payload.get("was_correct", False),
+            time_ms=payload.get("time_ms", 0),
+            question_type=payload.get("question_type", ""),
+            difficulty=payload.get("difficulty", "L1"),
+            confidence=payload.get("confidence"),
+            session_id=payload.get("session_id"),
+            question_id=payload.get("question_id")
+        )
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Analytics Record Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/study/history")
 async def get_study_history(
     secrets: AppSecrets = Depends(get_app_secrets)
@@ -1266,43 +1347,64 @@ async def ater_chat(
     payload: Dict[str, Any],
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
-    """Context-aware chat related to a selection."""
+    """Context-aware chat grounded to the active note's concept and source pages (v32.1)."""
     path = payload.get("path", "")
     selection = payload.get("selection", "")
     page_num = payload.get("page", 1)
-    messages_input = payload.get("messages", []) # List of {role, content}
-    
+    messages_input = payload.get("messages", [])  # List of {role, content}
+
     try:
-        # Resolve Context
+        # ── Resolve document path ────────────────────────────────────────────────
         is_pdf = path.lower().endswith('.pdf')
         decoded_path = unquote(path)
         full_path = Path(secrets.vault_path) / decoded_path
         relative_path = path
-        
+
         if not full_path.exists():
-            # Case-insensitive fallback
             parent = full_path.parent
             if parent.exists():
                 for f in parent.iterdir():
                     if f.name.lower() == full_path.name.lower():
                         full_path = f
                         break
-        
+
+        # ── Load source content ──────────────────────────────────────────────────
         context_content = ""
         if is_pdf and full_path.exists():
             from langchain_community.document_loaders import PyPDFLoader
             loader = PyPDFLoader(str(full_path))
             pages = loader.load_and_split()
-            if page_num > len(pages):
-                context_content = pages[-1].page_content if pages else ""
-            else:
-                context_content = pages[page_num - 1].page_content
-        elif full_path.exists() and full_path.suffix == ".md":
-            context_content = full_path.read_text(encoding="utf-8")
+            page_idx = min(page_num - 1, len(pages) - 1) if pages else 0
+            context_content = pages[page_idx].page_content if pages else ""
         elif full_path.exists():
-            # Fallback for other text files
             try:
                 context_content = full_path.read_text(encoding="utf-8")
+            except Exception:
+                pass
+
+        # ── ACTIVE NOTE METADATA EXTRACTION (v32.1 Ask AI Grounding) ────────────
+        # Parse YAML frontmatter of the active .md note to anchor every AI response
+        # to the exact concept and source pages the student is currently studying.
+        active_note_title = ""
+        active_note_mode = ""
+        active_source_pages: list = []
+        active_hub = ""
+        active_course = ""
+
+        if full_path.exists() and full_path.suffix == ".md":
+            try:
+                import yaml as _yaml
+                raw_md = full_path.read_text(encoding="utf-8")
+                _ym = re.search(r"^---\s*\n(.*?)\n---\s*\n", raw_md, re.DOTALL | re.MULTILINE)
+                if _ym:
+                    _meta = _yaml.safe_load(_ym.group(1)) or {}
+                    active_note_title = str(_meta.get("title", "")).replace("_", " ").strip()
+                    active_note_mode = str(_meta.get("mode", "")).strip()
+                    _raw_pages = _meta.get("source_pages", [])
+                    if isinstance(_raw_pages, list):
+                        active_source_pages = [int(p) for p in _raw_pages if str(p).strip().isdigit()]
+                    active_hub = str(_meta.get("hub", "")).strip()
+                    active_course = str(_meta.get("course", "")).strip()
             except Exception:
                 pass
 
@@ -1312,31 +1414,53 @@ async def ater_chat(
             api_key=secrets.ai_key,
             temperature=0.4
         )
-        
-        # Load SI
+
+        # ── Load system instruction ──────────────────────────────────────────────
         si_path = root_dir / ".system" / "prompts" / "pedagogical_assistant.md"
         si_content = si_path.read_text(encoding="utf-8") if si_path.exists() else "You are a helpful academic assistant."
-        
-        # Build Chat Messages
         chat_messages = [SystemMessage(content=si_content)]
-        
-        # Inject Context in the first user message if not already there or as a system reminder
-        context_reminder = f"""
-[SYSTEM CONTEXT]
-Document: {relative_path}
-Selection: "{selection}"
-Source Content: {context_content[:10000]}
-"""
+
+        # ── GROUNDED CONTEXT INJECTION ───────────────────────────────────────────
+        # Tier 1: Active Note Anchor — locks AI to the specific concept.
+        # Tier 2: Source Content — raw PDF page or note body for factual grounding.
+        anchor_block = ""
+        if active_note_title:
+            pages_str = ", ".join(str(p) for p in active_source_pages) if active_source_pages else "not specified"
+            anchor_block = (
+                f"\n[ACTIVE NOTE ANCHOR]\n"
+                f"Concept: {active_note_title}\n"
+                f"Domain Mode: {active_note_mode or 'General'}\n"
+                f"Course: {active_course or 'Unknown'}\n"
+                f"Source Pages in Textbook: {pages_str}\n"
+                f"Hub: {active_hub or 'Unknown'}\n\n"
+                f"CRITICAL INSTRUCTION: You are an expert tutor helping a student understand "
+                f"ONLY the concept \"{active_note_title}\" as taught in {active_course or 'this course'}. "
+                f"Every explanation, example, and answer MUST be directly relevant to this concept. "
+                f"Do NOT introduce unrelated topics. If the student strays, gently redirect them back. "
+                f"When citing the textbook, reference pages: {pages_str}.\n"
+            )
+
+        context_reminder = (
+            f"\n[SYSTEM CONTEXT]\n"
+            f"Document: {relative_path}\n"
+            f"Selection: \"{selection}\"\n"
+            f"{anchor_block}"
+            f"Source Content (Page {page_num}):\n{context_content[:8000]}\n"
+        )
         chat_messages.append(SystemMessage(content=context_reminder))
-        
+
         for msg in messages_input:
-            if msg['role'] == 'user':
+            if msg.get('role') == 'user':
                 chat_messages.append(HumanMessage(content=msg['content']))
-            elif msg['role'] == 'assistant':
+            elif msg.get('role') == 'assistant':
                 chat_messages.append(AIMessage(content=msg['content']))
-        
+
         res = await llm.ainvoke(chat_messages)
-        return {"answer": res.content}
+        return {
+            "answer": res.content,
+            "active_note": active_note_title,
+            "source_pages": active_source_pages,
+        }
     except Exception as e:
         logger.error(f"Error in ater_chat: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

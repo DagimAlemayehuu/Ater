@@ -467,6 +467,22 @@ export const sidecarApi = {
     getStudyHistory: () =>
         request<{ sessions: any[]; telemetry: any[]; practice: any[] }>('/api/study/history'),
 
+    // ── Spaced Repetition (SRS) & Analytics ─────────────────
+    srsReview: (notePath: string, rating: number) =>
+        request<{ success: boolean; card: any }>('/api/srs/review', {
+            method: 'POST',
+            body: JSON.stringify({ note_path: notePath, rating })
+        }),
+    
+    srsDue: (hubId?: string) =>
+        request<{ due_cards: any[] }>(`/api/srs/due${hubId ? `?hub_id=${encodeURIComponent(hubId)}` : ''}`),
+
+    recordPerformance: (payload: { note_path: string; was_correct: boolean; time_ms: number; question_type?: string; difficulty?: string; confidence?: number; session_id?: string; question_id?: string }) =>
+        request<{ success: boolean }>('/api/analytics/record', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
     // ── Reference Vault ─────────────────────────────────────────────────────
     vaultList: (hubId: string) =>
         request<{ vaults: any[] }>(`/api/practice/vault/list?hub_id=${encodeURIComponent(hubId)}`),

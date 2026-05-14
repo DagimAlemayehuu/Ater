@@ -1753,6 +1753,18 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             from .post_processing import deduplicate_plan
             print(f"[Ater Service] Deduplicating {len(all_atomic_notes)} concepts...")
             all_atomic_notes = deduplicate_plan(all_atomic_notes)
+
+            # ── READING-ORDER SORT (v32.1) ──────────────────────────────────────────
+            # Sort by the MINIMUM page number from source_pages so that note deployment
+            # and hub connections mirror the exact reading order of the textbook PDF.
+            # Notes with no source_pages are pushed to the end (page 9999).
+            def _min_page(note_dict):
+                pages = note_dict.get("source_pages", []) or []
+                return min((int(p) for p in pages if str(p).isdigit()), default=9999)
+
+            all_atomic_notes.sort(key=_min_page)
+            print(f"[Ater Service] Reading-order sort applied. First note: {all_atomic_notes[0]['title'] if all_atomic_notes else 'N/A'}")
+
             all_atomic_notes = self._topological_sort_prerequisites(all_atomic_notes)
 
             # Phase 1.5: Epistemic Classification (HYDRA)
@@ -2091,7 +2103,33 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     count=3,
                                     prof_domain=prof_domain
                                 )
-                                
+
+                                # ── SEMANTIC TOPIC LOCK (v32.1) ──────────────────────────────
+                                # Deterministically verify that quiz questions are grounded
+                                # in the note's source context, not hallucinated topics.
+                                topic_lock_source = (note_schema.source_context or "") + " " + note_schema.title
+                                lock_passed, lock_diag = self.validator.semantic_topic_lock(
+                                    note_title=note_schema.title,
+                                    source_context=topic_lock_source,
+                                    quiz_questions=valid_qs
+                                )
+                                if not lock_passed:
+                                    print(f"[Ater Service] Semantic Topic Lock FAILED: {lock_diag}. Triggering regeneration.")
+                                    AterService._status[session_id] = f"⚠️ Topic Lock Fail: Regenerating quiz for [[{current_note_title}]]..."
+                                    note_schema.source_context = (note_schema.source_context or "") + f"\n\nQUIZ FIX INSTRUCTION: {lock_diag}. Generate questions ONLY about '{note_schema.title.replace('_', ' ')}' using vocabulary from the source text."
+                                    continue
+
+                                # ── CLOSED-LOOP: Attach explanation_page metadata ────────────
+                                # Each quiz question gets a reference to the source page so the UI
+                                # can link directly from a wrong answer back to the PDF page.
+                                source_pages = note_schema.source_pages or []
+                                if source_pages:
+                                    first_page = min((int(p) for p in source_pages if str(p).isdigit()), default=None)
+                                    if first_page:
+                                        for q in valid_qs:
+                                            if isinstance(q, dict) and "explanation_page" not in q:
+                                                q["explanation_page"] = first_page
+
                                 note_data["possible_questions"] = "\n```interactive-quiz\n" + json.dumps(valid_qs, indent=2) + "\n```"
 
                                 # 4. Deterministic Assembly & Self-Healing

@@ -63,6 +63,12 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     if (event.detail.requestId === requestId) {
                         window.removeEventListener('ater-api-response', handler);
                         const nativeConfig = event.detail.data;
+                        if (nativeConfig.academicFolderPath === '1-Academic') {
+                            nativeConfig.academicFolderPath = 'Notes';
+                            if ((window as any).Ater) {
+                                (window as any).Ater.send('update_config', { ...nativeConfig, requestId: Math.random().toString(36).substring(7) });
+                            }
+                        }
                         setConfig({ ...DEFAULT_CONFIG, ...nativeConfig });
                         configLoaded = true;
                         setIsLoading(false);
@@ -78,7 +84,12 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                         console.warn('[Config] Native bridge timed out, checking localStorage');
                         const saved = safeStorage.getItem('ater-config');
                         if (saved) {
-                            setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
+                            const parsed = JSON.parse(saved);
+                            if (parsed.academicFolderPath === '1-Academic') {
+                                parsed.academicFolderPath = 'Notes';
+                                safeStorage.setItem('ater-config', JSON.stringify(parsed));
+                            }
+                            setConfig({ ...DEFAULT_CONFIG, ...parsed });
                         } else {
                             setConfig(DEFAULT_CONFIG);
                         }
@@ -97,7 +108,12 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     // Immediately trigger fallback if bridge doesn't exist
                     const saved = safeStorage.getItem('ater-config');
                     if (saved) {
-                        setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
+                        const parsed = JSON.parse(saved);
+                        if (parsed.academicFolderPath === '1-Academic') {
+                            parsed.academicFolderPath = 'Notes';
+                            safeStorage.setItem('ater-config', JSON.stringify(parsed));
+                        }
+                        setConfig({ ...DEFAULT_CONFIG, ...parsed });
                     } else {
                         setConfig(DEFAULT_CONFIG);
                     }

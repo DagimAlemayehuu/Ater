@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from .vault_manager import VaultManager
-from .validator import AterValidator, HARD_FAILURE_MARKERS
+from .validator import AterValidator, HARD_FAILURE_MARKERS, HARD_FAILURE_PATTERNS
 
 class AterDeployer:
     """
@@ -235,7 +235,10 @@ class AterDeployer:
             # Never write a note that contains error markers from failed generation
             raw_content_check = note.get("content", "")
             if any(marker in raw_content_check for marker in HARD_FAILURE_MARKERS):
-                print(f"[Ater Deployer] BLOCKED '{note.get('title', 'unknown')}': contains error marker. Will be queued for regeneration.")
+                print(f"[Ater Deployer] BLOCKED '{note.get('title', 'unknown')}': contains string error marker. Will be queued for regeneration.")
+                continue
+            if any(pat.search(raw_content_check) for pat in HARD_FAILURE_PATTERNS):
+                print(f"[Ater Deployer] BLOCKED '{note.get('title', 'unknown')}': contains regex error pattern (hallucinated system marker). Will be queued for regeneration.")
                 continue
             title = note.get("title", "Untitled")
             content = note.get("content", "")

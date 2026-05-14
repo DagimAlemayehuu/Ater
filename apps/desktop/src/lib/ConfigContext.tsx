@@ -140,7 +140,14 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     await store.save();
                 }
                 const inboxPath = (await store.get<string>('inboxPath')) || '';
-                const academicFolderPath = (await store.get<string>('academicFolderPath')) || DEFAULT_CONFIG.academicFolderPath;
+                let academicFolderPath = (await store.get<string>('academicFolderPath')) || DEFAULT_CONFIG.academicFolderPath;
+                
+                // ── MIGRATION: Force legacy "1-Academic" to "Notes" (v32.1) ──
+                if (academicFolderPath === '1-Academic') {
+                    academicFolderPath = 'Notes';
+                    await store.set('academicFolderPath', 'Notes');
+                    await store.save();
+                }
                 const autoDeploy = (await store.get<boolean>('autoDeploy')) ?? false;
                 const strategistPrompt = (await store.get<string>('strategistPrompt')) || DEFAULT_CONFIG.strategistPrompt;
                 const strategistSliders = (await store.get<string>('strategistSliders')) || '';

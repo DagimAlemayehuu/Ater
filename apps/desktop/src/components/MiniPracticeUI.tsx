@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import vs from 'react-syntax-highlighter/dist/esm/styles/prism/vs.js';
 import { MermaidWrapper } from './obsidian/MarkdownViewer';
 import { usePomodoroStore } from '@/lib/pomodoroStore';
 import { Question } from '@/types/practice';
-
+import { sidecarApi } from '@/lib/sidecarApi';
 // Density optimized CodeBlock
 const CodeBlock = ({ language, value }: { language: string | null, value: string }) => {
     const [copied, setCopied] = useState(false);
@@ -124,6 +124,9 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   const [scores, setScores] = useState<Record<number, boolean>>({});
   const [showScore, setShowScore] = useState(false);
   const [keywordChecks, setKeywordChecks] = useState<Record<string, boolean>>({});
+  
+  const startTimeRef = useRef(Date.now());
+  const [confidenceWager, setConfidenceWager] = useState<number | null>(null);
 
   const currentQ = questions[currentIdx];
 
@@ -177,10 +180,37 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
     }
     
     setRevealedStates({ ...revealedStates, [currentIdx]: true });
+    
+    if (notePath) {
+      const timeMs = Date.now() - startTimeRef.current;
+      sidecarApi.recordPerformance({
+        note_path: notePath,
+        was_correct: isCorrect,
+        time_ms: timeMs,
+        question_type: currentQ.type,
+        difficulty: String(currentQ.difficulty || '1'),
+        confidence: confidenceWager || undefined,
+        question_id: String(currentQ.id)
+      }).catch(console.error);
+    }
   };
 
   const handleSelfGrade = (isCorrect: boolean) => {
     setScores({...scores, [currentIdx]: isCorrect});
+    
+    if (notePath) {
+      const timeMs = Date.now() - startTimeRef.current;
+      sidecarApi.recordPerformance({
+        note_path: notePath,
+        was_correct: isCorrect,
+        time_ms: timeMs,
+        question_type: currentQ.type,
+        difficulty: String(currentQ.difficulty || '1'),
+        confidence: confidenceWager || undefined,
+        question_id: String(currentQ.id)
+      }).catch(console.error);
+    }
+
     if (currentIdx < questions.length - 1) {
       nextQuestion();
     } else {
@@ -192,6 +222,8 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
     if (currentIdx < questions.length - 1) {
       setCurrentIdx(currentIdx + 1);
       setKeywordChecks({});
+      setConfidenceWager(null);
+      startTimeRef.current = Date.now();
     }
   };
 
@@ -208,6 +240,8 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
     setRevealedStates({});
     setScores({});
     setShowScore(false);
+    setConfidenceWager(null);
+    startTimeRef.current = Date.now();
   };
 
   const renderFillInBlanks = () => {
@@ -425,10 +459,30 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
               )}
 
               {!isRevealed ? (
-              <div className="pt-2">
+              <div className="pt-2 space-y-3">
+                   <div className="flex flex-col gap-2 p-3 border border-border/40 rounded-lg bg-muted/5">
+                     <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 text-center">Confidence Wager</div>
+                     <div className="flex gap-2">
+                       {[1, 2, 3, 4, 5].map(val => (
+                         <button
+                           key={val}
+                           onClick={() => setConfidenceWager(val)}
+                           className={cn(
+                             "flex-1 py-1.5 rounded text-[10px] font-bold border transition-all",
+                             confidenceWager === val 
+                               ? "bg-primary text-primary-foreground border-primary"
+                               : "bg-background border-border/40 text-muted-foreground hover:border-foreground/30 hover:bg-muted/20"
+                           )}
+                         >
+                           {val}
+                         </button>
+                       ))}
+                     </div>
+                   </div>
                    <Button 
                    onClick={checkAnswer} 
-                   disabled={userAnswers[currentQ.id] === undefined || userAnswers[currentQ.id] === '' || (Array.isArray(userAnswers[currentQ.id]) && userAnswers[currentQ.id].length === 0)}
+                   disabled={userAnswers[currentQ.id] === undefined || userAnswers[currentQ.id] === '' || (Array.isArray(userAnswers[currentQ.id]) && userAnswers[currentQ.id].length === 0) || !confidenceWager}
+
                    className="w-full font-black tracking-widest uppercase text-[10px] h-9 rounded-lg "
                    >
                    Verify Understanding
