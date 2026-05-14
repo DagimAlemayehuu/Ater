@@ -75,29 +75,35 @@ export const MermaidWrapper = ({ chart }: { chart: string }) => {
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<boolean>(false);
 
+  const activeChartRef = useRef<string>(chart);
+  
   useEffect(() => {
+    activeChartRef.current = chart;
     const isDark = document.documentElement.classList.contains('dark');
-    const neutralThemeVars = {
-      primaryColor: isDark ? '#27272a' : '#f4f4f5',
-      primaryTextColor: isDark ? '#fafafa' : '#18181b',
-      primaryBorderColor: isDark ? '#3f3f46' : '#e4e4e7',
-      lineColor: isDark ? '#52525b' : '#a1a1aa',
-      secondaryColor: isDark ? '#18181b' : '#fafafa',
-      tertiaryColor: isDark ? '#27272a' : '#f4f4f5',
-      fontFamily: 'Inter, sans-serif'
-    };
-    
+    // ... rest of mermaid init ...
     mermaid.initialize({ 
       theme: isDark ? 'dark' : 'default',
-      themeVariables: neutralThemeVars
+      themeVariables: {
+        primaryColor: isDark ? '#27272a' : '#f4f4f5',
+        primaryTextColor: isDark ? '#fafafa' : '#18181b',
+        primaryBorderColor: isDark ? '#3f3f46' : '#e4e4e7',
+        lineColor: isDark ? '#52525b' : '#a1a1aa',
+        secondaryColor: isDark ? '#18181b' : '#fafafa',
+        tertiaryColor: isDark ? '#27272a' : '#f4f4f5',
+        fontFamily: 'Inter, sans-serif'
+      }
     });
     
     mermaid.render(`mermaid-${Math.random().toString(36).substring(7)}`, chart).then((result) => {
-      setSvg(result.svg);
-      setError(false);
+      if (activeChartRef.current === chart) {
+        setSvg(result.svg);
+        setError(false);
+      }
     }).catch((e) => {
-      console.error('Mermaid render error', e);
-      setError(true);
+      if (activeChartRef.current === chart) {
+        console.error('Mermaid render error', e);
+        setError(true);
+      }
     });
   }, [chart]);
 

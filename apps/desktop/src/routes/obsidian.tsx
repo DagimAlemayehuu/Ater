@@ -1857,7 +1857,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  {node.isFolder ? (
  <Folder className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/60")} />
  ) : node.path.toLowerCase().endsWith('.pdf') ? (
- <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-red-500/50")} />
+ <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/50")} />
  ) : (
  <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/40")} />
  )}

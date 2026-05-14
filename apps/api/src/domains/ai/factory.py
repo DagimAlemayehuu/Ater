@@ -7,6 +7,7 @@ from langchain_groq import ChatGroq
 from langchain_core.callbacks import AsyncCallbackHandler, BaseCallbackHandler
 from langchain_core.outputs import LLMResult
 from .tracker import tracker
+from src.domains.ater.governor import governor
 
 class TrackingCallbackHandler(AsyncCallbackHandler, BaseCallbackHandler):
     """
@@ -110,6 +111,9 @@ class ModelFactory:
         if provider not in ModelFactory.PROVIDERS:
             raise ValueError(f"Unsupported AI provider: {provider}")
 
+        # Pick a valid API key from the pool if comma-separated
+        valid_api_key = governor.get_valid_api_key(api_key)
+
         model_class = ModelFactory.PROVIDERS[provider]
         
         # Configuration mapping per provider
@@ -128,15 +132,15 @@ class ModelFactory:
             config["request_timeout"] = request_timeout or effective_timeout
 
         if provider == "google":
-            config["google_api_key"] = api_key
+            config["google_api_key"] = valid_api_key
         elif provider == "openai":
-            config["api_key"] = api_key
+            config["api_key"] = valid_api_key
         elif provider == "anthropic":
-            config["anthropic_api_key"] = api_key
+            config["anthropic_api_key"] = valid_api_key
         elif provider == "groq":
-            config["groq_api_key"] = api_key
+            config["groq_api_key"] = valid_api_key
         elif provider == "openrouter":
-            config["api_key"] = api_key
+            config["api_key"] = valid_api_key
             config["base_url"] = "https://openrouter.ai/api/v1"
             config["default_headers"] = {
                 "HTTP-Referer": "https://github.com/Ater",

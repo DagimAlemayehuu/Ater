@@ -302,7 +302,7 @@ class AterValidator:
                 is_last_section = body.strip().endswith(section_body.strip())
                 if is_last_section:
                     last_sent_char = cleaned[-1]
-                    valid_terminal = [".", "!", "?", "`", ")", "]", "}", "$", "|", '"', ";", ":", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+                    valid_terminal = [".", "!", "?", "`", ")", "]", "}", "$", '"', ";"]
                     # Also allow sections ending with a wikilink ([[...]]) or a bare word that isn't mid-sentence
                     ends_with_wikilink = cleaned.endswith("]]") or cleaned.endswith("]")
                     # Also allow common math variables or symbols

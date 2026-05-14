@@ -221,13 +221,13 @@ class AterService:
                 error_str = str(e)
                 print(f"[Ater Service] AI Attempt {attempt} failed: {error_str[:200]}")
 
-                is_rate_limit = "429" in error_str or "rate_limit" in error_str.lower()
+                is_rate_limit = any(x in error_str.lower() for x in ["429", "rate_limit", "rate limit", "exhausted", "capacity"])
                 
                 if is_rate_limit:
                     # Notify governor to trigger a hard cooldown for all workers
                     self.governor.report_error(wait_seconds=60.0)
                 is_transient = is_rate_limit or any(
-                    c in error_str for c in ["503", "524", "timeout", "overloaded"]
+                    c in error_str.lower() for c in ["503", "524", "timeout", "overloaded", "connection", "disconnected"]
                 )
 
                 if is_transient and attempt < ATER_MAX_RETRIES:

@@ -89,9 +89,9 @@ class SRSEngine:
             return FSRSCard(note_path=note_path)
         return FSRSCard(
             note_path=row[0], stability=row[1], difficulty=row[2],
-            due=datetime.fromisoformat(row[3]) if row[3] else datetime.now(),
+            due=datetime.fromisoformat(row[3].replace('Z', '+00:00')) if row[3] else datetime.now(),
             reps=row[4], lapses=row[5],
-            last_review=datetime.fromisoformat(row[6]) if row[6] else None
+            last_review=datetime.fromisoformat(row[6].replace('Z', '+00:00')) if row[6] else None
         )
 
     def review(self, note_path: str, rating: int) -> FSRSCard:
