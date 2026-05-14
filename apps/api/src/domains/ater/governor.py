@@ -49,6 +49,8 @@ class TokenGovernor:
         
         # API Key management
         self._current_key_hash = "default"
+        self._all_keys = []  # List of all available keys in the pool
+        self._active_key = "" # The actual key string currently in use
 
     def get_valid_api_key(self, api_keys_str: str, expected_tokens: int = 2000, expected_requests: int = 1) -> str:
         """Selects the first API key from a comma-separated list that hasn't exceeded daily limits."""
@@ -58,6 +60,9 @@ class TokenGovernor:
         keys = [k.strip() for k in api_keys_str.split(",") if k.strip()]
         if not keys:
             return ""
+        
+        # Store for internal rotation
+        self._all_keys = keys
             
         if len(keys) == 1:
             self.set_api_key(keys[0])
@@ -93,12 +98,21 @@ class TokenGovernor:
         """
         if not api_key:
             return
+            
+        # Support comma-separated pool registration
+        if "," in api_key:
+            keys = [k.strip() for k in api_key.split(",") if k.strip()]
+            if keys:
+                self._all_keys = keys
+                api_key = keys[0] # Use first by default, let get_permit rotate
+            
         new_hash = hashlib.sha256(api_key.strip().encode()).hexdigest()[:16]
         if new_hash == self._current_key_hash:
             return  # Same key — nothing to do
 
         old_hash = self._current_key_hash
         self._current_key_hash = new_hash
+        self._active_key = api_key
         # Reset in-memory windows — they're per-key at the API level
         self.request_window.clear()
         self.token_window.clear()
@@ -216,13 +230,23 @@ class TokenGovernor:
 
     async def get_permit(self, expected_tokens: int = 2000, expected_requests: int = 1):
         """
-        Precision Pacing: grants permits immediately when budget is available,
-        sleeps the EXACT duration needed when the window is full.
-        No fixed-time spin loops.
+        Precision Pacing: grants permits immediately when budget is available.
+        AUTO-ROTATION: If the current key is exhausted, attempts to find a valid key in the pool.
         """
-        # First, ensure we haven't blown the daily budget for this specific key
+        # 1. First, ensure we haven't blown the daily budget for this specific key
         is_ok, err_msg = await asyncio.to_thread(self._check_daily_limits_sync, expected_tokens, expected_requests)
+        
         if not is_ok:
+            # Attempt Auto-Rotation if pool exists
+            if self._all_keys and len(self._all_keys) > 1:
+                print(f"[Governor] 🔄 Key {self._current_key_hash} exhausted. Attempting rotation through pool of {len(self._all_keys)} keys...")
+                new_key = self.get_valid_api_key(",".join(self._all_keys), expected_tokens, expected_requests)
+                if new_key and hashlib.sha256(new_key.encode()).hexdigest()[:16] != self._current_key_hash:
+                    # Key was swapped! Permit check will now pass on next attempt.
+                    # We need to signal the caller (AterService) that the key changed so it can update its LLM client.
+                    # For now, we raise a specific error that the Service can catch to rebuild its LLM.
+                    raise DailyLimitExceededException("ROTATION_TRIGGERED")
+            
             raise DailyLimitExceededException(err_msg)
 
         async with self._lock:

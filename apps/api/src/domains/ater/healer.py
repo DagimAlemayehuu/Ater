@@ -95,6 +95,31 @@ class LogicHealer:
             result.append(section)
         return ''.join(result)
 
+    # Known XML block tags the LLM leaks into note prose
+    _XML_TAGS = [
+        "PLAIN_ENGLISH", "CORE_BREAKDOWN", "ACADEMIC_TRANSLATION",
+        "MISCONCEPTIONS", "ARTIFACT", "LIMITATIONS", "QUIZ_JSON",
+        "THEORY", "BREAKDOWN", "TRANSLATION", "ANALYSIS",
+    ]
+
+    def strip_orphan_xml_tags(self, text: str) -> str:
+        """
+        Removes stray XML tags that the LLM emitted outside of extraction.
+        e.g. </CORE_BREAKDOWN>, <MISCONCEPTIONS>, </PLAIN_ENGLISH>
+        These appear when _extract_xml pulls content correctly but leaves
+        the closing tag behind in the rendered note body.
+        """
+        for tag in self._XML_TAGS:
+            # Remove both opening and closing variants, case-insensitive
+            text = re.sub(rf'</?{tag}>', '', text, flags=re.IGNORECASE)
+            text = re.sub(rf'</?{tag}\s*/?>', '', text, flags=re.IGNORECASE)
+        # Also catch any generic remaining XML-style tags from LLM scaffolding
+        text = re.sub(r'</[A-Z_]{3,}>', '', text)
+        text = re.sub(r'<[A-Z_]{3,}>', '', text)
+        # Clean up any resulting double-blank lines
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        return text.strip()
+
     def sanitize_prose(self, text: str) -> str:
         """
         Violently removes LLM conversational filler and metatalk.
@@ -242,13 +267,46 @@ class LogicHealer:
                 healed_lines.append(line)
         return "\n".join(healed_lines)
 
+    def fix_mermaid_pipes(self, text: str) -> str:
+        """
+        Strips invalid leading pipe characters from Mermaid diagram lines.
+        The LLM generates: `    | A[Node] -->|label| B[Node]`
+        Valid Mermaid requires: `    A[Node] -->|label| B[Node]`
+        Only operates inside ```mermaid fenced blocks.
+        """
+        lines = text.split('\n')
+        in_mermaid = False
+        result = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('```mermaid'):
+                in_mermaid = True
+                result.append(line)
+                continue
+            if in_mermaid and stripped == '```':
+                in_mermaid = False
+                result.append(line)
+                continue
+            if in_mermaid:
+                # Strip leading pipe only when not a valid Markdown table separator
+                # A Mermaid node line like `    | A[X]` is invalid; strip the leading `|`
+                fixed = re.sub(r'^(\s*)\|\s+', r'\1', line)
+                result.append(fixed)
+            else:
+                result.append(line)
+        return '\n'.join(result)
+
     def heal_all(self, text: str, is_quiz: bool = False) -> str:
         if is_quiz:
             return self.heal_quiz_json(text)
-        
+
+        # v33.1: Strip orphaned XML tags FIRST — before any other processing
+        text = self.strip_orphan_xml_tags(text)
         text = self.sanitize_prose(text)
         text = self.heal_wikilinks(text)
         text = self.enforce_wikilink_density(text)
         text = self.verify_arithmetic(text)
         text = self.heal_markdown_tables(text)
+        # v33.2: Fix invalid leading pipes in Mermaid blocks
+        text = self.fix_mermaid_pipes(text)
         return text

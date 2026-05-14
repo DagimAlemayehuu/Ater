@@ -42,6 +42,18 @@ HARD_FAILURE_MARKERS = [
     "Let me refine that",
     "given the nature of the question",
     "let's verify the calculation with proper steps",
+    # Generation-level collapse stubs — the fallback strings _extract_xml emits
+    "Content for PLAIN_ENGLISH could not be generated.",
+    "Content for CORE_BREAKDOWN could not be generated.",
+    "Content for ACADEMIC_TRANSLATION could not be generated.",
+    "Content for MISCONCEPTIONS could not be generated.",
+    "Content for ARTIFACT could not be generated.",
+    "Content for LIMITATIONS could not be generated.",
+    "Content for QUIZ_JSON could not be generated.",
+    "could not be generated.",
+    "Content pending.",
+    "Artifact generation pending.",
+    "Edge cases pending.",
     "adjust for accurate",
     "approximately, by correct interpolation",
 ]
@@ -101,11 +113,12 @@ class AterValidator:
         # Supports both # and ## as the user recently adjusted the hierarchy
         required_sections = [
             r"(?:#|##) 1\. ",
-            r"(?:#|##) 2\. ", 
-            r"(?:#|##) 3\. ", 
-            r"(?:#|##) 4\. ", 
+            r"(?:#|##) 2\. ",
+            r"(?:#|##) 3\. ",
+            r"(?:#|##) 4\. ",
             r"(?:#|##) 5\. ",
-            r"(?:#|##) 6\. "
+            r"(?:#|##) 6\. ",
+            r"(?:#|##) 7\. "
         ]
         for section in required_sections:
             if not re.search(section, content):
@@ -152,17 +165,34 @@ class AterValidator:
         if yaml_match:
             body = content[yaml_match.end():]
 
-        # -- 3. Wikilink integrity (v29.2) --------------------------------------
+        # -- 3. Wikilink integrity (v33.0) — exclude self-referential links -----------
         wikilinks = re.findall(r'\[\[([^\]|]+)(?:\|[^\]]*)?\]\]', body)
-        wikilink_count = len(wikilinks)
-        
+
+        # Extract note title from YAML to exclude self-referential links
+        note_title_yaml = ""
+        if yaml_match:
+            try:
+                _meta = yaml.safe_load(yaml_match.group(1))
+                if isinstance(_meta, dict):
+                    note_title_yaml = str(_meta.get("title", "")).replace(" ", "_").strip()
+            except Exception:
+                pass
+
+        # Filter out self-referential links (e.g., [[This_Note_Title]]) from the count
+        non_self_wikilinks = [
+            w for w in wikilinks
+            if w.replace(" ", "_").strip() != note_title_yaml
+        ]
+        wikilink_count = len(non_self_wikilinks)
+
         # Hub/PQ notes don't need prose wikilinks — they ARE wikilinks
         note_type_match = re.search(r"type:\s*(.+)", content[:500])
         note_type = note_type_match.group(1).strip().lower() if note_type_match else ""
         if note_type not in ("hub", "possible questions") and wikilink_count < 3:
             errors.append(
-                f"INSUFFICIENT_WIKILINKS: Found {wikilink_count}, need ≥ 3. "
-                "Section 2 must wrap related concepts in [[Wikilinks]]."
+                f"INSUFFICIENT_WIKILINKS: Found {wikilink_count} non-self wikilinks, need ≥ 3. "
+                "Section 2 must wrap related concepts in [[Wikilinks]]. "
+                "Note: self-referential links (linking to the note's own title) do not count."
             )
 
         # Closed Knowledge Graph Check

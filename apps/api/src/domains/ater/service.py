@@ -198,7 +198,14 @@ class AterService:
                     # Get permit from governor before EACH chunk request
                     # Estimate tokens: (Current Context / 4) + prompt overhead
                     estimated_tokens = (len(str(current_messages)) // 4) + 1000
-                    await self.governor.get_permit(expected_tokens=estimated_tokens)
+                    try:
+                        await self.governor.get_permit(expected_tokens=estimated_tokens)
+                    except DailyLimitExceededException as de:
+                        if str(de) == "ROTATION_TRIGGERED":
+                            print(f"[Ater Service] 🔄 Governor triggered rotation. Swapping LLM key to: {self.governor._current_key_hash}")
+                            self.swap_api_key(self.governor._active_key)
+                            continue # Retry with new key
+                        raise de
 
                     res = await self.llm.ainvoke(current_messages)
                     final_content += res.content
@@ -1242,38 +1249,57 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         return sorted_notes
 
     def _extract_source_snippet(self, source_text: str, concept_title: str, page_hint: int, used_examples: List[str] = None) -> str:
-        """Finds the most relevant 2-3 sentences near the page hint for this concept, 
-        ensuring we don't repeat examples already used in this batch.
+        """v33.0: Source Window Extractor — injects a coherent, concept-relevant passage.
+        Strategy: Score paragraphs (not sentences) to find the richest context block,
+        then return up to 3500 chars to maximize model grounding on weak LLMs.
         """
         readable_title = concept_title.replace("_", " ").lower()
-        sentences = re.split(r'(?<=[.!?])\s+', source_text)
-        
-        # Score sentences by relevance to concept title
+        title_words = [w for w in readable_title.split() if len(w) > 3]
+
+        # Split source into paragraphs for richer context chunks
+        paragraphs = [p.strip() for p in re.split(r'\n{2,}', source_text) if len(p.strip()) > 80]
+
+        if not paragraphs:
+            # Fallback: sentence-level split
+            paragraphs = [s.strip() for s in re.split(r'(?<=[.!?])\s+', source_text) if len(s.strip()) > 40]
+
+        # Score paragraphs by title-word overlap
         scored = []
-        for sent in sentences:
-            if len(sent.strip()) < 40: continue
-            score = sum(1 for word in readable_title.split() if len(word) > 3 and word in sent.lower())
-            
-            # STATEFUL ENTROPY: Penalize sentences that overlap heavily with used examples
+        for para in paragraphs:
+            para_lower = para.lower()
+            score = sum(1 for word in title_words if word in para_lower)
+
+            # Penalize paragraphs that heavily overlap with already-used examples
             if used_examples:
-                sent_words = set(re.findall(r'\w+', sent.lower()))
+                para_words = set(re.findall(r'\w+', para_lower))
                 for ex in used_examples:
                     ex_words = set(re.findall(r'\w+', ex.lower()))
                     if not ex_words: continue
-                    overlap = len(sent_words.intersection(ex_words)) / len(ex_words)
-                    if overlap > 0.4:
-                        score -= 5 # Heavy penalty for repeating "Japan" or specific scenarios
-            
-            scored.append((score, sent))
-        
-        scored.sort(reverse=True)
-        # Select the top 2-3 unique-ish sentences
-        top_sentences = []
-        for _, sent in scored[:5]:
-            if len(top_sentences) >= 3: break
-            top_sentences.append(sent)
-            
-        return " ".join(top_sentences) if top_sentences else source_text[:500]
+                    overlap = len(para_words.intersection(ex_words)) / len(ex_words)
+                    if overlap > 0.5:
+                        score -= 8  # Heavy penalty for repeated content
+
+            scored.append((score, para))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        # Build a context window: anchor paragraph + its neighbors in the original text
+        if scored and scored[0][0] > 0:
+            best_para = scored[0][1]
+            anchor_idx = next((i for i, p in enumerate(paragraphs) if p == best_para), 0)
+            # Include 1 paragraph before and 2 after for context flow
+            window_start = max(0, anchor_idx - 1)
+            window_end = min(len(paragraphs), anchor_idx + 3)
+            window = "\n\n".join(paragraphs[window_start:window_end])
+        else:
+            # No match — use the beginning of the source (most likely to have definitions)
+            window = source_text[:3500]
+
+        # Cap at 3500 chars for token efficiency
+        if len(window) > 3500:
+            window = window[:3500]
+
+        return window if window else source_text[:3500]
 
     def get_active_academic_context(self) -> Dict[str, str]:
         """Reads the vault to find the currently active semester and year."""
@@ -2081,7 +2107,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     note_data.get("detailed_breakdown", ""), 
                                     primary_language, 
                                     note_schema.mode,
-                                    note_schema.source_context or "No context",
+                                    source_text=source_snippet,  # v33.0: source-grounded artifact
                                     academic_level=plan_obj.academic_level,
                                     course_title=plan_obj.course_title,
                                     max_tokens=8000,
@@ -2089,11 +2115,22 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 )
                                 note_data.update(prac_parts)
                                 # 3. Micro-Question Pass (Dynamic Assessment)
+                                # v33.0: Compressed context — saves ~8k tokens per note
                                 AterService._status[session_id] = f"{phase_prefix} Assessment: [[{current_note_title}]]..."
-                                await self.governor.get_permit(expected_tokens=3000)
-                                
+                                await self.governor.get_permit(expected_tokens=2500)
+
                                 q_agent = QuestionAgent(self.planner_llm, domain)
-                                q_context = f"INTUITION:\n{note_data.get('plain_english_explanation', '')}\n\nCORE LOGIC:\n{note_data.get('detailed_breakdown', '')}\n\nACADEMIC:\n{note_data.get('academic_translation', '')}\n\nARTIFACT:\n{prac_parts.get('artifact_content', '')}"
+                                # v33.1: Expanded source anchor + strict domain lock header
+                                _concept_label = current_note_title.replace('_', ' ')
+                                q_context = (
+                                    f"⚠️ DOMAIN LOCK: You MUST ONLY test the concept '{_concept_label}'. "
+                                    f"Do NOT generate questions about aggregate demand, monetary policy, interest rates, "
+                                    f"or ANY concept not explicitly present in the SOURCE ANCHOR below.\n\n"
+                                    f"CONCEPT: {_concept_label}\n"
+                                    f"PLAIN ENGLISH: {note_data.get('plain_english_explanation', '')[:250]}\n"
+                                    f"CORE LOGIC: {note_data.get('detailed_breakdown', '')[:400]}\n"
+                                    f"SOURCE ANCHOR (ONLY test vocabulary from here): {source_snippet[:500]}"
+                                )
                                 prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
                                 valid_qs = await q_agent.generate(
                                     note_schema=note_schema, 
@@ -2132,7 +2169,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
                                 note_data["possible_questions"] = "\n```interactive-quiz\n" + json.dumps(valid_qs, indent=2) + "\n```"
 
-                                # 4. Deterministic Assembly & Self-Healing
+                                # 4. Deterministic Assembly & Self-Healing (v33.0)
+                                # Inject misconceptions from theory pass before rendering
+                                note_data["misconceptions"] = theory_parts.get("misconceptions", "")
                                 healer = LogicHealer(canonical_titles=set(all_note_titles))
                                 body_content = render_atomic_note(note_data, healer=healer)
                                 
@@ -2167,7 +2206,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     AterService._status[session_id] = f"⚠️ Healing Failed: Regenerating [[{current_note_title}]]..."
                                     continue
 
-                                # 5.1 Semantic Validation (Hydra)
+                                # 5.1 Semantic Validation (Hydra) — tiered blocking
                                 if self.verifier_agent:
                                     AterService._status[session_id] = f"{phase_prefix} Semantic Validation: [[{current_note_title}]]..."
                                     await self.governor.get_permit(expected_tokens=2000)
@@ -2180,13 +2219,26 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     )
                                     if not v_res["passed"]:
                                         failures = v_res["failures"]
-                                        diag = "; ".join([f"{f['check']}: {f['issue']}" for f in failures])
-                                        print(f"[Ater Service] Semantic Validation Failed: {diag}")
-                                        AterService._status[session_id] = f"⚠️ Semantic Healing: [[{current_note_title}]]..."
-                                        # Update note_schema.source_context with fix instructions for the next attempt
-                                        if failures:
-                                            note_schema.source_context = (note_schema.source_context or "") + f"\n\nFIX INSTRUCTION: {failures[0]['fix_instruction']}"
-                                        continue
+                                        # ── TIERED BLOCKING (v33.1) ──────────────────────────────
+                                        # HARD failures (structural): block deployment, force regen
+                                        HARD_CHECKS = {"feynman_integrity", "wikilink_density", "clean_output"}
+                                        # SOFT failures (advisory): log warning, allow deployment
+                                        SOFT_CHECKS = {"limitations_rigor", "unique_scenario"}
+                                        
+                                        hard_failures = [f for f in failures if f.get("check") in HARD_CHECKS]
+                                        soft_failures = [f for f in failures if f.get("check") in SOFT_CHECKS]
+                                        
+                                        if soft_failures:
+                                            soft_diag = "; ".join([f"{f['check']}: {f['issue']}" for f in soft_failures])
+                                            logger.warning(f"[Ater Service] Advisory validation (non-blocking): {soft_diag}")
+                                        
+                                        if hard_failures:
+                                            hard_diag = "; ".join([f"{f['check']}: {f['issue']}" for f in hard_failures])
+                                            print(f"[Ater Service] Semantic Validation HARD FAIL: {hard_diag}")
+                                            AterService._status[session_id] = f"⚠️ Semantic Healing: [[{current_note_title}]]..."
+                                            if hard_failures:
+                                                note_schema.source_context = (note_schema.source_context or "") + f"\n\nFIX INSTRUCTION: {hard_failures[0]['fix_instruction']}"
+                                            continue  # Only hard failures trigger regen
 
                                 # 6. Deployment
                                 local_results = self.deployer.deploy_atomic_notes(
@@ -2318,29 +2370,36 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
             # ── EXECUTION ──
             if "Confirm Final Plan" in command:
-                # HYPERDRIVE MODE: Parallelize all atomic notes at once
+                # CASCADE MODE: Sequential — one note at a time, deploys immediately after each
+                # Why not parallel: with a 30k TPM rate limit, all workers compete for the same
+                # budget and the Governor throttles to 1 anyway — but with parallel you wait for
+                # ALL workers to assemble before ANY note deploys. Sequential means note 1 is
+                # readable in ~90s while note 2 is already generating.
                 atomic_batches = [b for b in session["metadata"]["batches"] if b["type"] == "atomic"]
                 other_batches = [b for b in session["metadata"]["batches"] if b["type"] != "atomic"]
                 
-                print(f"[Ater Service] Hyperdrive Activated: Spawning {len(atomic_batches)} parallel atomic workers.")
+                total_atomic = len(atomic_batches)
+                print(f"[Ater Service] Cascade Mode: Generating {total_atomic} notes sequentially (study-along enabled).")
                 
-                # 1. Run all atomic notes in parallel
-                # They will compete for governor slots (max 5 by default)
-                tasks = [run_single_batch(b["id"], b["type"], b["notes"]) for b in atomic_batches]
-                results = await asyncio.gather(*tasks, return_exceptions=True)
+                # 1. Run atomic notes one at a time — each deploys to vault on completion
+                for idx, b in enumerate(atomic_batches, 1):
+                    note_title = b["notes"][0] if b["notes"] else f"Note {idx}"
+                    AterService._status[session_id] = f"Generating [{idx}/{total_atomic}]: [[{note_title}]]..."
+                    try:
+                        result = await run_single_batch(b["id"], b["type"], b["notes"])
+                        if isinstance(result, dict) and result.get("status") == "rate_limited":
+                            print(f"[Ater Service] Cascade throttled (429) at note {idx}/{total_atomic}.")
+                            return result
+                    except Exception as e:
+                        err_str = str(e)
+                        if "429" in err_str or "rate_limit" in err_str.lower():
+                            print(f"[Ater Service] Cascade rate-limited at note {idx}/{total_atomic}.")
+                            return {"status": "rate_limited", "error": err_str}
+                        # Non-rate-limit errors: log and continue to next note
+                        print(f"[Ater Service] Cascade error at note {idx}/{total_atomic} ({note_title}): {e}")
+                        continue
                 
-                # Check for critical failures in the parallel batch
-                exceptions = [r for r in results if isinstance(r, Exception)]
-                if exceptions:
-                    first_err = str(exceptions[0])
-                    if "429" in first_err or "rate_limit" in first_err.lower():
-                        print(f"[Ater Service] Hyperdrive Batch throttled (429). {len(exceptions)} tasks failed.")
-                        # We return a specific status to help the watcher
-                        return {"status": "rate_limited", "error": first_err}
-                    else:
-                        raise exceptions[0] # Re-raise first non-rate-limit error
-                
-                # 2. Run sequential batches (PQ, Hub)
+                # 2. Run sequential batches (PQ, Hub) after all atomics done
                 for b in other_batches:
                     await run_single_batch(b["id"], b["type"], b["notes"])
                 
@@ -2349,6 +2408,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             else:
                 # Legacy Serial Mode (for individual batch stepping)
                 has_more = await run_single_batch(batch_number, batch_type, batch_notes)
+
 
             if isinstance(has_more, dict) and has_more.get("status") == "rate_limited":
                 return has_more

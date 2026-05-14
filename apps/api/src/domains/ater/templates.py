@@ -16,8 +16,11 @@ ATOMIC_NOTE_TEMPLATE = """
 ## 5. Where It Breaks (Edge Cases & Flaws)
 {limitations}
 
+## 6. Common Misconceptions
+{misconceptions}
+
 ---
-## 6. The Proving Grounds
+## 7. The Proving Grounds
 {possible_questions}
 """
 
@@ -26,8 +29,9 @@ def render_atomic_note(data: Dict[str, Any], healer=None) -> str:
     Deterministically renders the atomic note using a Python template.
     Guarantees structural integrity regardless of LLM quality.
     If a healer is provided, it performs self-healing (wikilinks, math, prose).
+    v33.0: Added misconceptions section to complete the Feynman ladder.
     """
-    
+
     # Pre-heal the individual parts if healer is present
     if healer:
         data["plain_english_explanation"] = healer.heal_all(data.get("plain_english_explanation", ""))
@@ -35,6 +39,7 @@ def render_atomic_note(data: Dict[str, Any], healer=None) -> str:
         data["academic_translation"] = healer.heal_all(data.get("academic_translation", ""))
         data["artifact_content"] = healer.heal_all(data.get("artifact_content", ""))
         data["limitations"] = healer.heal_all(data.get("limitations", ""))
+        data["misconceptions"] = healer.heal_all(data.get("misconceptions", ""))
         data["possible_questions"] = healer.heal_all(data.get("possible_questions", ""), is_quiz=True)
 
     return ATOMIC_NOTE_TEMPLATE.format(
@@ -46,5 +51,6 @@ def render_atomic_note(data: Dict[str, Any], healer=None) -> str:
         artifact_title=data.get("artifact_title", "High-Fidelity Artifact"),
         artifact_content=data.get("artifact_content", ""),
         limitations=data.get("limitations", ""),
+        misconceptions=data.get("misconceptions", ""),
         possible_questions=data.get("possible_questions", "")
     )
