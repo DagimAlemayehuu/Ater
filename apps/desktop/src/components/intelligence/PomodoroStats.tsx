@@ -238,7 +238,7 @@ export default function PomodoroStats() {
               <span className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/20 mb-2">Recall Mastery</span>
               <div className="flex items-baseline gap-4">
                 <span className="text-7xl font-bold tracking-tighter tabular-nums text-foreground">
-                  {Math.round(stats.practices.reduce((acc, p) => acc + (p.score && p.totalQuestions ? p.score / p.totalQuestions : 0), 0) / (stats.practices.length || 1) * 100)}%
+                  {Math.round(stats.practices.reduce((acc, p) => acc + ((p.score ?? 0) / (p.totalQuestions ?? 1)), 0) / (stats.practices.length || 1) * 100)}%
                 </span>
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/40">Average Performance</span>
               </div>

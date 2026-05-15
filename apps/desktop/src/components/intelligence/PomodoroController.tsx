@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import PomodoroTimer from '@/components/intelligence/PomodoroTimer';
 import PomodoroStats from '@/components/intelligence/PomodoroStats';
 import { Play, Pause, SkipForward } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function PomodoroController() {
   const { config } = useConfig();
