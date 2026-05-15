@@ -5,12 +5,14 @@ import { useHeader } from '@/context/header-context'
 import { cn } from '@/lib/utils'
 import { useLocation } from 'react-router-dom'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
+import { useConfig } from '@/lib/ConfigContext'
 import { Timer } from 'lucide-react'
 
 export function AppHeader() {
   const { goBack, goForward, canGoBack, canGoForward, history, currentIndex } = useNavigation()
   const { centerContent, rightContent } = useHeader()
   const { timeLeft, setShowOverlay, isActive: pomodoroActive } = usePomodoroStore()
+  const { config } = useConfig()
   const location = useLocation()
 
   // Dynamic Breadcrumb Logic
@@ -122,7 +124,12 @@ export function AppHeader() {
       <div className="flex-1" />
 
       {/* Right: Actions */}
-      <div className="flex items-center justify-end gap-1.5 shrink-0 z-10">
+      <div className="flex items-center justify-end gap-3 shrink-0 z-10">
+        <div className="hidden md:flex flex-col items-end mr-2">
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/30 leading-none mb-0.5">Authorized User</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-foreground/80 leading-none">{config?.displayName || 'Ater User'}</span>
+        </div>
+        <div className="h-4 w-px bg-border/40 mx-1" />
         {rightContent}
       </div>
     </header>

@@ -12,19 +12,21 @@ type StepStatus = 'idle' | 'testing' | 'success' | 'error'
 export default function Onboarding() {
   const [step, setStep] = useState(1)
   const { config, saveConfig } = useConfig()
-  const { profile } = useAuth()
   const navigate = useNavigate()
 
-  // Step 1 — Vault
+  // Step 1 — Profile
+  const [name, setName] = useState(config?.displayName || '')
+
+  // Step 2 — Vault
   const [vaultPath, setVaultPath] = useState(config?.obsidianVaultPath || '')
 
-  // Step 2 — API Key
-  const [apiKey, setApiKey] = useState('')
-  const [provider, setProvider] = useState<'google' | 'openai' | 'anthropic' | 'groq'>('google')
+  // Step 3 — API Key
+  const [apiKey, setApiKey] = useState(config?.aiApiKey || '')
+  const [provider, setProvider] = useState<'google' | 'openai' | 'anthropic' | 'groq'>(config?.aiProvider as any || 'google')
   const [testStatus, setTestStatus] = useState<StepStatus>('idle')
   const [testMessage, setTestMessage] = useState('')
 
-  // Step 3 — Finalize
+  // Step 4 — Finalize
   const [finalStatus, setFinalStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [finalError, setFinalError] = useState('')
 
@@ -71,15 +73,15 @@ export default function Onboarding() {
         obsidianVaultPath: vaultPath,
         aiApiKey: apiKey,
         aiProvider: provider,
+        displayName: name,
         inboxPath: `${vaultPath}/Inbox`,
         academicFolderPath: 'Notes',
         autoDeploy: true,
+        isActivated: true
       })
 
       await sidecarApi.academicsSyncProfile()
       setFinalStatus('done')
-
-      setTimeout(() => navigate('/obsidian'), 800)
     } catch (err: any) {
       setFinalError(err.message || 'Setup failed. Check your vault path and try again.')
       setFinalStatus('error')
@@ -105,7 +107,7 @@ export default function Onboarding() {
         {/* Step indicator */}
         {finalStatus === 'idle' || finalStatus === 'error' ? (
           <div className="flex items-center gap-3 mb-10">
-            {[1, 2, 3].map((s) => (
+            {[1, 2, 3, 4].map((s) => (
               <div key={s} className="flex items-center gap-3">
                 <div
                   className={cn(
@@ -117,11 +119,11 @@ export default function Onboarding() {
                       : "bg-border"
                   )}
                 />
-                {s < 3 && <div className="w-8 h-px bg-border" />}
+                {s < 4 && <div className="w-8 h-px bg-border" />}
               </div>
             ))}
             <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-2">
-              Step {step} of 3
+              Step {step} of 4
             </span>
           </div>
         ) : null}
@@ -141,23 +143,74 @@ export default function Onboarding() {
           </div>
         )}
 
-        {/* Done state */}
+        {/* Done state — Welcome Screen */}
         {finalStatus === 'done' && (
-          <div className="w-full">
-            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">
-              Ready
+          <div className="flex flex-col items-start w-full">
+            <div className="text-[9px] font-black uppercase tracking-widest text-primary mb-3">
+              Ready to Launch
             </div>
-            <p className="text-[11px] font-mono text-muted-foreground uppercase">
-              Launching Ater...
+            <h1 className="text-3xl font-black uppercase tracking-tight text-foreground mb-4">
+              Welcome, {name.split(' ')[0] || 'User'}
+            </h1>
+            <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-10 max-w-[320px]">
+              Your intelligence dashboard is now synchronized with your vault. Step into your high-fidelity pedagogical workspace.
             </p>
+            <button
+              onClick={() => navigate('/obsidian')}
+              className="py-3 px-12 bg-primary text-primary-foreground text-[11px] font-black uppercase tracking-[0.3em] border border-primary hover:opacity-90 shadow-2xl"
+            >
+              Enter Ater
+            </button>
           </div>
         )}
 
-        {/* Step 1 — Vault */}
+        {/* Step 1 — Profile */}
         {(finalStatus === 'idle' || finalStatus === 'error') && step === 1 && (
           <div className="flex flex-col items-start w-full">
             <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
               Step 1
+            </div>
+            <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
+              Define Your Profile
+            </h1>
+            <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-8">
+              What should we call you? Your data remains private and local.
+            </p>
+
+            <div className="w-full mb-8">
+              <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+                Display Name
+              </div>
+              <input
+                autoFocus
+                type="text"
+                placeholder="Enter your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full bg-card border border-border focus:border-foreground px-3 py-2.5 text-[12px] font-bold outline-none text-foreground placeholder:text-muted-foreground/30 uppercase tracking-widest"
+              />
+            </div>
+
+            <button
+              onClick={handleNext}
+              disabled={!name}
+              className={cn(
+                "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border",
+                name
+                  ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
+                  : "bg-muted text-muted-foreground cursor-not-allowed border-border"
+              )}
+            >
+              Continue
+            </button>
+          </div>
+        )}
+
+        {/* Step 2 — Vault */}
+        {(finalStatus === 'idle' || finalStatus === 'error') && step === 2 && (
+          <div className="flex flex-col items-start w-full">
+            <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+              Step 2
             </div>
             <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
               Select Your Vault
@@ -184,18 +237,26 @@ export default function Onboarding() {
               )}
             </button>
 
-            <button
-              onClick={handleNext}
-              disabled={!vaultPath}
-              className={cn(
-                "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border",
-                vaultPath
-                  ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
-                  : "bg-muted text-muted-foreground cursor-not-allowed border-border"
-              )}
-            >
-              Continue
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleBack}
+                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={!vaultPath}
+                className={cn(
+                  "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border",
+                  vaultPath
+                    ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
+                    : "bg-muted text-muted-foreground cursor-not-allowed border-border"
+                )}
+              >
+                Continue
+              </button>
+            </div>
           </div>
         )}
 
@@ -203,7 +264,7 @@ export default function Onboarding() {
         {(finalStatus === 'idle' || finalStatus === 'error') && step === 2 && (
           <div className="flex flex-col items-start w-full">
             <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-              Step 2
+              Step 3
             </div>
             <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
               Connect AI
@@ -288,15 +349,14 @@ export default function Onboarding() {
               </button>
               <button
                 onClick={handleNext}
-                disabled={!apiKey}
                 className={cn(
                   "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border",
                   apiKey
                     ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
-                    : "bg-muted text-muted-foreground cursor-not-allowed border-border"
+                    : "bg-background text-foreground border-border hover:border-foreground"
                 )}
               >
-                Continue
+                {apiKey ? 'Continue' : 'Skip'}
               </button>
             </div>
           </div>
@@ -306,13 +366,13 @@ export default function Onboarding() {
         {(finalStatus === 'idle' || finalStatus === 'error') && step === 3 && (
           <div className="flex flex-col items-start w-full">
             <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-              Step 3
+              Step 4
             </div>
             <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
               Confirm Setup
             </h1>
             <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-8">
-              Welcome{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}. Review your settings before launching.
+              Review your settings before launching.
             </p>
 
             <div className="w-full space-y-3 mb-8 p-5 bg-card border border-border">
@@ -353,7 +413,7 @@ export default function Onboarding() {
                 onClick={finalizeSetup}
                 className="py-2.5 px-8 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-[0.2em] border border-primary hover:opacity-90"
               >
-                Launch Ater
+                Finalize
               </button>
             </div>
           </div>

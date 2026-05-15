@@ -63,6 +63,7 @@ export interface AppConfig {
     activationEmail: string;
     activationCode: string;
     machineId: string;
+    displayName: string;
 }
 
 interface ConfigContextType {
@@ -105,6 +106,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     activationEmail: '',
     activationCode: '',
     machineId: '',
+    displayName: '',
 };
 
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -151,6 +153,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const isActivated = (await store.get<boolean>('isActivated')) ?? false;
                 const activationEmail = (await store.get<string>('activationEmail')) || '';
                 const activationCode = (await store.get<string>('activationCode')) || '';
+                const displayName = (await store.get<string>('displayName')) || '';
                 
                 let machineId = await store.get<string>('machineId');
                 if (!machineId) {
@@ -178,10 +181,10 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     pomodoroShortBreakDuration,
                     pomodoroLongBreakDuration,
                     pomodoroSessionsBeforeLongBreak,
-                    isActivated,
                     activationEmail,
                     activationCode,
                     machineId,
+                    displayName,
                 };
 
                 // Auto-select first key if none active
@@ -229,8 +232,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const isConfigured = Boolean(
-        config?.aiApiKey &&
-        config?.obsidianVaultPath
+        config?.obsidianVaultPath && config?.displayName
     );
 
     const addCustomPersona = async (p: CustomPersona) => {
