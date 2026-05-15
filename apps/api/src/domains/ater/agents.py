@@ -1247,16 +1247,18 @@ OUTPUT: The 3 bullet points only. No preamble."""
         return res.content.strip()
 
     async def generate_micro(self, note_schema, source_text: str, all_concepts: str, used_scenarios: list = None, academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 1500) -> Dict[str, Any]:
-        # v33.0: Single structured pass — source-grounded
+        # v33.0: Single structured pass — source-grounded. 4-section output only.
         theory_data = await self.generate_theory_core(note_schema, source_text, all_concepts, academic_level)
 
         return {
-            "plain_english_explanation": theory_data.get("plain_english", ""),
-            "h1_title": self.domain.get("h1", "The Core Logic Explained"),
-            "detailed_breakdown": theory_data.get("detailed_breakdown", ""),
-            "h2_title": self.domain.get("h2", "The Textbook Translation"),
-            "academic_translation": theory_data.get("academic_translation", ""),
-            "misconceptions": theory_data.get("misconceptions", ""),
+            # ── v33.0 key names matching templates.py 4-section structure ──
+            "mental_model": theory_data.get("plain_english", ""),
+            "h1_title": self.domain.get("h1", "How It Actually Works"),
+            "core_logic": theory_data.get("detailed_breakdown", ""),
+            "h2_title": self.domain.get("h2", "The Formal Model"),
+            "formal_model": theory_data.get("academic_translation", ""),
+            # misconceptions preserved internally but offloaded to AI Chat (Layer 3)
+            "_misconceptions_cache": theory_data.get("misconceptions", ""),
         }
 
     async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str, used_scenarios: list = None) -> str:

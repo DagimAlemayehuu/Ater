@@ -378,8 +378,8 @@ export const sidecarApi = {
         }),
 
     // ── Scholar & AI ──────────────────────────────────────
-    explainPdfSelection: (payload: { path: string, selection: string, page?: number }) =>
-        request<{ answer: string; detail?: string }>('/api/ater/explain', {
+    explainPdfSelection: (payload: { path: string, selection: string, page?: number, note_mode?: string, note_title?: string, note_course?: string }) =>
+        request<{ answer: string; persona?: string; mode?: string; detail?: string }>('/api/ater/explain', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
@@ -390,8 +390,8 @@ export const sidecarApi = {
             body: JSON.stringify(payload)
         }),
 
-    aterExplain: (payload: { path: string, selection: string, page?: number, question?: string }) =>
-        request<{ answer: string }>('/api/ater/explain', {
+    aterExplain: (payload: { path: string, selection: string, page?: number, question?: string, note_mode?: string, note_title?: string, note_course?: string }) =>
+        request<{ answer: string; persona?: string; mode?: string }>('/api/ater/explain', {
             method: 'POST',
             body: JSON.stringify(payload)
         }),

@@ -2119,9 +2119,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 # Track example/scenario to prevent reuse
                                 if source_snippet and len(source_snippet) > 50:
                                     session["used_examples"].append(source_snippet[:200])
-                                if "plain_english_explanation" in theory_parts:
+                                if "mental_model" in theory_parts:
                                     # Extract first 3 words of analogy as a 'scenario signature'
-                                    words = re.findall(r'\w+', theory_parts["plain_english_explanation"].lower())
+                                    words = re.findall(r'\w+', theory_parts["mental_model"].lower())
                                     if len(words) > 3:
                                         session["used_scenarios"].append(" ".join(words[:3]))
                                 
@@ -2130,14 +2130,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 await self.governor.get_permit(expected_tokens=3000)
                                 prac_parts = await practitioner_agent.generate_micro(
                                     note_schema.title, 
-                                    note_data.get("detailed_breakdown", ""), 
+                                    note_data.get("core_logic", ""), 
                                     primary_language, 
                                     note_schema.mode,
                                     source_text=source_snippet,  # v33.0: source-grounded artifact
                                     academic_level=plan_obj.academic_level,
                                     course_title=plan_obj.course_title,
                                     max_tokens=8000,
-                                    plain_english=note_data.get("plain_english_explanation", "")
+                                    plain_english=note_data.get("mental_model", "")
                                 )
                                 note_data.update(prac_parts)
                                 # 3. Micro-Question Pass (Dynamic Assessment)
@@ -2153,8 +2153,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     f"Do NOT generate questions about aggregate demand, monetary policy, interest rates, "
                                     f"or ANY concept not explicitly present in the SOURCE ANCHOR below.\n\n"
                                     f"CONCEPT: {_concept_label}\n"
-                                    f"PLAIN ENGLISH: {note_data.get('plain_english_explanation', '')[:250]}\n"
-                                    f"CORE LOGIC: {note_data.get('detailed_breakdown', '')[:400]}\n"
+                                    f"MENTAL MODEL: {note_data.get('mental_model', '')[:250]}\n"
+                                    f"CORE LOGIC: {note_data.get('core_logic', '')[:400]}\n"
                                     f"SOURCE ANCHOR (ONLY test vocabulary from here): {source_snippet[:500]}"
                                 )
                                 prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
@@ -2196,8 +2196,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 note_data["possible_questions"] = "\n```interactive-quiz\n" + json.dumps(valid_qs, indent=2) + "\n```"
 
                                 # 4. Deterministic Assembly & Self-Healing (v33.0)
-                                # Inject misconceptions from theory pass before rendering
-                                note_data["misconceptions"] = theory_parts.get("misconceptions", "")
+                                # misconceptions offloaded to AI Chat — not injected into note body
                                 healer = LogicHealer(canonical_titles=set(all_note_titles))
                                 body_content = render_atomic_note(note_data, healer=healer)
                                 

@@ -2413,6 +2413,9 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  content={noteContent} 
  onNavigate={handleWikiLinkClick} 
  path={selectedPath || undefined}
+ noteMode={String(noteMetadata?.mode || '')}
+ noteTitle={String(noteMetadata?.title || '')}
+ noteCourse={String(noteMetadata?.course || '')}
  />
  )}
  </div>

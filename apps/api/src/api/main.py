@@ -1261,87 +1261,121 @@ async def ater_explain_concept(
     payload: Dict[str, Any] = Body(...),
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
-    """Explains a specific concept from a PDF or Note using AI."""
+    """
+    Layer 3 Explain — domain-aware, persona-injected, source-grounded (v33.0).
+    Reads the active note's mode from frontmatter to select the correct DOMAIN_MATRIX persona.
+    Returns the answer AND the persona name so the UI can display who is explaining.
+    """
     relative_path = payload.get("path", "")
     selection = payload.get("selection", "")
     page_num = payload.get("page", 1)
     user_question = payload.get("question", "")
+    # v33.0: active note context injected by AiSidecar
+    note_mode = payload.get("note_mode", "")
+    note_title = payload.get("note_title", "")
+    note_course = payload.get("note_course", "")
     is_pdf = relative_path.lower().endswith(".pdf")
-    
-    logger.info(f"[AI Explain] Request for {relative_path} (is_pdf={is_pdf})")
-    
+
     if not secrets.ai_key:
         raise HTTPException(status_code=401, detail="AI API Key missing in Settings")
     if not secrets.vault_path:
         raise HTTPException(status_code=400, detail="Obsidian Vault Path not configured")
 
-    # Handle path resolution
     decoded_path = unquote(relative_path)
     full_path = Path(secrets.vault_path) / decoded_path
-    
+
     if not full_path.exists():
-        # Case-insensitive fallback
         parent = full_path.parent
         if parent.exists():
             for f in parent.iterdir():
                 if f.name.lower() == full_path.name.lower():
                     full_path = f
                     break
-    
+
     if not full_path.exists() and relative_path:
         raise HTTPException(status_code=404, detail=f"File not found in vault: {decoded_path}")
 
     try:
         from src.domains.ai.factory import ModelFactory
+        from src.domains.ater.agents import DOMAIN_MATRIX
         from langchain_core.messages import HumanMessage
-        
+
+        # ── DOMAIN PERSONA RESOLUTION (v33.0) ────────────────────────────────
+        # If the note_mode was not passed, try to extract it from the note's frontmatter
+        if not note_mode and full_path.exists() and full_path.suffix == ".md":
+            try:
+                import yaml as _yaml
+                raw = full_path.read_text(encoding="utf-8")
+                _ym = re.search(r"^---\s*\n(.*?)\n---\s*\n", raw, re.DOTALL | re.MULTILINE)
+                if _ym:
+                    _meta = _yaml.safe_load(_ym.group(1)) or {}
+                    note_mode = str(_meta.get("mode", "")).strip()
+                    note_title = note_title or str(_meta.get("title", "")).replace("_", " ").strip()
+                    note_course = note_course or str(_meta.get("course", "")).strip()
+            except Exception:
+                pass
+
+        domain_config = DOMAIN_MATRIX.get(note_mode, DOMAIN_MATRIX.get("ACADEMIC-GENERAL", {}))
+        persona = domain_config.get("persona", "Subject Matter Expert")
+        domain_h1 = domain_config.get("h1", "How It Actually Works")
+        domain_h2 = domain_config.get("h2", "The Formal Model")
+
+        # ── SOURCE CONTENT (capped at 3500 chars for token efficiency) ────────
         context_content = ""
         if is_pdf and full_path.exists():
             from langchain_community.document_loaders import PyPDFLoader
             loader = PyPDFLoader(str(full_path))
             pages = loader.load_and_split()
-            if page_num > len(pages):
-                context_content = pages[-1].page_content if pages else ""
-            else:
-                context_content = pages[page_num - 1].page_content
+            page_idx = min(page_num - 1, len(pages) - 1) if pages else 0
+            context_content = pages[page_idx].page_content if pages else ""
         elif full_path.exists() and full_path.suffix == ".md":
             context_content = full_path.read_text(encoding="utf-8")
-        
-        # Build model
+
+        # ── DYNAMIC PERSONA SYSTEM INSTRUCTION ───────────────────────────────
+        concept_label = note_title or selection[:60]
+        si_content = f"""You are an expert {persona}, acting as an on-demand tutor for a student who has just read an atomic note about "{concept_label}" in {note_course or 'their course'}.
+
+YOUR ROLE: You are explaining what the note did NOT cover in detail — the WALKTHROUGH, EDGE CASES, and DEEPER NUANCES. The student has already read the Mental Model and Core Logic. Do NOT repeat what is in the note. Go deeper.
+
+DOMAIN: {note_mode or 'General'} | PERSONA: {persona}
+EXPLAIN USING: {domain_h1} lens for mechanisms, {domain_h2} lens for formalism.
+
+LAWS:
+1. PERSONA FIDELITY: Speak as a {persona} would — use domain-appropriate vocabulary, examples, and mental frameworks.
+2. SOURCE GROUNDING: Every explanation must reference the source content below. Do not invent facts.
+3. DEPTH OVER BREADTH: Give ONE deep, precise explanation rather than a surface-level list.
+4. NO REPETITION: The student already knows the basic definition. Skip to the mechanism, the why, the edge case, or the worked example.
+5. FORMAT: Use markdown with clear section headers. Use LaTeX for math ($$). Use code blocks for code.
+6. LENGTH: Be substantive but not wasteful. Aim for 200–400 words."""
+
+        source_block = context_content[:3500]
+        user_prompt = f"""SOURCE CONTENT:
+{source_block}
+
+STUDENT'S SELECTION: "{selection}"
+STUDENT'S QUESTION: {user_question if user_question else f"Explain {concept_label} in depth — specifically the walkthrough, edge cases, and what the note left out."}"""
+
         llm = ModelFactory.get_model(
             provider=secrets.ai_provider or "google",
-            model_name=secrets.ai_model or "gemini-1.5-pro",
+            model_name=secrets.ai_model or "gemini-2.0-flash",
             api_key=secrets.ai_key,
-            temperature=0.2
+            temperature=0.25
         )
-        
-        # Load SI
-        si_path = root_dir / ".system" / "prompts" / "pedagogical_assistant.md"
-        si_content = si_path.read_text(encoding="utf-8") if si_path.exists() else "You are a helpful academic assistant."
-        
-        # Build messages
-        user_prompt = f"""
-        # CONTEXT
-        Document: {relative_path}
-        Location: {"Page " + str(page_num) if is_pdf else "Line Selection"}
-        
-        # SOURCE MATERIAL Snippet
-        {context_content[:15000]}
-        
-        # USER REQUEST
-        Selection: "{selection}"
-        Goal: {user_question if user_question else "Explain this concept perfectly."}
-        """
-        
+
         messages = [
             SystemMessage(content=si_content),
             HumanMessage(content=user_prompt)
         ]
         res = await llm.ainvoke(messages)
-        return {"answer": res.content}
+        return {
+            "answer": res.content,
+            "persona": persona,
+            "mode": note_mode,
+        }
     except Exception as e:
         logger.error(f"[AI Explain] Error: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/ater/quick-questions")
 async def ater_quick_questions(

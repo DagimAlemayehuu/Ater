@@ -26,6 +26,10 @@ interface AiSidecarProps {
     page?: number;
     onClose: () => void;
     initialMode?: 'explain' | 'quiz';
+    /** v33.0: active note metadata for persona-aware explain */
+    noteMode?: string;
+    noteTitle?: string;
+    noteCourse?: string;
 }
 
 export const AiSidecar: React.FC<AiSidecarProps> = ({ 
@@ -33,12 +37,16 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
     path, 
     page, 
     onClose,
-    initialMode = 'explain'
+    initialMode = 'explain',
+    noteMode,
+    noteTitle,
+    noteCourse,
 }) => {
     const [mode, setMode] = useState<'explain' | 'quiz'>(initialMode);
     const [messages, setMessages] = useState<Message[]>([]);
     const [chatInput, setChatInput] = useState('');
     const [isThinking, setIsThinking] = useState(false);
+    const [personaLabel, setPersonaLabel] = useState('AI Tutor');
     
     // Quiz State
     const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
@@ -54,14 +62,25 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
         setIsThinking(true);
         setMessages([]);
         try {
-            const data = await sidecarApi.explainPdfSelection({ path, selection, page });
+            const data = await sidecarApi.explainPdfSelection({ 
+                path, 
+                selection, 
+                page,
+                note_mode: noteMode,
+                note_title: noteTitle,
+                note_course: noteCourse,
+            });
+            // v33.0: Update persona label from response
+            if (data.persona) {
+                setPersonaLabel(data.persona);
+            }
             setMessages([{ role: 'assistant', content: data.answer }]);
         } catch (e: unknown) {
             setMessages([{ role: 'assistant', content: `Error: ${(e as Error).message}` }]);
         } finally {
             setIsThinking(false);
         }
-    }, [path, selection, page]);
+    }, [path, selection, page, noteMode, noteTitle, noteCourse]);
 
     const handleInitialQuiz = useCallback(async () => {
         setIsThinking(true);
@@ -144,14 +163,26 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
         }
     };
 
+    // v33.0: dynamic header subtitle based on mode
+    const modeSubtitle = noteTitle
+        ? noteTitle.replace(/_/g, ' ')
+        : (selection.slice(0, 40) + (selection.length > 40 ? '…' : ''));
+
     return (
         <div className="w-80 h-full border-l border-border bg-background flex flex-col shadow-2xl stop-selection-clear transition-none">
             {/* Header */}
             <div className="p-4 border-b border-border flex items-center justify-between bg-background sticky top-0 z-10">
                 <div className="flex flex-col gap-2">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground italic">
-                        AI Tutor
-                    </h3>
+                    <div className="flex flex-col gap-0.5">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground italic">
+                            {personaLabel}
+                        </h3>
+                        {modeSubtitle && (
+                            <span className="text-[9px] text-muted-foreground/40 font-medium truncate max-w-[180px]">
+                                {modeSubtitle}
+                            </span>
+                        )}
+                    </div>
                     <div className="flex bg-muted/30 p-1 rounded-none border border-border/50">
                         <button
                             onClick={() => setMode('explain')}

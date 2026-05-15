@@ -16,12 +16,17 @@ interface ExplainSidebarProps {
   selection: string
   path?: string
   page?: number
+  // v33.0: note metadata for persona-aware explain
+  noteMode?: string
+  noteTitle?: string
+  noteCourse?: string
 }
 
-export function ExplainSidebar({ isOpen, onClose, selection, path, page }: ExplainSidebarProps) {
+export function ExplainSidebar({ isOpen, onClose, selection, path, page, noteMode, noteTitle, noteCourse }: ExplainSidebarProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [personaLabel, setPersonaLabel] = useState('AI Tutor')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const prevSelectionRef = useRef('')
@@ -55,7 +60,12 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
         selection: sel,
         page: page ?? 1,
         question: '',
+        note_mode: noteMode,
+        note_title: noteTitle,
+        note_course: noteCourse,
       })
+      // v33.0: Show dynamic persona returned from backend
+      if (res.persona) setPersonaLabel(res.persona)
       setMessages(prev => [...prev, { role: 'assistant', content: res.answer }])
     } catch (e: any) {
       setMessages(prev => [
@@ -115,9 +125,16 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/40 shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground italic">
-              AI Tutor
-            </span>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground italic">
+                {personaLabel}
+              </span>
+              {noteTitle && (
+                <span className="text-[9px] text-muted-foreground/30 font-medium truncate max-w-[200px]">
+                  {noteTitle.replace(/_/g, ' ')}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-1">
             <button

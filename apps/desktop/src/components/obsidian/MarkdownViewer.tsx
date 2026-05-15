@@ -118,6 +118,10 @@ interface MarkdownViewerProps {
     onNavigate: (pageName: string) => void
     path?: string
     components?: any
+    // v33.0: note metadata for persona-aware AI explain
+    noteMode?: string
+    noteTitle?: string
+    noteCourse?: string
 }
 
 
@@ -255,7 +259,7 @@ const CodeRenderer = memo((props: any) => {
     return <code className={cn("bg-muted/30 px-1.5 py-0.5 text-[12px] font-mono text-foreground border border-border/5 font-medium mx-0.5", className)} {...props}>{children}</code>
 });
 
-export function MarkdownViewer({ content, onNavigate, path, components }: MarkdownViewerProps) {
+export function MarkdownViewer({ content, onNavigate, path, components, noteMode, noteTitle, noteCourse }: MarkdownViewerProps) {
     // Keep callbacks stable
     const onNavigateRef = useRef(onNavigate);
     const pathRef = useRef(path);
@@ -565,6 +569,9 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                 onClose={() => setSidebarOpen(false)}
                 selection={sidebarSelection}
                 path={path}
+                noteMode={noteMode}
+                noteTitle={noteTitle}
+                noteCourse={noteCourse}
             />
         </>
     )
