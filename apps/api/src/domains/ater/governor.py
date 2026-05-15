@@ -427,6 +427,50 @@ class TokenGovernor:
         except RuntimeError:
             self._record_usage_db_sync(tokens, requests)
 
+    def record_actual_usage(self, estimated_tokens: int, actual_tokens: int) -> None:
+        """
+        Corrects the usage accounting after a real LLM response with known token counts.
+        Inserts a delta record so the running TPD total stays accurate.
+        Also patches the last entry in the in-memory sliding window.
+        """
+        if actual_tokens <= 0:
+            return
+        delta = actual_tokens - estimated_tokens
+        if delta == 0:
+            return
+        # Patch the in-memory window: pop the last estimate and push the corrected value
+        if self.token_window:
+            ts, last_est = self.token_window.pop()
+            self.token_window.append((ts, max(0, last_est + delta)))
+        # Persist the delta to SQLite
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(asyncio.to_thread(self._record_usage_db_sync, delta, 0))
+        except RuntimeError:
+            self._record_usage_db_sync(delta, 0)
+
+    def get_reset_wait_seconds(self) -> float:
+        """
+        Returns seconds until the oldest DB record in the 24h window expires,
+        freeing quota for a new attempt. Returns 0 if no records or already reset.
+        """
+        cutoff_24h = time.time() - (24 * 3600)
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    'SELECT MIN(timestamp) FROM usage WHERE timestamp >= ? AND api_key_hash = ?',
+                    (cutoff_24h, self._current_key_hash)
+                )
+                row = cursor.fetchone()
+                if row and row[0]:
+                    oldest_ts = row[0]
+                    reset_at = oldest_ts + (24 * 3600)
+                    return max(0.0, reset_at - time.time())
+        except Exception as e:
+            print(f"[Governor] Failed to compute reset wait: {e}")
+        return 0.0
+
     def report_error(self, wait_seconds: float = 10.0):
         """Force a hard cooldown on 429 detection from any agent."""
         now = time.time()

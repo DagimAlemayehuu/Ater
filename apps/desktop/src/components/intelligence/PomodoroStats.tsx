@@ -269,8 +269,8 @@ export default function PomodoroStats() {
                      </div>
                      <span className={cn(
                        "text-[10px] font-black",
-                       (p.score || 0) / (p.totalQuestions || 1) >= 0.8 ? "text-green-500/60" : 
-                       (p.score || 0) / (p.totalQuestions || 1) >= 0.5 ? "text-yellow-500/60" : "text-red-500/60"
+                       (p.score || 0) / (p.totalQuestions || 1) >= 0.8 ? "text-foreground" : 
+                       (p.score || 0) / (p.totalQuestions || 1) >= 0.5 ? "text-foreground/60" : "text-foreground/30"
                      )}>
                        {p.score}/{p.totalQuestions}
                      </span>

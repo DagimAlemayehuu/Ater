@@ -529,4 +529,11 @@ class AterQueueManager:
             self.observer.stop()
         if self.worker_task:
             self.worker_task.cancel()
+        
+        # v32.0: Cancel all parallel workers
+        for path, task in self.active_tasks.items():
+            if not task.done():
+                print(f"[Ater Queue] Canceling active task for: {Path(path).name}")
+                task.cancel()
+                
         print("[Ater Queue] Stopped.")

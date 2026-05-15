@@ -6,6 +6,7 @@ class AppSecrets(BaseModel):
     ai_provider: str = "google"
     ai_key: Optional[str] = None
     ai_model: str = "gemini-2.0-flash"
+    ai_base_url: Optional[str] = None
     
     # Level 2: Planner/Router
     planner_provider: str = "google"

@@ -165,10 +165,13 @@ class AterService:
             return AterService._sessions[session_id]
         
         # Try to restore from disk
-        if self._session_file.exists():
+        if await asyncio.to_thread(self._session_file.exists):
             try:
-                with open(self._session_file, "r") as f:
-                    existing = json.load(f)
+                def _read_session():
+                    with open(self._session_file, "r") as f:
+                        return json.load(f)
+                
+                existing = await asyncio.to_thread(_read_session)
                 if session_id in existing:
                     data = existing[session_id]
                     # We need to re-initialize messages from SI and initial prompt
@@ -201,8 +204,10 @@ class AterService:
         raise FileNotFoundError(f"Ater System Instruction not found in: {[str(p) for p in paths]}")
 
     async def _get_si(self, path: str) -> str:
-        with open(path, "r", encoding="utf-8") as f:
-            return f.read()
+        def _read():
+            with open(path, "r", encoding="utf-8") as f:
+                return f.read()
+        return await asyncio.to_thread(_read)
 
     async def _invoke_with_retry(self, messages: List[BaseMessage], session_id: str, phase: str = "AI Generation") -> AIMessage:
         """
@@ -222,8 +227,12 @@ class AterService:
 
                 while True:
                     # Get permit from governor before EACH chunk request
-                    # Estimate tokens: (Current Context / 4) + prompt overhead
-                    estimated_tokens = (len(str(current_messages)) // 4) + 1000
+                    # Estimate tokens from actual message content lengths (not Python repr)
+                    content_chars = sum(
+                        len(m.content) if hasattr(m, 'content') and isinstance(m.content, str) else len(str(m))
+                        for m in current_messages
+                    )
+                    estimated_tokens = (content_chars // 4) + 512  # +512 for overhead
                     try:
                         await self.governor.get_permit(expected_tokens=estimated_tokens)
                     except DailyLimitExceededException as de:
@@ -231,9 +240,44 @@ class AterService:
                             print(f"[Ater Service] 🔄 Governor triggered rotation. Swapping LLM key to: {self.governor._current_key_hash}")
                             self.swap_api_key(self.governor._active_key)
                             continue # Retry with new key
-                        raise de
+                        # Daily quota exhausted — wait for the reset window instead of failing
+                        reset_wait = self.governor.get_reset_wait_seconds()
+                        if 0 < reset_wait <= 14400:  # wait up to 4 hours
+                            mins = int(reset_wait / 60)
+                            print(f"[Ater Service] 📊 Quota exhausted. Waiting {mins}m for 24h window reset...")
+                            AterService._status[session_id] = f"⏳ Quota Reset ({mins}m remaining)..."
+                            # Sleep in 60s chunks so status stays fresh
+                            slept = 0
+                            while slept < reset_wait:
+                                chunk = min(60, reset_wait - slept)
+                                await asyncio.sleep(chunk)
+                                slept += chunk
+                                remaining = max(0, reset_wait - slept)
+                                AterService._status[session_id] = f"⏳ Quota Reset ({int(remaining/60)}m remaining)..."
+                            print("[Ater Service] ⏰ Reset window elapsed — retrying...")
+                            continue  # Back to top of while True; get_permit will now succeed
+                        raise de  # Wait too long or unknown — propagate
 
                     res = await self.llm.ainvoke(current_messages)
+
+                    # Record actual tokens for accurate TPD accounting
+                    try:
+                        actual_tokens = None
+                        if hasattr(res, 'response_metadata') and res.response_metadata:
+                            usage = (
+                                res.response_metadata.get('token_usage') or
+                                res.response_metadata.get('usage') or {}
+                            )
+                            if isinstance(usage, dict):
+                                actual_tokens = (
+                                    usage.get('total_tokens') or
+                                    (usage.get('prompt_tokens', 0) + usage.get('completion_tokens', 0))
+                                ) or None
+                        if actual_tokens and actual_tokens > 0:
+                            self.governor.record_actual_usage(estimated_tokens, actual_tokens)
+                    except Exception:
+                        pass  # Never let telemetry corrections break generation
+
                     final_content += res.content
                     
                     finish_reason = res.response_metadata.get("finish_reason") if hasattr(res, "response_metadata") else None
@@ -245,10 +289,15 @@ class AterService:
                         return res
             except Exception as e:
                 if type(e).__name__ == "DailyLimitExceededException":
-                    print(f"[Ater Service] Daily Limit Hit: {e}")
+                    # This should be rare now — the inner loop handles wait-and-retry.
+                    # If we still get here it means the wait exceeded 4h (real exhaustion).
+                    print(f"[Ater Service] Daily Limit — wait exceeded max threshold: {e}")
                     AterService._rate_limited[session_id] = time.time()
-                    AterService._status[session_id] = f"Paused (Daily Limit Exceeded): {str(e)}"
-                    raise e # Break out completely immediately
+                    AterService._status[session_id] = f"Paused (Daily Limit — 4h+ wait): {str(e)}"
+                    # Do NOT raise immediately — sleep 30min then retry once more
+                    await asyncio.sleep(1800)
+                    attempt -= 1  # Don't count this as a retry attempt
+                    continue
                 
                 last_error = e
                 error_str = str(e)
@@ -1370,11 +1419,13 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             if path.suffix.lower() == ".pdf":
                 loader = PyPDFLoader(str(path))
                 # Load first 10 pages for better context coverage
-                pages = loader.load_and_split()
+                pages = await asyncio.to_thread(loader.load_and_split)
                 content_text = "\n".join([p.page_content for p in pages[:10]])
             else:
-                with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                    content_text = f.read(20000)
+                def _read_text():
+                    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                        return f.read(20000)
+                content_text = await asyncio.to_thread(_read_text)
 
             # Try to match an existing hub
             target_hub = self.find_best_hub_match(content_text)
@@ -1647,11 +1698,13 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         full_text = ""
         if path.suffix.lower() == ".pdf":
             loader = PyPDFLoader(str(path))
-            pages = loader.load_and_split()
+            pages = await asyncio.to_thread(loader.load_and_split)
             full_text = "\n".join([f"[PAGE {p.metadata.get('page', 0) + 1}]\n{p.page_content}" for p in pages])
         else:
-            with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                full_text = f.read()
+            def _read_full():
+                with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                    return f.read()
+            full_text = await asyncio.to_thread(_read_full)
 
         # Clean curriculum values
         def _strip_val(v: str) -> str:
@@ -2199,6 +2252,23 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 # misconceptions offloaded to AI Chat — not injected into note body
                                 healer = LogicHealer(canonical_titles=set(all_note_titles))
                                 body_content = render_atomic_note(note_data, healer=healer)
+
+                                # 4.1 Code fence repair — auto-close unclosed fences before validation
+                                body_content = self.validator.repair_code_fences(body_content)
+
+                                # 4.2 Section deduplication guard — catch Scarcity.md-class failures
+                                if self.validator.check_section_duplication(body_content):
+                                    logger.warning(f"[Ater Service] Section duplication detected in [{current_note_title}] — forcing regen")
+                                    self.set_status(session_id, f"⚠️ Content Dupe: Regenerating [[{current_note_title}]]...")
+                                    note_schema.source_context = (
+                                        note_schema.source_context or ""
+                                    ) + (
+                                        "\n\nCRITICAL FIX REQUIRED: Your previous output had Section 2 (Core Logic walkthrough) "
+                                        "as an exact copy of Section 1 (Mental Model). This is a hard failure. "
+                                        "Section 2 MUST be a step-by-step mechanical breakdown — ENTIRELY different prose "
+                                        "from the plain English analogy in Section 1. Do NOT repeat the Mental Model."
+                                    )
+                                    continue
                                 
                                 # Standardize metadata for YAML dumper
                                 metadata = {
@@ -2246,9 +2316,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                         failures = v_res["failures"]
                                         # ── TIERED BLOCKING (v33.1) ──────────────────────────────
                                         # HARD failures (structural): block deployment, force regen
-                                        HARD_CHECKS = {"feynman_integrity", "wikilink_density", "clean_output"}
+                                        HARD_CHECKS = {"feynman_integrity", "wikilink_density", "clean_output", "limitations_rigor"}
                                         # SOFT failures (advisory): log warning, allow deployment
-                                        SOFT_CHECKS = {"limitations_rigor", "unique_scenario"}
+                                        SOFT_CHECKS = {"unique_scenario"}
                                         
                                         hard_failures = [f for f in failures if f.get("check") in HARD_CHECKS]
                                         soft_failures = [f for f in failures if f.get("check") in SOFT_CHECKS]
@@ -2398,23 +2468,37 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             # confirm_plan now only executes ONE batch at a time when called via API.
             # This prevents HTTP timeouts during large cascades.
             
-            has_more = await run_single_batch(batch_number, batch_type, batch_notes)
+            # Execute the single batch
+            await run_single_batch(batch_number, batch_type, batch_notes)
 
-
-            if isinstance(has_more, dict) and has_more.get("status") == "rate_limited":
-                return has_more
+            # Update session state for next call (v33.2 State Hardening)
+            session["current_batch"] = batch_number
+            has_more = batch_number < total_batches
+            
+            # Persist the incremented batch to disk immediately
+            self._persist_session(session_id, session)
 
             if not has_more:
                 AterService._sessions.pop(session_id, None)
                 self.set_status(session_id, "Deployment Complete")
+                # Also clean up the persisted session file entry if finished
+                try:
+                    if self._session_file.exists():
+                        with open(self._session_file, "r") as f:
+                            existing = json.load(f)
+                        if session_id in existing:
+                            del existing[session_id]
+                            with open(self._session_file, "w") as f:
+                                json.dump(existing, f)
+                except Exception: pass
             else:
-                self.set_status(session_id, f"Awaiting Batch {session['current_batch'] + 1}")
+                self.set_status(session_id, f"Awaiting Batch {batch_number + 1}")
 
             return {
                 "results": deployment_results,
                 "count": len(deployment_results),
                 "has_more": has_more,
-                "current_batch": session.get("current_batch", batch_number),
+                "current_batch": batch_number,
                 "total_batches": total_batches,
                 "status": "success"
             }

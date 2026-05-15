@@ -36,8 +36,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .eq('activation_code', config.activationCode)
       .single()
 
-    if (error || !data) {
-      // If code is no longer valid, deactivate
+    if (error) {
+      // ── OFFLINE RESILIENCE (v33.1) ──
+      // If it's a network error or server error, DO NOT log out.
+      // Only log out if it's a definitive "Not Found" error (PGRST116).
+      if (error.code === 'PGRST116') {
+        console.warn('[Auth] Activation code invalid or revoked. Deactivating...');
+        await saveConfig({ isActivated: false, activationEmail: '', activationCode: '' })
+        setStatus(null)
+        setProfile(null)
+      } else {
+        console.warn('[Auth] Network failure during verification. Preserving local session.')
+        // Maintain local approval state during outages
+        setStatus('approved')
+      }
+    } else if (!data) {
       await saveConfig({ isActivated: false, activationEmail: '', activationCode: '' })
       setStatus(null)
       setProfile(null)

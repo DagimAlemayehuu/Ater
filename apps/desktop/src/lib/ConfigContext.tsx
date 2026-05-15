@@ -181,6 +181,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     pomodoroShortBreakDuration,
                     pomodoroLongBreakDuration,
                     pomodoroSessionsBeforeLongBreak,
+                    isActivated,
                     activationEmail,
                     activationCode,
                     machineId,

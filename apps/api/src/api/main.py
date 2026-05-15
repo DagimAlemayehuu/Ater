@@ -2015,15 +2015,7 @@ async def vault_generation_status():
     return {"status": _vault_status}
 
 
-def handle_shutdown(signum, frame):
-    """Clean shutdown handler for when Tauri terminates the process."""
-    sys.exit(0)
-
-
 if __name__ == "__main__":
-    signal.signal(signal.SIGTERM, handle_shutdown)
-    signal.signal(signal.SIGINT, handle_shutdown)
-
     host = os.environ.get("API_HOST", "0.0.0.0")
     port = int(os.environ.get("API_PORT", "8765"))
 

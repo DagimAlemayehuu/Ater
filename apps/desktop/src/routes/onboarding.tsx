@@ -260,8 +260,8 @@ export default function Onboarding() {
           </div>
         )}
 
-        {/* Step 2 — API Key */}
-        {(finalStatus === 'idle' || finalStatus === 'error') && step === 2 && (
+        {/* Step 3 — API Key */}
+        {(finalStatus === 'idle' || finalStatus === 'error') && step === 3 && (
           <div className="flex flex-col items-start w-full">
             <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
               Step 3
@@ -362,8 +362,8 @@ export default function Onboarding() {
           </div>
         )}
 
-        {/* Step 3 — Confirm */}
-        {(finalStatus === 'idle' || finalStatus === 'error') && step === 3 && (
+        {/* Step 4 — Confirm */}
+        {(finalStatus === 'idle' || finalStatus === 'error') && step === 4 && (
           <div className="flex flex-col items-start w-full">
             <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
               Step 4

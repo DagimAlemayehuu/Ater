@@ -111,8 +111,8 @@ export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMo
                         <div key={key} className={cn(
                             "group p-4 border relative overflow-hidden",
                             isActive ? "border-primary/40 bg-primary/[0.02]" : "border-border bg-background hover:border-muted-foreground/20",
-                            isCritical ? "border-destructive/30 bg-destructive/[0.02]" : 
-                            isLow ? "border-amber-500/30 bg-amber-500/[0.02]" : ""
+                            isCritical ? "border-foreground/30 bg-foreground/[0.02]" : 
+                            isLow ? "border-muted-foreground/30 bg-muted-foreground/[0.02]" : ""
                         )}>
                             {isActive && (
                                 <div className="absolute top-0 right-0 px-2 py-0.5 bg-primary text-primary-foreground text-[8px] font-black uppercase tracking-widest rounded-none">
@@ -130,15 +130,15 @@ export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMo
                                 </div>
                                 
                                 {limit.retry_after ? (
-                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-destructive text-destructive-foreground">
+                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-foreground text-background">
                                         <span className="text-[9px] font-black uppercase tracking-tighter">Throttled: {limit.retry_after}s</span>
                                     </div>
                                 ) : (
                                     <div className={cn(
                                         "flex items-center gap-1.5 px-2 py-1 border",
-                                        isCritical ? "bg-destructive/10 text-destructive border-destructive/20" :
-                                        isLow ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
-                                        "bg-green-500/10 text-green-500 border-green-500/20"
+                                        isCritical ? "bg-foreground text-background border-foreground/20" :
+                                        isLow ? "bg-muted-foreground/10 text-muted-foreground border-muted-foreground/20" :
+                                        "bg-muted/20 text-muted-foreground/60 border-border/40"
                                     )}>
                                         <span className="text-[9px] font-black uppercase tracking-tighter">
                                             {isCritical ? 'Critical' : isLow ? 'Low' : 'Healthy'}
@@ -160,7 +160,7 @@ export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMo
                                                 <div 
                                                     className={cn(
                                                         "h-full",
-                                                        isCritical ? "bg-destructive" : isLow ? "bg-amber-500" : "bg-primary"
+                                                        isCritical ? "bg-foreground" : isLow ? "bg-muted-foreground/60" : "bg-primary"
                                                     )}
                                                     style={{ width: `${Math.max(2, reqPercent || 0)}%` }}
                                                 />
@@ -183,7 +183,7 @@ export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMo
                                                 <div 
                                                     className={cn(
                                                         "h-full",
-                                                        isCritical ? "bg-destructive" : isLow ? "bg-amber-500" : "bg-primary"
+                                                        isCritical ? "bg-foreground" : isLow ? "bg-muted-foreground" : "bg-primary"
                                                     )}
                                                     style={{ width: `${Math.max(2, tokenPercent || 0)}%` }}
                                                 />

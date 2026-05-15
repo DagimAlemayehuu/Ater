@@ -109,20 +109,20 @@ class AterValidator:
         """
         errors: List[str] = []
 
-        # ── 0. Structural Obedience (v32.0) ──────────────────────────────────
-        # Supports both # and ## as the user recently adjusted the hierarchy
+        # ── 0. Structural Obedience (v33.0) ──────────────────────────────────
+        # Fixed sections: Mental Model (sec 1) and The Proving Grounds (sec 4)
+        # Domain sections 2 & 3 use dynamic h1/h2 titles — validated via heading count
         required_sections = [
-            r"(?:#|##) 1\. ",
-            r"(?:#|##) 2\. ",
-            r"(?:#|##) 3\. ",
-            r"(?:#|##) 4\. ",
-            r"(?:#|##) 5\. ",
-            r"(?:#|##) 6\. ",
-            r"(?:#|##) 7\. "
+            r"(?:#|##|###)\s+Mental Model",
+            r"(?:#|##|###)\s+The Proving Grounds",
         ]
         for section in required_sections:
-            if not re.search(section, content):
+            if not re.search(section, content, re.IGNORECASE):
                 errors.append(f"MISSING_SECTION: {section}")
+        # Require at least 4 '## '-level headings total (Mental Model + h1 + h2 + The Proving Grounds)
+        heading_count = len(re.findall(r'^#{1,3}\s+\S', content, re.MULTILINE))
+        if heading_count < 4:
+            errors.append(f"INSUFFICIENT_SECTIONS: Found {heading_count} headings, expected ≥ 4 (v33.0 requires Mental Model, Domain H1, Domain H2, The Proving Grounds)")
         for marker in HARD_FAILURE_MARKERS:
             if marker in content:
                 errors.append(f"HARD_FAILURE_MARKER: '{marker}' found in content. Note must be regenerated.")
@@ -223,12 +223,15 @@ class AterValidator:
         body_no_quiz = re.sub(r"```interactive-quiz.*?```", "", body, flags=re.DOTALL)
         backtick_count = body_no_quiz.count("```")
         if backtick_count % 2 != 0:
-            # Non-fatal: the LLM frequently emits an extra closing fence after
-            # code examples inside artifacts; Obsidian renders this fine.
-            # Log as a warning but do not block deployment.
+            # Hard structural error — unclosed fences corrupt Obsidian rendering.
+            # Surface as a validation error so the note is regenerated.
             import logging
             logging.getLogger("Ater").warning(
-                "[AterValidator] Odd code fence count (%d); auto-accepted.", backtick_count
+                "[AterValidator] Odd code fence count (%d); blocking deployment for regen.", backtick_count
+            )
+            errors.append(
+                f"ODD_CODE_FENCE: {backtick_count} triple-backtick markers detected (must be even). "
+                "An unclosed code fence will corrupt Obsidian rendering. Regenerate the note."
             )
 
 
@@ -317,8 +320,11 @@ class AterValidator:
             errors.append("TRUNCATED_GENERATION: The note appears to be cut off mid-sentence without proper closing punctuation.")
 
         # ── TRUNCATION GUARD: Check for mid-sentence cuts inside sections ──────
-        # Terminate at the next ## heading of any level, the quiz fence, or end-of-string
-        section_texts = re.findall(r'## (?:\d+\.)[^\n]*\n(.*?)(?=##|```interactive-quiz|$)', body, re.DOTALL)
+        # v33.0: matches any ##-level heading to capture all 4 sections
+        section_texts = re.findall(
+            r'(?:#|##|###)\s+[^\n]+\n(.*?)(?=(?:#|##|###)\s+|```interactive-quiz|$)',
+            body, re.DOTALL
+        )
         for section_body in section_texts:
             # v27.5 FIX: Strip markdown artifacts like ---, ***, ___ and trailing whitespace
             # before checking for terminal punctuation to avoid false-positives.
@@ -341,20 +347,15 @@ class AterValidator:
                     if last_sent_char not in valid_terminal and not ends_with_wikilink and not ends_with_math:
                         errors.append(f"SECTION_TRUNCATION: The final section ends mid-sentence: '...{cleaned[-40:]}'")
 
-        # v28.4 FIX: Empty Table Kill-Switch (Section 4 Artifacts)
-        if re.search(r'(?:#|##) 4\.', body):
-            artifact_match = re.search(r'(?:#|##) 4\.[^\n]*\n(.*?)(?=(?:#|##) 5\.|```interactive-quiz|$)', body, re.DOTALL)
-            if artifact_match:
-                artifact_text = artifact_match.group(1).strip()
-                if "|" in artifact_text and len(artifact_text.split("\n")) < 3:
-                    errors.append("EMPTY_TABLE: Section 4 contains a malformed or empty Markdown table.")
-
-        # ── 7. Walkthrough step count — section is ## 5. Walkthrough in the template
-        walkthrough_match = re.search(r'## 5\. Walkthrough(.*?)(?=## 6\.|```interactive-quiz|$)', body, re.DOTALL)
-        if walkthrough_match:
-            steps = re.findall(r'^[\-\*]|^\d+\.', walkthrough_match.group(1), re.MULTILINE)
-            if len(steps) < 3:
-                errors.append(f"WALKTHROUGH_TOO_SHORT: Found {len(steps)} steps, need ≥ 3.")
+        # v33.0: Empty Table Kill-Switch (Formal Model section)
+        formal_model_match = re.search(
+            r'(?:#|##|###)\s+Formal Model[^\n]*\n(.*?)(?=(?:#|##|###)\s+Proving Grounds|```interactive-quiz|$)',
+            body, re.DOTALL | re.IGNORECASE
+        )
+        if formal_model_match:
+            formal_text = formal_model_match.group(1).strip()
+            if "|" in formal_text and len(formal_text.split("\n")) < 3:
+                errors.append("EMPTY_TABLE: Formal Model section contains a malformed or empty Markdown table.")
 
         # ── 8. Gutter law defense (No longer logged; fixed proactively in VaultManager)
         # We previously warned here, but now we silenty accept and fix during the write phase.
@@ -365,6 +366,51 @@ class AterValidator:
                 errors.append(f"REGEX_HARD_FAILURE: Pattern '{pattern.pattern[:60]}' matched — note contains hallucinated system marker.")
 
         return len(errors) == 0, errors
+
+    @staticmethod
+    def check_section_duplication(body: str) -> bool:
+        """
+        Returns True if Section 1 (Mental Model) text is a near-exact
+        duplicate of Section 2 (domain H1 walkthrough). Prevents the
+        Scarcity.md-class copy-paste failure where the model reuses the
+        exact same prose block in both sections.
+        """
+        sections = re.findall(
+            r'(?:^|\n)(?:#{1,3})\s+[^\n]+\n(.*?)(?=(?:^|\n)(?:#{1,3})\s+|```interactive-quiz|\Z)',
+            body, re.DOTALL
+        )
+        if len(sections) < 2:
+            return False
+        s1 = sections[0].strip()
+        s2 = sections[1].strip()
+        if not s1 or not s2 or len(s1) < 100:
+            return False
+        # Exact duplicate
+        if s1 == s2:
+            return True
+        # Near-duplicate: >85% character overlap on the shorter text
+        shorter = min(len(s1), len(s2))
+        common = sum(1 for a, b in zip(s1, s2) if a == b)
+        similarity = common / shorter if shorter > 0 else 0
+        return similarity > 0.85
+
+    @staticmethod
+    def repair_code_fences(content: str) -> str:
+        """
+        If the note body has an unclosed code fence, appends a closing
+        fence just before the ```interactive-quiz block (or at end-of-body)
+        so the Obsidian renderer isn't corrupted. This is a last-resort patch
+        applied AFTER generation but BEFORE validation.
+        """
+        body_no_quiz = re.sub(r"```interactive-quiz.*?```", "", content, flags=re.DOTALL)
+        if body_no_quiz.count("```") % 2 == 0:
+            return content  # Already balanced
+        import logging
+        logging.getLogger("Ater").warning("[AterValidator] Injecting closing fence to repair odd count.")
+        quiz_pos = content.find("```interactive-quiz")
+        if quiz_pos > 0:
+            return content[:quiz_pos].rstrip() + "\n```\n\n" + content[quiz_pos:]
+        return content.rstrip() + "\n```\n"
 
     @staticmethod
     def semantic_topic_lock(note_title: str, source_context: str, quiz_questions: list, min_keyword_hits: int = 1) -> Tuple[bool, str]:

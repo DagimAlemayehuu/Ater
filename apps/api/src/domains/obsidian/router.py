@@ -362,6 +362,8 @@ async def update_vault_row(db_name: str, file_name: str, req: UpdateRowRequest, 
                 return {"success": True, "id": file_name, "properties": data}
 
         return {"success": False, "message": "No frontmatter found"}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found")
     except Exception as e:
         print(f"Error updating {file_name}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -427,6 +429,8 @@ async def create_vault_row(db_name: str, req: CreateRowRequest, secrets: AppSecr
             f.write(f"---\n{new_frontmatter}---{body_content}")
             
         return {"success": True, "id": file_path.stem, "title": file_path.stem, "properties": data}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found")
     except Exception as e:
         print(f"Error creating {file_name}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -483,6 +487,8 @@ async def rename_vault_row(db_name: str, old_file_name: str, req: RenameRowReque
         
         old_file_path.rename(new_file_path)
         return {"success": True}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found")
     except Exception as e:
         print(f"Error renaming {old_file_name} to {new_file_name}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
