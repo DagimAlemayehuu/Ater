@@ -65,6 +65,9 @@ export interface AppConfig {
     pomodoroShortBreakDuration: number;
     pomodoroLongBreakDuration: number;
     pomodoroSessionsBeforeLongBreak: number;
+    isActivated: boolean;
+    activationEmail: string;
+    activationCode: string;
 }
 
 interface ConfigContextType {
@@ -109,6 +112,9 @@ export const DEFAULT_CONFIG: AppConfig = {
     pomodoroShortBreakDuration: 5,
     pomodoroLongBreakDuration: 15,
     pomodoroSessionsBeforeLongBreak: 4,
+    isActivated: false,
+    activationEmail: '',
+    activationCode: '',
 };
 
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -160,6 +166,9 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const pomodoroShortBreakDuration = (await store.get<number>('pomodoroShortBreakDuration')) || DEFAULT_CONFIG.pomodoroShortBreakDuration;
                 const pomodoroLongBreakDuration = (await store.get<number>('pomodoroLongBreakDuration')) || DEFAULT_CONFIG.pomodoroLongBreakDuration;
                 const pomodoroSessionsBeforeLongBreak = (await store.get<number>('pomodoroSessionsBeforeLongBreak')) || DEFAULT_CONFIG.pomodoroSessionsBeforeLongBreak;
+                const isActivated = (await store.get<boolean>('isActivated')) ?? false;
+                const activationEmail = (await store.get<string>('activationEmail')) || '';
+                const activationCode = (await store.get<string>('activationCode')) || '';
 
                 let loadedConfig: any = {
                     aiProvider,
@@ -186,6 +195,9 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     pomodoroShortBreakDuration,
                     pomodoroLongBreakDuration,
                     pomodoroSessionsBeforeLongBreak,
+                    isActivated,
+                    activationEmail,
+                    activationCode,
                 };
 
                 // Auto-select first key if none active
