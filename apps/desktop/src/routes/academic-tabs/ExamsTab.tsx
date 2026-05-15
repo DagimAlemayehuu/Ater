@@ -99,7 +99,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  const doneHubs = relatedHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
 
  return (
- <div className="h-full overflow-y-auto custom-scrollbar p-6 lg:p-10 space-y-8">
+ <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-8">
  <div className="flex items-center justify-between">
  <div>
  <span className="text-[9px] font-black uppercase tracking-widest text-foreground/50">Exam Detail</span>
@@ -123,7 +123,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  </div>
 
  {/* Quick Info */}
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div className="grid grid-cols-2 gap-4">
  <StatCard label="Preparation Progress" value={`${doneHubs} / ${relatedHubs.length} Hubs`} accent />
  {getVal(exam, 'date', 'Exam Date') && !isBefore(parseISO(getVal(exam, 'date', 'Exam Date')), now) && (
  <StatCard label="Countdown" value={`${differenceInDays(parseISO(getVal(exam, 'date', 'Exam Date')), now)} Days Left`} />
@@ -131,7 +131,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  </div>
 
  {/* Properties */}
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+ <div className="grid grid-cols-4 gap-4">
  {(() => {
  const internal = ['id', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by']
  const keys = new Set([...Object.keys(schema || {}), ...Object.keys(exam || {})])
@@ -161,7 +161,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  {relatedHubs.length > 0 && (
  <section className="space-y-4">
  <SectionHeader title="Study Material Prep" count={relatedHubs.length} />
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+ <div className="grid grid-cols-2 gap-3">
  {relatedHubs.map((hub, idx) => {
  const hubStatus = stripWL(getVal(hub, 'status', 'Status'))
  const isDone = hubStatus.toLowerCase().includes('complet')
@@ -191,7 +191,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  {/* Next Exam Hero */}
  {nextExam && (
  <div className="mx-6 mt-6 mb-2 shrink-0">
- <div className="p-6 sm:p-8 border border-border bg-muted/5 rounded-none flex items-center justify-between gap-6">
+ <div className="p-8 border border-border bg-muted/5 rounded-none flex items-center justify-between gap-6">
  <div className="space-y-1">
  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-foreground/50">Next Exam</span>
  <h2 className="text-xl font-black uppercase tracking-tighter text-foreground">{cleanTitle(nextExam.title)}</h2>
@@ -259,7 +259,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  <section className="space-y-3">
  <SectionHeader title={`Upcoming — ${upcoming.length}`} />
  {upcoming.length === 0 && <EmptyState message="No upcoming exams." />}
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+ <div className="grid grid-cols-2 gap-3">
  {upcoming.map((exam, idx) => {
  const edate = getVal(exam, 'date', 'Exam Date')
  const days = edate ? differenceInDays(parseISO(edate), now) : 0
@@ -308,7 +308,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  {past.length > 0 && (
  <section className="space-y-3 opacity-60">
  <SectionHeader title={`Past — ${past.length}`} />
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+ <div className="grid grid-cols-2 gap-3">
  {past.map((exam, idx) => {
  const isEditing = editingScore === exam.id
  const score = getVal(exam, 'score', 'Score')

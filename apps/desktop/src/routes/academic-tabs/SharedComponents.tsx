@@ -218,8 +218,8 @@ export function ProgressRing({done, total, size = 32}: {done: number; total: num
  return (
  <svg width={size} height={size} style={{transform: 'rotate(-90deg)'}}>
  <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={1.5} className="text-border/20" />
- <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={1.5} className="text-foreground"
- strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" style={{transition: 'stroke-dasharray 0.8s cubic-bezier(0.4, 0, 0.2, 1)'}} />
+ <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={1.5} className="text-foreground transition-none"
+ strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" />
  </svg>
  )
 }
@@ -230,7 +230,7 @@ export function CreateBanner({label, onConfirm, onCancel}: {
 }) {
  const [name, setName] = useState('')
  return (
- <div className="mx-6 lg:mx-10 mb-4 p-3 bg-muted/5 border border-border rounded-none flex items-center gap-3 ">
+ <div className="mx-10 mb-4 p-3 bg-muted/5 border border-border rounded-none flex items-center gap-3 ">
  <Plus size={12} className="text-primary shrink-0" />
  <input
  autoFocus value={name} onChange={e => setName(e.target.value)}
@@ -340,7 +340,7 @@ export function SelectPropertyEditor({value, source, onSave, onCancel, label: di
  const rawValue = stripWL(value)
 
  return (
- <div className="absolute top-full left-0 mt-1 w-full min-w-[220px] bg-background border border-border rounded-none z-50 p-2 -95"
+ <div className="absolute top-full left-0 mt-1 w-full min-w-[220px] bg-background border border-border rounded-none z-50 p-2 transition-none"
  onClick={e => e.stopPropagation()}>
  <input autoFocus placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
  className="w-full bg-muted/5 text-[10px] font-black uppercase px-3 py-2 rounded-none mb-2 focus:outline-none" />
@@ -378,7 +378,7 @@ export function ProgramSetupForm({onScaffold}: {
  const [level, setLevel] = useState('Undergraduate')
 
  return (
- <div className="p-10 border border-border rounded-none bg-muted/5 flex flex-col items-center justify-center text-center space-y-8 -95">
+ <div className="p-10 border border-border rounded-none bg-muted/5 flex flex-col items-center justify-center text-center space-y-8 transition-none">
  <div className="space-y-2">
  <h3 className="text-lg font-black uppercase tracking-tight">Initialize Program</h3>
  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Works for High School, Undergrad, Masters, or PhD</p>

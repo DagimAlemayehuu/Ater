@@ -89,8 +89,8 @@ export default function Dashboard() {
               disabled={loading}
               className="flex items-center gap-2 px-4 py-2.5 border border-border bg-card hover:bg-accent text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
             >
-              <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
-              Refresh
+              <RefreshCw className="size-3.5" />
+              {loading ? "Refreshing..." : "Refresh"}
             </button>
           </div>
         </div>
@@ -100,7 +100,7 @@ export default function Dashboard() {
         <div className="max-w-5xl mx-auto space-y-8">
 
           {/* Stat Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 grid-cols-4 gap-4">
             {statCards.map((stat, i) => (
               <div key={i} className="p-6 bg-card border border-border">
                 <div className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-3">

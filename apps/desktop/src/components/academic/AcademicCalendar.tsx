@@ -7,7 +7,6 @@ import {
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Activity, Target, Calendar as CalendarIcon, Filter, Clock, X, ExternalLink, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 
 type ViewMode = 'day' | 'week' | 'month' | 'year';
 
@@ -53,8 +52,8 @@ function MiniCalendar({ currentDate, setCurrentDate, view, setView }: { currentD
       <div className="flex items-center justify-between mb-2">
         <span className="text-[11px] font-black uppercase tracking-widest text-foreground">{format(currentDate, 'MMMM yyyy')}</span>
         <div className="flex gap-1">
-          <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-1 text-zinc-500 hover:text-foreground transition-colors"><ChevronLeft size={12}/></button>
-          <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1 text-zinc-500 hover:text-foreground transition-colors"><ChevronRight size={12}/></button>
+          <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-1 text-zinc-500 hover:text-foreground transition-none"><ChevronLeft size={12}/></button>
+          <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1 text-zinc-500 hover:text-foreground transition-none"><ChevronRight size={12}/></button>
         </div>
       </div>
       <div className="grid grid-cols-7 text-center mb-1">
@@ -177,10 +176,8 @@ function TimelineView({ days, events, currentDate, setCurrentDate, setView, onSe
                     const left = width * overlapIdx;
 
                     return (
-                      <motion.div
+                      <div
                         key={i}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
                         onClick={() => {
                           if (ev._type === 'Assignment') onSelectEvent(`Database/03 - Assignments/${ev.id}.md`);
                           if (ev._type === 'Exam') onSelectEvent(`Database/04 - Exams/${ev.id}.md`);
@@ -209,7 +206,7 @@ function TimelineView({ days, events, currentDate, setCurrentDate, setView, onSe
                             {format(date, 'h:mm a')}
                           </div>
                         )}
-                      </motion.div>
+                      </div>
                     )
                   })}
                 </div>
@@ -416,7 +413,7 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
                 >
                   <div className="flex items-center gap-3">
                     <div className={cn("w-3 h-3 rounded-none transition-none", active ? color : "bg-transparent border border-zinc-800")} />
-                    <span className={cn("text-[11px] font-bold transition-colors uppercase tracking-tight", active ? "text-foreground" : "text-zinc-500/30 group-hover:text-zinc-500/60")}>
+                    <span className={cn("text-[11px] font-bold transition-none uppercase tracking-tight", active ? "text-foreground" : "text-zinc-500/30 group-hover:text-zinc-500/60")}>
                       {name}
                     </span>
                   </div>
@@ -469,54 +466,45 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col relative">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={view + currentDate.toISOString()}
-              initial={{ opacity: 0, scale: 0.99, y: 4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.99, y: -4 }}
-              transition={{ duration: 0.2, ease: "circOut" }}
-              className="absolute inset-0 flex flex-col"
-            >
-              {view === 'day' && (
-                <TimelineView 
-                  days={[currentDate]} 
-                  events={filteredEvents} 
-                  currentDate={currentDate}
-                  setCurrentDate={setCurrentDate}
-                  setView={setView}
-                  onSelectEvent={onSelectEvent}
-                />
-              )}
-              {view === 'week' && (
-                <TimelineView 
-                  days={eachDayOfInterval({ start: startOfWeek(currentDate, {weekStartsOn: 1}), end: endOfWeek(currentDate, {weekStartsOn: 1}) })} 
-                  events={filteredEvents}
-                  currentDate={currentDate}
-                  setCurrentDate={setCurrentDate}
-                  setView={setView}
-                  onSelectEvent={onSelectEvent}
-                />
-              )}
-              {view === 'month' && (
-                <MonthView 
-                  currentDate={currentDate} 
-                  setCurrentDate={setCurrentDate} 
-                  events={filteredEvents} 
-                  setView={setView} 
-                  onOpenDayOverview={() => {}}
-                />
-              )}
-              {view === 'year' && (
-                <YearView 
-                  currentDate={currentDate} 
-                  setCurrentDate={setCurrentDate} 
-                  events={filteredEvents} 
-                  setView={setView} 
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
+          <div className="absolute inset-0 flex flex-col">
+            {view === 'day' && (
+              <TimelineView 
+                days={[currentDate]} 
+                events={filteredEvents} 
+                currentDate={currentDate}
+                setCurrentDate={setCurrentDate}
+                setView={setView}
+                onSelectEvent={onSelectEvent}
+              />
+            )}
+            {view === 'week' && (
+              <TimelineView 
+                days={eachDayOfInterval({ start: startOfWeek(currentDate, {weekStartsOn: 1}), end: endOfWeek(currentDate, {weekStartsOn: 1}) })} 
+                events={filteredEvents}
+                currentDate={currentDate}
+                setCurrentDate={setCurrentDate}
+                setView={setView}
+                onSelectEvent={onSelectEvent}
+              />
+            )}
+            {view === 'month' && (
+              <MonthView 
+                currentDate={currentDate} 
+                setCurrentDate={setCurrentDate} 
+                events={filteredEvents} 
+                setView={setView} 
+                onOpenDayOverview={() => {}}
+              />
+            )}
+            {view === 'year' && (
+              <YearView 
+                currentDate={currentDate} 
+                setCurrentDate={setCurrentDate} 
+                events={filteredEvents} 
+                setView={setView} 
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

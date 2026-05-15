@@ -92,7 +92,7 @@ export default function WaitlistManager() {
               disabled={loading}
               className="p-2.5 border border-border bg-card hover:bg-accent disabled:opacity-50"
             >
-              <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+              <RefreshCw className="size-4" />
             </button>
           </div>
         </div>
@@ -169,7 +169,7 @@ export default function WaitlistManager() {
                           </span>
                         </td>
                         <td className="px-8 py-6 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100">
+                          <div className="flex items-center justify-end gap-2 hidden group-hover:flex">
                             <button
                               onClick={() => handleUpdate(entry.id, "approved")}
                               disabled={updatingId === entry.id || entry.status === "approved"}

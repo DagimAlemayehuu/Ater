@@ -16,7 +16,7 @@ import {RateLimitMonitor} from '@/components/intelligence/RateLimitMonitor'
 
 // Local UI Components to avoid dependency issues
 const Card = ({children, className}: any) => (
-  <div className={cn("border border-border bg-card", className)}>
+  <div className={cn("border border-border bg-card transition-none", className)}>
     {children}
   </div>
 )
@@ -79,12 +79,20 @@ export default function Settings() {
 
   useEffect(() => {
     if (config) {
-      setPomodoroEdit({
-        work: config.pomodoroWorkDuration,
-        short: config.pomodoroShortBreakDuration,
-        long: config.pomodoroLongBreakDuration,
-        sessions: config.pomodoroSessionsBeforeLongBreak
-      })
+      setPomodoroEdit(prev => {
+        if (prev.work === config.pomodoroWorkDuration && 
+            prev.short === config.pomodoroShortBreakDuration &&
+            prev.long === config.pomodoroLongBreakDuration &&
+            prev.sessions === config.pomodoroSessionsBeforeLongBreak) {
+          return prev;
+        }
+        return {
+          work: config.pomodoroWorkDuration,
+          short: config.pomodoroShortBreakDuration,
+          long: config.pomodoroLongBreakDuration,
+          sessions: config.pomodoroSessionsBeforeLongBreak
+        };
+      });
     }
   }, [config])
 
@@ -169,9 +177,9 @@ export default function Settings() {
           <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-2">General Configuration</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 gap-6">
           {/* Account Info */}
-          <Card className="md:col-span-2">
+          <Card className="col-span-2">
             <CardHeader 
               title="Account Information" 
               description="Manage your local activation and digital sovereignty." 
@@ -202,13 +210,13 @@ export default function Settings() {
           </Card>
 
           {/* API Key Manager */}
-          <Card className="md:col-span-2">
+          <Card className="col-span-2">
             <CardHeader 
               title="Key Vault" 
               description="Securely store and name your API keys." 
             />
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {config?.savedApiKeys?.map((k) => (
                   <div key={k.id} className="group relative flex flex-col p-4 border border-border bg-background hover:bg-accent">
                     <div className="flex items-center justify-between mb-4">

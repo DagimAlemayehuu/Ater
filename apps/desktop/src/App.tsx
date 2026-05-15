@@ -38,8 +38,8 @@ function SidecarGate({ children }: { children: React.ReactNode }) {
     return (
       <div style={gateStyle}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
-          <div style={{ width: '40px', height: '40px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: 'white', borderRadius: '0' }} />
-          <span style={{ fontWeight: 900, letterSpacing: '0.4em', textIndent: '0.4em', fontSize: '9px', color: 'rgba(255,255,255,0.4)' }}>INITIALIZING ENGINE</span>
+          <div style={{ width: '40px', height: '40px', border: '2px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '0' }} />
+          <span style={{ fontWeight: 900, letterSpacing: '0.4em', textIndent: '0.4em', fontSize: '9px', color: 'var(--muted-foreground)', opacity: 0.4 }}>INITIALIZING ENGINE</span>
         </div>
       </div>
     )
@@ -69,7 +69,7 @@ function AppRoutes() {
   
   if (configLoading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#030303] text-white">
+      <div className="h-screen w-full flex items-center justify-center bg-background text-foreground">
         <span className="text-[10px] font-black uppercase tracking-[0.4em]">Initializing</span>
       </div>
     );
@@ -117,8 +117,8 @@ const gateStyle: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   height: '100vh',
-  background: '#030303',
-  color: 'white',
+  background: 'var(--background)',
+  color: 'var(--foreground)',
   fontFamily: 'Inter, system-ui, sans-serif',
   fontSize: '0.75rem',
 }

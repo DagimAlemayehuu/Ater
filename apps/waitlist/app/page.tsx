@@ -104,7 +104,7 @@ export default function Home() {
 
   return (
     <div className="h-screen bg-background text-foreground overflow-hidden flex flex-col relative selection:bg-primary selection:text-primary-foreground font-sans">
-      <nav className="flex items-center justify-between px-6 lg:px-12 py-6 w-full relative z-50 shrink-0 border-b border-border bg-background/80 backdrop-blur-md">
+      <nav className="flex items-center justify-between px-12 py-6 w-full relative z-50 shrink-0 border-b border-border bg-background">
         <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setView("hero")}>
           <span className="font-black text-xl tracking-tighter uppercase">Ater <span className="text-muted-foreground ml-1 font-bold">አጠር</span></span>
         </div>
@@ -123,13 +123,13 @@ export default function Home() {
       </nav>
 
       {view === "hero" ? (
-        <main className="flex-1 w-full px-6 lg:px-12 flex flex-col justify-center relative z-20">
+        <main className="flex-1 w-full px-12 flex flex-col justify-center relative z-20">
           <div className="max-w-[1400px] w-full mx-auto relative h-full flex flex-col">
             <div className="flex-1 flex flex-col justify-center">
-              <h1 className="text-[2.75rem] sm:text-[4rem] lg:text-[5rem] leading-[0.95] font-black tracking-tighter text-foreground max-w-[720px] mb-8 uppercase">
-                Learn faster. <br className="hidden sm:block" /> Score better.
+              <h1 className="text-[5rem] leading-[0.95] font-black tracking-tighter text-foreground max-w-[720px] mb-8 uppercase">
+                Learn faster. <br className="block" /> Score better.
               </h1>
-              <p className="text-muted-foreground text-lg sm:text-xl max-w-[440px] leading-relaxed font-bold mb-12 uppercase tracking-tight">
+              <p className="text-muted-foreground text-xl max-w-[440px] leading-relaxed font-bold mb-12 uppercase tracking-tight">
                 Ater turns your PDFs into simple notes. It organizes your work in one clean place. Study less, get better grades.
               </p>
             </div>
@@ -237,13 +237,13 @@ export default function Home() {
 
 function MockupSection() {
   return (
-    <div className="absolute right-0 bottom-0 w-[75%] h-[95%] pointer-events-none z-10 hidden md:flex items-end justify-end translate-x-[30%] translate-y-[12%]">
+    <div className="absolute right-0 bottom-0 w-[75%] h-[95%] pointer-events-none z-10 flex items-end justify-end translate-x-[30%] translate-y-[12%]">
       <div className="w-full aspect-[16/10.4] bg-[#1A1A1A] rounded-none p-[1px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative flex flex-col border border-white/5">
         {/* Device Frame / Bezel - Dark Gray, not Pure Black */}
-        <div className="flex-1 bg-[#121212] rounded-none overflow-hidden border-[10px] lg:border-[12px] xl:border-[14px] border-[#121212] relative flex flex-col">
+        <div className="flex-1 bg-[#000000] rounded-none overflow-hidden border-[10px] border-[14px] border-[#000000] relative flex flex-col">
           
           {/* Perfect Mac Notch (Squared) */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[20%] h-[26px] bg-[#121212] rounded-none z-20 flex items-center justify-center">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[20%] h-[26px] bg-[#000000] rounded-none z-20 flex items-center justify-center">
             <div className="size-1.5 rounded-none bg-[#1A1A1A] border border-white/5 shadow-inner" />
           </div>
           

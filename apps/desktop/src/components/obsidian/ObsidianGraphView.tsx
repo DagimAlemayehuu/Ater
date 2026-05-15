@@ -165,8 +165,8 @@ export function ObsidianGraphView({
             onNodeClick(node.id)
         }
         if (fgRef.current) {
-            fgRef.current.centerAt(node.x, node.y, 1000)
-            fgRef.current.zoom(8, 2000)
+            fgRef.current.centerAt(node.x, node.y, 0)
+            fgRef.current.zoom(8, 0)
         }
     }, [onNodeClick])
 
@@ -176,9 +176,9 @@ export function ObsidianGraphView({
         return colors.nodeDefault
     }
 
-    const handleZoomIn = () => fgRef.current?.zoom(fgRef.current.zoom() * 1.5, 400)
-    const handleZoomOut = () => fgRef.current?.zoom(fgRef.current.zoom() / 1.5, 400)
-    const handleCenter = () => { fgRef.current?.centerAt(0, 0, 400); fgRef.current?.zoom(1, 400) }
+    const handleZoomIn = () => fgRef.current?.zoom(fgRef.current.zoom() * 1.5, 0)
+    const handleZoomOut = () => fgRef.current?.zoom(fgRef.current.zoom() / 1.5, 0)
+    const handleCenter = () => { fgRef.current?.centerAt(0, 0, 0); fgRef.current?.zoom(1, 0) }
 
     const handleNodeCanvasObject = (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
         const r = (node.val || 4) * (settings.nodeSize / 3); 
@@ -248,7 +248,7 @@ export function ObsidianGraphView({
                             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                             className="absolute top-6 right-6 p-2 bg-background border border-border rounded-none shadow-sm hover:bg-accent text-muted-foreground  z-20"
                         >
-                            <Settings size={18} className={cn(isSettingsOpen && "rotate-90 ")} />
+                            <Settings size={18} className={cn(isSettingsOpen && "text-foreground")} />
                         </button>
                     </>
                 )}
@@ -256,14 +256,14 @@ export function ObsidianGraphView({
 
             {/* Settings Side Panel */}
             {isSettingsOpen && (
-                <div className="absolute top-4 right-4 w-72 bg-background/80 backdrop-blur-xl border border-border/50 rounded-none shadow-2xl flex flex-col z-30 animate-none fade-in zoom-in-95 duration-200">
+                <div className="absolute top-4 right-4 w-72 bg-background border border-border rounded-none shadow-2xl flex flex-col z-30 transition-none">
                     <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
                         <span className="text-[11px] font-bold text-foreground/80">Graph settings</span>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => setSettings(DEFAULT_SETTINGS)} className="text-muted-foreground hover:text-foreground transition-colors" title="Reset settings">
+                            <button onClick={() => setSettings(DEFAULT_SETTINGS)} className="text-muted-foreground hover:text-foreground transition-none" title="Reset settings">
                                 <RefreshCw size={14} />
                             </button>
-                            <button onClick={() => setIsSettingsOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                            <button onClick={() => setIsSettingsOpen(false)} className="text-muted-foreground hover:text-foreground transition-none">
                                 <X size={14} />
                             </button>
                         </div>
@@ -276,7 +276,7 @@ export function ObsidianGraphView({
                         <SettingsSection title="Display" isOpen={false} />
                         
                         <div className="flex flex-col">
-                            <button className="flex items-center gap-2 py-2 text-[11px] font-bold text-foreground/70 hover:text-foreground transition-colors w-full text-left group">
+                            <button className="flex items-center gap-2 py-2 text-[11px] font-bold text-foreground/70 hover:text-foreground transition-none w-full text-left group">
                                 <ChevronDown size={14} className="text-muted-foreground/40 group-hover:text-muted-foreground" />
                                 Forces
                             </button>
@@ -317,7 +317,7 @@ export function ObsidianGraphView({
 
 function SettingsSection({ title, isOpen }: { title: string, isOpen: boolean }) {
     return (
-        <button className="flex items-center gap-2 py-2 text-[11px] font-bold text-foreground/40 hover:text-foreground/60 transition-colors w-full text-left">
+        <button className="flex items-center gap-2 py-2 text-[11px] font-bold text-foreground/40 hover:text-foreground/60 transition-none w-full text-left">
             <ChevronRight size={14} className="text-muted-foreground/20" />
             {title}
         </button>

@@ -10,7 +10,6 @@ import {
   Edit3, Save, FolderPlus, Hash, CheckSquare, Link, List, Heart,
   Activity, Play, SkipForward, MapPin
 } from 'lucide-react'
-import {motion, AnimatePresence} from 'framer-motion'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
 import { useConfig } from '@/lib/ConfigContext'
@@ -26,7 +25,6 @@ import {useLayout} from '@/context/layout-provider'
 import {useNavigation} from '@/context/navigation-context'
 import {useHeader} from '@/context/header-context'
 import React from 'react'
-import {useIsMobile} from '@/hooks/use-mobile'
 import {sidecarApi, ObsidianFile} from '@/lib/sidecarApi'
 
 interface InboxFile {
@@ -407,7 +405,7 @@ function KnowledgeFooter({tree, activePath, onNavigate, onFinish}: {tree: NavNod
                   navigate(`/practice?hubId=${hubId}`);
                 }
               }}
-              className="flex items-center gap-3 px-10 py-3 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-none border border-border/40 font-bold uppercase tracking-widest text-[10px] hover:scale-105   transition-none w-full min-w-[200px]"
+              className="flex items-center gap-3 px-10 py-3 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-none border border-border/40 font-bold uppercase tracking-widest text-[10px] transition-none w-full min-w-[200px]"
             >
               <Play size={14} fill="currentColor" />
               Start Study Session
@@ -417,7 +415,7 @@ function KnowledgeFooter({tree, activePath, onNavigate, onFinish}: {tree: NavNod
           {(!nextNode || isHub) && (
             <button 
               onClick={() => navigate(`/practice?hubId=${hubId}`)}
-              className="flex items-center gap-3 px-10 py-3 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-none border border-border/40 font-bold uppercase tracking-widest text-[10px] hover:scale-105   transition-none w-full min-w-[200px]"
+              className="flex items-center gap-3 px-10 py-3 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-none border border-border/40 font-bold uppercase tracking-widest text-[10px] transition-none w-full min-w-[200px]"
             >
               <SkipForward size={14} />
               Start Final Practice
@@ -577,7 +575,6 @@ export default function ObsidianVaultPage() {
     setTimeLeft, setShowStats, mode, addNoteFocus, currentHub 
   } = usePomodoroStore()
   const location = useLocation()
-  const isMobile = useIsMobile()
 
   // --- Focus Tracking ---
   const entryTimeRef = useRef<number>(Date.now());
@@ -705,7 +702,6 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                      <FileText size={14} />
                    </button>
                  )}
-                 {!isMobile && (
                    <button 
                      onClick={() => config && saveConfig({ ...config, showProperties: !config.showProperties })}
                      className={cn(
@@ -718,7 +714,6 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                    >
                      <Info size={14} />
                    </button>
-                 )}
                </div>
              )}
            </>
@@ -796,7 +791,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
        setCenterContent(null)
        setRightContent(null)
      }
-  }, [selectedPath, isEditing, isFullscreen, pdfState.page, pdfState.pageCount, noteMetadata, config, saveConfig, setCenterContent, setRightContent, isMobile, setIsFullscreen])
+  }, [selectedPath, isEditing, isFullscreen, pdfState.page, pdfState.pageCount, noteMetadata, config, saveConfig, setCenterContent, setRightContent, setIsFullscreen])
  
  // --- Sync & Topology Cache ---
  const currentHubPath = useRef<string | null>(null);
@@ -1459,10 +1454,22 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   }
 
   const handleWikiLinkClick = async (pageName: string, pageNumber?: number, filterPages: number[] = []) => {
+    selectRequestId.current += 1;
+    const currentReq = selectRequestId.current;
+    
     setLoadingNote(true);
+    const safetyTimeout = setTimeout(() => {
+      if (selectRequestId.current === currentReq) {
+        console.warn(`[WikiLink] Safety timeout triggered for ${pageName}`);
+        setLoadingNote(false);
+      }
+    }, 15000);
+
     try {
       console.log(`[WikiLink] Finding page: ${pageName}`);
       const res = await sidecarApi.findVaultPage(pageName);
+      
+      if (selectRequestId.current !== currentReq) return;
       if (res.found && res.path) {
         await selectFile(res.path, pageNumber, false, filterPages);
       } else if (res.found && res.type === 'database') {
@@ -1490,7 +1497,11 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     } catch (err) {
       console.error(`[WikiLink] Error:`, err);
       toast.error("Failed to resolve link");
-      setLoadingNote(false);
+    } finally {
+      clearTimeout(safetyTimeout);
+      if (selectRequestId.current === currentReq) {
+        setLoadingNote(false);
+      }
     }
   }
 
@@ -1975,7 +1986,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  <main className="flex-1 flex flex-col min-w-0">
  <div className="flex flex-1 overflow-hidden">
  {/* ExplorerSidebar */}
- {!isFullscreen && !isMobile && (
+ {!isFullscreen && (
  <aside 
  className="relative border-r border-border flex flex-col bg-background shrink-0 group/sidebar z-40  "
  style={{width: `${sidebarWidth}px`}}
@@ -2028,7 +2039,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   </div>
 
   {/* Sidebar Tabs - Minimal style matching academics */}
-  <div className="flex border-b border-border bg-background/50 backdrop-blur sticky top-0 z-20">
+  <div className="flex border-b border-border bg-background sticky top-0 z-20">
     <button 
       onClick={() => setSidebarTab('explorer')}
       className={cn(
@@ -2169,7 +2180,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  ) : (
  <>
  {/* Sticky Connections Column (Left-Contextual) */}
-  {selectedPath && !selectedPath.toLowerCase().endsWith('.pdf') && !isMobile && (
+  {selectedPath && !selectedPath.toLowerCase().endsWith('.pdf') && (
   <aside 
   className="relative border-r border-border flex flex-col bg-background shrink-0 group/connections overflow-hidden  "
   style={{width: `${connectionsWidth}px`}}
@@ -2239,9 +2250,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">Select an asset to visualize</p>
  </div>
  ) : (
-  <div className={cn("mx-auto w-full max-w-full relative", selectedPath.toLowerCase().endsWith('.pdf') ? "p-0 h-full overflow-hidden flex flex-col" : "py-12 px-6 sm:px-12 md:px-16 max-w-5xl")}>
+  <div className={cn("mx-auto w-full max-w-full relative", selectedPath.toLowerCase().endsWith('.pdf') ? "p-0 h-full overflow-hidden flex flex-col" : "py-12 px-16 max-w-5xl")}>
   {loadingNote && (
-  <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background/60 backdrop-blur-[2px]">
+  <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background">
   <RefreshCw size={24} className="text-primary/40" />
   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Loading Document...</p>
   <button 
@@ -2253,8 +2264,8 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   </div>
   )}
   {!selectedPath.toLowerCase().endsWith('.pdf') && (
-  <div className="flex items-start justify-between mb-8 sm:mb-12 group">
-  <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-foreground tracking-tighter sm:tracking-tight leading-tight flex-1 break-words">
+  <div className="flex items-start justify-between mb-12 group">
+  <h1 className="text-5xl font-extrabold text-foreground tracking-tight leading-tight flex-1 break-words">
   {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
   </h1>
   </div>

@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import { motion } from 'framer-motion'; const motion_div = (props: any) => <div {...props} />;
 import { X, Clock, Zap, Target, BarChart2 } from 'lucide-react';
 import { usePomodoroStore } from '@/lib/pomodoroStore';
 import { cn } from '@/lib/utils';

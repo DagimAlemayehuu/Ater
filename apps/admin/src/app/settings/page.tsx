@@ -78,9 +78,9 @@ export default function SettingsPage() {
       <div className="flex-1 overflow-auto p-10 custom-scrollbar">
         <div className="max-w-5xl mx-auto space-y-10">
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 grid-cols-3 gap-10">
             {/* Editor Area */}
-            <div className="lg:col-span-2 space-y-4">
+            <div className="col-span-2 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Terminal className="size-3.5 text-muted-foreground" />
@@ -105,7 +105,7 @@ export default function SettingsPage() {
                     className="w-full h-[400px] p-6 bg-card border border-border font-mono text-[12px] leading-relaxed text-foreground focus:outline-none focus:border-primary custom-scrollbar resize-none"
                     spellCheck={false}
                   />
-                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-none">
                     <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-background/80 px-2 py-1 border border-border">
                       UTF-8
                     </span>

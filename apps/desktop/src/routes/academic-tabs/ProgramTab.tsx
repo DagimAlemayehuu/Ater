@@ -102,7 +102,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
 })
 
  return (
- <div className="h-full overflow-y-auto custom-scrollbar p-6 lg:p-10 space-y-10 pb-24">
+ <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
  <div className="flex items-start justify-between">
  <div>
  <button onClick={() => setSelectedSemesterId(null)} className="text-[8px] font-black uppercase tracking-widest text-foreground/50 mb-2 ">← {selectedYear?.title || 'Year'}</button>
@@ -123,7 +123,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  </div>
  </div>
  
- <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+ <div className="grid grid-cols-3 gap-4">
  <BigPropertyCard
  label="Status"
  value={semester.Status || semester.properties?.Status || 'Active'}
@@ -134,7 +134,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <StatCard label="Courses" value={semCourses.length} />
  </div>
 
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+ <div className="grid grid-cols-4 gap-4">
  {(() => {
  const internal = ['id', 'title', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by', 'Status', 'status', 'Year', 'year', 'Term', 'term']
  const keys = new Set([...Object.keys(semesterSchema || {}), ...Object.keys(semester || {})])
@@ -171,7 +171,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  className="px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50 ">Add Course</button>
  </div>
  {semCourses.length === 0 && <EmptyState message="No courses linked to this semester." />}
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+ <div className="grid grid-cols-3 gap-4">
  {semCourses.map((c, idx) => (
  <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
  className="p-6 border border-border bg-muted/5  cursor-pointer group">
@@ -199,7 +199,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  const currentStatus = stripWL(getVal(selectedYear, 'Status', 'status'))
 
  return (
- <div className="h-full overflow-y-auto custom-scrollbar p-6 lg:p-10 space-y-10 pb-24">
+ <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
  <div className="flex items-start justify-between">
  <div>
  <button onClick={() => setSelectedYearId(null)} className="text-[8px] font-black uppercase tracking-widest text-foreground/50 mb-2 ">← Program</button>
@@ -226,7 +226,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  </div>
  </div>
 
- <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+ <div className="grid grid-cols-3 gap-4">
  <BigPropertyCard
  label="Status"
  value={selectedYear.Status || selectedYear.properties?.Status || 'Active'}
@@ -237,7 +237,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <StatCard label="GPA" value={gpa} />
  </div>
 
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+ <div className="grid grid-cols-4 gap-4">
  {(() => {
  const internal = ['id', 'title', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by', 'Academic Level', 'Earned Credits', 'Target Credits', 'Current Year', 'Program', 'Target Years', 'Status', 'status']
  const keys = new Set([...Object.keys(yearSchema || {}), ...Object.keys(selectedYear || {})])
@@ -327,7 +327,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  </aside>
 
  {/* Right: Overview or setup */}
- <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10 pb-24">
+ <div className="flex-1 overflow-y-auto custom-scrollbar p-10 pb-24">
  {programYears.length === 0 ? (
  <ProgramSetupForm onScaffold={(n, y, l, c) => {handleScaffold(n, y, l, c); setShowSetup(false)}} />
  ) : (
@@ -338,7 +338,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
            <h3 className="text-[10px] font-black uppercase tracking-widest">Edit Program Details</h3>
            <button onClick={() => setShowSetup(false)} className="text-[10px] font-black uppercase text-foreground/60 ">Close</button>
        </div>
-       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+       <div className="grid grid-cols-3 gap-4">
            {(() => {
                const internal = ['id', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by']
                const keys = new Set([...Object.keys(yearSchema || {}), ...Object.keys(activeYear || {})])
@@ -395,7 +395,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  {(() => {
  const activeSem = semesters.find(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase().includes('active'))
  return (
- <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+ <div className="grid grid-cols-3 gap-4">
  <StatCard label="Current Year" value={cleanTitle(activeYear?.title?.split(' ').pop() || '--')} onClick={() => activeYear && setSelectedYearId(activeYear.id)} />
  <StatCard label="Current Semester" value={cleanTitle(activeSem?.title || '--')} accent onClick={() => activeSem && setSelectedSemesterId(activeSem.id)} />
  <StatCard label="CGPA" value={getVal(activeYear, 'Cumulative GPA', 'cumulative_gpa') || '0.00'} />
@@ -427,7 +427,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  return (
  <section className="space-y-4">
  <SectionHeader title="Active Courses" count={activeCourses.length} />
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+ <div className="grid grid-cols-3 gap-4">
  {activeCourses.map((c, idx) => (
  <div key={`course-${idx}`} className="p-4 border border-border bg-muted/5 rounded-none flex items-center justify-between cursor-pointer hover:bg-muted/10 "
  onClick={() => navigateTo('COURSES', c.id)}>

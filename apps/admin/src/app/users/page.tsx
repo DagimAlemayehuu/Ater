@@ -56,7 +56,7 @@ export default function UsersPage() {
       </header>
 
       <div className="flex-1 overflow-auto p-10 custom-scrollbar">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 gap-6">
           {loading
             ? Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="p-8 bg-card border border-border">
@@ -73,7 +73,7 @@ export default function UsersPage() {
                 </div>
               ))
             : users.map((user) => (
-                <div key={user.id} className="p-8 bg-card border border-border group hover:border-primary/40 transition-colors">
+                <div key={user.id} className="p-8 bg-card border border-border group hover:border-primary/40 transition-none">
                   <div className="flex items-start justify-between mb-6">
                     <div className="size-12 bg-accent/50 border border-border flex items-center justify-center">
                       <User className="size-5 text-foreground" />

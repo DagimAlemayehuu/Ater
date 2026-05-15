@@ -115,7 +115,7 @@ export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMo
                             isLow ? "border-amber-500/30 bg-amber-500/[0.02]" : ""
                         )}>
                             {isActive && (
-                                <div className="absolute top-0 right-0 px-2 py-0.5 bg-primary text-primary-foreground text-[8px] font-black uppercase tracking-widest rounded-bl-md">
+                                <div className="absolute top-0 right-0 px-2 py-0.5 bg-primary text-primary-foreground text-[8px] font-black uppercase tracking-widest rounded-none">
                                     Current
                                 </div>
                             )}

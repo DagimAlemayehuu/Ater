@@ -1,5 +1,3 @@
-import React from 'react';
-import { motion } from 'framer-motion';
 import { Play, Pause, SkipForward, RefreshCw, BarChart2, MoreVertical, X } from 'lucide-react';
 import { useConfig } from '@/lib/ConfigContext';
 import { usePomodoroStore } from '@/lib/pomodoroStore';
@@ -32,7 +30,7 @@ export default function PomodoroTimer() {
     <div className="flex flex-col items-center justify-between p-8 bg-background border border-border shadow-[0_40px_120px_rgba(0,0,0,0.1)] dark:shadow-[0_40px_120px_rgba(0,0,0,1)] w-[400px] h-[400px] relative overflow-hidden text-foreground rounded-none">
       {/* Header */}
       <div className="w-full flex items-center justify-between z-10">
-        <button onClick={() => setShowOverlay(false)} className="p-2 hover:bg-muted rounded-none transition-colors border border-transparent hover:border-border">
+        <button onClick={() => setShowOverlay(false)} className="p-2 hover:bg-muted rounded-none transition-none border border-transparent hover:border-border">
           <X size={20} className="text-muted-foreground/30" />
         </button>
         <div className="flex items-center gap-1.5">
@@ -74,18 +72,11 @@ export default function PomodoroTimer() {
               const isActiveSession = i === currentSessionIndex;
               
               return (
-                <motion.div 
+                <div 
                   key={i} 
-                  initial={false}
-                  animate={{ 
-                    width: isActiveSession ? 24 : 8,
-                    height: 8,
-                    opacity: isActiveSession ? 1 : (isCompleted ? 0.2 : 0.4),
-                  }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   className={cn(
-                    "rounded-none transition-colors",
-                    isActiveSession ? "bg-primary shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" : "bg-foreground"
+                    "rounded-none transition-none",
+                    isActiveSession ? "w-6 h-2 bg-primary shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)] opacity-100" : (isCompleted ? "w-2 h-2 bg-foreground opacity-20" : "w-2 h-2 bg-foreground opacity-40")
                   )}
                 />
               );

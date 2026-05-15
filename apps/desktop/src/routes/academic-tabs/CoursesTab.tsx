@@ -61,7 +61,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  const doneHubs = courseHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
 
  return (
- <div className="h-full overflow-y-auto custom-scrollbar p-6 lg:p-10 space-y-10 pb-24">
+ <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
  {/* Header */}
  <div className="flex items-start justify-between">
  <div>
@@ -101,7 +101,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  )}
 
  {/* Properties */}
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+ <div className="grid grid-cols-4 gap-4">
  {(() => {
  const internal = ['id', 'title', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by', 'Assignments', 'Study Progress']
  const keys = new Set([...Object.keys(schema || {}), ...Object.keys(course || {})])
@@ -152,7 +152,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  {courseHubs.length > 0 && (
  <section className="space-y-4">
  <SectionHeader title={`Study Hubs — ${courseHubs.length}`} onAction={() => navigateTo('PLANNER')} actionLabel="View All" />
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+ <div className="grid grid-cols-2 gap-3">
  {courseHubs.slice(0, 6).map((hub, idx) => {
  const hStatus = stripWL(getVal(hub, 'status', 'Status'))
  const isDone = hStatus.toLowerCase().includes('complet')
@@ -205,7 +205,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  {/* Grid */}
  <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-24">
  {filtered.length === 0 && <EmptyState message="No courses found." icon={<GraduationCap size={24} />} />}
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+ <div className="grid grid-cols-3 gap-4">
  {filtered.map((course, idx) => {
  const grade = stripWL(getVal(course, 'Grade', 'grade'))
  const credits = getVal(course, 'Credits', 'credits')

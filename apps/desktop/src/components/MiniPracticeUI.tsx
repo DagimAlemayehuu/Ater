@@ -269,8 +269,8 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                   : "border-primary/40 focus:border-primary text-foreground"
               )}
             />
-            {isRevealed && String((userAnswers[currentQ.id] || [])[i] || '').toLowerCase() !== String((currentQ.answer || [])[i] || '').toLowerCase() && (
-               <div className="text-[10px] text-foreground font-black mt-1 uppercase tracking-widest bg-muted/30 px-1 rounded-none">Correct: {String((currentQ.answer || [])[i] || '')}</div>
+            {isRevealed && Array.isArray(currentQ.answer) && String((userAnswers[currentQ.id] || [])[i] || '').toLowerCase() !== String((currentQ.answer)[i] || '').toLowerCase() && (
+               <div className="text-[10px] text-foreground font-black mt-1 uppercase tracking-widest bg-muted/30 px-1 rounded-none">Correct: {String((currentQ.answer as string[])[i] || '')}</div>
             )}
           </div>
         )}
@@ -295,7 +295,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
       </div>
       
       {showScore ? (
-        <div className="p-4 flex flex-col items-center justify-center space-y-3 text-center   zoom-in ">
+        <div className="p-4 flex flex-col items-center justify-center space-y-3 text-center">
           <div className="w-12 h-12 rounded-none bg-primary/10 flex items-center justify-center border-4 border-primary/20">
             <Check size={24} className="text-primary" />
           </div>
@@ -489,8 +489,8 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                    </Button>
               </div>
               ) : (
-                <div className="mt-2 space-y-2   slide-in-from-top-4 ">
-                <div className="p-3 sm:p-4 border-2 border-border bg-muted/10 rounded-none space-y-3 shadow-xl shadow-foreground/5">
+                <div className="mt-2 space-y-2">
+                <div className="p-4 border-2 border-border bg-muted/10 rounded-none space-y-3 shadow-xl shadow-foreground/5">
                   <div className="flex items-center gap-2 text-foreground/80 font-black uppercase text-[10px] tracking-[0.2em]">
                     <div className="w-4 h-4 rounded-none bg-foreground/10 flex items-center justify-center">
                       <Check size={10} />
@@ -500,7 +500,11 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                   <div className="space-y-1">
                     <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Definitive Answer</div>
                     <div className="text-xs font-bold text-foreground/90 leading-relaxed">
-                      {Array.isArray(currentQ.answer) ? currentQ.answer.join(', ') : currentQ.answer}
+                      {Array.isArray(currentQ.answer) 
+                        ? currentQ.answer.join(', ') 
+                        : typeof currentQ.answer === 'object' && currentQ.answer !== null
+                          ? JSON.stringify(currentQ.answer)
+                          : String(currentQ.answer)}
                     </div>
                   </div>
  

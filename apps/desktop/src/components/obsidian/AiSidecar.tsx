@@ -145,9 +145,9 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
     };
 
     return (
-        <div className="w-80 h-full border-l border-border bg-background flex flex-col shadow-2xl slide-in-from-right stop-selection-clear">
+        <div className="w-80 h-full border-l border-border bg-background flex flex-col shadow-2xl stop-selection-clear transition-none">
             {/* Header */}
-            <div className="p-4 border-b border-border flex items-center justify-between bg-background/50 backdrop-blur-sm sticky top-0 z-10">
+            <div className="p-4 border-b border-border flex items-center justify-between bg-background sticky top-0 z-10">
                 <div className="flex flex-col gap-2">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground italic">
                         AI Tutor
@@ -186,7 +186,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
             </div>
 
             {/* Content Area */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-6 space-y-6 custom-scrollbar scroll-smooth">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-6 space-y-6 custom-scrollbar">
                 {/* Selection Context */}
                 <div className="space-y-3">
                     <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Selection</span>
@@ -202,14 +202,14 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                     <div className="space-y-6 pb-20">
                         {messages.map((msg, i) => (
                             <div key={i} className={cn(
-                                "flex flex-col space-y-2 slide-in-from-bottom-2",
+                                "flex flex-col space-y-2",
                                 msg.role === 'user' ? "items-end" : "items-start"
                             )}>
                                 <div className={cn(
                                     "px-4 py-3 rounded-none max-w-[95%] text-[12px] leading-relaxed",
                                     msg.role === 'user' 
-                                        ? "bg-foreground/10 text-foreground rounded-tr-none border border-border/50 shadow-sm" 
-                                        : "bg-muted/30 border border-border rounded-tl-none prose prose-zinc dark:prose-invert prose-sm text-foreground prose-headings:text-foreground prose-headings:font-black prose-headings:uppercase prose-headings:tracking-widest prose-headings:text-[11px] prose-strong:text-foreground"
+                                        ? "bg-foreground/10 text-foreground rounded-none border border-border/50 shadow-sm" 
+                                        : "bg-muted/30 border border-border rounded-none prose prose-zinc dark:prose-invert prose-sm text-foreground prose-headings:text-foreground prose-headings:font-black prose-headings:uppercase prose-headings:tracking-widest prose-headings:text-[11px] prose-strong:text-foreground"
                                 )}>
                                     {msg.role === 'user' ? (
                                         msg.content
@@ -298,7 +298,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                 {/* Feedback */}
                                 {quizFeedback && (
                                     <div className={cn(
-                                        "p-5 rounded-none border slide-in-from-top-4 space-y-4",
+                                        "p-5 rounded-none border space-y-4",
                                         quizFeedback.correct ? "bg-muted/20 border-border/50" : "bg-destructive/5 border-destructive/10"
                                     )}>
                                         <div className="flex items-center gap-3">
@@ -325,7 +325,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                         ) : (
                             isThinking && (
                                 <div className="space-y-4 py-12 flex flex-col items-center justify-center">
-                                    <RefreshCw size={24} className="text-muted-foreground/10 animate-spin" />
+                                    <RefreshCw size={24} className="text-muted-foreground/10" />
                                     <span className="text-[9px] font-black text-muted-foreground/30 uppercase tracking-[0.2em]">Preparing Quiz...</span>
                                 </div>
                             )
@@ -354,7 +354,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                 chatInput.trim() && !isThinking ? "bg-foreground/10 text-foreground" : "text-muted-foreground/20"
                             )}
                         >
-                            {isThinking ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                            {isThinking ? <Loader2 size={16} /> : <Send size={16} />}
                         </button>
                     </div>
                 </div>

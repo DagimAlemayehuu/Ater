@@ -172,7 +172,7 @@ function ButtonCell({ safeType, onSave }: { safeType: any, onSave: (v: any) => v
                     isRunning && "opacity-50 cursor-not-allowed"
                 )}
             >
-                {isRunning ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />}
+                {isRunning ? <Loader2 size={10} /> : <Plus size={10} />}
                 {label}
             </button>
         </div>
@@ -430,7 +430,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                         <CommandList className="max-h-[300px] overflow-y-auto custom-scrollbar">
                             {loadingOptions ? (
                                 <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <Loader2 className="h-4 w-4" />
                                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Loading...</span>
                                 </div>
                             ) : (
@@ -504,7 +504,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                         <CommandList className="max-h-[300px] overflow-y-auto custom-scrollbar">
                             {loadingOptions ? (
                                 <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <Loader2 className="h-4 w-4" />
                                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Loading...</span>
                                 </div>
                             ) : (

@@ -259,7 +259,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  <div className="h-px flex-1 bg-border" />
  <span className="text-[8px] font-black text-foreground/50">{section.hubs.length}</span>
  </div>
- <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+ <div className="grid grid-cols-3 gap-3">
  {section.hubs.map((hub, idx) => (
  <HubCard key={idx} hub={hub}
  onOpen={() => onOpenNote(`Database/06 - Study Planner/${hub.id}.md`)}

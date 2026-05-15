@@ -1,5 +1,5 @@
 import React from 'react'
-import { ChevronLeft, ChevronRight, Activity, Search, PanelLeft, Minimize2, Maximize2, Save, X, Edit2, RefreshCw, Heart } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Activity, Search, PanelLeft, Minimize2, Maximize2, Save, X, RefreshCw, Heart } from 'lucide-react'
 import { useNavigation } from '@/context/navigation-context'
 import { useHeader } from '@/context/header-context'
 import { cn } from '@/lib/utils'
@@ -64,7 +64,7 @@ export function AppHeader() {
   }
 
   return (
-    <header className="relative h-12 w-full bg-background/80 backdrop-blur-md border-b border-border/40 flex items-center shrink-0 z-40 sticky top-0 px-4 select-none">
+    <header className="relative h-12 w-full bg-background border-b border-border/40 flex items-center shrink-0 z-40 sticky top-0 px-4 select-none">
       {/* Left: Navigation */}
       <div className="flex items-center gap-2 shrink-0 z-10">
         <div className="flex items-center gap-1 bg-muted/20 p-0.5 rounded-none border border-border/40 shadow-inner">

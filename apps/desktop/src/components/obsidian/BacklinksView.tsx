@@ -47,7 +47,7 @@ export function BacklinksView({ pageName, onNavigate }: BacklinksViewProps) {
                 <span className="text-[9px] font-bold text-muted-foreground/40">{backlinks.length}</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 grid-cols-2 gap-3">
                 {loading ? (
                     Array(2).fill(0).map((_, i) => (
                         <div key={i} className="h-20 bg-muted/30 rounded-none " />

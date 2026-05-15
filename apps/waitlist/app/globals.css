@@ -63,7 +63,7 @@
   }
 
   .dark {
-    --background: 0 0% 8%; /* Dark gray instead of Black */
+    --background: 0 0% 0%; /* Pure Black */
     --foreground: 0 0% 90%; /* Light gray instead of White */
     --card: 0 0% 12%;
     --card-foreground: 0 0% 90%;

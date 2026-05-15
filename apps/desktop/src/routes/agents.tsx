@@ -343,7 +343,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  </div>
  </div>
  {node.parent && (
- <div className="hidden sm:flex items-center gap-1 text-[9px] font-bold uppercase text-muted-foreground shrink-0">
+ <div className="flex items-center gap-1 text-[9px] font-bold uppercase text-muted-foreground shrink-0">
  <ArrowLeft size={10} />
  <span className="truncate max-w-[80px]">{node.parent}</span>
  </div>
@@ -401,12 +401,12 @@ function AterDashboard({onBack}: {onBack: () => void}) {
      <button 
       onClick={toggleAutoDeploy}
       className={cn(
-       "relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-none border border-transparent   ease-in-out focus:outline-none", 
+       "relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-none border border-transparent focus:outline-none", 
        config?.autoDeploy ? 'bg-foreground' : 'bg-muted-foreground/30'
       )}
      >
       <span className={cn(
-       "pointer-events-none inline-block h-3 w-3 transform rounded-none bg-background shadow ring-0 transition  ease-in-out", 
+       "pointer-events-none inline-block h-3 w-3 transform rounded-none bg-background shadow ring-0 transition-none", 
        config?.autoDeploy ? 'translate-x-3.5' : 'translate-x-0'
       )} />
      </button>
@@ -626,7 +626,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  <div className="h-full flex flex-col font-sans bg-background text-foreground overflow-hidden">
 
  <div className="flex-1 overflow-hidden bg-background">
- <div className="max-w-3xl mx-auto py-8 sm:py-12 px-4 sm:px-6 h-full flex flex-col overflow-hidden">
+ <div className="max-w-3xl mx-auto py-12 px-6 h-full flex flex-col overflow-hidden">
  {/* AUTO INGESTION VIEW */}
  {queueStatus?.status !== 'idle' && (
  <div className="flex flex-col h-full overflow-hidden mb-4">
@@ -655,7 +655,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  <span>{Math.round(((queueStatus?.current_batch || 0) / (queueStatus?.total_batches || 1)) * 100)}%</span>
  </div>
  <div className="h-2 w-full bg-background rounded-none overflow-hidden border border-border">
- <div className="h-full bg-foreground  duration-700 ease-in-out" style={{width: `${((queueStatus?.current_batch || 0) / (queueStatus?.total_batches || 1)) * 100}%`}} />
+ <div className="h-full bg-foreground transition-none" style={{width: `${((queueStatus?.current_batch || 0) / (queueStatus?.total_batches || 1)) * 100}%`}} />
  </div>
  </div>
 
@@ -694,7 +694,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
   
   {!config?.autoDeploy && (
     <div className="flex-1 w-full overflow-y-auto custom-scrollbar min-h-0 pb-12">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+    <div className="grid grid-cols-2 gap-4 max-w-4xl mx-auto">
     {loadingInbox ? (
     Array.from({length: 4}).map((_, i) => (
     <div key={i} className="h-24 rounded-none bg-muted/5 border border-border " />
@@ -865,7 +865,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  </div>
  )}
  
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+ <div className="grid grid-cols-2 gap-3">
  {b.results.map((r: any, i: number) => (
  <div key={i} className="p-4 border border-border rounded-none bg-background flex items-center gap-3">
  <div className="p-2 bg-muted/5 rounded-none border border-border text-muted-foreground/40">

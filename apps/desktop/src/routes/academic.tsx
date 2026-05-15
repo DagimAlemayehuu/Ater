@@ -209,7 +209,7 @@ export default function AcademicDashboard() {
          className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-none text-[8px] font-black uppercase tracking-widest  focus-visible:ring-1 focus-visible:ring-primary outline-none',
          activeTab === 'CALENDAR' ? 'bg-foreground/10 text-foreground border border-border/50' : 'bg-background border border-border text-foreground/50 hover:text-foreground hover:border-primary shadow-sm')}>
          <CalendarDays size={11} />
-         <span className="hidden sm:inline">{activeTab === 'CALENDAR' ? 'Dashboard' : 'Calendar'}</span>
+         <span className="inline">{activeTab === 'CALENDAR' ? 'Dashboard' : 'Calendar'}</span>
        </button>
      </div>
    )
@@ -321,7 +321,7 @@ export default function AcademicDashboard() {
     {/* ── Main Content ── */}
     <main className="flex-1 flex flex-col overflow-hidden min-w-0">
      {/* Top bar */}
-     <div className={cn("shrink-0 px-4 sm:px-6 lg:px-10 pt-3 pb-0 border-b border-border bg-background/95 backdrop-blur-xl sticky top-0 z-30 ", activeTab === 'CALENDAR' && "hidden")}>
+     <div className={cn("shrink-0 px-10 pt-3 pb-0 border-b border-border bg-background sticky top-0 z-30 ", activeTab === 'CALENDAR' && "hidden")}>
       <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide mb-2">
        {tabs.map(t => (
         <TabButton key={t.id} active={activeTab === t.id} onClick={() => setActiveTab(t.id)} icon={t.icon} label={t.label} />
@@ -334,7 +334,7 @@ export default function AcademicDashboard() {
       {data && (
        <>
         {activeTab === 'CALENDAR' && (
-         <div className="h-full flex flex-col p-2 sm:p-4 bg-background">
+         <div className="h-full flex flex-col p-4 bg-background">
           <AcademicCalendar 
            events={calendarEvents} 
            onSelectEvent={(path) => nav(`/obsidian?path=${encodeURIComponent(path)}&fullscreen=true`)} 

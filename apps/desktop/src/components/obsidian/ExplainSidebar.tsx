@@ -36,7 +36,7 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
   }, [isOpen, selection])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
   }, [messages, loading])
 
   useEffect(() => {
@@ -106,12 +106,11 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
 
       {/* Panel */}
       <div
-        className="fixed right-0 top-0 h-full w-[400px] max-w-[90vw] bg-background border-l border-border flex flex-col z-50 shadow-2xl"
-        style={{ animation: 'slideInRight 0.22s cubic-bezier(0.16,1,0.3,1)' }}
+        className="fixed right-0 top-0 h-full w-[400px] max-w-[90vw] bg-background border-l border-border flex flex-col z-50 shadow-2xl transition-none"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/40 shrink-0">
@@ -175,7 +174,7 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
           {loading && (
             <div className="flex items-start">
               <div className="bg-muted/5 border border-border/20 rounded-none px-4 py-3 flex items-center gap-2">
-                <Loader2 size={11} className="animate-spin text-primary/40" />
+                <Loader2 size={11} className="text-primary/40" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">
                   Thinking…
                 </span>
@@ -209,12 +208,6 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
         </div>
       </div>
 
-      <style>{`
-        @keyframes slideInRight {
-          from { transform: translateX(100%); opacity: 0; }
-          to   { transform: translateX(0);    opacity: 1; }
-        }
-      `}</style>
     </>
   )
 }
