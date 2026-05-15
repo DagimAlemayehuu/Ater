@@ -68,8 +68,16 @@ export default function App() {
 }
 
 function AppRoutes() {
-  const { isConfigured } = useConfig();
+  const { isConfigured, isLoading: configLoading } = useConfig();
   
+  if (configLoading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-[#030303] text-white">
+        <span className="text-[10px] font-black uppercase tracking-[0.4em]">Initializing</span>
+      </div>
+    );
+  }
+
   return (
     <AuthProvider>
       <SidecarGate>
@@ -78,18 +86,22 @@ function AppRoutes() {
             <HeaderProvider>
               <AuthGuard>
                 <Routes>
+                  <Route path="/onboarding" element={<Onboarding />} />
                   <Route path="*" element={
-                    <AuthenticatedLayout>
-                      <Routes>
-                        <Route path="/" element={<Navigate to={isConfigured ? "/obsidian" : "/onboarding"} replace />} />
-                        <Route path="/obsidian" element={<ObsidianVault />} />
-                        <Route path="/academic" element={<AcademicDashboard />} />
-                        <Route path="/agents" element={<Agents />} />
-                        <Route path="/practice" element={<Practice />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/onboarding" element={<Onboarding />} />
-                      </Routes>
-                    </AuthenticatedLayout>
+                    !isConfigured ? (
+                      <Navigate to="/onboarding" replace />
+                    ) : (
+                      <AuthenticatedLayout>
+                        <Routes>
+                          <Route path="/" element={<Navigate to="/obsidian" replace />} />
+                          <Route path="/obsidian" element={<ObsidianVault />} />
+                          <Route path="/academic" element={<AcademicDashboard />} />
+                          <Route path="/agents" element={<Agents />} />
+                          <Route path="/practice" element={<Practice />} />
+                          <Route path="/settings" element={<Settings />} />
+                        </Routes>
+                      </AuthenticatedLayout>
+                    )
                   } />
                 </Routes>
               </AuthGuard>

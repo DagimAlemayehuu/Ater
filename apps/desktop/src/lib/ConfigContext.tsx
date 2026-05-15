@@ -44,12 +44,6 @@ export interface AppConfig {
     aiProvider: string;
     aiApiKey: string;
     aiModel: string;
-    plannerProvider: string;
-    plannerApiKey: string;
-    plannerModel: string;
-    utilityProvider: string;
-    utilityApiKey: string;
-    utilityModel: string;
     obsidianVaultPath: string;
     inboxPath: string;
     academicFolderPath: string;
@@ -92,12 +86,6 @@ export const DEFAULT_CONFIG: AppConfig = {
     aiProvider: 'google',
     aiApiKey: '',
     aiModel: 'gemini-2.0-flash',
-    plannerProvider: 'google',
-    plannerApiKey: '',
-    plannerModel: 'gemini-2.0-flash',
-    utilityProvider: 'google',
-    utilityApiKey: '',
-    utilityModel: 'gemini-1.5-flash-8b',
     obsidianVaultPath: '',
     inboxPath: '',
     academicFolderPath: 'Notes',
@@ -132,14 +120,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const aiProvider = (await store.get<string>('aiProvider')) || DEFAULT_CONFIG.aiProvider;
                 const aiApiKey = (await store.get<string>('aiApiKey')) || '';
                 const aiModel = (await store.get<string>('aiModel')) || DEFAULT_CONFIG.aiModel;
-                
-                const plannerProvider = (await store.get<string>('plannerProvider')) || DEFAULT_CONFIG.plannerProvider;
-                const plannerApiKey = (await store.get<string>('plannerApiKey')) || '';
-                const plannerModel = (await store.get<string>('plannerModel')) || DEFAULT_CONFIG.plannerModel;
-
-                const utilityProvider = (await store.get<string>('utilityProvider')) || DEFAULT_CONFIG.utilityProvider;
-                const utilityApiKey = (await store.get<string>('utilityApiKey')) || '';
-                const utilityModel = (await store.get<string>('utilityModel')) || DEFAULT_CONFIG.utilityModel;
 
                 let obsidianVaultPath = await store.get<string>('obsidianVaultPath');
                 if (!obsidianVaultPath || obsidianVaultPath.trim() === '') {
@@ -183,12 +163,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     aiProvider,
                     aiApiKey,
                     aiModel,
-                    plannerProvider,
-                    plannerApiKey,
-                    plannerModel,
-                    utilityProvider,
-                    utilityApiKey,
-                    utilityModel,
                     obsidianVaultPath,
                     inboxPath,
                     academicFolderPath,

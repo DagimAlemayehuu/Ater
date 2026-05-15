@@ -46,18 +46,6 @@ export function AppSidebar() {
         {/* Bottom Actions */}
         <div className="flex flex-col gap-6 mt-auto items-center mb-6 w-full">
             <ThemeSwitch />
-            {!isOnboarding && (
-              <NavLink 
-                  to="/onboarding"
-                  className={({ isActive }) => cn(
-                    "relative flex items-center justify-center w-8 h-8 rounded-none transition-none",
-                    isActive ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
-                  )} 
-                  title="System Setup"
-              >
-                <Zap className="size-5" strokeWidth={2} />
-              </NavLink>
-            )}
             <NavLink 
                 to="/settings"
                 className={({ isActive }) => cn(

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useAuth } from '@/context/auth-context'
 import { cn } from '@/lib/utils'
+import { ThemeSwitch } from '@/components/theme-switch'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -14,75 +15,100 @@ export default function Login() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    
+
     try {
       await activate(email, password, code.toUpperCase())
     } catch (err: any) {
-      setError(err.message || 'Activation failed. Please check your credentials.')
+      setError(err.message || 'Activation failed. Check your credentials and code.')
       setLoading(false)
     }
   }
 
   return (
-    <div className="h-screen w-full bg-background text-foreground flex items-center justify-center p-6 selection:bg-foreground selection:text-background">
-      <div className="w-full max-w-[320px]">
-        <div className="mb-10 text-center">
-          <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-1">Ater</h1>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Actuate Engine</p>
+    <div className="h-screen w-full bg-background text-foreground flex flex-col items-center justify-center p-6 selection:bg-foreground selection:text-background relative">
+      <div className="absolute top-8 right-8">
+        <ThemeSwitch />
+      </div>
+      <div className="w-full max-w-[300px]">
+        <div className="mb-10">
+          <h1 className="text-lg font-black uppercase tracking-[0.15em] text-foreground">Ater</h1>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
+            Enter your credentials to activate
+          </p>
         </div>
 
         <form onSubmit={handleActivate} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Registry Email</label>
-            <input 
-              type="email" 
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+              Email
+            </label>
+            <input
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-card border border-border focus:border-primary rounded-none py-2 px-3 text-foreground text-[12px] focus:outline-none"
+              className="w-full bg-card border border-border focus:border-foreground py-2.5 px-3 text-foreground text-[12px] outline-none"
               required
+              autoComplete="email"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Password</label>
-            <input 
-              type="password" 
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+              Password
+            </label>
+            <input
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-card border border-border focus:border-primary rounded-none py-2 px-3 text-foreground text-[12px] focus:outline-none"
+              className="w-full bg-card border border-border focus:border-foreground py-2.5 px-3 text-foreground text-[12px] outline-none"
               required
+              autoComplete="current-password"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Activation Code</label>
-            <input 
-              type="text" 
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+              Activation Code
+            </label>
+            <p className="text-[9px] text-muted-foreground leading-relaxed">
+              From your waitlist approval email.
+            </p>
+            <input
+              type="text"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              className="w-full bg-card border border-border focus:border-primary rounded-none py-2 px-3 text-foreground text-[12px] font-mono tracking-wider focus:outline-none"
+              className="w-full bg-card border border-border focus:border-foreground py-2.5 px-3 text-foreground text-[13px] font-mono tracking-[0.2em] outline-none uppercase"
               required
+              maxLength={8}
+              spellCheck={false}
+              autoComplete="off"
             />
           </div>
 
           {error && (
-            <p className="text-[10px] font-bold text-destructive bg-destructive/10 p-2 uppercase tracking-widest text-center border border-destructive/20">
-              {error}
-            </p>
+            <div className="p-4 border border-destructive bg-destructive/5 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="size-1 bg-destructive" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-destructive">Verification Failure</span>
+              </div>
+              <p className="text-[11px] font-bold text-foreground leading-relaxed uppercase">
+                {error}
+              </p>
+            </div>
           )}
 
-          <button 
+          <button
             type="submit"
             disabled={loading}
             className={cn(
-              "w-full mt-8 py-2.5 flex items-center justify-center border transition-none",
-              loading 
-                ? "bg-muted border-border text-muted-foreground cursor-wait" 
+              "w-full mt-6 py-2.5 flex items-center justify-center border",
+              loading
+                ? "bg-muted border-border text-muted-foreground cursor-wait"
                 : "bg-primary text-primary-foreground border-primary hover:opacity-90"
             )}
           >
-            <span className="text-[11px] font-black uppercase tracking-widest">
-              {loading ? "Verifying..." : "Verify"}
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+              {loading ? "Verifying..." : "Activate"}
             </span>
           </button>
         </form>

@@ -12,7 +12,7 @@ import {open} from '@tauri-apps/plugin-dialog'
 import {usePomodoroStore} from '@/lib/pomodoroStore'
 import {RateLimitMonitor} from '@/components/intelligence/RateLimitMonitor'
 
-type AiTier = 'primary' | 'planner' | 'utility'
+
 
 // Local UI Components to avoid dependency issues
 const Card = ({children, className}: any) => (
@@ -63,7 +63,7 @@ export default function Settings() {
   const {clearHistory} = usePomodoroStore()
   
   const [editingKey, setEditingKey] = useState<string | null>(null)
-  const [aiTab, setAiTab] = useState<AiTier>('primary')
+  const [aiTab, setAiTab] = useState('primary')
   
   // Local state for edits
   const [aiEdit, setAiEdit] = useState({provider: '', key: '', model: ''})
@@ -88,15 +88,9 @@ export default function Settings() {
     }
   }, [config])
 
-  const startAiEdit = (tier: AiTier) => {
-    setEditingKey(`${tier}_engine`)
-    if (tier === 'primary') {
-      setAiEdit({provider: config?.aiProvider || 'google', key: config?.aiApiKey || '', model: config?.aiModel || 'gemini-2.0-flash'})
-    } else if (tier === 'planner') {
-      setAiEdit({provider: config?.plannerProvider || 'google', key: config?.plannerApiKey || '', model: config?.plannerModel || 'gemini-2.0-flash'})
-    } else {
-      setAiEdit({provider: config?.utilityProvider || 'google', key: config?.utilityApiKey || '', model: config?.utilityModel || 'gemini-2.0-flash'})
-    }
+  const startAiEdit = () => {
+    setEditingKey('primary_engine')
+    setAiEdit({provider: config?.aiProvider || 'google', key: config?.aiApiKey || '', model: config?.aiModel || 'gemini-2.0-flash'})
   }
 
   const startPomodoroEdit = () => {
@@ -110,15 +104,8 @@ export default function Settings() {
   }
 
   const handleSave = async () => {
-    if (editingKey?.includes('_engine')) {
-      const tier = editingKey.replace('_engine', '') as AiTier
-      if (tier === 'primary') {
-        await saveConfig({aiProvider: aiEdit.provider, aiApiKey: aiEdit.key, aiModel: aiEdit.model})
-      } else if (tier === 'planner') {
-        await saveConfig({plannerProvider: aiEdit.provider, plannerApiKey: aiEdit.key, plannerModel: aiEdit.model})
-      } else if (tier === 'utility') {
-        await saveConfig({utilityProvider: aiEdit.provider, utilityApiKey: aiEdit.key, utilityModel: aiEdit.model})
-      }
+    if (editingKey === 'primary_engine') {
+      await saveConfig({aiProvider: aiEdit.provider, aiApiKey: aiEdit.key, aiModel: aiEdit.model})
     } else if (editingKey === 'pomodoro_engine') {
       await saveConfig({
         pomodoroWorkDuration: pomodoroEdit.work,
@@ -131,22 +118,20 @@ export default function Settings() {
   }
 
   const handleClear = async () => {
-    if (window.confirm('WARNING: This will wipe all local configuration. Registry activation will persist. Continue?')) {
-      await saveConfig({
-        obsidianVaultPath: '',
-        aiProvider: 'google',
-        aiApiKey: '',
-        aiModel: 'gemini-2.0-flash',
-        autoDeploy: false
-      })
-      window.location.reload()
-    }
+    await saveConfig({
+      obsidianVaultPath: '',
+      aiProvider: 'google',
+      aiApiKey: '',
+      aiModel: 'gemini-2.0-flash',
+      autoDeploy: false
+    })
+    window.location.reload()
   }
 
-  const handleTestConnection = async (tier: AiTier) => {
+  const handleTestConnection = async () => {
     setTestStatus({loading: true, success: null, message: ''})
     try {
-      const res = await sidecarApi.testAiConnection(tier)
+      const res = await sidecarApi.testAiConnection('primary')
       if (res.success) {
         setTestStatus({loading: false, success: true, message: res.message || 'Connected successfully.'})
       } else {
@@ -288,30 +273,14 @@ export default function Settings() {
           {/* Intelligence (AI Engines) */}
           <SettingsCard
             title="Intelligence Engine"
-            value={`Configure ${aiTab.charAt(0).toUpperCase() + aiTab.slice(1)} Intelligence`}
-            isEditing={editingKey === `${aiTab}_engine`}
-            onEdit={() => startAiEdit(aiTab)}
+            value="Configure Primary Intelligence"
+            isEditing={editingKey === 'primary_engine'}
+            onEdit={() => startAiEdit()}
             onSave={handleSave}
             onCancel={() => setEditingKey(null)}
           >
             <div className="space-y-6 text-foreground">
-              {/* Tier Switcher */}
-              <div className="flex border border-border">
-                {(['primary', 'planner', 'utility'] as AiTier[]).map((tier) => (
-                  <button
-                    key={tier}
-                    onClick={() => setAiTab(tier)}
-                    className={cn(
-                      "flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-none",
-                      aiTab === tier 
-                        ? "bg-primary text-primary-foreground" 
-                        : "bg-background text-muted-foreground hover:bg-accent"
-                    )}
-                  >
-                    {tier}
-                  </button>
-                ))}
-              </div>
+
 
               {/* Saved Key Selection */}
               <div className="space-y-4 pb-6 border-b border-border">
@@ -323,15 +292,12 @@ export default function Settings() {
                     <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-widest">No keys saved in vault yet.</p>
                   )}
                   {config?.savedApiKeys?.map(k => {
-                    const currentKey = aiTab === 'primary' ? config.aiApiKey : aiTab === 'planner' ? config.plannerApiKey : config.utilityApiKey;
-                    const isSelected = currentKey === k.key;
+                    const isSelected = config.aiApiKey === k.key;
                     return (
                       <button
                         key={k.id}
                         onClick={() => {
-                          if (aiTab === 'primary') saveConfig({aiProvider: k.provider, aiApiKey: k.key});
-                          else if (aiTab === 'planner') saveConfig({plannerProvider: k.provider, plannerApiKey: k.key});
-                          else saveConfig({utilityProvider: k.provider, utilityApiKey: k.key});
+                          saveConfig({aiProvider: k.provider, aiApiKey: k.key});
                         }}
                         className={cn(
                           "px-4 py-2 text-[10px] font-black uppercase tracking-widest border transition-none",
@@ -340,7 +306,7 @@ export default function Settings() {
                             : "bg-background text-muted-foreground border-border hover:bg-accent"
                         )}
                       >
-                        {isSelected ? `[ ${k.name} ]` : k.name}
+                        {k.name}
                       </button>
                     );
                   })}
@@ -351,8 +317,8 @@ export default function Settings() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-foreground uppercase tracking-widest">Provider</label>
                   <select
-                    value={editingKey === `${aiTab}_engine` ? aiEdit.provider : (aiTab === 'primary' ? config?.aiProvider : aiTab === 'planner' ? config?.plannerProvider : config?.utilityProvider) || 'google'}
-                    disabled={editingKey !== `${aiTab}_engine`}
+                    value={editingKey === 'primary_engine' ? aiEdit.provider : config?.aiProvider || 'google'}
+                    disabled={editingKey !== 'primary_engine'}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                       const provider = e.target.value;
                       let defaultModel = 'gemini-2.0-flash';
@@ -374,7 +340,7 @@ export default function Settings() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-foreground uppercase tracking-widest">API Key</label>
-                  {editingKey === `${aiTab}_engine` ? (
+                  {editingKey === 'primary_engine' ? (
                     <input
                       type="password"
                       value={aiEdit.key}
@@ -386,10 +352,7 @@ export default function Settings() {
                   ) : (
                     <div className="px-4 py-3 bg-muted text-[13px] font-mono text-muted-foreground border border-border">
                       <span>
-                        {aiTab === 'primary' && config?.aiApiKey ? '••••••••' + config?.aiApiKey.slice(-4) : 
-                         aiTab === 'planner' && config?.plannerApiKey ? '••••••••' + config?.plannerApiKey.slice(-4) :
-                         aiTab === 'utility' && config?.utilityApiKey ? '••••••••' + config?.utilityApiKey.slice(-4) :
-                         'Not configured'}
+                        {config?.aiApiKey ? '••••••••' + config?.aiApiKey.slice(-4) : 'Not configured'}
                       </span>
                     </div>
                   )}
@@ -399,8 +362,8 @@ export default function Settings() {
                   <label className="text-[10px] font-black text-foreground uppercase tracking-widest">Model ID</label>
                   <input
                     type="text"
-                    disabled={editingKey !== `${aiTab}_engine`}
-                    value={editingKey === `${aiTab}_engine` ? aiEdit.model : (aiTab === 'primary' ? config?.aiModel : aiTab === 'planner' ? config?.plannerModel : config?.utilityModel) || ''}
+                    disabled={editingKey !== 'primary_engine'}
+                    value={editingKey === 'primary_engine' ? aiEdit.model : config?.aiModel || ''}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, model: e.target.value})}
                     className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50"
                   />
@@ -408,8 +371,8 @@ export default function Settings() {
 
                 <div className="pt-4">
                   <button
-                    onClick={() => handleTestConnection(aiTab)}
-                    disabled={testStatus.loading || (aiTab === 'primary' ? !config?.aiApiKey : aiTab === 'planner' ? !config?.plannerApiKey : !config?.utilityApiKey)}
+                    onClick={() => handleTestConnection()}
+                    disabled={testStatus.loading || !config?.aiApiKey}
                     className={cn(
                       "w-full px-4 py-3 text-[10px] font-black uppercase tracking-widest border transition-none",
                       testStatus.loading ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :
@@ -434,7 +397,7 @@ export default function Settings() {
 
               {/* Real-time Rate Limit Tracker */}
               <div className="pt-8 border-t border-border mt-8">
-                <RateLimitMonitor config={config || undefined} activeTier={aiTab} />
+                <RateLimitMonitor config={config || undefined} activeTier="primary" />
               </div>
             </div>
           </SettingsCard>
@@ -618,7 +581,7 @@ export default function Settings() {
   return (
     <div className="h-full flex flex-col font-sans bg-background text-foreground overflow-hidden">
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="max-w-4xl mx-auto px-16 py-12">
+        <div className="max-w-7xl mx-auto px-10 py-12">
           {renderGeneral()}
         </div>
       </div>

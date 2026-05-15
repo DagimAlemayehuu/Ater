@@ -5,6 +5,9 @@ import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/auth-context'
+import { ThemeSwitch } from '@/components/theme-switch'
+
+type StepStatus = 'idle' | 'testing' | 'success' | 'error'
 
 export default function Onboarding() {
   const [step, setStep] = useState(1)
@@ -12,29 +15,25 @@ export default function Onboarding() {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
-  // Step 1: Vault State
+  // Step 1 — Vault
   const [vaultPath, setVaultPath] = useState(config?.obsidianVaultPath || '')
-  
-  // Step 2: Intelligence State
+
+  // Step 2 — API Key
   const [apiKey, setApiKey] = useState('')
-  const [provider, setProvider] = useState('google')
-  const [isTesting, setIsTesting] = useState(false)
-  const [testResult, setTestResult] = useState<{success?: boolean; message?: string} | null>(null)
+  const [provider, setProvider] = useState<'google' | 'openai' | 'anthropic' | 'groq'>('google')
+  const [testStatus, setTestStatus] = useState<StepStatus>('idle')
+  const [testMessage, setTestMessage] = useState('')
 
-  // Step 3: Activation State
-  const [isInitializing, setIsInitializing] = useState(false)
-  const [initProgress, setInitProgress] = useState(0)
+  // Step 3 — Finalize
+  const [finalStatus, setFinalStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
+  const [finalError, setFinalError] = useState('')
 
-  const handleNext = () => setStep(s => s + 1)
-  const handleBack = () => setStep(s => s - 1)
+  const handleNext = () => setStep((s) => s + 1)
+  const handleBack = () => setStep((s) => s - 1)
 
   const selectVault = async () => {
     try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: 'Select Vault'
-      })
+      const selected = await open({ directory: true, multiple: false, title: 'Select your Obsidian vault folder' })
       if (selected) setVaultPath(selected as string)
     } catch (err) {
       console.error(err)
@@ -42,43 +41,30 @@ export default function Onboarding() {
   }
 
   const testConnection = async () => {
-    setIsTesting(true)
-    setTestResult(null)
-    
-    if (!apiKey) {
-      setIsTesting(false)
-      setTestResult({ success: false, message: 'No Key' })
-      return
-    }
-    
+    if (!apiKey) return
+    setTestStatus('testing')
+    setTestMessage('')
+
     await saveConfig({ aiApiKey: apiKey, aiProvider: provider })
-    
+
     try {
       const res = await sidecarApi.testAiConnection('primary')
       if (res.success) {
-        setTestResult({ success: true, message: 'Connected' })
+        setTestStatus('success')
+        setTestMessage('Connected successfully')
       } else {
-        setTestResult({ success: false, message: 'Failed' })
+        setTestStatus('error')
+        setTestMessage('Connection failed. Check your key.')
       }
-    } catch (err: any) {
-      setTestResult({ success: false, message: 'Error' })
-    } finally {
-      setIsTesting(false)
+    } catch {
+      setTestStatus('error')
+      setTestMessage('Could not reach the provider.')
     }
   }
 
   const finalizeSetup = async () => {
-    setIsInitializing(true)
-    
-    const interval = setInterval(() => {
-      setInitProgress(p => {
-        if (p >= 100) {
-          clearInterval(interval)
-          return 100
-        }
-        return p + 5
-      })
-    }, 50)
+    setFinalStatus('running')
+    setFinalError('')
 
     try {
       await saveConfig({
@@ -87,171 +73,290 @@ export default function Onboarding() {
         aiProvider: provider,
         inboxPath: `${vaultPath}/Inbox`,
         academicFolderPath: 'Notes',
-        autoDeploy: true
+        autoDeploy: true,
       })
 
       await sidecarApi.academicsSyncProfile()
-      
-      setTimeout(() => {
-        navigate('/obsidian')
-      }, 1000)
-    } catch (err) {
-      console.error(err)
-      setIsInitializing(false)
+      setFinalStatus('done')
+
+      setTimeout(() => navigate('/obsidian'), 800)
+    } catch (err: any) {
+      setFinalError(err.message || 'Setup failed. Check your vault path and try again.')
+      setFinalStatus('error')
     }
   }
 
-  const renderStep1 = () => (
-    <div className="flex flex-col items-start w-full">
-      <h2 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Phase 01</h2>
-      <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-4">Vault Path</h1>
-      <p className="text-sm font-bold text-muted-foreground leading-relaxed mb-8 max-w-sm">
-        Select your local Obsidian vault to begin.
-      </p>
-      
-      <button 
-        onClick={selectVault}
-        className="w-full bg-card border border-border hover:border-primary py-4 px-4 mb-8 text-left"
-      >
-        <span className="text-[11px] font-black uppercase tracking-widest text-foreground block">
-          {vaultPath ? 'Selected Directory' : 'Open Directory'}
-        </span>
-        {vaultPath && (
-          <span className="text-[10px] font-mono text-muted-foreground truncate block mt-1">{vaultPath}</span>
-        )}
-      </button>
+  const PROVIDERS = [
+    { id: 'google', label: 'Google', hint: 'aistudio.google.com' },
+    { id: 'openai', label: 'OpenAI', hint: 'platform.openai.com' },
+    { id: 'anthropic', label: 'Anthropic', hint: 'console.anthropic.com' },
+    { id: 'groq', label: 'Groq', hint: 'console.groq.com' },
+  ] as const
 
-      <button 
-        onClick={handleNext}
-        disabled={!vaultPath}
-        className={cn(
-          "py-3 px-6 text-[10px] font-black uppercase tracking-widest border",
-          vaultPath 
-            ? "bg-primary text-primary-foreground border-primary hover:opacity-90" 
-            : "bg-muted text-muted-foreground cursor-not-allowed border-border"
-        )}
-      >
-        Continue
-      </button>
-    </div>
-  )
-
-  const renderStep2 = () => (
-    <div className="flex flex-col items-start w-full">
-      <h2 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Phase 02</h2>
-      <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-4">Provider Config</h1>
-      <p className="text-sm font-bold text-muted-foreground leading-relaxed mb-8 max-w-sm">
-        Enter your API key. Stored locally.
-      </p>
-
-      <div className="w-full space-y-6 mb-8">
-        <div className="flex flex-wrap gap-2">
-          {['google', 'openai', 'anthropic', 'groq'].map((p) => (
-            <button
-              key={p}
-              onClick={() => setProvider(p)}
-              className={cn(
-                "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border",
-                provider === p 
-                  ? "bg-primary text-primary-foreground border-primary" 
-                  : "bg-card text-muted-foreground border-border hover:border-primary hover:text-foreground"
-              )}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-2">
-          <input 
-            type="password"
-            placeholder="Secret Key"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            className="w-full bg-card border border-border focus:border-primary rounded-none px-3 py-2 text-[12px] font-mono focus:outline-none text-foreground placeholder:text-muted-foreground"
-          />
-          
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={testConnection}
-              disabled={isTesting || !apiKey}
-              className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-transparent hover:border-border px-2 py-1"
-            >
-              {isTesting ? 'Testing...' : 'Test Connection'}
-            </button>
-
-            {testResult && (
-              <span className={cn(
-                "text-[9px] font-black uppercase tracking-widest",
-                testResult.success ? "text-foreground" : "text-muted-foreground"
-              )}>
-                {testResult.message}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex gap-4">
-        <button 
-          onClick={handleBack} 
-          className="py-3 px-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground border border-border hover:border-primary hover:text-foreground"
-        >
-          Back
-        </button>
-        <button 
-          onClick={handleNext}
-          disabled={!apiKey}
-          className={cn(
-            "py-3 px-6 text-[10px] font-black uppercase tracking-widest border",
-            apiKey 
-              ? "bg-primary text-primary-foreground border-primary hover:opacity-90" 
-              : "bg-muted text-muted-foreground cursor-not-allowed border-border"
-          )}
-        >
-          Finalize
-        </button>
-      </div>
-    </div>
-  )
-
-  const renderSuccess = () => (
-    <div className="flex flex-col items-start w-full">
-      <h2 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Initialization</h2>
-      <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-4">Ready</h1>
-      <p className="text-sm font-bold text-muted-foreground leading-relaxed mb-8 max-w-sm">
-        Welcome, {profile?.full_name?.split(' ')[0] || 'User'}. Application is ready.
-      </p>
-
-      <button 
-        onClick={finalizeSetup}
-        className="py-3 px-6 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest border border-primary hover:opacity-90"
-      >
-        Complete Setup
-      </button>
-    </div>
-  )
+  const selectedProvider = PROVIDERS.find((p) => p.id === provider)!
 
   return (
-    <div className="h-screen w-full flex flex-col justify-center bg-background text-foreground selection:bg-foreground selection:text-background p-12">
+    <div className="h-screen w-full flex flex-col justify-center bg-background text-foreground selection:bg-foreground selection:text-background px-12 relative">
+      <div className="absolute top-12 right-12 z-10">
+        <ThemeSwitch />
+      </div>
       <div className="w-full max-w-md mx-auto">
-        {isInitializing ? (
-          <div className="w-full">
-            <h2 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Actuating</h2>
-            <div className="h-px w-full bg-border mt-4 mb-2">
-              <div 
-                className="h-full bg-primary"
-                style={{ width: `${initProgress}%` }}
-              />
-            </div>
-            <p className="text-[9px] font-mono text-muted-foreground uppercase">{Math.round(initProgress)}%</p>
+
+        {/* Step indicator */}
+        {finalStatus === 'idle' || finalStatus === 'error' ? (
+          <div className="flex items-center gap-3 mb-10">
+            {[1, 2, 3].map((s) => (
+              <div key={s} className="flex items-center gap-3">
+                <div
+                  className={cn(
+                    "size-1.5",
+                    step === s
+                      ? "bg-foreground"
+                      : step > s
+                      ? "bg-muted-foreground"
+                      : "bg-border"
+                  )}
+                />
+                {s < 3 && <div className="w-8 h-px bg-border" />}
+              </div>
+            ))}
+            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-2">
+              Step {step} of 3
+            </span>
           </div>
-        ) : step === 1 ? (
-          renderStep1()
-        ) : step === 2 ? (
-          renderStep2()
-        ) : (
-          renderSuccess()
+        ) : null}
+
+        {/* Running state */}
+        {finalStatus === 'running' && (
+          <div className="w-full">
+            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">
+              Initializing
+            </div>
+            <div className="h-px w-full bg-border mb-3 overflow-hidden">
+              <div className="h-full bg-foreground w-full origin-left animate-none" />
+            </div>
+            <p className="text-[11px] font-mono text-muted-foreground uppercase">
+              Syncing vault profile...
+            </p>
+          </div>
+        )}
+
+        {/* Done state */}
+        {finalStatus === 'done' && (
+          <div className="w-full">
+            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">
+              Ready
+            </div>
+            <p className="text-[11px] font-mono text-muted-foreground uppercase">
+              Launching Ater...
+            </p>
+          </div>
+        )}
+
+        {/* Step 1 — Vault */}
+        {(finalStatus === 'idle' || finalStatus === 'error') && step === 1 && (
+          <div className="flex flex-col items-start w-full">
+            <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+              Step 1
+            </div>
+            <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
+              Select Your Vault
+            </h1>
+            <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-8">
+              Point Ater to your local Obsidian vault folder. All notes are read locally — nothing leaves your machine.
+            </p>
+
+            <button
+              onClick={selectVault}
+              className="w-full bg-card border border-border hover:border-foreground py-4 px-4 mb-8 text-left"
+            >
+              <span className="text-[11px] font-black uppercase tracking-widest text-foreground block">
+                {vaultPath ? 'Vault Selected' : 'Choose Folder'}
+              </span>
+              {vaultPath ? (
+                <span className="text-[10px] font-mono text-muted-foreground truncate block mt-1.5">
+                  {vaultPath}
+                </span>
+              ) : (
+                <span className="text-[10px] font-medium text-muted-foreground block mt-1.5">
+                  Click to open your file browser
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={handleNext}
+              disabled={!vaultPath}
+              className={cn(
+                "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border",
+                vaultPath
+                  ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
+                  : "bg-muted text-muted-foreground cursor-not-allowed border-border"
+              )}
+            >
+              Continue
+            </button>
+          </div>
+        )}
+
+        {/* Step 2 — API Key */}
+        {(finalStatus === 'idle' || finalStatus === 'error') && step === 2 && (
+          <div className="flex flex-col items-start w-full">
+            <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+              Step 2
+            </div>
+            <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
+              Connect AI
+            </h1>
+            <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-8">
+              Ater uses your own API key — stored locally, never shared.
+            </p>
+
+            <div className="w-full space-y-5 mb-8">
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+                  Provider
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {PROVIDERS.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => { setProvider(p.id); setTestStatus('idle'); setTestMessage(''); }}
+                      className={cn(
+                        "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border",
+                        provider === p.id
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-card text-muted-foreground border-border hover:border-foreground hover:text-foreground"
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] font-medium text-muted-foreground mt-2">
+                  Get your key at{' '}
+                  <a
+                    href={`https://${selectedProvider.hint}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-foreground underline underline-offset-2"
+                  >
+                    {selectedProvider.hint}
+                  </a>
+                </p>
+              </div>
+
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+                  API Key
+                </div>
+                <input
+                  type="password"
+                  placeholder="Paste your secret key"
+                  value={apiKey}
+                  onChange={(e) => { setApiKey(e.target.value); setTestStatus('idle'); setTestMessage(''); }}
+                  className="w-full bg-card border border-border focus:border-foreground px-3 py-2.5 text-[12px] font-mono outline-none text-foreground placeholder:text-muted-foreground"
+                />
+
+                <div className="flex items-center gap-4 mt-3">
+                  <button
+                    onClick={testConnection}
+                    disabled={testStatus === 'testing' || !apiKey}
+                    className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-transparent hover:border-border px-2 py-1 disabled:opacity-40"
+                  >
+                    {testStatus === 'testing' ? 'Testing...' : 'Test Connection'}
+                  </button>
+
+                  {testMessage && (
+                    <span className={cn(
+                      "text-[9px] font-black uppercase tracking-widest",
+                      testStatus === 'success' ? "text-foreground" : "text-destructive"
+                    )}>
+                      {testMessage}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleBack}
+                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={!apiKey}
+                className={cn(
+                  "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border",
+                  apiKey
+                    ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
+                    : "bg-muted text-muted-foreground cursor-not-allowed border-border"
+                )}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3 — Confirm */}
+        {(finalStatus === 'idle' || finalStatus === 'error') && step === 3 && (
+          <div className="flex flex-col items-start w-full">
+            <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+              Step 3
+            </div>
+            <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
+              Confirm Setup
+            </h1>
+            <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-8">
+              Welcome{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}. Review your settings before launching.
+            </p>
+
+            <div className="w-full space-y-3 mb-8 p-5 bg-card border border-border">
+              <div className="flex justify-between items-start">
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Vault</span>
+                <span className="text-[10px] font-mono text-foreground max-w-[220px] text-right break-all">
+                  {vaultPath}
+                </span>
+              </div>
+              <div className="h-px bg-border" />
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Provider</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-foreground">{provider}</span>
+              </div>
+              <div className="h-px bg-border" />
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">API Key</span>
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  {apiKey ? `${apiKey.substring(0, 8)}••••••` : '—'}
+                </span>
+              </div>
+            </div>
+
+            {finalError && (
+              <div className="w-full px-4 py-3 border border-destructive/30 bg-destructive/10 mb-6">
+                <p className="text-[11px] font-bold text-destructive">{finalError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleBack}
+                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground"
+              >
+                Back
+              </button>
+              <button
+                onClick={finalizeSetup}
+                className="py-2.5 px-8 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-[0.2em] border border-primary hover:opacity-90"
+              >
+                Launch Ater
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

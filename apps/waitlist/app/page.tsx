@@ -126,10 +126,10 @@ export default function Home() {
         <main className="flex-1 w-full px-6 lg:px-12 flex flex-col justify-center relative z-20">
           <div className="max-w-[1400px] w-full mx-auto relative h-full flex flex-col">
             <div className="flex-1 flex flex-col justify-center">
-              <h1 className="text-[2.75rem] sm:text-[4rem] lg:text-[5rem] leading-[0.95] font-black tracking-tighter text-foreground max-w-[800px] mb-8 uppercase">
+              <h1 className="text-[2.75rem] sm:text-[4rem] lg:text-[5rem] leading-[0.95] font-black tracking-tighter text-foreground max-w-[720px] mb-8 uppercase">
                 Learn faster. <br className="hidden sm:block" /> Score better.
               </h1>
-              <p className="text-muted-foreground text-lg sm:text-xl max-w-[480px] leading-relaxed font-bold mb-12 uppercase tracking-tight">
+              <p className="text-muted-foreground text-lg sm:text-xl max-w-[440px] leading-relaxed font-bold mb-12 uppercase tracking-tight">
                 Ater turns your PDFs into simple notes. It organizes your work in one clean place. Study less, get better grades.
               </p>
             </div>
@@ -237,7 +237,7 @@ export default function Home() {
 
 function MockupSection() {
   return (
-    <div className="absolute right-0 bottom-0 w-[75%] h-[95%] pointer-events-none z-10 hidden md:flex items-end justify-end translate-x-[20%] translate-y-[12%]">
+    <div className="absolute right-0 bottom-0 w-[75%] h-[95%] pointer-events-none z-10 hidden md:flex items-end justify-end translate-x-[30%] translate-y-[12%]">
       <div className="w-full aspect-[16/10.4] bg-[#1A1A1A] rounded-t-[24px] xl:rounded-t-[32px] p-[1px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative flex flex-col border-t border-x border-white/5">
         {/* Device Frame / Bezel - Dark Gray, not Pure Black */}
         <div className="flex-1 bg-[#121212] rounded-t-[20px] xl:rounded-t-[26px] overflow-hidden border-t-[10px] border-x-[10px] lg:border-t-[12px] lg:border-x-[12px] xl:border-t-[14px] xl:border-x-[14px] border-[#121212] relative flex flex-col">

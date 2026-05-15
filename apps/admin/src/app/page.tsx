@@ -2,47 +2,61 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type WaitlistEntry = {
+  id: string;
+  email: string;
+  full_name: string;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+};
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
-    totalUsers: 0,
-    waitlistCount: 0,
+    totalApproved: 0,
+    waitlistPending: 0,
     totalTokens: 0,
-    activeToday: 0
+    totalRejected: 0,
   });
-  const [velocityData, setVelocityData] = useState<{ height: string; tokens: number }[]>([]);
+  const [recentEntries, setRecentEntries] = useState<WaitlistEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
   async function fetchStats() {
     setLoading(true);
     setError(null);
     try {
-      const [usersRes, waitlistRes, logsRes] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact' }),
-        supabase.from('waiting_list').select('id', { count: 'exact' }).eq('status', 'pending'),
-        supabase.from('usage_logs').select('token_count'),
+      const [approvedRes, pendingRes, rejectedRes, logsRes, recentRes] = await Promise.all([
+        supabase.from("waiting_list").select("id", { count: "exact" }).eq("status", "approved"),
+        supabase.from("waiting_list").select("id", { count: "exact" }).eq("status", "pending"),
+        supabase.from("waiting_list").select("id", { count: "exact" }).eq("status", "rejected"),
+        supabase.from("usage_logs").select("token_count"),
+        supabase
+          .from("waiting_list")
+          .select("id, email, full_name, status, created_at")
+          .order("created_at", { ascending: false })
+          .limit(5),
       ]);
 
-      if (usersRes.error) throw usersRes.error;
-      if (waitlistRes.error) throw waitlistRes.error;
-      if (logsRes.error) throw logsRes.error;
+      if (approvedRes.error) throw approvedRes.error;
+      if (pendingRes.error) throw pendingRes.error;
+      if (rejectedRes.error) throw rejectedRes.error;
 
       setStats({
-        totalUsers: usersRes.count || 0,
-        waitlistCount: waitlistRes.count || 0,
-        totalTokens: logsRes.data?.reduce((acc, l) => acc + l.token_count, 0) || 0,
-        activeToday: 0
+        totalApproved: approvedRes.count || 0,
+        waitlistPending: pendingRes.count || 0,
+        totalRejected: rejectedRes.count || 0,
+        totalTokens: logsRes.data?.reduce((acc, l) => acc + (l.token_count || 0), 0) || 0,
       });
 
-      setVelocityData(Array.from({ length: 40 }).map(() => ({
-        height: `${20 + Math.random() * 80}%`,
-        tokens: Math.floor(Math.random() * 500)
-      })));
+      if (recentRes.data) setRecentEntries(recentRes.data);
+      setLastRefreshed(new Date());
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "Failed to load data.");
     } finally {
       setLoading(false);
     }
@@ -50,91 +64,139 @@ export default function Dashboard() {
 
   useEffect(() => { fetchStats(); }, []);
 
+  const statCards = [
+    { label: "Approved", value: stats.totalApproved, sub: "Active users" },
+    { label: "Pending", value: stats.waitlistPending, sub: "Awaiting review" },
+    { label: "Rejected", value: stats.totalRejected, sub: "Access denied" },
+    { label: "Tokens Used", value: stats.totalTokens > 0 ? `${(stats.totalTokens / 1000).toFixed(1)}k` : "0", sub: "Total usage" },
+  ];
+
   return (
-    <div className="flex-1 flex flex-col h-full bg-background text-foreground font-sans">
-      <header className="bg-background border-b border-border py-10 px-10">
-        <div className="max-w-6xl mx-auto flex items-end justify-between">
+    <div className="flex-1 flex flex-col h-full bg-background text-foreground font-sans overflow-auto custom-scrollbar">
+      <header className="bg-background border-b border-border py-8 px-10 shrink-0">
+        <div className="max-w-5xl mx-auto flex items-end justify-between">
           <div>
-            <h1 className="text-5xl font-black tracking-tighter text-foreground leading-none uppercase">Overview</h1>
+            <h1 className="text-4xl font-black tracking-tighter text-foreground leading-none uppercase">
+              Overview
+            </h1>
           </div>
-          <div className="text-right">
-            {error && <p className="text-[10px] font-black uppercase text-destructive mb-1">{error}</p>}
-            <div className="flex items-center gap-2 justify-end">
-              <span className={cn("size-2 rounded-none", loading ? "bg-muted" : "bg-primary")} />
-              <p className="text-[12px] font-bold uppercase tracking-widest text-foreground">
-                {loading ? "Refreshing..." : "System Online"}
-              </p>
-            </div>
+          <div className="flex items-center gap-4">
+            {error && (
+              <p className="text-[10px] font-black uppercase text-destructive">{error}</p>
+            )}
+            <button
+              onClick={fetchStats}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2.5 border border-border bg-card hover:bg-accent text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+            >
+              <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
+              Refresh
+            </button>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-10">
-        <div className="max-w-6xl mx-auto space-y-10">
-          <div className="grid grid-cols-4 gap-6">
-            {[
-              { label: "Users", value: stats.totalUsers, sub: "Approved" },
-              { label: "Waitlist", value: stats.waitlistCount, sub: "Pending" },
-              { label: "Usage", value: `${(stats.totalTokens / 1000).toFixed(1)}k`, sub: "Tokens" },
-              { label: "API", value: "99.9%", sub: "Health" },
-            ].map((stat, i) => (
-              <div key={i} className="p-8 bg-card border border-border rounded-none shadow-sm transition-none">
-                <div className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-4">{stat.sub}</div>
+      <div className="flex-1 p-10">
+        <div className="max-w-5xl mx-auto space-y-8">
+
+          {/* Stat Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {statCards.map((stat, i) => (
+              <div key={i} className="p-6 bg-card border border-border">
+                <div className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
+                  {stat.sub}
+                </div>
                 {loading ? (
-                  <Skeleton className="h-10 w-24 mb-1" />
+                  <Skeleton className="h-9 w-20 mb-1" />
                 ) : (
-                  <p className="text-4xl font-black tracking-tighter text-foreground tabular-nums">{stat.value}</p>
+                  <p className="text-3xl font-black tracking-tighter text-foreground tabular-nums">
+                    {stat.value}
+                  </p>
                 )}
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mt-2">{stat.label}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mt-2">
+                  {stat.label}
+                </p>
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-3 gap-6">
-            <div className="col-span-2 p-10 bg-card border border-border rounded-none shadow-sm transition-none">
-              <div className="flex items-center justify-between mb-12">
-                <div>
-                  <h2 className="text-xl font-black tracking-tight text-foreground uppercase">History</h2>
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">24 hour activity</p>
-                </div>
-                <div className="px-4 py-1.5 border border-border bg-accent/30">
-                  <span className="text-[10px] font-black text-foreground uppercase tracking-widest">Active</span>
-                </div>
+          {/* Recent Applicants */}
+          <div className="bg-card border border-border">
+            <div className="px-8 py-6 border-b border-border flex items-center justify-between">
+              <div>
+                <h2 className="text-[11px] font-black uppercase tracking-[0.25em] text-foreground">
+                  Recent Applicants
+                </h2>
+                <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest">
+                  Last 5 entries
+                </p>
               </div>
-              <div className="h-56 flex items-end gap-1 px-1">
-                {loading ? (
-                  Array.from({ length: 40 }).map((_, i) => (
-                    <Skeleton key={i} className="flex-1" style={{ height: `${20 + (i % 5) * 15}%` }} />
-                  ))
-                ) : (
-                  velocityData.map((data, i) => (
-                    <div key={i} className="flex-1 bg-muted hover:bg-primary transition-none rounded-none" style={{ height: data.height }} />
-                  ))
-                )}
-              </div>
+              {lastRefreshed && (
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
+                  Updated {lastRefreshed.toLocaleTimeString()}
+                </span>
+              )}
             </div>
 
-            <div className="p-10 bg-card border border-border rounded-none flex flex-col justify-between shadow-sm transition-none">
-              <div>
-                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Status</h2>
-                <p className="text-3xl font-black tracking-tighter mt-2 uppercase">Stable</p>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="px-8 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground">
+                    User
+                  </th>
+                  <th className="px-8 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground text-right">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {loading
+                  ? Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i}>
+                        <td className="px-8 py-5">
+                          <Skeleton className="h-4 w-48" />
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <Skeleton className="h-5 w-20 ml-auto" />
+                        </td>
+                      </tr>
+                    ))
+                  : recentEntries.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-accent/20">
+                        <td className="px-8 py-5">
+                          <div className="font-bold text-foreground text-[13px]">
+                            {entry.full_name || "—"}
+                          </div>
+                          <div className="text-[11px] font-medium text-muted-foreground mt-0.5">
+                            {entry.email}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <span
+                            className={cn(
+                              "px-3 py-1 text-[9px] font-black uppercase tracking-widest border",
+                              entry.status === "approved"
+                                ? "bg-primary/10 border-primary/20 text-primary"
+                                : entry.status === "rejected"
+                                ? "bg-destructive/10 border-destructive/20 text-destructive"
+                                : "bg-muted/30 border-border text-muted-foreground"
+                            )}
+                          >
+                            {entry.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+              </tbody>
+            </table>
+
+            {!loading && recentEntries.length === 0 && (
+              <div className="py-16 text-center">
+                <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">
+                  No applicants yet.
+                </p>
               </div>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground"><span>Load</span><span>42%</span></div>
-                  <div className="h-2 bg-muted rounded-none overflow-hidden border border-border">
-                    <div className="h-full bg-primary w-[42%] transition-none" />
-                  </div>
-                </div>
-                <button 
-                  onClick={() => fetchStats()} 
-                  disabled={loading}
-                  className="w-full py-4 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-[0.3em] rounded-none hover:opacity-90 transition-none disabled:opacity-50"
-                >
-                  {loading ? "Processing..." : "Refresh Status"}
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
