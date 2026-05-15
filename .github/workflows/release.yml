@@ -78,13 +78,14 @@ jobs:
           echo "Target binary name: $TARGET"
 
           # Run PyInstaller
-          # --hidden-import is used to ensure ML libraries are bundled correctly
+          # --collect-all is used to bypass OOM errors on 2-core runners by force-collecting large ML libraries
           python -m PyInstaller \
             --noconfirm \
             --onefile \
+            --clean \
             --name ater-api \
-            --hidden-import=torch \
-            --hidden-import=onnxruntime \
+            --collect-all torch \
+            --collect-all onnxruntime \
             apps/api/src/api/main.py
 
           # Create binaries directory in Tauri src
