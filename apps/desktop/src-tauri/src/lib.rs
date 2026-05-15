@@ -4,7 +4,7 @@
 use std::net::TcpListener;
 use tauri::{Manager, State};
 use tauri_plugin_shell::ShellExt;
-use tauri_plugin_shell::process::CommandEvent;
+use sha2::Digest;
 
 pub struct SidecarConfig {
     pub port: u16,
@@ -20,7 +20,7 @@ fn get_available_port(start_port: u16) -> Option<u16> {
 }
 
 #[tauri::command]
-async fn export_logs(app: tauri::AppHandle) -> Result<String, String> {
+async fn export_logs(_app: tauri::AppHandle) -> Result<String, String> {
     let log_dir = dirs::home_dir()
         .ok_or_else(|| "Could not find home directory".to_string())?
         .join(".ater")
@@ -64,29 +64,41 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_stronghold::Builder::new(|password| {
-            let config = argon2::Config {
-                variant: argon2::Variant::Argon2id,
-                version: argon2::Version::Version13,
-                mem_cost: 65536,
-                time_cost: 1,
-                lanes: 4,
-                thread_mode: argon2::ThreadMode::Parallel,
-                secret: &[],
-                ad: &[],
-                hash_length: 32,
-            };
-            argon2::hash_raw(password.as_bytes(), b"ater_secure_salt_v1", &config).expect("failed to hash password")
+            use argon2::{Argon2, Algorithm, Version, Params};
+            let salt = b"ater_secure_salt"; // 16 bytes
+            let mut hash = [0u8; 32];
+            let argon2 = Argon2::new(
+                Algorithm::Argon2id,
+                Version::V0x13,
+                Params::new(65536, 1, 4, Some(32)).unwrap(),
+            );
+            argon2.hash_password_into(password.as_bytes(), salt, &mut hash).expect("failed to hash password");
+            hash.to_vec()
         }).build())
         .setup(|app| {
-            let port = get_available_port(8765).unwrap_or(8765);
+            let mut port = 8765;
+            let mut should_spawn = true;
+
+            // In debug mode, if 8765 is already in use, we assume an external 
+            // sidecar (like the one from `pnpm run sidecar:dev`) is running.
+            if cfg!(debug_assertions) {
+                if TcpListener::bind(("127.0.0.1", 8765)).is_err() {
+                    should_spawn = false;
+                    port = 8765;
+                }
+            }
+
+            if should_spawn {
+                port = get_available_port(8765).unwrap_or(8765);
+                let sidecar_command = app.shell().sidecar("ater-api")
+                    .expect("failed to create sidecar command")
+                    .args(&["--port", &port.to_string()]);
+
+                let (mut _rx, _child) = sidecar_command.spawn()
+                    .expect("failed to spawn sidecar");
+            }
+
             app.manage(SidecarConfig { port });
-
-            let sidecar_command = app.shell().sidecar("ater-api")
-                .expect("failed to create sidecar command")
-                .args(&["--port", &port.to_string()]);
-
-            let (mut _rx, _child) = sidecar_command.spawn()
-                .expect("failed to spawn sidecar");
 
             if cfg!(debug_assertions) {
                 app.handle().plugin(

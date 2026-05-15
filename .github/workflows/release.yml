@@ -98,8 +98,8 @@ jobs:
             mv dist/ater-api apps/desktop/src-tauri/binaries/$TARGET
           fi
 
-      - name: install frontend dependencies
-        run: pnpm install
+      - name: Install Frontend Dependencies
+        run: pnpm install --frozen-lockfile
 
       - uses: tauri-apps/tauri-action@v0
         env:

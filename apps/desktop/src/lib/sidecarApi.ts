@@ -547,4 +547,5 @@ export const sidecarApi = {
     getMachineId: async (): Promise<string> => {
         return await invoke<string>('get_machine_id')
     },
+    getBaseUrl,
 }
