@@ -15,20 +15,23 @@ import Onboarding from '@/routes/onboarding'
 /**
  * Gate to ensure sidecar is connected before proceeding.
  */
+/**
+ * Gate to ensure sidecar is connected. Optimistic by default to skip loading screens.
+ */
 function SidecarGate({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<'checking' | 'connected' | 'error'>('checking')
+  const [status, setStatus] = useState<'checking' | 'connected' | 'error'>('connected')
 
   useEffect(() => {
     const check = async () => {
       try {
         const res = await sidecarApi.health()
         if (res.status === 'ok') {
-          console.log('[Ater] Sidecar Connected - version:', res.version)
           setStatus('connected')
         }
       } catch {
-        console.warn('[Ater] Sidecar connection failed. Retrying in 2s...')
-        setTimeout(check, 2000)
+        console.warn('[Ater] Sidecar connection failed. Retrying...')
+        setStatus('checking') // Only show loading if we confirmed it's not there
+        setTimeout(check, 1000)
       }
     }
     check()

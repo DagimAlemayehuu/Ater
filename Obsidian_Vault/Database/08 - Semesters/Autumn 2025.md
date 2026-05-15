@@ -1,8 +1,5 @@
 ---
-Year: "[[Year II]]"
-Status: "[[Completed]]"
-Start Date: '2026-05-04'
-End Date: ''
+title: Autumn 2025
+year: [[2025]]
+status: active
 ---
-
-# Autumn 2025

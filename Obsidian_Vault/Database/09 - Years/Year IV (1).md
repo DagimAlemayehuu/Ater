@@ -1,8 +1,8 @@
 ---
 Program: "[[Computer Science]]"
 Academic Level: "[[Undergraduate]]"
-Status: "[[Active]]"
-Current Year: true
+Status: "[[Planned]]"
+Current Year: false
 Target Years: 4
 Earned Credits: 0
 Target Credits: 0

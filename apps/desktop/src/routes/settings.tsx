@@ -161,7 +161,9 @@ export default function Settings() {
       aiApiKey: '',
       aiModel: 'gemini-2.0-flash',
       autoDeploy: false,
-      savedApiKeys: []
+      savedApiKeys: [],
+      displayName: '',
+      isProgramConfigured: false
     })
     window.location.reload()
   }
@@ -175,6 +177,36 @@ export default function Settings() {
       }
     } catch (err: any) {
       toast.error('Failed to clear data: ' + err.message);
+    }
+  }
+
+  const handleFactoryReset = async () => {
+    if (!confirm('CRITICAL ACTION: This will wipe your academic dashboard, ALL API keys, and study history. Atomic notes will be preserved. Proceed?')) return;
+    
+    try {
+      const res = await sidecarApi.factoryReset();
+      if (res.success) {
+        // Clear local config completely
+        await saveConfig({
+          aiApiKey: '',
+          aiProvider: 'google',
+          aiModel: 'gemini-2.0-flash',
+          savedApiKeys: [],
+          obsidianVaultPath: '',
+          inboxPath: '',
+          isActivated: false,
+          activationEmail: '',
+          activationCode: '',
+          displayName: '',
+          isProgramConfigured: false
+        });
+        
+        clearLocalHistory();
+        toast.success('System has been factory reset.');
+        setTimeout(() => window.location.reload(), 1500);
+      }
+    } catch (err: any) {
+      toast.error('Factory reset failed: ' + err.message);
     }
   }
 
@@ -649,6 +681,12 @@ export default function Settings() {
                 className="px-6 py-3 text-[10px] font-black uppercase tracking-widest border border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-none"
               >
                 Delete All Study History
+              </button>
+              <button
+                onClick={handleFactoryReset}
+                className="px-6 py-3 text-[10px] font-black uppercase tracking-widest bg-primary text-primary-foreground border border-primary hover:opacity-90 transition-none"
+              >
+                Factory Reset System
               </button>
             </CardContent>
           </Card>

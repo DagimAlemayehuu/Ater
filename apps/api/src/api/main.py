@@ -1245,6 +1245,64 @@ async def reset_study_history(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/system/factory-reset")
+async def factory_reset_system(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """
+    Absolute Wipe:
+    1. Purges ater_queue.db (History, SRS, Queue)
+    2. Wipes Academic metadata files (Database/*)
+    3. Resets in-memory trackers
+    """
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault Path not configured")
+
+    vault_root = Path(secrets.vault_path)
+    db_path = Path(secrets.inbox_path or str(vault_root / "Inbox")) / "ater_queue.db"
+
+    try:
+        # 1. Purge DB if exists
+        if db_path.exists():
+            conn = sqlite3.connect(str(db_path))
+            conn.execute("DELETE FROM study_sessions")
+            conn.execute("DELETE FROM study_telemetry")
+            conn.execute("DELETE FROM practice_log")
+            conn.execute("DELETE FROM note_srs")
+            conn.execute("DELETE FROM queue")
+            conn.commit()
+            conn.close()
+
+        # 2. Wipe Academic Metadata Files
+        academic_folders = [
+            "Database/03 - Assignments",
+            "Database/04 - Exams",
+            "Database/06 - Study Planner",
+            "Database/07 - Courses",
+            "Database/08 - Semesters",
+            "Database/09 - Years",
+            "Database/00 - Bases/Inbox"
+        ]
+        
+        for folder in academic_folders:
+            folder_path = vault_root / folder
+            if folder_path.exists() and folder_path.is_dir():
+                for f in folder_path.glob("*.md"):
+                    if not f.name.startswith("."):
+                        f.unlink()
+
+        # 3. Clear In-Memory State
+        AterService.clear_sessions()
+        if ater_watcher:
+            ater_watcher.reset_queue()
+        
+        from src.domains.ai.tracker import tracker as _tracker
+        _tracker.limits = {}
+
+        return {"success": True, "message": "System factory reset successful. Dashboard and history wiped."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/practice/srs")
 async def get_srs_data(
     secrets: AppSecrets = Depends(get_app_secrets)

@@ -26,7 +26,13 @@ export default function Onboarding() {
   const [testStatus, setTestStatus] = useState<StepStatus>('idle')
   const [testMessage, setTestMessage] = useState('')
 
-  // Step 4 — Finalize
+  // Step 4 — Academic Program
+  const [programName, setProgramName] = useState('')
+  const [programLevel, setProgramLevel] = useState('Undergraduate')
+  const [programDuration, setProgramDuration] = useState(4)
+  const [programCurrentYear, setProgramCurrentYear] = useState(1)
+
+  // Step 5 — Finalize
   const [finalStatus, setFinalStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [finalError, setFinalError] = useState('')
 
@@ -69,6 +75,33 @@ export default function Onboarding() {
     setFinalError('')
 
     try {
+      // 1. Initial sync to prepare databases
+      await sidecarApi.academicsSyncProfile()
+
+      // 2. Scaffold Academic Program
+      if (programName) {
+        const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
+        const cleanName = programName.replace(/_/g, ' ').trim()
+        const currentIdx = programCurrentYear - 1
+        
+        for (let i = 0; i < programDuration; i++) {
+          const title = `Year ${romans[i] || (i + 1)}`
+          const status = i < currentIdx ? '[[Completed]]' : i === currentIdx ? '[[Active]]' : '[[Planned]]'
+          
+          await sidecarApi.createVaultRow('09 - Years', title, {
+            Program: `[[${cleanName}]]`,
+            'Academic Level': `[[${programLevel}]]`,
+            Status: status,
+            'Current Year': i === currentIdx,
+            'Target Years': programDuration,
+            'Earned Credits': 0,
+            'Target Credits': 0,
+            'Cumulative GPA': 0.00
+          })
+        }
+      }
+
+      // 3. Finalize all configuration in ONE call to prevent race conditions in App.tsx
       await saveConfig({
         obsidianVaultPath: vaultPath,
         aiApiKey: apiKey,
@@ -77,10 +110,10 @@ export default function Onboarding() {
         inboxPath: `${vaultPath}/Inbox`,
         academicFolderPath: 'Notes',
         autoDeploy: true,
-        isActivated: true
+        isActivated: true,
+        isProgramConfigured: true
       })
 
-      await sidecarApi.academicsSyncProfile()
       setFinalStatus('done')
     } catch (err: any) {
       setFinalError(err.message || 'Setup failed. Check your vault path and try again.')
@@ -107,7 +140,7 @@ export default function Onboarding() {
         {/* Step indicator */}
         {finalStatus === 'idle' || finalStatus === 'error' ? (
           <div className="flex items-center gap-3 mb-10">
-            {[1, 2, 3, 4].map((s) => (
+            {[1, 2, 3, 4, 5].map((s) => (
               <div key={s} className="flex items-center gap-3">
                 <div
                   className={cn(
@@ -119,11 +152,11 @@ export default function Onboarding() {
                       : "bg-border"
                   )}
                 />
-                {s < 4 && <div className="w-8 h-px bg-border" />}
+                {s < 5 && <div className="w-8 h-px bg-border" />}
               </div>
             ))}
             <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-2">
-              Step {step} of 4
+              Step {step} of 5
             </span>
           </div>
         ) : null}
@@ -138,7 +171,7 @@ export default function Onboarding() {
               <div className="h-full bg-foreground w-full origin-left animate-none" />
             </div>
             <p className="text-[11px] font-mono text-muted-foreground uppercase">
-              Syncing vault profile...
+              Scaffolding academic roadmap...
             </p>
           </div>
         )}
@@ -153,7 +186,7 @@ export default function Onboarding() {
               Welcome, {name.split(' ')[0] || 'User'}
             </h1>
             <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-10 max-w-[320px]">
-              Your intelligence dashboard is now synchronized with your vault. Step into your high-fidelity pedagogical workspace.
+              Your intelligence dashboard is now synchronized with your vault and academic program. Step into your high-fidelity pedagogical workspace.
             </p>
             <button
               onClick={() => navigate('/obsidian')}
@@ -362,17 +395,121 @@ export default function Onboarding() {
           </div>
         )}
 
-        {/* Step 4 — Confirm */}
+        {/* Step 4 — Academic Program */}
         {(finalStatus === 'idle' || finalStatus === 'error') && step === 4 && (
           <div className="flex flex-col items-start w-full">
             <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
               Step 4
             </div>
             <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
+              Your Academic Program
+            </h1>
+            <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-8">
+              Define your course of study to scaffold your local knowledge roadmap.
+            </p>
+
+            <div className="w-full space-y-6 mb-8">
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+                  Program Name
+                </div>
+                <input
+                  type="text"
+                  placeholder="e.g. Computer Science"
+                  value={programName}
+                  onChange={(e) => setProgramName(e.target.value)}
+                  className="w-full bg-card border border-border focus:border-foreground px-3 py-2.5 text-[12px] font-bold outline-none text-foreground uppercase tracking-widest"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+                    Level
+                  </div>
+                  <select 
+                    value={programLevel}
+                    onChange={(e) => setProgramLevel(e.target.value)}
+                    className="w-full bg-card border border-border focus:border-foreground px-3 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer"
+                  >
+                    {['Undergraduate', 'Graduate', 'Doctorate', 'Professional'].map(lvl => (
+                      <option key={lvl} value={lvl}>{lvl}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+                    Duration (Years)
+                  </div>
+                  <select 
+                    value={programDuration}
+                    onChange={(e) => setProgramDuration(Number(e.target.value))}
+                    className="w-full bg-card border border-border focus:border-foreground px-3 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer"
+                  >
+                    {[1,2,3,4,5,6,7,8].map(y => (
+                      <option key={y} value={y}>{y} Year{y > 1 ? 's' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+                  Current Year
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {Array.from({length: programDuration}).map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setProgramCurrentYear(i + 1)}
+                      className={cn(
+                        "px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border transition-none",
+                        programCurrentYear === i + 1
+                          ? "bg-foreground text-background border-foreground"
+                          : "bg-card text-muted-foreground border-border hover:border-foreground hover:text-foreground"
+                      )}
+                    >
+                      Year {i + 1}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleBack}
+                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={!programName}
+                className={cn(
+                  "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border",
+                  programName
+                    ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
+                    : "bg-muted text-muted-foreground cursor-not-allowed border-border"
+                )}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 5 — Confirm */}
+        {(finalStatus === 'idle' || finalStatus === 'error') && step === 5 && (
+          <div className="flex flex-col items-start w-full">
+            <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+              Step 5
+            </div>
+            <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
               Confirm Setup
             </h1>
             <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-8">
-              Review your settings before launching.
+              Review your configuration before generating your vault roadmap.
             </p>
 
             <div className="w-full space-y-3 mb-8 p-5 bg-card border border-border">
@@ -384,15 +521,18 @@ export default function Onboarding() {
               </div>
               <div className="h-px bg-border" />
               <div className="flex justify-between items-center">
-                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Provider</span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-foreground">{provider}</span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">AI Intelligence</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-foreground">{apiKey ? `${provider} (Active)` : 'Disabled'}</span>
               </div>
               <div className="h-px bg-border" />
               <div className="flex justify-between items-center">
-                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">API Key</span>
-                <span className="text-[10px] font-mono text-muted-foreground">
-                  {apiKey ? `${apiKey.substring(0, 8)}••••••` : '—'}
-                </span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Program</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-foreground truncate max-w-[150px]">{programName}</span>
+              </div>
+              <div className="h-px bg-border" />
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Current Level</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Year {programCurrentYear} / {programDuration}</span>
               </div>
             </div>
 

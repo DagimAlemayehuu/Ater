@@ -28,37 +28,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // Verify code still valid and get status
-    const { data, error } = await supabase
-      .from('waiting_list')
-      .select('status, full_name')
-      .eq('email', config.activationEmail)
-      .eq('activation_code', config.activationCode)
-      .single()
+    // ── OPTIMISTIC AUTH (v33.2) ──
+    // If we have local activation, assume success immediately to skip "Verifying" screen.
+    // We check in the background and only kick them out if definitively revoked.
+    setLoading(false)
+    setStatus('approved')
 
-    if (error) {
-      // ── OFFLINE RESILIENCE (v33.1) ──
-      // If it's a network error or server error, DO NOT log out.
-      // Only log out if it's a definitive "Not Found" error (PGRST116).
-      if (error.code === 'PGRST116') {
-        console.warn('[Auth] Activation code invalid or revoked. Deactivating...');
+    try {
+      const { data, error } = await supabase
+        .from('waiting_list')
+        .select('status, full_name')
+        .eq('email', config.activationEmail)
+        .eq('activation_code', config.activationCode)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.warn('[Auth] Activation code invalid or revoked. Deactivating...');
+          await saveConfig({ isActivated: false, activationEmail: '', activationCode: '' })
+          setStatus(null)
+          setProfile(null)
+        } else {
+          console.warn('[Auth] Network failure during verification. Maintaining session.')
+        }
+      } else if (!data) {
         await saveConfig({ isActivated: false, activationEmail: '', activationCode: '' })
         setStatus(null)
         setProfile(null)
       } else {
-        console.warn('[Auth] Network failure during verification. Preserving local session.')
-        // Maintain local approval state during outages
-        setStatus('approved')
+        setStatus(data.status as WaitlistStatus)
+        setProfile({ full_name: data.full_name })
       }
-    } else if (!data) {
-      await saveConfig({ isActivated: false, activationEmail: '', activationCode: '' })
-      setStatus(null)
-      setProfile(null)
-    } else {
-      setStatus(data.status as WaitlistStatus)
-      setProfile({ full_name: data.full_name })
+    } catch (err) {
+      console.error('[Auth] Verification failed:', err)
     }
-    setLoading(false)
   }
 
   useEffect(() => {

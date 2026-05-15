@@ -9,7 +9,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { saveConfig } = useConfig()
 
   const resetActivation = async () => {
-    await saveConfig({ isActivated: false, activationEmail: '', activationCode: '' })
+    await saveConfig({ 
+      isActivated: false, 
+      activationEmail: '', 
+      activationCode: '',
+      displayName: '',
+      isProgramConfigured: false
+    })
   }
 
   if (loading) {

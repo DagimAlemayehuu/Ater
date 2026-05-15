@@ -28,6 +28,8 @@ export default function WaitlistManager() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
   async function handleUpdate(id: string, action: "approved" | "rejected") {
     setUpdatingId(id);
     const activation_code = action === "approved" ? generateActivationCode() : null;
@@ -56,6 +58,7 @@ export default function WaitlistManager() {
   };
 
   useEffect(() => {
+    setMounted(true);
     fetchEntries();
 
     // Subscribe to realtime changes
@@ -170,7 +173,7 @@ export default function WaitlistManager() {
                         </td>
                         <td className="px-8 py-6">
                           <span className="text-[11px] font-mono text-muted-foreground">
-                            {new Date(entry.created_at).toLocaleDateString()}
+                            {mounted ? new Date(entry.created_at).toLocaleDateString() : "—"}
                           </span>
                         </td>
                         <td className="px-8 py-6">

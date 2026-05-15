@@ -148,49 +148,46 @@ export default function Home() {
         <main className="flex-1 w-full flex flex-col items-center justify-center bg-background relative z-20">
           <div className="max-w-[500px] w-full px-6 text-center">
             <div className="mb-10">
-              <h2 className="text-4xl font-black tracking-tighter uppercase text-foreground">Hey, {userStatus?.full_name?.split(' ')[0] || 'User'}</h2>
+              <h2 className="text-4xl font-black tracking-tighter uppercase text-foreground">Hey, {userStatus?.full_name || 'User'}</h2>
               <p className="text-muted-foreground font-bold uppercase tracking-widest mt-2 text-[12px]">Check your status below.</p>
             </div>
-            <div className="p-10 border border-border bg-card relative overflow-hidden shadow-sm">
-               <div className="relative z-10 text-left">
-                 <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Status</div>
-                 <div className="flex items-center justify-start gap-3">
-                    <div className={cn("size-3", userStatus?.status === 'approved' ? "bg-primary" : userStatus?.status === 'rejected' ? "bg-destructive" : "bg-muted")} />
-                    <span className="text-2xl font-black uppercase tracking-tighter text-foreground">
-                      {userStatus?.status === 'approved' ? "Approved" : userStatus?.status === 'rejected' ? "Rejected" : "Pending"}
-                    </span>
-                 </div>
-                 <p className="text-muted-foreground text-[13px] font-bold mt-6 leading-relaxed uppercase tracking-tight">
-                    {userStatus?.status === 'approved' ? "Your account is approved. Use the code to activate Ater Desktop." : userStatus?.status === 'rejected' ? "Your account was not approved." : "Your account is pending. We will give you a code once approved."}
-                 </p>
-                 {userStatus?.status === 'approved' && userStatus?.activation_code && (
-                    <div className="mt-8 p-6 bg-background border border-border relative group overflow-hidden">
-                      <div className="absolute top-0 right-0 p-3">
-                        <button onClick={() => copyToClipboard(userStatus.activation_code)} className="p-2 hover:bg-accent">
-                          {copied ? <ClipboardCheck className="size-4 text-foreground" /> : <Clipboard className="size-4 text-muted-foreground" />}
-                        </button>
-                      </div>
-                      <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Activation Code</div>
-                      <div className="text-3xl font-mono font-black text-foreground tracking-[0.3em]">{userStatus.activation_code}</div>
-                      {copied && (
-                        <div className="absolute inset-0 bg-background/95 flex items-center justify-center">
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Copied</span>
-                        </div>
-                      )}
-                    </div>
-                 )}
-                 {userStatus?.status === 'approved' && (
-                    <div className="mt-6">
-                       <a href="/download" className="w-full py-4 bg-primary text-primary-foreground flex items-center justify-center gap-3 font-black uppercase tracking-[0.2em] text-[11px] hover:opacity-90">
-                        Download <Download className="size-4" />
-                       </a>
-                    </div>
-                 )}
-               </div>
-               <div className="absolute -bottom-4 -right-4 text-[120px] font-black text-foreground/5 select-none pointer-events-none tracking-tighter">
-                 {userStatus?.status === 'approved' ? "GO" : userStatus?.status === 'rejected' ? "NO" : "WAIT"}
-               </div>
-            </div>
+             <div className="p-10 border border-border bg-card relative overflow-hidden shadow-sm">
+                <div className="relative z-10 text-left">
+                  <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Status</div>
+                  <div className="flex items-center justify-start gap-3">
+                     <div className={cn("size-3", userStatus?.status === 'approved' ? "bg-primary" : userStatus?.status === 'rejected' ? "bg-destructive" : "bg-muted")} />
+                     <span className="text-2xl font-black uppercase tracking-tighter text-foreground">
+                       {userStatus?.status === 'approved' ? "Approved" : userStatus?.status === 'rejected' ? "Rejected" : "Pending"}
+                     </span>
+                  </div>
+                  <p className="text-muted-foreground text-[13px] font-bold mt-6 leading-relaxed uppercase tracking-tight">
+                     {userStatus?.status === 'approved' ? "Your account is approved. Use the code to activate Ater Desktop." : userStatus?.status === 'rejected' ? "Your account was not approved." : "Your account is pending. We will give you a code once approved."}
+                  </p>
+                  {userStatus?.status === 'approved' && userStatus?.activation_code && (
+                     <div className="mt-8 p-6 bg-background border border-border relative group overflow-hidden">
+                       <div className="absolute top-0 right-0 p-3">
+                         <button onClick={() => copyToClipboard(userStatus.activation_code)} className="p-2 hover:bg-accent">
+                           {copied ? <ClipboardCheck className="size-4 text-foreground" /> : <Clipboard className="size-4 text-muted-foreground" />}
+                         </button>
+                       </div>
+                       <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Activation Code</div>
+                       <div className="text-3xl font-mono font-black text-foreground tracking-[0.3em]">{userStatus.activation_code}</div>
+                       {copied && (
+                         <div className="absolute inset-0 bg-background/95 flex items-center justify-center">
+                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Copied</span>
+                         </div>
+                       )}
+                     </div>
+                  )}
+                  {userStatus?.status === 'approved' && (
+                     <div className="mt-6">
+                        <a href="/download" className="w-full py-4 bg-primary text-primary-foreground flex items-center justify-center gap-3 font-black uppercase tracking-[0.2em] text-[11px] hover:opacity-90">
+                         Download <Download className="size-4" />
+                        </a>
+                     </div>
+                  )}
+                </div>
+             </div>
             <button onClick={async () => { await supabase.auth.signOut(); setUserStatus(null); setView("hero"); }} className="mt-12 text-[10px] font-black text-muted-foreground hover:text-foreground uppercase tracking-[0.3em]">Sign Out</button>
           </div>
         </main>
@@ -237,20 +234,45 @@ export default function Home() {
 
 function MockupSection() {
   return (
-    <div className="absolute right-0 bottom-0 w-[75%] h-[95%] pointer-events-none z-10 flex items-end justify-end translate-x-[30%] translate-y-[12%]">
-      <div className="w-full aspect-[16/10.4] bg-[#1A1A1A] rounded-none p-[1px] shadow-[20px_20px_0px_0px_rgba(0,0,0,0.2)] relative flex flex-col border border-white/5">
-        {/* Device Frame / Bezel - Dark Gray, not Pure Black */}
-        <div className="flex-1 bg-[#000000] rounded-none overflow-hidden border-[10px] border-[14px] border-[#000000] relative flex flex-col">
+    <div className="absolute right-0 bottom-0 w-[75%] h-[95%] pointer-events-none z-10 flex items-end justify-end translate-x-[25%] translate-y-[10%] opacity-90">
+      {/* MacBook Chassis / Lid */}
+      <div className="w-full aspect-[16/10.4] bg-[#1a1a1a] rounded-[3rem] p-[2px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.5),0_20px_40px_-10px_rgba(0,0,0,0.3)] relative flex flex-col border border-white/10 overflow-hidden">
+        
+        {/* Subtle Brushed Metal Reflection */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-white/5 via-transparent to-white/5 pointer-events-none" />
+        
+        {/* Screen Bezel (Uniform Dark Black) */}
+        <div className="flex-1 bg-[#050505] rounded-[2.8rem] overflow-hidden p-3 relative flex flex-col m-[2px]">
           
-          {/* Perfect Mac Notch (Squared) */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[20%] h-[26px] bg-[#000000] rounded-none z-20 flex items-center justify-center">
-            <div className="size-1.5 rounded-none bg-[#1A1A1A] border border-white/5 shadow-inner" />
+          {/* MacBook Notch (Deep, Professional, Minimal Rounding) */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[180px] h-[42px] bg-[#050505] z-30 flex items-center justify-center rounded-b-[0.5rem]">
+            {/* Camera & Sensors Cluster */}
+            <div className="flex items-center gap-4 mt-1 opacity-40">
+              <div className="size-1 rounded-full bg-[#111]" />
+              <div className="size-2 rounded-full bg-[#111] border border-white/5 flex items-center justify-center">
+                <div className="size-0.5 rounded-full bg-blue-500/30" />
+              </div>
+              <div className="size-1 rounded-full bg-[#111]" />
+            </div>
           </div>
           
-          <div className="flex-1 bg-background rounded-none overflow-hidden relative shadow-inner border border-white/5">
-             <Image src="/dashboard.png" alt="Ater Dashboard" fill className="object-cover" priority />
+          {/* The Actual Display (Rounded Corners) */}
+          <div className="flex-1 bg-[#000] rounded-[1.8rem] overflow-hidden relative shadow-2xl border border-white/5">
+             <Image 
+                src="/dashboard.png" 
+                alt="Ater Dashboard" 
+                fill 
+                className="object-cover opacity-95 group-hover:opacity-100 transition-opacity" 
+                priority 
+             />
+             
+             {/* Screen Glare / Reflection */}
+             <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none z-20" />
           </div>
         </div>
+
+        {/* Bottom Lip / Opening Notch Indentation */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-1.5 bg-black/40 rounded-t-full" />
       </div>
     </div>
   );

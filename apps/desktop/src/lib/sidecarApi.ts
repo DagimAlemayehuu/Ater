@@ -433,6 +433,9 @@ export const sidecarApi = {
     clearStudyHistory: () =>
         request<{ success: boolean }>('/api/study/reset', { method: 'POST' }),
 
+    factoryReset: () =>
+        request<{ success: boolean }>('/api/system/factory-reset', { method: 'POST' }),
+
     getAiUsage: (keyHash?: string, timeframe: string = 'day') => {
         const params = new URLSearchParams();
         if (keyHash) params.append('key_hash', keyHash);

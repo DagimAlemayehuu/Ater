@@ -42,5 +42,12 @@
       "binaries/ater-api"
     ]
   },
-  "plugins": {}
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ4NkNCRTVENTBEM0RCMEUKUldRTzI5TlFYYjVzMkw2bEhxeXlzdUJtbVBTSWxFTTFlaXN4ZFlvUnIyMVJicGJtTVJnTFQ4ZXEK",
+      "endpoints": [
+        "https://github.com/DagimAlemayehuu/ater/releases/latest/download/update.json"
+      ]
+    }
+  }
 }

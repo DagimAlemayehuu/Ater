@@ -64,6 +64,7 @@ export interface AppConfig {
     activationCode: string;
     machineId: string;
     displayName: string;
+    isProgramConfigured: boolean;
 }
 
 interface ConfigContextType {
@@ -107,6 +108,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     activationCode: '',
     machineId: '',
     displayName: '',
+    isProgramConfigured: false,
 };
 
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -154,6 +156,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const activationEmail = (await store.get<string>('activationEmail')) || '';
                 const activationCode = (await store.get<string>('activationCode')) || '';
                 const displayName = (await store.get<string>('displayName')) || '';
+                const isProgramConfigured = (await store.get<boolean>('isProgramConfigured')) ?? false;
                 
                 let machineId = await store.get<string>('machineId');
                 if (!machineId) {
@@ -186,6 +189,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     activationCode,
                     machineId,
                     displayName,
+                    isProgramConfigured,
                 };
 
                 // Auto-select first key if none active
@@ -233,7 +237,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const isConfigured = Boolean(
-        config?.obsidianVaultPath && config?.displayName
+        config?.obsidianVaultPath && config?.displayName && config?.isProgramConfigured
     );
 
     const addCustomPersona = async (p: CustomPersona) => {

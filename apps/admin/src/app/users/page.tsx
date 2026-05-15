@@ -16,22 +16,24 @@ type UserProfile = {
 export default function UsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
+    let isMounted = true;
+    setMounted(true);
     const loadUsers = async () => {
       const { data } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (mounted) {
+      if (isMounted) {
         if (data) setUsers(data);
         setLoading(false);
       }
     };
     loadUsers();
-    return () => { mounted = false; };
+    return () => { isMounted = false; };
   }, []);
 
   return (
@@ -114,7 +116,7 @@ export default function UsersPage() {
                         Joined
                       </div>
                       <div className="text-[11px] font-mono font-bold text-foreground">
-                        {new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                        {mounted ? new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' }) : "—"}
                       </div>
                     </div>
                   </div>
