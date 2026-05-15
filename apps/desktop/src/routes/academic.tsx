@@ -181,13 +181,12 @@ export default function AcademicDashboard() {
 }
 }, [fetchData])
 
- const onDelete = useCallback(async (dbId: string, itemId: string) => {
- if (!window.confirm('Delete this item? This cannot be undone.')) return
- try {
- await sidecarApi.deleteVaultRow(dbId, itemId)
- fetchData()
-} catch {toast.error('Delete failed')}
-}, [fetchData])
+  const onDelete = useCallback(async (dbId: string, itemId: string) => {
+    try {
+      await sidecarApi.deleteVaultRow(dbId, itemId)
+      fetchData()
+    } catch {toast.error('Delete failed')}
+  }, [fetchData])
 
  const handleSync = useCallback(async () => {
  try {

@@ -86,6 +86,16 @@ class AterQueueManager:
         # Register status callback for real-time persistence
         self.service.register_status_callback(self.update_status_message)
 
+    def update_status_message(self, session_id: str, message: str):
+        """Updates the database with a real-time status message."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.execute("UPDATE queue SET status_message = ? WHERE file_path = ?", (message, session_id))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"[Watcher] Failed to update status message: {e}")
+
     def _init_db(self):
         """Initializes the database schema."""
         conn = self._get_conn()
@@ -443,10 +453,10 @@ class AterQueueManager:
         conn = self._get_conn()
         pending_count = conn.execute("SELECT COUNT(*) FROM queue WHERE status = 'pending'").fetchone()[0]
         
-        # Pull real-time progress for the primary active file from DB if available
-        # Pull granular status from DB first
+        current_file = None
         db_status_msg = "Ready"
         primary_path_str = None
+        
         if self.active_tasks:
             primary_path_str = list(self.active_tasks.keys())[0]
             current_file = Path(primary_path_str).name
@@ -501,6 +511,18 @@ class AterQueueManager:
             "processed_notes": self.processed_notes,
             "governor_pressure": governor.current_pressure
         }
+
+    def reset_queue(self):
+        """Cancels all active tasks and clears local state."""
+        for task in self.active_tasks.values():
+            task.cancel()
+        self.active_tasks = {}
+        self.processed_notes = []
+        self.planned_batches = []
+        self.current_batch = 0
+        self.total_batches = 0
+        self.status = "idle"
+        self.last_action = "Ready"
 
     def stop(self):
         if self.observer:

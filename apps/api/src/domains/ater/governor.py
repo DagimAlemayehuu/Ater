@@ -149,6 +149,97 @@ class TokenGovernor:
         except Exception as e:
             return {"key_hash": self._current_key_hash, "error": str(e)}
 
+    def get_aggregated_usage(self, key_hash: str = None, timeframe: str = "day") -> dict:
+        """
+        Returns aggregated usage for a specific key and timeframe.
+        Timeframes: day (24h), week (7d), month (30d), year (365d)
+        Use key_hash="all" for system-wide total.
+        """
+        if not key_hash:
+            key_hash = self._current_key_hash
+            
+        days = {"day": 1, "week": 7, "month": 30, "year": 365}
+        d = days.get(timeframe, 1)
+        cutoff = time.time() - (d * 24 * 3600)
+        
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Total usage
+                if key_hash == "all":
+                    cursor.execute(
+                        'SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ?',
+                        (cutoff,)
+                    )
+                else:
+                    cursor.execute(
+                        'SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND api_key_hash = ?',
+                        (cutoff, key_hash)
+                    )
+                total_row = cursor.fetchone()
+                
+                # Daily breakdown for charts
+                if timeframe == "day":
+                    if key_hash == "all":
+                        cursor.execute(
+                            "SELECT strftime('%Y-%m-%d %H:00', datetime(timestamp, 'unixepoch')) as hr, SUM(tokens), SUM(requests) "
+                            "FROM usage WHERE timestamp >= ? GROUP BY hr ORDER BY hr ASC",
+                            (cutoff,)
+                        )
+                    else:
+                        cursor.execute(
+                            "SELECT strftime('%Y-%m-%d %H:00', datetime(timestamp, 'unixepoch')) as hr, SUM(tokens), SUM(requests) "
+                            "FROM usage WHERE timestamp >= ? AND api_key_hash = ? GROUP BY hr ORDER BY hr ASC",
+                            (cutoff, key_hash)
+                        )
+                else:
+                    if key_hash == "all":
+                        cursor.execute(
+                            "SELECT strftime('%Y-%m-%d', datetime(timestamp, 'unixepoch')) as dt, SUM(tokens), SUM(requests) "
+                            "FROM usage WHERE timestamp >= ? GROUP BY dt ORDER BY dt ASC",
+                            (cutoff,)
+                        )
+                    else:
+                        cursor.execute(
+                            "SELECT strftime('%Y-%m-%d', datetime(timestamp, 'unixepoch')) as dt, SUM(tokens), SUM(requests) "
+                            "FROM usage WHERE timestamp >= ? AND api_key_hash = ? GROUP BY dt ORDER BY dt ASC",
+                            (cutoff, key_hash)
+                        )
+                
+                breakdown = [{"label": r[0], "tokens": r[1], "requests": r[2]} for r in cursor.fetchall()]
+                
+                return {
+                    "key_hash": key_hash,
+                    "timeframe": timeframe,
+                    "total_tokens": total_row[0] or 0,
+                    "total_requests": total_row[1] or 0,
+                    "breakdown": breakdown
+                }
+        except Exception as e:
+            return {"error": str(e)}
+
+    def get_all_keys_usage(self, timeframe: str = "day") -> list:
+        """Returns a summary of usage for all keys tracked in the DB."""
+        days = {"day": 1, "week": 7, "month": 30, "year": 365}
+        d = days.get(timeframe, 1)
+        cutoff = time.time() - (d * 24 * 3600)
+        
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    'SELECT api_key_hash, SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? GROUP BY api_key_hash',
+                    (cutoff,)
+                )
+                return [{
+                    "key_hash": r[0],
+                    "used_tpd": r[1] or 0,
+                    "used_rpd": r[2] or 0
+                } for r in cursor.fetchall()]
+        except Exception as e:
+            return []
+
     def _init_db(self):
         with sqlite3.connect(self.db_path) as conn:
             conn.execute('''

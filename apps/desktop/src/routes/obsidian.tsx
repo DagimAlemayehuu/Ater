@@ -1328,7 +1328,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  setHubConnections(null)
 }
 } catch (err: any) {
- alert(`Delete failed: ${err.message}`)
+ toast.error(`Delete failed: ${err.message}`)
 }
 }
 
@@ -1356,7 +1356,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  selectFile(fullPath)
 }
 } catch (err: any) {
- alert(`Creation failed: ${err.message}`)
+ toast.error(`Creation failed: ${err.message}`)
 }
 }
 
@@ -1386,7 +1386,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  setRenamingPath(null)
  setNewItemName('')
 } catch (err: any) {
-  alert(`Rename failed: ${err.message}`)
+  toast.error(`Rename failed: ${err.message}`)
  }
 }
 
@@ -1863,7 +1863,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
    if (selectedPath === sourcePath) setSelectedPath(newPath)
   } catch (err: any) {
    console.error("Move failed:", err)
-   alert(`Move failed: ${err.message}`)
+   toast.error(`Move failed: ${err.message}`)
   } finally {
    setDraggedPath(null)
   }

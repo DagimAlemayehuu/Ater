@@ -42,6 +42,17 @@ class AterService:
     _session_file = Path.home() / ".ater" / "ater" / "sessions.json"
     _status_callback: Optional[Any] = None # (session_id, message) -> None
 
+    @classmethod
+    def clear_sessions(cls):
+        """Wipes all active and persisted sessions."""
+        cls._sessions = {}
+        cls._status = {}
+        if cls._session_file.exists():
+            try:
+                cls._session_file.unlink()
+            except Exception as e:
+                logger.error(f"[Ater Service] Failed to delete session file: {e}")
+
     def __init__(self, secrets):
         self.secrets = secrets
         self.vm = VaultManager(secrets.vault_path, academic_root=secrets.academic_path)

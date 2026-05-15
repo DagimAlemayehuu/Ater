@@ -91,7 +91,7 @@ export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMo
         <div className="space-y-4">
             <div className="flex items-center justify-between mb-2">
                 <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <Activity size={14} /> Usage Health
+                    Usage Health
                 </h3>
                 <div className="flex items-center gap-3">
                     <span className="text-[9px] font-medium text-muted-foreground bg-muted px-2 py-0.5 uppercase tracking-tighter">Real-time</span>
@@ -131,7 +131,6 @@ export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMo
                                 
                                 {limit.retry_after ? (
                                     <div className="flex items-center gap-1.5 px-2 py-1 bg-destructive text-destructive-foreground">
-                                        <Clock size={12} />
                                         <span className="text-[9px] font-black uppercase tracking-tighter">Throttled: {limit.retry_after}s</span>
                                     </div>
                                 ) : (
@@ -141,7 +140,6 @@ export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMo
                                         isLow ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
                                         "bg-green-500/10 text-green-500 border-green-500/20"
                                     )}>
-                                        <Zap size={10} className={cn(isLow ? "" : "fill-current")} />
                                         <span className="text-[9px] font-black uppercase tracking-tighter">
                                             {isCritical ? 'Critical' : isLow ? 'Low' : 'Healthy'}
                                         </span>
@@ -211,7 +209,7 @@ export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMo
                                     </div>
                                     <div className="pt-2 border-t border-border/30 flex items-center justify-between">
                                         <span className="text-[9px] font-black text-primary/40 uppercase tracking-widest flex items-center gap-1">
-                                            <BarChart3 size={10} /> Session
+                                            Session
                                         </span>
                                         <span className="text-[11px] font-black tabular-nums text-primary">{(limit.total_tokens/1000).toFixed(1)}k</span>
                                     </div>

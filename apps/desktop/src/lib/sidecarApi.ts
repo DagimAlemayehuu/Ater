@@ -74,15 +74,6 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         'X-AI-Key': config.aiApiKey || config.geminiApiKey || '',
         'X-AI-Model': config.aiModel || 'gemini-2.0-flash',
         
-        // Tiered Reasoning
-        'X-Planner-Provider': config.plannerProvider || config.aiProvider || 'google',
-        'X-Planner-Key': config.plannerApiKey || config.aiApiKey || config.geminiApiKey || '',
-        'X-Planner-Model': config.plannerModel || config.aiModel || 'gemini-2.0-flash',
-
-        'X-Utility-Provider': config.utilityProvider || config.aiProvider || 'google',
-        'X-Utility-Key': config.utilityApiKey || config.plannerApiKey || config.aiApiKey || config.geminiApiKey || '',
-        'X-Utility-Model': config.utilityModel || config.aiModel || 'gemini-1.5-flash-8b',
-
         'X-Vault-Path': config.obsidianVaultPath,
         'X-Inbox-Path': config.inboxPath || '',
         'X-Academic-Path': config.academicFolderPath || 'Database',
@@ -224,7 +215,7 @@ export const sidecarApi = {
         request<{ backlinks: any[] }>(`/api/vault/backlinks?page_name=${encodeURIComponent(pageName)}`),
 
     // ── AI & Agents ─────────────────────────────────────────
-    testAiConnection: (target: 'primary' | 'planner' | 'utility' = 'primary') =>
+    testAiConnection: (target: 'primary' = 'primary') =>
         request<{ success: boolean; message?: string; error?: string }>('/api/ai/test-connection', {
             method: 'POST',
             body: JSON.stringify({ target })
@@ -438,6 +429,19 @@ export const sidecarApi = {
     
     getStudyHistory: () =>
         request<{ sessions: any[]; telemetry: any[]; practice: any[] }>('/api/study/history'),
+
+    clearStudyHistory: () =>
+        request<{ success: boolean }>('/api/study/reset', { method: 'POST' }),
+
+    getAiUsage: (keyHash?: string, timeframe: string = 'day') => {
+        const params = new URLSearchParams();
+        if (keyHash) params.append('key_hash', keyHash);
+        params.append('timeframe', timeframe);
+        return request<any>(`/api/ai/usage?${params.toString()}`);
+    },
+
+    getAllKeysUsage: (timeframe: string = 'day') =>
+        request<any[]>(`/api/ai/usage/all?timeframe=${timeframe}`),
 
     // ── Spaced Repetition (SRS) & Analytics ─────────────────
     srsReview: (notePath: string, rating: number) =>

@@ -170,6 +170,21 @@ async def get_rate_limits():
     """Returns the current captured rate limit state for all providers."""
     return tracker.get_all()
 
+@app.get("/api/ai/usage")
+async def get_ai_usage(
+    key_hash: Optional[str] = Query(None),
+    timeframe: str = Query("day")
+):
+    """Returns aggregated usage stats for a specific key and timeframe."""
+    from src.domains.ater.governor import governor
+    return governor.get_aggregated_usage(key_hash, timeframe)
+
+@app.get("/api/ai/usage/all")
+async def get_all_ai_usage(timeframe: str = Query("day")):
+    """Returns usage summary for all tracked keys."""
+    from src.domains.ater.governor import governor
+    return governor.get_all_keys_usage(timeframe)
+
 @app.get("/api/obsidian/files")
 def list_obsidian_files(secrets: AppSecrets = Depends(get_app_secrets)):
     """
@@ -1185,6 +1200,37 @@ async def get_study_history(
             "telemetry": telemetry,
             "practice": practice
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/study/reset")
+async def reset_study_history(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Clears all study sessions, telemetry, and practice logs."""
+    if not secrets.inbox_path:
+        raise HTTPException(status_code=400, detail="Inbox Path not configured")
+    
+    db_path = Path(secrets.inbox_path) / "ater_queue.db"
+    if not db_path.exists():
+        return {"success": True, "message": "Database already empty"}
+    
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.execute("DELETE FROM study_sessions")
+        conn.execute("DELETE FROM study_telemetry")
+        conn.execute("DELETE FROM practice_log")
+        conn.execute("DELETE FROM note_srs")
+        conn.execute("DELETE FROM queue")
+        conn.commit()
+        conn.close()
+        
+        # Clear service and watcher state
+        AterService.clear_sessions()
+        if ater_watcher:
+            ater_watcher.reset_queue()
+            
+        return {"success": True, "message": "Study history and queue purged successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
