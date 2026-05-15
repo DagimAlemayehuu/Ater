@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useConfig } from '@/lib/ConfigContext'
+import { sidecarApi } from '@/lib/sidecarApi'
 
 export type WaitlistStatus = 'pending' | 'approved' | 'rejected'
 
@@ -127,8 +128,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Profile not found.')
       }
 
-      // Check 1: Key Match
-      if (code !== profile.activation_code) {
+      // Check 1: Key Match (Case-Insensitive)
+      if (code.toUpperCase() !== profile.activation_code?.toUpperCase()) {
         throw new Error('Invalid activation code for this account.')
       }
 

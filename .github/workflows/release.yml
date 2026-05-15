@@ -98,7 +98,7 @@ jobs:
             mv dist/ater-api apps/desktop/src-tauri/binaries/$TARGET
           fi
 
-      - name: Install Frontend Dependencies
+      - name: Install All Monorepo Dependencies
         run: pnpm install --frozen-lockfile
 
       - uses: tauri-apps/tauri-action@v0
