@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Save, Database, Shield, Globe, Terminal } from "lucide-react";
 
@@ -14,7 +13,6 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState(false);
 
   async function fetchSettings() {
-    setLoading(true);
     const { data, error } = await supabase
       .from('app_settings')
       .select('*')
@@ -44,13 +42,16 @@ export default function SettingsPage() {
       if (error) throw error;
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "An unknown error occurred";
+      setError(message);
     }
     setSaving(false);
   }
 
-  useEffect(() => { fetchSettings(); }, []);
+  useEffect(() => {
+    fetchSettings();
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background text-foreground font-sans">

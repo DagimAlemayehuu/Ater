@@ -1,21 +1,10 @@
 "use client";
 
 import { useTheme } from "@/components/theme-provider";
-import { Sun, Moon, Wifi } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { Sun, Moon } from "lucide-react";
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
-  const [isLive, setIsLive] = useState(true);
-
-  // Simulate a slight pulse or check (static)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsLive(prev => !prev);
-    }, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-md flex items-center justify-between px-8 z-50">

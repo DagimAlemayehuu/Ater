@@ -43,18 +43,44 @@ export default function WaitlistManager() {
     setUpdatingId(null);
   }
 
-  async function fetchEntries() {
+  const fetchEntries = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("waiting_list")
       .select("*")
       .order("created_at", { ascending: false });
-    if (data) setEntries(data);
+    if (!error && data) {
+      setEntries(data);
+    }
     setLoading(false);
-  }
+  };
 
   useEffect(() => {
     fetchEntries();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel("admin-waitlist-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "waiting_list" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            setEntries((prev) => [payload.new as Entry, ...prev]);
+          } else if (payload.eventType === "UPDATE") {
+            setEntries((prev) =>
+              prev.map((e) => (e.id === payload.new.id ? { ...e, ...(payload.new as Entry) } : e))
+            );
+          } else if (payload.eventType === "DELETE") {
+            setEntries((prev) => prev.filter((e) => e.id === payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filtered = entries.filter(

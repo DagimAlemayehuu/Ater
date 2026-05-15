@@ -81,11 +81,11 @@
     @apply h-full overflow-hidden;
   }
 
-  /* Disable all animations globally */
+  /* Restore fluid motion with premium easing */
   *, ::before, ::after {
-    animation-duration: 0s !important;
-    animation-delay: 0s !important;
-    transition-duration: 0s !important;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
   }
 }
 

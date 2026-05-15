@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, Activity, Shield, MoreHorizontal, Mail, Calendar } from "lucide-react";
+import { User, Activity, MoreHorizontal, Mail, Calendar } from "lucide-react";
 
 type UserProfile = {
   id: string;
@@ -18,18 +17,22 @@ export default function UsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
-  async function fetchUsers() {
-    setLoading(true);
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (data) setUsers(data);
-    setLoading(false);
-  }
-
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    let mounted = true;
+    const loadUsers = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (mounted) {
+        if (data) setUsers(data);
+        setLoading(false);
+      }
+    };
+    loadUsers();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background text-foreground font-sans">

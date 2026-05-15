@@ -10,7 +10,7 @@
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules",
     "sidecar:dev": "cd apps/api && uv run python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8765 --reload",
-    "dev:all": "concurrently --kill-others --kill-others-on-fail --names 'SIDECAR,TAURI' --prefix-colors 'blue,green' \"pnpm run sidecar:dev\" \"cd apps/desktop && pnpm tauri:dev\"",
+    "dev:all": "concurrently --kill-others --kill-others-on-fail --names 'SIDECAR,TAURI' --prefix-colors 'blue,green' \"lsof -ti:8765 | xargs kill -9 2>/dev/null || true && pnpm run sidecar:dev\" \"sleep 3 && cd apps/desktop && pnpm tauri:dev\"",
     "safe-commit": "bash ./.system/scripts/safe-commit.sh",
     "graph:update": "uv tool run --from graphifyy graphify update ."
   },

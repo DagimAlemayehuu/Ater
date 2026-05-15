@@ -125,7 +125,7 @@ export function AppHeader() {
 
       {/* Right: Actions */}
       <div className="flex items-center justify-end gap-3 shrink-0 z-10">
-        <div className="hidden md:flex flex-col items-end mr-2">
+        <div className="flex flex-col items-end mr-2">
           <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/30 leading-none mb-0.5">Authorized User</span>
           <span className="text-[10px] font-black uppercase tracking-widest text-foreground/80 leading-none">{config?.displayName || 'Ater User'}</span>
         </div>

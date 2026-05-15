@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, {useState, useEffect} from 'react'
+import React, {useState, useEffect, useRef} from 'react'
 import {cn} from '@/lib/utils'
 import {useConfig, SavedApiKey} from '@/lib/ConfigContext'
 import {sidecarApi} from '@/lib/sidecarApi'
@@ -74,35 +74,26 @@ export default function Settings() {
     loading: false, success: null, message: ''
   })
 
-  useEffect(() => {
-    if (config) {
-      setPomodoroEdit(prev => {
-        if (prev.work === config.pomodoroWorkDuration && 
-            prev.short === config.pomodoroShortBreakDuration &&
-            prev.long === config.pomodoroLongBreakDuration &&
-            prev.sessions === config.pomodoroSessionsBeforeLongBreak) {
-          return prev;
-        }
-        return {
-          work: config.pomodoroWorkDuration,
-          short: config.pomodoroShortBreakDuration,
-          long: config.pomodoroLongBreakDuration,
-          sessions: config.pomodoroSessionsBeforeLongBreak
-        };
-      });
-      
-      setVaultEdit({
-        vaultPath: config.obsidianVaultPath || '',
-        inboxPath: config.inboxPath || '',
-        academicPath: config.academicFolderPath || 'Notes',
-        autoDeploy: config.autoDeploy || false
-      });
-
-      setProfileEdit({
-        name: config.displayName || ''
-      });
-    }
-  }, [config])
+  // Sync config to local edits on change
+  const prevConfigId = useRef(config?.id);
+  if (config && prevConfigId.current !== config.id) {
+    prevConfigId.current = config.id;
+    setPomodoroEdit({
+      work: config.pomodoroWorkDuration,
+      short: config.pomodoroShortBreakDuration,
+      long: config.pomodoroLongBreakDuration,
+      sessions: config.pomodoroSessionsBeforeLongBreak
+    });
+    setVaultEdit({
+      vaultPath: config.obsidianVaultPath || '',
+      inboxPath: config.inboxPath || '',
+      academicPath: config.academicFolderPath || 'Notes',
+      autoDeploy: config.autoDeploy || false
+    });
+    setProfileEdit({
+      name: config.displayName || ''
+    });
+  }
 
   const startAiEdit = () => {
     setEditingKey('primary_engine')

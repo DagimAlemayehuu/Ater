@@ -250,58 +250,58 @@ def infer_unit_prerequisites(unit_dir: Path):
             print(f"[PrereqInfer] {note_file.stem}: {prereqs}")
 
 def enforce_gutter(unit_dir: Path):
+    """
+    Enforces the Ater Gutter Law (v33.0):
+    EXACTLY one blank line BEFORE and AFTER every heading, table, code block, and diagram.
+    """
     PATTERNS = [
-        r'(^#{1,3} .+)',           # headings
-        r'(^```)',                  # code fence
-        r'(^---$)',                 # horizontal rule
+        r'^#{1,6}\s+',          # Headings
+        r'^```',                 # Code fences
+        r'^---$',                # Horizontal rules
+        r'^>\s+\*\*.+\*\*',      # Artifact labels
     ]
     combined = re.compile('|'.join(PATTERNS))
-    
+
     def is_table_row(l):
         s = l.strip()
         return s.startswith('|') and s.endswith('|') and len(s) > 1
 
     for note_file in unit_dir.glob("*.md"):
-        lines = note_file.read_text(encoding="utf-8").split('\n')
-        result = []
-        for i, line in enumerate(lines):
-            match = combined.match(line.strip())
-            is_tr = is_table_row(line)
-            is_prev_tr = i > 0 and is_table_row(lines[i-1])
-            
-            needs_blank_before = False
-            if match and result and result[-1].strip() != '':
-                needs_blank_before = True
-            if is_tr and not is_prev_tr and result and result[-1].strip() != '':
-                needs_blank_before = True
-                
-            if needs_blank_before:
-                result.append('')
-                
-            result.append(line)
-            
-        final_lines = result
-        final_result = []
+        content = note_file.read_text(encoding="utf-8")
+        # Split into lines and strip trailing whitespace
+        lines = [line.rstrip() for line in content.split('\n')]
         
-        for i, line in enumerate(final_lines):
-            final_result.append(line)
-            match = combined.match(line.strip())
-            is_tr = is_table_row(line)
-            is_next_tr = i + 1 < len(final_lines) and is_table_row(final_lines[i+1])
+        processed = []
+        for i, line in enumerate(lines):
+            is_gutter_line = bool(combined.match(line.strip())) or is_table_row(line)
             
-            needs_blank_after = False
-            if match and i + 1 < len(final_lines) and final_lines[i+1].strip() != '':
-                needs_blank_after = True
-            if is_tr and not is_next_tr and i + 1 < len(final_lines) and final_lines[i+1].strip() != '':
-                needs_blank_after = True
-                
-            if needs_blank_after:
-                final_result.append('')
+            # 1. Before Logic
+            if is_gutter_line and processed:
+                # If the previous line is not blank, add one
+                if processed[-1].strip() != '':
+                    processed.append('')
+                # If there are multiple blank lines before, collapse them (not handled here, handled in final pass)
+            
+            processed.append(line)
+            
+            # 2. After Logic
+            if is_gutter_line and i + 1 < len(lines):
+                # If the next line is not blank, add one
+                if lines[i+1].strip() != '':
+                    processed.append('')
+        
+        # Final pass: Collapse multiple blank lines into single ones
+        final = []
+        for i, line in enumerate(processed):
+            if i > 0 and line.strip() == '' and processed[i-1].strip() == '':
+                continue
+            final.append(line)
+            
+        # Ensure no trailing/leading multiple blanks
+        final_str = '\n'.join(final).strip() + '\n'
+        note_file.write_text(final_str, encoding="utf-8")
+        print(f"[GutterLaw] Sanitized: {note_file.name}")
 
-        final_text = '\n'.join(final_result)
-        if final_text != '\n'.join(lines):
-            note_file.write_text(final_text, encoding="utf-8")
-            print(f"[GutterEnforce] Fixed spacing in: {note_file.name}")
 
 def deduplicate_plan(notes: List[dict], threshold: float = 0.92) -> List[dict]:
     kept = []

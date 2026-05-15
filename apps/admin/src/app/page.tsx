@@ -27,7 +27,6 @@ export default function Dashboard() {
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
   async function fetchStats() {
-    setLoading(true);
     setError(null);
     try {
       const [approvedRes, pendingRes, rejectedRes, logsRes, recentRes] = await Promise.all([
@@ -55,14 +54,42 @@ export default function Dashboard() {
 
       if (recentRes.data) setRecentEntries(recentRes.data);
       setLastRefreshed(new Date());
-    } catch (err: any) {
-      setError(err.message || "Failed to load data.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to load data.";
+      setError(message);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { fetchStats(); }, []);
+  useEffect(() => {
+    fetchStats();
+
+    // Subscribe to realtime changes for waiting_list
+    const channel = supabase
+      .channel("admin-dashboard-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "waiting_list" },
+        () => {
+          // Re-fetch stats when waitlist changes
+          fetchStats();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "usage_logs" },
+        () => {
+          // Re-fetch stats when new usage logs are added (token count)
+          fetchStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const statCards = [
     { label: "Approved", value: stats.totalApproved, sub: "Active users" },

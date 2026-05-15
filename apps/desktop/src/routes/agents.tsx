@@ -100,37 +100,39 @@ function CurriculumPill({
 }
 
 function BatchTreeView({batches, processedNotes}: {batches: any[], processedNotes: any[]}) {
- if (!batches || batches.length === 0) return null;
+  const firstPendingRef = useRef<HTMLDivElement | null>(null);
 
- const processedTitles = new Set(processedNotes?.map((n: any) => {
-   const raw = typeof n === 'string' ? n : (n?.title ?? '');
-   return cleanTitle(raw).toLowerCase();
- }));
+  // Determine sorted list for hook dependency check
+  const processedTitles = useMemo(() => new Set(processedNotes?.map((n: any) => {
+    const raw = typeof n === 'string' ? n : (n?.title ?? '');
+    return cleanTitle(raw).toLowerCase();
+  })), [processedNotes]);
 
- // Flatten all notes, tagged done/pending
- const allNotes: {batchId: number; note: string; isDone: boolean}[] = [];
- batches.forEach((batch: any) => {
-   batch.notes?.forEach((note: string) => {
-     allNotes.push({
-       batchId: batch.id,
-       note,
-       isDone: processedTitles.has(cleanTitle(note).toLowerCase()),
-     });
-   });
- });
+  const allNotes: {batchId: number; note: string; isDone: boolean}[] = [];
+  batches?.forEach((batch: any) => {
+    batch.notes?.forEach((note: string) => {
+      allNotes.push({
+        batchId: batch.id,
+        note,
+        isDone: processedTitles.has(cleanTitle(note).toLowerCase()),
+      });
+    });
+  });
 
- // Done notes float to top, pending follow
- const sorted = [
-   ...allNotes.filter(n => n.isDone),
-   ...allNotes.filter(n => !n.isDone),
- ];
+  const sorted = [
+    ...allNotes.filter(n => n.isDone),
+    ...allNotes.filter(n => !n.isDone),
+  ];
 
- const firstPendingIdx = sorted.findIndex(n => !n.isDone);
- const firstPendingRef = useRef<HTMLDivElement | null>(null);
+  const firstPendingIdx = sorted.findIndex(n => !n.isDone);
 
- useEffect(() => {
-   firstPendingRef.current?.scrollIntoView({behavior: 'smooth', block: 'nearest'});
- }, [firstPendingIdx]);
+  useEffect(() => {
+    if (firstPendingIdx !== -1) {
+      firstPendingRef.current?.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    }
+  }, [firstPendingIdx]);
+
+  if (!batches || batches.length === 0) return null;
 
  return (
  <div className="flex flex-col gap-0.5 overflow-y-auto custom-scrollbar pr-2 pb-4 max-h-[340px]">

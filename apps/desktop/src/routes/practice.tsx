@@ -173,6 +173,14 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
   useEffect(() => { isRevealedRef.current = isRevealed; }, [isRevealed]);
   useEffect(() => { currentQuestionRef.current = currentQuestion; }, [currentQuestion]);
 
+  const [elapsedSec, setElapsedSec] = useState(0);
+  useEffect(() => {
+    if (view === 'results') {
+      const val = Math.round((Date.now() - (window as any).__practiceStartTime || 0) / 1000);
+      setElapsedSec(val);
+    }
+  }, [view]);
+
   // ── Reference Vault handlers ─────────────────────────────────────────────
   const loadVaultFiles = async (hubId: string) => {
     if (!hubId) return
@@ -356,7 +364,7 @@ const handleStartSession = async () => {
  setGradedAnswers({}); 
  setStreak(0); setBookmarked(new Set());
  setView('session');
- (window as any).__practiceStartTime = Date.now();
+  (window as any).__practiceStartTime = Date.now();
  if (advancedConfig.globalTimeLimitMinutes) setGlobalTimeLeft(advancedConfig.globalTimeLimitMinutes * 60);
  if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
 }, 1000);
@@ -384,7 +392,7 @@ const handleStartSession = async () => {
  setIsRevealed(false); 
  setGradedAnswers({}); 
  setView('session');
- (window as any).__practiceStartTime = Date.now();
+  (window as any).__practiceStartTime = Date.now();
 }, 500);
 } catch {
  toast.error('Error loading.'); 
@@ -859,7 +867,7 @@ const handleStartSession = async () => {
  <Command className="bg-transparent">
  <div className="p-3 border-b border-border flex justify-between items-center bg-muted/10">
  <span className="text-[8px] font-black uppercase text-muted-foreground/40">{availableNotes.length} Total</span>
- <Button variant="ghost" size="sm" className="h-7 text-[8px] font-black uppercase" onClick={() => {if (advancedConfig.selectedAtomicNotes.length === availableNotes.length) {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: []}))} else {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: availableNotes.map(n => n.id)}))}}}>Toggle All</Button>
+ <Button variant="ghost" size="default" className="h-7 text-[8px] font-black uppercase" onClick={() => {if (advancedConfig.selectedAtomicNotes.length === availableNotes.length) {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: []}))} else {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: availableNotes.map(n => n.id)}))}}}>Toggle All</Button>
  </div>
  <CommandInput placeholder="Search..." className="h-10 text-[10px] font-black uppercase border-none" />
  <CommandList className="max-h-60 p-1">
@@ -909,7 +917,7 @@ const handleStartSession = async () => {
      </button>
     ))}
    </div>
-   <Button variant="outline" size="sm" onClick={randomizeDistribution} className="h-6 px-2 text-[8px] font-black uppercase border-border/40 hover:bg-foreground/5"><Zap size={10} className="mr-1"/>Random</Button>
+   <Button variant="outline" size="default" onClick={randomizeDistribution} className="h-6 px-2 text-[8px] font-black uppercase border-border/40 hover:bg-foreground/5"><Zap size={10} className="mr-1"/>Random</Button>
   </div>
  </div>
  <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
@@ -1261,9 +1269,9 @@ const handleStartSession = async () => {
  // ──────────────────────────────────────────────────────────────────────────
  // RESULTS RENDERER
  // ──────────────────────────────────────────────────────────────────────────
- if (view === 'results') {
-  const {score, correct, total} = calculateScore();
-  const elapsedSec = Math.round((Date.now() - (window as any).__practiceStartTime || 0) / 1000);
+
+  if (view === 'results') {
+   const {score, correct, total} = calculateScore();
   const avgTime = total > 0 ? Math.round(elapsedSec / total) : 0;
 
   // Per-type breakdown

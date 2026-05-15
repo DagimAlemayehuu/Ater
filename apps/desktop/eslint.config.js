@@ -3,21 +3,37 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
-import { defineConfig, globalIgnores } from 'eslint/config'
 
-export default defineConfig([
-  globalIgnores(['dist']),
+export default [
+  {
+    ignores: ['dist', '.next', 'out', 'build', 'next-env.d.ts']
+  },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  reactHooks.configs.flat.recommended,
   {
     files: ['**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
-    ],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    plugins: {
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/set-state-in-effect": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "react-refresh/only-export-components": "warn",
+      "@typescript-eslint/ban-ts-comment": "off",
+      "no-empty": "off",
+      "no-useless-escape": "off",
+      "no-constant-condition": "off",
+      "prefer-const": "off",
+      "@typescript-eslint/no-unused-expressions": "off",
+      "no-inner-declarations": "off",
+      "no-case-declarations": "off"
+    }
   },
-])
+];

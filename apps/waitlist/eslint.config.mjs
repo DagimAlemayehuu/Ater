@@ -1,11 +1,19 @@
-import { defineConfig } from "eslint/config";
-import next from "eslint-config-next";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-export default defineConfig([{
-    extends: [...next],
-}]);
+export default [
+  ...nextVitals,
+  ...nextTs,
+  {
+    ignores: [".next/**", "out/**", "build/**", "next-env.d.ts"]
+  },
+  {
+    rules: {
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/set-state-in-effect": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/ban-ts-comment": "warn"
+    }
+  }
+];

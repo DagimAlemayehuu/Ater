@@ -79,6 +79,17 @@ async def lifespan(app: FastAPI):
         logger.info("[RAG] Stopping Vault Watcher during shutdown")
         rag_watcher.stop()
 
+# ── SIGNAL HANDLERS (v33.1 Singularity) ──
+def _signal_handler(sig, frame):
+    """Force shutdown of watchers on kill signal."""
+    logger.info(f"[Ater] Signal {sig} received. Purging background services...")
+    if ater_watcher: ater_watcher.stop()
+    if rag_watcher: rag_watcher.stop()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, _signal_handler)
+signal.signal(signal.SIGTERM, _signal_handler)
+
 
 app = FastAPI(
     title="Ater Python Sidecar",

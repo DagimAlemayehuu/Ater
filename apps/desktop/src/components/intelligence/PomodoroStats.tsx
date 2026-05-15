@@ -96,16 +96,16 @@ export default function PomodoroStats() {
              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Analytics Engine</span>
            </div>
            
-           <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-none border border-border">
+           <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-md border border-border">
              {(['OVERALL', 'NOTES', 'PRACTICE'] as const).map(tab => (
                <button 
                  key={tab}
                  onClick={() => setActiveTab(tab)}
                  className={cn(
-                   "px-4 h-7 text-[9px] font-black uppercase tracking-widest rounded-none transition-none",
+                   "px-4 h-7 text-[9px] font-black uppercase tracking-widest rounded-md",
                    activeTab === tab 
                      ? "bg-background text-foreground shadow-sm border border-border/50" 
-                     : "text-muted-foreground/40 hover:text-muted-foreground"
+                     : "text-muted-foreground/40 hover:text-foreground"
                  )}
                >
                  {tab}
@@ -121,7 +121,7 @@ export default function PomodoroStats() {
                   key={f}
                   onClick={() => setTimeFilter(f as any)}
                   className={cn(
-                    "px-4 h-7 text-[10px] font-bold rounded-none transition-none uppercase tracking-widest",
+                    "px-4 h-7 text-[10px] font-bold rounded-md transition-none uppercase tracking-widest",
                     timeFilter === f 
                       ? "bg-background text-foreground shadow-sm border border-border/50" 
                       : "text-muted-foreground/60 hover:text-muted-foreground"
@@ -131,7 +131,7 @@ export default function PomodoroStats() {
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowStats(false)} className="p-2 hover:bg-muted rounded-none border border-transparent hover:border-border transition-none">
+            <button onClick={() => setShowStats(false)} className="p-2 hover:bg-muted rounded-md border border-transparent hover:border-border transition-none">
               <X size={20} className="text-muted-foreground/40" />
             </button>
         </div>

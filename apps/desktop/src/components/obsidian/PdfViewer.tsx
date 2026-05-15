@@ -34,12 +34,15 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     const { theme } = useTheme();
     const [page, setPage] = useState(initialPage);
     
-    // Sync internal page state and trigger iframe jump when prop changes
+    // Sync internal page state when initialPage prop changes (Render-time sync pattern)
+    const prevInitialPage = useRef(initialPage);
+    if (prevInitialPage.current !== initialPage) {
+        prevInitialPage.current = initialPage;
+        setPage(initialPage);
+    }
+
     useEffect(() => {
-        if (page !== initialPage) {
-            setPage(initialPage);
-            handleJump(initialPage);
-        }
+        handleJump(initialPage);
     }, [initialPage]);
 
     const [isFiltered, setIsFiltered] = useState(false);

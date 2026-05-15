@@ -135,7 +135,7 @@ export const TokenTracker: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between border border-border p-6 bg-card">
+      <div className="flex flex-row gap-6 items-center justify-between border border-border p-6 bg-card rounded-md">
         <div>
           <h2 className="text-[14px] font-black uppercase tracking-[0.2em] text-foreground">API Usage</h2>
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter mt-1">Hash: {keyHash}</p>
@@ -147,7 +147,7 @@ export const TokenTracker: React.FC = () => {
             <select 
               value={selectedKeyId}
               onChange={(e) => handleKeyChange(e.target.value)}
-              className="w-48 bg-background border border-border px-3 py-2 text-[11px] font-black uppercase tracking-widest focus:outline-none focus:border-primary appearance-none cursor-pointer"
+              className="w-48 bg-background border border-border px-3 py-2 text-[11px] font-black uppercase tracking-widest focus:outline-none focus:border-primary appearance-none cursor-pointer rounded-md"
             >
               <option value="all">Default Total</option>
               {config?.savedApiKeys.map(k => (
@@ -172,7 +172,7 @@ export const TokenTracker: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-6">
         {keyHash !== 'all' ? (
           <div className="border border-border p-6 bg-card">
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-3">Daily Quota</span>

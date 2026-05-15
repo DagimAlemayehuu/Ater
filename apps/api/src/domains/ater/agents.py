@@ -1162,6 +1162,7 @@ CRITICAL RULES:
 4. FORMAT LAW: Output ONLY the four XML blocks below. No preamble, no explanation, no extra text before <PLAIN_ENGLISH>.
 5. MECHANISM LAW: In CORE_BREAKDOWN, you MUST explain (a) what the concept IS, (b) WHY it exists/matters, (c) HOW it works step by step.
 6. STRUCTURE VIOLATION LAW (CRITICAL): Every single one of the four XML blocks below MUST contain substantive content. An empty tag — e.g. <ACADEMIC_TRANSLATION></ACADEMIC_TRANSLATION> or <MISCONCEPTIONS></MISCONCEPTIONS> — is a TOTAL FAILURE. If a section seems short, write more. You may NOT leave any block empty or with a single word.
+7. NO BULLET POINTS LAW: You are STRICTLY FORBIDDEN from using bullet points or lists in <PLAIN_ENGLISH>, <CORE_BREAKDOWN>, or <ACADEMIC_TRANSLATION>. Use only continuous, analytical paragraphs.
 
 OUTPUT — exactly these four XML blocks and nothing else. The FIRST character of your response must be '<':
 
@@ -1173,9 +1174,9 @@ OUTPUT — exactly these four XML blocks and nothing else. The FIRST character o
 [{domain_h1}: Detailed, mechanistic explanation of "{title_readable}". Structure:
 - WHAT: Define the concept precisely using source language.
 - WHY: Explain the underlying reason this concept exists / its significance.
-- HOW: Walk through the mechanism step-by-step. Use numbers, relationships, or cause-effect chains.
+- HOW: Walk through the mechanism step-by-step. Use continuous paragraphs.
 - CONNECTIONS: Link to 3-5 related concepts using [[Wikilinks]] from the required list.
-Do NOT use the concept title itself as a wikilink.]
+Do NOT use the concept title itself as a wikilink. NO bullet points allowed in this section.]
 </CORE_BREAKDOWN>
 
 <ACADEMIC_TRANSLATION>

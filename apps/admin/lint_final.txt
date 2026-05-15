@@ -1,0 +1,4 @@
+
+> admin@0.1.0 lint /Users/dabodestroyer/code/Antigravity/Ater/apps/admin
+> eslint
+

@@ -130,6 +130,27 @@ class AterValidator:
         if any("HARD_FAILURE" in e for e in errors):
             return False, errors
 
+        # ── 1. No Bullets in Prose Law (v33.0) ───────────────────────────────
+        # Sections 1, 2, and 3 must be continuous prose. Lists/bullets are forbidden.
+        # We check the content before 'The Proving Grounds'
+        prose_boundary = content.lower().find("## the proving grounds")
+        if prose_boundary == -1:
+            prose_boundary = len(content)
+        
+        prose_content = content[:prose_boundary]
+        # Regex to find markdown lists: lines starting with -, *, or 1. (allowing for some indent)
+        # We exclude the artifact block if it's a table or code, which we do by stripping fences/tables first
+        prose_clean = re.sub(r"```.*?```", "", prose_content, flags=re.DOTALL)
+        prose_clean = re.sub(r"\|.*?\|", "", prose_clean) # strip tables
+        
+        list_matches = re.findall(r"^\s*[\-\*\u2022]\s|^\s*\d+\.\s", prose_clean, re.MULTILINE)
+        if list_matches:
+            errors.append(f"BULLET_POINTS_DETECTED: Found {len(list_matches)} list items in prose sections. v33.0 mandates continuous analytical prose ONLY.")
+
+        # ── 1.1 Section Duplication Law (v33.0) ─────────────────────────────
+        if AterValidator.check_section_duplication(content):
+            errors.append("SECTION_DUPLICATION: Near-identical content detected between Mental Model and Core Logic.")
+
         # ── 2. YAML frontmatter ─────────────────────────────────────────────
         yaml_match = re.search(r"^---\s*\n(.*?)\n---\s*(\n|$)", content, re.DOTALL | re.MULTILINE)
         if not yaml_match:

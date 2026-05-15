@@ -67,7 +67,7 @@ export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMo
     if (isLoading && entries.length === 0) {
         return (
             <div className="p-4 flex flex-col items-center justify-center border border-dashed border-border bg-muted/5 gap-2">
-                <div className="h-4 w-4 rounded-none border-2 border-primary border-t-transparent" />
+                <div className="h-4 w-4 rounded-md border-2 border-primary border-t-transparent animate-none" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Connecting Tracker...</span>
             </div>
         );
@@ -115,7 +115,7 @@ export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMo
                             isLow ? "border-muted-foreground/30 bg-muted-foreground/[0.02]" : ""
                         )}>
                             {isActive && (
-                                <div className="absolute top-0 right-0 px-2 py-0.5 bg-primary text-primary-foreground text-[8px] font-black uppercase tracking-widest rounded-none">
+                                <div className="absolute top-0 right-0 px-2 py-0.5 bg-primary text-primary-foreground text-[8px] font-black uppercase tracking-widest rounded-md">
                                     Current
                                 </div>
                             )}

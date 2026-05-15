@@ -238,7 +238,7 @@ export default function Home() {
 function MockupSection() {
   return (
     <div className="absolute right-0 bottom-0 w-[75%] h-[95%] pointer-events-none z-10 flex items-end justify-end translate-x-[30%] translate-y-[12%]">
-      <div className="w-full aspect-[16/10.4] bg-[#1A1A1A] rounded-none p-[1px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative flex flex-col border border-white/5">
+      <div className="w-full aspect-[16/10.4] bg-[#1A1A1A] rounded-none p-[1px] shadow-[20px_20px_0px_0px_rgba(0,0,0,0.2)] relative flex flex-col border border-white/5">
         {/* Device Frame / Bezel - Dark Gray, not Pure Black */}
         <div className="flex-1 bg-[#000000] rounded-none overflow-hidden border-[10px] border-[14px] border-[#000000] relative flex flex-col">
           

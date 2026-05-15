@@ -2341,6 +2341,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 )
                                 if current_note_title not in session.get("processed_notes", []):
                                     session.setdefault("processed_notes", []).append(current_note_title)
+                                
+                                # v33.2: Atomic State Persistence — save progress after every successful deployment
+                                self._persist_session(session_id, session)
                                 break # Success, exit generation loop
 
                             except Exception as e:
