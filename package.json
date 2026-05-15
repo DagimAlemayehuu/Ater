@@ -9,10 +9,8 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules",
-    "build:mobile": "cd apps/mobile-client && pnpm build && cd ../.. && python3 scratch/bundle_scriptable.py",
     "sidecar:dev": "cd apps/api && uv run python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8765 --reload",
-    "dev:mobile": "cd apps/mobile-client && pnpm vite",
-    "dev:all": "concurrently --kill-others --kill-others-on-fail --names 'SIDECAR,MOBILE,TAURI' --prefix-colors 'blue,magenta,green' \"pnpm run sidecar:dev\" \"pnpm run dev:mobile\" \"cd apps/desktop && pnpm tauri:dev\"",
+    "dev:all": "concurrently --kill-others --kill-others-on-fail --names 'SIDECAR,TAURI' --prefix-colors 'blue,green' \"pnpm run sidecar:dev\" \"cd apps/desktop && pnpm tauri:dev\"",
     "safe-commit": "bash ./.system/scripts/safe-commit.sh",
     "graph:update": "uv tool run --from graphifyy graphify update ."
   },
