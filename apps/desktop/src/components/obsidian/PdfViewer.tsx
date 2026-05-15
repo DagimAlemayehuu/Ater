@@ -172,7 +172,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                     <div className="absolute top-3 right-3 z-20">
                         <button
                             onClick={handleAskAI}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-background/80 backdrop-blur border border-border/50 shadow-md rounded-full text-[9px] font-black uppercase tracking-widest text-foreground/50 hover:text-foreground hover:border-foreground/30 hover:bg-background transition-all"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-background/80 backdrop-blur border border-border/50 shadow-md rounded-none text-[9px] font-black uppercase tracking-widest text-foreground/50 hover:text-foreground hover:border-foreground/30 hover:bg-background transition-none"
                             title="Ask AI about this page"
                         >
                             Ask AI

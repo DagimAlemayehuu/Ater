@@ -124,13 +124,13 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
             <button
               onClick={() => { prevSelectionRef.current = ''; triggerInitialExplain(selection) }}
               title="Restart explanation"
-              className="p-1.5 rounded-md text-muted-foreground/30 hover:text-foreground hover:bg-foreground/5 transition-all"
+              className="p-1.5 rounded-none text-muted-foreground/30 hover:text-foreground hover:bg-foreground/5 transition-none"
             >
               <RotateCcw size={12} />
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-md text-muted-foreground/30 hover:text-foreground hover:bg-foreground/5 transition-all"
+              className="p-1.5 rounded-none text-muted-foreground/30 hover:text-foreground hover:bg-foreground/5 transition-none"
             >
               <X size={14} />
             </button>
@@ -155,7 +155,7 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
             <div key={i} className={cn('flex flex-col', msg.role === 'user' ? 'items-end' : 'items-start')}>
               <div
                 className={cn(
-                  'max-w-[95%] rounded-xl px-4 py-3 text-[12px] leading-relaxed',
+                  'max-w-[95%] rounded-none px-4 py-3 text-[12px] leading-relaxed',
                   msg.role === 'user'
                     ? 'bg-foreground/10 border border-border/30 text-foreground'
                     : 'bg-muted/30 border border-border/20 text-foreground/80'
@@ -174,7 +174,7 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
 
           {loading && (
             <div className="flex items-start">
-              <div className="bg-muted/5 border border-border/20 rounded-xl px-4 py-3 flex items-center gap-2">
+              <div className="bg-muted/5 border border-border/20 rounded-none px-4 py-3 flex items-center gap-2">
                 <Loader2 size={11} className="animate-spin text-primary/40" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">
                   Thinking…
@@ -196,12 +196,12 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page }: Expla
               onKeyDown={handleKeyDown}
               placeholder="Ask follow-up..."
               rows={1}
-              className="flex-1 bg-muted/40 border-border/40 rounded-xl px-4 py-2.5 text-[12px] text-foreground placeholder:text-muted-foreground/20 focus:outline-none focus:border-foreground/20 resize-none leading-relaxed custom-scrollbar"
+              className="flex-1 bg-muted/40 border-border/40 rounded-none px-4 py-2.5 text-[12px] text-foreground placeholder:text-muted-foreground/20 focus:outline-none focus:border-foreground/20 resize-none leading-relaxed custom-scrollbar"
             />
             <button
               onClick={sendMessage}
               disabled={!input.trim() || loading}
-              className="h-9 w-9 flex items-center justify-center rounded-xl bg-foreground/10 hover:bg-foreground/20 text-foreground border border-border/40 disabled:opacity-20 disabled:cursor-not-allowed transition-all shrink-0"
+              className="h-9 w-9 flex items-center justify-center rounded-none bg-foreground/10 hover:bg-foreground/20 text-foreground border border-border/40 disabled:opacity-20 disabled:cursor-not-allowed transition-none shrink-0"
             >
               <Send size={13} />
             </button>

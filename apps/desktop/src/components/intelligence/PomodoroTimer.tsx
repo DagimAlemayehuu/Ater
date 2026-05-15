@@ -29,10 +29,10 @@ export default function PomodoroTimer() {
   const currentSettingsTime = mode === 'focus' ? settings.focus : (mode === 'short_break' ? settings.shortBreak : settings.longBreak);
 
   return (
-    <div className="flex flex-col items-center justify-between p-8 bg-background border border-border shadow-[0_40px_120px_rgba(0,0,0,0.1)] dark:shadow-[0_40px_120px_rgba(0,0,0,1)] w-[400px] h-[400px] relative overflow-hidden text-foreground rounded-2xl">
+    <div className="flex flex-col items-center justify-between p-8 bg-background border border-border shadow-[0_40px_120px_rgba(0,0,0,0.1)] dark:shadow-[0_40px_120px_rgba(0,0,0,1)] w-[400px] h-[400px] relative overflow-hidden text-foreground rounded-none">
       {/* Header */}
       <div className="w-full flex items-center justify-between z-10">
-        <button onClick={() => setShowOverlay(false)} className="p-2 hover:bg-muted rounded-lg transition-colors border border-transparent hover:border-border">
+        <button onClick={() => setShowOverlay(false)} className="p-2 hover:bg-muted rounded-none transition-colors border border-transparent hover:border-border">
           <X size={20} className="text-muted-foreground/30" />
         </button>
         <div className="flex items-center gap-1.5">
@@ -41,14 +41,14 @@ export default function PomodoroTimer() {
                setIsActive(false);
                setTimeLeft(currentSettingsTime);
              }}
-             className="p-2 hover:bg-muted rounded-lg border border-transparent hover:border-border transition-all text-muted-foreground/30 hover:text-foreground"
+             className="p-2 hover:bg-muted rounded-none border border-transparent hover:border-border transition-none text-muted-foreground/30 hover:text-foreground"
              title="Reset"
            >
              <RefreshCw size={20} />
            </button>
            <button 
              onClick={() => setShowStats(true)}
-             className="p-2 hover:bg-muted rounded-lg border border-transparent hover:border-border transition-all text-muted-foreground/30 hover:text-foreground"
+             className="p-2 hover:bg-muted rounded-none border border-transparent hover:border-border transition-none text-muted-foreground/30 hover:text-foreground"
              title="Statistics"
            >
              <BarChart2 size={20} />
@@ -84,7 +84,7 @@ export default function PomodoroTimer() {
                   }}
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   className={cn(
-                    "rounded-full transition-colors",
+                    "rounded-none transition-colors",
                     isActiveSession ? "bg-primary shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" : "bg-foreground"
                   )}
                 />
@@ -95,7 +95,7 @@ export default function PomodoroTimer() {
           {/* Circular Play/Pause Button */}
           <button 
             onClick={() => setIsActive(!isActive)}
-            className="w-20 h-20 rounded-full bg-muted/40 border border-border/50 text-foreground flex items-center justify-center shadow-xl hover:bg-muted/60 active:scale-95 transition-all z-10"
+            className="w-20 h-20 rounded-none bg-muted/40 border border-border/50 text-foreground flex items-center justify-center shadow-xl hover:bg-muted/60  transition-none z-10"
           >
             {isActive ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
           </button>
@@ -107,7 +107,7 @@ export default function PomodoroTimer() {
         <div className="absolute top-1/2 -translate-y-1/2 right-4">
           <button 
             onClick={() => setTimeLeft(0)}
-            className="p-3 bg-background border border-border rounded-xl text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all shadow-xl"
+            className="p-3 bg-background border border-border rounded-none text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-none shadow-xl"
             title="Skip"
           >
             <SkipForward size={20} />

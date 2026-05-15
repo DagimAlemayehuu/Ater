@@ -139,7 +139,7 @@ function NoteProperties({
  type="checkbox"
  checked={!!value}
  onChange={(e) => onUpdateProperty(key, e.target.checked)}
- className="h-3.5 w-3.5 rounded border-border/50 bg-transparent text-primary focus:ring-0 cursor-pointer"
+ className="h-3.5 w-3.5 rounded-none border-border/50 bg-transparent text-primary focus:ring-0 cursor-pointer"
  />
  )
 }
@@ -263,7 +263,7 @@ function NoteProperties({
  onClick={() => setSelectedType(opt.id)}
  title={opt.label}
  className={cn(
- "p-1.5 rounded transition-none",
+ "p-1.5 rounded-none transition-none",
  selectedType === opt.id ? "bg-foreground/10 text-foreground" : "text-muted-foreground/20 hover:text-foreground"
  )}
  >
@@ -276,7 +276,7 @@ function NoteProperties({
  <button onClick={() => setIsAdding(false)} className="text-[9px] font-bold text-muted-foreground/30 hover:text-foreground uppercase">Cancel</button>
  <button 
  onClick={() => {if(newName) {onAddProperty(newName, selectedType); setNewName(''); setIsAdding(false);}}}
- className="px-3 py-1 bg-primary text-primary-foreground rounded text-[9px] font-bold uppercase tracking-widest"
+ className="px-3 py-1 bg-primary text-primary-foreground rounded-none text-[9px] font-bold uppercase tracking-widest"
  >
  Add
  </button>
@@ -380,7 +380,7 @@ function KnowledgeFooter({tree, activePath, onNavigate, onFinish}: {tree: NavNod
               onClick={() => onNavigate(prevNode.target!)}
               className="flex items-center gap-3 px-6 py-2.5 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-none border border-border/40 group transition-none"
             >
-              <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+              <ChevronLeft size={16} className="group-hover:-translate-x-1 " />
               <div className="flex flex-col items-start min-w-0">
                 <span className="text-[8px] font-black uppercase tracking-widest opacity-30">Previous Note</span>
                 <span className="text-[10px] font-bold truncate max-w-[150px]">{prevNode.label}</span>
@@ -438,7 +438,7 @@ function KnowledgeFooter({tree, activePath, onNavigate, onFinish}: {tree: NavNod
                 <span className="text-[8px] font-black uppercase tracking-widest opacity-30">Next Note</span>
                 <span className="text-[10px] font-bold truncate max-w-[150px]">{nextNode.label}</span>
               </div>
-              <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              <ChevronRight size={16} className="group-hover:translate-x-1 " />
             </button>
           )}
         </div>
@@ -491,7 +491,7 @@ function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox}: 
  <div key={`${node.target ?? node.label}-${idx}`} className="flex flex-col">
  <div 
  className={cn(
- "group flex items-center gap-1.5 py-1 px-3 rounded-sm cursor-pointer  relative",
+ "group flex items-center gap-1.5 py-1 px-3 rounded-none cursor-pointer  relative",
  active ? "bg-accent text-accent-foreground font-semibold" : "hover:bg-accent/50 text-muted-foreground/80"
  )}
  >
@@ -510,7 +510,7 @@ function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox}: 
  onClick={(e) => {e.stopPropagation(); toggleNode(node.label);}}
  >
  {hasChildren ? (
- <ChevronRight className={cn("w-3 h-3 transition-transform text-muted-foreground/40", isExpanded ? "rotate-90" : "")} />
+ <ChevronRight className={cn("w-3 h-3  text-muted-foreground/40", isExpanded ? "rotate-90" : "")} />
  ) : null}
  </div>
 
@@ -519,7 +519,7 @@ function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox}: 
  checked={node.isChecked} 
  onChange={(e) => onToggleCheckbox(node.label, e.target.checked, node.target)}
  className={cn(
- "h-3 w-3 shrink-0 appearance-none border border-muted-foreground/40 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[3.5px] after:h-[6.5px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer ",
+ "h-3 w-3 shrink-0 appearance-none border border-muted-foreground/40 bg-transparent rounded-none checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[3.5px] after:h-[6.5px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer ",
  node.isChecked && "opacity-30"
  )} 
  />
@@ -728,7 +728,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
             <div className="flex items-center gap-1.5">
               {/* Waypoint Navigation (if multiple) */}
               {waypoints.length > 1 && (
-                <div className="flex items-center gap-1.5 bg-primary/5 px-2 py-0.5 rounded border border-primary/20 h-8">
+                <div className="flex items-center gap-1.5 bg-primary/5 px-2 py-0.5 rounded-none border border-primary/20 h-8">
                   <MapPin size={10} className="text-primary opacity-50 mr-0.5" />
                   <div className="flex items-center gap-1">
                     {waypoints.map((page, idx) => (
@@ -739,7 +739,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                           pdfRef.current?.handleJump(page);
                         }}
                         className={cn(
-                          "w-5 h-5 flex items-center justify-center text-[10px] font-black rounded border transition-none",
+                          "w-5 h-5 flex items-center justify-center text-[10px] font-black rounded-none border transition-none",
                           currentWaypointIndex === idx 
                             ? "bg-foreground/10 border-foreground/50 text-foreground shadow-sm" 
                             : "bg-background/50 border-border/40 text-muted-foreground/60 hover:border-foreground/40 hover:text-foreground"
@@ -753,10 +753,10 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                 </div>
               )}
 
-              <div className="flex items-center gap-1 bg-muted/30 px-2 py-0.5 rounded border border-border/50 h-8">
+              <div className="flex items-center gap-1 bg-muted/30 px-2 py-0.5 rounded-none border border-border/50 h-8">
              <button 
                onClick={() => pdfRef.current?.handlePrev()}
-               className="p-1 hover:bg-background rounded  text-muted-foreground hover:text-foreground"
+               className="p-1 hover:bg-background rounded-none  text-muted-foreground hover:text-foreground"
              >
                <ChevronLeft size={12} />
              </button>
@@ -767,7 +767,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
              </div>
              <button 
                onClick={() => pdfRef.current?.handleNext()}
-               className="p-1 hover:bg-background rounded  text-muted-foreground hover:text-foreground"
+               className="p-1 hover:bg-background rounded-none  text-muted-foreground hover:text-foreground"
              >
                <ChevronRight size={12} />
              </button>
@@ -796,7 +796,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
        setCenterContent(null)
        setRightContent(null)
      }
-  }, [selectedPath, isEditing, isFullscreen, pdfState, noteMetadata, config, saveConfig, setCenterContent, setRightContent, isMobile, setIsFullscreen])
+  }, [selectedPath, isEditing, isFullscreen, pdfState.page, pdfState.pageCount, noteMetadata, config, saveConfig, setCenterContent, setRightContent, isMobile, setIsFullscreen])
  
  // --- Sync & Topology Cache ---
  const currentHubPath = useRef<string | null>(null);
@@ -1840,7 +1840,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }}
  onClick={() => node.isFolder ? toggleFolder(node.path) : selectFile(node.path)}
  className={cn(
-   "flex items-center gap-1.5 py-1 cursor-pointer px-2 group relative rounded-sm mx-1",
+   "flex items-center gap-1.5 py-1 cursor-pointer px-2 group relative rounded-none mx-1",
    isSelected 
     ? "bg-foreground/10 text-foreground font-bold border-l-2 border-foreground/50 shadow-sm" 
     : "hover:bg-foreground/[0.03] text-muted-foreground hover:text-foreground",
@@ -1850,7 +1850,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  >
  <div className="w-4 h-4 shrink-0 flex items-center justify-center">
  {node.isFolder ? (
- <ChevronRight className={cn("w-3 h-3 transition-transform", isExpanded ? "rotate-90" : "")} />
+ <ChevronRight className={cn("w-3 h-3 ", isExpanded ? "rotate-90" : "")} />
  ) : null}
  </div>
  
@@ -1865,7 +1865,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  {isRenaming ? (
  <input
  autoFocus
- className="flex-1 bg-background border border-primary rounded px-1 py-0 text-[12px] outline-none h-5"
+ className="flex-1 bg-background border border-primary rounded-none px-1 py-0 text-[12px] outline-none h-5"
  value={newItemName}
  onChange={(e) => setNewItemName(e.target.value)}
  onKeyDown={(e) => {
@@ -1891,7 +1891,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  setNewItemName('')
  if (!isExpanded) toggleFolder(node.path)
 }}
- className="p-0.5 hover:bg-accent hover:text-foreground rounded "
+ className="p-0.5 hover:bg-accent hover:text-foreground rounded-none "
  title="New file"
  >
  <Plus size={10} />
@@ -1903,14 +1903,14 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  setRenamingPath(node.path)
  setNewItemName(node.name)
 }}
- className="p-0.5 hover:bg-accent hover:text-foreground rounded "
+ className="p-0.5 hover:bg-accent hover:text-foreground rounded-none "
  title="Rename"
  >
  <Edit3 size={10} />
  </button>
  <button
  onClick={(e) => handleDeleteItem(node.path, node.isFolder)}
- className="p-0.5 hover:bg-destructive/10 hover:text-destructive rounded "
+ className="p-0.5 hover:bg-destructive/10 hover:text-destructive rounded-none "
  title="Delete"
  >
  <Trash2 size={10} strokeWidth={2.5} />
@@ -1925,7 +1925,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  {creatingType === 'folder' ? <Folder size={12} className="text-muted-foreground/60" /> : <FileText size={12} className="text-muted-foreground/40" />}
  <input
  autoFocus
- className="flex-1 bg-background border border-primary rounded px-1 py-0 text-[12px] outline-none h-5"
+ className="flex-1 bg-background border border-primary rounded-none px-1 py-0 text-[12px] outline-none h-5"
  placeholder={`New ${creatingType}...`}
  value={newItemName}
  onChange={(e) => setNewItemName(e.target.value)}
@@ -1951,7 +1951,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  {creatingType === 'folder' ? <Folder size={14} className="text-muted-foreground" /> : <FileText size={14} className="text-muted-foreground" />}
  <input
  autoFocus
- className="flex-1 bg-background border border-primary rounded px-1 py-0.5 text-[13px] outline-none"
+ className="flex-1 bg-background border border-primary rounded-none px-1 py-0.5 text-[13px] outline-none"
  placeholder={`New ${creatingType}...`}
  value={newItemName}
  onChange={(e) => setNewItemName(e.target.value)}
@@ -1992,14 +1992,14 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   <div className="p-3 flex items-center justify-between gap-1 border-b border-border/50">
     <div className="flex items-center gap-1 w-full">
       <div 
-        className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 " 
+        className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded-none hover:bg-accent shrink-0 " 
         title="New Note"
         onClick={() => {setCreatingInPath(null); setCreatingType('file'); setNewItemName('');}}
       >
         <Plus className="w-4 h-4" />
       </div>
       <div 
-        className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 " 
+        className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded-none hover:bg-accent shrink-0 " 
         title="New Folder"
         onClick={() => {setCreatingInPath(null); setCreatingType('folder'); setNewItemName('');}}
       >
@@ -2018,7 +2018,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
         </div>
       </div>
       <div 
-        className={cn("cursor-pointer flex items-center justify-center p-1.5 rounded hover:bg-accent shrink-0 ", showGraphView ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground")} 
+        className={cn("cursor-pointer flex items-center justify-center p-1.5 rounded-none hover:bg-accent shrink-0 ", showGraphView ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground")} 
         onClick={() => setShowGraphView(!showGraphView)} 
         title="Toggle Graph View"
       >

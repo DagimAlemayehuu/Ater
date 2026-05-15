@@ -168,7 +168,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  const title = window.prompt('Enter Course Title', 'New Course') || 'New Course'
  onCreate('07 - Courses', title, {Semester: `[[${semester.title}]]`, Status: '[[Active]]'})
 }}
- className="px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase rounded hover:border-foreground/50 ">Add Course</button>
+ className="px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50 ">Add Course</button>
  </div>
  {semCourses.length === 0 && <EmptyState message="No courses linked to this semester." />}
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -272,7 +272,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  const title = window.prompt('Enter Semester Title', 'New Semester') || 'New Semester'
  onCreate('08 - Semesters', title, {Year: `[[${selectedYear.title}]]`, Status: '[[Planned]]'})
 }}
- className="px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase rounded hover:border-foreground/50 ">Add</button>
+ className="px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50 ">Add</button>
  </div>
  {relatedSemesters.length === 0 && <EmptyState message="No semesters yet. Add one above." />}
  <div className="roadmap-container pl-2">
@@ -313,7 +313,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <aside className="w-56 shrink-0 border-r border-border flex flex-col p-5 overflow-hidden">
  <div className="flex items-center justify-between mb-4">
  <span className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/60">Roadmap</span>
- <button onClick={() => setShowSetup(!showSetup)} className="px-2 py-1 bg-foreground/5 text-[7px] font-black uppercase tracking-widest rounded hover:bg-foreground/70  border border-border/10">
+ <button onClick={() => setShowSetup(!showSetup)} className="px-2 py-1 bg-foreground/5 text-[7px] font-black uppercase tracking-widest hover:bg-foreground/70  border border-border/10">
  {showSetup ? 'Back' : (programYears.length > 0 ? 'Edit' : 'Setup')}
  </button>
  </div>

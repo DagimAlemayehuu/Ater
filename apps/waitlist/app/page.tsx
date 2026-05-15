@@ -238,16 +238,16 @@ export default function Home() {
 function MockupSection() {
   return (
     <div className="absolute right-0 bottom-0 w-[75%] h-[95%] pointer-events-none z-10 hidden md:flex items-end justify-end translate-x-[30%] translate-y-[12%]">
-      <div className="w-full aspect-[16/10.4] bg-[#1A1A1A] rounded-t-[24px] xl:rounded-t-[32px] p-[1px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative flex flex-col border-t border-x border-white/5">
+      <div className="w-full aspect-[16/10.4] bg-[#1A1A1A] rounded-none p-[1px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative flex flex-col border border-white/5">
         {/* Device Frame / Bezel - Dark Gray, not Pure Black */}
-        <div className="flex-1 bg-[#121212] rounded-t-[20px] xl:rounded-t-[26px] overflow-hidden border-t-[10px] border-x-[10px] lg:border-t-[12px] lg:border-x-[12px] xl:border-t-[14px] xl:border-x-[14px] border-[#121212] relative flex flex-col">
+        <div className="flex-1 bg-[#121212] rounded-none overflow-hidden border-[10px] lg:border-[12px] xl:border-[14px] border-[#121212] relative flex flex-col">
           
-          {/* Perfect Mac Notch */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[20%] h-[26px] bg-[#121212] rounded-b-[14px] z-20 flex items-center justify-center">
-            <div className="size-1.5 rounded-full bg-[#1A1A1A] border border-white/5 shadow-inner" />
+          {/* Perfect Mac Notch (Squared) */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[20%] h-[26px] bg-[#121212] rounded-none z-20 flex items-center justify-center">
+            <div className="size-1.5 rounded-none bg-[#1A1A1A] border border-white/5 shadow-inner" />
           </div>
           
-          <div className="flex-1 bg-background rounded-t-[8px] xl:rounded-t-[12px] overflow-hidden relative shadow-inner border-t border-white/5">
+          <div className="flex-1 bg-background rounded-none overflow-hidden relative shadow-inner border border-white/5">
              <Image src="/dashboard.png" alt="Ater Dashboard" fill className="object-cover" priority />
           </div>
         </div>

@@ -67,7 +67,7 @@ export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMo
     if (isLoading && entries.length === 0) {
         return (
             <div className="p-4 flex flex-col items-center justify-center border border-dashed border-border bg-muted/5 gap-2">
-                <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent" />
+                <div className="h-4 w-4 rounded-none border-2 border-primary border-t-transparent" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Connecting Tracker...</span>
             </div>
         );
@@ -94,7 +94,7 @@ export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMo
                     <Activity size={14} /> Usage Health
                 </h3>
                 <div className="flex items-center gap-3">
-                    <span className="text-[9px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded uppercase tracking-tighter">Real-time</span>
+                    <span className="text-[9px] font-medium text-muted-foreground bg-muted px-2 py-0.5 uppercase tracking-tighter">Real-time</span>
                 </div>
             </div>
 

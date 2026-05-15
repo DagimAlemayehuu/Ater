@@ -78,7 +78,7 @@ export default function UsersPage() {
                     <div className="size-12 bg-accent/50 border border-border flex items-center justify-center">
                       <User className="size-5 text-foreground" />
                     </div>
-                    <button className="p-2 opacity-0 group-hover:opacity-100 hover:bg-accent border border-transparent hover:border-border transition-all">
+                    <button className="p-2 opacity-0 group-hover:opacity-100 hover:bg-accent border border-transparent hover:border-border transition-none">
                       <MoreHorizontal className="size-4 text-muted-foreground" />
                     </button>
                   </div>

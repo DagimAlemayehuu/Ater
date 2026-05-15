@@ -75,7 +75,7 @@ const renderInlineMarkdown = (text: string) => {
             return <em key={i} className="italic text-foreground">{part.slice(1, -1)}</em>;
         }
         if (part.startsWith('`') && part.endsWith('`')) {
-            return <code key={i} className="font-mono bg-muted text-foreground px-1 py-0.5 rounded text-[9px] border border-border/50">{part.slice(1, -1)}</code>;
+            return <code key={i} className="font-mono bg-muted text-foreground px-1 py-0.5 text-[9px] border border-border/50">{part.slice(1, -1)}</code>;
         }
         return part;
     });
@@ -168,7 +168,7 @@ function ButtonCell({ safeType, onSave }: { safeType: any, onSave: (v: any) => v
                 onClick={handleRunAction}
                 disabled={isRunning}
                 className={cn(
-                    "w-full h-7 px-3 flex items-center justify-center gap-2 rounded border border-border/40 bg-background hover:bg-muted text-[10px] font-black uppercase tracking-widest text-foreground shadow-sm active:scale-[0.98] ",
+                    "w-full h-7 px-3 flex items-center justify-center gap-2 border border-border/40 bg-background hover:bg-muted text-[10px] font-black uppercase tracking-widest text-foreground shadow-sm [0.98] ",
                     isRunning && "opacity-50 cursor-not-allowed"
                 )}
             >
@@ -278,7 +278,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
         if (!isFocused && value) {
             const href = typeStr === 'email' ? `mailto:${value}` : typeStr === 'phone' ? `tel:${value}` : value.startsWith('http') ? value : `https://${value}`;
             return (
-                <div className="flex items-center gap-2 group w-full px-1.5 py-1 rounded border border-transparent hover:border-border/40 ">
+                <div className="flex items-center gap-2 group w-full px-1.5 py-1 border border-transparent hover:border-border/40 ">
                     <TypeIcon />
                     <a 
                         href={href} 
@@ -310,7 +310,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
             <div className="flex items-center w-full group/status">
                 <select 
                     className={cn(
-                        "h-6 px-3 rounded-full text-[9px] font-black uppercase tracking-widest border-none focus:outline-none cursor-pointer hover:brightness-110  appearance-none",
+                        "h-6 px-3 rounded-none text-[9px] font-black uppercase tracking-widest border-none focus:outline-none cursor-pointer hover:brightness-110  appearance-none",
                     )}
                     style={{ backgroundColor: category.color, color: category.text }}
                     value={currentVal}
@@ -331,13 +331,13 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
     if (typeStr === 'bool') {
         const checked = !!value;
         return (
-            <div className="flex items-center gap-2 group w-full px-1 py-1 rounded border border-transparent hover:border-border/20  cursor-pointer" onClick={() => {
+            <div className="flex items-center gap-2 group w-full px-1 py-1 border border-transparent hover:border-border/20  cursor-pointer" onClick={() => {
                 const nv = !checked;
                 setValue(nv);
                 onSave(nv);
             }}>
                 <div className={cn(
-                    "w-4 h-4 rounded border flex items-center justify-center ",
+                    "w-4 h-4 border flex items-center justify-center ",
                     checked ? "bg-foreground border-foreground text-background" : "bg-background border-border group-hover:border-muted-foreground/40"
                 )}>
                     {checked && <Check size={10} strokeWidth={4} />}
@@ -359,7 +359,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                     <button className={cn(
-                        "w-full flex items-center gap-2 bg-transparent border border-transparent hover:border-border/40 rounded px-1.5 py-1  text-[10px]",
+                        "w-full flex items-center gap-2 bg-transparent border border-transparent hover:border-border/40 px-1.5 py-1  text-[10px]",
                         !value && "text-muted-foreground/30 italic"
                     )}>
                         <CalendarIcon size={10} className="text-muted-foreground/40" />
@@ -399,14 +399,14 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                     <button className={cn(
-                        "w-full justify-between flex items-center bg-transparent border border-transparent hover:border-border/20 rounded px-1.5 py-1  text-[10px] min-h-[1.5rem] group",
+                        "w-full justify-between flex items-center bg-transparent border border-transparent hover:border-border/20 px-1.5 py-1  text-[10px] min-h-[1.5rem] group",
                         !value && "text-muted-foreground/20 italic"
                     )}>
                         <div className="flex items-center gap-2 truncate flex-1">
                             <TypeIcon />
                             {cleanValue ? (
                                 <span className={cn(
-                                    "px-2 py-0.5 rounded border text-[9px] font-black tracking-widest truncate",
+                                    "px-2 py-0.5 border text-[9px] font-black tracking-widest truncate",
                                     (onNavigate && typeStr !== 'status') && "cursor-pointer hover:opacity-80 ",
                                     typeStr === 'status' ? getStatusColor(cleanValue) : getBadgeColor(cleanValue)
                                 )}
@@ -455,7 +455,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                                                     className="text-xs py-2 px-3 cursor-pointer flex items-center justify-between hover:bg-muted"
                                                 >
                                                     <div className="flex items-center gap-2">
-                                                        <div className={cn("px-2 py-0.5 rounded border text-[9px] font-bold", typeStr === 'status' ? getStatusColor(opt) : getBadgeColor(opt))}>{opt}</div>
+                                                        <div className={cn("px-2 py-0.5 border text-[9px] font-bold", typeStr === 'status' ? getStatusColor(opt) : getBadgeColor(opt))}>{opt}</div>
                                                     </div>
                                                     <Check className={cn("h-3 w-3 text-foreground", cleanValue === opt ? "opacity-100" : "opacity-0")} />
                                                 </CommandItem>
@@ -476,7 +476,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
         return (
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
-                    <div className="flex flex-wrap gap-1 min-h-[1.5rem] items-center cursor-pointer w-full group py-0.5 px-1.5 hover:bg-muted/30 rounded border border-transparent hover:border-border/20 ">
+                    <div className="flex flex-wrap gap-1 min-h-[1.5rem] items-center cursor-pointer w-full group py-0.5 px-1.5 hover:bg-muted/30 border border-transparent hover:border-border/20 ">
                         <TypeIcon />
                         {list.length === 0 ? (
                             <span className="text-muted-foreground/20 text-[10px] italic">Empty</span>
@@ -484,7 +484,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                             list.map((item, i) => {
                                 const clean = String(item).replace(/^\[\[/, "").replace(/\]\]$/, "")
                                 return (
-                                    <span key={i} className={cn("text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border shadow-sm", onNavigate && "cursor-pointer hover:opacity-80 ", getBadgeColor(clean))}
+                                    <span key={i} className={cn("text-[9px] font-black uppercase tracking-widest px-2 py-0.5 border shadow-sm", onNavigate && "cursor-pointer hover:opacity-80 ", getBadgeColor(clean))}
                                         onClick={(e) => {
                                             if (onNavigate) {
                                                 e.preventDefault(); e.stopPropagation(); onNavigate(clean);
@@ -529,7 +529,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                                             const clean = String(item).replace(/^\[\[/, "").replace(/\]\]$/, "")
                                             return (
                                                 <CommandItem key={item} onSelect={() => { const next = list.filter(i => i !== item); setValue(next); onSave(next); }} className="text-xs py-2 px-3 cursor-pointer flex items-center justify-between hover:bg-muted">
-                                                    <div className={cn("px-2 py-0.5 rounded border text-[9px] font-bold", getBadgeColor(clean))}>{clean}</div>
+                                                    <div className={cn("px-2 py-0.5 border text-[9px] font-bold", getBadgeColor(clean))}>{clean}</div>
                                                     <Check className="h-3 w-3 text-foreground opacity-100" />
                                                 </CommandItem>
                                             )
@@ -538,7 +538,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                                     <CommandGroup heading="Available Options">
                                         {(options || []).filter(opt => !list.some(i => String(i).includes(opt))).map((opt) => (
                                             <CommandItem key={opt} onSelect={() => { const val = typeStr === 'relation' ? `[[${opt}]]` : opt; const next = [...list, val]; setValue(next); onSave(next); }} className="text-xs py-2 px-3 cursor-pointer flex items-center justify-between hover:bg-muted">
-                                                <div className={cn("px-2 py-0.5 rounded border text-[9px] font-bold", getBadgeColor(opt))}>{opt}</div>
+                                                <div className={cn("px-2 py-0.5 border text-[9px] font-bold", getBadgeColor(opt))}>{opt}</div>
                                                 <Check className="h-3 w-3 text-foreground opacity-0" />
                                             </CommandItem>
                                         ))}
@@ -557,10 +557,10 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
         const percent = isNaN(numVal) ? 0 : (numVal <= 1 && parseFloat(value) > 0 ? numVal * 100 : numVal);
         const constrained = Math.max(0, Math.min(100, percent));
         return (
-            <div className={cn("flex items-center gap-2 group w-full px-1.5 py-1 rounded border border-transparent hover:bg-muted/30  cursor-pointer", isFocused && "border-border/40 bg-muted/20")}>
+            <div className={cn("flex items-center gap-2 group w-full px-1.5 py-1 border border-transparent hover:bg-muted/30  cursor-pointer", isFocused && "border-border/40 bg-muted/20")}>
                 <TypeIcon />
                 <div className="flex-1 flex items-center gap-2">
-                    <div className="flex-1 max-w-[80px] h-1.5 bg-muted rounded-full overflow-hidden shrink-0 relative"
+                    <div className="flex-1 max-w-[80px] h-1.5 bg-muted rounded-none overflow-hidden shrink-0 relative"
                         onClick={(e) => {
                             const rect = e.currentTarget.getBoundingClientRect();
                             const x = e.clientX - rect.left;
@@ -568,7 +568,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
                             const final = numVal <= 1 && numVal > 0 ? newVal / 100 : newVal;
                             setValue(final); onSave(final);
                         }}>
-                        <div className="h-full bg-foreground rounded-full  " style={{ width: `${constrained}%` }} />
+                        <div className="h-full bg-foreground rounded-none  " style={{ width: `${constrained}%` }} />
                     </div>
                     {isFocused ? (
                         <input className="w-10 bg-transparent border-none focus:ring-0 p-0 text-[10px] text-right font-mono text-foreground" autoFocus value={value || ''} onChange={e => setValue(e.target.value)} onBlur={() => { setIsFocused(false); if (String(initialValue||'') !== String(value||'')) onSave(value); }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }} />
@@ -612,8 +612,8 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
             } else { computed = "No Expr"; }
         } catch (e) { computed = "Syntax Error"; }
         return (
-            <div className="flex items-center gap-2 group w-full px-1.5 py-1 rounded border border-transparent bg-muted/10">
-                <div className="flex items-center justify-center p-0.5 rounded bg-muted shrink-0">
+            <div className="flex items-center gap-2 group w-full px-1.5 py-1 border border-transparent bg-muted/10">
+                <div className="flex items-center justify-center p-0.5 bg-muted shrink-0">
                     <Sigma size={10} className="text-muted-foreground/40" />
                 </div>
                 <div className="flex-1 truncate text-[11px] font-black text-foreground tracking-tighter uppercase font-mono">{String(computed)}</div>
@@ -622,7 +622,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
     }
 
     return (
-        <div className={cn("flex items-center gap-2 group w-full px-1.5 py-1 rounded border border-transparent hover:border-border/20 ", isFocused && "border-border/40 bg-muted/20", !isFocused && typeof value === 'string' && value && "cursor-text")} onClick={() => { if (!isFocused) setIsFocused(true) }}>
+        <div className={cn("flex items-center gap-2 group w-full px-1.5 py-1 border border-transparent hover:border-border/20 ", isFocused && "border-border/40 bg-muted/20", !isFocused && typeof value === 'string' && value && "cursor-text")} onClick={() => { if (!isFocused) setIsFocused(true) }}>
             <TypeIcon />
             {!isFocused && typeof value === 'string' ? (
                 <div className="text-[10px] flex-1 truncate text-foreground font-bold tracking-tight">

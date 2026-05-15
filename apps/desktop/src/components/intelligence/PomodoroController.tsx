@@ -149,7 +149,7 @@ export default function PomodoroController() {
                           : 'var(--muted-foreground)',
                         opacity: i < (sessionCount % settings.sessionsBeforeLong || (sessionCount > 0 ? settings.sessionsBeforeLong : 0)) ? 0.6 : 0.1
                       }}
-                      className="w-4 h-4 rounded-full"
+                      className="w-4 h-4 rounded-none"
                     />
                   ))}
                 </div>
@@ -159,14 +159,14 @@ export default function PomodoroController() {
             <div className="flex items-center gap-3 mt-24">
               <button
                 onClick={() => setIsActive(!isActive)}
-                className="flex items-center gap-3 px-10 py-4 rounded-xl bg-muted/20 hover:bg-muted/40 border border-border transition-all active:scale-95 text-[10px] font-black uppercase tracking-[0.2em] text-foreground"
+                className="flex items-center gap-3 px-10 py-4 rounded-none bg-muted/20 hover:bg-muted/40 border border-border transition-none  text-[10px] font-black uppercase tracking-[0.2em] text-foreground"
               >
                 {isActive ? <Pause size={14} /> : <Play size={14} />}
                 {isActive ? 'PAUSE' : 'RESUME'}
               </button>
               <button
                 onClick={() => setTimeLeft(0)}
-                className="flex items-center gap-3 px-10 py-4 rounded-xl bg-muted/10 hover:bg-muted/30 border border-border transition-all active:scale-95 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+                className="flex items-center gap-3 px-10 py-4 rounded-none bg-muted/10 hover:bg-muted/30 border border-border transition-none  text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
               >
                 <SkipForward size={14} />
                 SKIP

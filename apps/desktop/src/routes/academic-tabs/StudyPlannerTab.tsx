@@ -214,7 +214,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  <div className="flex items-center gap-1 bg-muted/5 p-0.5 rounded-none flex-wrap">
  {(['All', 'Not Started', 'In Progress', 'Reviewing', 'Completed'] as StatusFilter[]).map(s => (
  <button key={s} onClick={() => setStatusFilter(s)}
- className={cn('px-2 py-1 rounded text-[7px] font-black uppercase tracking-wide  whitespace-nowrap',
+ className={cn('px-2 py-1 text-[7px] font-black uppercase tracking-wide  whitespace-nowrap',
  statusFilter === s ? 'bg-background text-foreground shadow-sm' : 'text-foreground/40'
  )}>{s}</button>
  ))}
@@ -322,7 +322,7 @@ function HubCard({hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete
  <div className="relative">
  <button
  onClick={() => setShowStatusMenu(!showStatusMenu)}
- className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border ',
+ className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest border ',
  statusColorClass(status) || 'text-foreground/40 bg-muted/10 border-border')}>
  {status || 'Not Started'}
  </button>
@@ -330,7 +330,7 @@ function HubCard({hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete
  <div className="absolute top-full left-0 mt-1 bg-background border border-border rounded-none shadow-xl z-20 p-1 min-w-[150px]">
  {['Planned', 'In Progress', 'Completed'].map(s => (
  <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('06 - Study Planner', hub.id, {Status: wrapWL(s)}); setShowStatusMenu(false)}}
- className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase rounded hover:bg-muted/10 ', statusColorClass(s))}>
+ className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase hover:bg-muted/10 ', statusColorClass(s))}>
  {s}
  </button>
  ))}

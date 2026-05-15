@@ -63,8 +63,7 @@ export interface BaseQuestion {
   hints?: string[];
   confidenceWager?: "Low" | "Medium" | "High";
   required_keywords?: string[];
-  // Shared optional fields for generic UI rendering
-  answer?: any;
+  answer?: string | string[] | boolean | Record<string, string>;
   options?: Record<string, string>;
   steps?: string[];
   content?: string;
@@ -72,6 +71,8 @@ export interface BaseQuestion {
   language?: string;
   textWithBlanks?: string;
   text_with_blanks?: string;
+  pairs?: Array<{ left: string; right: string }>;
+  buggyCode?: string;
 }
 
 export interface MCQQuestion extends BaseQuestion {

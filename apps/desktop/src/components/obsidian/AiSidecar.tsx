@@ -152,11 +152,11 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                     <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground italic">
                         AI Tutor
                     </h3>
-                    <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50">
+                    <div className="flex bg-muted/30 p-1 rounded-none border border-border/50">
                         <button
                             onClick={() => setMode('explain')}
                             className={cn(
-                                "flex-1 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md transition-all",
+                                "flex-1 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-none transition-none",
                                 mode === 'explain' 
                                     ? "bg-background text-foreground shadow-sm border border-border/50" 
                                     : "text-muted-foreground/50 hover:text-foreground"
@@ -167,7 +167,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                         <button
                             onClick={() => { setMode('quiz'); if (quizQuestions.length === 0) handleInitialQuiz(); }}
                             className={cn(
-                                "flex-1 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md transition-all",
+                                "flex-1 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-none transition-none",
                                 mode === 'quiz' 
                                     ? "bg-background text-foreground shadow-sm border border-border/50" 
                                     : "text-muted-foreground/50 hover:text-foreground"
@@ -179,7 +179,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                 </div>
                 <button 
                     onClick={onClose}
-                    className="p-2 hover:bg-foreground/5 rounded-xl text-muted-foreground hover:text-foreground active:scale-95 transition-all"
+                    className="p-2 hover:bg-foreground/5 rounded-none text-muted-foreground hover:text-foreground  transition-none"
                 >
                     <X size={16} />
                 </button>
@@ -190,8 +190,8 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                 {/* Selection Context */}
                 <div className="space-y-3">
                     <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Selection</span>
-                    <div className="p-4 bg-muted/20 rounded-2xl border border-border group hover:bg-muted/30 transition-all">
-                        <p className="text-[11px] text-muted-foreground leading-relaxed italic line-clamp-3 group-hover:line-clamp-none transition-all">"{selection}"</p>
+                    <div className="p-4 bg-muted/20 rounded-none border border-border group hover:bg-muted/30 transition-none">
+                        <p className="text-[11px] text-muted-foreground leading-relaxed italic line-clamp-3 group-hover:line-clamp-none transition-none">"{selection}"</p>
                     </div>
                 </div>
 
@@ -206,7 +206,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                 msg.role === 'user' ? "items-end" : "items-start"
                             )}>
                                 <div className={cn(
-                                    "px-4 py-3 rounded-2xl max-w-[95%] text-[12px] leading-relaxed",
+                                    "px-4 py-3 rounded-none max-w-[95%] text-[12px] leading-relaxed",
                                     msg.role === 'user' 
                                         ? "bg-foreground/10 text-foreground rounded-tr-none border border-border/50 shadow-sm" 
                                         : "bg-muted/30 border border-border rounded-tl-none prose prose-zinc dark:prose-invert prose-sm text-foreground prose-headings:text-foreground prose-headings:font-black prose-headings:uppercase prose-headings:tracking-widest prose-headings:text-[11px] prose-strong:text-foreground"
@@ -221,9 +221,9 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                         ))}
                         {isThinking && (
                             <div className="flex items-center gap-2 text-muted-foreground/20">
-                                <div className="w-1.5 h-1.5 rounded-full bg-foreground/20 animate-bounce" style={{ animationDelay: '0ms' }} />
-                                <div className="w-1.5 h-1.5 rounded-full bg-foreground/20 animate-bounce" style={{ animationDelay: '150ms' }} />
-                                <div className="w-1.5 h-1.5 rounded-full bg-foreground/20 animate-bounce" style={{ animationDelay: '300ms' }} />
+                                <div className="w-1.5 h-1.5 rounded-none bg-foreground/20 animate-none" style={{ animationDelay: '0ms' }} />
+                                <div className="w-1.5 h-1.5 rounded-none bg-foreground/20 animate-none" style={{ animationDelay: '150ms' }} />
+                                <div className="w-1.5 h-1.5 rounded-none bg-foreground/20 animate-none" style={{ animationDelay: '300ms' }} />
                             </div>
                         )}
                     </div>
@@ -238,7 +238,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                     <div className="flex gap-1">
                                         {quizQuestions.map((_, i) => (
                                             <div key={i} className={cn(
-                                                "h-1 rounded-full transition-all duration-300",
+                                                "h-1 rounded-none transition-none duration-300",
                                                 i === currentQuestionIndex ? "bg-foreground/40 w-6" : i < currentQuestionIndex ? "bg-foreground/20 w-3" : "bg-muted w-3"
                                             )} />
                                         ))}
@@ -259,7 +259,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                                     onClick={() => handleAnswerQuiz(opt)}
                                                     disabled={isAnswered}
                                                     className={cn(
-                                                        "w-full px-4 py-3 rounded-xl border text-[12px] text-left transition-all active:scale-[0.98] flex items-center justify-between group",
+                                                        "w-full px-4 py-3 rounded-none border text-[12px] text-left transition-none [0.98] flex items-center justify-between group",
                                                         isAnswered 
                                                             ? (opt.toLowerCase() === quizQuestions[currentQuestionIndex].answer.toLowerCase() 
                                                                 ? "bg-foreground/10 border-foreground/30 text-foreground font-black" 
@@ -279,7 +279,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                                         onClick={() => handleAnswerQuiz(opt)}
                                                         disabled={isAnswered}
                                                         className={cn(
-                                                            "px-4 py-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex flex-col items-center gap-2",
+                                                            "px-4 py-4 rounded-none border text-[10px] font-black uppercase tracking-widest transition-none  flex flex-col items-center gap-2",
                                                             isAnswered 
                                                                 ? (opt.toLowerCase() === quizQuestions[currentQuestionIndex].answer.toLowerCase() 
                                                                     ? "bg-foreground/10 border-foreground/30 text-foreground font-black" 
@@ -298,7 +298,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                 {/* Feedback */}
                                 {quizFeedback && (
                                     <div className={cn(
-                                        "p-5 rounded-2xl border slide-in-from-top-4 space-y-4",
+                                        "p-5 rounded-none border slide-in-from-top-4 space-y-4",
                                         quizFeedback.correct ? "bg-muted/20 border-border/50" : "bg-destructive/5 border-destructive/10"
                                     )}>
                                         <div className="flex items-center gap-3">
@@ -314,7 +314,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                         </p>
                                         <button 
                                             onClick={nextQuestion}
-                                            className="w-full h-10 bg-foreground/10 hover:bg-foreground/20 text-foreground border border-border/50 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
+                                            className="w-full h-10 bg-foreground/10 hover:bg-foreground/20 text-foreground border border-border/50 rounded-none text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-none  shadow-sm"
                                         >
                                             {currentQuestionIndex < quizQuestions.length - 1 ? 'Next' : 'Finish'}
                                             <ArrowRight size={12} />
@@ -344,13 +344,13 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                             onChange={(e) => setChatInput(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                             placeholder="Ask follow-up..."
-                            className="w-full bg-muted/40 border-border/40 rounded-2xl pl-5 pr-12 py-3 text-[12px] focus:ring-1 focus:ring-border focus:border-border placeholder:text-muted-foreground/20 placeholder:font-black placeholder:uppercase placeholder:tracking-widest text-foreground"
+                            className="w-full bg-muted/40 border-border/40 rounded-none pl-5 pr-12 py-3 text-[12px] focus:ring-1 focus:ring-border focus:border-border placeholder:text-muted-foreground/20 placeholder:font-black placeholder:uppercase placeholder:tracking-widest text-foreground"
                         />
                         <button 
                             onClick={handleSendMessage}
                             disabled={!chatInput.trim() || isThinking}
                             className={cn(
-                                "absolute right-2 p-2 rounded-xl transition-all active:scale-90",
+                                "absolute right-2 p-2 rounded-none transition-none ",
                                 chatInput.trim() && !isThinking ? "bg-foreground/10 text-foreground" : "text-muted-foreground/20"
                             )}
                         >

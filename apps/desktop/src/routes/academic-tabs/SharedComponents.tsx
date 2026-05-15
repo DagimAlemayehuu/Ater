@@ -32,7 +32,7 @@ export function SectionHeader({title, count, onAction, actionLabel}: {
  {count !== undefined && <span className="text-[8px] font-black text-muted-foreground">{count}</span>}
  <div className="h-px flex-1 bg-border" />
  {onAction && (
- <button onClick={onAction} className="flex items-center gap-1 px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase tracking-widest rounded hover:border-foreground/50 ">
+ <button onClick={onAction} className="flex items-center gap-1 px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase tracking-widest hover:border-foreground/50 ">
  <Plus size={8} />{actionLabel || 'Add'}
  </button>
  )}
@@ -131,7 +131,7 @@ export function BigPropertyCard({label, value, schema, onUpdate}: {
  onChange={e => setEditValue(e.target.value)}
  onBlur={() => handleSave()}
  onKeyDown={e => e.key === 'Enter' && handleSave()}
- className="w-full bg-muted/10 px-2 py-1 rounded text-xl font-black uppercase outline-none focus:ring-1 focus:ring-primary/30  border-none"
+ className="w-full bg-muted/10 px-2 py-1 text-xl font-black uppercase outline-none focus:ring-1 focus:ring-primary/30  border-none"
  />
  </div>
  )
@@ -179,7 +179,7 @@ export function EditableTitle({value, onSave, className}: {
  setIsEditing(false)
 }
 }}
- className={cn('bg-muted/10 px-2 rounded outline-none w-full border-none focus:ring-1 focus:ring-primary/30 ', className)}
+ className={cn('bg-muted/10 px-2 outline-none w-full border-none focus:ring-1 focus:ring-primary/30 ', className)}
  />
  )
 }
@@ -196,7 +196,7 @@ export function EditableTitle({value, onSave, className}: {
 // ─── Badge Pill ────────────────────────────────────────────────────────────────
 export function BadgePill({label, colorClass}: {label: string; colorClass: string}) {
  return (
- <span className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border', colorClass)}>
+ <span className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest border', colorClass)}>
  {label}
  </span>
  )
@@ -238,7 +238,7 @@ export function CreateBanner({label, onConfirm, onCancel}: {
  className="flex-1 bg-transparent border-b border-primary/30 focus:border-primary text-sm font-bold focus:outline-none  pb-0.5"
  onKeyDown={e => {if (e.key === 'Enter') onConfirm(name); if (e.key === 'Escape') onCancel()}}
  />
- <button onClick={() => onConfirm(name)} disabled={!name.trim()} className="px-3 py-1.5 text-foreground border border-border bg-background text-[9px] font-black uppercase rounded hover:border-foreground/50 disabled:opacity-20 ">Deploy</button>
+ <button onClick={() => onConfirm(name)} disabled={!name.trim()} className="px-3 py-1.5 text-foreground border border-border bg-background text-[9px] font-black uppercase hover:border-foreground/50 disabled:opacity-20 ">Deploy</button>
  <button onClick={onCancel} className="p-1.5 text-muted-foreground  "><X size={12} /></button>
  </div>
  )

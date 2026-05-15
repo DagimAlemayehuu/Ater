@@ -237,7 +237,7 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
   )}>
  {/* Checkbox */}
  <button onClick={e => {e.stopPropagation(); if (!isDone) onComplete(a)}}
- className={cn('w-4 h-4 rounded border flex items-center justify-center shrink-0 ',
+ className={cn('w-4 h-4 border flex items-center justify-center shrink-0 ',
  isDone ? 'bg-primary border-primary' : 'border-border hover:border-primary'
  )}>
  {isDone && <Check size={9} strokeWidth={4} className="text-primary-foreground" />}
@@ -257,7 +257,7 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  <div className="flex items-center gap-2 shrink-0">
  <div className="relative">
  <button onClick={e => {e.stopPropagation(); setShowStatusMenu(!showStatusMenu)}}
- className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border ',
+ className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest border ',
  statusColorClass(stripWL(getVal(a, 'Status', 'status'))) || 'text-foreground/40 bg-muted/10 border-border')}>
  {cleanTitle(stripWL(getVal(a, 'Status', 'status')) || 'Planned')}
  </button>
@@ -265,14 +265,14 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  <div className="absolute top-full right-0 mt-1 bg-background border border-border rounded-none shadow-xl z-50 p-1 min-w-[120px]">
  {['Planned', 'In Progress', 'Completed'].map(s => (
  <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('03 - Assignments', a.id, {Status: wrapWL(s)}); setShowStatusMenu(false)}}
- className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase rounded hover:bg-muted/10 ', statusColorClass(s))}>
+ className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase hover:bg-muted/10 ', statusColorClass(s))}>
  {s}
  </button>
  ))}
  </div>
  )}
  </div>
- {priority && <span className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border', priorityColorClass(priority))}>{priority}</span>}
+ {priority && <span className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest border', priorityColorClass(priority))}>{priority}</span>}
  {daysLabel() && <span className={cn('text-[9px] font-black uppercase tracking-widest', daysColor)}>{daysLabel()}</span>}
  <button onClick={(e) => {e.stopPropagation(); onDelete()}}
  className="p-1.5 text-foreground/0 group-hover:text-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-none ">

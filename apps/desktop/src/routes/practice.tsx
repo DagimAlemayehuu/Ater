@@ -775,7 +775,7 @@ const handleStartSession = async () => {
            <button key={vf.path} onClick={() => setVaultSelectedFiles(prev => isSel ? prev.filter(p => p !== vf.path) : [...prev, vf.path])}
             className={cn("w-full text-left p-3 border rounded-none flex items-center justify-between transition-none", isSel ? "border-foreground/40 bg-foreground/5" : "border-border/40 bg-muted/5 hover:border-foreground/20")}>
             <div className="flex items-center gap-3">
-             <div className={cn("w-4 h-4 rounded border flex items-center justify-center", isSel ? "bg-foreground border-foreground" : "border-border/40")}>{isSel && <Check size={10} className="text-background"/>}</div>
+             <div className={cn("w-4 h-4 rounded-none border flex items-center justify-center", isSel ? "bg-foreground border-foreground" : "border-border/40")}>{isSel && <Check size={10} className="text-background"/>}</div>
              <div><div className="text-[10px] font-black uppercase tracking-tight">{vf.name}</div><div className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-widest">{vf.total_questions} questions</div></div>
             </div>
             <FileText size={12} className="text-muted-foreground/20"/>
@@ -867,7 +867,7 @@ const handleStartSession = async () => {
  const isSelected = advancedConfig.selectedAtomicNotes.includes(note.id); 
  return (
  <CommandItem key={note.id} onSelect={() => toggleAtomicNote(note.id)} className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-none text-[9px] font-black uppercase">
- <div className={cn("w-3 h-3 border flex items-center justify-center rounded-sm ", isSelected ? "bg-foreground border-foreground text-background" : "border-border")}>{isSelected && <Check size={8} />}</div>
+ <div className={cn("w-3 h-3 border flex items-center justify-center rounded-none ", isSelected ? "bg-foreground border-foreground text-background" : "border-border")}>{isSelected && <Check size={8} />}</div>
  <span className="truncate">{note.title}</span>
  </CommandItem>
  ); 
@@ -904,7 +904,7 @@ const handleStartSession = async () => {
   <div className="flex items-center gap-2">
    <div className="flex gap-1 overflow-x-auto custom-scrollbar pb-1 max-w-[200px] sm:max-w-xs">
     {Object.entries(PRESETS).map(([k, p]) => (
-     <button key={k} onClick={() => applyPreset(k)} className="shrink-0 px-2 py-1 text-[8px] font-black uppercase tracking-widest bg-muted/10 hover:bg-muted/20 border border-border rounded text-muted-foreground hover:text-foreground transition-none" title={p.label}>
+     <button key={k} onClick={() => applyPreset(k)} className="shrink-0 px-2 py-1 text-[8px] font-black uppercase tracking-widest bg-muted/10 hover:bg-muted/20 border border-border text-muted-foreground hover:text-foreground transition-none" title={p.label}>
       {p.label}
      </button>
     ))}
@@ -1009,7 +1009,7 @@ const handleStartSession = async () => {
  {globalTimeLeft !== null && (
  <div className="flex flex-col items-end gap-0.5">
  <span className="text-muted-foreground/20 text-[7px]">Total</span>
- <div className={cn("px-2 py-0.5 rounded border", globalTimeLeft < 60 ? "border-destructive text-destructive" : "border-border text-muted-foreground/60")}>
+  <div className={cn("px-2 py-0.5 rounded-none border", globalTimeLeft < 60 ? "border-destructive text-destructive" : "border-border text-muted-foreground/60")}>
  {Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}
  </div>
  </div>
@@ -1017,14 +1017,14 @@ const handleStartSession = async () => {
  {questionTimeLeft !== null && (
  <div className="flex flex-col items-end gap-0.5">
  <span className="text-muted-foreground/20 text-[7px]">Q-Time</span>
- <div className={cn("px-2 py-0.5 rounded border", questionTimeLeft < 10 ? "border-destructive text-destructive" : "border-border text-primary")}>
+  <div className={cn("px-2 py-0.5 rounded-none border", questionTimeLeft < 10 ? "border-destructive text-destructive" : "border-border text-primary")}>
  {Math.floor(questionTimeLeft / 60)}:{String(questionTimeLeft % 60).padStart(2, '0')}
  </div>
  </div>
  )}
  <div className="flex flex-col items-end gap-0.5">
  <span className="text-muted-foreground/20 text-[7px]">Progress</span>
- <div className="px-2 py-0.5 rounded border border-border">{currentQuestionIdx + 1} / {questions.length}</div>
+  <div className="px-2 py-0.5 rounded-none border border-border">{currentQuestionIdx + 1} / {questions.length}</div>
  </div>
  </div>
  </div>
@@ -1076,13 +1076,13 @@ const handleStartSession = async () => {
 
  {(!currentQuestion.type || ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) && (
   <div className="space-y-6">
-  {['debug', 'code'].includes(currentQuestion.type) && ((currentQuestion as any).content || (currentQuestion as any).codeSnippet) && <div className="p-1 border border-border rounded-none bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${(currentQuestion as any).content || (currentQuestion as any).codeSnippet}\n\`\`\``} /></div>}
-  {['trace', 'calculation', 'data_analysis', 'scenario', 'synthesis', 'writing'].includes(currentQuestion.type) && ((currentQuestion as any).content) && <div className="p-4 border border-border/10 rounded-none bg-muted/5 text-sm text-foreground/80"><MarkdownBlock content={(currentQuestion as any).content} /></div>}
+  {['debug', 'code'].includes(currentQuestion.type) && (currentQuestion.content || currentQuestion.codeSnippet) && <div className="p-1 border border-border rounded-none bg-muted/5"><MarkdownBlock content={`\`\`\`${currentQuestion.language || 'text'}\n${currentQuestion.content || currentQuestion.codeSnippet}\n\`\`\``} /></div>}
+  {['trace', 'calculation', 'data_analysis', 'scenario', 'synthesis', 'writing'].includes(currentQuestion.type) && (currentQuestion.content) && <div className="p-4 border border-border/10 rounded-none bg-muted/5 text-sm text-foreground/80"><MarkdownBlock content={currentQuestion.content} /></div>}
   <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-muted/5 border-2 border-border rounded-none text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
   {isRevealed && (
     <div className="p-4 border-2 border-primary/20 bg-primary/5 rounded-none space-y-2">
       <div className="text-[9px] font-black uppercase tracking-[0.3em] text-primary mb-1">Correct Answer</div>
-      <div className="text-xs font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap"><MarkdownBlock content={String((currentQuestion as any).answer || '')} /></div>
+      <div className="text-xs font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap"><MarkdownBlock content={String(currentQuestion.answer || '')} /></div>
     </div>
   )}
   </div>
@@ -1204,7 +1204,7 @@ const handleStartSession = async () => {
           const isFound = String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase());
           return (
             <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-none cursor-pointer ", isFound ? "border-primary/50 bg-primary/5" : "border-border/40 hover:bg-muted/10")}>
-              <input type="checkbox" checked={keywordChecks[kw] || false} onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} className="w-5 h-5 rounded border-border text-primary focus:ring-primary" />
+              <input type="checkbox" checked={keywordChecks[kw] || false} onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} className="w-5 h-5 rounded-none border-border text-primary focus:ring-primary" />
               <span className={cn("text-sm font-bold", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[10px] uppercase tracking-widest text-primary ml-3">(Found in your answer)</span>}</span>
             </label>
           );
@@ -1337,7 +1337,7 @@ const handleStartSession = async () => {
         {bookmarkedQuestions.map((q,i) => (
          <div key={i} className="p-4 bg-muted/5 border border-border/40 rounded-none space-y-2">
           <div className="flex items-center gap-2">
-           <Badge variant="outline" className="text-[8px] border-border/40 rounded px-1.5">{q.difficulty||'?'}</Badge>
+           <Badge variant="outline" className="text-[8px] border-border/40 rounded-none px-1.5">{q.difficulty||'?'}</Badge>
            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{TYPE_LABELS[q.type]||q.type}</span>
            {gradedAnswers[q.id] === true && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-foreground/40">Correct</span>}
            {gradedAnswers[q.id] === false && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-destructive/60">Wrong</span>}

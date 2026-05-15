@@ -324,17 +324,17 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  </div>
  <div onClick={e => e.stopPropagation()}>
  {score ? (
- <span className="px-2 py-1 bg-foreground/5 border border-border rounded text-[10px] font-black text-foreground">{score}</span>
+ <span className="px-2 py-1 bg-foreground/5 border border-border text-[10px] font-black text-foreground">{score}</span>
  ) : isEditing ? (
  <div className="flex items-center gap-1">
  <input autoFocus value={scoreInput} onChange={e => setScoreInput(e.target.value)} placeholder="Score"
- className="w-20 bg-background border border-border px-2 py-1 rounded text-[10px] font-black focus:outline-none"
+ className="w-20 bg-background border border-border px-2 py-1 text-[10px] font-black focus:outline-none"
  onKeyDown={e => {if (e.key === 'Enter') handleAddScore(exam); if (e.key === 'Escape') setEditingScore(null)}} />
  <button onClick={() => handleAddScore(exam)} className="p-1 text-primary"><Check size={11} /></button>
  </div>
  ) : (
  <button onClick={() => {setEditingScore(exam.id); setScoreInput('')}}
- className="px-2 py-1 text-[8px] font-black uppercase tracking-wide text-foreground/50 border border-border rounded  ">
+ className="px-2 py-1 text-[8px] font-black uppercase tracking-wide text-foreground/50 border border-border  ">
  + Score
  </button>
  )}

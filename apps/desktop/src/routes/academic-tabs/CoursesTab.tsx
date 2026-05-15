@@ -76,7 +76,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  />
  <div className="flex items-center gap-3 mt-1">
  {professor && <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{professor}</span>}
- {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase rounded border', gradeColorClass(grade))}>{grade}</span>}
+ {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase border', gradeColorClass(grade))}>{grade}</span>}
  </div>
  </div>
  <button onClick={() => onDelete('07 - Courses', selectedId)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
@@ -232,7 +232,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
    onUpdate('07 - Courses', course.id, {title: cleanNext})
  }
 }}>{cleanTitle(course.title)}</h3>
- {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase rounded border shrink-0', gradeColorClass(grade))}>{grade}</span>}
+ {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase border shrink-0', gradeColorClass(grade))}>{grade}</span>}
  </div>
 
  {/* Meta */}

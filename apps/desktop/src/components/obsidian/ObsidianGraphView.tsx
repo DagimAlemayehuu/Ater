@@ -230,10 +230,10 @@ export function ObsidianGraphView({
                         
                         {/* Overlay Navigation Controls */}
                         <div className="absolute bottom-6 left-6 flex flex-col gap-2 z-10">
-                            <button onClick={handleCenter} className="p-2 bg-background border border-border rounded-md shadow-sm hover:bg-accent text-muted-foreground " title="Center Graph">
+                            <button onClick={handleCenter} className="p-2 bg-background border border-border rounded-none shadow-sm hover:bg-accent text-muted-foreground " title="Center Graph">
                                 <Maximize size={16} />
                             </button>
-                            <div className="flex flex-col bg-background border border-border rounded-md shadow-sm overflow-hidden">
+                            <div className="flex flex-col bg-background border border-border rounded-none shadow-sm overflow-hidden">
                                 <button onClick={handleZoomIn} className="p-2 hover:bg-accent text-muted-foreground border-b border-border " title="Zoom In">
                                     <ZoomIn size={16} />
                                 </button>
@@ -246,9 +246,9 @@ export function ObsidianGraphView({
                         {/* Settings Toggle */}
                         <button 
                             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                            className="absolute top-6 right-6 p-2 bg-background border border-border rounded-md shadow-sm hover:bg-accent text-muted-foreground  z-20"
+                            className="absolute top-6 right-6 p-2 bg-background border border-border rounded-none shadow-sm hover:bg-accent text-muted-foreground  z-20"
                         >
-                            <Settings size={18} className={cn(isSettingsOpen && "rotate-90 transition-transform")} />
+                            <Settings size={18} className={cn(isSettingsOpen && "rotate-90 ")} />
                         </button>
                     </>
                 )}
@@ -256,7 +256,7 @@ export function ObsidianGraphView({
 
             {/* Settings Side Panel */}
             {isSettingsOpen && (
-                <div className="absolute top-4 right-4 w-72 bg-background/80 backdrop-blur-xl border border-border/50 rounded-xl shadow-2xl flex flex-col z-30 animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute top-4 right-4 w-72 bg-background/80 backdrop-blur-xl border border-border/50 rounded-none shadow-2xl flex flex-col z-30 animate-none fade-in zoom-in-95 duration-200">
                     <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
                         <span className="text-[11px] font-bold text-foreground/80">Graph settings</span>
                         <div className="flex items-center gap-2">
@@ -336,7 +336,7 @@ function ForceSlider({ label, value, min, max, step, onChange }: { label: string
                     min={min} max={max} step={step}
                     value={value} 
                     onChange={e => onChange(parseFloat(e.target.value))}
-                    className="w-full h-1 bg-muted-foreground/10 rounded-full appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all"
+                    className="w-full h-1 bg-muted-foreground/10 rounded-none appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-none"
                 />
             </div>
         </div>

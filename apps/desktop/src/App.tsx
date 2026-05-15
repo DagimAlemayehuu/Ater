@@ -38,12 +38,9 @@ function SidecarGate({ children }: { children: React.ReactNode }) {
     return (
       <div style={gateStyle}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
-          <div style={{ width: '40px', height: '40px', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-          <span style={{ fontWeight: 800, letterSpacing: '0.3em', textIndent: '0.3em' }}>CONNECTING TO SIDECAR</span>
+          <div style={{ width: '40px', height: '40px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: 'white', borderRadius: '0' }} />
+          <span style={{ fontWeight: 900, letterSpacing: '0.4em', textIndent: '0.4em', fontSize: '9px', color: 'rgba(255,255,255,0.4)' }}>INITIALIZING ENGINE</span>
         </div>
-        <style>{`
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
       </div>
     )
   }

@@ -39,7 +39,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           
           <div className="space-y-6 pt-4">
             <div className="h-[2px] w-full bg-muted overflow-hidden">
-              <div className="h-full w-1/3 bg-primary animate-pulse" />
+              <div className="h-full w-1/3 bg-primary animate-none" />
             </div>
             <button 
               onClick={resetActivation}

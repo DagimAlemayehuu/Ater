@@ -47,7 +47,7 @@ function CurriculumPill({
  else if (options.length > 0) setIsMenuOpen(!isMenuOpen);
 }}
  className={cn(
- "px-2.5 py-1.5 rounded bg-background border border-border text-xs font-semibold uppercase tracking-tight flex items-center gap-2  hover:bg-muted hover:border-muted-foreground/30",
+ "px-2.5 py-1.5 bg-background border border-border text-xs font-semibold uppercase tracking-tight flex items-center gap-2  hover:bg-muted hover:border-muted-foreground/30",
  (isDropdown || options.length > 0) && "cursor-pointer"
  )}
  >
@@ -73,7 +73,7 @@ function CurriculumPill({
  {isMenuOpen && options.length > 0 && (
  <>
  <div className="fixed inset-0 z-[110]" onClick={() => setIsMenuOpen(false)} />
- <div className="absolute top-full left-0 mt-1 w-48 bg-popover border border-border shadow-md rounded z-[120] p-1.5 ">
+ <div className="absolute top-full left-0 mt-1 w-48 bg-popover border border-border shadow-md z-[120] p-1.5 ">
  <div className="px-2 py-1 text-xs font-semibold uppercase text-muted-foreground tracking-tight mb-1">{label} Options</div>
  <div className="max-h-40 overflow-y-auto custom-scrollbar">
  {options.map(opt => (
@@ -84,7 +84,7 @@ function CurriculumPill({
  setIsMenuOpen(false);
 }}
  className={cn(
- "w-full text-left px-2 py-1.5 rounded text-sm font-medium  hover:bg-muted",
+ "w-full text-left px-2 py-1.5 text-sm font-medium  hover:bg-muted",
  value === opt && "text-foreground bg-accent"
  )}
  >
@@ -260,9 +260,9 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  <div className="flex flex-col overflow-y-auto custom-scrollbar pr-2 gap-6 h-full">
  <div className="flex flex-col gap-3">
  {hubContent && (
- <div className="rounded border border-border bg-background p-5 hover:border-muted-foreground/30  group">
+ <div className="border border-border bg-background p-5 hover:border-muted-foreground/30  group">
  <div className="flex items-center gap-3 mb-3">
- <div className="p-1.5 bg-muted rounded text-foreground">
+ <div className="p-1.5 bg-muted text-foreground">
  <Bot size={16} />
  </div>
  <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Topic</h4>
@@ -273,9 +273,9 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  </div>
  )}
  {pqContent && (
- <div className="rounded border border-border bg-background p-5 hover:border-muted-foreground/30  group">
+ <div className="border border-border bg-background p-5 hover:border-muted-foreground/30  group">
  <div className="flex items-center gap-3 mb-3">
- <div className="p-1.5 bg-muted rounded text-foreground">
+ <div className="p-1.5 bg-muted text-foreground">
  <ShieldCheck size={16} />
  </div>
  <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Test</h4>
@@ -299,7 +299,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  key={i} 
  style={{marginLeft: `${node.level * 24}px`}}
  className={cn(
- "p-3 rounded border bg-background hover:border-muted-foreground/30 hover:bg-muted/50  relative overflow-hidden group min-w-0 w-full",
+ "p-3 border bg-background hover:border-muted-foreground/30 hover:bg-muted/50  relative overflow-hidden group min-w-0 w-full",
  node.level > 0 ? "border-dashed opacity-90 scale-[1] border-border" : "border-solid border-border shadow-sm"
  )}
  >
@@ -309,7 +309,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  <div className="flex items-start justify-between gap-4 min-w-0">
  <div className="flex items-start gap-3 min-w-0 flex-1">
  <div className={cn(
- "p-1.5 rounded shrink-0 mt-0.5",
+ "p-1.5 shrink-0 mt-0.5",
  node.level === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
  )}>
  <FileText size={12} />
@@ -333,7 +333,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  <span className="text-[9px] font-bold uppercase text-muted-foreground tracking-tighter">Relevant Pages:</span>
  <div className="flex flex-wrap gap-1">
  {node.pages.map(p => (
- <span key={p} className="text-[9px] font-bold px-1.5 py-0.5 bg-muted text-muted-foreground border border-border rounded hover:bg-background hover:border-muted-foreground/30  cursor-default">
+ <span key={p} className="text-[9px] font-bold px-1.5 py-0.5 bg-muted text-muted-foreground border border-border hover:bg-background hover:border-muted-foreground/30  cursor-default">
  {p}
  </span>
  ))}
@@ -659,7 +659,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  </div>
  </div>
 
- <div className={cn("p-4 rounded border shrink-0", 
+ <div className={cn("p-4 border shrink-0", 
  queueStatus?.last_action?.toLowerCase().includes("rate limit") || queueStatus?.last_action?.toLowerCase().includes("fail") || queueStatus?.status === 'error'
  ? "bg-destructive/10 border-destructive/20 text-destructive" 
  : "bg-background border-border text-muted-foreground"

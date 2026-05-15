@@ -55,12 +55,12 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-8 border-2 border-destructive/20 bg-destructive/5 rounded-2xl text-center my-12">
+        <div className="p-8 border-2 border-destructive/20 bg-destructive/5 rounded-none text-center my-12">
           <p className="text-sm font-black text-destructive/60 uppercase tracking-[0.2em]">Document Parsing Error</p>
           <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-2">The content structure is malformed or contains illegal sequences.</p>
           <button 
             onClick={() => window.location.reload()}
-            className="mt-6 px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive text-[9px] font-black uppercase tracking-widest rounded-lg border border-destructive/20 transition-all"
+            className="mt-6 px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive text-[9px] font-black uppercase tracking-widest rounded-none border border-destructive/20 transition-none"
           >
             Reload Interface
           </button>
@@ -107,10 +107,10 @@ export const MermaidWrapper = ({ chart }: { chart: string }) => {
     });
   }, [chart]);
 
-  if (error) return <div className="text-destructive font-mono text-[11px] p-4 bg-destructive/10 rounded">Error rendering Mermaid diagram</div>;
+  if (error) return <div className="text-destructive font-mono text-[11px] p-4 bg-destructive/10 rounded-none">Error rendering Mermaid diagram</div>;
   if (!svg) return <div className="text-muted-foreground font-mono text-[11px] p-4 text-center">Rendering diagram...</div>;
 
-  return <div className="my-6 flex justify-center bg-muted/30 p-6 rounded-lg border border-border" dangerouslySetInnerHTML={{ __html: svg }} />;
+  return <div className="my-6 flex justify-center bg-muted/30 p-6 rounded-none border border-border" dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
 interface MarkdownViewerProps {
@@ -133,7 +133,7 @@ const CodeBlock = ({ language, value }: { language: string | null, value: string
     };
 
     return (
-        <div className="relative group my-8 rounded-xl border border-border/20 overflow-hidden bg-transparent  hover:border-border/40">
+        <div className="relative group my-8 rounded-none border border-border/20 overflow-hidden bg-transparent  hover:border-border/40">
             {/* Header / Top Bar - Minimalist and blended */}
             <div className={cn(
                 "flex items-center justify-between px-5 py-1.5 border-b border-border/5 bg-muted/5 ",
@@ -146,13 +146,13 @@ const CodeBlock = ({ language, value }: { language: string | null, value: string
                 </div>
                 <button 
                     onClick={handleCopy}
-                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-muted/20 rounded-md  text-muted-foreground/50 hover:text-foreground group/copy"
+                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-muted/20 rounded-none  text-muted-foreground/50 hover:text-foreground group/copy"
                     title="Copy Code"
                 >
                     <span className="text-[9px] font-bold uppercase tracking-widest opacity-0 group-hover/copy:opacity-100 ">
                         {copied ? 'Copied' : 'Copy'}
                     </span>
-                    {copied ? <Check size={12} className="text-primary" /> : <Copy size={12} className="group-hover/copy:scale-110 transition-transform" />}
+                    {copied ? <Check size={12} className="text-primary" /> : <Copy size={12} className="group-hover/copy:scale-110 " />}
                 </button>
             </div>
             
@@ -192,12 +192,19 @@ const CodeRenderer = memo((props: any) => {
     const language = match ? match[1] : null
     
     if (language === 'interactive-quiz') {
-        try {
-            const quizData = JSON.parse(String(children).trim());
-            return <MiniPracticeUI question={quizData} notePath={notePath} />;
-        } catch (e) {
-            return <div className="text-destructive p-4 border border-destructive/30 bg-destructive/10 rounded-xl my-4 text-xs font-mono">Failed to load interactive quiz JSON.</div>;
+        const quizData = useMemo(() => {
+            try {
+                return JSON.parse(String(children).trim());
+            } catch (e) {
+                return null;
+            }
+        }, [children]);
+
+        if (!quizData) {
+            return <div className="text-destructive p-4 border border-destructive/30 bg-destructive/10 rounded-none my-4 text-xs font-mono">Failed to load interactive quiz JSON.</div>;
         }
+
+        return <MiniPracticeUI question={quizData} notePath={notePath} />;
     }
 
     if (language === 'mermaid') return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />
@@ -205,7 +212,7 @@ const CodeRenderer = memo((props: any) => {
     // Render ```markdown blocks as actual Markdown documents to support rendered artifact tables
     if (language === 'markdown') {
         return (
-            <div className="my-6 p-6 bg-muted/5 border border-border/20 rounded-xl prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-table:my-0">
+            <div className="my-6 p-6 bg-muted/5 border border-border/20 rounded-none prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-table:my-0">
                 <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]}>
                     {String(children).replace(/\n$/, '')}
                 </ReactMarkdown>
@@ -228,7 +235,7 @@ const CodeRenderer = memo((props: any) => {
             .replace(/\\\]/g, () => '\n$$\n')
             .trim();
         return (
-            <div className="my-6 p-6 bg-muted/10 border border-border/30 rounded-xl">
+            <div className="my-6 p-6 bg-muted/10 border border-border/30 rounded-none">
                 <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-2">
                     <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]}>
                         {mathContent}
@@ -245,7 +252,7 @@ const CodeRenderer = memo((props: any) => {
         return <CodeBlock language={language} value={content} />
     }
     
-    return <code className={cn("bg-muted/30 px-1.5 py-0.5 rounded text-[12px] font-mono text-foreground border border-border/5 font-medium mx-0.5", className)} {...props}>{children}</code>
+    return <code className={cn("bg-muted/30 px-1.5 py-0.5 text-[12px] font-mono text-foreground border border-border/5 font-medium mx-0.5", className)} {...props}>{children}</code>
 });
 
 export function MarkdownViewer({ content, onNavigate, path, components }: MarkdownViewerProps) {
@@ -319,7 +326,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
     }, [selectedText])
 
     const markdownComponents = useMemo(() => ({
-        ...(componentsRef.current || {}),
+        ...(components || {}),
         p: ({ node, children, ...props }: any) => {
             return (
                 <p className="mb-4 leading-relaxed text-[13px] text-foreground/80 antialiased">
@@ -431,14 +438,14 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                                 }
                             }
                         }}
-                        className="mt-1 size-3.5 appearance-none border border-border/50 bg-transparent rounded-sm checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[4px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer " 
+                        className="mt-1 size-3.5 appearance-none border border-border/50 bg-transparent rounded-none checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[4px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer " 
                     />
                 );
             }
             return null;
         },
         table: ({ children }: any) => (
-            <div className="overflow-x-auto my-6 rounded-md border border-border">
+            <div className="overflow-x-auto my-6 rounded-none border border-border">
                 <table className="w-full border-collapse text-[12px]">{children}</table>
             </div>
         ),
@@ -500,7 +507,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
 
                 return (
                     <div className={cn(
-                        "my-6 rounded-lg border-l-2 p-5 not-prose border-border bg-muted/10",
+                        "my-6 rounded-none border-l-2 p-5 not-prose border-border bg-muted/10",
                         borderClass
                     )}>
                         {processedChildren}
@@ -509,7 +516,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
             }
 
             return (
-                <blockquote className="border-l-4 border-primary/20 pl-4 italic my-6 text-muted-foreground text-[13px] bg-muted/10 py-3 rounded-r-lg">
+                <blockquote className="border-l-4 border-primary/20 pl-4 italic my-6 text-muted-foreground text-[13px] bg-muted/10 py-3 rounded-none">
                     {children}
                 </blockquote>
             );
@@ -541,7 +548,7 @@ export function MarkdownViewer({ content, onNavigate, path, components }: Markdo
                     <button
                         onMouseDown={e => e.preventDefault()}
                         onClick={handleClickExplain}
-                        className="absolute z-30 flex items-center gap-1.5 px-3 py-1.5 bg-background border border-border/60 shadow-lg rounded-full text-[10px] font-black uppercase tracking-widest text-foreground/70 hover:text-foreground hover:border-foreground/30 hover:bg-muted/10 transition-all"
+                        className="absolute z-30 flex items-center gap-1.5 px-3 py-1.5 bg-background border border-border/60 shadow-lg rounded-none text-[10px] font-black uppercase tracking-widest text-foreground/70 hover:text-foreground hover:border-foreground/30 hover:bg-muted/10 transition-none"
                         style={{
                             left: Math.max(0, floatPos.x - 60),
                             top: Math.max(0, floatPos.y),
