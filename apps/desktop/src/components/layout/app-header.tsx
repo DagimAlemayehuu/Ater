@@ -30,7 +30,7 @@ export function AppHeader() {
       if (entry.type === 'file') {
         const parts = entryPath.split('/')
         const fileName = parts[parts.length - 1]
-        subPath = fileName.replace(/\.md$/, '').replace(/_/g, ' ')
+        subPath = fileName.replace(/\.(md|pdf)$/, '').replace(/_/g, ' ')
       }
     } else if (entryPath.startsWith('/academic')) {
       module = 'Academic Dashboard'

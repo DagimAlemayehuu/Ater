@@ -28,7 +28,7 @@ export function SectionHeader({title, count, onAction, actionLabel}: {
 }) {
  return (
  <div className="flex items-center gap-3">
- <h2 className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/60 shrink-0">{title}</h2>
+ <h2 className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground shrink-0">{title}</h2>
  {count !== undefined && <span className="text-[8px] font-black text-muted-foreground">{count}</span>}
  <div className="h-px flex-1 bg-border" />
  {onAction && (
@@ -54,7 +54,7 @@ export function EmptyState({message, icon}: {message: string; icon?: React.React
 export function StatCard({label, value, accent, onClick}: {label: string; value: string | number; accent?: boolean; onClick?: () => void}) {
  return (
  <div onClick={onClick} className={cn('p-6 border border-border rounded-none bg-muted/5 flex flex-col gap-2 ', onClick && 'cursor-pointer hover:bg-muted/10 hover:border-foreground/70')}>
- <span className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/50">{label}</span>
+ <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">{label}</span>
  <span className={cn('text-xl font-black tracking-tighter truncate', accent ? 'text-primary' : 'text-foreground')}>{value}</span>
  </div>
  )

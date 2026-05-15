@@ -628,6 +628,40 @@ async def find_vault_page(page_name: str, secrets: AppSecrets = Depends(get_app_
                 return {"found": True, "type": "note", "path": str(found.relative_to(vault_root))}
 
     # 2. Search in 3-Database (prioritize database views)
+    return {"found": False}
+
+@router.get("/vault/search-full")
+async def search_vault_full(query: str, secrets: AppSecrets = Depends(get_app_secrets)):
+    """Deep search across file names AND file content."""
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+    
+    vault_root = Path(secrets.vault_path)
+    results = []
+    query_low = query.lower()
+    
+    # 1. Search for matching paths (fast)
+    for item in vault_root.rglob("*"):
+        if any(p in item.parts for p in ['.trash', 'node_modules', '.git', '.obsidian']):
+            continue
+        
+        rel_path = str(item.relative_to(vault_root))
+        if query_low in rel_path.lower():
+            results.append(rel_path)
+            continue
+            
+        # 2. Search for matching content in .md files
+        if item.is_file() and item.suffix == ".md":
+            try:
+                # Read only first 50k to prevent hanging on huge files
+                with open(item, "r", encoding="utf-8") as f:
+                    content = f.read(50000)
+                    if query_low in content.lower():
+                        results.append(rel_path)
+            except:
+                continue
+                
+    return {"paths": list(set(results))}
     db_root = vault_root / DB_DIR_PREFIX
     if db_root.exists():
         for db_dir in db_root.iterdir():

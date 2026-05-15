@@ -7,7 +7,7 @@
 
 import { load } from '@tauri-apps/plugin-store'
 
-const SIDECAR_BASE_URL = 'http://127.0.0.1:8765'
+export const SIDECAR_BASE_URL = 'http://127.0.0.1:8765'
 const STORE_FILENAME = 'ater_config.json'
 
 export interface HealthResponse {
@@ -213,6 +213,9 @@ export const sidecarApi = {
 
     findVaultPage: (pageName: string) =>
         request<{ found: boolean; type?: 'database' | 'note'; db_id?: string; file_name?: string; path?: string }>(`/api/vault/search?page_name=${encodeURIComponent(pageName)}`),
+
+    searchVaultFull: (query: string) =>
+        request<{ paths: string[] }>(`/api/vault/search-full?query=${encodeURIComponent(query)}`),
 
     getVaultGraph: () =>
         request<{ nodes: any[]; links: any[] }>('/api/vault/graph'),

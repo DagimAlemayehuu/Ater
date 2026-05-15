@@ -412,7 +412,7 @@ function KnowledgeFooter({tree, activePath, onNavigate, onFinish}: {tree: NavNod
             </button>
           )}
 
-          {(!nextNode || isHub) && (
+          {(!nextNode || isHub) && !activePath.toLowerCase().endsWith('.pdf') && (
             <button 
               onClick={() => navigate(`/practice?hubId=${hubId}`)}
               className="flex items-center gap-3 px-10 py-3 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-none border border-border/40 font-bold uppercase tracking-widest text-[10px] transition-none w-full min-w-[200px]"
@@ -446,9 +446,25 @@ function KnowledgeFooter({tree, activePath, onNavigate, onFinish}: {tree: NavNod
 }
 
 
-function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox}: {content: string, activePath: string | null, onNavigate: (name: string) => void, onToggleCheckbox: (label: string, isChecked: boolean, target: string | null) => void}) {
+function HubConnectionsNav({content, activePath, onNavigate, onToggleCheckbox, searchQuery}: {content: string, activePath: string | null, onNavigate: (name: string) => void, onToggleCheckbox: (label: string, isChecked: boolean, target: string | null) => void, searchQuery?: string}) {
  const activeNoteName = activePath?.split('/').pop()?.replace('.md', '').replace('.pdf', '')?.toLowerCase() || ''
- const tree = useMemo(() => parseHubTree(content), [content]);
+ const tree = useMemo(() => {
+   const baseTree = parseHubTree(content);
+   if (!searchQuery) return baseTree;
+   
+   const filterNodes = (nodes: NavNode[]): NavNode[] => {
+     return nodes.filter(node => {
+       const matches = node.label.toLowerCase().includes(searchQuery.toLowerCase());
+       const childrenMatches = node.children.length > 0 ? filterNodes(node.children) : [];
+       if (matches || childrenMatches.length > 0) {
+         node.children = childrenMatches;
+         return true;
+       }
+       return false;
+     });
+   };
+   return filterNodes(JSON.parse(JSON.stringify(baseTree)));
+ }, [content, searchQuery]);
  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
  // Auto-expand all nodes by default
@@ -649,7 +665,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
      // Right Content (Actions)
      setRightContent(
        <div className="flex items-center gap-1.5">
-         {selectedPath && !selectedPath.toLowerCase().endsWith('.pdf') && (
+         {selectedPath && (
            <>
              {isEditing ? (
                <div className="flex items-center gap-1.5">
@@ -677,24 +693,41 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                  </button>
                  {(noteMetadata?.source_file || noteMetadata?.source) && (
                    <button 
-                     onClick={() => {
+                      onClick={async () => {
                         const src = noteMetadata.source_file || noteMetadata.source
-                        const cleanPath = typeof src === 'string' ? src.replace(/^\[\[/, '').replace(/\]\]$/, '') : src
+                        if (!src) return;
                         
-                        // Extract all possible page waypoints
+                        // 1. Clean Wikilink (handle [[Path/File.pdf|Alias]])
+                        let cleanPath = src
+                        if (typeof src === 'string') {
+                          cleanPath = src.replace(/^\[\[/, '').replace(/\]\]$/, '').split('|')[0]
+                        }
+                        
+                        // 2. Resolve Waypoints
                         const wps = Array.isArray(noteMetadata.source_pages) 
                           ? noteMetadata.source_pages 
                           : (noteMetadata.source_pages ? [noteMetadata.source_pages] : (noteMetadata.source_page ? [noteMetadata.source_page] : []))
                         
                         const numericWaypoints = wps.map(Number).filter(n => !isNaN(n))
-                        
-                        setSelectedPath(cleanPath)
+                        const firstPage = numericWaypoints.length > 0 ? numericWaypoints[0] : 1
+
+                        // 3. Resolve Path via sidecar if it doesn't look like a direct path
+                        let resolvedPath = cleanPath
+                        if (!cleanPath.includes('/') && !cleanPath.includes('\\')) {
+                          try {
+                            const searchRes = await sidecarApi.findVaultPage(cleanPath)
+                            if (searchRes.found && searchRes.path) {
+                              resolvedPath = searchRes.path
+                            }
+                          } catch (err) {
+                            console.error("[Jump] Path resolution failed", err)
+                          }
+                        }
+
+                        // 4. Trigger Select
                         setWaypoints(numericWaypoints)
                         setCurrentWaypointIndex(0)
-                        
-                        if (numericWaypoints.length > 0) {
-                          setSelectedPage(numericWaypoints[0])
-                        }
+                        await selectFile(resolvedPath, firstPage, false, [], true)
                       }}
                      className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-none hover:text-foreground hover:border-primary  shadow-sm"
                      title="Jump to Source PDF"
@@ -1353,11 +1386,11 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  setRenamingPath(null)
  setNewItemName('')
 } catch (err: any) {
- alert(`Rename failed: ${err.message}`)
-}
+  alert(`Rename failed: ${err.message}`)
+ }
 }
 
-  const selectFile = async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = []) => {
+const selectFile = async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = [], keepMetadata: boolean = false) => {
     // 0. Skip if already loading the exact same thing
     if (selectedPath === path && selectedPage === page && !fromHistory) {
       console.log(`[selectFile] Skip: Already on ${path}`);
@@ -1402,15 +1435,18 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
         type: 'file', 
         path: path, 
         metadata: { page, filterPages } 
+        // Note: we don't store keepMetadata in history as it's a one-time intent
       }, false);
     }
 
     // PDFs are handled by an iframe, we don't need to read content here
     if (path.toLowerCase().endsWith('.pdf')) {
       console.log(`[selectFile] PDF detected: ${path}`);
-      setNoteMetadata({})
-      setNoteContent('')
-      setEditedContent('')
+      if (!keepMetadata) {
+        setNoteMetadata({})
+        setNoteContent('')
+        setEditedContent('')
+      }
       setIsEditing(false)
       clearTimeout(loadingTimeout)
       clearTimeout(safetyTimeout)
@@ -1528,7 +1564,11 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   // Grouping logic for Hubs
   const groupedHubs = useMemo(() => {
     const groups: Record<string, any[]> = {}
-    hubs.forEach(hub => {
+    hubs.filter(hub => {
+      if (!searchQuery) return true;
+      return hub.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+             (hub.course && hub.course.toLowerCase().includes(searchQuery.toLowerCase()));
+    }).forEach(hub => {
       const course = hub.course || 'Uncategorized'
       if (!groups[course]) groups[course] = []
       groups[course].push(hub)
@@ -1538,11 +1578,17 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
       acc[key] = groups[key].sort((a, b) => (parseInt(a.unit) || 0) - (parseInt(b.unit) || 0))
       return acc
     }, {} as Record<string, any[]>)
-  }, [hubs])
+  }, [hubs, searchQuery])
 
   // Grouping logic for PDFs
   const groupedPdfs = useMemo(() => {
-    const pdfFiles = files.filter(f => f.path.toLowerCase().endsWith('.pdf'))
+    const pdfFiles = files.filter(f => {
+      const isPdf = f.path.toLowerCase().endsWith('.pdf');
+      if (!isPdf) return false;
+      if (!searchQuery) return true;
+      return f.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+             f.path.toLowerCase().includes(searchQuery.toLowerCase());
+    })
     const groups: Record<string, any[]> = {}
     pdfFiles.forEach(file => {
       const parts = file.path.split('/')
@@ -1551,7 +1597,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
       groups[folder].push(file)
     })
     return groups
-  }, [files])
+  }, [files, searchQuery])
 
   const toggleFolder = (path: string) => {
  const newExpanded = new Set(expandedFolders)
@@ -1731,14 +1777,47 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  return root
 }, [files])
 
- const matchesSearch = (node: FileNode, query: string): boolean => {
- if (!query) return true
- if (node.path.toLowerCase().includes(query.toLowerCase())) return true
- if (node.children) {
- return node.children.some(child => matchesSearch(child, query))
-}
- return false
-}
+  const [isNoteMetadataExpanded, setIsNoteMetadataExpanded] = useState(false)
+  const [contentMatchPaths, setContentMatchPaths] = useState<Set<string>>(new Set())
+
+  const matchesSearch = useCallback((node: FileNode, query: string): boolean => {
+    if (!query) return true
+    if (node.path.toLowerCase().includes(query.toLowerCase())) return true
+    if (contentMatchPaths.has(node.path)) return true
+    if (node.children) {
+      return node.children.some(child => matchesSearch(child, query))
+    }
+    return false
+  }, [contentMatchPaths])
+
+  useEffect(() => {
+    if (!searchQuery || searchQuery.length < 3) {
+      setContentMatchPaths(new Set())
+      return
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await sidecarApi.searchVaultFull(searchQuery)
+        setContentMatchPaths(new Set(res.paths))
+      } catch (e) { console.error("Search failed", e) }
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  const filteredFiles = useMemo(() => {
+    if (!searchQuery) return fileTree
+    
+    const filterTree = (nodes: FileNode[]): FileNode[] => {
+      return nodes
+        .filter(node => matchesSearch(node, searchQuery))
+        .map(node => ({
+          ...node,
+          children: node.children ? filterTree(node.children) : undefined
+        }))
+    }
+
+    return filterTree(fileTree)
+  }, [fileTree, searchQuery, matchesSearch])
 
  const [draggedPath, setDraggedPath] = useState<string | null>(null)
  const [dragOverPath, setDragOverPath] = useState<string | null>(null)
@@ -2085,7 +2164,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
         }}
         onDrop={(e) => handleDrop(e, null)}
       >
-        {files.length > 0 ? renderTree(fileTree) : (
+        {files.length > 0 ? renderTree(filteredFiles) : (
           <div className="py-10 text-center opacity-40">
             <Folder className="w-8 h-8 mx-auto mb-2 opacity-20" />
             <p className="text-[10px] font-black uppercase tracking-widest">Vault Empty</p>
@@ -2180,7 +2259,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  ) : (
  <>
  {/* Sticky Connections Column (Left-Contextual) */}
-  {selectedPath && !selectedPath.toLowerCase().endsWith('.pdf') && (
+  {selectedPath && (
   <aside 
   className="relative border-r border-border flex flex-col bg-background shrink-0 group/connections overflow-hidden  "
   style={{width: `${connectionsWidth}px`}}
@@ -2229,6 +2308,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  activePath={selectedPath}
  onNavigate={handleWikiLinkClick}
  onToggleCheckbox={handleToggleCheckbox}
+ searchQuery={searchQuery}
  />
  ) : (
  <div className="py-20 flex flex-col items-center gap-3 opacity-20">
@@ -2271,23 +2351,36 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   </div>
   )}
 
- {selectedPath.toLowerCase().endsWith('.pdf') ? (
- <div className="flex-1 min-h-0">
- <PdfViewer 
- ref={pdfRef}
- path={selectedPath} 
- title={selectedPath.split('/').pop() || ''} 
- initialPage={selectedPage} 
- filterPages={selectedFilteredPages}
- onStateChange={(state) => setPdfState({
- page: state.page,
- pageCount: state.pageCount || 1,
- sidebarOpen: state.sidebarOpen,
- isFullscreen: state.isFullscreen
+  {selectedPath.toLowerCase().endsWith('.pdf') ? (
+  <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
+  <div className="flex-1 min-h-0">
+  <PdfViewer 
+  ref={pdfRef}
+  path={selectedPath} 
+  title={selectedPath.split('/').pop() || ''} 
+  initialPage={selectedPage} 
+  filterPages={selectedFilteredPages}
+  onStateChange={(state) => setPdfState({
+  page: state.page,
+  pageCount: state.pageCount || 1,
+  sidebarOpen: state.sidebarOpen,
+  isFullscreen: state.isFullscreen
 })}
- />
- </div>
- ) : (
+  />
+  </div>
+  
+  {/* Knowledge Navigation Footer for PDF (when in context) */}
+  {studyTree.length > 0 && (
+    <div className="border-t border-border bg-background/50 px-16 py-8">
+      <KnowledgeFooter 
+        tree={studyTree} 
+        activePath={selectedPath}
+        onNavigate={handleWikiLinkClick}
+      />
+    </div>
+  )}
+  </div>
+  ) : (
  <>
  {config?.showProperties && (
  <NoteProperties 

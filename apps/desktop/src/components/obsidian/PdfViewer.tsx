@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
 import { useConfig } from '@/lib/ConfigContext';
 import { useTheme } from '@/context/theme-provider';
@@ -33,6 +33,15 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     const { config } = useConfig();
     const { theme } = useTheme();
     const [page, setPage] = useState(initialPage);
+    
+    // Sync internal page state and trigger iframe jump when prop changes
+    useEffect(() => {
+        if (page !== initialPage) {
+            setPage(initialPage);
+            handleJump(initialPage);
+        }
+    }, [initialPage]);
+
     const [isFiltered, setIsFiltered] = useState(false);
     const [filteredList, setFilteredList] = useState<number[]>([]);
     const [pageCount, setPageCount] = useState<number | null>(null);
@@ -41,6 +50,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     // Explain sidebar state
     const [explainOpen, setExplainOpen] = useState(false);
     const [explainSelection, setExplainSelection] = useState('');
+    const [floatPos, setFloatPos] = useState<{ x: number, y: number } | null>(null);
 
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -141,21 +151,38 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                     setPageCount(event.data.pageCount);
                     setFilteredList(event.data.filterList);
                 }
-            } else if (event.data.type === 'selection' && event.data.text?.trim()) {
-                // iframe sends selected text via postMessage
-                setExplainSelection(event.data.text.trim())
-                setExplainOpen(true)
+            } else if (event.data.type === 'selection') {
+                if (event.data.text?.trim()) {
+                    setExplainSelection(event.data.text.trim())
+                    // Position button slightly above selection
+                    setFloatPos({ x: event.data.mouseX, y: event.data.mouseY - 40 })
+                } else {
+                    setFloatPos(null)
+                }
             }
         };
+
+        const handleGlobalClick = () => setFloatPos(null);
+
         window.addEventListener('message', handleMessage);
-        return () => window.removeEventListener('message', handleMessage);
+        window.addEventListener('mousedown', handleGlobalClick);
+
+        return () => {
+            window.removeEventListener('message', handleMessage);
+            window.removeEventListener('mousedown', handleGlobalClick);
+        };
     }, []);
 
 
     const isDarkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     const resolvedTheme = isDarkMode ? 'dark' : 'light';
 
-    const pdfUrl = `http://127.0.0.1:8765/api/obsidian/viewer/${encodeURI(path)}?vault_path=${encodeURIComponent(config?.obsidianVaultPath || '')}&page=${initialPage}${filterPages && filterPages.length > 0 ? `&filter_pages=${filterPages.join(',')}` : ''}&theme=${resolvedTheme}`;
+    // Memoize URL to prevent reloads when jumping between waypoints in the same file
+    const pdfUrl = useMemo(() => {
+        const vaultPath = config?.obsidianVaultPath || '';
+        const filterStr = filterPages && filterPages.length > 0 ? `&filter_pages=${filterPages.join(',')}` : '';
+        return `http://127.0.0.1:8765/api/obsidian/viewer/${encodeURI(path)}?vault_path=${encodeURIComponent(vaultPath)}&page=${initialPage}${filterStr}&theme=${resolvedTheme}`;
+    }, [path, resolvedTheme, filterPages, config?.obsidianVaultPath]);
 
     const handleAskAI = () => {
         // Use the page title and page number as context since we can't get iframe selection
@@ -178,6 +205,29 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                             Ask AI
                         </button>
                     </div>
+
+                    {/* Floating Explain Button */}
+                    {floatPos && (
+                        <div 
+                            className="absolute z-50 pointer-events-auto"
+                            style={{ 
+                                left: `${floatPos.x}px`, 
+                                top: `${floatPos.y}px`,
+                                transform: 'translateX(-50%)'
+                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            <button
+                                onClick={() => {
+                                    setExplainOpen(true);
+                                    setFloatPos(null);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-foreground text-background border border-foreground shadow-xl rounded-none text-[9px] font-black uppercase tracking-widest hover:bg-foreground/90 transition-none animate-in fade-in zoom-in duration-100"
+                            >
+                                Explain More
+                            </button>
+                        </div>
+                    )}
 
                     <div className="flex-1 w-full h-full overflow-hidden flex items-center justify-center">
                         <iframe 

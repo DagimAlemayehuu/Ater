@@ -15,6 +15,7 @@ import CoursesTab from './academic-tabs/CoursesTab'
 import StudyPlannerTab from './academic-tabs/StudyPlannerTab'
 import AssignmentsTab from './academic-tabs/AssignmentsTab'
 import ExamsTab from './academic-tabs/ExamsTab'
+import { SIDECAR_BASE_URL } from '@/lib/sidecarApi'
 import {cleanTitle} from './academic-tabs/utils'
 import type {AcademicTab, AcademicData, VaultDatabase, TabProps} from './academic-tabs/types'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
@@ -44,7 +45,7 @@ export default function AcademicDashboard() {
   const {setRightContent} = useHeader()
  const {setIsFullscreen} = useLayout()
  const nav = useNavigate()
- const API_BASE = 'http://127.0.0.1:8765'
+ const API_BASE = SIDECAR_BASE_URL
 
  // ── Data fetching ──────────────────────────────────────────────────────────
  const fetchData = useCallback(async () => {
