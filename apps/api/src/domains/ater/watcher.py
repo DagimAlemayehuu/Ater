@@ -82,6 +82,9 @@ class AterQueueManager:
         self.db_path = str(self.inbox_path.absolute() / "ater_queue.db")
         self._init_db()
         self._lock = asyncio.Lock()
+        
+        # Register status callback for real-time persistence
+        self.service.register_status_callback(self.update_status_message)
 
     def _init_db(self):
         """Initializes the database schema."""
@@ -192,9 +195,11 @@ class AterQueueManager:
 
         # Migrations
         for col, defval in [("session_id", "NULL"), ("current_batch", "0"),
-                            ("total_batches", "0"), ("curriculum", "NULL")]:
+                            ("total_batches", "0"), ("curriculum", "NULL"),
+                            ("status_message", "'Ready'")]:
             try:
-                conn.execute(f"ALTER TABLE queue ADD COLUMN {col} {'TEXT' if col in ('session_id','curriculum') else 'INTEGER'} DEFAULT {defval}")
+                is_text = col in ('session_id','curriculum','status_message')
+                conn.execute(f"ALTER TABLE queue ADD COLUMN {col} {'TEXT' if is_text else 'INTEGER'} DEFAULT {defval}")
             except Exception:
                 pass
         conn.commit()
@@ -320,6 +325,20 @@ class AterQueueManager:
                 
                 # Immediate Checkpoint to prevent re-planning on restart
                 self._save_checkpoint(file_path_str, session_id, 0, total, curriculum)
+            else:
+                # v32.0: Restore metadata for UI consistency
+                session = await self.service._get_or_restore_session(session_id)
+                if session:
+                    plan_metadata = session.get("metadata", {})
+                    self.planned_batches = plan_metadata.get("batches", [])
+                    self.total_batches = total
+                    self.current_batch = temp_batch
+                    # Processed notes will be synced by get_status via Connections tree
+                else:
+                    # Session missing from disk? Re-plan.
+                    watcher_logger.warning(f"Session {session_id} not found on disk. Re-planning {path.name}...")
+                    self._mark_done(file_path_str) # Reset state
+                    return await self.process_file(file_path_str)
             
             # 3. Deployment Loop (Hyperdrive)
             has_more = True
@@ -425,32 +444,28 @@ class AterQueueManager:
         pending_count = conn.execute("SELECT COUNT(*) FROM queue WHERE status = 'pending'").fetchone()[0]
         
         # Pull real-time progress for the primary active file from DB if available
-        current_file = None
+        # Pull granular status from DB first
+        db_status_msg = "Ready"
+        primary_path_str = None
         if self.active_tasks:
-            # Sort keys to be deterministic, or just pick first
             primary_path_str = list(self.active_tasks.keys())[0]
             current_file = Path(primary_path_str).name
             
-            # Optionally refresh batch counts from DB to ensure accuracy if multiple workers are active
-            row = conn.execute("SELECT current_batch, total_batches FROM queue WHERE file_path=?", (primary_path_str,)).fetchone()
+            row = conn.execute("SELECT current_batch, total_batches, status_message FROM queue WHERE file_path=?", (primary_path_str,)).fetchone()
             if row:
                 self.current_batch = row[0] or self.current_batch
                 self.total_batches = row[1] or self.total_batches
+                db_status_msg = row[2] or "Processing"
         
         conn.close()
         active_files = [Path(f).name for f in self.active_tasks.keys()]
         
-        # Inject governor status into last_action if waiting
-        display_action = self.last_action
-        session_id = primary_path_str if self.active_tasks else None
+        # Pull live status from service if available (fallback to DB)
+        display_action = db_status_msg
+        session_id = primary_path_str
         
-        # Pull granular status from service if available
         if session_id:
-            svc_status = AterService._status.get(session_id)
-            if svc_status:
-                display_action = f"{self.last_action} | {svc_status}"
-            
-            # Pull real-time processed notes from service session
+            # Check session for real-time processed notes
             session = AterService._sessions.get(session_id)
             if session:
                 svc_processed = session.get("processed_notes", [])

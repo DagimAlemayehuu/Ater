@@ -111,7 +111,7 @@
 .prose h1, .prose h2, .prose h3, .prose h4 { @apply text-foreground font-black uppercase tracking-tight; }
 .prose p { @apply text-foreground/70 leading-relaxed; }
 .prose a { @apply text-foreground underline decoration-foreground/30 hover:decoration-foreground; }
-.prose code { @apply bg-muted/30 px-1.5 py-0.5 rounded text-[11px] font-mono border border-border/10; }
+.prose code { @apply bg-muted/30 px-1.5 py-0.5 rounded-none text-[11px] font-mono border border-border/10; }
 .prose ul, .prose ol { @apply text-foreground/70; }
 .prose blockquote { @apply border-l border-foreground/20 pl-4 italic text-muted-foreground/60 bg-muted/5 py-1; }
 .prose table { @apply w-full border-collapse my-4; }

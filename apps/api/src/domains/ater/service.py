@@ -40,6 +40,7 @@ class AterService:
     _status: Dict[str, str] = {}  # Global status map
     _rate_limited: Dict[str, float] = {}  # session_id → timestamp when rate-limit hit
     _session_file = Path.home() / ".ater" / "ater" / "sessions.json"
+    _status_callback: Optional[Any] = None # (session_id, message) -> None
 
     def __init__(self, secrets):
         self.secrets = secrets
@@ -90,7 +91,6 @@ class AterService:
             max_tokens=4096,
         ) if secrets.ai_key else None
         
-        self.writer_agent = None  # replaced by split agents
         self.critic_agent = CriticAgent(llm=self.llm_creative) if self.llm_creative else None
         self.hub_agent = HubAgent(llm=self.llm) if self.llm else None
         self.epistemic_classifier_agent = EpistemicClassifierAgent(llm=self.llm) if self.llm else None
@@ -107,6 +107,21 @@ class AterService:
         # Initialize YAML compiler
         self.yaml = ruamel.yaml.YAML()
         self.yaml.indent(mapping=2, sequence=4, offset=2)
+
+    @classmethod
+    def set_status(cls, session_id: str, message: str):
+        """Sets the status for a session and triggers callback if registered."""
+        cls._status[session_id] = message
+        if cls._status_callback:
+            try:
+                # Callback is usually AterQueueManager.update_status_message
+                cls._status_callback(session_id, message)
+            except Exception as e:
+                print(f"[Ater Service] Status callback failed: {e}")
+
+    @classmethod
+    def register_status_callback(cls, callback):
+        cls._status_callback = callback
 
     def _ensure_session_dir(self):
         self._session_file.parent.mkdir(parents=True, exist_ok=True)
@@ -1652,10 +1667,10 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
         # Phase 1.4: Intelligent Routing Selection
         # We try the fast deterministic router first to save time and tokens.
-        AterService._status[session_id] = "Analyzing Domain (Fast Track)..."
+        self.set_status(session_id, "Analyzing Domain (Fast Track)...")
         fast_mode = router.route(full_text, course=course)
         
-        AterService._status[session_id] = "Oracle Context Briefing..."
+        self.set_status(session_id, "Oracle Context Briefing...")
         context_briefing_data = await self.meta_scanner_agent.scan_full_text(full_text)
         from .schemas import ContextBriefing
         context_briefing = ContextBriefing(**context_briefing_data)
@@ -1665,7 +1680,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             detected_mode = fast_mode
             print(f"[Ater Service] Fast Router Confirmed: {detected_mode}")
         else:
-            AterService._status[session_id] = "Oracle Domain Routing..."
+            self.set_status(session_id, "Oracle Domain Routing...")
             detected_mode = await router.route_with_oracle(
                 self.planner_llm, 
                 context_briefing.model_dump(), 
@@ -1675,7 +1690,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             print(f"[Ater Service] Oracle Router Detected: {detected_mode}")
 
         # Invoke Architect Agent
-        AterService._status[session_id] = "Architecting Sovereign Plan..."
+        self.set_status(session_id, "Architecting Sovereign Plan...")
         
         # Build prompt enrichment with metadata and healing info
         context_enrichment = (
@@ -1709,7 +1724,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         extracted_epistemic_stance = "Unknown"
         
         for idx, chunk in enumerate(text_chunks):
-            AterService._status[session_id] = f"Architecting Plan (Chunk {idx+1}/{len(text_chunks)})..."
+            self.set_status(session_id, f"Architecting Plan (Chunk {idx+1}/{len(text_chunks)})...")
             print(f"[Ater Service] Processing chunk {idx+1}/{len(text_chunks)}")
             try:
                 await self.governor.get_permit(expected_tokens=len(chunk) + 1000)
@@ -1771,7 +1786,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 with open("/Users/dabodestroyer/code/Antigravity/Ater/.cursor/debug-18a97e.log", "a", encoding="utf-8") as _f: _f.write(json.dumps({"sessionId":"18a97e","runId":"pre-fix","hypothesisId":"H3","location":"service.py:generate_plan","message":"Chunk planning failed","data":{"sessionId":session_id,"chunkIndex":idx+1,"errorType":type(e).__name__,"error":str(e)[:240]},"timestamp":int(time.time()*1000)}) + "\n")
                 # endregion
                 print(f"[Ater Service] CRITICAL: Chunk {idx+1} failed validation: {e}\n{err_trace}")
-                AterService._status[session_id] = f"Load Failed during Architecting: {str(e)}"
+                self.set_status(session_id, f"Load Failed during Architecting: {str(e)}")
                 raise e
 
         # Deduplicate Plan
@@ -1794,7 +1809,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             all_atomic_notes = self._topological_sort_prerequisites(all_atomic_notes)
 
             # Phase 1.5: Epistemic Classification (HYDRA)
-            AterService._status[session_id] = "Classifying Concept Modalities..."
+            self.set_status(session_id, "Classifying Concept Modalities...")
             classifications = await self.epistemic_classifier_agent.classify_batch(all_atomic_notes)
             for note in all_atomic_notes:
                 modality = classifications.get(note["title"], "Qualitative/Definitional")
@@ -2063,7 +2078,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 }
 
                                 # 1. Micro-Theory Pass
-                                AterService._status[session_id] = f"{phase_prefix} Theory: [[{current_note_title}]]..."
+                                self.set_status(session_id, f"{phase_prefix} Theory: [[{current_note_title}]]...")
                                 await self.governor.get_permit(expected_tokens=4000)
                                 
                                 # THIN CONTEXT: Limit concept list to immediate prerequisites + unit neighbors
@@ -2100,7 +2115,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                         session["used_scenarios"].append(" ".join(words[:3]))
                                 
                                 # 2. Micro-Execution (The Systems Breaker)
-                                AterService._status[session_id] = f"{phase_prefix} Execution: [[{current_note_title}]]..."
+                                self.set_status(session_id, f"{phase_prefix} Execution: [[{current_note_title}]]...")
                                 await self.governor.get_permit(expected_tokens=3000)
                                 prac_parts = await practitioner_agent.generate_micro(
                                     note_schema.title, 
@@ -2116,7 +2131,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 note_data.update(prac_parts)
                                 # 3. Micro-Question Pass (Dynamic Assessment)
                                 # v33.0: Compressed context — saves ~8k tokens per note
-                                AterService._status[session_id] = f"{phase_prefix} Assessment: [[{current_note_title}]]..."
+                                self.set_status(session_id, f"{phase_prefix} Assessment: [[{current_note_title}]]...")
                                 await self.governor.get_permit(expected_tokens=2500)
 
                                 q_agent = QuestionAgent(self.planner_llm, domain)
@@ -2152,7 +2167,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 )
                                 if not lock_passed:
                                     print(f"[Ater Service] Semantic Topic Lock FAILED: {lock_diag}. Triggering regeneration.")
-                                    AterService._status[session_id] = f"⚠️ Topic Lock Fail: Regenerating quiz for [[{current_note_title}]]..."
+                                    self.set_status(session_id, f"⚠️ Topic Lock Fail: Regenerating quiz for [[{current_note_title}]]...")
                                     note_schema.source_context = (note_schema.source_context or "") + f"\n\nQUIZ FIX INSTRUCTION: {lock_diag}. Generate questions ONLY about '{note_schema.title.replace('_', ' ')}' using vocabulary from the source text."
                                     continue
 
@@ -2203,12 +2218,12 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 if not is_valid:
                                     error_msg = f"Validation failed for [[{current_note_title}]]: {', '.join(validation_errors)}"
                                     logger.warning(f"[AterService] {error_msg}")
-                                    AterService._status[session_id] = f"⚠️ Healing Failed: Regenerating [[{current_note_title}]]..."
+                                    self.set_status(session_id, f"⚠️ Healing Failed: Regenerating [[{current_note_title}]]...")
                                     continue
 
                                 # 5.1 Semantic Validation (Hydra) — tiered blocking
                                 if self.verifier_agent:
-                                    AterService._status[session_id] = f"{phase_prefix} Semantic Validation: [[{current_note_title}]]..."
+                                    self.set_status(session_id, f"{phase_prefix} Semantic Validation: [[{current_note_title}]]...")
                                     await self.governor.get_permit(expected_tokens=2000)
                                     v_res = await self.verifier_agent.verify(
                                         note_schema.title, 
@@ -2235,7 +2250,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                         if hard_failures:
                                             hard_diag = "; ".join([f"{f['check']}: {f['issue']}" for f in hard_failures])
                                             print(f"[Ater Service] Semantic Validation HARD FAIL: {hard_diag}")
-                                            AterService._status[session_id] = f"⚠️ Semantic Healing: [[{current_note_title}]]..."
+                                            self.set_status(session_id, f"⚠️ Semantic Healing: [[{current_note_title}]]...")
                                             if hard_failures:
                                                 note_schema.source_context = (note_schema.source_context or "") + f"\n\nFIX INSTRUCTION: {hard_failures[0]['fix_instruction']}"
                                             continue  # Only hard failures trigger regen
@@ -2271,7 +2286,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         
                         from .schemas import NoteSchema
                         note_schema = NoteSchema(**note_schema_raw)
-                        AterService._status[session_id] = f"Synthesizing Master Question Bank: [[{current_note_title}]]..."
+                        self.set_status(session_id, f"Synthesizing Master Question Bank: [[{current_note_title}]]...")
                         
                         all_note_probes = session.get("all_note_probes", {})
                         pq_output = self._compile_pq_note(
@@ -2284,7 +2299,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         local_results = self.deployer.deploy_atomic_notes(session_id, [current_note_title], [pq_output], plan_obj, session.get("path", ""))
 
                     elif b_type == "hub":
-                        AterService._status[session_id] = "Compiling Unit Mastery Hub..."
+                        self.set_status(session_id, "Compiling Unit Mastery Hub...")
                         ai_output = self._compile_hub_note(plan_obj, session_path=session.get("path", ""))
                         
                         if self.hub_agent:
@@ -2356,7 +2371,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 if hub_file.exists():
                                     plan_titles = [n.get("title") for n in meta.get("atomic_notes", [])]
                                     sync_hub_connections(hub_file, unit_dir, plan_order=plan_titles)
-                                AterService._status[session_id] = "Post-Processing Complete"
+                                self.set_status(session_id, "Post-Processing Complete")
                             else:
                                 print(f"[Ater Service] Post-processing skipped: unit dir not found: {unit_dir}")
                         except Exception as pp_e:
@@ -2369,45 +2384,11 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
 
             # ── EXECUTION ──
-            if "Confirm Final Plan" in command:
-                # CASCADE MODE: Sequential — one note at a time, deploys immediately after each
-                # Why not parallel: with a 30k TPM rate limit, all workers compete for the same
-                # budget and the Governor throttles to 1 anyway — but with parallel you wait for
-                # ALL workers to assemble before ANY note deploys. Sequential means note 1 is
-                # readable in ~90s while note 2 is already generating.
-                atomic_batches = [b for b in session["metadata"]["batches"] if b["type"] == "atomic"]
-                other_batches = [b for b in session["metadata"]["batches"] if b["type"] != "atomic"]
-                
-                total_atomic = len(atomic_batches)
-                print(f"[Ater Service] Cascade Mode: Generating {total_atomic} notes sequentially (study-along enabled).")
-                
-                # 1. Run atomic notes one at a time — each deploys to vault on completion
-                for idx, b in enumerate(atomic_batches, 1):
-                    note_title = b["notes"][0] if b["notes"] else f"Note {idx}"
-                    AterService._status[session_id] = f"Generating [{idx}/{total_atomic}]: [[{note_title}]]..."
-                    try:
-                        result = await run_single_batch(b["id"], b["type"], b["notes"])
-                        if isinstance(result, dict) and result.get("status") == "rate_limited":
-                            print(f"[Ater Service] Cascade throttled (429) at note {idx}/{total_atomic}.")
-                            return result
-                    except Exception as e:
-                        err_str = str(e)
-                        if "429" in err_str or "rate_limit" in err_str.lower():
-                            print(f"[Ater Service] Cascade rate-limited at note {idx}/{total_atomic}.")
-                            return {"status": "rate_limited", "error": err_str}
-                        # Non-rate-limit errors: log and continue to next note
-                        print(f"[Ater Service] Cascade error at note {idx}/{total_atomic} ({note_title}): {e}")
-                        continue
-                
-                # 2. Run sequential batches (PQ, Hub) after all atomics done
-                for b in other_batches:
-                    await run_single_batch(b["id"], b["type"], b["notes"])
-                
-                session["current_batch"] = total_batches
-                has_more = False
-            else:
-                # Legacy Serial Mode (for individual batch stepping)
-                has_more = await run_single_batch(batch_number, batch_type, batch_notes)
+            # v32.0: Atomicity Enforcement. 
+            # confirm_plan now only executes ONE batch at a time when called via API.
+            # This prevents HTTP timeouts during large cascades.
+            
+            has_more = await run_single_batch(batch_number, batch_type, batch_notes)
 
 
             if isinstance(has_more, dict) and has_more.get("status") == "rate_limited":
@@ -2415,9 +2396,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
             if not has_more:
                 AterService._sessions.pop(session_id, None)
-                AterService._status[session_id] = "Deployment Complete"
+                self.set_status(session_id, "Deployment Complete")
             else:
-                AterService._status[session_id] = f"Awaiting Batch {session['current_batch'] + 1}"
+                self.set_status(session_id, f"Awaiting Batch {session['current_batch'] + 1}")
 
             return {
                 "results": deployment_results,
@@ -2431,7 +2412,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             err_trace = traceback.format_exc()
             error_msg = self._format_user_error(e)
             print(f"[Ater Service] Execution failed: {e}\n{err_trace}")
-            AterService._status[session_id] = f"Architecture Load Failed: {error_msg}"
+            self.set_status(session_id, f"Architecture Load Failed: {error_msg}")
             return {
                 "status": "error",
                 "detail": str(e),
@@ -2632,3 +2613,24 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         if missing:
             return False, f"The following notes from the plan are MISSING from the Connections tree: {', '.join(missing)}"
         return True, "Consistency verified."
+
+    async def run_full_cascade(self, session_id: str, curriculum_override: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Executes an entire session from start to finish.
+        Used primarily by the background watcher for auto-ingest.
+        """
+        # 1. Initialize with the first batch
+        res = await self.confirm_plan(session_id, command="Confirm Final Plan & Proceed Batch 1", curriculum_override=curriculum_override)
+        if res.get("status") != "success":
+            return res
+        
+        # 2. Loop until done
+        while res.get("has_more"):
+            next_batch = res.get("current_batch", 0) + 1
+            res = await self.confirm_plan(session_id, command=f"Proceed Batch {next_batch}")
+            if res.get("status") == "rate_limited":
+                return res
+            if res.get("status") == "error":
+                return res
+        
+        return res

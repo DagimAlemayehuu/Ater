@@ -511,6 +511,7 @@ async def ater_watcher_toggle(
             raise HTTPException(status_code=500, detail=str(e))
         
         effective_inbox = secrets.inbox_path or str(Path(secrets.vault_path) / "Inbox")
+        service = AterService(secrets)
         ater_watcher = AterQueueManager(service, effective_inbox, str(si_path))
         
         try:
@@ -578,7 +579,6 @@ async def ater_queue_status(
         ater_watcher.update_settings(auto_process=secrets.auto_deploy)
     
     status_dict = ater_watcher.get_status()
-    status_dict["manual_status"] = dict(AterService._status)
     return status_dict
 
 @app.get("/api/ater/generated")
