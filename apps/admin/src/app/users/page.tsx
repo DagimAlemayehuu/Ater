@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { User, Activity, MoreHorizontal, Mail, Calendar } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type UserProfile = {
   id: string;
@@ -11,30 +12,56 @@ type UserProfile = {
   full_name: string;
   created_at: string;
   role: string;
+  is_approved: boolean;
+  waitlist_status: string;
 };
 
 export default function UsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const loadUsers = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (data) setUsers(data as UserProfile[]);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    let isMounted = true;
     setMounted(true);
-    const loadUsers = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (isMounted) {
-        if (data) setUsers(data);
-        setLoading(false);
-      }
-    };
     loadUsers();
-    return () => { isMounted = false; };
   }, []);
+
+  async function handleRevoke(id: string) {
+    setUpdatingId(id);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_approved: false, waitlist_status: 'revoked' })
+      .eq('id', id);
+    
+    if (!error) {
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, is_approved: false, waitlist_status: 'revoked' } : u));
+    }
+    setUpdatingId(null);
+  }
+
+  async function handleRestore(id: string) {
+    setUpdatingId(id);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_approved: true, waitlist_status: 'approved' })
+      .eq('id', id);
+    
+    if (!error) {
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, is_approved: true, waitlist_status: 'approved' } : u));
+    }
+    setUpdatingId(null);
+  }
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background text-foreground font-sans">
@@ -78,14 +105,36 @@ export default function UsersPage() {
                 </div>
               ))
             : users.map((user) => (
-                <div key={user.id} className="p-8 bg-card border border-border group hover:border-primary/40 transition-none">
+                <div key={user.id} className="p-8 bg-card border border-border group hover:border-primary/40 transition-none relative overflow-hidden">
+                  {user.waitlist_status === 'revoked' && (
+                    <div className="absolute top-0 right-0 px-4 py-1 bg-destructive text-white text-[8px] font-black uppercase tracking-widest">
+                      Revoked
+                    </div>
+                  )}
+                  
                   <div className="flex items-start justify-between mb-6">
                     <div className="size-12 bg-accent/50 border border-border flex items-center justify-center">
                       <User className="size-5 text-foreground" />
                     </div>
-                    <button className="p-2 opacity-0 group-hover:opacity-100 hover:bg-accent border border-transparent hover:border-border transition-none">
-                      <MoreHorizontal className="size-4 text-muted-foreground" />
-                    </button>
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {user.waitlist_status === 'revoked' ? (
+                        <button 
+                          onClick={() => handleRestore(user.id)}
+                          disabled={updatingId === user.id}
+                          className="px-3 py-1.5 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest border border-primary hover:opacity-90 disabled:opacity-50 transition-none"
+                        >
+                          Restore
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => handleRevoke(user.id)}
+                          disabled={updatingId === user.id || user.role === 'Admin'}
+                          className="px-3 py-1.5 bg-destructive text-white text-[9px] font-black uppercase tracking-widest border border-destructive hover:opacity-90 disabled:opacity-50 transition-none"
+                        >
+                          Revoke
+                        </button>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="mb-8">
@@ -106,7 +155,10 @@ export default function UsersPage() {
                         <Activity className="size-2.5" />
                         Role
                       </div>
-                      <div className="px-2 py-0.5 bg-primary/5 border border-primary/10 text-[10px] font-black uppercase tracking-widest text-primary inline-block">
+                      <div className={cn(
+                        "px-2 py-0.5 border text-[10px] font-black uppercase tracking-widest inline-block",
+                        user.role === 'Admin' ? "bg-primary/5 border-primary/20 text-primary" : "bg-muted/30 border-border text-muted-foreground"
+                      )}>
                         {user.role || "User"}
                       </div>
                     </div>

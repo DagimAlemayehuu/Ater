@@ -1,16 +1,17 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { ConfigProvider, useConfig } from '@/lib/ConfigContext'
 import { ThemeProvider } from '@/context/theme-provider'
 import { NavigationProvider } from '@/context/navigation-provider'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
-import ObsidianVault from '@/routes/obsidian'
-import Settings from '@/routes/settings'
-import Practice from '@/routes/practice'
-import AcademicDashboard from '@/routes/academic'
-import Agents from '@/routes/agents'
-import Onboarding from '@/routes/onboarding'
+
+const ObsidianVault = lazy(() => import('@/routes/obsidian'))
+const Settings = lazy(() => import('@/routes/settings'))
+const Practice = lazy(() => import('@/routes/practice'))
+const AcademicDashboard = lazy(() => import('@/routes/academic'))
+const Agents = lazy(() => import('@/routes/agents'))
+const Onboarding = lazy(() => import('@/routes/onboarding'))
 
 /**
  * Gate to ensure sidecar is connected before proceeding.
@@ -85,25 +86,34 @@ function AppRoutes() {
           <NavigationProvider>
             <HeaderProvider>
               <AuthGuard>
-                <Routes>
-                  <Route path="/onboarding" element={<Onboarding />} />
-                  <Route path="*" element={
-                    !isConfigured ? (
-                      <Navigate to="/onboarding" replace />
-                    ) : (
-                      <AuthenticatedLayout>
-                        <Routes>
-                          <Route path="/" element={<Navigate to="/obsidian" replace />} />
-                          <Route path="/obsidian" element={<ObsidianVault />} />
-                          <Route path="/academic" element={<AcademicDashboard />} />
-                          <Route path="/agents" element={<Agents />} />
-                          <Route path="/practice" element={<Practice />} />
-                          <Route path="/settings" element={<Settings />} />
-                        </Routes>
-                      </AuthenticatedLayout>
-                    )
-                  } />
-                </Routes>
+                <Suspense fallback={
+                  <div className="h-screen w-full flex items-center justify-center bg-background">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-8 h-8 border-2 border-primary border-t-transparent animate-spin rounded-none" />
+                      <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Loading Module</span>
+                    </div>
+                  </div>
+                }>
+                  <Routes>
+                    <Route path="/onboarding" element={<Onboarding />} />
+                    <Route path="*" element={
+                      !isConfigured ? (
+                        <Navigate to="/onboarding" replace />
+                      ) : (
+                        <AuthenticatedLayout>
+                          <Routes>
+                            <Route path="/" element={<Navigate to="/obsidian" replace />} />
+                            <Route path="/obsidian" element={<ObsidianVault />} />
+                            <Route path="/academic" element={<AcademicDashboard />} />
+                            <Route path="/agents" element={<Agents />} />
+                            <Route path="/practice" element={<Practice />} />
+                            <Route path="/settings" element={<Settings />} />
+                          </Routes>
+                        </AuthenticatedLayout>
+                      )
+                    } />
+                  </Routes>
+                </Suspense>
               </AuthGuard>
               <Toaster />
               <PomodoroController />

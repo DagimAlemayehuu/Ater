@@ -484,6 +484,10 @@ class TokenGovernor:
               f"Hard cooldown for {wait_seconds}s...")
         self._slot_event.set()  # Wake blocked workers so they re-evaluate
 
+    def get_pressure(self) -> float:
+        """Returns the current pressure ratio (0.0 to 1.0+)."""
+        return self.current_pressure
+
     @property
     def current_tpm(self) -> int:
         now = time.time()

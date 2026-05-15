@@ -224,6 +224,18 @@ export default function Settings() {
     }
   }
 
+  const handleExportLogs = async () => {
+    try {
+      toast.info('Packaging system logs...');
+      const logPath = await sidecarApi.exportLogs();
+      toast.success('Logs exported successfully');
+      // In a real app we might open the folder, but for now just show the path
+      alert(`System logs packaged and saved to:\n${logPath}\n\nPlease attach this file to your support request.`);
+    } catch (err: any) {
+      toast.error('Log export failed: ' + err.message);
+    }
+  }
+
   const handleAddNewKey = async () => {
     if (!newKeyName || !newKeyValue) return
     const newKey: SavedApiKey = {
@@ -252,6 +264,25 @@ export default function Settings() {
         </div>
 
         <div className="grid grid-cols-2 gap-6">
+          {/* Diagnostics Card */}
+          <Card className="col-span-2">
+            <CardHeader 
+              title="System Diagnostics" 
+              description="Export a 'Black Box' diagnostic package for troubleshooting and support." 
+            />
+            <CardContent className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">Log Package Exporter</p>
+                <p className="text-[10px] text-muted-foreground/60 font-medium">Includes sidecar trails, process logs, and system state.</p>
+              </div>
+              <button
+                onClick={handleExportLogs}
+                className="px-6 py-3 text-[10px] font-black uppercase tracking-widest border border-border text-foreground hover:bg-accent hover:border-foreground/30 transition-none"
+              >
+                Export Black Box
+              </button>
+            </CardContent>
+          </Card>
           {/* Account Info */}
           <Card className="col-span-2">
             <CardHeader 

@@ -26,15 +26,24 @@ if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
 # Configure Logging
+log_dir = Path.home() / ".ater" / "logs"
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file = log_dir / "sidecar.log"
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)]
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(log_file, encoding="utf-8")
+    ]
 )
 logger = logging.getLogger("Ater")
+logger.info(f"Ater Sidecar starting. Logs: {log_file}")
 
 from urllib.parse import unquote
 import uvicorn
+import argparse
 import uuid
 from datetime import datetime
 import sqlite3
@@ -605,6 +614,12 @@ async def ater_queue_status(
         ater_watcher.update_settings(auto_process=secrets.auto_deploy)
     
     status_dict = ater_watcher.get_status()
+    
+    # Inject Governor Telemetry
+    from src.domains.ater.governor import governor
+    status_dict["governor_pressure"] = governor.get_pressure()
+    status_dict["last_throttle_event"] = governor.last_throttle_event
+    
     return status_dict
 
 @app.get("/api/ater/generated")
@@ -2085,14 +2100,16 @@ async def vault_generation_status():
 
 
 if __name__ == "__main__":
-    host = os.environ.get("API_HOST", "0.0.0.0")
-    port = int(os.environ.get("API_PORT", "8765"))
+    parser = argparse.ArgumentParser(description="Ater Sidecar API")
+    parser.add_argument("--port", type=int, default=int(os.environ.get("API_PORT", "8765")), help="Port to run the API on")
+    parser.add_argument("--host", type=str, default=os.environ.get("API_HOST", "127.0.0.1"), help="Host to bind to")
+    args = parser.parse_args()
 
-
+    logger.info(f"Starting sidecar on {args.host}:{args.port}")
     uvicorn.run(
         "src.api.main:app",
-        host=host,
-        port=port,
+        host=args.host,
+        port=args.port,
         reload=False,
         log_level="info",
     )

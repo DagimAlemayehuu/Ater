@@ -6,9 +6,24 @@
  */
 
 import { load } from '@tauri-apps/plugin-store'
+import { invoke } from '@tauri-apps/api/core'
 
-export const SIDECAR_BASE_URL = 'http://127.0.0.1:8765'
+let dynamicBaseUrl: string | null = null
 const STORE_FILENAME = 'ater_config.json'
+
+async function getBaseUrl(): Promise<string> {
+    if (dynamicBaseUrl) return dynamicBaseUrl
+    try {
+        const port = await invoke<number>('get_sidecar_port')
+        dynamicBaseUrl = `http://127.0.0.1:${port}`
+        console.info(`[Sidecar] Discovered dynamic API URL: ${dynamicBaseUrl}`)
+        return dynamicBaseUrl
+    } catch (err) {
+        console.error('[Sidecar] Failed to fetch dynamic port, falling back to 8765:', err)
+        dynamicBaseUrl = 'http://127.0.0.1:8765'
+        return dynamicBaseUrl
+    }
+}
 
 export interface HealthResponse {
     status: string
@@ -93,7 +108,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         throw new Error('AI API Key is not configured. Go to Settings > AI Configuration to add your key.')
     }
     
-    const response = await fetch(`${SIDECAR_BASE_URL}${path}`, {
+    const baseUrl = await getBaseUrl()
+    const response = await fetch(`${baseUrl}${path}`, {
         ...options,
         headers: {
             'Content-Type': 'application/json',
@@ -112,7 +128,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const sidecarApi = {
     health: async (): Promise<HealthResponse> => {
-        const response = await fetch(`${SIDECAR_BASE_URL}/api/health`)
+        const baseUrl = await getBaseUrl()
+        const response = await fetch(`${baseUrl}/api/health`)
         if (!response.ok) throw new Error('Health check failed')
         return response.json()
     },
@@ -260,7 +277,8 @@ export const sidecarApi = {
         const authHeaders = await getAuthHeaders()
         const formData = new FormData()
         formData.append('file', file)
-        const response = await fetch(`${SIDECAR_BASE_URL}/api/ai/upload`, {
+        const baseUrl = await getBaseUrl()
+        const response = await fetch(`${baseUrl}/api/ai/upload`, {
             method: 'POST',
             headers: { ...authHeaders },
             body: formData,
@@ -482,7 +500,8 @@ export const sidecarApi = {
         const authHeaders = await getAuthHeaders()
         const formData = new FormData()
         formData.append('file', file)
-        const response = await fetch(`${SIDECAR_BASE_URL}/api/practice/vault/upload-file?hub_id=${encodeURIComponent(hubId)}`, {
+        const baseUrl = await getBaseUrl()
+        const response = await fetch(`${baseUrl}/api/practice/vault/upload-file?hub_id=${encodeURIComponent(hubId)}`, {
             method: 'POST',
             headers: { ...authHeaders },
             body: formData,
@@ -519,4 +538,13 @@ export const sidecarApi = {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
+
+    // ── Diagnostics ──────────────────────────────────────────
+    exportLogs: async (): Promise<string> => {
+        return await invoke<string>('export_logs')
+    },
+
+    getMachineId: async (): Promise<string> => {
+        return await invoke<string>('get_machine_id')
+    },
 }

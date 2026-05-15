@@ -81,12 +81,30 @@
     @apply h-full overflow-hidden;
   }
 
-  /* Restore fluid motion with premium easing */
+  /* Remove expensive global filters from transitions to protect GPU pipeline */
   *, ::before, ::after {
-    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
   }
+}
+
+/* GPU Acceleration & Performance Optimizations */
+.glass-container {
+  @apply backdrop-blur-md bg-background/70;
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform, opacity, filter;
+}
+
+.optimize-scrolling {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  will-change: scroll-position;
 }
 
 @layer utilities {

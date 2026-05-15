@@ -97,9 +97,49 @@ class AterQueueManager:
             print(f"[Watcher] Failed to update status message: {e}")
 
     def _init_db(self):
-        """Initializes the database schema."""
-        conn = self._get_conn()
+        """Initializes the database schema and handles migrations."""
+        conn = sqlite3.connect(self.db_path)
+        
+        # Core Queue Table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS queue (
+                file_path TEXT PRIMARY KEY,
+                status TEXT,
+                added_at TEXT,
+                session_id TEXT,
+                current_batch INTEGER DEFAULT 0,
+                total_batches INTEGER DEFAULT 0,
+                curriculum TEXT,
+                status_message TEXT DEFAULT 'Ready'
+            )
+        """)
+        
+        # Meta table for version tracking
+        conn.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)")
+        
+        # Telemetry tables
+        conn.execute("CREATE TABLE IF NOT EXISTS practice_log (id TEXT PRIMARY KEY, note_id TEXT, question_type TEXT, is_correct BOOLEAN, time_taken_seconds INTEGER, timestamp TEXT)")
+        conn.execute("CREATE TABLE IF NOT EXISTS note_srs (note_id TEXT PRIMARY KEY, review_count INTEGER DEFAULT 0, consecutive_correct INTEGER DEFAULT 0, easiness_factor REAL DEFAULT 2.5, interval_days INTEGER DEFAULT 0, next_review_date TEXT)")
+        conn.execute("CREATE TABLE IF NOT EXISTS study_telemetry (id TEXT PRIMARY KEY, note_path TEXT, duration_seconds INTEGER, timestamp TEXT)")
+        conn.execute("CREATE TABLE IF NOT EXISTS study_sessions (id TEXT PRIMARY KEY, hub_id TEXT, duration_seconds INTEGER, timestamp TEXT, mode TEXT)")
+
+        # Handle Migrations
+        cursor = conn.cursor()
+        cursor.execute("SELECT value FROM meta WHERE key = 'schema_version'")
+        row = cursor.fetchone()
+        version = int(row[0]) if row else 0
+
+        if version < 1:
+            watcher_logger.info("[Migration] Upgrading schema to v1...")
+            # We already have the v1 tables created above (CREATE TABLE IF NOT EXISTS)
+            cursor.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '1')")
+            conn.commit()
+
         conn.close()
+
+    def _get_conn(self):
+        """Returns a simple connection to the initialized database."""
+        return sqlite3.connect(self.db_path)
 
     def start(self, loop: asyncio.AbstractEventLoop, auto_process: bool = False):
         if not self.inbox_path.exists():
@@ -142,78 +182,6 @@ class AterQueueManager:
                     self.add_to_queue(item)
         except Exception as e:
             print(f"[Ater Queue] Error scanning files: {e}")
-
-    def _get_conn(self):
-        """Returns a connection and ensures the schema exists."""
-        conn = sqlite3.connect(self.db_path)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS queue (
-                file_path TEXT PRIMARY KEY,
-                status TEXT,
-                added_at TEXT,
-                session_id TEXT,
-                current_batch INTEGER DEFAULT 0,
-                total_batches INTEGER DEFAULT 0,
-                curriculum TEXT
-            )
-        """)
-        
-        # Telemetry: Practice Log
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS practice_log (
-                id TEXT PRIMARY KEY,
-                note_id TEXT,
-                question_type TEXT,
-                is_correct BOOLEAN,
-                time_taken_seconds INTEGER,
-                timestamp TEXT
-            )
-        """)
-        
-        # Telemetry: Note SRS
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS note_srs (
-                note_id TEXT PRIMARY KEY,
-                review_count INTEGER DEFAULT 0,
-                consecutive_correct INTEGER DEFAULT 0,
-                easiness_factor REAL DEFAULT 2.5,
-                interval_days INTEGER DEFAULT 0,
-                next_review_date TEXT
-            )
-        """)
-        
-        # Telemetry: Note Visits (Time spent on each note)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS study_telemetry (
-                id TEXT PRIMARY KEY,
-                note_path TEXT,
-                duration_seconds INTEGER,
-                timestamp TEXT
-            )
-        """)
-        
-        # Telemetry: Study Sessions (Pomodoro/Focus sessions)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS study_sessions (
-                id TEXT PRIMARY KEY,
-                hub_id TEXT,
-                duration_seconds INTEGER,
-                timestamp TEXT,
-                mode TEXT
-            )
-        """)
-
-        # Migrations
-        for col, defval in [("session_id", "NULL"), ("current_batch", "0"),
-                            ("total_batches", "0"), ("curriculum", "NULL"),
-                            ("status_message", "'Ready'")]:
-            try:
-                is_text = col in ('session_id','curriculum','status_message')
-                conn.execute(f"ALTER TABLE queue ADD COLUMN {col} {'TEXT' if is_text else 'INTEGER'} DEFAULT {defval}")
-            except Exception:
-                pass
-        conn.commit()
-        return conn
 
     def add_to_queue(self, file_path: Path):
         path_str = str(file_path.absolute())

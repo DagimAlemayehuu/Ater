@@ -27,6 +27,11 @@ tauri-plugin-store = "^2"
 tauri-plugin-dialog = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-updater = "2"
+tauri-plugin-stronghold = "2.0.0-rc.0"
+dirs = "6.0.0"
+argon2 = "0.5.3"
+machine-uid = "0.6.0"
+sha2 = "0.10.9"
 
 
 [profile.release]

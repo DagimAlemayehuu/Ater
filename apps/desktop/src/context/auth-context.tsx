@@ -35,29 +35,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStatus('approved')
 
     try {
-      const { data, error } = await supabase
-        .from('waiting_list')
-        .select('status, full_name')
-        .eq('email', config.activationEmail)
-        .eq('activation_code', config.activationCode)
+      // Use getUser to ensure the session is still valid
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.warn('[Auth] No active session. Deactivating...')
+        await saveConfig({ isActivated: false, activationEmail: '', activationCode: '' })
+        setStatus(null)
+        return
+      }
+
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('is_approved, waitlist_status, full_name, machine_id')
+        .eq('id', user.id)
         .single()
+
+      const localMachineId = await sidecarApi.getMachineId()
 
       if (error) {
         if (error.code === 'PGRST116') {
-          console.warn('[Auth] Activation code invalid or revoked. Deactivating...');
+          console.warn('[Auth] Profile not found. Deactivating...');
           await saveConfig({ isActivated: false, activationEmail: '', activationCode: '' })
           setStatus(null)
-          setProfile(null)
         } else {
           console.warn('[Auth] Network failure during verification. Maintaining session.')
         }
-      } else if (!data) {
+      } else if (!profile) {
         await saveConfig({ isActivated: false, activationEmail: '', activationCode: '' })
         setStatus(null)
-        setProfile(null)
       } else {
-        setStatus(data.status as WaitlistStatus)
-        setProfile({ full_name: data.full_name })
+        // Heartbeat Kill Switch
+        if (profile.is_approved === false || profile.waitlist_status === 'revoked' || profile.machine_id !== localMachineId) {
+          console.error('[Auth] Access revoked or hardware mismatch detected!')
+          
+          // Wipe everything
+          await supabase.auth.signOut()
+          await saveConfig({ 
+            isActivated: false, 
+            activationEmail: '', 
+            activationCode: '',
+            isProgramConfigured: false,
+            displayName: '',
+            geminiApiKey: '',
+            aiApiKey: '',
+            savedApiKeys: []
+          })
+          
+          // NOTE: Stronghold deletion would ideally happen here too if we have a direct helper
+          // For now, clearing the config flags is the primary way to trigger re-onboarding/lockout
+          
+          setStatus('rejected') // This triggers the Access Restricted screen in AuthGuard
+          setProfile(null)
+        } else {
+          setStatus('approved')
+          setProfile({ full_name: profile.full_name })
+        }
       }
     } catch (err) {
       console.error('[Auth] Verification failed:', err)
@@ -84,53 +116,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Authentication failed. Please check your email and password.')
       }
 
-      // 2. Verify Waitlist Code and Status
-      const { data: waitlistData, error: waitlistError } = await supabase
-        .from('waiting_list')
-        .select('status, full_name')
-        .eq('email', email)
-        .eq('activation_code', code)
-        .single()
-
-      if (waitlistError || !waitlistData) {
-        throw new Error('Invalid activation code.')
-      }
-
-      if (waitlistData.status !== 'approved') {
-        throw new Error('Access for this account is still pending.')
-      }
-
-      // 3. Enforce 1 device strictly
+      // 2. Fetch User Profile
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('machine_id, id')
+        .select('*')
         .eq('id', authData.user.id)
         .single()
         
-      if (profileError) {
+      if (profileError || !profile) {
         throw new Error('Profile not found.')
       }
 
-      const currentMachineId = config?.machineId
-
-      if (!currentMachineId) {
-         throw new Error('Local engine failure: Missing hardware ID.')
+      // Check 1: Key Match
+      if (code !== profile.activation_code) {
+        throw new Error('Invalid activation code for this account.')
       }
 
-      if (profile.machine_id && profile.machine_id !== currentMachineId) {
-        throw new Error('This account is already locked to another device.')
+      // Check 2: Hardware Lock
+      const localMachineId = await sidecarApi.getMachineId()
+
+      if (!profile.machine_id) {
+        // First login - Burn the key
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ 
+            machine_id: localMachineId,
+            waitlist_status: 'approved',
+            is_approved: true 
+          })
+          .eq('id', authData.user.id)
+
+        if (updateError) throw new Error('Failed to bind device. Please try again.')
+      } else {
+        // Subsequent login - Check hardware
+        if (profile.machine_id !== localMachineId) {
+          throw new Error('Unauthorized Device. This activation key is already bound to another computer.')
+        }
       }
 
-      // 4. Update profile with machine mapping
-      await supabase
-        .from('profiles')
-        .update({ 
-          activation_code: code,
-          machine_id: currentMachineId,
-          waitlist_status: 'approved',
-          is_approved: true 
-        })
-        .eq('id', authData.user.id)
+      // Check 3: Final Status Check
+      if (profile.is_approved === false || profile.waitlist_status === 'revoked') {
+        throw new Error('Access for this account has been revoked.')
+      }
 
       await saveConfig({ 
         isActivated: true, 
@@ -139,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       
       setStatus('approved')
-      setProfile({ full_name: waitlistData.full_name })
+      setProfile({ full_name: profile.full_name })
     } catch (error) {
       setLoading(false)
       throw error

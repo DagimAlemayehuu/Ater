@@ -1,4 +1,5 @@
-import React, {useState, useEffect, useRef} from 'react'
+import React, {useState, useEffect, useRef, lazy, Suspense} from 'react'
+import { useTelemetryStore } from '@/lib/telemetryStore'
 import {
  ShieldCheck, RefreshCw, 
  FileText, Activity, 
@@ -10,6 +11,7 @@ import {cn} from '@/lib/utils'
 import {useConfig} from '@/lib/ConfigContext'
 import {useHeader} from '@/context/header-context'
 import {useNavigate} from 'react-router-dom'
+import { useVirtualizer } from '@tanstack/react-virtual'
 
 /* ─── Utilities ─── */
 const cleanTitle = (val: any): string => {
@@ -359,13 +361,52 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  )
 }
 
+/* ─── Optimized UI Components ─── */
+function AiPressureBar() {
+  const pressure = useTelemetryStore(state => state.queueStatus?.governor_pressure);
+  const throttleEvent = useTelemetryStore(state => state.queueStatus?.last_throttle_event);
+
+  if (pressure === undefined) return null;
+
+  return (
+    <div className="mt-4 flex flex-col gap-1.5 gpu-accelerated">
+      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+        <span>AI Pressure</span>
+        <span>{Math.round(pressure * 100)}%</span>
+      </div>
+      <div className="h-1 w-full bg-background border border-border">
+        <div 
+          className={cn(
+            "h-full transition-all duration-500",
+            pressure > 0.8 ? "bg-destructive" : 
+            pressure > 0.5 ? "bg-amber-500" : "bg-foreground"
+          )}
+          style={{width: `${Math.min(100, pressure * 100)}%`}} 
+        />
+      </div>
+      {throttleEvent && (
+        <p className="mt-1 text-[9px] font-bold text-amber-500 uppercase tracking-widest flex items-center gap-1 animate-pulse">
+          <Zap size={10} fill="currentColor" /> Throttled: {throttleEvent}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /* ─── AI Agents (Ater) Dashboard ─── */
 function AterDashboard({onBack}: {onBack: () => void}) {
  const {config, saveConfig} = useConfig()
  const navigate = useNavigate()
- const [queueStatus, setQueueStatus] = useState<any>(null)
- const [inboxFiles, setInboxFiles] = useState<any[]>([])
- const [loadingInbox, setLoadingInbox] = useState(false)
+ 
+ // Use Zustand for global telemetry to prevent whole-dashboard re-renders
+ const queueStatus = useTelemetryStore(state => state.queueStatus)
+ const inboxFiles = useTelemetryStore(state => state.inboxFiles)
+ const loadingInbox = useTelemetryStore(state => state.isLoadingInbox)
+ const fetchInbox = useTelemetryStore(state => state.fetchInbox)
+ const startPolling = useTelemetryStore(state => state.startPolling)
+ const stopPolling = useTelemetryStore(state => state.stopPolling)
+ const fetchStatus = useTelemetryStore(state => state.fetchStatus)
+
  const [selectedInboxFile, setSelectedInboxFile] = useState<any>(null)
  const [processing, setProcessing] = useState(false)
  const [activePlan, setActivePlan] = useState<string | null>(null)
@@ -382,17 +423,16 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  const [isCompleted, setIsCompleted] = useState(false)
  const [batchFeed, setBatchFeed] = useState<any[]>([])
  const [aterError, setAterError] = useState<string | null>(null)
-
  const [isAwaitingNextBatch, setIsAwaitingNextBatch] = useState(false)
 
-  const {setRightContent} = useHeader()
-
- const fetchStatus = async () => {
- try {
- const res = await sidecarApi.aterQueueStatus()
- setQueueStatus(res)
-} catch (err) {console.error(err)}
-}
+ const {setRightContent} = useHeader()
+ const parentRef = useRef<HTMLDivElement>(null)
+ const virtualizer = useVirtualizer({
+  count: batchFeed.length,
+  getScrollElement: () => parentRef.current,
+  estimateSize: () => 300, 
+  overscan: 5,
+ })
 
  // Sync Header Actions
  useEffect(() => {
@@ -426,33 +466,11 @@ function AterDashboard({onBack}: {onBack: () => void}) {
   return () => setRightContent(null);
  }, [config?.autoDeploy, queueStatus]);
 
- const fetchInbox = async () => {
- setLoadingInbox(true)
- try {
- const res = await sidecarApi.aterListInbox()
- setInboxFiles(res.files || [])
-} finally {setLoadingInbox(false)}
-}
-
- useEffect(() => {
-  let active = true;
-  let timer: NodeJS.Timeout;
-
-  const poll = async () => {
-   if (!active) return;
-   await fetchStatus();
-   if (!active) return;
-   timer = setTimeout(poll, 2000);
-  };
-
-  fetchInbox();
-  poll();
-
-  return () => {
-   active = false;
-   clearTimeout(timer);
-  };
- }, [])
+  useEffect(() => {
+   fetchInbox();
+   startPolling(2000);
+   return () => stopPolling();
+  }, [])
 
  const toggleAutoDeploy = async () => {
  await saveConfig({autoDeploy: !config?.autoDeploy})
@@ -659,6 +677,8 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  <div className="h-2 w-full bg-background rounded-none overflow-hidden border border-border">
  <div className="h-full bg-foreground transition-none" style={{width: `${((queueStatus?.current_batch || 0) / (queueStatus?.total_batches || 1)) * 100}%`}} />
  </div>
+
+ <AiPressureBar />
  </div>
 
  <div className={cn("p-4 border shrink-0", 
@@ -841,44 +861,69 @@ function AterDashboard({onBack}: {onBack: () => void}) {
 
  {/* Execution Feed */}
  {batchFeed.length > 0 && (
- <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6 mt-4 pr-2">
+ <div ref={parentRef} className="flex-1 overflow-y-auto custom-scrollbar space-y-6 mt-4 pr-2">
  <div className="flex items-center justify-between pb-4 border-b border-border">
  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground">Logs</h4>
  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{currentBatch} / {totalBatches} Completed</span>
  </div>
  
- {batchFeed.map(b => (
- <div key={b.batch} className="p-6 rounded-none border border-border bg-muted/5 -95">
- <div className="flex items-center gap-3 mb-6">
- <div className="w-6 h-6 rounded-none bg-foreground text-[10px] font-black text-background flex items-center justify-center">
- {b.batch}
- </div>
- <span className={cn("text-[10px] font-black uppercase tracking-widest", b.results.length > 0 ? "text-foreground" : "text-destructive")}>
- {b.results.length > 0 ? "Success" : "Failed"}
- </span>
- </div>
- 
- {b.results.length === 0 && (
- <div className="mb-4 mt-2 p-4 rounded-none bg-destructive/5 border border-destructive/20">
- <p className="text-[10px] text-destructive font-black uppercase tracking-widest mb-3">No Ater Regions detected.</p>
- <pre className="text-[9px] bg-background border border-border p-3 rounded-none overflow-x-auto font-mono text-muted-foreground/60">
- {b.ai_output}
- </pre>
- </div>
- )}
- 
- <div className="grid grid-cols-2 gap-3">
- {b.results.map((r: any, i: number) => (
- <div key={i} className="p-4 border border-border rounded-none bg-background flex items-center gap-3">
- <div className="p-2 bg-muted/5 rounded-none border border-border text-muted-foreground/40">
-  <FileText size={14} />
- </div>
- <span className="text-[10px] font-black uppercase tracking-widest truncate text-foreground/80">{r.title}</span>
- </div>
- ))}
- </div>
- </div>
- ))}
+  <div
+  style={{
+   height: `${virtualizer.getTotalSize()}px`,
+   width: '100%',
+   position: 'relative',
+  }}
+  >
+  {virtualizer.getVirtualItems().map((virtualRow) => {
+   const b = batchFeed[virtualRow.index]
+   return (
+    <div
+     key={virtualRow.index}
+     data-index={virtualRow.index}
+     ref={virtualizer.measureElement}
+     style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      transform: `translateY(${virtualRow.start}px)`,
+     }}
+     className="py-3"
+    >
+     <div className="p-6 rounded-none border border-border bg-muted/5 -95">
+      <div className="flex items-center gap-3 mb-6">
+       <div className="w-6 h-6 rounded-none bg-foreground text-[10px] font-black text-background flex items-center justify-center">
+        {b.batch}
+       </div>
+       <span className={cn("text-[10px] font-black uppercase tracking-widest", b.results.length > 0 ? "text-foreground" : "text-destructive")}>
+        {b.results.length > 0 ? "Success" : "Failed"}
+       </span>
+      </div>
+      
+      {b.results.length === 0 && (
+       <div className="mb-4 mt-2 p-4 rounded-none bg-destructive/5 border border-destructive/20">
+        <p className="text-[10px] text-destructive font-black uppercase tracking-widest mb-3">No Ater Regions detected.</p>
+        <pre className="text-[9px] bg-background border border-border p-3 rounded-none overflow-x-auto font-mono text-muted-foreground/60 whitespace-pre-wrap">
+         {b.ai_output}
+        </pre>
+       </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+       {b.results.map((r: any, i: number) => (
+        <div key={i} className="p-4 border border-border rounded-none bg-background flex items-center gap-3">
+         <div className="p-2 bg-muted/5 rounded-none border border-border text-muted-foreground/40">
+          <FileText size={14} />
+         </div>
+         <span className="text-[10px] font-black uppercase tracking-widest truncate text-foreground/80">{r.title}</span>
+        </div>
+       ))}
+      </div>
+     </div>
+    </div>
+   )
+  })}
+  </div>
 
  {isCompleted && (
  <div className="py-16 flex flex-col items-center justify-center text-center -95">

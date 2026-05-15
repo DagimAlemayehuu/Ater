@@ -61,34 +61,40 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r apps/api/requirements.txt
-          pip install nuitka
+          pip install pyinstaller
 
-      - name: Build Python Sidecar (Nuitka)
+      - name: Build Python Sidecar (PyInstaller)
         shell: bash
         run: |
-          cd apps/api
-          # OS-specific target naming for Tauri
+          # Set the target filename based on platform and arch
           if [ "${{ matrix.platform }}" == "macos" ]; then
-            TARGET="api-${{ matrix.arch }}-apple-darwin"
+            TARGET="ater-api-${{ matrix.arch }}-apple-darwin"
           elif [ "${{ matrix.platform }}" == "windows" ]; then
-            TARGET="api-x86_64-pc-windows-msvc"
+            TARGET="ater-api-x86_64-pc-windows-msvc"
           else
-            TARGET="api-x86_64-unknown-linux-gnu"
+            TARGET="ater-api-x86_64-unknown-linux-gnu"
           fi
-          
-          # Run Nuitka
-          python -m nuitka \
-            --standalone \
+
+          echo "Target binary name: $TARGET"
+
+          # Run PyInstaller
+          # --hidden-import is used to ensure ML libraries are bundled correctly
+          python -m PyInstaller \
+            --noconfirm \
             --onefile \
-            --remove-output \
-            --output-filename=ater-api \
-            src/api/main.py
-            
-          mkdir -p ../desktop/src-tauri/binaries/
+            --name ater-api \
+            --hidden-import=torch \
+            --hidden-import=onnxruntime \
+            apps/api/src/api/main.py
+
+          # Create binaries directory in Tauri src
+          mkdir -p apps/desktop/src-tauri/binaries/
+
+          # Move and rename the binary from dist/ to the tauri binaries folder
           if [ "${{ matrix.platform }}" == "windows" ]; then
-            mv ater-api.exe ../desktop/src-tauri/binaries/$TARGET.exe
+            mv dist/ater-api.exe apps/desktop/src-tauri/binaries/$TARGET.exe
           else
-            mv ater-api ../desktop/src-tauri/binaries/$TARGET
+            mv dist/ater-api apps/desktop/src-tauri/binaries/$TARGET
           fi
 
       - name: install frontend dependencies

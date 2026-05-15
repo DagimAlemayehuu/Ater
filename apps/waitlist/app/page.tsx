@@ -12,6 +12,7 @@ import {
   Moon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DownloadAterButton } from "@/components/DownloadAterButton";
 
 export default function Home() {
   const [view, setView] = useState<"hero" | "auth" | "dashboard">("hero");
@@ -163,27 +164,30 @@ export default function Home() {
                   <p className="text-muted-foreground text-[13px] font-bold mt-6 leading-relaxed uppercase tracking-tight">
                      {userStatus?.status === 'approved' ? "Your account is approved. Use the code to activate Ater Desktop." : userStatus?.status === 'rejected' ? "Your account was not approved." : "Your account is pending. We will give you a code once approved."}
                   </p>
+                  
                   {userStatus?.status === 'approved' && userStatus?.activation_code && (
-                     <div className="mt-8 p-6 bg-background border border-border relative group overflow-hidden">
-                       <div className="absolute top-0 right-0 p-3">
-                         <button onClick={() => copyToClipboard(userStatus.activation_code)} className="p-2 hover:bg-accent">
-                           {copied ? <ClipboardCheck className="size-4 text-foreground" /> : <Clipboard className="size-4 text-muted-foreground" />}
-                         </button>
-                       </div>
-                       <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Activation Code</div>
-                       <div className="text-3xl font-mono font-black text-foreground tracking-[0.3em]">{userStatus.activation_code}</div>
-                       {copied && (
-                         <div className="absolute inset-0 bg-background/95 flex items-center justify-center">
-                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Copied</span>
+                     <div className="mt-10 space-y-8">
+                       <div className="p-8 bg-background border-2 border-primary/20 relative group overflow-hidden">
+                         <div className="absolute top-0 right-0 p-3">
+                           <button onClick={() => copyToClipboard(userStatus.activation_code)} className="p-2 hover:bg-accent transition-colors">
+                             {copied ? <ClipboardCheck className="size-5 text-primary" /> : <Clipboard className="size-5 text-muted-foreground" />}
+                           </button>
                          </div>
-                       )}
-                     </div>
-                  )}
-                  {userStatus?.status === 'approved' && (
-                     <div className="mt-6">
-                        <a href="/download" className="w-full py-4 bg-primary text-primary-foreground flex items-center justify-center gap-3 font-black uppercase tracking-[0.2em] text-[11px] hover:opacity-90">
-                         Download <Download className="size-4" />
-                        </a>
+                         <div className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-2">Activation Key</div>
+                         <div className="text-5xl font-mono font-black text-foreground tracking-[0.4em] select-all">
+                           {userStatus.activation_code}
+                         </div>
+                         <p className="mt-4 text-[10px] font-bold text-muted-foreground uppercase leading-relaxed tracking-widest">
+                           You will need this key to unlock Ater on your device. This key can only be used once.
+                         </p>
+                         {copied && (
+                           <div className="absolute inset-0 bg-primary flex items-center justify-center animate-in fade-in duration-200">
+                             <span className="text-[12px] font-black uppercase tracking-[0.4em] text-primary-foreground">Key Copied</span>
+                           </div>
+                         )}
+                       </div>
+
+                       <DownloadAterButton />
                      </div>
                   )}
                 </div>
