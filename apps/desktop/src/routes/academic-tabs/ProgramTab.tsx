@@ -117,7 +117,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  </div>
  <div className="flex items-center gap-2">
  <button onClick={() => {onDelete('08 - Semesters', selectedSemesterId); setSelectedSemesterId(null)}}
- className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg ">
+ className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
  <Trash2 size={13} />
  </button>
  </div>
@@ -215,12 +215,12 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <div className="flex items-center gap-2 flex-wrap">
  {derived === 'Completed' && !currentStatus.toLowerCase().includes('complet') && (
  <button onClick={() => onUpdate('09 - Years', selectedYearId, {Status: '[[Completed]]'})}
- className="px-3 py-1.5 bg-muted border border-border text-foreground text-[8px] font-black uppercase rounded-lg hover:bg-muted/80 ">
+ className="px-3 py-1.5 bg-muted border border-border text-foreground text-[8px] font-black uppercase rounded-none hover:bg-muted/80 ">
  Mark Complete
  </button>
  )}
  <button onClick={() => {onDelete('09 - Years', selectedYearId); setSelectedYearId(null)}}
- className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg ">
+ className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
  <Trash2 size={13} />
  </button>
  </div>
@@ -287,7 +287,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <div className={cn('roadmap-dot', isCompleted ? 'roadmap-dot-completed' : isActive ? 'roadmap-dot-active pulse-node' : 'roadmap-dot-planned')}>
  {isCompleted ? <Check size={10} strokeWidth={4} /> : (idx + 1)}
  </div>
- <div className="roadmap-content p-4 border border-border bg-muted/5 rounded-xl  flex items-center justify-between">
+ <div className="roadmap-content p-4 border border-border bg-muted/5 rounded-none  flex items-center justify-between">
  <div className="min-w-0">
  <span className="text-[12px] font-black uppercase ">{cleanTitle(s.title)}</span>
  <span className="ml-2 text-[8px] font-black uppercase tracking-widest text-foreground/50">{statusRaw}</span>
@@ -429,7 +429,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <SectionHeader title="Active Courses" count={activeCourses.length} />
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
  {activeCourses.map((c, idx) => (
- <div key={`course-${idx}`} className="p-4 border border-border bg-muted/5 rounded-xl flex items-center justify-between cursor-pointer hover:bg-muted/10 "
+ <div key={`course-${idx}`} className="p-4 border border-border bg-muted/5 rounded-none flex items-center justify-between cursor-pointer hover:bg-muted/10 "
  onClick={() => navigateTo('COURSES', c.id)}>
  <div>
   <span className="text-[13px] font-black uppercase text-foreground">{cleanTitle(stripWL(c.title))}</span>
@@ -457,7 +457,7 @@ function ProgramFieldEditor({label, defaultValue, onBlur, type = 'text'}: {label
  <div className="flex flex-col gap-1">
  <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">{label}</label>
  <input type={type} value={val} onChange={e => setVal(e.target.value)} onBlur={() => onBlur(val)}
- className="bg-background border border-border/20 px-3 py-2.5 rounded-lg text-sm font-bold outline-none focus:ring-1 focus:ring-primary/20" />
+ className="bg-background border border-border/20 px-3 py-2.5 rounded-none text-sm font-bold outline-none focus:ring-1 focus:ring-primary/20" />
  </div>
  )
 }

@@ -200,13 +200,13 @@ export default function AcademicDashboard() {
  useEffect(() => {
    setRightContent(
      <div className="flex items-center gap-2 shrink-0">
-       <button aria-label="Sync Vault Databases" onClick={handleSync} className="h-8 px-3 flex items-center justify-center rounded-xl bg-background border border-border text-foreground/50 hover:text-foreground hover:bg-foreground/5 hover:border-foreground/40 transition-all active:scale-95 text-[10px] font-black uppercase tracking-widest" title="Sync Vault Databases">
+       <button aria-label="Sync Vault Databases" onClick={handleSync} className="h-8 px-3 flex items-center justify-center rounded-none bg-background border border-border text-foreground/50 hover:text-foreground hover:bg-foreground/5 hover:border-foreground/40 transition-none   text-[10px] font-black uppercase tracking-widest" title="Sync Vault Databases">
          <RefreshCw size={12} />
        </button>
        <button onClick={() => setActiveTab(prev => prev === 'CALENDAR' ? 'PROGRAM' : 'CALENDAR')}
          title={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar (Cmd+C)'}
          aria-label={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar'}
-         className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[8px] font-black uppercase tracking-widest  focus-visible:ring-1 focus-visible:ring-primary outline-none',
+         className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-none text-[8px] font-black uppercase tracking-widest  focus-visible:ring-1 focus-visible:ring-primary outline-none',
          activeTab === 'CALENDAR' ? 'bg-foreground/10 text-foreground border border-border/50' : 'bg-background border border-border text-foreground/50 hover:text-foreground hover:border-primary shadow-sm')}>
          <CalendarDays size={11} />
          <span className="hidden sm:inline">{activeTab === 'CALENDAR' ? 'Dashboard' : 'Calendar'}</span>
@@ -271,7 +271,7 @@ export default function AcademicDashboard() {
  if (loading) {
   return (
    <div className="h-full flex items-center justify-center bg-background">
-    <div className="w-5 h-5 border-2 border-border border-t-foreground rounded-full animate-spin" />
+    <div className="w-5 h-5 border-2 border-border border-t-foreground rounded-none" />
    </div>
   )
  }

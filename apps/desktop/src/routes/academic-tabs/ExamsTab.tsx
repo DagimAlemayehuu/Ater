@@ -115,10 +115,10 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  </div>
  <div className="flex items-center gap-2">
  <button onClick={() => {onDelete('04 - Exams', selectedId); setSelectedId(null)}}
- className="p-2 text-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-lg ">
+ className="p-2 text-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-none ">
  <Trash2 size={13} />
  </button>
- <button onClick={() => setSelectedId(null)} className="px-3 py-1.5 bg-muted/10 border border-border rounded-lg text-[9px] font-black uppercase hover:bg-muted/20 ">Back</button>
+ <button onClick={() => setSelectedId(null)} className="px-3 py-1.5 bg-muted/10 border border-border rounded-none text-[9px] font-black uppercase hover:bg-muted/20 ">Back</button>
  </div>
  </div>
 
@@ -166,8 +166,8 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  const hubStatus = stripWL(getVal(hub, 'status', 'Status'))
  const isDone = hubStatus.toLowerCase().includes('complet')
  return (
- <div key={idx} className={cn('p-3 border border-border rounded-xl flex items-center gap-3', isDone ? 'bg-muted/5 opacity-60' : 'bg-background')}>
- <div className={cn('w-4 h-4 rounded-full border flex items-center justify-center shrink-0', isDone ? 'bg-primary border-primary' : 'border-border')}>
+ <div key={idx} className={cn('p-3 border border-border rounded-none flex items-center gap-3', isDone ? 'bg-muted/5 opacity-60' : 'bg-background')}>
+ <div className={cn('w-4 h-4 rounded-none border flex items-center justify-center shrink-0', isDone ? 'bg-primary border-primary' : 'border-border')}>
  {isDone && <Check size={9} strokeWidth={4} className="text-primary-foreground" />}
  </div>
  <div className="flex-1 min-w-0">
@@ -191,7 +191,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  {/* Next Exam Hero */}
  {nextExam && (
  <div className="mx-6 mt-6 mb-2 shrink-0">
- <div className="p-6 sm:p-8 border border-border bg-muted/5 rounded-2xl flex items-center justify-between gap-6">
+ <div className="p-6 sm:p-8 border border-border bg-muted/5 rounded-none flex items-center justify-between gap-6">
  <div className="space-y-1">
  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-foreground/50">Next Exam</span>
  <h2 className="text-xl font-black uppercase tracking-tighter text-foreground">{cleanTitle(nextExam.title)}</h2>
@@ -220,9 +220,9 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
    
    {/* Filters */}
    <div className="flex items-center gap-2">
-    <div className="flex bg-muted/5 p-1 rounded-lg border border-border">
-     <button onClick={() => setStatusFilter('Active')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md ", statusFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>Active</button>
-     <button onClick={() => setStatusFilter('All')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md ", statusFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>All</button>
+    <div className="flex bg-muted/5 p-1 rounded-none border border-border">
+     <button onClick={() => setStatusFilter('Active')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-none ", statusFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>Active</button>
+     <button onClick={() => setStatusFilter('All')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-none ", statusFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>All</button>
     </div>
    </div>
   </div>
@@ -235,7 +235,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
   return (
   <button key={id} onClick={() => setCourseFilter(id)}
   className={cn(
-  'px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wide whitespace-nowrap ',
+  'px-3 py-1 rounded-none text-[8px] font-black uppercase tracking-wide whitespace-nowrap ',
   courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-transparent bg-muted/5 text-foreground/50  hover:border-border'
   )}>{label}</button>
   )
@@ -247,7 +247,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
    const props = courseFilter !== 'All' ? {Course: wrapWL(courses.find(c => c.id === courseFilter)?.title)} : {}
    onCreate('04 - Exams', cleanAsgnTitle, props)
  }}
-   className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-lg hover:border-foreground/70  shrink-0">
+   className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-none hover:border-foreground/70  shrink-0">
    <Plus size={10} /> Add
    </button>
   </div>
@@ -273,7 +273,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
 
  return (
  <div key={idx} onClick={() => setSelectedId(exam.id)}
- className={cn('p-5 border border-border rounded-xl cursor-pointer bg-background ')}>
+ className={cn('p-5 border border-border rounded-none cursor-pointer bg-background ')}>
  <div className="flex items-start justify-between gap-3 mb-3">
  <div className="flex-1 min-w-0">
  <span className="text-[13px] font-black uppercase block truncate">{cleanTitle(exam.title)}</span>
@@ -293,7 +293,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  <span className="text-[7px] font-black uppercase tracking-widest text-foreground/50">Prep</span>
  <span className="text-[7px] font-black text-foreground/50">{doneHubs}/{relatedHubs.length} hubs</span>
  </div>
- <div className="h-1 bg-muted/20 rounded-full overflow-hidden">
+ <div className="h-1 bg-muted/20 rounded-none overflow-hidden">
  <div className="h-full bg-foreground/70 " style={{width: `${prepPct}%`}} />
  </div>
  </div>
@@ -314,7 +314,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  const score = getVal(exam, 'score', 'Score')
  return (
  <div key={idx} onClick={() => !isEditing && setSelectedId(exam.id)}
- className="p-5 border border-border rounded-xl bg-background cursor-pointer ">
+ className="p-5 border border-border rounded-none bg-background cursor-pointer ">
  <div className="flex items-start justify-between gap-3">
  <div className="flex-1 min-w-0">
  <span className="text-[13px] font-black uppercase block truncate">{cleanTitle(exam.title)}</span>

@@ -86,9 +86,9 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
    
    {/* Filters */}
    <div className="flex items-center gap-2">
-    <div className="flex bg-muted/5 p-1 rounded-lg border border-border">
-     <button onClick={() => setStatusFilter('Active')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md ", statusFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>Active</button>
-     <button onClick={() => setStatusFilter('All')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md ", statusFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>All</button>
+    <div className="flex bg-muted/5 p-1 rounded-none border border-border">
+     <button onClick={() => setStatusFilter('Active')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-none ", statusFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>Active</button>
+     <button onClick={() => setStatusFilter('All')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-none ", statusFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>All</button>
     </div>
    </div>
   </div>
@@ -101,7 +101,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  return (
  <button key={id} onClick={() => setCourseFilter(id)}
  className={cn(
- 'px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wide whitespace-nowrap ',
+ 'px-3 py-1 rounded-none text-[8px] font-black uppercase tracking-wide whitespace-nowrap ',
  courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-transparent bg-muted/5 text-foreground/50  hover:border-border'
  )}>{label}</button>
  )
@@ -113,7 +113,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
    const props = courseFilter !== 'All' ? {Course: wrapWL(courses.find(c => c.id === courseFilter)?.title)} : {}
    onCreate('03 - Assignments', cleanAsgnTitle, props)
  }}
-   className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-lg hover:border-foreground/70  shrink-0">
+   className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-none hover:border-foreground/70  shrink-0">
    <Plus size={10} /> Add
    </button>
   </div>
@@ -230,7 +230,7 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
 
  return (
   <div onClick={onOpen} className={cn(
-  'flex items-center gap-3 p-3.5 border rounded-xl cursor-pointer  group',
+  'flex items-center gap-3 p-3.5 border rounded-none cursor-pointer  group',
   urgency === 'overdue' ? 'border-border bg-muted/5' :
   urgency === 'today' ? 'border-border bg-muted/5' :
   urgency === 'done' ? 'border-border opacity-60' : 'border-border bg-background'
@@ -262,7 +262,7 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  {cleanTitle(stripWL(getVal(a, 'Status', 'status')) || 'Planned')}
  </button>
  {showStatusMenu && (
- <div className="absolute top-full right-0 mt-1 bg-background border border-border rounded-lg shadow-xl z-50 p-1 min-w-[120px]">
+ <div className="absolute top-full right-0 mt-1 bg-background border border-border rounded-none shadow-xl z-50 p-1 min-w-[120px]">
  {['Planned', 'In Progress', 'Completed'].map(s => (
  <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('03 - Assignments', a.id, {Status: wrapWL(s)}); setShowStatusMenu(false)}}
  className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase rounded hover:bg-muted/10 ', statusColorClass(s))}>
@@ -275,7 +275,7 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  {priority && <span className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest rounded border', priorityColorClass(priority))}>{priority}</span>}
  {daysLabel() && <span className={cn('text-[9px] font-black uppercase tracking-widest', daysColor)}>{daysLabel()}</span>}
  <button onClick={(e) => {e.stopPropagation(); onDelete()}}
- className="p-1.5 text-foreground/0 group-hover:text-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-md ">
+ className="p-1.5 text-foreground/0 group-hover:text-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-none ">
  <Trash2 size={11} />
  </button>
  </div>

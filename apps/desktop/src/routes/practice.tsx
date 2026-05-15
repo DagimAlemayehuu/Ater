@@ -607,27 +607,27 @@ const handleStartSession = async () => {
  return (
  <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-4 sm:p-10 space-y-8">
  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
- <div className="flex bg-muted/5 p-1 rounded-lg border border-border w-full sm:w-auto">
- <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", view === 'dashboard' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>Dashboard</button>
- <button onClick={() => setView('history' as any)} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", (view as string) === 'history' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>History</button>
- <button onClick={() => { setView('vault' as any); if (selectedHub) loadVaultFiles(selectedHub) }} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md flex items-center gap-1", (view as string) === 'vault' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}><BookOpen size={10}/>Reference Vault</button>
+ <div className="flex bg-muted/5 p-1 rounded-none border border-border w-full sm:w-auto">
+ <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none ", view === 'dashboard' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>Dashboard</button>
+ <button onClick={() => setView('history' as any)} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none ", (view as string) === 'history' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>History</button>
+ <button onClick={() => { setView('vault' as any); if (selectedHub) loadVaultFiles(selectedHub) }} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none flex items-center gap-1", (view as string) === 'vault' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}><BookOpen size={10}/>Reference Vault</button>
  </div>
  <div className="flex gap-2 w-full sm:w-auto">
- <Button onClick={handleReviewDueCards} className="h-9 flex-1 sm:flex-none px-6 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 rounded-md font-black uppercase tracking-widest text-[9px]"><FlameKindling size={10} className="mr-1"/>Review Due</Button>
- <Button onClick={() => setView('configuring')} className="h-9 flex-1 sm:flex-none px-6 bg-muted/5 border border-border hover:border-foreground/50 text-foreground rounded-md font-black uppercase tracking-widest text-[9px] ">Custom</Button>
+ <Button onClick={handleReviewDueCards} className="h-9 flex-1 sm:flex-none px-6 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 rounded-none font-black uppercase tracking-widest text-[9px]"><FlameKindling size={10} className="mr-1"/>Review Due</Button>
+ <Button onClick={() => setView('configuring')} className="h-9 flex-1 sm:flex-none px-6 bg-muted/5 border border-border hover:border-foreground/50 text-foreground rounded-none font-black uppercase tracking-widest text-[9px] ">Custom</Button>
  </div>
  </div>
 
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
- <div className="p-6 bg-muted/5 border border-border rounded-lg flex flex-col gap-1">
+ <div className="p-6 bg-muted/5 border border-border rounded-none flex flex-col gap-1">
  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Average Score</span>
  <span className="text-2xl font-black tracking-tight">{totalPrecision}%</span>
  </div>
- <div className="p-6 bg-muted/5 border border-border rounded-lg flex flex-col gap-1">
+ <div className="p-6 bg-muted/5 border border-border rounded-none flex flex-col gap-1">
  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Total Practices</span>
  <span className="text-2xl font-black tracking-tight">{pastPractices.length}</span>
  </div>
- <div className="p-6 bg-muted/5 border border-border rounded-lg flex flex-col gap-1">
+ <div className="p-6 bg-muted/5 border border-border rounded-none flex flex-col gap-1">
  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Stability</span>
  <span className="text-2xl font-black tracking-tight uppercase text-foreground">{stability}</span>
  </div>
@@ -635,7 +635,7 @@ const handleStartSession = async () => {
 
  <div className="flex flex-col gap-8">
  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
- <div className="p-8 bg-muted/5 border border-border rounded-lg space-y-6">
+ <div className="p-8 bg-muted/5 border border-border rounded-none space-y-6">
  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Trend</h3>
  <div className="w-full h-64">
  <ResponsiveContainer width="100%" height="100%">
@@ -650,7 +650,7 @@ const handleStartSession = async () => {
  </div>
  </div>
 
- <div className="p-8 bg-muted/5 border border-border rounded-lg space-y-8">
+ <div className="p-8 bg-muted/5 border border-border rounded-none space-y-8">
  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Cognitive Modalities</h3>
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-8">
  {[
@@ -669,7 +669,7 @@ const handleStartSession = async () => {
  <span className="text-muted-foreground/40">{stat.type}</span>
  <span className="text-foreground/90">{stat.p}%</span>
  </div>
- <div className="h-1.5 bg-muted/20 rounded-full overflow-hidden">
+ <div className="h-1.5 bg-muted/20 rounded-none overflow-hidden">
  <div className="h-full bg-primary/60" style={{width: `${stat.p}%`}}></div>
  </div>
  </div>
@@ -689,18 +689,18 @@ const handleStartSession = async () => {
  return (
  <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-4 sm:p-10 space-y-8">
  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
- <div className="flex bg-muted/10 p-1 rounded-lg border border-border/10 w-full sm:w-auto">
- <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", false ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>Dashboard</button>
- <button onClick={() => setView('history')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md ", true ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>History</button>
+ <div className="flex bg-muted/10 p-1 rounded-none border border-border/10 w-full sm:w-auto">
+ <button onClick={() => setView('dashboard')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none ", false ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>Dashboard</button>
+ <button onClick={() => setView('history')} className={cn("flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none ", true ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>History</button>
  </div>
- <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-primary text-primary-foreground rounded-md font-black uppercase tracking-widest text-[9px]">Start</Button>
+ <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-primary text-primary-foreground rounded-none font-black uppercase tracking-widest text-[9px]">Start</Button>
  </div>
 
  <div className="space-y-4">
  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 border-b border-border/10 pb-2">Past Sessions</h3>
  <div className="grid grid-cols-1 gap-2">
  {(Array.isArray(pastPractices) ? pastPractices : []).slice().reverse().map((p, i) => (
- <div key={i} onClick={() => handleResumePractice(p.path)} className="group p-4 bg-muted/5 border border-border rounded-lg cursor-pointer  flex items-center justify-between">
+ <div key={i} onClick={() => handleResumePractice(p.path)} className="group p-4 bg-muted/5 border border-border rounded-none cursor-pointer  flex items-center justify-between">
  <div className="flex items-center gap-4">
  <div className="text-[10px] font-black text-muted-foreground/40">{p.score}%</div>
  <div className="flex flex-col">
@@ -731,36 +731,36 @@ const handleStartSession = async () => {
   return (
    <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-4 sm:p-10 space-y-8">
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-     <div className="flex bg-muted/5 p-1 rounded-lg border border-border w-full sm:w-auto">
-      <button onClick={() => setView('dashboard')} className="flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted/5">Dashboard</button>
-      <button onClick={() => setView('history' as any)} className="flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted/5">History</button>
-      <button className="flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-md bg-muted/20 text-foreground border border-border flex items-center gap-1"><BookOpen size={10}/>Reference Vault</button>
+     <div className="flex bg-muted/5 p-1 rounded-none border border-border w-full sm:w-auto">
+      <button onClick={() => setView('dashboard')} className="flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none text-muted-foreground/40 hover:text-foreground hover:bg-muted/5">Dashboard</button>
+      <button onClick={() => setView('history' as any)} className="flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none text-muted-foreground/40 hover:text-foreground hover:bg-muted/5">History</button>
+      <button className="flex-1 sm:flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none bg-muted/20 text-foreground border border-border flex items-center gap-1"><BookOpen size={10}/>Reference Vault</button>
      </div>
-     <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-muted/5 border border-border hover:border-foreground/50 text-foreground rounded-md font-black uppercase tracking-widest text-[9px]">New Session</Button>
+     <Button onClick={() => setView('configuring')} className="h-9 w-full sm:w-auto px-6 bg-muted/5 border border-border hover:border-foreground/50 text-foreground rounded-none font-black uppercase tracking-widest text-[9px]">New Session</Button>
     </div>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
      <div className="lg:col-span-1 space-y-4">
-      <div className="p-4 bg-muted/5 border border-border rounded-lg space-y-3">
+      <div className="p-4 bg-muted/5 border border-border rounded-none space-y-3">
        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Hub</div>
        <Select value={selectedHub} onValueChange={(val: string) => { setSelectedHub(val); loadVaultFiles(val) }}>
-        <SelectTrigger className="w-full h-9 bg-muted/5 border-border rounded-md px-3 text-[10px] font-black uppercase tracking-tight"><SelectValue placeholder="Select Hub..." /></SelectTrigger>
+        <SelectTrigger className="w-full h-9 bg-muted/5 border-border rounded-none px-3 text-[10px] font-black uppercase tracking-tight"><SelectValue placeholder="Select Hub..." /></SelectTrigger>
         <SelectContent className="border-border bg-popover">{hubs.map(hub => <SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>)}</SelectContent>
        </Select>
       </div>
-      <div className="p-4 bg-muted/5 border border-border rounded-lg space-y-3">
+      <div className="p-4 bg-muted/5 border border-border rounded-none space-y-3">
        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Add Source Text</div>
        <input value={vaultSourceName} onChange={e => setVaultSourceName(e.target.value)} placeholder="Source name (e.g. Midterm 2024)"
-        className="w-full px-3 py-2 bg-background border border-border/40 rounded-md text-[10px] font-medium focus:outline-none focus:border-foreground/30"/>
+        className="w-full px-3 py-2 bg-background border border-border/40 rounded-none text-[10px] font-medium focus:outline-none focus:border-foreground/30"/>
        <textarea value={vaultSourceText} onChange={e => setVaultSourceText(e.target.value)}
         placeholder="Paste exam questions, worksheet text here..." rows={5}
-        className="w-full px-3 py-2 bg-background border border-border/40 rounded-md text-[10px] font-medium focus:outline-none focus:border-foreground/30 resize-y"/>
+        className="w-full px-3 py-2 bg-background border border-border/40 rounded-none text-[10px] font-medium focus:outline-none focus:border-foreground/30 resize-y"/>
        <Button onClick={handleVaultUploadText} disabled={vaultLoading || !vaultSourceText.trim() || !vaultSourceName.trim()} className="w-full h-9 font-black uppercase tracking-widest text-[9px]">
-        {vaultLoading ? <><Loader2 size={12} className="mr-2 animate-spin"/>{vaultStatus || 'Processing...'}</> : 'Extract & Solve Questions'}
+        {vaultLoading ? <>{vaultStatus || 'Processing...'}</> : 'Extract & Solve Questions'}
        </Button>
       </div>
      </div>
      <div className="lg:col-span-2 space-y-4">
-      <div className="p-4 bg-muted/5 border border-border rounded-lg space-y-3">
+      <div className="p-4 bg-muted/5 border border-border rounded-none space-y-3">
        <div className="flex items-center justify-between">
         <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Question Banks</div>
         <span className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{vaultSelectedFiles.length} selected</span>
@@ -773,7 +773,7 @@ const handleStartSession = async () => {
           const isSel = vaultSelectedFiles.includes(vf.path)
           return (
            <button key={vf.path} onClick={() => setVaultSelectedFiles(prev => isSel ? prev.filter(p => p !== vf.path) : [...prev, vf.path])}
-            className={cn("w-full text-left p-3 border rounded-lg flex items-center justify-between transition-all", isSel ? "border-foreground/40 bg-foreground/5" : "border-border/40 bg-muted/5 hover:border-foreground/20")}>
+            className={cn("w-full text-left p-3 border rounded-none flex items-center justify-between transition-none", isSel ? "border-foreground/40 bg-foreground/5" : "border-border/40 bg-muted/5 hover:border-foreground/20")}>
             <div className="flex items-center gap-3">
              <div className={cn("w-4 h-4 rounded border flex items-center justify-center", isSel ? "bg-foreground border-foreground" : "border-border/40")}>{isSel && <Check size={10} className="text-background"/>}</div>
              <div><div className="text-[10px] font-black uppercase tracking-tight">{vf.name}</div><div className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-widest">{vf.total_questions} questions</div></div>
@@ -786,23 +786,23 @@ const handleStartSession = async () => {
        )}
       </div>
       {vaultFiles.length > 0 && (
-       <div className="p-4 bg-muted/5 border border-border rounded-lg space-y-4">
+       <div className="p-4 bg-muted/5 border border-border rounded-none space-y-4">
         <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Practice Mode</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
          {MODES.map(m => (
           <button key={m.id} onClick={() => setVaultMode(m.id as any)}
-           className={cn("p-3 border rounded-lg text-left transition-all", vaultMode === m.id ? "border-foreground/40 bg-foreground/5" : "border-border/40 hover:border-foreground/20 hover:bg-muted/5")}>
+           className={cn("p-3 border rounded-none text-left transition-none", vaultMode === m.id ? "border-foreground/40 bg-foreground/5" : "border-border/40 hover:border-foreground/20 hover:bg-muted/5")}>
            <div className="flex items-center gap-2 mb-1">
             <span className="text-muted-foreground/60">{m.icon}</span>
             <span className="text-[10px] font-black uppercase tracking-tight">{m.label}</span>
-            {vaultMode === m.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-foreground"/>}
+            {vaultMode === m.id && <div className="ml-auto w-1.5 h-1.5 rounded-none bg-foreground"/>}
            </div>
            <p className="text-[8px] text-muted-foreground/40 leading-relaxed">{m.desc}</p>
           </button>
          ))}
         </div>
         <Button onClick={handleVaultPracticeGenerate} disabled={vaultLoading || vaultSelectedFiles.length === 0} className="w-full h-10 font-black uppercase tracking-widest text-[9px]">
-         {vaultLoading ? <><Loader2 size={12} className="mr-2 animate-spin"/>Generating...</> : <>Practice from Vault <ArrowRight size={13} className="ml-2"/></>}
+         {vaultLoading ? <>Generating...</> : <>Practice from Vault <ArrowRight size={13} className="ml-2"/></>}
         </Button>
        </div>
       )}
@@ -820,18 +820,18 @@ const handleStartSession = async () => {
   return (
   <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-hidden p-3 sm:p-6">
  <div className="flex items-center justify-between mb-8">
- <button onClick={() => setView('dashboard')} className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border rounded-md bg-muted/5 ">Cancel</button>
+ <button onClick={() => setView('dashboard')} className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border rounded-none bg-muted/5 ">Cancel</button>
  <div className="text-xl font-black tracking-tight">{totalQuestions} Questions</div>
  </div>
 
  <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0">
   <div className="lg:col-span-3 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-  <div className="p-4 bg-muted/5 border border-border rounded-lg space-y-6">
+  <div className="p-4 bg-muted/5 border border-border rounded-none space-y-6">
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
  <Select value={selectedHub} onValueChange={(val: string) => {setSelectedHub(val); loadHubNotes(val);}}>
- <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-md px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 "><SelectValue placeholder="Select Topic..." /></SelectTrigger>
+ <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-none px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 "><SelectValue placeholder="Select Topic..." /></SelectTrigger>
  <SelectContent className="border-border bg-popover">{hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>))}</SelectContent>
  </Select>
  </div>
@@ -839,7 +839,7 @@ const handleStartSession = async () => {
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Difficulty</Label>
  <RadioGroup value={advancedConfig.difficulty} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, difficulty: val as any}))} className="grid grid-cols-4 gap-1">
  {[ {val: 'L1', label: '1'}, {val: 'L2', label: '2'}, {val: 'L3', label: '3'}, {val: 'Mixed', label: 'M'} ].map((level) => (
- <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-border rounded-md bg-muted/5 peer-data-[state=checked]:bg-foreground/10 peer-data-[state=checked]:border-foreground peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black  hover:bg-muted/10">{level.label}</Label></div>
+ <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-border rounded-none bg-muted/5 peer-data-[state=checked]:bg-foreground/10 peer-data-[state=checked]:border-foreground peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black  hover:bg-muted/10">{level.label}</Label></div>
  ))}
  </RadioGroup>
  </div>
@@ -855,7 +855,7 @@ const handleStartSession = async () => {
  <Layers size={12} className="opacity-40" />
  </Button>
  </PopoverTrigger>
- <PopoverContent className="w-[90vw] sm:w-[400px] p-0 rounded-md border border-border bg-popover overflow-hidden" align="start">
+ <PopoverContent className="w-[90vw] sm:w-[400px] p-0 rounded-none border border-border bg-popover overflow-hidden" align="start">
  <Command className="bg-transparent">
  <div className="p-3 border-b border-border flex justify-between items-center bg-muted/10">
  <span className="text-[8px] font-black uppercase text-muted-foreground/40">{availableNotes.length} Total</span>
@@ -866,7 +866,7 @@ const handleStartSession = async () => {
  {availableNotes.map(note => {
  const isSelected = advancedConfig.selectedAtomicNotes.includes(note.id); 
  return (
- <CommandItem key={note.id} onSelect={() => toggleAtomicNote(note.id)} className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-md text-[9px] font-black uppercase">
+ <CommandItem key={note.id} onSelect={() => toggleAtomicNote(note.id)} className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-none text-[9px] font-black uppercase">
  <div className={cn("w-3 h-3 border flex items-center justify-center rounded-sm ", isSelected ? "bg-foreground border-foreground text-background" : "border-border")}>{isSelected && <Check size={8} />}</div>
  <span className="truncate">{note.title}</span>
  </CommandItem>
@@ -882,14 +882,14 @@ const handleStartSession = async () => {
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total (Min)</Label>
  <Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val)}))}>
- <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-md px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
+ <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-none px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
  <SelectContent className="border-border bg-popover">{[null, 5, 10, 15, 30, 60].map(m => (<SelectItem key={String(m)} value={String(m)} className="text-[10px] font-black uppercase">{m ? `${m}m` : 'None'}</SelectItem>))}</SelectContent>
  </Select>
  </div>
  <div className="space-y-2">
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Per Q (Sec)</Label>
  <Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val)}))}>
- <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-md px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
+ <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-none px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
  <SelectContent className="border-border bg-popover">{[null, 15, 30, 60, 120].map(s => (<SelectItem key={String(s)} value={String(s)} className="text-[10px] font-black uppercase">{s ? `${s}s` : 'None'}</SelectItem>))}</SelectContent>
  </Select>
  </div>
@@ -898,13 +898,13 @@ const handleStartSession = async () => {
  </div>
  </div>
 
- <div className="p-6 bg-muted/5 border border-border rounded-lg flex flex-col min-h-0">
+ <div className="p-6 bg-muted/5 border border-border rounded-none flex flex-col min-h-0">
  <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
   <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Types</h3>
   <div className="flex items-center gap-2">
    <div className="flex gap-1 overflow-x-auto custom-scrollbar pb-1 max-w-[200px] sm:max-w-xs">
     {Object.entries(PRESETS).map(([k, p]) => (
-     <button key={k} onClick={() => applyPreset(k)} className="shrink-0 px-2 py-1 text-[8px] font-black uppercase tracking-widest bg-muted/10 hover:bg-muted/20 border border-border rounded text-muted-foreground hover:text-foreground transition-colors" title={p.label}>
+     <button key={k} onClick={() => applyPreset(k)} className="shrink-0 px-2 py-1 text-[8px] font-black uppercase tracking-widest bg-muted/10 hover:bg-muted/20 border border-border rounded text-muted-foreground hover:text-foreground transition-none" title={p.label}>
       {p.label}
      </button>
     ))}
@@ -937,7 +937,7 @@ const handleStartSession = async () => {
  </div>
  ))}
  </div>
- <Button onClick={handleStartSession} disabled={isLoading} className="h-10 w-full bg-foreground/5 border border-foreground/20 hover:border-foreground/50 hover:bg-muted/10 text-foreground text-[10px] font-black uppercase tracking-widest rounded-md mt-6 ">Start Session</Button>
+ <Button onClick={handleStartSession} disabled={isLoading} className="h-10 w-full bg-foreground/5 border border-foreground/20 hover:border-foreground/50 hover:bg-muted/10 text-foreground text-[10px] font-black uppercase tracking-widest rounded-none mt-6 ">Start Session</Button>
  </div>
  </div>
  </div>
@@ -949,7 +949,7 @@ const handleStartSession = async () => {
  return (
  <div className="h-full flex-1 flex flex-col items-center justify-center bg-background text-foreground">
  <div className="flex flex-col items-center gap-6 ">
- <Loader2 size={32} className="text-primary animate-spin" />
+ <Loader2 size={32} className="text-primary" />
  <div className="flex flex-col items-center gap-2">
  <span className="text-[10px] font-black uppercase tracking-widest text-primary">{genStatus}</span>
  <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Rate-Limit Protection Active</span>
@@ -969,18 +969,18 @@ const handleStartSession = async () => {
  {/* ── Explain More Modal ── */}
  {explainOpen && (
    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)'}}>
-     <div className="relative w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col bg-background border border-border/40 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+     <div className="relative w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col bg-background border border-border/40 rounded-none shadow-2xl overflow-hidden">
        <div className="flex items-start justify-between px-6 py-5 border-b border-border/20 gap-4">
          <div className="min-w-0">
            <div className="text-[8px] font-black uppercase tracking-[0.35em] text-primary/50 mb-1">Deep Lesson</div>
            <div className="text-sm font-black tracking-tight text-foreground/85 leading-snug line-clamp-2">{currentQuestion.question}</div>
          </div>
-         <button onClick={() => setExplainOpen(false)} className="shrink-0 p-1.5 rounded-lg hover:bg-muted/20 text-muted-foreground/30 hover:text-foreground transition-colors mt-0.5"><X size={15}/></button>
+         <button onClick={() => setExplainOpen(false)} className="shrink-0 p-1.5 rounded-none hover:bg-muted/20 text-muted-foreground/30 hover:text-foreground transition-none mt-0.5"><X size={15}/></button>
        </div>
        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5">
          {explainLoading ? (
            <div className="flex flex-col items-center justify-center py-20 gap-4">
-             <Loader2 size={28} className="animate-spin text-primary/40" />
+             <Loader2 size={28} className="text-primary/40" />
              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Generating your lesson...</span>
            </div>
          ) : (
@@ -990,7 +990,7 @@ const handleStartSession = async () => {
          )}
        </div>
        <div className="px-6 py-4 border-t border-border/10">
-         <button onClick={() => setExplainOpen(false)} className="w-full h-10 bg-muted/5 border border-border/20 hover:border-foreground/20 text-foreground/50 hover:text-foreground text-[9px] font-black uppercase tracking-widest rounded-lg transition-colors">Close Lesson</button>
+         <button onClick={() => setExplainOpen(false)} className="w-full h-10 bg-muted/5 border border-border/20 hover:border-foreground/20 text-foreground/50 hover:text-foreground text-[9px] font-black uppercase tracking-widest rounded-none transition-none">Close Lesson</button>
        </div>
      </div>
    </div>
@@ -1001,7 +1001,7 @@ const handleStartSession = async () => {
  <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Practice</span>
  <div className="text-xs font-black uppercase tracking-tight truncate max-w-[200px]">{cleanTitle(hubs.find(h => h.id === selectedHub)?.title || '')}</div>
  </div>
- <div className="flex-1 sm:w-64 h-1 bg-muted/20 rounded-full overflow-hidden">
+ <div className="flex-1 sm:w-64 h-1 bg-muted/20 rounded-none overflow-hidden">
  <div className="h-full bg-primary" style={{width: `${progress}%`}} />
  </div>
  </div>
@@ -1033,8 +1033,8 @@ const handleStartSession = async () => {
  <div className="max-w-3xl w-full space-y-8">
  <div className="space-y-4">
  <div className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/40 flex items-center gap-2">
- <Badge variant="outline" className="text-[8px] border-primary/20 bg-primary/5 text-primary rounded-md px-1.5 py-0">{currentQuestion.difficulty || '1'}</Badge>
- <div className="w-1 h-1 rounded-full bg-primary/20" />
+ <Badge variant="outline" className="text-[8px] border-primary/20 bg-primary/5 text-primary rounded-none px-1.5 py-0">{currentQuestion.difficulty || '1'}</Badge>
+ <div className="w-1 h-1 rounded-none bg-primary/20" />
  <span>{(
       {
           'mcq': 'Multiple Choice',
@@ -1052,7 +1052,7 @@ const handleStartSession = async () => {
           'code': 'Code / Implementation'
       } as any)[currentQuestion.type as string] || (currentQuestion.type || '').replace('_', ' ')
   } MODE</span>
-  <button onClick={() => toggleBookmark(currentQuestionIdx)} className={cn("ml-auto transition-colors", bookmarked.has(currentQuestionIdx) ? "text-primary" : "text-muted-foreground/20 hover:text-foreground")} title="Bookmark Question">
+  <button onClick={() => toggleBookmark(currentQuestionIdx)} className={cn("ml-auto transition-none", bookmarked.has(currentQuestionIdx) ? "text-primary" : "text-muted-foreground/20 hover:text-foreground")} title="Bookmark Question">
     <Bookmark size={14} className={bookmarked.has(currentQuestionIdx) ? "fill-primary" : ""} />
   </button>
  </div>
@@ -1066,7 +1066,7 @@ const handleStartSession = async () => {
  const isSelected = userAnswers[currentQuestion.id] === key; 
  const isCorrect = isRevealed && (key === currentQuestion.answer || String(val).toLowerCase() === String(currentQuestion.answer).toLowerCase());
  return (
- <button key={key} disabled={isRevealed} onClick={() => handleSelectAnswer(key)} className={cn("p-3 sm:p-4 border rounded-md text-left text-[12px] font-black uppercase tracking-tight", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10")}>
+ <button key={key} disabled={isRevealed} onClick={() => handleSelectAnswer(key)} className={cn("p-3 sm:p-4 border rounded-none text-left text-[12px] font-black uppercase tracking-tight", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10")}>
  <span className="text-muted-foreground/20 shrink-0 mt-0.5 mr-3">{key}</span> <div className="flex-1 overflow-x-auto"><MarkdownBlock content={String(val)} /></div>
  </button>
  );
@@ -1076,11 +1076,11 @@ const handleStartSession = async () => {
 
  {(!currentQuestion.type || ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) && (
   <div className="space-y-6">
-  {['debug', 'code'].includes(currentQuestion.type) && ((currentQuestion as any).content || (currentQuestion as any).codeSnippet) && <div className="p-1 border border-border rounded-xl bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${(currentQuestion as any).content || (currentQuestion as any).codeSnippet}\n\`\`\``} /></div>}
-  {['trace', 'calculation', 'data_analysis', 'scenario', 'synthesis', 'writing'].includes(currentQuestion.type) && ((currentQuestion as any).content) && <div className="p-4 border border-border/10 rounded-xl bg-muted/5 text-sm text-foreground/80"><MarkdownBlock content={(currentQuestion as any).content} /></div>}
-  <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-muted/5 border-2 border-border rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
+  {['debug', 'code'].includes(currentQuestion.type) && ((currentQuestion as any).content || (currentQuestion as any).codeSnippet) && <div className="p-1 border border-border rounded-none bg-muted/5"><MarkdownBlock content={`\`\`\`${(currentQuestion as any).language || 'text'}\n${(currentQuestion as any).content || (currentQuestion as any).codeSnippet}\n\`\`\``} /></div>}
+  {['trace', 'calculation', 'data_analysis', 'scenario', 'synthesis', 'writing'].includes(currentQuestion.type) && ((currentQuestion as any).content) && <div className="p-4 border border-border/10 rounded-none bg-muted/5 text-sm text-foreground/80"><MarkdownBlock content={(currentQuestion as any).content} /></div>}
+  <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-muted/5 border-2 border-border rounded-none text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
   {isRevealed && (
-    <div className="p-4 border-2 border-primary/20 bg-primary/5 rounded-lg space-y-2">
+    <div className="p-4 border-2 border-primary/20 bg-primary/5 rounded-none space-y-2">
       <div className="text-[9px] font-black uppercase tracking-[0.3em] text-primary mb-1">Correct Answer</div>
       <div className="text-xs font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap"><MarkdownBlock content={String((currentQuestion as any).answer || '')} /></div>
     </div>
@@ -1094,7 +1094,7 @@ const handleStartSession = async () => {
  const isSelected = userAnswers[currentQuestion.id] === v; 
  const isCorrect = isRevealed && v.toLowerCase() === String(currentQuestion.answer).toLowerCase(); 
  return (
- <button key={v} disabled={isRevealed} onClick={() => handleSelectAnswer(v)} className={cn("h-20 sm:h-24 border rounded-md text-[10px] font-black uppercase tracking-widest ", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale text-muted-foreground/40" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10 text-muted-foreground/40")}>{v}</button>
+ <button key={v} disabled={isRevealed} onClick={() => handleSelectAnswer(v)} className={cn("h-20 sm:h-24 border rounded-none text-[10px] font-black uppercase tracking-widest ", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale text-muted-foreground/40" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10 text-muted-foreground/40")}>{v}</button>
  );
 })}
  </div>
@@ -1111,7 +1111,7 @@ const handleStartSession = async () => {
      const isWrong = isRevealed && step !== (currentQuestion.answer || [])[i];
      return (
          <div key={i} className={cn(
-             "flex items-center gap-4 p-3 border rounded-2xl ",
+             "flex items-center gap-4 p-3 border rounded-none ",
              isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border bg-muted/5 hover:border-foreground/20"
          )}>
              <div className="flex flex-col gap-1.5 border-r border-border/10 pr-4">
@@ -1134,12 +1134,12 @@ const handleStartSession = async () => {
      const isWrong = isRevealed && selected !== pair.right;
      return (
          <div key={i} className={cn(
-             "flex items-center gap-4 p-3 border rounded-2xl ",
+             "flex items-center gap-4 p-3 border rounded-none ",
              isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border bg-muted/5 hover:border-foreground/20"
          )}>
              <div className="flex-1 font-black uppercase tracking-[0.2em] text-[10px] text-muted-foreground/60">{pair.left}</div>
              <div className="flex-1">
-                 <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-3 bg-background border border-border rounded-xl outline-none focus:border-primary/50 text-[10px] font-black uppercase tracking-widest  appearance-none cursor-pointer">
+                 <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-3 bg-background border border-border rounded-none outline-none focus:border-primary/50 text-[10px] font-black uppercase tracking-widest  appearance-none cursor-pointer">
                      <option value="">Select match...</option>
                      {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
                  </select>
@@ -1157,7 +1157,7 @@ const handleStartSession = async () => {
   )}
 
  {currentQuestion.type === 'fill_in' && (
-  <div className="p-5 bg-muted/5 border border-border/10 rounded-lg text-base font-medium leading-relaxed flex flex-wrap items-center gap-y-3">
+  <div className="p-5 bg-muted/5 border border-border/10 rounded-none text-base font-medium leading-relaxed flex flex-wrap items-center gap-y-3">
  {(() => {
  const parts = (currentQuestion.textWithBlanks || '').split(/\[\[.*?\]\]/);
  return parts.map((part: string, i: number) => (
@@ -1178,14 +1178,14 @@ const handleStartSession = async () => {
  )}
 
    {isRevealed && currentQuestion.explanation && (
-     <div className="p-5 border border-border/10 rounded-xl bg-muted/5 text-[13px] font-medium text-muted-foreground/80 italic leading-relaxed   ">
+     <div className="p-5 border border-border/10 rounded-none bg-muted/5 text-[13px] font-medium text-muted-foreground/80 italic leading-relaxed   ">
          <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30 mb-2 not-italic">Explanation</div>
          <MarkdownBlock content={currentQuestion.explanation} />
      </div>
    )}
 
   {isRevealed && ['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQuestion.type) && Array.isArray(currentQuestion.required_keywords) && currentQuestion.required_keywords.length > 0 && (
-    <div className="p-8 border border-border/10 rounded-2xl bg-muted/5 space-y-4   ">
+    <div className="p-8 border border-border/10 rounded-none bg-muted/5 space-y-4   ">
       <div className="flex items-center justify-between">
         <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mandatory Concepts Checklist</div>
         <div className="text-[10px] font-black tabular-nums text-muted-foreground/50">
@@ -1194,7 +1194,7 @@ const handleStartSession = async () => {
       </div>
       
       {currentQuestion.required_keywords.filter((kw: string) => !String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase())).length > 0 && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-sm font-bold text-destructive/90 mb-4">
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-none text-sm font-bold text-destructive/90 mb-4">
           Warning: Your answer is missing core concepts. Are you sure you mastered this?
         </div>
       )}
@@ -1203,7 +1203,7 @@ const handleStartSession = async () => {
         {currentQuestion.required_keywords.map((kw: string, i: number) => {
           const isFound = String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase());
           return (
-            <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-xl cursor-pointer ", isFound ? "border-primary/50 bg-primary/5" : "border-border/40 hover:bg-muted/10")}>
+            <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-none cursor-pointer ", isFound ? "border-primary/50 bg-primary/5" : "border-border/40 hover:bg-muted/10")}>
               <input type="checkbox" checked={keywordChecks[kw] || false} onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} className="w-5 h-5 rounded border-border text-primary focus:ring-primary" />
               <span className={cn("text-sm font-bold", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[10px] uppercase tracking-widest text-primary ml-3">(Found in your answer)</span>}</span>
             </label>
@@ -1223,7 +1223,7 @@ const handleStartSession = async () => {
   <Button
     variant="ghost"
     onClick={handleExplainMore}
-    className="h-10 px-4 text-[9px] font-black uppercase tracking-widest border border-border/30 hover:border-border/60 text-muted-foreground/50 hover:text-foreground rounded-md flex items-center gap-2 transition-colors"
+    className="h-10 px-4 text-[9px] font-black uppercase tracking-widest border border-border/30 hover:border-border/60 text-muted-foreground/50 hover:text-foreground rounded-none flex items-center gap-2 transition-none"
     title="Get a detailed lesson on this question's concept"
   >
     <BookOpen size={12} />
@@ -1231,7 +1231,7 @@ const handleStartSession = async () => {
   </Button>
   <div className="flex items-center gap-2">
  {!isRevealed ? (
- <Button onClick={handleSubmitAnswer} disabled={!userAnswers[currentQuestion.id] && !['writing','synthesis','debug','trace','calculation','data_analysis','scenario','code'].includes(currentQuestion.type)} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md">Check</Button>
+ <Button onClick={handleSubmitAnswer} disabled={!userAnswers[currentQuestion.id] && !['writing','synthesis','debug','trace','calculation','data_analysis','scenario','code'].includes(currentQuestion.type)} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-none">Check</Button>
  ) : (
  <div className="flex gap-2">
  {gradedAnswers[currentQuestion.id] === undefined && ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type) && (
@@ -1246,7 +1246,7 @@ const handleStartSession = async () => {
  </>
  )} 
  {((!['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) || gradedAnswers[currentQuestion.id] !== undefined) && (
- <Button onClick={() => nextQuestion()} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-md">Next</Button>
+ <Button onClick={() => nextQuestion()} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-none">Next</Button>
  )}
  </div>
  )}
@@ -1301,8 +1301,8 @@ const handleStartSession = async () => {
      </div>
 
      {/* Progress bar */}
-     <div className="h-1.5 w-full bg-muted/20 rounded-full overflow-hidden">
-      <div className="h-full bg-foreground/80 rounded-full transition-all duration-700" style={{width:`${score}%`}}/>
+     <div className="h-1.5 w-full bg-muted/20 rounded-none overflow-hidden">
+      <div className="h-full bg-foreground/80 rounded-none transition-none duration-700" style={{width:`${score}%`}}/>
      </div>
 
      {/* Type breakdown */}
@@ -1313,13 +1313,13 @@ const handleStartSession = async () => {
         {Object.entries(typeMap).map(([t, s]) => {
           const pct = Math.round((s.correct/s.total)*100);
           return (
-           <div key={t} className="p-3 bg-muted/5 border border-border/40 rounded-lg space-y-2">
+           <div key={t} className="p-3 bg-muted/5 border border-border/40 rounded-none space-y-2">
             <div className="flex items-center justify-between">
              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{TYPE_LABELS[t]||t}</span>
              <span className="text-[10px] font-black tabular-nums">{pct}%</span>
             </div>
-            <div className="h-0.5 w-full bg-muted/20 rounded-full overflow-hidden">
-             <div className="h-full rounded-full" style={{width:`${pct}%`, background: pct >= 80 ? 'hsl(var(--foreground)/0.8)' : pct >= 50 ? 'hsl(var(--foreground)/0.4)' : 'hsl(var(--destructive)/0.6)'}}/>
+            <div className="h-0.5 w-full bg-muted/20 rounded-none overflow-hidden">
+             <div className="h-full rounded-none" style={{width:`${pct}%`, background: pct >= 80 ? 'hsl(var(--foreground)/0.8)' : pct >= 50 ? 'hsl(var(--foreground)/0.4)' : 'hsl(var(--destructive)/0.6)'}}/>
             </div>
             <div className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{s.correct}/{s.total} correct</div>
            </div>
@@ -1335,7 +1335,7 @@ const handleStartSession = async () => {
        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Bookmarked for Review</div>
        <div className="space-y-2">
         {bookmarkedQuestions.map((q,i) => (
-         <div key={i} className="p-4 bg-muted/5 border border-border/40 rounded-lg space-y-2">
+         <div key={i} className="p-4 bg-muted/5 border border-border/40 rounded-none space-y-2">
           <div className="flex items-center gap-2">
            <Badge variant="outline" className="text-[8px] border-border/40 rounded px-1.5">{q.difficulty||'?'}</Badge>
            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{TYPE_LABELS[q.type]||q.type}</span>
@@ -1352,9 +1352,9 @@ const handleStartSession = async () => {
 
      {/* Actions */}
      <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-border/10">
-      <Button onClick={() => { setStreak(0); setBookmarked(new Set()); setView('configuring'); }} className="h-11 flex-1 bg-foreground text-background text-[10px] font-black uppercase tracking-widest rounded-md">Practice Again</Button>
-      <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setAdvancedConfig({...DEFAULT_CONFIG, questionDistribution: Object.fromEntries(Object.entries(typeMap).map(([t,s]) => [t, Math.max(0, s.total - s.correct)])) as any }); setView('configuring'); }} className="h-11 flex-1 border-border/40 text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-md">Retry Wrong Only</Button>
-      <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setView('dashboard'); }} className="h-11 px-6 border-border/20 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-md">Done</Button>
+      <Button onClick={() => { setStreak(0); setBookmarked(new Set()); setView('configuring'); }} className="h-11 flex-1 bg-foreground text-background text-[10px] font-black uppercase tracking-widest rounded-none">Practice Again</Button>
+      <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setAdvancedConfig({...DEFAULT_CONFIG, questionDistribution: Object.fromEntries(Object.entries(typeMap).map(([t,s]) => [t, Math.max(0, s.total - s.correct)])) as any }); setView('configuring'); }} className="h-11 flex-1 border-border/40 text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-none">Retry Wrong Only</Button>
+      <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setView('dashboard'); }} className="h-11 px-6 border-border/20 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-none">Done</Button>
      </div>
     </div>
    </div>

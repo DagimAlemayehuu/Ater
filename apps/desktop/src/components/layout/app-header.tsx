@@ -67,13 +67,13 @@ export function AppHeader() {
     <header className="relative h-12 w-full bg-background/80 backdrop-blur-md border-b border-border/40 flex items-center shrink-0 z-40 sticky top-0 px-4 select-none">
       {/* Left: Navigation */}
       <div className="flex items-center gap-2 shrink-0 z-10">
-        <div className="flex items-center gap-1 bg-muted/20 p-0.5 rounded-xl border border-border/40 shadow-inner">
+        <div className="flex items-center gap-1 bg-muted/20 p-0.5 rounded-none border border-border/40 shadow-inner">
           <button 
             onClick={goBack}
             disabled={!canGoBack}
             title="Back (Cmd+[)"
             className={cn(
-              "w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-90",
+              "w-8 h-8 flex items-center justify-center rounded-none transition-none",
               canGoBack 
                 ? "text-foreground bg-background hover:bg-foreground/5 hover:border-foreground/40 border-border shadow-sm" 
                 : "text-muted-foreground/10 bg-transparent border-transparent cursor-default"
@@ -87,7 +87,7 @@ export function AppHeader() {
             disabled={!canGoForward}
             title="Forward (Cmd+])"
             className={cn(
-              "w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-90",
+              "w-8 h-8 flex items-center justify-center rounded-none transition-none",
               canGoForward 
                 ? "text-foreground bg-background hover:bg-foreground/5 hover:border-foreground/40 border-border shadow-sm" 
                 : "text-muted-foreground/10 bg-transparent border-transparent cursor-default"
@@ -101,11 +101,11 @@ export function AppHeader() {
         <button 
           onClick={() => setShowOverlay(true)}
           className={cn(
-            "ml-3 px-3 h-8 flex items-center justify-center rounded-xl border border-border/60 transition-all active:scale-95 text-[10px] font-black tabular-nums shadow-sm bg-background/50",
+            "ml-3 px-3 h-8 flex items-center justify-center rounded-none border border-border/60 transition-none text-[10px] font-black tabular-nums shadow-sm bg-background/50",
             pomodoroActive ? "bg-primary/10 text-primary border-primary/20 ring-1 ring-primary/10" : "hover:border-foreground/40"
           )}
         >
-          <Timer size={12} className={cn("mr-1.5 opacity-50", pomodoroActive && "animate-pulse text-primary opacity-100")} />
+          <Timer size={12} className={cn("mr-1.5 opacity-50", pomodoroActive && "text-primary opacity-100")} />
           {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
         </button>
       </div>

@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
-import { ConfigProvider } from '@/lib/ConfigContext'
+import { ConfigProvider, useConfig } from '@/lib/ConfigContext'
 import { ThemeProvider } from '@/context/theme-provider'
 import { NavigationProvider } from '@/context/navigation-provider'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
@@ -61,38 +61,46 @@ export default function App() {
   return (
     <ThemeProvider>
       <ConfigProvider>
-        <AuthProvider>
-          <SidecarGate>
-            <BrowserRouter>
-              <NavigationProvider>
-                <HeaderProvider>
-                  <AuthGuard>
-                    <Routes>
-                      <Route path="*" element={
-                        <AuthenticatedLayout>
-                          <Routes>
-                            <Route path="/" element={<Navigate to="/obsidian" replace />} />
-                            <Route path="/obsidian" element={<ObsidianVault />} />
-                            <Route path="/academic" element={<AcademicDashboard />} />
-                            <Route path="/agents" element={<Agents />} />
-                            <Route path="/practice" element={<Practice />} />
-                            <Route path="/settings" element={<Settings />} />
-                            <Route path="/onboarding" element={<Onboarding />} />
-                          </Routes>
-                        </AuthenticatedLayout>
-                      } />
-                    </Routes>
-                  </AuthGuard>
-                  <Toaster />
-                  <PomodoroController />
-                </HeaderProvider>
-              </NavigationProvider>
-            </BrowserRouter>
-          </SidecarGate>
-        </AuthProvider>
+        <AppRoutes />
       </ConfigProvider>
     </ThemeProvider>
   )
+}
+
+function AppRoutes() {
+  const { isConfigured } = useConfig();
+  
+  return (
+    <AuthProvider>
+      <SidecarGate>
+        <BrowserRouter>
+          <NavigationProvider>
+            <HeaderProvider>
+              <AuthGuard>
+                <Routes>
+                  <Route path="*" element={
+                    <AuthenticatedLayout>
+                      <Routes>
+                        <Route path="/" element={<Navigate to={isConfigured ? "/obsidian" : "/onboarding"} replace />} />
+                        <Route path="/obsidian" element={<ObsidianVault />} />
+                        <Route path="/academic" element={<AcademicDashboard />} />
+                        <Route path="/agents" element={<Agents />} />
+                        <Route path="/practice" element={<Practice />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/onboarding" element={<Onboarding />} />
+                      </Routes>
+                    </AuthenticatedLayout>
+                  } />
+                </Routes>
+              </AuthGuard>
+              <Toaster />
+              <PomodoroController />
+            </HeaderProvider>
+          </NavigationProvider>
+        </BrowserRouter>
+      </SidecarGate>
+    </AuthProvider>
+  );
 }
 
 const gateStyle: React.CSSProperties = {

@@ -24,7 +24,7 @@ interface RateLimitMonitorProps {
     activeTier?: 'primary' | 'planner' | 'utility';
 }
 
-export default function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMonitorProps) {
+export function RateLimitMonitor({ config, activeTier = 'primary' }: RateLimitMonitorProps) {
     const [limits, setLimits] = useState<Record<string, RateLimit>>({});
     const [isLoading, setIsLoading] = useState(true);
 
@@ -41,7 +41,8 @@ export default function RateLimitMonitor({ config, activeTier = 'primary' }: Rat
 
     useEffect(() => {
         fetchLimits();
-        const interval = setInterval(fetchLimits, 2000);
+        // Slowed down polling to 10 seconds for performance and reduced noise
+        const interval = setInterval(fetchLimits, 10000);
         return () => clearInterval(interval);
     }, []);
 
@@ -65,8 +66,8 @@ export default function RateLimitMonitor({ config, activeTier = 'primary' }: Rat
 
     if (isLoading && entries.length === 0) {
         return (
-            <div className="p-4 flex flex-col items-center justify-center border border-dashed border-border rounded-lg bg-muted/5 gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <div className="p-4 flex flex-col items-center justify-center border border-dashed border-border bg-muted/5 gap-2">
+                <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Connecting Tracker...</span>
             </div>
         );
@@ -74,7 +75,7 @@ export default function RateLimitMonitor({ config, activeTier = 'primary' }: Rat
 
     if (entries.length === 0) {
         return (
-            <div className="p-8 flex flex-col items-center justify-center text-center space-y-3 border border-dashed border-border rounded-lg bg-muted/5">
+            <div className="p-8 flex flex-col items-center justify-center text-center space-y-3 border border-dashed border-border bg-muted/5">
                 <Activity size={20} className="text-muted-foreground/20" />
                 <div className="space-y-1">
                     <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">No usage data detected yet</p>
@@ -108,7 +109,7 @@ export default function RateLimitMonitor({ config, activeTier = 'primary' }: Rat
 
                     return (
                         <div key={key} className={cn(
-                            "group p-4 rounded-lg border    slide-in-from-top-2  relative overflow-hidden",
+                            "group p-4 border relative overflow-hidden",
                             isActive ? "border-primary/40 bg-primary/[0.02]" : "border-border bg-background hover:border-muted-foreground/20",
                             isCritical ? "border-destructive/30 bg-destructive/[0.02]" : 
                             isLow ? "border-amber-500/30 bg-amber-500/[0.02]" : ""
@@ -129,13 +130,13 @@ export default function RateLimitMonitor({ config, activeTier = 'primary' }: Rat
                                 </div>
                                 
                                 {limit.retry_after ? (
-                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-destructive text-destructive-foreground ">
+                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-destructive text-destructive-foreground">
                                         <Clock size={12} />
                                         <span className="text-[9px] font-black uppercase tracking-tighter">Throttled: {limit.retry_after}s</span>
                                     </div>
                                 ) : (
                                     <div className={cn(
-                                        "flex items-center gap-1.5 px-2 py-1 rounded border",
+                                        "flex items-center gap-1.5 px-2 py-1 border",
                                         isCritical ? "bg-destructive/10 text-destructive border-destructive/20" :
                                         isLow ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
                                         "bg-green-500/10 text-green-500 border-green-500/20"
@@ -157,10 +158,10 @@ export default function RateLimitMonitor({ config, activeTier = 'primary' }: Rat
                                                 <span className="text-muted-foreground/60">Requests Left</span>
                                                 <span className="text-foreground tabular-nums">{limit.requests_remaining} / {limit.requests_limit}</span>
                                             </div>
-                                            <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                                            <div className="h-1 w-full bg-muted overflow-hidden">
                                                 <div 
                                                     className={cn(
-                                                        "h-full  ",
+                                                        "h-full",
                                                         isCritical ? "bg-destructive" : isLow ? "bg-amber-500" : "bg-primary"
                                                     )}
                                                     style={{ width: `${Math.max(2, reqPercent || 0)}%` }}
@@ -180,10 +181,10 @@ export default function RateLimitMonitor({ config, activeTier = 'primary' }: Rat
                                                 <span className="text-muted-foreground/60">Tokens Left</span>
                                                 <span className="text-foreground tabular-nums">{(limit.tokens_remaining!/1000).toFixed(1)}k</span>
                                             </div>
-                                            <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                                            <div className="h-1 w-full bg-muted overflow-hidden">
                                                 <div 
                                                     className={cn(
-                                                        "h-full  ",
+                                                        "h-full",
                                                         isCritical ? "bg-destructive" : isLow ? "bg-amber-500" : "bg-primary"
                                                     )}
                                                     style={{ width: `${Math.max(2, tokenPercent || 0)}%` }}

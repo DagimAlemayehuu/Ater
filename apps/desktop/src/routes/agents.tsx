@@ -141,7 +141,7 @@ function BatchTreeView({batches, processedNotes}: {batches: any[], processedNote
          key={`${item.batchId}-${item.note}-${idx}`}
          ref={isCurrentNote ? firstPendingRef : null}
          className={cn(
-           "flex items-center gap-3 px-2 py-1.5 rounded-md  ",
+           "flex items-center gap-3 px-2 py-1.5 rounded-none  ",
            item.isDone ? "opacity-35" : "opacity-100",
            isCurrentNote && "bg-muted/15 border border-border/40"
          )}
@@ -396,24 +396,24 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  useEffect(() => {
   const HeaderActions = (
    <div className="flex items-center gap-2">
-    <div className="flex items-center gap-2 bg-muted/30 border border-border/40 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+    <div className="flex items-center gap-2 bg-muted/30 border border-border/40 px-2.5 py-1 rounded-none text-[9px] font-black uppercase tracking-widest text-muted-foreground">
      <span>Auto-Ingest</span>
      <button 
       onClick={toggleAutoDeploy}
       className={cn(
-       "relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border border-transparent   ease-in-out focus:outline-none", 
+       "relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-none border border-transparent   ease-in-out focus:outline-none", 
        config?.autoDeploy ? 'bg-foreground' : 'bg-muted-foreground/30'
       )}
      >
       <span className={cn(
-       "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-background shadow ring-0 transition  ease-in-out", 
+       "pointer-events-none inline-block h-3 w-3 transform rounded-none bg-background shadow ring-0 transition  ease-in-out", 
        config?.autoDeploy ? 'translate-x-3.5' : 'translate-x-0'
       )} />
      </button>
     </div>
     <button 
      onClick={() => {fetchInbox(); fetchStatus();}} 
-     className="flex items-center justify-center w-8 h-8 bg-muted/30 border border-border/40 text-muted-foreground rounded-md hover:text-foreground hover:border-foreground/30 "
+     className="flex items-center justify-center w-8 h-8 bg-muted/30 border border-border/40 text-muted-foreground rounded-none hover:text-foreground hover:border-foreground/30 "
     >
      <RefreshCw size={12} />
     </button>
@@ -630,7 +630,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  {/* AUTO INGESTION VIEW */}
  {queueStatus?.status !== 'idle' && (
  <div className="flex flex-col h-full overflow-hidden mb-4">
- <div className="p-8 rounded-lg border border-border bg-muted/5 flex flex-col h-full overflow-hidden gap-8">
+ <div className="p-8 rounded-none border border-border bg-muted/5 flex flex-col h-full overflow-hidden gap-8">
  <div className="flex items-center justify-between border-b border-border pb-6 shrink-0">
  <div className="flex items-center gap-3">
  <div>
@@ -654,7 +654,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  <span>Completion</span>
  <span>{Math.round(((queueStatus?.current_batch || 0) / (queueStatus?.total_batches || 1)) * 100)}%</span>
  </div>
- <div className="h-2 w-full bg-background rounded-full overflow-hidden border border-border">
+ <div className="h-2 w-full bg-background rounded-none overflow-hidden border border-border">
  <div className="h-full bg-foreground  duration-700 ease-in-out" style={{width: `${((queueStatus?.current_batch || 0) / (queueStatus?.total_batches || 1)) * 100}%`}} />
  </div>
  </div>
@@ -697,14 +697,14 @@ function AterDashboard({onBack}: {onBack: () => void}) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
     {loadingInbox ? (
     Array.from({length: 4}).map((_, i) => (
-    <div key={i} className="h-24 rounded-xl bg-muted/5 border border-border " />
+    <div key={i} className="h-24 rounded-none bg-muted/5 border border-border " />
     ))
     ) : inboxFiles.length > 0 ? (
     inboxFiles.map(f => (
     <div 
     key={f.path} 
     onClick={() => {setSelectedInboxFile(f); setAterError(null); setActivePlan(null); setIsAwaitingConfirmation(false); setIsCurriculumReady(false); setBatchFeed([]);}}
-    className="p-8 rounded-lg border border-border bg-muted/5 hover:bg-muted/5 hover:border-foreground/30 cursor-pointer  group flex flex-col justify-between"
+    className="p-8 rounded-none border border-border bg-muted/5 hover:bg-muted/5 hover:border-foreground/30 cursor-pointer  group flex flex-col justify-between"
     >
     <div>
     <h3 className="text-sm font-black uppercase tracking-tight text-foreground truncate">{f.name}</h3>
@@ -713,7 +713,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
     </div>
     ))
     ) : (
-    <div className="col-span-full py-20 border border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-muted-foreground/30">
+    <div className="col-span-full py-20 border border-dashed border-border rounded-none flex flex-col items-center justify-center text-muted-foreground/30">
     <Archive size={32} className="mb-4 opacity-50" />
     <p className="text-[10px] font-black uppercase tracking-widest">Inbox is empty</p>
     </div>
@@ -728,9 +728,9 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  {selectedInboxFile && queueStatus?.status === 'idle' && (
  <div className="flex flex-col h-full overflow-hidden">
  {/* Selected File Header */}
- <div className="p-6 rounded-lg border border-border bg-muted/5 mb-8 flex items-center justify-between shrink-0">
+ <div className="p-6 rounded-none border border-border bg-muted/5 mb-8 flex items-center justify-between shrink-0">
  <div className="flex items-center gap-4">
- <button onClick={() => setSelectedInboxFile(null)} className="p-2 bg-background border border-border rounded-lg text-muted-foreground hover:text-foreground ">
+ <button onClick={() => setSelectedInboxFile(null)} className="p-2 bg-background border border-border rounded-none text-muted-foreground hover:text-foreground ">
  BACK
  </button>
  <div>
@@ -741,37 +741,37 @@ function AterDashboard({onBack}: {onBack: () => void}) {
 
  <div className="flex items-center gap-2">
  {!isCurriculumReady && !processing && (
- <button onClick={() => processSelectedFile()} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg ">
+ <button onClick={() => processSelectedFile()} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-none ">
  Analyze Context
  </button>
  )}
  {isCurriculumReady && !activePlan && !processing && (
- <button onClick={startPlanning} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground bg-muted/5 hover:bg-muted/5 rounded-lg ">
+ <button onClick={startPlanning} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground bg-muted/5 hover:bg-muted/5 rounded-none ">
  Generate Plan
  </button>
  )}
  {isAwaitingConfirmation && (
  <div className="flex items-center gap-2">
- <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground bg-muted/5 hover:bg-muted/5 rounded-lg  disabled:opacity-50">
+ <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground bg-muted/5 hover:bg-muted/5 rounded-none  disabled:opacity-50">
  Full Deploy
  </button>
- <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg  disabled:opacity-50">
+ <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-none  disabled:opacity-50">
  Deploy Step 1
  </button>
  </div>
  )}
  {isAwaitingNextBatch && (
  <div className="flex items-center gap-2">
- <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground bg-muted/5 hover:bg-muted/5 rounded-lg  disabled:opacity-50">
+ <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground bg-muted/5 hover:bg-muted/5 rounded-none  disabled:opacity-50">
  Finish All
  </button>
- <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg  disabled:opacity-50">
+ <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-none  disabled:opacity-50">
  Next Step
  </button>
  </div>
  )}
  {isCompleted && (
- <button onClick={resetAterSession} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-lg ">
+ <button onClick={resetAterSession} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-background hover:border-foreground/50 rounded-none ">
  Reset
  </button>
  )}
@@ -781,15 +781,15 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  {/* Processing Indicator */}
  {processing && !activePlan && !batchFeed.length && (
  <div className="py-24 flex flex-col items-center justify-center text-center ">
- <div className="w-4 h-4 border-2 border-foreground border-t-transparent rounded-full animate-spin mb-6" />
+ <div className="w-4 h-4 border-2 border-foreground border-t-transparent rounded-none mb-6" />
  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] mb-4 text-foreground/40">Generating...</h4>
  </div>
  )}
 
  {processing && (activePlan || batchFeed.length > 0) && (
- <div className="mb-8 p-6 rounded-lg bg-muted/5 border border-border shrink-0 flex items-center justify-between ">
+ <div className="mb-8 p-6 rounded-none bg-muted/5 border border-border shrink-0 flex items-center justify-between ">
  <div className="flex items-center gap-4">
- <div className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin" />
+ <div className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-none" />
  <div>
  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-1">Status</p>
  <p className="text-sm font-black uppercase tracking-tight text-foreground">Executing Plan...</p>
@@ -803,7 +803,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
 
  {/* Curriculum Editor */}
  {isCurriculumReady && !activePlan && !processing && (
- <div className="mb-8 p-8 rounded-lg bg-muted/5 border border-border shrink-0 space-y-6 -95">
+ <div className="mb-8 p-8 rounded-none bg-muted/5 border border-border shrink-0 space-y-6 -95">
  <div className="flex items-center gap-3 border-b border-border pb-4">
  
  <div>
@@ -824,7 +824,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  {/* Plan Review */}
  {activePlan && !processing && !batchFeed.length && (
  <div className="flex-1 overflow-hidden min-h-0">
- <div className="p-8 rounded-lg bg-muted/5 border border-border flex flex-col overflow-hidden h-full">
+ <div className="p-8 rounded-none bg-muted/5 border border-border flex flex-col overflow-hidden h-full">
  <div className="flex items-center gap-3 border-b border-border pb-4 mb-6">
  
  <div>
@@ -846,9 +846,9 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  </div>
  
  {batchFeed.map(b => (
- <div key={b.batch} className="p-6 rounded-2xl border border-border bg-muted/5 -95">
+ <div key={b.batch} className="p-6 rounded-none border border-border bg-muted/5 -95">
  <div className="flex items-center gap-3 mb-6">
- <div className="w-6 h-6 rounded-md bg-foreground text-[10px] font-black text-background flex items-center justify-center">
+ <div className="w-6 h-6 rounded-none bg-foreground text-[10px] font-black text-background flex items-center justify-center">
  {b.batch}
  </div>
  <span className={cn("text-[10px] font-black uppercase tracking-widest", b.results.length > 0 ? "text-foreground" : "text-destructive")}>
@@ -857,9 +857,9 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  </div>
  
  {b.results.length === 0 && (
- <div className="mb-4 mt-2 p-4 rounded-xl bg-destructive/5 border border-destructive/20">
+ <div className="mb-4 mt-2 p-4 rounded-none bg-destructive/5 border border-destructive/20">
  <p className="text-[10px] text-destructive font-black uppercase tracking-widest mb-3">No Ater Regions detected.</p>
- <pre className="text-[9px] bg-background border border-border p-3 rounded-lg overflow-x-auto font-mono text-muted-foreground/60">
+ <pre className="text-[9px] bg-background border border-border p-3 rounded-none overflow-x-auto font-mono text-muted-foreground/60">
  {b.ai_output}
  </pre>
  </div>
@@ -867,8 +867,8 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
  {b.results.map((r: any, i: number) => (
- <div key={i} className="p-4 border border-border rounded-xl bg-background flex items-center gap-3">
- <div className="p-2 bg-muted/5 rounded-lg border border-border text-muted-foreground/40">
+ <div key={i} className="p-4 border border-border rounded-none bg-background flex items-center gap-3">
+ <div className="p-2 bg-muted/5 rounded-none border border-border text-muted-foreground/40">
   <FileText size={14} />
  </div>
  <span className="text-[10px] font-black uppercase tracking-widest truncate text-foreground/80">{r.title}</span>
@@ -880,12 +880,12 @@ function AterDashboard({onBack}: {onBack: () => void}) {
 
  {isCompleted && (
  <div className="py-16 flex flex-col items-center justify-center text-center -95">
- <div className="w-16 h-16 rounded-2xl bg-muted/5 border border-border text-foreground/40 flex items-center justify-center mb-6">
+ <div className="w-16 h-16 rounded-none bg-muted/5 border border-border text-foreground/40 flex items-center justify-center mb-6">
   <CheckCircle2 size={32} />
  </div>
  <h4 className="text-xl font-black uppercase tracking-tight mb-2 text-foreground">All Done</h4>
  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mb-8 max-w-sm">All files have been saved to your vault.</p>
- <button onClick={() => navigate('/obsidian')} className="flex items-center justify-center rounded-lg px-6 py-3 text-[10px] font-black uppercase tracking-widest text-foreground bg-background border border-border hover:border-foreground/50 ">
+ <button onClick={() => navigate('/obsidian')} className="flex items-center justify-center rounded-none px-6 py-3 text-[10px] font-black uppercase tracking-widest text-foreground bg-background border border-border hover:border-foreground/50 ">
  Go to Vault
  </button>
  </div>
@@ -894,7 +894,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  )}
 
  {aterError && (
- <div className="p-6 rounded-2xl bg-destructive/5 border border-destructive/20 mt-8">
+ <div className="p-6 rounded-none bg-destructive/5 border border-destructive/20 mt-8">
  <div className="flex items-center gap-2 mb-3 text-[10px] font-black uppercase tracking-widest text-destructive">
  
  Error

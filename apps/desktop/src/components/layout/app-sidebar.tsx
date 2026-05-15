@@ -1,68 +1,72 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { FileText, Users, Settings, GraduationCap, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeSwitch } from '@/components/theme-switch'
 
 export function AppSidebar() {
+  const location = useLocation()
+  const isOnboarding = location.pathname === '/onboarding'
+
   return (
-    <aside className="w-12 bg-sidebar border-r border-sidebar-border flex flex-col items-center py-4 shrink-0 z-50 h-full shadow-[1px_0_10px_rgba(0,0,0,0.02)]">
+    <aside className="w-12 bg-background border-r border-border flex flex-col items-center py-6 shrink-0 z-50 h-full">
         {/* Navigation Links */}
-        <div className="flex flex-col gap-5 flex-1">
+        <div className="flex flex-col gap-6 flex-1 items-center">
             <NavLink 
                 to="/academic"
                 className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-300",
-                  isActive ? "text-primary bg-primary/10 shadow-sm ring-1 ring-primary/20" : "text-foreground/30 hover:text-foreground/70 hover:bg-foreground/5"
+                  "relative flex items-center justify-center w-8 h-8 rounded-none transition-none",
+                  isActive ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
                 )} 
                 title="Academic Dashboard"
             >
-              <GraduationCap className="w-5 h-5" strokeWidth={2.2} />
-              <div className="absolute -right-[1px] top-1/2 -translate-y-1/2 w-[2px] h-4 bg-primary rounded-l-full scale-y-0 transition-transform active:scale-y-100" />
+              <GraduationCap className="size-5" strokeWidth={2} />
             </NavLink>
             <NavLink 
                 to="/obsidian"
                 className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-300",
-                  isActive ? "text-primary bg-primary/10 shadow-sm ring-1 ring-primary/20" : "text-foreground/30 hover:text-foreground/70 hover:bg-foreground/5"
+                  "relative flex items-center justify-center w-8 h-8 rounded-none transition-none",
+                  isActive ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
                 )} 
                 title="Knowledge Base"
             >
-              <FileText className="w-5 h-5" strokeWidth={2.2} />
+              <FileText className="size-5" strokeWidth={2} />
             </NavLink>
             <NavLink 
                 to="/agents"
                 className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-300",
-                  isActive ? "text-primary bg-primary/10 shadow-sm ring-1 ring-primary/20" : "text-foreground/30 hover:text-foreground/70 hover:bg-foreground/5"
+                  "relative flex items-center justify-center w-8 h-8 rounded-none transition-none",
+                  isActive ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
                 )} 
                 title="AI Agents"
             >
-              <Users className="w-5 h-5" strokeWidth={2.2} />
+              <Users className="size-5" strokeWidth={2} />
             </NavLink>
         </div>
 
         {/* Bottom Actions */}
-        <div className="flex flex-col gap-5 mt-auto px-1 items-center mb-2 w-full">
+        <div className="flex flex-col gap-6 mt-auto items-center mb-6 w-full">
             <ThemeSwitch />
-            <NavLink 
-                to="/onboarding"
-                className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-300",
-                  isActive ? "text-primary bg-primary/10 shadow-sm ring-1 ring-primary/20" : "text-foreground/30 hover:text-foreground/70 hover:bg-foreground/5"
-                )} 
-                title="System Setup"
-            >
-              <Zap className="w-5 h-5" strokeWidth={2.2} />
-            </NavLink>
+            {!isOnboarding && (
+              <NavLink 
+                  to="/onboarding"
+                  className={({ isActive }) => cn(
+                    "relative flex items-center justify-center w-8 h-8 rounded-none transition-none",
+                    isActive ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
+                  )} 
+                  title="System Setup"
+              >
+                <Zap className="size-5" strokeWidth={2} />
+              </NavLink>
+            )}
             <NavLink 
                 to="/settings"
                 className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-300",
-                  isActive ? "text-primary bg-primary/10 shadow-sm ring-1 ring-primary/20" : "text-foreground/30 hover:text-foreground/70 hover:bg-foreground/5"
+                  "relative flex items-center justify-center w-8 h-8 rounded-none transition-none",
+                  isActive ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
                 )} 
                 title="Settings"
             >
-              <Settings className="w-5 h-5" strokeWidth={2.2} />
+              <Settings className="size-5" strokeWidth={2} />
             </NavLink>
         </div>
     </aside>

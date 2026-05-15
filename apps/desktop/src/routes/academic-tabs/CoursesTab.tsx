@@ -79,7 +79,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase rounded border', gradeColorClass(grade))}>{grade}</span>}
  </div>
  </div>
- <button onClick={() => onDelete('07 - Courses', selectedId)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg ">
+ <button onClick={() => onDelete('07 - Courses', selectedId)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
  <Trash2 size={14} />
  </button>
  </div>
@@ -88,7 +88,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
 
  {/* Next exam callout */}
  {nextExam && (
- <div className="p-4 bg-muted/5 border border-border rounded-xl flex items-center justify-between">
+ <div className="p-4 bg-muted/5 border border-border rounded-none flex items-center justify-between">
  <div>
  <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Next Exam</span>
  <p className="text-[13px] font-black uppercase">{nextExam.title}</p>
@@ -138,8 +138,8 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  <div className="flex flex-col gap-2">
  {pendingAssignments.slice(0, 5).map((a, idx) => (
  <div key={idx} onClick={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)}
- className="flex items-center gap-3 p-3 border border-border rounded-xl cursor-pointer bg-background ">
- <div className="w-3 h-3 rounded-full border border-border shrink-0" />
+ className="flex items-center gap-3 p-3 border border-border rounded-none cursor-pointer bg-background ">
+ <div className="w-3 h-3 rounded-none border border-border shrink-0" />
  <span className="text-[11px] font-black uppercase flex-1">{cleanTitle(a.title)}</span>
  {a.due_date && <span className="text-[8px] font-black text-muted-foreground">{a.due_date.split('T')[0]}</span>}
  </div>
@@ -158,9 +158,9 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  const isDone = hStatus.toLowerCase().includes('complet')
  return (
  <div key={idx} onClick={() => onOpenNote(`Database/06 - Study Planner/${hub.id}.md`)}
- className={cn('p-3 border rounded-xl flex items-center gap-3 cursor-pointer hover:border-foreground/70 ',
+ className={cn('p-3 border rounded-none flex items-center gap-3 cursor-pointer hover:border-foreground/70 ',
  isDone ? 'border-border bg-muted/5 opacity-50' : 'border-border bg-background')}>
- <div className={cn('w-3 h-3 rounded-full border shrink-0', isDone ? 'bg-primary border-primary' : 'border-border')} />
+ <div className={cn('w-3 h-3 rounded-none border shrink-0', isDone ? 'bg-primary border-primary' : 'border-border')} />
  <span className={cn('text-[10px] font-black uppercase truncate', isDone ? 'text-muted-foreground line-through' : 'text-foreground')}>
  {cleanTitle(hub.title || hub.id)}
  </span>
@@ -179,15 +179,15 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  <div className="h-full flex flex-col overflow-hidden">
  {/* Filter bar */}
  <div className="px-6 py-3 border-b border-border flex items-center gap-3 shrink-0">
- <div className="flex items-center gap-1.5 bg-muted/5 p-1 rounded-lg border border-border">
+ <div className="flex items-center gap-1.5 bg-muted/5 p-1 rounded-none border border-border">
  {(['Active', 'All', 'Completed'] as const).map(f => (
  <button key={f} onClick={() => setStatusFilter(f)}
- className={cn('px-3 py-1.5 rounded-md text-[8px] font-black uppercase tracking-widest ',
+ className={cn('px-3 py-1.5 rounded-none text-[8px] font-black uppercase tracking-widest ',
  statusFilter === f ? 'bg-muted/20 text-foreground border border-border' : 'text-muted-foreground  hover:bg-muted/5'
  )}>{f}</button>
  ))}
  </div>
- <div className="flex items-center gap-2 flex-1 bg-muted/5 border border-border rounded-lg px-3 py-2">
+ <div className="flex items-center gap-2 flex-1 bg-muted/5 border border-border rounded-none px-3 py-2">
  <Search size={11} className="text-muted-foreground" />
  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search courses..."
  className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-foreground placeholder:text-muted-foreground" />
@@ -197,7 +197,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  const cleanCourseTitle = cleanTitle(title)
  onCreate('07 - Courses', cleanCourseTitle, {status: wrapWL('Active')})
 }}
- className="flex items-center gap-1.5 px-3 py-2 text-foreground border border-border bg-background text-[8px] font-black uppercase rounded-lg hover:border-foreground/50 ">
+ className="flex items-center gap-1.5 px-3 py-2 text-foreground border border-border bg-background text-[8px] font-black uppercase rounded-none hover:border-foreground/50 ">
  <Plus size={10} /> Add
  </button>
  </div>
@@ -220,7 +220,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
 
  return (
  <div key={idx} onClick={() => setSelectedId(course.id)}
- className="p-5 border border-border rounded-xl cursor-pointer bg-background  group flex flex-col gap-3">
+ className="p-5 border border-border rounded-none cursor-pointer bg-background  group flex flex-col gap-3">
  {/* Title + Grade */}
  <div className="flex items-start justify-between gap-2">
  <h3 className="text-[13px] font-black uppercase leading-tight text-foreground cursor-pointer"
@@ -249,7 +249,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  <span>Study Progress</span>
  <span>{doneHubs}/{courseHubs.length}</span>
  </div>
- <div className="h-1 bg-muted/20 rounded-full overflow-hidden">
+ <div className="h-1 bg-muted/20 rounded-none overflow-hidden">
  <div className="h-full bg-foreground/70 " style={{width: `${courseHubs.length > 0 ? (doneHubs / courseHubs.length) * 100 : 0}%`}} />
  </div>
  </div>

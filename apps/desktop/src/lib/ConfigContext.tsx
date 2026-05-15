@@ -68,6 +68,7 @@ export interface AppConfig {
     isActivated: boolean;
     activationEmail: string;
     activationCode: string;
+    machineId: string;
 }
 
 interface ConfigContextType {
@@ -115,6 +116,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     isActivated: false,
     activationEmail: '',
     activationCode: '',
+    machineId: '',
 };
 
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -169,6 +171,13 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const isActivated = (await store.get<boolean>('isActivated')) ?? false;
                 const activationEmail = (await store.get<string>('activationEmail')) || '';
                 const activationCode = (await store.get<string>('activationCode')) || '';
+                
+                let machineId = await store.get<string>('machineId');
+                if (!machineId) {
+                    machineId = crypto.randomUUID();
+                    await store.set('machineId', machineId);
+                    await store.save();
+                }
 
                 let loadedConfig: any = {
                     aiProvider,
@@ -198,6 +207,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     isActivated,
                     activationEmail,
                     activationCode,
+                    machineId,
                 };
 
                 // Auto-select first key if none active

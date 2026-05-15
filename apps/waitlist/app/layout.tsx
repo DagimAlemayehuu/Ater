@@ -5,8 +5,8 @@ import './globals.css'; // Global styles
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Expo Agent - Waiting List',
-  description: 'Agentic app creation by Expo.',
+  title: 'Ater | Waitlist',
+  description: 'The easiest way to master any subject.',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

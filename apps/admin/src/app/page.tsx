@@ -2,18 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { 
-  Users, 
-  UserPlus, 
-  Activity, 
-  Zap, 
-  BarChart3,
-  ArrowUpRight,
-  TrendingUp,
-  Cpu,
-  AlertCircle
-} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -29,7 +19,6 @@ export default function Dashboard() {
   async function fetchStats() {
     setLoading(true);
     setError(null);
-    
     try {
       const [usersRes, waitlistRes, logsRes] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact' }),
@@ -37,13 +26,9 @@ export default function Dashboard() {
         supabase.from('usage_logs').select('token_count'),
       ]);
 
-      if (usersRes.error) console.error("Profiles Error:", usersRes.error);
-      if (waitlistRes.error) console.error("Waitlist Error:", waitlistRes.error);
-      if (logsRes.error) console.error("Logs Error:", logsRes.error);
-
-      if (usersRes.error || waitlistRes.error) {
-        setError("Connectivity degraded. Some Oracle sectors are unreachable.");
-      }
+      if (usersRes.error) throw usersRes.error;
+      if (waitlistRes.error) throw waitlistRes.error;
+      if (logsRes.error) throw logsRes.error;
 
       setStats({
         totalUsers: usersRes.count || 0,
@@ -52,7 +37,6 @@ export default function Dashboard() {
         activeToday: 0
       });
 
-      // Generate random chart data only on client
       setVelocityData(Array.from({ length: 40 }).map(() => ({
         height: `${20 + Math.random() * 80}%`,
         tokens: Math.floor(Math.random() * 500)
@@ -64,106 +48,90 @@ export default function Dashboard() {
     }
   }
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  useEffect(() => { fetchStats(); }, []);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#FAFAFA]">
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-2xl border-b border-black/5 py-12 px-10">
+    <div className="flex-1 flex flex-col h-full bg-background text-foreground font-sans">
+      <header className="bg-background border-b border-border py-10 px-10">
         <div className="max-w-6xl mx-auto flex items-end justify-between">
           <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.4em] text-gray-300 mb-3">Sovereign Control</p>
-            <h1 className="text-7xl font-black tracking-tighter text-black leading-[0.8]">Oracle</h1>
+            <h1 className="text-5xl font-black tracking-tighter text-foreground leading-none uppercase">Overview</h1>
           </div>
-          <div className="text-right pb-1">
-            {error && (
-              <div className="flex items-center gap-2 text-red-400 mb-2 justify-end">
-                <AlertCircle className="size-3" />
-                <span className="text-[10px] font-black uppercase tracking-widest">{error}</span>
-              </div>
-            )}
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-300 mb-1">Infrastructure</p>
+          <div className="text-right">
+            {error && <p className="text-[10px] font-black uppercase text-destructive mb-1">{error}</p>}
             <div className="flex items-center gap-2 justify-end">
-              <span className={cn("size-2 rounded-full", error ? "bg-red-400" : "bg-black")} />
-              <p className="text-[14px] font-bold tracking-tight">Active Node</p>
+              <span className={cn("size-2 rounded-none", loading ? "bg-muted" : "bg-primary")} />
+              <p className="text-[12px] font-bold uppercase tracking-widest text-foreground">
+                {loading ? "Refreshing..." : "System Online"}
+              </p>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto custom-scrollbar p-10">
+      <div className="flex-1 overflow-auto p-10">
         <div className="max-w-6xl mx-auto space-y-10">
-          {/* Stats Grid */}
           <div className="grid grid-cols-4 gap-6">
             {[
-              { label: "Sovereign Users", value: stats.totalUsers, icon: Users, sub: "Verified Base" },
-              { label: "Waitlist", value: stats.waitlistCount, icon: UserPlus, sub: "Pending Approval" },
-              { label: "Token Burn", value: `${(stats.totalTokens / 1000).toFixed(1)}k`, icon: Zap, sub: "Cumulative" },
-              { label: "API Health", value: "99.9%", icon: Activity, sub: "Oracle Uptime" },
+              { label: "Users", value: stats.totalUsers, sub: "Approved" },
+              { label: "Waitlist", value: stats.waitlistCount, sub: "Pending" },
+              { label: "Usage", value: `${(stats.totalTokens / 1000).toFixed(1)}k`, sub: "Tokens" },
+              { label: "API", value: "99.9%", sub: "Health" },
             ].map((stat, i) => (
-              <div key={i} className="group p-8 bg-white border border-black/5 rounded-[2.5rem] hover:border-black/20 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.01)]">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="size-10 bg-gray-50 border border-black/5 rounded-2xl flex items-center justify-center group-hover:bg-black group-hover:border-black transition-all">
-                    <stat.icon className="size-4 text-gray-300 group-hover:text-white" />
-                  </div>
-                  <ArrowUpRight className="size-3 text-gray-200" />
-                </div>
-                <p className="text-4xl font-black tracking-tighter text-black tabular-nums">{loading ? "---" : stat.value}</p>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-300 mt-2">{stat.label}</p>
+              <div key={i} className="p-8 bg-card border border-border rounded-none shadow-sm transition-none">
+                <div className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-4">{stat.sub}</div>
+                {loading ? (
+                  <Skeleton className="h-10 w-24 mb-1" />
+                ) : (
+                  <p className="text-4xl font-black tracking-tighter text-foreground tabular-nums">{stat.value}</p>
+                )}
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mt-2">{stat.label}</p>
               </div>
             ))}
           </div>
 
-          {/* Large Monitoring Section */}
           <div className="grid grid-cols-3 gap-6">
-            <div className="col-span-2 p-10 bg-white border border-black/5 rounded-[3rem] relative overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.02)]">
+            <div className="col-span-2 p-10 bg-card border border-border rounded-none shadow-sm transition-none">
               <div className="flex items-center justify-between mb-12">
                 <div>
-                  <h2 className="text-xl font-black tracking-tight text-black">Transmission Velocity</h2>
-                  <p className="text-[11px] font-bold text-gray-300 uppercase tracking-widest mt-1">Real-time token distribution</p>
+                  <h2 className="text-xl font-black tracking-tight text-foreground uppercase">History</h2>
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">24 hour activity</p>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-2xl border border-black/5">
-                  <TrendingUp className="size-3.5 text-black" />
-                  <span className="text-[11px] font-black text-black uppercase tracking-widest">Stable</span>
+                <div className="px-4 py-1.5 border border-border bg-accent/30">
+                  <span className="text-[10px] font-black text-foreground uppercase tracking-widest">Active</span>
                 </div>
               </div>
-              
-              <div className="h-56 flex items-end gap-1.5 px-2">
-                {velocityData.map((data, i) => (
-                  <div 
-                    key={i} 
-                    className="flex-1 bg-black/5 rounded-xl hover:bg-black transition-all cursor-help"
-                    style={{ height: data.height }}
-                  />
-                ))}
-              </div>
-              <div className="mt-8 flex justify-between text-[10px] font-black uppercase tracking-[0.2em] text-gray-200">
-                <span>T-24H</span>
-                <span>Present</span>
+              <div className="h-56 flex items-end gap-1 px-1">
+                {loading ? (
+                  Array.from({ length: 40 }).map((_, i) => (
+                    <Skeleton key={i} className="flex-1" style={{ height: `${20 + (i % 5) * 15}%` }} />
+                  ))
+                ) : (
+                  velocityData.map((data, i) => (
+                    <div key={i} className="flex-1 bg-muted hover:bg-primary transition-none rounded-none" style={{ height: data.height }} />
+                  ))
+                )}
               </div>
             </div>
 
-            <div className="p-10 bg-black text-white rounded-[3rem] flex flex-col justify-between shadow-2xl shadow-black/20">
+            <div className="p-10 bg-card border border-border rounded-none flex flex-col justify-between shadow-sm transition-none">
               <div>
-                <div className="size-14 bg-white/10 rounded-2xl flex items-center justify-center mb-8">
-                  <Cpu className="size-6 text-white" />
-                </div>
-                <h2 className="text-[12px] font-black uppercase tracking-[0.3em] opacity-40">System Architecture</h2>
-                <p className="text-4xl font-black tracking-tighter mt-2">Optimal</p>
+                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Status</h2>
+                <p className="text-3xl font-black tracking-tighter mt-2 uppercase">Stable</p>
               </div>
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest opacity-40">
-                    <span>Concurrency</span>
-                    <span>42%</span>
-                  </div>
-                  <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-white w-[42%] transition-all" />
+                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground"><span>Load</span><span>42%</span></div>
+                  <div className="h-2 bg-muted rounded-none overflow-hidden border border-border">
+                    <div className="h-full bg-primary w-[42%] transition-none" />
                   </div>
                 </div>
-                <button className="w-full py-4 bg-white text-black text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-gray-100 transition-all">
-                  Access Logs
+                <button 
+                  onClick={() => fetchStats()} 
+                  disabled={loading}
+                  className="w-full py-4 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-[0.3em] rounded-none hover:opacity-90 transition-none disabled:opacity-50"
+                >
+                  {loading ? "Processing..." : "Refresh Status"}
                 </button>
               </div>
             </div>
