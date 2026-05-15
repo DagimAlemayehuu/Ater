@@ -17,6 +17,7 @@ describe('sidecarApi', () => {
         });
 
         const result = await sidecarApi.health();
+        // Base URL is discovered via get_sidecar_port mock in setup.ts (8765)
         expect(global.fetch).toHaveBeenCalledWith('http://127.0.0.1:8765/api/health');
         expect(result).toEqual({ status: 'ok', version: '0.1.0' });
     });
@@ -28,6 +29,10 @@ describe('sidecarApi', () => {
                 if (key === 'obsidianVaultPath') return '/test/vault';
                 return null;
             }),
+            set: vi.fn(),
+            save: vi.fn(),
+            load: vi.fn(),
+            entries: vi.fn(),
         };
         (load as any).mockResolvedValue(mockStore);
 
@@ -52,6 +57,10 @@ describe('sidecarApi', () => {
     it('should throw error if AI key is missing for protected routes', async () => {
         const mockStore = {
             get: vi.fn().mockResolvedValue(null),
+            set: vi.fn(),
+            save: vi.fn(),
+            load: vi.fn(),
+            entries: vi.fn(),
         };
         (load as any).mockResolvedValue(mockStore);
 
@@ -65,6 +74,10 @@ describe('sidecarApi', () => {
                 if (key === 'aiApiKey') return 'test-key';
                 return 'something';
             }),
+            set: vi.fn(),
+            save: vi.fn(),
+            load: vi.fn(),
+            entries: vi.fn(),
         };
         (load as any).mockResolvedValue(mockStore);
 

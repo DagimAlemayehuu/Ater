@@ -23,6 +23,10 @@ vi.mock('@tauri-apps/plugin-store', () => ({
             if (key === 'obsidianVaultPath') return '/test/vault';
             return null;
         }),
+        set: vi.fn(),
+        save: vi.fn(),
+        load: vi.fn(),
+        entries: vi.fn(),
     }),
 }));
 
