@@ -2257,7 +2257,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Loading Document...</p>
   <button 
     onClick={() => setLoadingNote(false)}
-    className="mt-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 hover:text-primary transition-none border border-border/20 px-2 py-1 rounded"
+    className="mt-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 hover:text-primary transition-none border border-border/20 px-2 py-1 rounded-none"
   >
     Dismiss
   </button>

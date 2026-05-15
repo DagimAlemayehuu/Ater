@@ -227,28 +227,6 @@ export const sidecarApi = {
             body: JSON.stringify({ target })
         }),
 
-    brainstorm: (query: string, context?: string, systemPrompt?: string, history?: any[], fileUri?: string) =>
-        request<{ response: string }>('/api/ai/brainstorm', {
-            method: 'POST',
-            body: JSON.stringify({ query, context, system_prompt: systemPrompt, history, file_uri: fileUri })
-        }),
-
-    executeAgent: (agentName: string, query: string) =>
-        request<{ response: string }>(`/api/ai/execute/${agentName}`, {
-            method: 'POST',
-            body: JSON.stringify({ query })
-        }),
-
-    getOrchestratorStatus: () =>
-        request<{
-            current_prompt: string;
-            current_plan: string;
-            active_agents: string[];
-            stage: string;
-            next_agent: string;
-            logs: string[];
-        }>('/api/ai/orchestrator/status'),
-
     // ── Obsidian & Ater ──────────────────────────────────────
     listObsidianFiles: () => request<{ files: ObsidianFile[] }>('/api/obsidian/files'),
     
@@ -334,9 +312,6 @@ export const sidecarApi = {
 
     getAiRateLimits: () =>
         request<Record<string, any>>('/api/ai/rate-limits'),
-
-    aterWatcherStatus: () =>
-        request<{ is_running: boolean, inbox: string | null }>('/api/ater/watcher/status'),
 
     aterQueueStatus: () =>
         request<{ 
@@ -438,12 +413,6 @@ export const sidecarApi = {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
-
-    getChronosStatus: () => request<any>('/api/ai/specialists/chronos'),
-    getChronosTimeline: () => request<any[]>('/api/ai/chronos/timeline'),
-    getWealthStatus: () => request<any>('/api/ai/specialists/wealth'),
-    getGymStatus: () => request<any>('/api/ai/specialists/gym'),
-    getScholarStatus: () => request<any>('/api/ai/specialists/scholar'),
 
     // ── Telemetry & Study Tracking ──────────────────────────
     logNoteVisit: (notePath: string, durationSeconds: number) =>
