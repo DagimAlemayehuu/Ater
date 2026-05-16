@@ -17,8 +17,7 @@ jobs:
             --repo DagimAlemayehuu/Ater_Releases \
             --title "Ater OS ${{ github.ref_name }}" \
             --notes "Official release for Ater OS version ${{ github.ref_name }}." \
-            --draft \
-            --discussion-category "Announcements"
+            --draft
 
   publish:
     needs: create-release
@@ -145,6 +144,7 @@ jobs:
         run: |
           gh release edit ${{ github.ref_name }} \
             --repo DagimAlemayehuu/Ater_Releases \
+            --discussion-category "Announcements" \
             --draft=false
 
   generate-updater-json:
