@@ -179,8 +179,8 @@ function TimelineView({ days, events, currentDate, setCurrentDate, setView, onSe
                       <div
                         key={i}
                         onClick={() => {
-                          if (ev._type === 'Assignment') onSelectEvent(`Database/03 - Assignments/${ev.id}.md`);
-                          if (ev._type === 'Exam') onSelectEvent(`Database/04 - Exams/${ev.id}.md`);
+                          if (ev._type === 'Assignment') onSelectEvent(`database/assignments/${ev.id}.md`);
+                          if (ev._type === 'Exam') onSelectEvent(`database/exams/${ev.id}.md`);
                           if (ev._type === 'Note Visit' && ev.id) onSelectEvent(ev.id);
                         }}
                         className={cn(

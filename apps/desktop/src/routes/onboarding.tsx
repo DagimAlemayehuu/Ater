@@ -5,6 +5,7 @@ import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/auth-context'
+import { supabase } from '@/lib/supabase'
 import { ThemeSwitch } from '@/components/theme-switch'
 
 type StepStatus = 'idle' | 'testing' | 'success' | 'error'
@@ -88,7 +89,7 @@ export default function Onboarding() {
           const title = `Year ${romans[i] || (i + 1)}`
           const status = i < currentIdx ? '[[Completed]]' : i === currentIdx ? '[[Active]]' : '[[Planned]]'
           
-          await sidecarApi.createVaultRow('09 - Years', title, {
+          await sidecarApi.createVaultRow('years', title, {
             Program: `[[${cleanName}]]`,
             'Academic Level': `[[${programLevel}]]`,
             Status: status,
@@ -99,6 +100,12 @@ export default function Onboarding() {
             'Cumulative GPA': 0.00
           })
         }
+      }
+
+      // Update Supabase profile
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from('profiles').update({ is_configured: true }).eq('id', user.id)
       }
 
       // 3. Finalize all configuration in ONE call to prevent race conditions in App.tsx

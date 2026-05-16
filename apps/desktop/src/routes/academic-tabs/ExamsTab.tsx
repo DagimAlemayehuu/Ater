@@ -79,7 +79,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  const handleAddScore = async (exam: any) => {
  if (!scoreInput.trim()) return
  try {
- await onUpdate('04 - Exams', exam.id, {score: scoreInput.trim()})
+ await onUpdate('exams', exam.id, {score: scoreInput.trim()})
  toast.success('Score saved')
  setEditingScore(null)
  setScoreInput('')
@@ -90,7 +90,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  if (selectedId) {
  const exam = allExams.find(e => e.id === selectedId)
  if (!exam) {setSelectedId(null); return null}
- const schema = databases.find(d => d.id === '04 - Exams')?.schema || {}
+ const schema = databases.find(d => d.id === 'exams')?.schema || {}
  const examCourse = stripWL(getVal(exam, 'Course', 'course'))
  const relatedHubs = hubs.filter(h => {
  const hubCourse = getVal(h, 'course', 'Course').toLowerCase()
@@ -107,14 +107,14 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  value={exam.title}
  className="text-2xl font-black uppercase"
  onSave={(next) => {
- onUpdate('04 - Exams', exam.id, {title: next})
+ onUpdate('exams', exam.id, {title: next})
  setSelectedId(next)
 }}
  />
  <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">{cleanTitle(examCourse)}</span>
  </div>
  <div className="flex items-center gap-2">
- <button onClick={() => {onDelete('04 - Exams', selectedId); setSelectedId(null)}}
+ <button onClick={() => {onDelete('exams', selectedId); setSelectedId(null)}}
  className="p-2 text-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-none ">
  <Trash2 size={13} />
  </button>
@@ -152,7 +152,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  label={key}
  value={exam[key]}
  schema={schema[key]}
- onUpdate={(v) => onUpdate('04 - Exams', exam.id, {[key]: v})}
+ onUpdate={(v) => onUpdate('exams', exam.id, {[key]: v})}
  />
  ))
 })()}
@@ -245,7 +245,7 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
    const title = window.prompt('Enter Exam Title', 'New Exam') || 'New Exam'
    const cleanAsgnTitle = cleanTitle(title)
    const props = courseFilter !== 'All' ? {Course: wrapWL(courses.find(c => c.id === courseFilter)?.title)} : {}
-   onCreate('04 - Exams', cleanAsgnTitle, props)
+   onCreate('exams', cleanAsgnTitle, props)
  }}
    className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-none hover:border-foreground/70  shrink-0">
    <Plus size={10} /> Add

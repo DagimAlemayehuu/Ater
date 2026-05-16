@@ -459,10 +459,10 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  
  if (!topologies) {
  const searchPaths = [
- `Database/06 - Study Planner/${cleanHubName}.md`,
- `Database/06 - Study Planner/${cleanHubName}_Hub.md`,
- `Database/01 - Areas/${cleanHubName}.md`,
- `Database/01 - Areas/${cleanHubName}_Hub.md`,
+  `database/study planer/${cleanHubName}.md`,
+  `database/study planer/${cleanHubName}_Hub.md`,
+  `database/areas/${cleanHubName}.md`,
+  `database/areas/${cleanHubName}_Hub.md`,
  `${cleanHubName}_Hub.md`
  ]
  for (const p of searchPaths) {
@@ -974,7 +974,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
       if (res.found && res.path) {
         await selectFile(res.path, pageNumber, false, filterPages);
       } else if (res.found && res.type === 'database') {
-        await selectFile(`Database/${res.db_id}/${res.file_name}`, pageNumber, false, filterPages);
+        await selectFile(`database/${res.db_id}/${res.file_name}`, pageNumber, false, filterPages);
       } else {
         console.warn(`[WikiLink] Page not found: ${pageName}. Creating new...`);
         // If the pageName looks like a path (contains slashes), resolve it from root instead of current folder.
@@ -982,7 +982,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
         if (pageName.includes('/')) {
           newPath = pageName.endsWith('.md') ? pageName : `${pageName}.md`;
         } else {
-          let folder = 'Database/00 - Bases/Inbox'; 
+          let folder = 'database/bases/Inbox'; 
           if (selectedPath && selectedPath.includes('/')) {
             folder = selectedPath.substring(0, selectedPath.lastIndexOf('/'));
           }

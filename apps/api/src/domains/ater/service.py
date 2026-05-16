@@ -485,24 +485,24 @@ class AterService:
 
     def _get_planner_path(self) -> Path:
         """Resolves the absolute path to the Study Planner database."""
-        # Standard location: Database/06 - Study Planner
-        path = Path(self.secrets.vault_path) / "Database" / "06 - Study Planner"
+        # Standard location: database/study planer
+        path = Path(self.secrets.vault_path) / "database" / "study planer"
         return path
 
     def list_available_options(self) -> Dict[str, List[str]]:
         """Returns all available options for Course, Semester, Year, Hubs, and Units from the vault."""
-        base_path = Path(self.secrets.vault_path) / "Database"
+        base_path = Path(self.secrets.vault_path) / "database"
         
         def safe_glob(path, pattern):
             try: return [f.stem for f in path.glob(pattern) if not f.name.startswith("_")]
             except Exception: return []
 
-        courses = safe_glob(base_path / "07 - Courses", "*.md")
-        semesters = safe_glob(base_path / "08 - Semesters", "*.md")
-        years = safe_glob(base_path / "09 - Years", "*.md")
-        hubs = safe_glob(base_path / "06 - Study Planner", "*.md")
+        courses = safe_glob(base_path / "courses", "*.md")
+        semesters = safe_glob(base_path / "semesters", "*.md")
+        years = safe_glob(base_path / "years", "*.md")
+        hubs = safe_glob(base_path / "study planer", "*.md")
         units = []
-        try: units = [f.stem for f in (base_path / "06 - Study Planner" / "_Units").glob("*.md")]
+        try: units = [f.stem for f in (base_path / "study planer" / "_Units").glob("*.md")]
         except Exception: pass
         
         # Sort units numerically if possible
@@ -1379,7 +1379,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
     def get_active_academic_context(self) -> Dict[str, str]:
         """Reads the vault to find the currently active semester and year."""
         try:
-            semesters_path = Path(self.secrets.vault_path) / "Database" / "08 - Semesters"
+            semesters_path = Path(self.secrets.vault_path) / "database" / "semesters"
             if not semesters_path.exists(): return {}
             
             active_sem = None
@@ -1392,7 +1392,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         active_sem = f.stem
                         break
             
-            years_path = Path(self.secrets.vault_path) / "Database" / "09 - Years"
+            years_path = Path(self.secrets.vault_path) / "database" / "years"
             active_year = None
             if years_path.exists():
                 for f in years_path.glob("*.md"):
@@ -1462,7 +1462,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 course_name = detected_curriculum["course"]
                 # Handle wiki-links in course name
                 clean_course_name = self.vm.super_clean(course_name)
-                course_file = Path(self.secrets.vault_path) / "Database" / "07 - Courses" / f"{clean_course_name}.md"
+                course_file = Path(self.secrets.vault_path) / "database" / "courses" / f"{clean_course_name}.md"
                 
                 if course_file.exists():
                     try:
@@ -1559,7 +1559,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         """Uses AI to extract course, semester, year, unit, and hub_title from text.
         
         Critically important: year, course and semester must match EXACT stems from the vault
-        database files (07 - Courses / 08 - Semesters / 09 - Years). The AI is shown these exact names
+        database files (courses / semesters / years). The AI is shown these exact names
         and instructed to pick the CLOSEST match. If nothing matches, it invents a new value.
         """
         options = self.list_available_options()

@@ -7,20 +7,20 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const { activate } = useAuth()
+  const [localLoading, setLocalLoading] = useState(false)
+  const { activate, error, setError } = useAuth()
 
   const handleActivate = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setLocalLoading(true)
     setError(null)
 
     try {
-      await activate(email, password, code.toUpperCase())
+      await activate(email.trim(), password, code.trim().toUpperCase())
     } catch (err: any) {
-      setError(err.message || 'Activation failed. Check your credentials and code.')
-      setLoading(false)
+      // Error is caught and set globally by activate()
+    } finally {
+      setLocalLoading(false)
     }
   }
 
@@ -99,16 +99,16 @@ export default function Login() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={localLoading}
             className={cn(
               "w-full mt-6 py-2.5 flex items-center justify-center border",
-              loading
+              localLoading
                 ? "bg-muted border-border text-muted-foreground cursor-wait"
                 : "bg-primary text-primary-foreground border-primary hover:opacity-90"
             )}
           >
             <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-              {loading ? "Verifying..." : "Activate"}
+              {localLoading ? "Verifying..." : "Activate"}
             </span>
           </button>
         </form>

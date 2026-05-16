@@ -13,7 +13,7 @@ from src.api.deps import AppSecrets, get_app_secrets
 
 router = APIRouter()
 
-DB_DIR_PREFIX = "Database"
+DB_DIR_PREFIX = "database"
 
 import yaml
 
@@ -98,14 +98,14 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                         }
 
             # Pre-seed schema for Study Planner to guarantee Ater properties always exist
-            if "06 - Study Planner" in entry.name:
+            if "study planer" in entry.name:
                 schema.update({
-                    "course": {"type": "relation", "source": f"{DB_DIR_PREFIX}/07 - Courses"},
-                    "unit": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Unit"},
-                    "status": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Status"},
-                    "confidence": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Confidence"},
+                    "course": {"type": "relation", "source": f"{DB_DIR_PREFIX}/courses"},
+                    "unit": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/unit"},
+                    "status": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/status"},
+                    "confidence": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/confidence"},
                     "study date": {"type": "date"},
-                    "type": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Type"},
+                    "type": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/type"},
                     "generated": {"type": "bool"},
                     "source": {"type": "relation", "source": "Inbox"},
                     "source pages": {"type": "str"}
@@ -133,9 +133,9 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                                             # Known Academic Types Hardcoding
                                             known_types = {
                                                 "current year": {"type": "bool"},
-                                                "year": {"type": "relation", "source": f"{DB_DIR_PREFIX}/09 - Years"},
-                                                "semester": {"type": "relation", "source": f"{DB_DIR_PREFIX}/08 - Semesters"},
-                                                "course": {"type": "relation", "source": f"{DB_DIR_PREFIX}/07 - Courses"},
+                                                "year": {"type": "relation", "source": f"{DB_DIR_PREFIX}/years"},
+                                                "semester": {"type": "relation", "source": f"{DB_DIR_PREFIX}/semesters"},
+                                                "course": {"type": "relation", "source": f"{DB_DIR_PREFIX}/courses"},
                                                 "start date": {"type": "date"},
                                                 "end date": {"type": "date"},
                                                 "due date": {"type": "date"},
@@ -144,16 +144,16 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                                                 "credits": {"type": "number"},
                                                 "score": {"type": "number"},
                                                 "total score": {"type": "number"},
-                                                "unit": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Unit"},
-                                                "status": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Status"},
-                                                "confidence": {"type": "select", "source": f"{DB_DIR_PREFIX}/06 - Study Planner/Confidence"},
-                                                "grade": {"type": "select", "source": f"{DB_DIR_PREFIX}/07 - Courses/Grade"},
-                                                "professor": {"type": "select", "source": f"{DB_DIR_PREFIX}/07 - Courses/Professor"},
+                                                "unit": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/unit"},
+                                                "status": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/status"},
+                                                "confidence": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/confidence"},
+                                                "grade": {"type": "select", "source": f"{DB_DIR_PREFIX}/courses/grade"},
+                                                "professor": {"type": "select", "source": f"{DB_DIR_PREFIX}/courses/professor"},
                                                 "generated": {"type": "bool"},
-                                                "source": {"type": "relation", "source": "Inbox"},
+                                                "source": {"type": "relation", "source": "inbox"},
                                                 "source pages": {"type": "str"},
-                                                "academic level": {"type": "select", "source": f"{DB_DIR_PREFIX}/09 - Years/Academic Level"},
-                                                "program": {"type": "select", "source": f"{DB_DIR_PREFIX}/09 - Years/Program"},
+                                                "academic level": {"type": "select", "source": f"{DB_DIR_PREFIX}/years/academic level"},
+                                                "program": {"type": "select", "source": f"{DB_DIR_PREFIX}/years/program"},
                                                 "target years": {"type": "number"},
                                                 "target credits": {"type": "number"},
                                                 "earned credits": {"type": "number"},
@@ -166,9 +166,9 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                                                 # Relation detection: if value is [[...]] and not already a select
                                                 if isinstance(v, str) and v.startswith("[[") and v.endswith("]]"):
                                                     source = ""
-                                                    if k_low == "course": source = f"{DB_DIR_PREFIX}/07 - Courses"
-                                                    elif k_low == "semester": source = f"{DB_DIR_PREFIX}/08 - Semesters"
-                                                    elif k_low == "year": source = f"{DB_DIR_PREFIX}/09 - Years"
+                                                    if k_low == "course": source = f"{DB_DIR_PREFIX}/courses"
+                                                    elif k_low == "semester": source = f"{DB_DIR_PREFIX}/semesters"
+                                                    elif k_low == "year": source = f"{DB_DIR_PREFIX}/years"
                                                     schema[k] = {"type": "relation", "source": source}
                                                 else:
                                                     new_type = 'bool' if isinstance(v, bool) else \
@@ -202,7 +202,7 @@ async def list_vault_areas(secrets: AppSecrets = Depends(get_app_secrets)):
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
         
     vault_root = Path(secrets.vault_path)
-    areas_path = vault_root / DB_DIR_PREFIX / "01 - Areas"
+    areas_path = vault_root / DB_DIR_PREFIX / "areas"
     if not areas_path.exists():
         return {"areas": ["Core", "Academic", "Projects", "Resources", "Reference"]}
         

@@ -131,13 +131,13 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
 
  const handleSetStatus = async (hub: any, status: string) => {
  try {
- await onUpdate('06 - Study Planner', hub.id, {status: wrapWL(status)})
+ await onUpdate('study planer', hub.id, {status: wrapWL(status)})
 } catch {toast.error('Update failed')}
 }
 
  const handleSetStudyDate = async (hub: any, date: string) => {
  try {
- await onUpdate('06 - Study Planner', hub.id, {'study date': date})
+ await onUpdate('study planer', hub.id, {'study date': date})
  toast.success('Study date set')
 } catch {toast.error('Update failed')}
 }
@@ -194,7 +194,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  onClick={() => {
  const title = window.prompt('Enter Hub Title', 'New Hub') || 'New Hub'
  const cleanHubTitle = cleanTitle(title)
- onCreate('06 - Study Planner', cleanHubTitle, selectedCourseId && selectedCourse ? {course: wrapWL(selectedCourse.title)} : {})
+ onCreate('study planer', cleanHubTitle, selectedCourseId && selectedCourse ? {course: wrapWL(selectedCourse.title)} : {})
 }}
  className="w-full py-2 bg-foreground/5 text-[8px] font-black uppercase tracking-widest rounded-none ">
  + Add Hub
@@ -262,11 +262,11 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  <div className="grid grid-cols-3 gap-3">
  {section.hubs.map((hub, idx) => (
  <HubCard key={idx} hub={hub}
- onOpen={() => onOpenNote(`Database/06 - Study Planner/${hub.id}.md`)}
+ onOpen={() => onOpenNote(`database/study planer/${hub.id}.md`)}
  onPractice={() => navigateTo('PRACTICE', hub.id)}
  onSetStatus={handleSetStatus}
  onSetStudyDate={handleSetStudyDate}
- onDelete={() => onDelete('06 - Study Planner', hub.id)}
+ onDelete={() => onDelete('study planer', hub.id)}
  onUpdate={onUpdate}
  />
  ))}
@@ -306,7 +306,7 @@ function HubCard({hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete
  <EditableTitle
  value={displayTitle}
  className={cn('text-[11px] font-black uppercase leading-tight flex-1', isCompleted ? 'text-muted-foreground line-through' : 'text-foreground')}
- onSave={(next) => onUpdate('06 - Study Planner', hub.id, {title: next})}
+ onSave={(next) => onUpdate('study planer', hub.id, {title: next})}
  />
  <div className="flex items-center gap-1">
  {isCompleted && <Check size={12} className="text-foreground/40 shrink-0" />}
@@ -329,7 +329,7 @@ function HubCard({hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete
  {showStatusMenu && (
  <div className="absolute top-full left-0 mt-1 bg-background border border-border rounded-none shadow-xl z-20 p-1 min-w-[150px]">
  {['Planned', 'In Progress', 'Completed'].map(s => (
- <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('06 - Study Planner', hub.id, {Status: wrapWL(s)}); setShowStatusMenu(false)}}
+ <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('study planer', hub.id, {Status: wrapWL(s)}); setShowStatusMenu(false)}}
  className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase hover:bg-muted/10 ', statusColorClass(s))}>
  {s}
  </button>

@@ -66,7 +66,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
 
  const handleComplete = async (a: any) => {
  try {
- await onUpdate('03 - Assignments', a.id, {done: true})
+ await onUpdate('assignments', a.id, {done: true})
  toast.success('Marked done')
 } catch {toast.error('Update failed')}
 }
@@ -111,7 +111,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
    const title = window.prompt('Enter Assignment Title', 'New Assignment') || 'New Assignment'
    const cleanAsgnTitle = cleanTitle(title)
    const props = courseFilter !== 'All' ? {Course: wrapWL(courses.find(c => c.id === courseFilter)?.title)} : {}
-   onCreate('03 - Assignments', cleanAsgnTitle, props)
+   onCreate('assignments', cleanAsgnTitle, props)
  }}
    className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-none hover:border-foreground/70  shrink-0">
    <Plus size={10} /> Add
@@ -132,7 +132,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <div className="h-px flex-1 bg-border/20" />
  </div>
  <div className="flex flex-col gap-2">
- {overdue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="overdue" />)}
+ {overdue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="overdue" />)}
  </div>
  </section>
  )}
@@ -146,7 +146,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <div className="h-px flex-1 bg-border/10" />
  </div>
  <div className="flex flex-col gap-2">
- {todayDue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="today" />)}
+ {todayDue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="today" />)}
  </div>
  </section>
  )}
@@ -160,7 +160,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <div className="h-px flex-1 bg-border/10" />
  </div>
  <div className="flex flex-col gap-2">
- {thisWeek.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="week" />)}
+ {thisWeek.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="week" />)}
  </div>
  </section>
  )}
@@ -170,7 +170,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <section className="space-y-2">
  <SectionHeader title={`Upcoming — ${upcoming.length}`} />
  <div className="flex flex-col gap-2">
- {upcoming.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
+ {upcoming.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
  </div>
  </section>
  )}
@@ -180,7 +180,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <section className="space-y-2">
  <SectionHeader title={`No Due Date — ${undated.length}`} />
  <div className="flex flex-col gap-2">
- {undated.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
+ {undated.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
  </div>
  </section>
  )}
@@ -196,7 +196,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  </button>
  {showDone && (
  <div className="flex flex-col gap-2">
- {done.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={() => {}} onOpen={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)} onDelete={() => onDelete('03 - Assignments', a.id)} onUpdate={onUpdate} urgency="done" />)}
+ {done.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={() => {}} onOpen={() => onOpenNote(`database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="done" />)}
  </div>
  )}
  </section>
@@ -248,7 +248,7 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  <EditableTitle
  value={cleanTitle(a.title)}
  className={cn('text-[12px] font-black uppercase truncate block', isDone ? 'line-through text-foreground/30' : 'text-foreground')}
- onSave={(next) => onUpdate('03 - Assignments', a.id, {title: next})}
+ onSave={(next) => onUpdate('assignments', a.id, {title: next})}
  />
  {courseName && <span className="text-[8px] font-black uppercase tracking-widest text-foreground/40">{cleanTitle(courseName)}</span>}
  </div>
@@ -264,7 +264,7 @@ function AssignmentRow({a, courses, onComplete, onOpen, onDelete, onUpdate, urge
  {showStatusMenu && (
  <div className="absolute top-full right-0 mt-1 bg-background border border-border rounded-none shadow-xl z-50 p-1 min-w-[120px]">
  {['Planned', 'In Progress', 'Completed'].map(s => (
- <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('03 - Assignments', a.id, {Status: wrapWL(s)}); setShowStatusMenu(false)}}
+ <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('assignments', a.id, {Status: wrapWL(s)}); setShowStatusMenu(false)}}
  className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase hover:bg-muted/10 ', statusColorClass(s))}>
  {s}
  </button>

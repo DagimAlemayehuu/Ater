@@ -15,8 +15,8 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  const years = data.years || []
  const semesters = data.semesters || []
  const courses = data.courses || []
- const yearSchema = databases.find(d => d.id === '09 - Years')?.schema || {}
- const semesterSchema = databases.find(d => d.id === '08 - Semesters')?.schema || {}
+ const yearSchema = databases.find(d => d.id === 'years')?.schema || {}
+ const semesterSchema = databases.find(d => d.id === 'semesters')?.schema || {}
 
  const sorted = [...years].sort((a, b) => getYearOrder(a?.title || '') - getYearOrder(b?.title || ''))
  const activeYear = sorted.find(y => y['Current Year'] === true || y['Current Year'] === 'true')
@@ -49,7 +49,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
   for (let i = 0; i < numYears; i++) {
   const title = `Year ${romans[i] || (i + 1)}`
   const status = i < currentIdx ? wrapWL('Completed') : i === currentIdx ? wrapWL('Active') : wrapWL('Planned')
-  promises.push(onCreate('09 - Years', title, {
+  promises.push(onCreate('years', title, {
   Program: wrapWL(cleanName),
   'Academic Level': wrapWL(level),
   Status: status,
@@ -71,7 +71,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
   const toUpdate = years.filter(y => stripWL(getVal(y, 'Program', 'program')) === oldName)
   const cleanNewName = cleanTitle(newName)
   await Promise.all(toUpdate.map(y => 
-  onUpdate('09 - Years', y.id, {
+  onUpdate('years', y.id, {
   Program: wrapWL(cleanNewName),
   'Academic Level': wrapWL(level),
   'Target Years': numYears
@@ -85,7 +85,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  const handleSetCurrentYear = async (id: string) => {
   try {
   await Promise.all(years.map(y => 
-  onUpdate('09 - Years', y.id, {'Current Year': y.id === id})
+  onUpdate('years', y.id, {'Current Year': y.id === id})
   ))
   toast.success('Active year set')
 } catch {toast.error('Failed to set active year')}
@@ -110,13 +110,13 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  value={semester.title}
  className="text-xl font-black uppercase tracking-tight"
  onSave={(next) => {
- onUpdate('08 - Semesters', semester.id, {title: next})
+ onUpdate('semesters', semester.id, {title: next})
 }}
  />
  <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">{cleanTitle(activeProgram)} · {cleanTitle(selectedYear?.title || '')}</span>
  </div>
  <div className="flex items-center gap-2">
- <button onClick={() => {onDelete('08 - Semesters', selectedSemesterId); setSelectedSemesterId(null)}}
+ <button onClick={() => {onDelete('semesters', selectedSemesterId); setSelectedSemesterId(null)}}
  className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
  <Trash2 size={13} />
  </button>
@@ -128,7 +128,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  label="Status"
  value={semester.Status || semester.properties?.Status || 'Active'}
  schema={semesterSchema['Status']}
- onUpdate={(v) => onUpdate('08 - Semesters', selectedSemesterId, {Status: v})}
+ onUpdate={(v) => onUpdate('semesters', selectedSemesterId, {Status: v})}
  />
  <StatCard label="Total Credits" value={semCourses.reduce((acc, c) => acc + (parseFloat(getVal(c, 'Credits', 'credits')) || 0), 0)} />
  <StatCard label="Courses" value={semCourses.length} />
@@ -155,7 +155,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  label={key}
  value={semester[key]}
  schema={semesterSchema[key]}
- onUpdate={(v) => onUpdate('08 - Semesters', selectedSemesterId, {[key]: v})}
+ onUpdate={(v) => onUpdate('semesters', selectedSemesterId, {[key]: v})}
  />
  ))
 })()}
@@ -166,7 +166,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <SectionHeader title="Courses" count={semCourses.length} />
  <button onClick={() => {
  const title = window.prompt('Enter Course Title', 'New Course') || 'New Course'
- onCreate('07 - Courses', title, {Semester: `[[${semester.title}]]`, Status: '[[Active]]'})
+ onCreate('courses', title, {Semester: `[[${semester.title}]]`, Status: '[[Active]]'})
 }}
  className="px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50 ">Add Course</button>
  </div>
@@ -207,19 +207,19 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  value={selectedYear.title}
  className="text-2xl font-black uppercase tracking-tighter mb-2"
  onSave={(next) => {
- onUpdate('09 - Years', selectedYear.id, {title: next})
+ onUpdate('years', selectedYear.id, {title: next})
  }}
  />
  <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">{cleanTitle(activeProgram)} · {cleanTitle(level)}</span>
  </div>
  <div className="flex items-center gap-2 flex-wrap">
  {derived === 'Completed' && !currentStatus.toLowerCase().includes('complet') && (
- <button onClick={() => onUpdate('09 - Years', selectedYearId, {Status: '[[Completed]]'})}
+ <button onClick={() => onUpdate('years', selectedYearId, {Status: '[[Completed]]'})}
  className="px-3 py-1.5 bg-muted border border-border text-foreground text-[8px] font-black uppercase rounded-none hover:bg-muted/80 ">
  Mark Complete
  </button>
  )}
- <button onClick={() => {onDelete('09 - Years', selectedYearId); setSelectedYearId(null)}}
+ <button onClick={() => {onDelete('years', selectedYearId); setSelectedYearId(null)}}
  className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
  <Trash2 size={13} />
  </button>
@@ -231,7 +231,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  label="Status"
  value={selectedYear.Status || selectedYear.properties?.Status || 'Active'}
  schema={yearSchema['Status']}
- onUpdate={(v) => onUpdate('09 - Years', selectedYearId, {Status: v})}
+ onUpdate={(v) => onUpdate('years', selectedYearId, {Status: v})}
  />
  <StatCard label="Credits" value={`${earnedCredits} / ${targetCredits}`} />
  <StatCard label="GPA" value={gpa} />
@@ -259,7 +259,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  label={key}
  value={selectedYear[key]}
  schema={yearSchema[key]}
- onUpdate={(v) => onUpdate('09 - Years', selectedYearId, {[key]: v})}
+ onUpdate={(v) => onUpdate('years', selectedYearId, {[key]: v})}
  />
  ))
 })()}
@@ -270,7 +270,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <SectionHeader title="Semesters" count={relatedSemesters.length} />
  <button onClick={() => {
  const title = window.prompt('Enter Semester Title', 'New Semester') || 'New Semester'
- onCreate('08 - Semesters', title, {Year: `[[${selectedYear.title}]]`, Status: '[[Planned]]'})
+ onCreate('semesters', title, {Year: `[[${selectedYear.title}]]`, Status: '[[Planned]]'})
 }}
  className="px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50 ">Add</button>
  </div>
@@ -367,7 +367,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
                                        key === 'Target Years' ? parseInt(v) : targetYears
                                    )
                                } else {
-                                   onUpdate('09 - Years', activeYear.id, {[key]: v})
+                                   onUpdate('years', activeYear.id, {[key]: v})
                                }
                            }}
                        />

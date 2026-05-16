@@ -24,8 +24,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      'react-force-graph-2d': path.resolve(__dirname, 'node_modules/react-force-graph-2d/dist/react-force-graph-2d.mjs')
     },
+  },
+  optimizeDeps: {
+    include: ['react-force-graph-2d', 'd3-force'],
   },
   server: {
     port: 1420,

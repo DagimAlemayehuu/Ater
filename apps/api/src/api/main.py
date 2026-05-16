@@ -1290,13 +1290,13 @@ async def factory_reset_system(
 
         # 2. Wipe Academic Metadata Files
         academic_folders = [
-            "Database/03 - Assignments",
-            "Database/04 - Exams",
-            "Database/06 - Study Planner",
-            "Database/07 - Courses",
-            "Database/08 - Semesters",
-            "Database/09 - Years",
-            "Database/00 - Bases/Inbox"
+            "database/assignments",
+            "database/exams",
+            "database/study planer",
+            "database/courses",
+            "database/semesters",
+            "database/years",
+            "database/bases/Inbox"
         ]
         
         for folder in academic_folders:

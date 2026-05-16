@@ -22,7 +22,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  const assignments = data.assignments || []
  const exams = data.exams || []
  const hubs = data.study_sessions || []
- const schema = databases.find(d => d.id === '07 - Courses')?.schema || {}
+ const schema = databases.find(d => d.id === 'courses')?.schema || {}
  const now = startOfDay(new Date())
 
  const activeSemesters = (data.semesters || []).filter(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase() === 'active').map(s => (s.title || '').toLowerCase())
@@ -70,7 +70,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  value={cleanTitle(course.title)}
  className="text-xl font-black uppercase tracking-tight"
  onSave={(next) => {
- onUpdate('07 - Courses', course.id, {title: next})
+ onUpdate('courses', course.id, {title: next})
  setSelectedId(next)
 }}
  />
@@ -79,7 +79,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase border', gradeColorClass(grade))}>{grade}</span>}
  </div>
  </div>
- <button onClick={() => onDelete('07 - Courses', selectedId)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
+ <button onClick={() => onDelete('courses', selectedId)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
  <Trash2 size={14} />
  </button>
  </div>
@@ -122,7 +122,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  label={key}
  value={course[key]}
  schema={schema[key]}
- onUpdate={(v) => onUpdate('07 - Courses', selectedId, {[key]: v})}
+ onUpdate={(v) => onUpdate('courses', selectedId, {[key]: v})}
  />
  ))
 })()}
@@ -133,11 +133,11 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  <section className="space-y-4">
  <SectionHeader title={`Pending Assignments — ${pendingAssignments.length}`} onAction={() => {
  const title = window.prompt('Enter Assignment Title', 'New Assignment') || 'New Assignment'
- onCreate('03 - Assignments', title, {Course: `[[${course.title}]]`})
+ onCreate('assignments', title, {Course: `[[${course.title}]]`})
 }} />
  <div className="flex flex-col gap-2">
  {pendingAssignments.slice(0, 5).map((a, idx) => (
- <div key={idx} onClick={() => onOpenNote(`Database/03 - Assignments/${a.id}.md`)}
+ <div key={idx} onClick={() => onOpenNote(`database/assignments/${a.id}.md`)}
  className="flex items-center gap-3 p-3 border border-border rounded-none cursor-pointer bg-background ">
  <div className="w-3 h-3 rounded-none border border-border shrink-0" />
  <span className="text-[11px] font-black uppercase flex-1">{cleanTitle(a.title)}</span>
@@ -157,7 +157,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  const hStatus = stripWL(getVal(hub, 'status', 'Status'))
  const isDone = hStatus.toLowerCase().includes('complet')
  return (
- <div key={idx} onClick={() => onOpenNote(`Database/06 - Study Planner/${hub.id}.md`)}
+ <div key={idx} onClick={() => onOpenNote(`database/study planer/${hub.id}.md`)}
  className={cn('p-3 border rounded-none flex items-center gap-3 cursor-pointer hover:border-foreground/70 ',
  isDone ? 'border-border bg-muted/5 opacity-50' : 'border-border bg-background')}>
  <div className={cn('w-3 h-3 rounded-none border shrink-0', isDone ? 'bg-primary border-primary' : 'border-border')} />
@@ -195,7 +195,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  <button onClick={() => {
  const title = window.prompt('Enter Course Title', 'New Course') || 'New Course'
  const cleanCourseTitle = cleanTitle(title)
- onCreate('07 - Courses', cleanCourseTitle, {status: wrapWL('Active')})
+ onCreate('courses', cleanCourseTitle, {status: wrapWL('Active')})
 }}
  className="flex items-center gap-1.5 px-3 py-2 text-foreground border border-border bg-background text-[8px] font-black uppercase rounded-none hover:border-foreground/50 ">
  <Plus size={10} /> Add
@@ -229,7 +229,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  const next = window.prompt('Rename Course', course.title || '')
  if (next && next !== course.title) {
    const cleanNext = cleanTitle(next)
-   onUpdate('07 - Courses', course.id, {title: cleanNext})
+   onUpdate('courses', course.id, {title: cleanNext})
  }
 }}>{cleanTitle(course.title)}</h3>
  {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase border shrink-0', gradeColorClass(grade))}>{grade}</span>}
