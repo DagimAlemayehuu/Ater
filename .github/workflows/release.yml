@@ -20,6 +20,7 @@ jobs:
             --title "Ater OS ${{ github.ref_name }}" \
             --notes "Official release for Ater OS version ${{ github.ref_name }}." \
             --draft \
+            --target ${{ github.sha }} \
             --discussion-category "Announcements" || true
 
   publish:
