@@ -24,7 +24,7 @@ import { ThemeProvider } from '../context/ThemeContext';
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="font-inter selection:bg-primary selection:text-background antialiased min-h-screen flex flex-col" suppressHydrationWarning>
+      <body className="font-inter selection:bg-primary selection:text-background antialiased" suppressHydrationWarning>
         <ThemeProvider>
           {children}
         </ThemeProvider>

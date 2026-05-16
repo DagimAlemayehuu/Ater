@@ -7,34 +7,34 @@ import { ChevronRight, Terminal, Download, Shield, Lock, Activity, Zap, Cpu, Sea
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen">
-      <main className="flex-grow industrial-container py-20 lg:py-32 space-y-32">
-        {/* Hero Section */}
-        <section className="flex flex-col items-start justify-center gap-12 w-full">
-          <h1 className="text-display-hero border-b border-outline-variant pb-8 text-left w-full">
-            LEARN FASTER.<br />SCORE BETTER.
-          </h1>
-          <div className="flex flex-col sm:flex-row gap-6 w-full max-w-md items-start justify-start">
-            <Link href="/waitlist" className="industrial-btn industrial-btn-primary w-full sm:w-auto h-16 group">
+    <>
+      {/* Hero & Mockup Integrated Section */}
+      <section className="sticky top-0 z-10 bg-background grid-background flex flex-col items-center justify-center h-screen w-full overflow-hidden border-b border-outline-variant pt-16">
+        <div className="industrial-container flex flex-col items-center justify-center gap-8 w-full h-full">
+          <div className="flex flex-col items-start justify-center gap-6 w-full">
+            <h1 className="text-display-hero border-b border-outline-variant pb-4 text-left w-full text-[48px] md:text-[60px] lg:text-[72px]">
+              LEARN FASTER.<br />SCORE BETTER.
+            </h1>
+          </div>
+
+          {/* Integrated Mockup */}
+          <div className="w-full max-w-4xl relative transform scale-75 md:scale-90 lg:scale-100 origin-center transition-transform duration-500">
+             <FullMacbookMockup />
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-6 w-full items-center justify-center">
+            <Link href="/waitlist" className="industrial-btn industrial-btn-primary w-full sm:w-auto h-14 group">
               <span>JOIN WAITLIST</span>
               <ChevronRight className="ml-2 size-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Full M2 MacBook Air Mockup Section */}
-        <section className="w-full flex justify-center py-20 relative z-10 overflow-hidden">
-           <div className="w-full max-w-5xl relative">
-              <FullMacbookMockup />
-           </div>
-        </section>
-
-        <div className="w-full h-[1px] bg-outline-variant"></div>
-
-        {/* Core Benefits */}
-        <section className="w-full">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 industrial-border bg-outline-variant">
-            {/* Item 1 */}
+      {/* Core Benefits */}
+      <section className="sticky top-0 z-20 bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
+        <div className="industrial-container w-full">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 industrial-border bg-outline-variant w-full">
             <div className="bg-background p-12 flex flex-col gap-6 hover:bg-surface transition-colors duration-150 border-r border-outline-variant last:border-r-0">
               <div className="flex items-center gap-3 border-b border-outline-variant pb-4">
                 <div className="w-3 h-3 bg-primary active-status-pulse"></div>
@@ -45,7 +45,6 @@ export default function Home() {
               </p>
               <Download className="size-8 text-primary mt-auto pt-4" />
             </div>
-            {/* Item 2 */}
             <div className="bg-background p-12 flex flex-col gap-6 hover:bg-surface transition-colors duration-150 border-r border-outline-variant last:border-r-0">
               <div className="flex items-center gap-3 border-b border-outline-variant pb-4">
                 <div className="w-3 h-3 bg-primary active-status-pulse"></div>
@@ -56,7 +55,6 @@ export default function Home() {
               </p>
               <Cpu className="size-8 text-primary mt-auto pt-4" />
             </div>
-            {/* Item 3 */}
             <div className="bg-background p-12 flex flex-col gap-6 hover:bg-surface transition-colors duration-150 border-r border-outline-variant last:border-r-0">
               <div className="flex items-center gap-3 border-b border-outline-variant pb-4">
                 <div className="w-3 h-3 bg-primary active-status-pulse"></div>
@@ -68,11 +66,13 @@ export default function Home() {
               <Zap className="size-8 text-primary mt-auto pt-4" />
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* HOW IT WORKS */}
-        <section className="w-full py-20 border-t border-outline-variant">
-          <div className="flex flex-col gap-12">
+      {/* HOW IT WORKS */}
+      <section className="sticky top-0 z-30 bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
+        <div className="industrial-container w-full">
+          <div className="flex flex-col gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">HOW IT WORKS</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
               <div className="flex flex-col gap-6">
@@ -95,11 +95,13 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* FEATURES */}
-        <section className="w-full py-20 border-t border-outline-variant">
-          <div className="flex flex-col gap-12">
+      {/* FEATURES */}
+      <section className="sticky top-0 z-[35] bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
+        <div className="industrial-container w-full">
+          <div className="flex flex-col gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">FEATURES</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="bg-background p-8 industrial-border flex flex-col gap-4 hover:bg-surface transition-colors">
@@ -116,11 +118,13 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* SECURITY */}
-        <section className="w-full py-20 border-t border-outline-variant">
-          <div className="flex flex-col gap-12">
+      {/* SECURITY */}
+      <section className="sticky top-0 z-40 bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
+        <div className="industrial-container w-full">
+          <div className="flex flex-col gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">SECURITY</h2>
             <div className="flex flex-col md:flex-row gap-12 items-center">
               <div className="w-full md:w-1/3 flex justify-center">
@@ -136,11 +140,13 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* STUDY CENTER */}
-        <section className="w-full py-20 border-y border-outline-variant">
-          <div className="flex flex-col gap-12">
+      {/* STUDY CENTER */}
+      <section className="sticky top-0 z-[45] bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
+        <div className="industrial-container w-full">
+          <div className="flex flex-col gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">STUDY CENTER</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
               <div className="flex flex-col gap-6">
@@ -149,7 +155,7 @@ export default function Home() {
                 </p>
                 <p className="technical-label text-primary uppercase tracking-widest">PROGRESS TRACKING. SMART PLANNING. BETTER GRADES.</p>
               </div>
-              <div className="flex flex-col gap-4 p-8 industrial-border bg-surface">
+              <div className="flex flex-col gap-4 p-8 industrial-border bg-surface w-full">
                 <span className="technical-label opacity-40 uppercase tracking-widest">PROGRESS STREAM</span>
                 <div className="w-full h-2 bg-outline-variant/20 industrial-border">
                   <div className="w-[78%] h-full bg-primary shadow-[0_0_10px_rgba(255,255,255,0.3)]"></div>
@@ -161,10 +167,12 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* SEARCH */}
-        <section className="w-full max-w-md mx-auto py-12">
+      {/* SEARCH */}
+      <section className="sticky top-0 z-[48] bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
+        <div className="industrial-container w-full max-w-md mx-auto">
           <div className="relative group">
             <input 
               className="w-full bg-transparent border-0 border-b border-outline-variant text-on-background font-mono uppercase tracking-widest focus:ring-0 focus:border-primary p-4 placeholder:opacity-20 outline-none" 
@@ -173,9 +181,9 @@ export default function Home() {
             />
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-outline-variant group-focus-within:text-primary transition-colors" />
           </div>
-        </section>
-      </main>
-    </div>
+        </div>
+      </section>
+    </>
   );
 }
 

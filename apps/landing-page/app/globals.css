@@ -129,9 +129,55 @@
   --grid-color: rgba(255, 255, 255, 0.05);
 }
 
+html {
+  scroll-behavior: smooth;
+  height: auto;
+  min-height: 100vh;
+  scroll-snap-type: y proximity;
+  overflow-y: scroll;
+  @apply bg-background;
+}
+
 @layer base {
+  :root {
+    --grid-color: rgba(0, 0, 0, 0.05);
+    --card-shadow: 0 -30px 100px rgba(0, 0, 0, 0.12);
+  }
+
+  .dark {
+    --grid-color: rgba(255, 255, 255, 0.03);
+    --card-shadow: 0 -40px 120px rgba(255, 255, 255, 0.12); /* Pronounced glow for dark mode */
+  }
+
   body {
     @apply bg-background text-on-surface antialiased selection:bg-primary selection:text-on-primary transition-colors duration-300 font-inter;
+    height: auto;
+    min-height: 100vh;
+    overflow-x: clip;
+    /* Removed scroll-snap-type from body to avoid conflict with html element */
+    background-image: 
+      linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  section, footer {
+    position: sticky;
+    top: 0;
+    min-height: 100vh;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    will-change: transform;
+    transform: translateZ(0);
+    box-shadow: var(--card-shadow);
+    /* Ensure layering is clean */
+    background-color: var(--background);
+    z-index: 1;
+  }
+
+  .dark section, .dark footer {
+    /* Add a very subtle top border highlight in dark mode to define the edge better */
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   h1, h2, h3, h4, h5, h6, .display {
@@ -157,11 +203,30 @@
   }
 
   .industrial-btn {
-    @apply px-8 py-5 bg-surface text-on-surface border border-outline-variant font-mono text-[11px] uppercase tracking-widest transition-all duration-200 hover:bg-outline-variant/10 active:bg-outline-variant/20 inline-flex items-center justify-center;
+    @apply px-8 py-5 text-on-surface border font-mono text-[11px] uppercase tracking-widest transition-all duration-300 inline-flex items-center justify-center relative z-10;
+    border-color: var(--on-surface);
+    background-color: var(--background);
+  }
+
+  .industrial-btn:hover {
+    background-color: color-mix(in srgb, var(--on-surface) 8%, transparent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  .dark .industrial-btn:hover {
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
   }
 
   .industrial-btn-primary {
-    @apply bg-primary text-background border border-primary font-black;
+    @apply bg-on-surface text-background font-black;
+    border-color: var(--on-surface);
+  }
+
+  .industrial-btn-primary:hover {
+    @apply opacity-90;
+    background-color: var(--on-surface);
+    transform: translateY(-1px);
   }
 
   .industrial-btn-primary:hover {
@@ -194,6 +259,13 @@
     letter-spacing: -0.02em;
     font-weight: 900;
     @apply uppercase text-on-surface font-black;
+  }
+
+  .grid-background {
+    background-image: 
+      linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+    background-size: 40px 40px;
   }
 }
 

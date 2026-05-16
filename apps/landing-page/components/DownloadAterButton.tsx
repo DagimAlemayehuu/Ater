@@ -53,8 +53,8 @@ export function DownloadAterButton() {
       <a 
         href={getDownloadUrl()}
         className={cn(
-          "group w-full py-5 px-8 bg-foreground text-background flex items-center justify-between",
-          "hover:bg-foreground/90 transition-all duration-300 border border-transparent active:scale-[0.99]"
+          "group w-full py-5 px-8 bg-on-background text-background flex items-center justify-between",
+          "hover:bg-on-background/90 transition-all duration-300 border border-transparent active:scale-[0.99]"
         )}
       >
         <div className="flex flex-col items-start gap-0.5">
@@ -66,7 +66,7 @@ export function DownloadAterButton() {
         </div>
       </a>
       
-      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest text-center">
+      <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest text-center">
         v0.1.0-beta • High-Fidelity Binary
       </p>
     </div>

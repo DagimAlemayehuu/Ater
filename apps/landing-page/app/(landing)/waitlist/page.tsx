@@ -1,64 +1,313 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronRight } from 'lucide-react';
+import { 
+  ChevronRight, 
+  Clipboard, 
+  ClipboardCheck, 
+  Download, 
+  Sun, 
+  Moon,
+  ArrowLeft
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { cn } from '@/lib/utils';
+import { DownloadAterButton } from '@/components/DownloadAterButton';
 
 export default function WaitlistLandingPage() {
-  return (
-    <div className="flex flex-col text-on-background min-h-screen relative selection:bg-primary selection:text-background">
-      <main className="flex-1 w-full flex items-center relative z-20 overflow-hidden">
+  const [view, setView] = useState<"hero" | "auth" | "dashboard">("hero");
+  const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [userStatus, setUserStatus] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
 
-        <div className="max-w-[1400px] w-full mx-auto px-8 md:px-12 lg:px-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center h-full py-20 relative">
-          
-          {/* Left Content */}
-          <div className="flex flex-col justify-center py-12 z-30 lg:pr-12 h-full">
-            <div className="space-y-4">
-              <h1 className="text-[2.5rem] md:text-[3rem] lg:text-[3.5rem] leading-[1.1] font-black tracking-tighter text-on-background uppercase">
-                <span className="whitespace-nowrap">Learn faster.</span><br />
-                <span className="whitespace-nowrap">Score better.</span>
-              </h1>
-              <p className="text-on-surface-variant text-[13px] lg:text-[14px] max-w-[400px] leading-relaxed font-bold uppercase tracking-tight">
-                Ater turns your PDFs into simple notes. It organizes your work in one clean place. Study less, get better grades.
-              </p>
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchUserStatus(session.user.email!);
+        const interval = setInterval(() => {
+          fetchUserStatus(session.user.email!);
+        }, 5000);
+        return () => clearInterval(interval);
+      }
+    });
+  }, []);
+
+  async function fetchUserStatus(userEmail: string) {
+    const { data, error } = await supabase
+      .from('waiting_list')
+      .select('*')
+      .eq('email', userEmail)
+      .maybeSingle();
+    
+    if (error) {
+      console.error("Fetch status error:", error);
+      return;
+    }
+
+    if (data) {
+      setUserStatus(data);
+      setView("dashboard");
+    }
+  }
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      if (authMode === "signup") {
+        // 1. Add to waiting list first to ensure trigger has data (idempotent upsert)
+        const { error: waitlistError } = await supabase
+          .from('waiting_list')
+          .upsert(
+            [{ email, full_name: fullName, status: 'pending' }],
+            { onConflict: 'email' }
+          );
+        
+        if (waitlistError) {
+          console.error("Waitlist error:", waitlistError);
+          throw new Error("Failed to register for waitlist. Please try again.");
+        }
+
+        // 2. Perform authentication
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { 
+            data: { 
+              full_name: fullName,
+              source: 'landing_page_v2'
+            } 
+          }
+        });
+        
+        if (authError) throw authError;
+        
+        if (authData.user) {
+          fetchUserStatus(authData.user.email!);
+        }
+      } else {
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+        if (authError) throw authError;
+        if (authData.user) fetchUserStatus(authData.user.email!);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <section className="bg-background grid-background flex flex-col items-center justify-center h-screen w-full overflow-hidden pt-16">
+      <main className="flex-1 w-full flex items-center relative z-20 overflow-hidden">
+        {view === "hero" ? (
+          <div className="max-w-[1400px] w-full mx-auto px-8 md:px-12 lg:px-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center h-full py-20 relative">
+            {/* Left Content */}
+            <div className="flex flex-col justify-center py-12 z-30 lg:pr-12 h-full">
+              <div className="space-y-4">
+                <h1 className="text-[2.5rem] md:text-[3rem] lg:text-[3.5rem] leading-[1.1] font-black tracking-tighter text-on-background uppercase">
+                  <span className="whitespace-nowrap">Learn faster.</span><br />
+                  <span className="whitespace-nowrap">Score better.</span>
+                </h1>
+                <p className="text-on-surface-variant text-[13px] lg:text-[14px] max-w-[400px] leading-relaxed font-bold uppercase tracking-tight">
+                  Ater turns your PDFs into simple notes. It organizes your work in one clean place. Study less, get better grades.
+                </p>
+              </div>
+              
+              <div className="mt-24">
+                <button 
+                  onClick={() => setView("auth")}
+                  className="industrial-btn h-14 px-10 group"
+                >
+                  <span>Join Waitlist</span>
+                  <ChevronRight className="ml-2 size-4 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
             </div>
             
-            <div className="mt-24">
-              <Link 
-                href="/auth"
-                className="industrial-btn h-14 px-10 group inline-flex items-center justify-center w-full md:w-auto hover:bg-surface-container transition-all text-[11px]"
-              >
-                <span>Join Waitlist</span>
-              </Link>
+            {/* Right Mockup Area */}
+            <div className="relative h-full w-full min-h-[500px] lg:min-h-[700px] flex items-center">
+               <MockupSection />
             </div>
           </div>
-          
-          {/* Right Mockup Area */}
-          <div className="relative h-full w-full min-h-[500px] lg:min-h-[700px] flex items-center">
-             <MockupSection />
+        ) : view === "dashboard" ? (
+          <div className="max-w-[1400px] w-full mx-auto px-8 md:px-12 lg:px-24 flex flex-col items-center justify-center h-full py-20 relative z-20">
+            <div className="max-w-[500px] w-full text-center">
+              <div className="mb-10">
+                <h2 className="text-4xl font-black tracking-tighter uppercase text-on-background">Hey, {userStatus?.full_name || 'User'}</h2>
+                <p className="text-on-surface-variant font-bold uppercase tracking-widest mt-2 text-[12px]">Check your status below.</p>
+              </div>
+              
+              <div className="p-10 industrial-border bg-surface relative overflow-hidden shadow-sm text-left">
+                <div className="relative z-10">
+                  <div className="technical-label text-on-surface-variant mb-2">Status</div>
+                  <div className="flex items-center justify-start gap-3">
+                     <div className={cn("size-3", userStatus?.status === 'approved' ? "bg-primary" : userStatus?.status === 'rejected' ? "bg-destructive" : "bg-outline")} />
+                     <span className="text-2xl font-black uppercase tracking-tighter text-on-background">
+                       {userStatus?.status === 'approved' ? "Approved" : userStatus?.status === 'rejected' ? "Rejected" : "Pending"}
+                     </span>
+                  </div>
+                  <p className="text-on-surface-variant text-[13px] font-bold mt-6 leading-relaxed uppercase tracking-tight">
+                     {userStatus?.status === 'approved' 
+                       ? "Your account is approved. Use the code to activate Ater Desktop." 
+                       : userStatus?.status === 'rejected' 
+                       ? "Your account was not approved." 
+                       : "Your account is pending. We will give you a code once approved."}
+                  </p>
+                  
+                  {userStatus?.status === 'approved' && userStatus?.activation_code && (
+                     <div className="mt-10 space-y-8">
+                       <div className="p-8 bg-background border-2 border-primary/20 relative group overflow-hidden">
+                         <div className="absolute top-0 right-0 p-3">
+                           <button onClick={() => copyToClipboard(userStatus.activation_code)} className="p-2 hover:bg-surface transition-colors">
+                             {copied ? <ClipboardCheck className="size-5 text-primary" /> : <Clipboard className="size-5 text-on-surface-variant" />}
+                           </button>
+                         </div>
+                         <div className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-2">Activation Key</div>
+                         <div className="text-4xl md:text-5xl font-mono font-black text-on-background tracking-[0.4em] select-all">
+                           {userStatus.activation_code}
+                         </div>
+                         <p className="mt-4 text-[10px] font-bold text-on-surface-variant uppercase leading-relaxed tracking-widest">
+                           You will need this key to unlock Ater on your device. This key can only be used once.
+                         </p>
+                         {copied && (
+                           <div className="absolute inset-0 bg-primary flex items-center justify-center animate-in fade-in duration-200">
+                             <span className="text-[12px] font-black uppercase tracking-[0.4em] text-on-primary">Key Copied</span>
+                           </div>
+                         )}
+                       </div>
+
+                       <DownloadAterButton />
+                     </div>
+                  )}
+                </div>
+              </div>
+              
+              <button 
+                onClick={async () => { await supabase.auth.signOut(); setUserStatus(null); setView("hero"); }} 
+                className="mt-12 technical-label text-on-surface-variant hover:text-on-background transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="max-w-[1400px] w-full mx-auto px-8 md:px-12 lg:px-24 flex flex-col items-center justify-center h-full py-20 relative z-20">
+            <div className="max-w-[400px] w-full">
+              <button 
+                onClick={() => setView("hero")} 
+                className="text-on-surface-variant hover:text-on-background flex items-center gap-2 mb-10 technical-label transition-colors"
+              >
+                <ArrowLeft className="size-3" />
+                <span>Back</span>
+              </button>
+              
+              <div className="w-full">
+                <h2 className="text-3xl font-black mb-2 tracking-tighter uppercase text-on-background">
+                  {authMode === "signup" ? "Join Waitlist" : "Sign In"}
+                </h2>
+                <p className="text-on-surface-variant font-bold mb-10 text-[12px] uppercase tracking-widest">
+                  {authMode === "signup" ? "Get early access." : "Check your status."}
+                </p>
+                
+                <form onSubmit={handleAuth} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="technical-label text-on-surface-variant ml-1">Email</label>
+                    <input 
+                      type="email" 
+                      placeholder="user@ater.ai" 
+                      required 
+                      value={email} 
+                      onChange={(e) => setEmail(e.target.value)} 
+                      className="industrial-input" 
+                    />
+                  </div>
+                  
+                  {authMode === "signup" && (
+                    <div className="space-y-1.5">
+                      <label className="technical-label text-on-surface-variant ml-1">Full Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="Your Name" 
+                        required 
+                        value={fullName} 
+                        onChange={(e) => setFullName(e.target.value)} 
+                        className="industrial-input" 
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="space-y-1.5">
+                    <label className="technical-label text-on-surface-variant ml-1">Password</label>
+                    <input 
+                      type="password" 
+                      placeholder="••••••••" 
+                      required 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      className="industrial-input" 
+                    />
+                  </div>
+                  
+                  {error && <p className="text-[10px] font-black text-destructive uppercase tracking-widest text-center py-2">{error}</p>}
+                  
+                  <button 
+                    disabled={loading} 
+                    className="industrial-btn industrial-btn-primary w-full h-16 mt-6 disabled:opacity-50"
+                  >
+                    {loading ? "Processing..." : (authMode === "signup" ? "Join Waitlist" : "Sign In")}
+                  </button>
+                </form>
+                
+                <div className="mt-10 pt-10 border-t border-outline-variant text-center">
+                  <p className="technical-label text-on-surface-variant">
+                    {authMode === "signup" ? "Registered?" : "New?"}{" "}
+                    <button 
+                      onClick={() => setAuthMode(authMode === "signup" ? "login" : "signup")} 
+                      className="text-on-background hover:underline underline-offset-8 ml-2 font-black transition-all"
+                    >
+                      {authMode === "signup" ? "Sign In" : "Create Account"}
+                    </button>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
-    </div>
+    </section>
   );
 }
 
 function MockupSection() {
   return (
     <div className="absolute left-0 w-[140%] lg:w-[160%] aspect-[2560/1664] pointer-events-none z-10 origin-left scale-110 lg:scale-[1.25] translate-y-[25%] lg:translate-y-[35%]">
-      {/* MacBook Air M2 Chassis (Uniform Thickness, Thin Profile) */}
+      {/* MacBook Air M2 Chassis */}
       <div className="w-full h-full bg-[#1A1A1A] rounded-[2.5rem] p-[1px] shadow-[0_80px_160px_-30px_rgba(0,0,0,0.4),0_40px_80px_-20px_rgba(0,0,0,0.3)] relative flex flex-col border border-white/10 overflow-hidden">
         
         {/* Subtle Brushed Metal Reflection */}
         <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/10 pointer-events-none" />
         
-        {/* Display Panel (Uniform 6mm-style bezels) */}
+        {/* Display Panel */}
         <div className="flex-1 bg-[#000] rounded-[2.3rem] overflow-hidden p-[10px] relative flex flex-col m-[1px]">
           
-          {/* M2 Notch (Proportional width, smooth transition) */}
+          {/* M2 Notch */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[180px] h-[34px] bg-[#000] z-30 flex items-center justify-center rounded-b-[0.8rem]">
-            {/* Camera & Sensors Cluster (Miniaturized for M2) */}
+            {/* Camera & Sensors Cluster */}
             <div className="flex items-center gap-4 mt-0.5 opacity-60">
               <div className="size-1.5 rounded-full bg-[#111]" />
               <div className="size-2 rounded-full bg-[#111] border border-white/5 flex items-center justify-center">
@@ -68,7 +317,7 @@ function MockupSection() {
             </div>
           </div>
           
-          {/* Liquid Retina Display (With rounded corners that match the bezel) */}
+          {/* Liquid Retina Display */}
           <div className="flex-1 bg-[#FFFFFF] rounded-[1.4rem] overflow-hidden relative shadow-inner">
              <Image 
                 src="/dashboard.png" 

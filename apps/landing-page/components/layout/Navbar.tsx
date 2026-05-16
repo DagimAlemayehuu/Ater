@@ -37,7 +37,7 @@ export function Navbar() {
   const showCenteredHeader = isAuthPage && !session;
 
   return (
-    <header className="bg-background/80 backdrop-blur-md text-on-background border-b border-outline-variant sticky top-0 z-50 rounded-none">
+    <header className="bg-background/80 backdrop-blur-md text-on-background border-b border-outline-variant fixed top-0 left-0 right-0 z-[100] rounded-none">
       <div className={cn(
         "flex items-center w-full px-8 h-16 max-w-(--spacing-container) mx-auto",
         showCenteredHeader ? "justify-center" : "justify-between"
@@ -78,7 +78,7 @@ export function Navbar() {
               
               <Link 
                 href="/waitlist"
-                className="hidden md:block bg-primary text-on-primary font-mono text-[11px] uppercase tracking-widest px-6 py-2 hover:opacity-90 transition-all duration-150 rounded-none"
+                className="hidden md:block industrial-btn px-6 py-2"
               >
                 JOIN WAITLIST
               </Link>
