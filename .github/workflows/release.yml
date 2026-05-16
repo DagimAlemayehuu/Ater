@@ -17,9 +17,9 @@ jobs:
             const { data: release } = await github.rest.repos.createRelease({
               owner: 'DagimAlemayehuu',
               repo: 'Ater_Releases',
-              tag_name: process.env.GITHUB_REF_NAME,
-              name: `Ater OS ${process.env.GITHUB_REF_NAME}`,
-              body: `Official release for Ater OS version ${process.env.GITHUB_REF_NAME}.`,
+              tag_name: 'v0.0.23',
+              name: 'Ater v0.0.23',
+              body: 'Official release for Ater version v0.0.23.',
               draft: true
             });
             console.log(`Created release: ${release.html_url}`);
@@ -116,15 +116,17 @@ jobs:
       - name: Install All Monorepo Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Tauri App
+      - name: Build and Publish Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Ater OS ${{ github.ref_name }}"
-          uploadIntoRelease: false
+          tagName: v0.0.23
+          releaseName: "Ater v0.0.23"
+          owner: DagimAlemayehuu
+          repo: Ater_Releases
           args: ${{ matrix.platform == 'macos' && format('--target {0}', matrix.arch == 'aarch64' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin') || '' }}
 
       - name: Upload Release Assets
@@ -137,7 +139,7 @@ jobs:
           shopt -s nullglob
           
           # Upload files matching both target-specific and default build paths
-          gh release upload ${{ github.ref_name }} \
+          gh release upload v0.0.23 \
             --repo DagimAlemayehuu/Ater_Releases \
             --clobber \
             apps/desktop/src-tauri/target/*/release/bundle/*/*.{dmg,tar.gz,AppImage,deb,exe,msi,sig,zip} \
@@ -151,7 +153,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
-          gh release edit ${{ github.ref_name }} \
+          gh release edit v0.0.23 \
             --repo DagimAlemayehuu/Ater_Releases \
             --discussion-category "Announcements" \
             --draft=false
@@ -179,5 +181,5 @@ jobs:
         with:
           token: ${{ secrets.RELEASE_PAT }}
           repository: DagimAlemayehuu/Ater_Releases
-          tag_name: ${{ github.ref_name }}
+          tag_name: v0.0.23
           files: update.json
