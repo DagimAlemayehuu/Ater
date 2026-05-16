@@ -102,21 +102,34 @@ jobs:
       - name: Install All Monorepo Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build and release Tauri app
+      - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
-          owner: DagimAlemayehuu
-          repo: ater-releases
-          tagName: v__VERSION__
-          releaseName: "Ater v__VERSION__"
-          releaseBody: "Automated release from GitHub Actions."
-          releaseDraft: true
-          prerelease: false
           args: ${{ matrix.platform == 'macos' && format('--target {0}', matrix.arch == 'aarch64' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin') || '' }}
+
+      - name: Upload Release to Public Repo
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+        run: |
+          # Use GitHub CLI to create/update release and upload assets
+          # We use --clobber to overwrite if it already exists (useful if one job finishes after another)
+          gh release create ${{ github.ref_name }} \
+            --repo DagimAlemayehuu/ater-releases \
+            --title "Ater OS ${{ github.ref_name }}" \
+            --notes "Official release for Ater OS version ${{ github.ref_name }}." \
+            --draft \
+            --discussion-category "Announcements" || true
+
+          # Upload all bundled files (dmg, exe, deb, AppImage, sig)
+          # The path uses a glob to handle both default and target-specific build directories
+          gh release upload ${{ github.ref_name }} \
+            --repo DagimAlemayehuu/ater-releases \
+            --clobber \
+            apps/desktop/src-tauri/target/**/release/bundle/**/*
 
   generate-updater-json:
     needs: publish
