@@ -18,10 +18,16 @@ import re
 import json
 from pathlib import Path
 from contextlib import asynccontextmanager
+import threading
 from typing import Dict, Any, Optional
+import psutil
 
 # Add project root to sys.path
-root_dir = Path(__file__).parent.parent.parent.absolute()
+if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    root_dir = Path(sys._MEIPASS)
+else:
+    root_dir = Path(__file__).parent.parent.parent.absolute()
+
 if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
@@ -98,6 +104,26 @@ def _signal_handler(sig, frame):
 
 signal.signal(signal.SIGINT, _signal_handler)
 signal.signal(signal.SIGTERM, _signal_handler)
+
+def parent_watchdog():
+    """
+    Monitors the parent process (Tauri). If Tauri dies, this kills the Python sidecar instantly,
+    preventing zombie processes and port blocking on the next boot.
+    """
+    # Tauri typically sets ATER_PARENT_PID via env var, fallback to os.getppid()
+    try:
+        parent_pid = int(os.getenv("ATER_PARENT_PID", os.getppid()))
+        logger.info(f"[Watchdog] Assigned to monitor Parent PID: {parent_pid}")
+        
+        while True:
+            time.sleep(5)
+            if not psutil.pid_exists(parent_pid):
+                logger.critical(f"[Watchdog] FATAL: Parent Tauri process {parent_pid} vanished. Committing sepuku.")
+                # os._exit bypasses Python's graceful shutdown and forces OS-level termination. 
+                # Necessary to prevent Uvicorn/asyncio from hanging.
+                os._exit(1)
+    except Exception as e:
+        logger.error(f"[Watchdog] Failed to start monitor: {e}")
 
 
 app = FastAPI(
@@ -2104,6 +2130,9 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=int(os.environ.get("API_PORT", "8765")), help="Port to run the API on")
     parser.add_argument("--host", type=str, default=os.environ.get("API_HOST", "127.0.0.1"), help="Host to bind to")
     args = parser.parse_args()
+
+    # Start it before your FastAPI app initializes
+    threading.Thread(target=parent_watchdog, daemon=True, name="AterWatchdog").start()
 
     logger.info(f"Starting sidecar on {args.host}:{args.port}")
     uvicorn.run(

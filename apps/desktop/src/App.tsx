@@ -16,11 +16,9 @@ const Onboarding = lazy(() => import('@/routes/onboarding'))
 /**
  * Gate to ensure sidecar is connected before proceeding.
  */
-/**
- * Gate to ensure sidecar is connected. Optimistic by default to skip loading screens.
- */
 function SidecarGate({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<'checking' | 'connected' | 'error'>('connected')
+  const [status, setStatus] = useState<'checking' | 'connected' | 'error'>('checking')
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     const check = async () => {
@@ -28,23 +26,84 @@ function SidecarGate({ children }: { children: React.ReactNode }) {
         const res = await sidecarApi.health()
         if (res.status === 'ok') {
           setStatus('connected')
+        } else {
+          throw new Error("Health not ok")
         }
-      } catch {
-        console.warn('[Ater] Sidecar connection failed. Retrying...')
-        setStatus('checking') // Only show loading if we confirmed it's not there
-        setTimeout(check, 1000)
+      } catch (err) {
+        if (retryCount < 60) {
+          console.warn(`[Ater] Sidecar connection attempt ${retryCount + 1} failed. Retrying...`)
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1)
+          }, 1000)
+        } else {
+          console.error('[Ater] Sidecar failed to connect after 60 attempts.', err)
+          setStatus('error')
+        }
       }
     }
-    check()
-  }, [])
+    if (status !== 'connected') {
+      check()
+    }
+  }, [retryCount, status])
+
+  const gateStyle: React.CSSProperties = {
+    height: '100vh',
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'var(--background)',
+    color: 'var(--foreground)'
+  }
+
+  if (status === 'error') {
+    return (
+      <div style={gateStyle}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', maxWidth: '320px' }}>
+          <div style={{ width: '40px', height: '40px', border: '1px solid var(--destructive)', display: 'flex', alignItems: 'center', justifyCenter: 'center' }}>
+            <span style={{ color: 'var(--destructive)', fontSize: '20px', fontWeight: 900 }}>!</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <h2 style={{ fontWeight: 900, fontSize: '14px', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>Engine Failure</h2>
+            <p style={{ fontWeight: 600, fontSize: '10px', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.1em', lineHeight: 1.6 }}>
+              The AI Sidecar failed to bind to a local port after 10 attempts. Ensure no other application is blocking the engine.
+            </p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{ 
+              marginTop: '1rem',
+              padding: '0.75rem 1.5rem', 
+              border: '1px solid var(--foreground)', 
+              background: 'transparent',
+              color: 'var(--foreground)',
+              fontSize: '10px',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              letterSpacing: '0.2em',
+              cursor: 'pointer'
+            }}
+          >
+            Re-Initialize
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (status === 'checking') {
     return (
       <div style={gateStyle}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
-          <div style={{ width: '40px', height: '40px', border: '2px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '0' }} />
+          <div style={{ width: '40px', height: '40px', border: '2px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '0', animation: 'spin 1s linear infinite' }} />
           <span style={{ fontWeight: 900, letterSpacing: '0.4em', textIndent: '0.4em', fontSize: '9px', color: 'var(--muted-foreground)', opacity: 0.4 }}>INITIALIZING ENGINE</span>
         </div>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     )
   }

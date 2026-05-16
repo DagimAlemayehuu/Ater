@@ -82,6 +82,8 @@ class AterQueueManager:
         self.db_path = str(self.inbox_path.absolute() / "ater_queue.db")
         self._init_db()
         self._lock = asyncio.Lock()
+        # Limit to 4 concurrent heavy I/O / Embedding tasks to protect the user's OS
+        self.worker_semaphore = asyncio.Semaphore(4)
         
         # Register status callback for real-time persistence
         self.service.register_status_callback(self.update_status_message)
@@ -269,7 +271,9 @@ class AterQueueManager:
 
     async def process_file(self, file_path_str: str):
         """Worker task for a single file."""
-        path = Path(file_path_str)
+        # The worker will block here if 4 tasks are already processing
+        async with self.worker_semaphore:
+            path = Path(file_path_str)
         try:
             # Mark as active
             conn = self._get_conn()

@@ -104,6 +104,13 @@ jobs:
             chmod +x apps/desktop/src-tauri/binaries/$TARGET
           fi
 
+      - name: Ad-hoc Sign Sidecar
+        if: matrix.platform == 'macos'
+        run: |
+          TARGET_BIN="apps/desktop/src-tauri/binaries/ater-api-${{ matrix.arch }}-apple-darwin"
+          # The "-" means ad-hoc signing (no identity required)
+          codesign --force --deep -s - "$TARGET_BIN"
+
       - name: Install All Monorepo Dependencies
         run: pnpm install --frozen-lockfile
 

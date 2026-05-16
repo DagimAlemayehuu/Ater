@@ -84,14 +84,32 @@ class ObsidianClient:
 
     def write_note(self, relative_path: str, content: str) -> bool:
         """
-        Writes (creates or updates) a specific note.
+        Writes (creates or updates) a specific note atomically to prevent race 
+        conditions with Obsidian's internal indexer.
         """
+        import uuid
+        import os
         full_path = self.vault_path / relative_path
         # Ensure parent directory exists
         full_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(full_path, "w", encoding="utf-8") as f:
-            f.write(content)
-        return True
+        
+        # Create a hidden tmp file in the SAME directory to ensure it is on the same disk drive
+        # (Required for os.replace to be atomic)
+        tmp_path = full_path.with_suffix(f".{uuid.uuid4().hex[:8]}.tmp")
+        
+        try:
+            # Write to the temporary file first
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            
+            # Atomically swap the tmp file into the target file.
+            os.replace(tmp_path, full_path)
+            return True
+        except Exception as e:
+            print(f"[ObsidianClient] Failed atomic write for {relative_path}: {e}")
+            if tmp_path.exists():
+                tmp_path.unlink() # Cleanup orphaned tmp file
+            return False
 
     def delete_item(self, relative_path: str) -> bool:
         """

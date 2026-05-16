@@ -15,13 +15,14 @@ async function getBaseUrl(): Promise<string> {
     if (dynamicBaseUrl) return dynamicBaseUrl
     try {
         const port = await invoke<number>('get_sidecar_port')
+        if (!port) throw new Error("No sidecar port provided by backend")
         dynamicBaseUrl = `http://127.0.0.1:${port}`
         console.info(`[Sidecar] Discovered dynamic API URL: ${dynamicBaseUrl}`)
         return dynamicBaseUrl
     } catch (err) {
-        console.error('[Sidecar] Failed to fetch dynamic port, falling back to 8765:', err)
-        dynamicBaseUrl = 'http://127.0.0.1:8765'
-        return dynamicBaseUrl
+        console.error('[Sidecar] Failed to fetch dynamic port:', err)
+        // Strict error: do NOT fallback to 8765 to avoid silent connection failures
+        throw err
     }
 }
 
