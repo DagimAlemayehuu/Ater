@@ -3,7 +3,7 @@ import { Twitter, Github, MessageSquare } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="sticky top-0 z-[100] h-screen bg-background grid-background flex flex-col items-center justify-center border-t border-outline-variant">
+    <footer className="relative md:sticky md:top-0 z-[100] min-h-[50vh] md:h-screen bg-background grid-background flex flex-col items-center justify-center border-t border-outline-variant py-20 md:py-0">
       <div className="industrial-container w-full flex flex-col gap-20">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="col-span-1 md:col-span-2 space-y-6">

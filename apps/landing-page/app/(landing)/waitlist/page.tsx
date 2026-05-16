@@ -1,43 +1,31 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  ChevronRight, 
-  Clipboard, 
-  ClipboardCheck, 
-  Download, 
-  Sun, 
-  Moon,
-  ArrowLeft
-} from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { cn } from '@/lib/utils';
-import { DownloadAterButton } from '@/components/DownloadAterButton';
 import { IndustrialButton } from '@/components/IndustrialButton';
 
 
 export default function WaitlistLandingPage() {
   return (
-    <section className="bg-background grid-background flex flex-col items-center justify-center h-screen w-full overflow-hidden pt-16">
-      <main className="flex-1 w-full flex items-center relative z-20 overflow-hidden">
-        <div className="industrial-container grid grid-cols-1 lg:grid-cols-2 gap-12 items-center h-full py-12 relative">
+    <section className="bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full pt-16 overflow-x-hidden">
+      <main className="flex-1 w-full flex items-center relative z-20">
+        <div className="industrial-container grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full py-12 md:py-20 relative">
           {/* Left Content */}
-          <div className="flex flex-col justify-center py-6 z-30 lg:pr-12 h-full">
-            <div className="space-y-4">
-              <h1 className="text-display-hero !text-[4rem] tracking-tighter">
-                <span className="whitespace-nowrap">Learn faster.</span><br />
-                <span className="whitespace-nowrap">Score better.</span>
+          <div className="flex flex-col justify-center py-6 z-30 lg:pr-12">
+            <div className="space-y-6 text-center lg:text-left flex flex-col items-center lg:items-start">
+              <h1 className="text-display-hero !leading-[0.9]">
+                Learn faster.<br />
+                Score better.
               </h1>
-              <p className="text-body max-w-[360px] opacity-60 !text-[12px]">
+              <p className="text-body max-w-[360px] opacity-60">
                 Ater turns your PDFs into simple notes. It organizes your work in one clean place. Study less, get better grades.
               </p>
             </div>
             
-            <div className="mt-12">
+            <div className="mt-10 md:mt-12 flex justify-center lg:justify-start">
               <Link href="/auth">
-                <IndustrialButton className="h-14 px-10">
+                <IndustrialButton className="h-14 md:h-16 px-10 md:px-12 w-full md:w-auto">
                   JOIN WAITLIST
                 </IndustrialButton>
               </Link>
@@ -45,7 +33,7 @@ export default function WaitlistLandingPage() {
           </div>
           
           {/* Right Mockup Area */}
-          <div className="relative h-full w-full min-h-[400px] flex items-center">
+          <div className="relative w-full min-h-[300px] sm:min-h-[400px] flex items-center lg:h-full overflow-visible">
              <MockupSection />
           </div>
         </div>
@@ -56,7 +44,7 @@ export default function WaitlistLandingPage() {
 
 function MockupSection() {
   return (
-    <div className="absolute left-0 w-[140%] lg:w-[160%] aspect-[2560/1664] pointer-events-none z-10 origin-left scale-110 lg:scale-[1.25] translate-y-[25%] lg:translate-y-[35%]">
+    <div className="absolute left-0 w-[140%] lg:w-[160%] aspect-[2560/1664] pointer-events-none z-10 origin-left scale-110 lg:scale-[1.25] translate-y-[15%] lg:translate-y-[35%]">
       {/* MacBook Air M2 Chassis */}
       <div className="w-full h-full bg-[#1A1A1A] rounded-[2.5rem] p-[1px] shadow-[0_80px_160px_-30px_rgba(0,0,0,0.4),0_40px_80px_-20px_rgba(0,0,0,0.3)] relative flex flex-col border border-white/10 overflow-hidden">
         

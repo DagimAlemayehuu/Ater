@@ -7,7 +7,7 @@ export default function FeaturesPage() {
   return (
     <>
       {/* Header Section */}
-      <section className="sticky top-0 z-10 bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-b border-outline-variant pt-16">
+      <section className="sticky top-0 z-10 bg-background grid-background flex flex-col items-center justify-center min-h-[60vh] md:h-screen w-full border-b border-outline-variant pt-16">
         <div className="industrial-container w-full flex flex-col items-start gap-8 py-20">
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 bg-primary"></div>
@@ -23,8 +23,8 @@ export default function FeaturesPage() {
       </section>
 
       {/* Section 01: Academic Dashboard */}
-      <section className="sticky top-0 z-20 bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
-        <div className="industrial-container w-full py-20">
+      <section className="sticky top-0 z-20 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant py-20 lg:py-0">
+        <div className="industrial-container w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             <div className="flex flex-col gap-12">
               <div className="space-y-6">
@@ -39,15 +39,15 @@ export default function FeaturesPage() {
                   { label: 'TIMELINE', desc: 'DYNAMIC ACADEMIC CALENDAR SYNCHRONIZED WITH YOUR VAULT.' },
                   { label: 'PLANNER', desc: 'STUDY SESSIONS AUTOMATICALLY LINKED TO COURSE CONTENT.' }
                 ].map((item) => (
-                  <div key={item.label} className="p-10 border border-outline-variant bg-surface flex flex-col gap-4">
+                  <div key={item.label} className="p-8 md:p-10 border border-outline-variant bg-surface flex flex-col gap-4">
                     <span className="technical-label text-primary">{item.label}</span>
-                    <p className="text-body !text-[13px]">{item.desc}</p>
+                    <p className="text-body !text-[12px] md:!text-[13px]">{item.desc}</p>
                   </div>
                 ))}
               </div>
             </div>
             
-            <div className="aspect-video border border-outline-variant bg-surface flex flex-col p-12 gap-8 w-full relative overflow-hidden">
+            <div className="aspect-video border border-outline-variant bg-surface flex flex-col p-6 md:p-12 gap-8 w-full relative overflow-hidden">
                <div className="flex justify-between items-center border-b border-outline-variant pb-6">
                  <span className="technical-label opacity-40">ACADEMIC_COMMAND_PULSE</span>
                  <div className="size-2 bg-primary"></div>
@@ -63,15 +63,15 @@ export default function FeaturesPage() {
       </section>
 
       {/* Section 02: Obsidian Architecture */}
-      <section className="sticky top-0 z-30 bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
-        <div className="industrial-container w-full py-20">
+      <section className="sticky top-0 z-30 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant py-20 lg:py-0">
+        <div className="industrial-container w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             <div className="order-2 lg:order-1 relative aspect-video border border-outline-variant bg-background flex items-center justify-center overflow-hidden w-full">
                <div className="absolute inset-0 opacity-10">
-                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-96 border border-primary rounded-full"></div>
-                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-64 border border-primary/50 rounded-full"></div>
+                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-48 md:size-96 border border-primary rounded-full"></div>
+                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-32 md:size-64 border border-primary/50 rounded-full"></div>
                </div>
-               <span className="technical-label text-4xl opacity-20">GRAPH_TOPOLOGY</span>
+               <span className="technical-label text-2xl md:text-4xl opacity-20">GRAPH_TOPOLOGY</span>
             </div>
             
             <div className="order-1 lg:order-2 flex flex-col gap-12">
@@ -89,9 +89,9 @@ export default function FeaturesPage() {
                   'PDF ANNOTATION SYNC',
                   'GRAPH VISUALIZATION'
                 ].map((item) => (
-                  <li key={item} className="flex items-center gap-6 p-6 border border-outline-variant bg-surface">
+                  <li key={item} className="flex items-center gap-6 p-4 md:p-6 border border-outline-variant bg-surface">
                     <div className="size-1.5 bg-primary"></div>
-                    <span className="technical-label text-[12px]">{item}</span>
+                    <span className="technical-label text-[10px] md:text-[12px]">{item}</span>
                   </li>
                 ))}
               </ul>
@@ -101,8 +101,8 @@ export default function FeaturesPage() {
       </section>
 
       {/* Section 03: Reasoning Agents */}
-      <section className="sticky top-0 z-[35] bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
-        <div className="industrial-container w-full py-20">
+      <section className="sticky top-0 z-[35] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant py-20 lg:py-0">
+        <div className="industrial-container w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             <div className="flex flex-col gap-12">
               <div className="space-y-6">
@@ -112,13 +112,13 @@ export default function FeaturesPage() {
                 </p>
               </div>
               
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
                   { label: 'SEARCH', value: 'SEMANTIC' },
                   { label: 'CONTEXT', value: 'FULL' },
                   { label: 'PRIVACY', value: 'AIR-GAPPED' }
                 ].map((stat) => (
-                  <div key={stat.label} className="p-10 border border-outline-variant bg-surface text-center space-y-4">
+                  <div key={stat.label} className="p-6 md:p-10 border border-outline-variant bg-surface text-center space-y-4">
                     <span className="technical-label opacity-40 text-[10px]">{stat.label}</span>
                     <p className="text-xl font-black text-primary">{stat.value}</p>
                   </div>
@@ -126,7 +126,7 @@ export default function FeaturesPage() {
               </div>
             </div>
             
-            <div className="relative aspect-video border border-outline-variant bg-surface overflow-hidden flex flex-col p-10 gap-6 w-full">
+            <div className="relative aspect-video border border-outline-variant bg-surface overflow-hidden flex flex-col p-6 md:p-10 gap-6 w-full">
                <div className="h-2 w-full bg-outline-variant/20 overflow-hidden">
                  <div className="h-full w-2/3 bg-primary animate-pulse"></div>
                </div>
@@ -141,8 +141,8 @@ export default function FeaturesPage() {
       </section>
 
       {/* Section 04: Active Recall */}
-      <section className="sticky top-0 z-[40] bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
-        <div className="industrial-container w-full py-20">
+      <section className="sticky top-0 z-[40] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant py-20 lg:py-0">
+        <div className="industrial-container w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             <div className="order-2 lg:order-1 relative aspect-video border border-outline-variant bg-background flex items-center justify-center overflow-hidden w-full">
                <div className="grid grid-cols-6 gap-2 p-12 w-full h-full opacity-20">
@@ -166,10 +166,10 @@ export default function FeaturesPage() {
                   { label: 'SRS', desc: 'SPACED REPETITION SYSTEM INTEGRATED WITH YOUR VAULT.' },
                   { label: 'EXAMS', desc: 'PREDICTIVE TESTING BASED ON DOCUMENT SEMANTICS.' }
                 ].map((item) => (
-                  <div key={item.label} className="p-8 border border-outline-variant bg-surface flex items-center justify-between">
+                  <div key={item.label} className="p-6 md:p-8 border border-outline-variant bg-surface flex items-center justify-between">
                     <div className="flex flex-col gap-2">
                       <span className="technical-label text-primary">{item.label}</span>
-                      <p className="text-body !text-[12px] opacity-60">{item.desc}</p>
+                      <p className="text-body !text-[11px] md:!text-[12px] opacity-60">{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -178,15 +178,16 @@ export default function FeaturesPage() {
           </div>
         </div>
       </section>
+
       {/* Final CTA */}
-      <section className="sticky top-0 z-[50] bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
-        <div className="industrial-container w-full flex flex-col items-center gap-12 py-20">
+      <section className="sticky top-0 z-[50] bg-background grid-background flex flex-col items-center justify-center min-h-[60vh] md:h-screen w-full border-t border-outline-variant py-20 lg:py-0">
+        <div className="industrial-container w-full flex flex-col items-center gap-12">
           <h2 className="text-display-hero text-center">
             READY FOR<br />THE UPGRADE?
           </h2>
           <IndustrialButton 
             href="/auth?mode=signup" 
-            className="h-16 px-16"
+            className="h-16 px-16 w-full md:w-auto"
           >
             JOIN WAITLIST
           </IndustrialButton>

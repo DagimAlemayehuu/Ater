@@ -1,5 +1,5 @@
 import React, {useState, useMemo} from 'react'
-import {Check, Zap, Trash2, Plus, ChevronRight} from 'lucide-react'
+import {Check, Zap, Trash2, Plus, ChevronRight, BookOpen, Calendar} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {toast} from 'sonner'
 import {stripWL, getVal, getBoolVal, getYearOrder, deriveStatus, wrapWL, cleanTitle} from './utils'

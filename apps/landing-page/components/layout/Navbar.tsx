@@ -5,7 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { usePathname } from "next/navigation";
 import { useTheme } from "../../context/ThemeContext";
-import { Sun, Moon, Menu } from "lucide-react";
+import { Sun, Moon, Menu, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IndustrialButton } from "../IndustrialButton";
 
@@ -45,69 +45,84 @@ export function Navbar() {
   const showCenteredHeader = isAuthPage && !session;
 
   return (
-    <header className="bg-background/80 backdrop-blur-md text-on-background border-b border-outline-variant fixed top-0 left-0 right-0 z-[100] rounded-none">
-      <div className={cn(
-        "flex items-center w-full px-4 md:px-8 h-16 max-w-(--spacing-container) mx-auto",
-        showCenteredHeader ? "justify-center" : "justify-between"
-      )}>
-        <Link href="/" className="text-xl md:text-2xl font-black tracking-tighter text-on-background uppercase font-inter flex items-center gap-2">
-          ATER <span className="text-on-surface-variant font-bold normal-case opacity-40">አጠር</span>
-        </Link>
-        
-        {!showCenteredHeader && (
-          <>
-            <nav className="hidden lg:flex items-center gap-4 font-mono text-[12px] uppercase tracking-widest">
-              {navLinks.map((link) => {
-                const isActive = pathname === link.href;
-                return (
-                  <Link
-                    key={link.label}
-                    href={link.href}
-                    className={`py-2 px-4 transition-all duration-150 rounded-none border-b-2 ${
-                      isActive 
-                        ? "border-on-background text-on-background" 
-                        : "border-transparent text-on-background/60 hover:text-on-background hover:border-outline-variant"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
-            </nav>
+    <>
+      <header className="bg-background/80 backdrop-blur-md text-on-background border-b border-outline-variant fixed top-0 left-0 right-0 z-[100] rounded-none">
+        <div className={cn(
+          "flex items-center w-full px-4 md:px-8 h-16 max-w-(--spacing-container) mx-auto",
+          showCenteredHeader ? "justify-center" : "justify-between"
+        )}>
+          <Link href="/" className="text-xl md:text-2xl font-black tracking-tighter text-on-background uppercase font-inter flex items-center gap-2">
+            ATER <span className="text-on-surface-variant font-bold normal-case opacity-40">አጠር</span>
+          </Link>
+          
+          {!showCenteredHeader && (
+            <>
+              <nav className="hidden lg:flex items-center gap-4 font-mono text-[12px] uppercase tracking-widest">
+                {navLinks.map((link) => {
+                  const isActive = pathname === link.href;
+                  return (
+                    <Link
+                      key={link.label}
+                      href={link.href}
+                      className={`py-2 px-4 transition-all duration-150 rounded-none border-b-2 ${
+                        isActive 
+                          ? "border-on-background text-on-background" 
+                          : "border-transparent text-on-background/60 hover:text-on-background hover:border-outline-variant"
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </nav>
 
-            <div className="flex items-center gap-2 md:gap-4">
-              <IndustrialButton
-                onClick={toggleTheme}
-                size="icon"
-                aria-label="Toggle theme"
-                className="size-10 md:size-11"
-              >
-                {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-              </IndustrialButton>
-              
-              <IndustrialButton 
-                href="/auth"
-                size="sm"
-                className="hidden sm:flex h-10 md:h-11 px-6"
-              >
-                SIGN IN
-              </IndustrialButton>
+              <div className="flex items-center gap-2 md:gap-4">
+                <IndustrialButton
+                  onClick={toggleTheme}
+                  size="icon"
+                  aria-label="Toggle theme"
+                  className="size-10 md:size-11"
+                >
+                  {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                </IndustrialButton>
+                
+                <IndustrialButton 
+                  href="/auth"
+                  size="sm"
+                  className="hidden sm:flex h-10 md:h-11 px-6"
+                >
+                  SIGN IN
+                </IndustrialButton>
 
-              <button 
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden text-on-background p-2 rounded-none hover:bg-surface transition-colors"
-              >
-                <Menu className="size-6" />
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+                <button 
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="lg:hidden text-on-background p-2 rounded-none hover:bg-surface transition-colors"
+                >
+                  <Menu className="size-6" />
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </header>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu Overlay - Moved outside header to avoid backdrop-blur transparency issues */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 top-16 bg-background z-[99] flex flex-col p-8 border-t border-outline-variant animate-in fade-in slide-in-from-top-4 duration-200">
-          <nav className="flex flex-col gap-2">
+        <div className="lg:hidden fixed inset-0 bg-background z-[200] flex flex-col animate-in fade-in duration-300">
+          {/* Mobile Header Inside Menu */}
+          <div className="flex items-center justify-between px-4 h-16 border-b border-outline-variant bg-background">
+            <Link href="/" className="text-xl font-black tracking-tighter uppercase font-inter text-on-background">
+              ATER
+            </Link>
+            <button 
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-2 rounded-none hover:bg-surface transition-colors text-on-background"
+            >
+              <Menu className="size-6 rotate-90" />
+            </button>
+          </div>
+
+          <div className="flex-1 flex flex-col p-6 gap-2 overflow-y-auto bg-background">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
               return (
@@ -115,29 +130,40 @@ export function Navbar() {
                   key={link.label}
                   href={link.href}
                   className={cn(
-                    "p-4 technical-label text-sm border border-outline-variant transition-colors",
-                    isActive ? "bg-primary text-background" : "bg-surface hover:bg-outline-variant/10"
+                    "p-6 technical-label text-lg border border-outline-variant transition-all flex items-center justify-between group",
+                    isActive 
+                      ? "bg-primary text-background" 
+                      : "bg-surface text-on-surface hover:bg-outline-variant/10"
                   )}
                 >
-                  {link.label.toUpperCase()}
+                  <span className="font-bold tracking-widest">{link.label.toUpperCase()}</span>
+                  <ChevronRight className={cn(
+                    "size-5 transition-all",
+                    isActive ? "text-background opacity-100" : "text-on-surface opacity-20 group-hover:opacity-100 group-hover:translate-x-1"
+                  )} />
                 </Link>
               );
             })}
-          </nav>
+          </div>
           
-          <div className="mt-auto pt-8 border-t border-outline-variant flex flex-col gap-4">
+          <div className="p-6 border-t border-outline-variant flex flex-col gap-4 bg-surface">
             <IndustrialButton 
               href="/auth"
-              className="w-full h-14"
+              className="w-full h-16"
             >
               SIGN IN
             </IndustrialButton>
-            <p className="technical-label opacity-30 text-[10px] text-center">
-              ATER V0.1.0-BETA
-            </p>
+            <div className="flex justify-between items-center px-2">
+              <p className="technical-label opacity-30 text-[10px] text-on-surface">
+                ATER V0.1.0-BETA
+              </p>
+              <p className="technical-label opacity-30 text-[10px] text-on-surface">
+                EST. 2026
+              </p>
+            </div>
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

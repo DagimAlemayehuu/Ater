@@ -12,7 +12,7 @@ export default function Home() {
   return (
     <>
       {/* Hero & Mockup Integrated Section */}
-      <section className="sticky top-0 z-10 bg-background grid-background flex flex-col items-center justify-center h-screen w-full overflow-hidden border-b border-outline-variant pt-16">
+      <section className="sticky top-0 z-10 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full overflow-hidden border-b border-outline-variant pt-16">
         <div className="industrial-container flex flex-col items-center justify-center gap-8 w-full h-full py-20">
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -46,7 +46,7 @@ export default function Home() {
       </section>
 
       {/* Core Benefits */}
-      <section className="sticky top-0 z-20 bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
+      <section className="sticky top-0 z-20 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
         <div className="industrial-container w-full py-20">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-0 industrial-border bg-outline-variant w-full">
             <div className="bg-background p-12 flex flex-col gap-6 hover:bg-surface transition-colors duration-150 border-r border-outline-variant last:border-r-0">
@@ -84,7 +84,7 @@ export default function Home() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="sticky top-0 z-30 bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
+      <section className="sticky top-0 z-30 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
         <div className="industrial-container w-full py-20">
           <div className="flex flex-col gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">HOW IT WORKS</h2>
@@ -116,7 +116,7 @@ export default function Home() {
       </section>
 
       {/* FEATURES */}
-      <section className="sticky top-0 z-[35] bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
+      <section className="sticky top-0 z-[35] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
         <div className="industrial-container w-full py-20">
           <div className="flex flex-col gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">FEATURES</h2>
@@ -139,7 +139,7 @@ export default function Home() {
       </section>
 
       {/* SECURITY */}
-      <section className="sticky top-0 z-40 bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
+      <section className="sticky top-0 z-40 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
         <div className="industrial-container w-full py-20">
           <div className="flex flex-col gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">SECURITY</h2>
@@ -164,7 +164,7 @@ export default function Home() {
       </section>
 
       {/* STUDY CENTER */}
-      <section className="sticky top-0 z-[45] bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
+      <section className="sticky top-0 z-[45] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
         <div className="industrial-container w-full py-20">
           <div className="flex flex-col gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">STUDY CENTER</h2>
@@ -212,6 +212,8 @@ function FullMacbookMockup() {
               alt="Ater Dashboard" 
               fill 
               className="object-cover object-top" 
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+              priority
             />
           </div>
         </div>

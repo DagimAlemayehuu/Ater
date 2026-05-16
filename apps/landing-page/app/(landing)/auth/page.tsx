@@ -236,8 +236,9 @@ function AuthContent() {
 
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="technical-label opacity-40">EMAIL ADDRESS</label>
+                <label htmlFor="email" className="technical-label opacity-40">EMAIL ADDRESS</label>
                 <input 
+                  id="email"
                   type="email" 
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)} 
@@ -249,8 +250,9 @@ function AuthContent() {
 
               {authMode === "signup" && (
                 <div className="space-y-2">
-                  <label className="technical-label opacity-40">FULL NAME</label>
+                  <label htmlFor="full-name" className="technical-label opacity-40">FULL NAME</label>
                   <input 
+                    id="full-name"
                     type="text" 
                     value={fullName} 
                     onChange={(e) => setFullName(e.target.value)} 
@@ -262,8 +264,9 @@ function AuthContent() {
               )}
 
               <div className="space-y-2">
-                <label className="technical-label opacity-40">PASSWORD</label>
+                <label htmlFor="password" className="technical-label opacity-40">PASSWORD</label>
                 <input 
+                  id="password"
                   type="password" 
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)} 

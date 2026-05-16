@@ -92,7 +92,7 @@
 
 /* DARK THEME */
 .dark {
-  --background: #000000;
+  --background: #0a0a0a;
   --surface: #131313;
   --surface-dim: #131313;
   --surface-bright: #393939;
@@ -161,21 +161,29 @@ html {
     transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
   }
 
-  section, footer, div, h1, h2, h3, h4, h5, h6, p, span, a, button, input {
+  /* Removed global element transitions to prevent scroll jank. 
+     Transitions should be applied to specific interactive components only. */
+  .transition-theme {
     transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, opacity 0.4s ease;
   }
 
   section, footer {
-    position: sticky;
-    top: 0;
+    position: relative;
     min-height: 100vh;
     scroll-snap-align: start;
     scroll-snap-stop: always;
-    will-change: transform;
-    transform: translateZ(0);
-    box-shadow: var(--card-shadow);
     background-color: var(--background);
     z-index: 1;
+  }
+
+  @media (min-width: 768px) {
+    section, footer {
+      position: sticky;
+      top: 0;
+      will-change: transform;
+      transform: translateZ(0);
+      box-shadow: var(--card-shadow);
+    }
   }
 
   h1, h2, h3, h4, h5, h6, .display {
