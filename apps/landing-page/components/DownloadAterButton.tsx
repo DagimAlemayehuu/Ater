@@ -1,73 +1,54 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Download, Monitor, Laptop, Terminal } from 'lucide-react';
+import React from 'react';
+import { Download, Cpu, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function DownloadAterButton() {
-  const [os, setOs] = useState<'mac' | 'windows' | 'linux' | 'unknown'>('unknown');
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    
-    if (userAgent.indexOf('mac') !== -1) setOs('mac');
-    else if (userAgent.indexOf('win') !== -1) setOs('windows');
-    else if (userAgent.indexOf('linux') !== -1) setOs('linux');
-    else setOs('unknown');
-  }, []);
-
-  const getDownloadUrl = () => {
-    const base = 'https://github.com/DagimAlemayehuu/ater-releases/releases/latest/download/';
-    switch (os) {
-      case 'mac': return `${base}Ater.dmg`;
-      case 'windows': return `${base}Ater_setup.exe`;
-      case 'linux': return `${base}Ater.AppImage`;
-      default: return 'https://github.com/DagimAlemayehuu/ater-releases/releases/latest';
+  const downloads = [
+    { 
+      label: 'macOS (Intel)', 
+      info: 'X64_BINARY | 148MB', 
+      url: 'https://github.com/DagimAlemayehuu/ater-releases/releases/latest/download/Ater-x64.dmg',
+      icon: Cpu
+    },
+    { 
+      label: 'macOS (M-Series)', 
+      info: 'ARM64_SILICON | 142MB', 
+      url: 'https://github.com/DagimAlemayehuu/ater-releases/releases/latest/download/Ater-aarch64.dmg',
+      icon: Cpu
+    },
+    { 
+      label: 'Windows', 
+      info: 'X64_EXECUTABLE | 156MB', 
+      url: 'https://github.com/DagimAlemayehuu/ater-releases/releases/latest/download/Ater_setup.exe',
+      icon: Monitor
     }
-  };
-
-  const getOsIcon = () => {
-    switch (os) {
-      case 'mac': return <Laptop className="size-4" />;
-      case 'windows': return <Monitor className="size-4" />;
-      case 'linux': return <Terminal className="size-4" />;
-      default: return <Download className="size-4" />;
-    }
-  };
-
-  const getOsLabel = () => {
-    switch (os) {
-      case 'mac': return 'macOS';
-      case 'windows': return 'Windows';
-      case 'linux': return 'Linux';
-      default: return 'Desktop App';
-    }
-  };
-
-  if (!mounted) return null;
+  ];
 
   return (
-    <div className="space-y-4 w-full">
-      <a 
-        href={getDownloadUrl()}
-        className={cn(
-          "industrial-btn industrial-btn-primary w-full h-20 px-8 group justify-between",
-          "active:scale-[0.99]"
-        )}
-      >
-        <div className="flex flex-col items-start gap-0.5">
-          <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60">Download</span>
-          <span className="text-sm font-black uppercase tracking-[0.1em]">{getOsLabel()} Build</span>
-        </div>
-        <div className="size-10 bg-background/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-          {getOsIcon()}
-        </div>
-      </a>
+    <div className="w-full space-y-3">
+      <div className="grid grid-cols-1 gap-2">
+        {downloads.map((item) => (
+          <a 
+            key={item.label}
+            href={item.url}
+            className={cn(
+              "industrial-btn industrial-btn-primary w-full h-12 px-6 flex items-center justify-between group",
+              "active:scale-[0.99] transition-all"
+            )}
+          >
+            <div className="flex flex-col items-start">
+              <span className="text-[10px] font-black tracking-tight">{item.label.toUpperCase()}</span>
+              <span className="text-[7px] font-bold opacity-30 tracking-[0.2em]">{item.info}</span>
+            </div>
+            <item.icon className="size-3.5 opacity-40 group-hover:opacity-100 group-hover:text-primary transition-all" />
+          </a>
+        ))}
+      </div>
       
-      <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest text-center">
-        v0.1.0-beta • High-Fidelity Binary
+      <p className="technical-label opacity-20 text-center text-[7px] pt-2">
+        V0.1.0-BETA_PRODUCTION_STABLE
       </p>
     </div>
   );

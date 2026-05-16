@@ -29,7 +29,7 @@ export function Navbar() {
 
   const navLinks = [
     { label: "Home", href: "/" },
-    { label: "Product", href: "/product" },
+    { label: "Features", href: "/features" },
     { label: "Pricing", href: "/pricing" },
     { label: "Waitlist", href: "/waitlist" },
     { label: "Contact", href: "/contact" },
@@ -79,11 +79,11 @@ export function Navbar() {
               </IndustrialButton>
               
               <IndustrialButton 
-                href="/waitlist"
+                href={session ? "/auth" : "/auth"}
                 size="sm"
                 className="hidden md:flex"
               >
-                JOIN WAITLIST
+                {session ? "DASHBOARD" : "SIGN IN"}
               </IndustrialButton>
 
               <button className="md:hidden text-on-background rounded-none">

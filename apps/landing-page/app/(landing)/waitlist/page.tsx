@@ -117,173 +117,146 @@ export default function WaitlistLandingPage() {
     <section className="bg-background grid-background flex flex-col items-center justify-center h-screen w-full overflow-hidden pt-16">
       <main className="flex-1 w-full flex items-center relative z-20 overflow-hidden">
         {view === "hero" ? (
-          <div className="max-w-[1400px] w-full mx-auto px-8 md:px-12 lg:px-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center h-full py-20 relative">
+          <div className="industrial-container grid grid-cols-1 lg:grid-cols-2 gap-12 items-center h-full py-12 relative">
             {/* Left Content */}
-            <div className="flex flex-col justify-center py-12 z-30 lg:pr-12 h-full">
+            <div className="flex flex-col justify-center py-6 z-30 lg:pr-12 h-full">
               <div className="space-y-4">
-                <h1 className="text-[2.5rem] md:text-[3rem] lg:text-[3.5rem] leading-[1.1] font-black tracking-tighter text-on-background uppercase">
+                <h1 className="text-display-hero !text-[4rem] tracking-tighter">
                   <span className="whitespace-nowrap">Learn faster.</span><br />
                   <span className="whitespace-nowrap">Score better.</span>
                 </h1>
-                <p className="text-on-surface-variant text-[13px] lg:text-[14px] max-w-[400px] leading-relaxed font-bold uppercase tracking-tight">
+                <p className="text-body max-w-[360px] opacity-60 !text-[12px]">
                   Ater turns your PDFs into simple notes. It organizes your work in one clean place. Study less, get better grades.
                 </p>
               </div>
               
-              <div className="mt-24">
+              <div className="mt-12">
                 <IndustrialButton 
                   onClick={() => setView("auth")}
+                  className="h-14 px-10"
                 >
-                  Join Waitlist
+                  SIGN IN
                 </IndustrialButton>
               </div>
             </div>
             
             {/* Right Mockup Area */}
-            <div className="relative h-full w-full min-h-[500px] lg:min-h-[700px] flex items-center">
+            <div className="relative h-full w-full min-h-[400px] flex items-center">
                <MockupSection />
             </div>
           </div>
         ) : view === "dashboard" ? (
-          <div className="max-w-[1400px] w-full mx-auto px-8 md:px-12 lg:px-24 flex flex-col items-center justify-center h-full py-20 relative z-20">
-            <div className="max-w-[500px] w-full text-center">
-              <div className="mb-10">
-                <h2 className="text-4xl font-black tracking-tighter uppercase text-on-background">Hey, {userStatus?.full_name || 'User'}</h2>
-                <p className="text-on-surface-variant font-bold uppercase tracking-widest mt-2 text-[12px]">Check your status below.</p>
+          <div className="industrial-container flex flex-col items-center justify-center h-full py-12 relative z-20 overflow-hidden">
+            <div className="max-w-[440px] w-full text-center">
+              <div className="mb-6">
+                <h2 className="text-display-hero !text-[3rem] tracking-tighter">HEY, {(userStatus?.full_name || 'USER').split(' ')[0].toUpperCase()}</h2>
+                <p className="text-body mt-2 !text-[11px] opacity-40">STATUS: {userStatus?.status?.toUpperCase() || 'ACTIVE'}</p>
               </div>
               
-              <div className="p-10 industrial-border bg-surface relative overflow-hidden shadow-sm text-left">
-                <div className="relative z-10">
-                  <div className="technical-label text-on-surface-variant mb-2">Status</div>
-                  <div className="flex items-center justify-start gap-3">
-                     <div className={cn("size-3", userStatus?.status === 'approved' ? "bg-primary" : userStatus?.status === 'rejected' ? "bg-destructive" : "bg-outline")} />
-                     <span className="text-2xl font-black uppercase tracking-tighter text-on-background">
-                       {userStatus?.status === 'approved' ? "Approved" : userStatus?.status === 'rejected' ? "Rejected" : "Pending"}
-                     </span>
-                  </div>
-                  <p className="text-on-surface-variant text-[13px] font-bold mt-6 leading-relaxed uppercase tracking-tight">
-                     {userStatus?.status === 'approved' 
-                       ? "Your account is approved. Use the code to activate Ater Desktop." 
-                       : userStatus?.status === 'rejected' 
-                       ? "Your account was not approved." 
-                       : "Your account is pending. We will give you a code once approved."}
-                  </p>
-                  
-                  {userStatus?.status === 'approved' && userStatus?.activation_code && (
-                     <div className="mt-10 space-y-8">
-                       <div className="p-8 bg-background border-2 border-primary/20 relative group overflow-hidden">
-                         <div className="absolute top-0 right-0 p-3">
-                           <button onClick={() => copyToClipboard(userStatus.activation_code)} className="p-2 hover:bg-surface transition-colors">
-                             {copied ? <ClipboardCheck className="size-5 text-primary" /> : <Clipboard className="size-5 text-on-surface-variant" />}
-                           </button>
-                         </div>
-                         <div className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-2">Activation Key</div>
-                         <div className="text-4xl md:text-5xl font-mono font-black text-on-background tracking-[0.4em] select-all">
-                           {userStatus.activation_code}
-                         </div>
-                         <p className="mt-4 text-[10px] font-bold text-on-surface-variant uppercase leading-relaxed tracking-widest">
-                           You will need this key to unlock Ater on your device. This key can only be used once.
-                         </p>
-                         {copied && (
-                           <div className="absolute inset-0 bg-primary flex items-center justify-center animate-in fade-in duration-200">
-                             <span className="text-[12px] font-black uppercase tracking-[0.4em] text-on-primary">Key Copied</span>
-                           </div>
-                         )}
-                       </div>
-
-                       <DownloadAterButton />
-                     </div>
-                  )}
+              <div className="p-8 industrial-border bg-surface relative overflow-hidden shadow-sm text-left space-y-8">
+                <div className="flex items-center gap-3 border-b border-outline-variant pb-6">
+                   <div className={cn("size-2.5", userStatus?.status === 'approved' ? "bg-primary" : "bg-outline-variant")} />
+                   <h2 className="text-section-heading !text-[1.5rem]">
+                     {userStatus?.status === 'approved' ? "APPROVED" : "PENDING"}
+                   </h2>
                 </div>
+                
+                {userStatus?.status === 'approved' && (
+                   <div className="space-y-6">
+                     <div className="p-6 bg-background border border-outline-variant relative group">
+                       <div className="flex justify-between items-center mb-4">
+                         <span className="technical-label opacity-30 !text-[8px]">ACTIVATION_KEY</span>
+                         <button onClick={() => copyToClipboard(userStatus.activation_code)} className="opacity-40 hover:opacity-100 transition-opacity">
+                           {copied ? <ClipboardCheck className="size-3.5 text-primary" /> : <Clipboard className="size-3.5" />}
+                         </button>
+                       </div>
+                       <div className="text-3xl font-mono font-black text-center tracking-[0.4em] text-primary select-all">
+                         {userStatus.activation_code}
+                       </div>
+                       {copied && (
+                         <div className="absolute inset-0 bg-primary flex items-center justify-center animate-in fade-in duration-200">
+                           <span className="text-[10px] font-black uppercase tracking-[0.4em] text-on-primary">KEY_COPIED</span>
+                         </div>
+                       )}
+                     </div>
+
+                     <DownloadAterButton />
+                   </div>
+                )}
               </div>
               
               <button 
                 onClick={async () => { await supabase.auth.signOut(); setUserStatus(null); setView("hero"); }} 
-                className="mt-12 technical-label text-on-surface-variant hover:text-on-background transition-colors"
+                className="mt-8 technical-label opacity-30 hover:opacity-100 transition-opacity"
               >
-                Sign Out
+                SIGN OUT
               </button>
             </div>
           </div>
         ) : (
-          <div className="max-w-[1400px] w-full mx-auto px-8 md:px-12 lg:px-24 flex flex-col items-center justify-center h-full py-20 relative z-20">
-            <div className="max-w-[400px] w-full">
-              <button 
-                onClick={() => setView("hero")} 
-                className="text-on-surface-variant hover:text-on-background flex items-center gap-2 mb-10 technical-label transition-colors"
-              >
-                <ArrowLeft className="size-3" />
-                <span>Back</span>
-              </button>
+          <div className="industrial-container flex flex-col items-center justify-center h-full py-12 relative z-20">
+            <div className="max-w-[400px] w-full flex flex-col gap-8">
+              <div className="flex flex-col gap-2 text-center">
+                <h1 className="text-section-heading !text-[2rem]">SIGN IN</h1>
+                <p className="text-body !text-[11px] opacity-40 uppercase">ENTER YOUR EMAIL TO CONTINUE.</p>
+              </div>
               
-              <div className="w-full">
-                <h2 className="text-3xl font-black mb-2 tracking-tighter uppercase text-on-background">
-                  {authMode === "signup" ? "Join Waitlist" : "Sign In"}
-                </h2>
-                <p className="text-on-surface-variant font-bold mb-10 text-[12px] uppercase tracking-widest">
-                  {authMode === "signup" ? "Get early access." : "Check your status."}
-                </p>
-                
-                <form onSubmit={handleAuth} className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="technical-label text-on-surface-variant ml-1">Email</label>
-                    <input 
-                      type="email" 
-                      placeholder="user@ater.ai" 
-                      required 
-                      value={email} 
-                      onChange={(e) => setEmail(e.target.value)} 
-                      className="industrial-input" 
-                    />
-                  </div>
-                  
-                  {authMode === "signup" && (
-                    <div className="space-y-1.5">
-                      <label className="technical-label text-on-surface-variant ml-1">Full Name</label>
-                      <input 
-                        type="text" 
-                        placeholder="Your Name" 
-                        required 
-                        value={fullName} 
-                        onChange={(e) => setFullName(e.target.value)} 
-                        className="industrial-input" 
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="space-y-1.5">
-                    <label className="technical-label text-on-surface-variant ml-1">Password</label>
-                    <input 
-                      type="password" 
-                      placeholder="••••••••" 
-                      required 
-                      value={password} 
-                      onChange={(e) => setPassword(e.target.value)} 
-                      className="industrial-input" 
-                    />
-                  </div>
-                  
-                  {error && <p className="text-[10px] font-black text-destructive uppercase tracking-widest text-center py-2">{error}</p>}
-                  
-                  <IndustrialButton 
-                    disabled={loading} 
-                    className="w-full h-16 mt-6 disabled:opacity-50"
-                  >
-                    {loading ? "Processing..." : (authMode === "signup" ? "Join Waitlist" : "Sign In")}
-                  </IndustrialButton>
-                </form>
-                
-                <div className="mt-10 pt-10 border-t border-outline-variant text-center">
-                  <p className="technical-label text-on-surface-variant">
-                    {authMode === "signup" ? "Registered?" : "New?"}{" "}
-                    <button 
-                      onClick={() => setAuthMode(authMode === "signup" ? "login" : "signup")} 
-                      className="text-on-background hover:underline underline-offset-8 ml-2 font-black transition-all"
-                    >
-                      {authMode === "signup" ? "Sign In" : "Create Account"}
-                    </button>
-                  </p>
+              <form onSubmit={handleAuth} className="space-y-6">
+                <div className="space-y-1.5">
+                  <label className="technical-label opacity-40 ml-1">EMAIL</label>
+                  <input 
+                    type="email" 
+                    placeholder="user@ater.ai" 
+                    required 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    className="industrial-input" 
+                  />
                 </div>
+                
+                {authMode === "signup" && (
+                  <div className="space-y-1.5">
+                    <label className="technical-label opacity-40 ml-1">FULL NAME</label>
+                    <input 
+                      type="text" 
+                      placeholder="Your Name" 
+                      required 
+                      value={fullName} 
+                      onChange={(e) => setFullName(e.target.value)} 
+                      className="industrial-input" 
+                    />
+                  </div>
+                )}
+                
+                <div className="space-y-1.5">
+                  <label className="technical-label opacity-40 ml-1">PASSWORD</label>
+                  <input 
+                    type="password" 
+                    placeholder="••••••••" 
+                    required 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    className="industrial-input" 
+                  />
+                </div>
+                
+                {error && <p className="text-[10px] font-black text-destructive uppercase tracking-widest text-center py-2">{error}</p>}
+                
+                <IndustrialButton 
+                  disabled={loading} 
+                  className="w-full h-14 mt-4 disabled:opacity-50"
+                >
+                  {loading ? "PROCESSING..." : (authMode === "signup" ? "CREATE" : "SIGN IN")}
+                </IndustrialButton>
+              </form>
+              
+              <div className="mt-8 pt-8 border-t border-outline-variant text-center">
+                <button 
+                  onClick={() => setAuthMode(authMode === "signup" ? "login" : "signup")} 
+                  className="technical-label opacity-40 hover:opacity-100 hover:text-primary transition-all"
+                >
+                  {authMode === "signup" ? "HAVE ACCOUNT? SIGN IN" : "NO ACCOUNT? CREATE ONE"}
+                </button>
               </div>
             </div>
           </div>

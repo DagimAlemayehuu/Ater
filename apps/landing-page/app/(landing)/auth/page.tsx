@@ -3,19 +3,13 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { 
-  ArrowLeft, 
   Loader2, 
   Copy, 
   Check, 
-  Laptop,
-  LogOut,
-  ChevronRight
 } from "lucide-react";
-import Link from "next/link";
 import { DownloadAterButton } from "@/components/DownloadAterButton";
 import { IndustrialButton } from "@/components/IndustrialButton";
 import { cn } from "@/lib/utils";
-
 
 export default function AuthPage() {
   const [email, setEmail] = useState("");
@@ -23,53 +17,87 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<"loading" | "register" | "dashboard">("loading");
+  const [view, setView] = useState<"loading" | "auth" | "dashboard">("loading");
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [user, setUser] = useState<any>(null);
+  const [userStatus, setUserStatus] = useState<any>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user);
+        fetchUserStatus(session.user.email!);
         setView("dashboard");
       } else {
-        setView("register");
+        setView("auth");
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         setUser(session.user);
+        fetchUserStatus(session.user.email!);
         setView("dashboard");
       } else {
         setUser(null);
-        setView("register");
+        setUserStatus(null);
+        setView("auth");
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  async function fetchUserStatus(userEmail: string) {
+    const { data } = await supabase
+      .from('waiting_list')
+      .select('*')
+      .eq('email', userEmail)
+      .maybeSingle();
+    
+    if (data) {
+      setUserStatus(data);
+    }
+  }
+
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
+      if (authMode === "signup") {
+        // Add to waiting list first
+        const { error: waitlistError } = await supabase
+          .from('waiting_list')
+          .upsert(
+            [{ email, full_name: fullName, status: 'pending' }],
+            { onConflict: 'email' }
+          );
+        
+        if (waitlistError) throw waitlistError;
 
-      if (signUpError) throw signUpError;
-      
-      if (!data.session) {
-        setError("Success! Please check your email to confirm your account.");
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+            },
+          },
+        });
+
+        if (signUpError) throw signUpError;
+        if (!data.session) {
+          setError("Success! Please check your email to confirm your account.");
+        }
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) throw signInError;
       }
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
@@ -79,7 +107,7 @@ export default function AuthPage() {
   };
 
   const copyKey = () => {
-    const key = user?.id?.substring(0, 8).toUpperCase() || "M5C7HU7";
+    const key = userStatus?.activation_code || user?.id?.substring(0, 8).toUpperCase();
     navigator.clipboard.writeText(key);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -87,185 +115,144 @@ export default function AuthPage() {
 
   if (view === "loading") {
     return (
-      <div className="flex-1 flex items-center justify-center bg-black min-h-[60vh]">
-        <div className="font-mono text-[10px] text-primary/40 animate-pulse uppercase tracking-[0.3em]">LOADING...</div>
+      <div className="flex-1 flex items-center justify-center bg-background min-h-[60vh]">
+        <div className="technical-label animate-pulse opacity-20">LOADING...</div>
       </div>
     );
   }
 
   if (view === "dashboard") {
+    const firstName = (userStatus?.full_name || user?.user_metadata?.full_name || 'USER').split(' ')[0];
+    
     return (
-      <div className="w-full max-w-[1280px] mx-auto px-6 md:px-[80px] pt-[80px] pb-[80px] flex-1 flex flex-col items-center justify-center">
-        <main className="w-full max-w-[500px] flex flex-col gap-12 items-center">
-          {/* Header Section */}
-          <div className="text-center space-y-2">
-            <h1 className="text-[64px] font-black uppercase text-primary leading-[0.9] tracking-tighter">
-              HELLO, {user?.user_metadata?.full_name?.split(' ')[0] || 'USER'}
-            </h1>
-            <p className="font-mono text-[11px] text-on-surface-variant uppercase tracking-[0.3em] font-medium">
-              ACCOUNT STATUS: ACTIVE
-            </p>
+      <section className="bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant pt-16 overflow-hidden">
+        <div className="industrial-container w-full flex flex-col items-center justify-center gap-6 py-12 relative z-20">
+          <div className="max-w-[440px] w-full text-center">
+            <div className="mb-6">
+              <h1 className="text-display-hero !text-[3rem] tracking-tighter">HEY, {firstName.toUpperCase()}</h1>
+              <p className="text-body !text-[11px] opacity-40">STATUS: {userStatus?.status?.toUpperCase() || 'ACTIVE'}</p>
+            </div>
+            
+            <div className="p-8 industrial-border bg-surface relative overflow-hidden shadow-sm text-left space-y-8">
+              <div className="flex items-center gap-3 border-b border-outline-variant pb-6">
+                <div className={cn("size-2.5", userStatus?.status === 'approved' ? "bg-primary" : "bg-outline-variant")} />
+                <h2 className="text-section-heading !text-[1.5rem]">
+                  {userStatus?.status === 'approved' ? 'APPROVED' : 'PENDING'}
+                </h2>
+              </div>
+
+              {userStatus?.status === 'approved' && (
+                <div className="space-y-6">
+                  <div className="p-6 bg-background border border-outline-variant relative group">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="technical-label opacity-30 !text-[8px]">ACTIVATION_KEY</span>
+                      <button onClick={copyKey} className="opacity-40 hover:opacity-100 transition-opacity">
+                        {copied ? <Check className="size-3.5 text-primary" /> : <Copy className="size-3.5" />}
+                      </button>
+                    </div>
+                    <div className="text-3xl font-mono font-black text-center tracking-[0.4em] text-primary">
+                      {userStatus?.activation_code || '---'}
+                    </div>
+                    {copied && (
+                      <div className="absolute inset-0 bg-primary flex items-center justify-center animate-in fade-in duration-200">
+                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-on-primary">KEY_COPIED</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <DownloadAterButton />
+                </div>
+              )}
+            </div>
+            
+            <button 
+              onClick={() => supabase.auth.signOut()} 
+              className="mt-8 technical-label opacity-30 hover:opacity-100 transition-opacity"
+            >
+              SIGN OUT
+            </button>
           </div>
-
-          {/* Activation Card */}
-          <div className="w-full space-y-12">
-            {/* Status Header */}
-            <div className="space-y-4 border-b border-outline-variant pb-6">
-              <span className="font-mono text-[9px] text-on-surface-variant uppercase tracking-[0.2em] font-bold opacity-60 tracking-widest">STATUS</span>
-              <div className="flex items-center gap-3">
-                <div className="size-3 bg-primary" />
-                <h2 className="text-[32px] font-black text-primary uppercase leading-none tracking-tighter">APPROVED</h2>
-              </div>
-              <p className="font-mono text-[12px] text-on-surface-variant uppercase tracking-wide leading-relaxed">
-                YOU'RE APPROVED. USE THIS KEY TO START USING ATER ON YOUR COMPUTER.
-              </p>
-            </div>
-
-            {/* Activation Key Section */}
-            <div className="border border-outline-variant p-8 space-y-4 relative bg-transparent">
-              <div className="flex justify-between items-start">
-                <span className="font-mono text-[9px] text-on-surface-variant uppercase tracking-[0.2em] font-bold opacity-60 tracking-widest">ACTIVATION KEY</span>
-                <button 
-                  onClick={copyKey}
-                  className="text-on-surface-variant hover:text-primary transition-all duration-200"
-                >
-                  {copied ? <Check className="size-4 text-green-500" /> : <Copy className="size-4" />}
-                </button>
-              </div>
-              <div className="text-[48px] font-black text-primary font-mono text-center py-4 tracking-[0.2em] whitespace-nowrap overflow-hidden text-ellipsis">
-                {user?.id?.substring(0, 8).toUpperCase() || "M5C7HU7"}
-              </div>
-              <p className="font-mono text-[10px] text-on-surface-variant text-center opacity-60 uppercase tracking-widest leading-relaxed">
-                KEEP THIS KEY PRIVATE. IT CAN ONLY BE USED ONCE TO UNLOCK YOUR DEVICE.
-              </p>
-            </div>
-
-            {/* Download Action */}
-            <DownloadAterButton />
-
-            {/* Card Footer */}
-            <div className="text-center font-mono text-[9px] text-on-surface-variant opacity-30 uppercase tracking-[0.3em] font-bold">
-              ATER v0.1.0-BETA
-            </div>
-          </div>
-
-          {/* Sign Out Link */}
-          <IndustrialButton 
-            onClick={() => supabase.auth.signOut()}
-            size="sm"
-            icon={false}
-            className="border-none hover:bg-transparent hover:shadow-none hover:translate-y-0"
-          >
-            SIGN OUT
-          </IndustrialButton>
-        </main>
-      </div>
+        </div>
+      </section>
     );
   }
 
   return (
-    <div className="w-full max-w-[1280px] mx-auto px-6 md:px-[80px] pt-[80px] pb-[80px] flex-1 flex flex-col items-center">
-      <main className="w-full max-w-[440px] flex flex-col gap-8 relative items-center">
-        {/* Back Action */}
-        <Link 
-          href="/waitlist"
-          className="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-all duration-200 group"
-        >
-          <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-mono text-[9px] font-medium uppercase tracking-[0.2em]">BACK</span>
-        </Link>
+    <section className="bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant pt-16">
+      <div className="industrial-container w-full flex flex-col items-center justify-center gap-8 py-12">
+        <main className="w-full max-w-[400px] flex flex-col gap-8">
+          {/* Header */}
+          <div className="flex flex-col gap-2">
+            <h1 className="text-section-heading !text-[2rem]">SIGN IN</h1>
+            <p className="text-body !text-[11px] opacity-40">ENTER YOUR CREDENTIALS TO CONTINUE.</p>
+          </div>
 
-        {/* Header */}
-        <header className="flex flex-col gap-2 text-center">
-          <h1 className="text-[32px] font-black uppercase text-primary leading-none tracking-tighter">JOIN WAITLIST</h1>
-          <p className="font-mono text-[11px] text-on-surface-variant uppercase tracking-[0.2em] font-medium">
-            GET EARLY ACCESS.
-          </p>
-        </header>
+          {/* Form */}
+          <form onSubmit={handleAuth} className="flex flex-col gap-8">
+            {error && (
+              <div className={cn(
+                "p-6 border text-[11px] font-mono uppercase tracking-widest text-center",
+                error.includes("Success") ? "bg-primary/5 border-primary/20 text-primary" : "bg-error/10 border-error/20 text-error"
+              )}>
+                {error}
+              </div>
+            )}
 
-        {/* Registration Form */}
-        <form onSubmit={handleSignUp} className="flex flex-col gap-6 w-full">
-          {error && (
-            <div className={cn(
-              "p-4 border text-[11px] font-mono uppercase tracking-wider text-center",
-              error.includes("Success") 
-                ? "bg-primary/5 border-primary/20 text-primary" 
-                : "bg-error-container/20 border-error/20 text-error"
-            )}>
-              {error}
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="technical-label opacity-40">EMAIL ADDRESS</label>
+                <input 
+                  type="email" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  placeholder="user@ater.ai" 
+                  required 
+                  className="industrial-input" 
+                />
+              </div>
+
+              {authMode === "signup" && (
+                <div className="space-y-2">
+                  <label className="technical-label opacity-40">FULL NAME</label>
+                  <input 
+                    type="text" 
+                    value={fullName} 
+                    onChange={(e) => setFullName(e.target.value)} 
+                    placeholder="Your Name" 
+                    required 
+                    className="industrial-input" 
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="technical-label opacity-40">PASSWORD</label>
+                <input 
+                  type="password" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  placeholder="••••••••" 
+                  required 
+                  className="industrial-input" 
+                />
+              </div>
             </div>
-          )}
 
-          {/* Email Field */}
-          <div className="flex flex-col gap-2">
-            <label className="font-mono text-[9px] text-on-surface-variant uppercase tracking-[0.2em] opacity-80" htmlFor="email">
-              EMAIL ADDRESS
-            </label>
-            <input 
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="YOUR@EMAIL.COM"
-              required
-              className="w-full bg-black border border-outline-variant text-primary font-mono text-[11px] p-4 placeholder-on-surface-variant/30 focus:outline-none focus:border-primary transition-all rounded-none appearance-none"
-            />
+            <IndustrialButton type="submit" disabled={loading} className="w-full h-14">
+              {loading ? <Loader2 className="size-4 animate-spin" /> : (authMode === "signup" ? "CREATE" : "SIGN IN")}
+            </IndustrialButton>
+          </form>
+
+          <div className="text-center pt-8 border-t border-outline-variant">
+            <button 
+              onClick={() => setAuthMode(authMode === "signup" ? "login" : "signup")} 
+              className="technical-label opacity-40 hover:opacity-100 hover:text-primary transition-all"
+            >
+              {authMode === "signup" ? "HAVE ACCOUNT? SIGN IN" : "NO ACCOUNT? CREATE ONE"}
+            </button>
           </div>
-
-          {/* Full Name Field */}
-          <div className="flex flex-col gap-2">
-            <label className="font-mono text-[9px] text-on-surface-variant uppercase tracking-[0.2em] opacity-80" htmlFor="fullName">
-              FULL NAME
-            </label>
-            <input 
-              id="fullName"
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="YOUR NAME"
-              required
-              className="w-full bg-black border border-outline-variant text-primary font-mono text-[11px] p-4 placeholder-on-surface-variant/30 focus:outline-none focus:border-primary transition-all rounded-none appearance-none"
-            />
-          </div>
-
-          {/* Password Field */}
-          <div className="flex flex-col gap-2">
-            <label className="font-mono text-[9px] text-on-surface-variant uppercase tracking-[0.2em] opacity-80" htmlFor="password">
-              PASSWORD
-            </label>
-            <input 
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="w-full bg-black border border-outline-variant text-primary font-mono text-[11px] p-4 placeholder-on-surface-variant/30 focus:outline-none focus:border-primary transition-all rounded-none appearance-none"
-            />
-          </div>
-
-          {/* Submit CTA */}
-          <IndustrialButton 
-            type="submit"
-            disabled={loading}
-            className="w-full mt-2"
-            icon={!loading}
-          >
-            {loading ? <Loader2 className="size-4 animate-spin" /> : "JOIN WAITLIST"}
-          </IndustrialButton>
-        </form>
-
-        {/* Divider */}
-        <div className="w-full border-t border-outline-variant my-2" />
-
-        {/* Footer Link */}
-        <div className="text-center font-mono text-[9px] text-on-surface-variant uppercase tracking-[0.2em]">
-          ALREADY SIGNED UP? 
-          <Link href="/auth?mode=signin" className="text-primary hover:underline transition-none ml-2">
-            SIGN IN
-          </Link>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    </section>
   );
 }
