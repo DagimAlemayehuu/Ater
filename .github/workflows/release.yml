@@ -164,8 +164,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: update.json
+          token: ${{ secrets.RELEASE_PAT }}
           repository: DagimAlemayehuu/Ater_Releases
           tag_name: ${{ github.ref_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
+          files: update.json
