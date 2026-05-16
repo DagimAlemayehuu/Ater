@@ -19,12 +19,12 @@ export function DownloadAterButton() {
   }, []);
 
   const getDownloadUrl = () => {
-    const base = 'https://github.com/DagimAlemayehuu/LifeOs/releases/latest/download/';
+    const base = 'https://github.com/DagimAlemayehuu/ater-releases/releases/latest/download/';
     switch (os) {
       case 'mac': return `${base}Ater.dmg`;
       case 'windows': return `${base}Ater_setup.exe`;
       case 'linux': return `${base}Ater.AppImage`;
-      default: return 'https://github.com/DagimAlemayehuu/LifeOs/releases/latest';
+      default: return 'https://github.com/DagimAlemayehuu/ater-releases/releases/latest';
     }
   };
 
