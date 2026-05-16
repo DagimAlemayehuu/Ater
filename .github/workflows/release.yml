@@ -7,8 +7,6 @@ on:
 
 jobs:
   create-release:
-    permissions:
-      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Create Draft Release
@@ -20,8 +18,7 @@ jobs:
             --title "Ater OS ${{ github.ref_name }}" \
             --notes "Official release for Ater OS version ${{ github.ref_name }}." \
             --draft \
-            --target ${{ github.sha }} \
-            --discussion-category "Announcements" || true
+            --discussion-category "Announcements"
 
   publish:
     needs: create-release
