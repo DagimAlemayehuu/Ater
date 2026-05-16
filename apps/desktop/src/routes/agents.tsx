@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef, lazy, Suspense} from 'react'
+import React, {useState, useEffect, useRef, lazy, Suspense, useMemo} from 'react'
 import { useTelemetryStore } from '@/lib/telemetryStore'
 import {
  ShieldCheck, RefreshCw, 
@@ -958,6 +958,6 @@ function AterDashboard({onBack}: {onBack: () => void}) {
 }
 
 /* ─── Main Agents Hub ─── */
-export default function Agents() {
- return <AterDashboard onBack={() => {}} />
+export default function Agents({onBack}: {onBack?: () => void}) {
+ return <AterDashboard onBack={onBack || (() => {})} />
 }
