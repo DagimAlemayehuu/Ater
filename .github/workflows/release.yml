@@ -127,12 +127,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
-          # Upload all bundled files (dmg, exe, deb, AppImage, sig)
-          # Using --clobber to handle any potential duplicate uploads
+          # Enable nullglob so if an OS doesn't have a certain file extension, it doesn't fail
+          # Enable globstar to allow ** to search recursively
+          shopt -s nullglob globstar
+          
+          # Upload only the specific installer/bundle files, ignoring raw .app directories
           gh release upload ${{ github.ref_name }} \
             --repo DagimAlemayehuu/Ater_Releases \
             --clobber \
-            apps/desktop/src-tauri/target/**/release/bundle/**/*
+            apps/desktop/src-tauri/target/**/release/bundle/**/*.{dmg,tar.gz,AppImage,deb,exe,msi,sig,zip}
 
   publish-release:
     needs: publish
