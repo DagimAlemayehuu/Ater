@@ -84,10 +84,10 @@ export default function PricingPage() {
               </ul>
 
               <IndustrialButton 
-                href="/waitlist" 
+                href="/auth" 
                 className="h-16 w-full mt-auto"
               >
-                GET ACCESS
+                SIGN IN
               </IndustrialButton>
             </div>
           </div>

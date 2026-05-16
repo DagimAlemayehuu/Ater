@@ -150,44 +150,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       console.log('[DRM] Profile received:', profile);
 
-      // Check 1: Key Match (Case-Insensitive)
+      // Check 1: Key Match (Case-Insensitive + Trim)
       console.log('[DRM] Verifying Activation Key...');
-      if (code.toUpperCase() !== profile.activation_code?.toUpperCase()) {
-        console.error('[DRM] Activation Key mismatch.');
-        throw new Error('Invalid activation code for this account.')
+      const inputCode = code.trim().toUpperCase();
+      let dbCode = profile.activation_code?.trim().toUpperCase();
+
+      if (!dbCode) {
+        console.log('[DRM] Code not in profile, checking waiting_list fallback...');
+        const { data: waitlistEntry, error: waitlistError } = await supabase
+          .from('waiting_list')
+          .select('activation_code')
+          .eq('email', email.toLowerCase().trim())
+          .eq('status', 'approved')
+          .maybeSingle();
+        
+        if (waitlistEntry?.activation_code) {
+          dbCode = waitlistEntry.activation_code.trim().toUpperCase();
+          console.log('[DRM] Found code in waiting_list.');
+          
+          // Sync to profile for future faster lookups
+          await supabase
+            .from('profiles')
+            .update({ activation_code: waitlistEntry.activation_code })
+            .eq('id', authData.user.id);
+        }
+      }
+
+      if (!dbCode || inputCode !== dbCode) {
+        console.error('[DRM] Activation Key mismatch or not found.');
+        throw new Error('Invalid activation code for this account. Please ensure you are using the code sent to your email.')
       }
       console.log('[DRM] Activation Key is valid.');
 
-      // Check 2: Hardware Lock
+      // Check 2: Hardware Lock (Anti-Piracy)
       console.log('[DRM] Fetching machine_id from Rust core...');
       const localMachineId = await sidecarApi.getMachineId()
       console.log('[DRM] Machine ID received:', localMachineId);
 
       if (!profile.machine_id) {
-        // First login - Burn the key
-        console.log('[DRM] First-time activation. Attempting to burn machine_id to database...');
+        // First login ever - Bind this account to this hardware
+        console.log('[DRM] First-time activation. Binding account to this device...');
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ 
             machine_id: localMachineId,
             waitlist_status: 'approved',
-            is_approved: true 
+            is_approved: true,
+            activation_code: dbCode // Ensure it's saved if we found it via fallback
           })
           .eq('id', authData.user.id)
 
         if (updateError) {
-          console.error('[DRM] Failed to burn machine_id:', updateError.message);
+          console.error('[DRM] Failed to bind machine_id:', updateError.message);
           throw new Error(`Failed to activate device: ${updateError.message}`)
         }
-        console.log('[DRM] Machine ID successfully burned.');
+        console.log('[DRM] Device successfully bound.');
       } else {
-        // Subsequent login - Check hardware
-        console.log('[DRM] Verifying Hardware Lock...');
+        // Subsequent login - Enforce Hardware Lock
+        console.log('[DRM] Verifying Hardware Binding...');
         if (profile.machine_id !== localMachineId) {
-          console.error('[DRM] Hardware mismatch detected!');
-          throw new Error('Unauthorized Device. This activation key is already bound to another computer.')
+          console.error('[DRM] Cross-device activation attempt blocked!');
+          throw new Error('Unauthorized Device. Your activation code is locked to another computer. Please contact support to transfer your license.')
         }
-        console.log('[DRM] Hardware lock passed.');
+        console.log('[DRM] Hardware verification successful.');
       }
 
       // Check 3: Final Status Check

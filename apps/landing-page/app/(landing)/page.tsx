@@ -25,9 +25,11 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-6 w-full items-center justify-center mt-4">
-            <IndustrialButton href="/waitlist" className="w-full sm:w-auto">
-              JOIN WAITLIST
-            </IndustrialButton>
+            <Link href="/auth">
+              <IndustrialButton className="w-full sm:w-auto h-14 px-12">
+                SIGN IN
+              </IndustrialButton>
+            </Link>
           </div>
         </div>
       </section>

@@ -169,7 +169,7 @@ export default function AuthPage() {
               onClick={() => supabase.auth.signOut()} 
               className="mt-8 technical-label opacity-30 hover:opacity-100 transition-opacity"
             >
-              SIGN OUT
+              NOT {firstName.toUpperCase()}? SIGN OUT
             </button>
           </div>
         </div>

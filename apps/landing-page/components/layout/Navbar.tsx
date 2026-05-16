@@ -79,11 +79,11 @@ export function Navbar() {
               </IndustrialButton>
               
               <IndustrialButton 
-                href={session ? "/auth" : "/auth"}
+                href="/auth"
                 size="sm"
                 className="hidden md:flex"
               >
-                {session ? "DASHBOARD" : "SIGN IN"}
+                SIGN IN
               </IndustrialButton>
 
               <button className="md:hidden text-on-background rounded-none">

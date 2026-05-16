@@ -178,6 +178,20 @@ export default function FeaturesPage() {
           </div>
         </div>
       </section>
+      {/* Final CTA */}
+      <section className="sticky top-0 z-[50] bg-background grid-background flex flex-col items-center justify-center h-screen w-full border-t border-outline-variant">
+        <div className="industrial-container w-full flex flex-col items-center gap-12 py-20">
+          <h2 className="text-display-hero text-center">
+            READY FOR<br />THE UPGRADE?
+          </h2>
+          <IndustrialButton 
+            href="/auth" 
+            className="h-16 px-16"
+          >
+            SIGN IN
+          </IndustrialButton>
+        </div>
+      </section>
     </>
   );
 }

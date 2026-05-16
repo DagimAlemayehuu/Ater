@@ -7,13 +7,7 @@ import { cn } from '@/lib/utils';
 export function DownloadAterButton() {
   const downloads = [
     { 
-      label: 'macOS (Intel)', 
-      info: 'X64_BINARY | 148MB', 
-      url: 'https://github.com/DagimAlemayehuu/ater-releases/releases/latest/download/Ater-x64.dmg',
-      icon: Cpu
-    },
-    { 
-      label: 'macOS (M-Series)', 
+      label: 'macOS (Apple Silicon)', 
       info: 'ARM64_SILICON | 142MB', 
       url: 'https://github.com/DagimAlemayehuu/ater-releases/releases/latest/download/Ater-aarch64.dmg',
       icon: Cpu
