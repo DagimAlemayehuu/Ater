@@ -3,6 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { Cpu, Database, Shield, Zap, Search, Layout, Terminal, Box, Activity, ChevronRight, Lock } from 'lucide-react';
+import { IndustrialButton } from '@/components/IndustrialButton';
+
 
 export default function ProductPage() {
   return (
@@ -153,10 +155,12 @@ export default function ProductPage() {
               JOIN THE WAITLIST TO GET EARLY ACCESS TO THE ATER ENGINE.
             </p>
           </div>
-          <Link href="/waitlist" className="industrial-btn industrial-btn-primary h-20 px-16 group">
-            <span>JOIN WAITLIST</span>
-            <ChevronRight className="ml-2 size-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
+          <IndustrialButton 
+            href="/waitlist" 
+            className="h-20 px-16"
+          >
+            JOIN WAITLIST
+          </IndustrialButton>
         </div>
       </section>
     </>

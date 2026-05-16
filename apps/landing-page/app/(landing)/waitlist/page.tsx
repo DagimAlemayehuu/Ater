@@ -15,6 +15,8 @@ import {
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { DownloadAterButton } from '@/components/DownloadAterButton';
+import { IndustrialButton } from '@/components/IndustrialButton';
+
 
 export default function WaitlistLandingPage() {
   const [view, setView] = useState<"hero" | "auth" | "dashboard">("hero");
@@ -129,13 +131,11 @@ export default function WaitlistLandingPage() {
               </div>
               
               <div className="mt-24">
-                <button 
+                <IndustrialButton 
                   onClick={() => setView("auth")}
-                  className="industrial-btn h-14 px-10 group"
                 >
-                  <span>Join Waitlist</span>
-                  <ChevronRight className="ml-2 size-4 group-hover:translate-x-1 transition-transform" />
-                </button>
+                  Join Waitlist
+                </IndustrialButton>
               </div>
             </div>
             
@@ -265,12 +265,12 @@ export default function WaitlistLandingPage() {
                   
                   {error && <p className="text-[10px] font-black text-destructive uppercase tracking-widest text-center py-2">{error}</p>}
                   
-                  <button 
+                  <IndustrialButton 
                     disabled={loading} 
-                    className="industrial-btn industrial-btn-primary w-full h-16 mt-6 disabled:opacity-50"
+                    className="w-full h-16 mt-6 disabled:opacity-50"
                   >
                     {loading ? "Processing..." : (authMode === "signup" ? "Join Waitlist" : "Sign In")}
-                  </button>
+                  </IndustrialButton>
                 </form>
                 
                 <div className="mt-10 pt-10 border-t border-outline-variant text-center">

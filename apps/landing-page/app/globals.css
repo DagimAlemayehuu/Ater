@@ -102,11 +102,11 @@
   --surface-container-high: #2a2a2a;
   --surface-container-highest: #353534;
   
-  --on-surface: #e5e2e1;
+  --on-surface: #ffffff;
   --on-surface-variant: #c4c7c8;
   
   --primary: #ffffff;
-  --on-primary: #2f3131;
+  --on-primary: #000000;
   --primary-container: #e2e2e2;
   --on-primary-container: #636465;
   --primary-fixed: #e2e2e2;
@@ -146,7 +146,7 @@ html {
 
   .dark {
     --grid-color: rgba(255, 255, 255, 0.03);
-    --card-shadow: 0 -40px 120px rgba(255, 255, 255, 0.12); /* Pronounced glow for dark mode */
+    --card-shadow: 0 -40px 120px rgba(255, 255, 255, 0.12);
   }
 
   body {
@@ -154,7 +154,6 @@ html {
     height: auto;
     min-height: 100vh;
     overflow-x: clip;
-    /* Removed scroll-snap-type from body to avoid conflict with html element */
     background-image: 
       linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
       linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
@@ -170,14 +169,8 @@ html {
     will-change: transform;
     transform: translateZ(0);
     box-shadow: var(--card-shadow);
-    /* Ensure layering is clean */
     background-color: var(--background);
     z-index: 1;
-  }
-
-  .dark section, .dark footer {
-    /* Add a very subtle top border highlight in dark mode to define the edge better */
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   h1, h2, h3, h4, h5, h6, .display {
@@ -186,10 +179,6 @@ html {
 
   p, .body-text {
     @apply leading-[1.2] text-left font-inter font-bold text-on-surface;
-  }
-
-  .mono {
-    @apply font-mono uppercase text-left;
   }
 }
 
@@ -203,42 +192,43 @@ html {
   }
 
   .industrial-btn {
-    @apply px-8 py-5 text-on-surface border font-mono text-[11px] uppercase tracking-widest transition-all duration-300 inline-flex items-center justify-center relative z-10;
+    @apply px-8 py-5 text-on-surface border-2 font-mono text-[11px] uppercase tracking-[0.2em] transition-all duration-300 inline-flex items-center justify-center relative z-10 overflow-hidden;
     border-color: var(--on-surface);
     background-color: var(--background);
+    border-radius: 0px !important;
   }
 
   .industrial-btn:hover {
-    background-color: color-mix(in srgb, var(--on-surface) 8%, transparent);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    @apply bg-on-surface text-background opacity-100;
+    transform: translateY(-2px);
+    box-shadow: 6px 6px 0px color-mix(in srgb, var(--on-surface) 20%, transparent);
   }
 
-  .dark .industrial-btn:hover {
-    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+  .industrial-btn:active {
+    transform: translateY(0);
+    box-shadow: 2px 2px 0px var(--on-surface);
   }
 
+  /* Fixed recursive apply issue for Tailwind v4 compatibility */
   .industrial-btn-primary {
-    @apply bg-on-surface text-background font-black;
+    @apply px-8 py-5 text-on-surface border-2 font-mono text-[11px] uppercase tracking-[0.2em] transition-all duration-300 inline-flex items-center justify-center relative z-10 overflow-hidden font-black;
     border-color: var(--on-surface);
+    background-color: var(--background);
+    border-radius: 0px !important;
   }
 
   .industrial-btn-primary:hover {
-    @apply opacity-90;
-    background-color: var(--on-surface);
-    transform: translateY(-1px);
-  }
-
-  .industrial-btn-primary:hover {
-    @apply bg-primary/90;
+    @apply bg-on-surface text-background opacity-100;
+    transform: translateY(-2px);
+    box-shadow: 6px 6px 0px color-mix(in srgb, var(--on-surface) 20%, transparent);
   }
 
   .industrial-input {
-    @apply w-full px-6 py-5 bg-surface border border-outline-variant focus:border-primary outline-none transition-all duration-200 font-mono text-[13px] uppercase text-on-surface placeholder:text-outline/40;
+    @apply w-full px-6 py-5 bg-surface border-2 border-outline-variant focus:border-primary outline-none transition-all duration-200 font-mono text-[13px] uppercase text-on-surface placeholder:text-outline/40 rounded-none;
   }
 
   .text-display-hero {
-    font-size: 72px;
+    font-size: clamp(48px, 8vw, 96px);
     line-height: 0.9;
     letter-spacing: -0.05em;
     font-weight: 900;
@@ -246,19 +236,11 @@ html {
   }
 
   .technical-label {
-    font-size: 9px;
+    font-size: 10px;
     line-height: 1;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.3em;
     font-weight: 900;
     @apply font-mono uppercase text-on-surface;
-  }
-
-  .text-section-heading {
-    font-size: 36px;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-    font-weight: 900;
-    @apply uppercase text-on-surface font-black;
   }
 
   .grid-background {
@@ -267,14 +249,4 @@ html {
       linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
     background-size: 40px 40px;
   }
-}
-
-/* Animations */
-@keyframes pulse-active {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-.active-status-pulse {
-  animation: pulse-active 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

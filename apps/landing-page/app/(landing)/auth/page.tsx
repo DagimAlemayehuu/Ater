@@ -13,7 +13,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { DownloadAterButton } from "@/components/DownloadAterButton";
+import { IndustrialButton } from "@/components/IndustrialButton";
 import { cn } from "@/lib/utils";
+
 
 export default function AuthPage() {
   const [email, setEmail] = useState("");
@@ -148,12 +150,14 @@ export default function AuthPage() {
           </div>
 
           {/* Sign Out Link */}
-          <button 
+          <IndustrialButton 
             onClick={() => supabase.auth.signOut()}
-            className="font-mono text-[9px] text-on-surface-variant uppercase tracking-[0.3em] hover:text-primary transition-all duration-200 border-b border-transparent hover:border-primary pb-1 font-bold tracking-widest"
+            size="sm"
+            icon={false}
+            className="border-none hover:bg-transparent hover:shadow-none hover:translate-y-0"
           >
             SIGN OUT
-          </button>
+          </IndustrialButton>
         </main>
       </div>
     );
@@ -241,13 +245,14 @@ export default function AuthPage() {
           </div>
 
           {/* Submit CTA */}
-          <button 
+          <IndustrialButton 
             type="submit"
             disabled={loading}
-            className="w-full mt-2 bg-primary text-background border border-outline-variant font-mono text-[11px] font-bold uppercase p-5 hover:bg-on-surface transition-all rounded-none flex justify-center items-center gap-2 active:scale-[0.98] disabled:opacity-50"
+            className="w-full mt-2"
+            icon={!loading}
           >
             {loading ? <Loader2 className="size-4 animate-spin" /> : "JOIN WAITLIST"}
-          </button>
+          </IndustrialButton>
         </form>
 
         {/* Divider */}

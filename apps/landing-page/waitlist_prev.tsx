@@ -1,2 +1,0 @@
-"\"use client\";\n\nimport React from 'react';\nimport Link from 'next/link';\n\nexport default function WaitlistPage() {\n  return (\n    <div className=\"min-h-screen flex flex-col bg-[#000000] text-[#e5e2e1] selection:bg-white selection:text-black\">\n 
-<truncated 4743 bytes>

@@ -7,6 +7,8 @@ import { usePathname } from "next/navigation";
 import { useTheme } from "../../context/ThemeContext";
 import { Sun, Moon, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { IndustrialButton } from "../IndustrialButton";
+
 
 export function Navbar() {
   const { theme, toggleTheme } = useTheme();
@@ -68,20 +70,21 @@ export function Navbar() {
             </nav>
 
             <div className="flex items-center gap-4">
-              <button
+              <IndustrialButton
                 onClick={toggleTheme}
-                className="p-2 hover:bg-surface-container transition-colors duration-150 rounded-none border border-outline-variant"
+                size="icon"
                 aria-label="Toggle theme"
               >
                 {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-              </button>
+              </IndustrialButton>
               
-              <Link 
+              <IndustrialButton 
                 href="/waitlist"
-                className="hidden md:block industrial-btn px-6 py-2"
+                size="sm"
+                className="hidden md:flex"
               >
                 JOIN WAITLIST
-              </Link>
+              </IndustrialButton>
 
               <button className="md:hidden text-on-background rounded-none">
                 <Menu className="size-6" />

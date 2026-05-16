@@ -61,7 +61,7 @@ function SidecarGate({ children }: { children: React.ReactNode }) {
     return (
       <div style={gateStyle}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', maxWidth: '320px' }}>
-          <div style={{ width: '40px', height: '40px', border: '1px solid var(--destructive)', display: 'flex', alignItems: 'center', justifyCenter: 'center' }}>
+          <div style={{ width: '40px', height: '40px', border: '1px solid var(--destructive)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ color: 'var(--destructive)', fontSize: '20px', fontWeight: 900 }}>!</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

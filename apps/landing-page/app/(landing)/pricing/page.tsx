@@ -3,6 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { Check, ChevronRight, Activity, Zap, Shield, Cpu, Lock } from 'lucide-react';
+import { IndustrialButton } from '@/components/IndustrialButton';
+
 
 export default function PricingPage() {
   return (
@@ -54,9 +56,12 @@ export default function PricingPage() {
                 ))}
               </ul>
 
-              <button className="industrial-btn industrial-btn-primary h-16 w-full mt-auto cursor-not-allowed opacity-50">
-                <span>CURRENTLY_OPEN_FOR_WAITLIST</span>
-              </button>
+              <IndustrialButton 
+                className="h-16 w-full mt-auto cursor-not-allowed opacity-50"
+                icon={false}
+              >
+                CURRENTLY_OPEN_FOR_WAITLIST
+              </IndustrialButton>
             </div>
 
             {/* Pro Tier */}
@@ -91,10 +96,12 @@ export default function PricingPage() {
                 ))}
               </ul>
 
-              <Link href="/waitlist" className="industrial-btn industrial-btn-primary h-16 w-full mt-auto">
-                <span>GET_PRO_ACCESS</span>
-                <ChevronRight className="ml-2 size-4" />
-              </Link>
+              <IndustrialButton 
+                href="/waitlist" 
+                className="h-16 w-full mt-auto"
+              >
+                GET_PRO_ACCESS
+              </IndustrialButton>
             </div>
           </div>
         </div>
@@ -129,10 +136,12 @@ export default function PricingPage() {
         <div className="industrial-container flex flex-col items-center gap-12">
           <Activity className="size-12 text-primary" />
           <h2 className="text-display-hero text-center">JOIN THE ENGINE.</h2>
-          <Link href="/waitlist" className="industrial-btn industrial-btn-primary h-20 px-16 group">
-            <span>RESERVE_YOUR_SLOT</span>
-            <ChevronRight className="ml-2 size-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
+          <IndustrialButton 
+            href="/waitlist" 
+            className="h-20 px-16"
+          >
+            RESERVE_YOUR_SLOT
+          </IndustrialButton>
         </div>
       </section>
     </>

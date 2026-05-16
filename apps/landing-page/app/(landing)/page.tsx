@@ -4,6 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ChevronRight, Terminal, Download, Shield, Lock, Activity, Zap, Cpu, Search, Layout } from 'lucide-react';
+import { IndustrialButton } from '@/components/IndustrialButton';
+
 
 export default function Home() {
   return (
@@ -23,10 +25,9 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-6 w-full items-center justify-center">
-            <Link href="/waitlist" className="industrial-btn industrial-btn-primary w-full sm:w-auto h-14 group">
-              <span>JOIN WAITLIST</span>
-              <ChevronRight className="ml-2 size-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
+            <IndustrialButton href="/waitlist" className="w-full sm:w-auto">
+              JOIN WAITLIST
+            </IndustrialButton>
           </div>
         </div>
       </section>

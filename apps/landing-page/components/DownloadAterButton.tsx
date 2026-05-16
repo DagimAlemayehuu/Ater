@@ -53,12 +53,12 @@ export function DownloadAterButton() {
       <a 
         href={getDownloadUrl()}
         className={cn(
-          "group w-full py-5 px-8 bg-on-background text-background flex items-center justify-between",
-          "hover:bg-on-background/90 transition-all duration-300 border border-transparent active:scale-[0.99]"
+          "industrial-btn industrial-btn-primary w-full h-20 px-8 group justify-between",
+          "active:scale-[0.99]"
         )}
       >
         <div className="flex flex-col items-start gap-0.5">
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">Download</span>
+          <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60">Download</span>
           <span className="text-sm font-black uppercase tracking-[0.1em]">{getOsLabel()} Build</span>
         </div>
         <div className="size-10 bg-background/10 flex items-center justify-center group-hover:scale-110 transition-transform">

@@ -3,6 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { Mail, MessageSquare, Twitter, Github, ChevronRight, Activity, Terminal, Send } from 'lucide-react';
+import { IndustrialButton } from '@/components/IndustrialButton';
+
 
 export default function ContactPage() {
   return (
@@ -56,10 +58,12 @@ export default function ContactPage() {
                   </div>
                 </div>
 
-                <button type="submit" className="industrial-btn industrial-btn-primary h-16 w-full flex items-center justify-center gap-4">
+                <IndustrialButton 
+                  className="h-16 w-full"
+                >
                   <span>SEND_MESSAGE</span>
-                  <Send className="size-4" />
-                </button>
+                  <Send className="ml-4 size-4" />
+                </IndustrialButton>
               </form>
             </div>
 
@@ -115,10 +119,12 @@ export default function ContactPage() {
               WE ARE A REMOTE-FIRST TEAM BUILDING THE FUTURE OF COGNITIVE TOOLS.
             </p>
           </div>
-          <Link href="/" className="industrial-btn industrial-btn-primary h-20 px-16 group">
-            <span>BACK_TO_HOME</span>
-            <ChevronRight className="ml-2 size-4" />
-          </Link>
+          <IndustrialButton 
+            href="/" 
+            size="lg"
+          >
+            BACK_TO_HOME
+          </IndustrialButton>
         </div>
       </section>
     </>
