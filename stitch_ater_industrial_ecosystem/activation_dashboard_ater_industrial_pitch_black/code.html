@@ -1,0 +1,188 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Ater Industrial - Activation Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#342f2d",
+                        "surface-tint": "#c6c6c6",
+                        "primary-container": "#e2e2e2",
+                        "surface-container-high": "#2a2a2a",
+                        "on-secondary-fixed-variant": "#444748",
+                        "surface": "#131313",
+                        "surface-container-low": "#1c1b1b",
+                        "secondary-fixed-dim": "#c5c7c8",
+                        "inverse-primary": "#5d5f5f",
+                        "on-primary-container": "#636465",
+                        "surface-variant": "#353534",
+                        "on-background": "#e5e2e1",
+                        "tertiary-container": "#eae0dd",
+                        "secondary": "#c5c7c8",
+                        "on-secondary-fixed": "#191c1d",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-fixed-variant": "#4b4543",
+                        "surface-container-highest": "#353534",
+                        "primary-fixed": "#e2e2e2",
+                        "surface-bright": "#393939",
+                        "on-primary": "#2f3131",
+                        "tertiary-fixed-dim": "#cec4c2",
+                        "on-primary-fixed": "#1a1c1c",
+                        "surface-container-lowest": "#0e0e0e",
+                        "secondary-fixed": "#e1e3e4",
+                        "surface-container": "#201f1f",
+                        "on-surface-variant": "#c4c7c8",
+                        "background": "#131313",
+                        "outline": "#8e9192",
+                        "on-error": "#690005",
+                        "outline-variant": "#444748",
+                        "error": "#ffb4ab",
+                        "error-container": "#93000a",
+                        "secondary-container": "#444748",
+                        "surface-dim": "#131313",
+                        "inverse-surface": "#e5e2e1",
+                        "on-error-container": "#ffdad6",
+                        "primary": "#ffffff",
+                        "on-tertiary-fixed": "#1f1b19",
+                        "on-tertiary-container": "#696360",
+                        "tertiary": "#fffeff",
+                        "tertiary-fixed": "#eae0dd",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "on-secondary": "#2e3132",
+                        "on-secondary-container": "#b3b5b6",
+                        "on-surface": "#e5e2e1",
+                        "on-primary-fixed-variant": "#454747"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "0px"
+                    },
+                    "spacing": {
+                        "stack-md": "16px",
+                        "stack-lg": "32px",
+                        "margin-mobile": "16px",
+                        "stack-sm": "8px",
+                        "margin-desktop": "32px",
+                        "unit": "4px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "label-mono": ["JetBrains Mono"],
+                        "headline-md": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "label-mono": ["11px", { "lineHeight": "14px", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "22px", "letterSpacing": "-0.03em", "fontWeight": "900" }],
+                        "label-caps": ["9px", { "lineHeight": "12px", "letterSpacing": "0.1em", "fontWeight": "500" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "display-lg": ["64px", { "lineHeight": "58px", "letterSpacing": "-0.05em", "fontWeight": "900" }],
+                        "headline-lg": ["32px", { "lineHeight": "29px", "letterSpacing": "-0.04em", "fontWeight": "900" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-[#000000] text-on-surface font-body-md min-h-screen flex flex-col items-start">
+<div class="w-full max-w-[1280px] flex flex-col flex-grow">
+<!-- Top Navigation -->
+<nav class="w-full border-b border-outline-variant flex justify-between items-center px-[80px] h-16">
+<div class="font-headline-md text-headline-md font-black tracking-tighter text-primary dark:text-primary uppercase">
+            ATER
+        </div>
+<div class="hidden md:flex gap-gutter items-center">
+<a class="font-body-md text-body-md uppercase font-label-mono text-label-mono text-on-surface-variant font-normal hover:bg-surface-container-high transition-none px-2 py-1" href="#">Home</a>
+<a class="font-body-md text-body-md uppercase font-label-mono text-label-mono text-primary font-bold border-b-2 border-primary pb-1 hover:bg-surface-container-high transition-none px-2 py-1" href="#">Product</a>
+<a class="font-body-md text-body-md uppercase font-label-mono text-label-mono text-on-surface-variant font-normal hover:bg-surface-container-high transition-none px-2 py-1" href="#">Pricing</a>
+<a class="font-body-md text-body-md uppercase font-label-mono text-label-mono text-on-surface-variant font-normal hover:bg-surface-container-high transition-none px-2 py-1" href="#">Contact</a>
+</div>
+<button class="bg-primary-container text-[#000000] px-4 py-2 font-label-mono text-label-mono uppercase border border-outline-variant hover:bg-surface-container-high hover:text-primary-container transition-none hidden md:block rounded-none">
+            JOIN WAITLIST
+        </button>
+</nav>
+<!-- Main Content -->
+<main class="flex-grow flex flex-col items-center justify-center p-[80px] gap-stack-lg">
+<!-- Header Section -->
+<div class="text-center flex flex-col gap-unit">
+<h1 class="font-display-lg text-display-lg text-primary uppercase">HEY, USER</h1>
+<p class="font-label-mono text-label-mono text-on-surface-variant uppercase tracking-widest">CHECK YOUR STATUS BELOW.</p>
+</div>
+<!-- Activation Card -->
+<div class="border-outline-variant w-full max-w-[500px] p-stack-lg flex flex-col gap-stack-lg rounded-none bg-transparent">
+<!-- Status Header -->
+<div class="flex flex-col gap-stack-sm border-b border-outline-variant pb-stack-sm">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">STATUS</span>
+<div class="flex items-center gap-unit">
+<div class="w-3 h-3 bg-primary"></div>
+<h2 class="font-headline-lg text-headline-lg text-primary uppercase">APPROVED</h2>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-unit">YOUR ACCOUNT IS APPROVED. USE THE CODE TO ACTIVATE ATER DESKTOP.</p>
+</div>
+<!-- Activation Key Section -->
+<div class="border border-outline-variant p-stack-md flex flex-col gap-stack-sm relative rounded-none bg-transparent">
+<div class="flex justify-between items-start">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">ACTIVATION KEY</span>
+<button class="text-on-surface-variant hover:text-primary transition-none rounded-none">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<div class="font-display-lg text-display-lg text-primary font-label-mono text-center py-stack-sm tracking-[0.25em] whitespace-nowrap" style="opacity: 0;">M5C7HU7</div>
+<p class="font-label-mono text-label-mono text-on-surface-variant text-center opacity-70">YOU WILL NEED THIS KEY TO UNLOCK ATER ON YOUR DEVICE. THIS KEY CAN ONLY BE USED ONCE.</p>
+</div>
+<!-- Download Action -->
+<button class="bg-surface-container-high border border-outline-variant p-stack-md flex justify-between items-center w-full group hover:bg-surface-variant transition-none rounded-none">
+<div class="flex flex-col items-start gap-unit">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">DOWNLOAD</span>
+<span class="font-headline-md text-headline-md text-primary uppercase">MACOS BUILD</span>
+</div>
+<div class="text-on-surface-variant group-hover:text-primary transition-none">
+<span class="material-symbols-outlined text-3xl" data-icon="laptop_mac">laptop_mac</span>
+</div>
+</button>
+<!-- Card Footer -->
+<div class="text-center font-label-caps text-label-caps text-on-surface-variant opacity-40 uppercase">
+                V0.1.0-BETA • HIGH-FIDELITY BINARY
+            </div>
+</div>
+<!-- Sign Out Link -->
+<a class="font-label-caps text-label-caps text-on-surface-variant uppercase hover:text-primary transition-none tracking-widest mt-stack-md border-b border-transparent hover:border-primary" href="#">
+            SIGN OUT
+        </a>
+</main>
+<!-- Footer -->
+<footer class="w-full border-t border-outline-variant flex flex-col md:flex-row justify-between items-center px-[80px] py-stack-lg gap-gutter">
+<div class="font-label-mono text-label-mono font-bold text-primary">
+            © 2024 ATER INDUSTRIAL. ALL RIGHTS RESERVED.
+        </div>
+<div class="flex gap-gutter items-center">
+<a class="font-label-mono text-label-mono uppercase text-on-surface-variant hover:text-primary transition-none" href="#">Terms</a>
+<a class="font-label-mono text-label-mono uppercase text-on-surface-variant hover:text-primary transition-none" href="#">Privacy</a>
+<a class="font-label-mono text-label-mono uppercase text-on-surface-variant hover:text-primary transition-none" href="#">Security</a>
+<a class="font-label-mono text-label-mono uppercase text-on-surface-variant hover:text-primary transition-none" href="#">API</a>
+</div>
+</footer>
+</div>
+
+
+</body></html>

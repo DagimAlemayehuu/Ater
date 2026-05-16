@@ -1,0 +1,157 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Join Waitlist - ATER</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#342f2d",
+                        "surface-tint": "#c6c6c6",
+                        "primary-container": "#e2e2e2",
+                        "surface-container-high": "#2a2a2a",
+                        "on-secondary-fixed-variant": "#444748",
+                        "surface": "#131313",
+                        "surface-container-low": "#1c1b1b",
+                        "secondary-fixed-dim": "#c5c7c8",
+                        "inverse-primary": "#5d5f5f",
+                        "on-primary-container": "#636465",
+                        "surface-variant": "#353534",
+                        "on-background": "#e5e2e1",
+                        "tertiary-container": "#eae0dd",
+                        "secondary": "#c5c7c8",
+                        "on-secondary-fixed": "#191c1d",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-fixed-variant": "#4b4543",
+                        "surface-container-highest": "#353534",
+                        "primary-fixed": "#e2e2e2",
+                        "surface-bright": "#393939",
+                        "on-primary": "#2f3131",
+                        "tertiary-fixed-dim": "#cec4c2",
+                        "on-primary-fixed": "#1a1c1c",
+                        "surface-container-lowest": "#0e0e0e",
+                        "secondary-fixed": "#e1e3e4",
+                        "surface-container": "#201f1f",
+                        "on-surface-variant": "#c4c7c8",
+                        "background": "#131313",
+                        "outline": "#8e9192",
+                        "on-error": "#690005",
+                        "outline-variant": "#444748",
+                        "error": "#ffb4ab",
+                        "error-container": "#93000a",
+                        "secondary-container": "#444748",
+                        "surface-dim": "#131313",
+                        "inverse-surface": "#e5e2e1",
+                        "on-error-container": "#ffdad6",
+                        "primary": "#ffffff",
+                        "on-tertiary-fixed": "#1f1b19",
+                        "on-tertiary-container": "#696360",
+                        "tertiary": "#fffeff",
+                        "tertiary-fixed": "#eae0dd",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "on-secondary": "#2e3132",
+                        "on-secondary-container": "#b3b5b6",
+                        "on-surface": "#e5e2e1",
+                        "on-primary-fixed-variant": "#454747"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "16px",
+                        "stack-lg": "32px",
+                        "margin-mobile": "16px",
+                        "stack-sm": "8px",
+                        "margin-desktop": "32px",
+                        "unit": "4px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "label-mono": ["JetBrains Mono"],
+                        "headline-md": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "label-mono": ["11px", { "lineHeight": "14px", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "22px", "letterSpacing": "-0.03em", "fontWeight": "900" }],
+                        "label-caps": ["9px", { "lineHeight": "12px", "letterSpacing": "0.1em", "fontWeight": "500" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "display-lg": ["64px", { "lineHeight": "58px", "letterSpacing": "-0.05em", "fontWeight": "900" }],
+                        "headline-lg": ["32px", { "lineHeight": "29px", "letterSpacing": "-0.04em", "fontWeight": "900" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-[#000000] text-on-surface min-h-screen flex flex-col selection:bg-primary-fixed selection:text-surface">
+<header class="w-full border-b border-outline-variant">
+<div class="w-full max-w-[1280px] px-[80px] h-[64px] flex items-center justify-center">
+<a class="font-headline-md font-[900] tracking-tighter text-primary uppercase" href="#">ATER</a>
+</div>
+</header>
+<div class="w-full max-w-[1280px] px-[80px] pt-[80px] pb-[80px] flex-1">
+<main class="w-full max-w-[440px] flex flex-col gap-stack-lg relative items-center">
+<!-- Back Action -->
+<a aria-label="Go back" class="flex items-center gap-unit text-on-surface-variant hover:text-primary font-label-caps text-label-caps uppercase w-fit transition-none self-center" href="#">
+<span class="material-symbols-outlined text-[16px]" data-icon="arrow_back">arrow_back</span>
+<span class="">BACK</span>
+</a>
+<!-- Header -->
+<header class="flex flex-col gap-stack-sm text-center">
+<h1 class="font-headline-lg text-headline-lg uppercase text-primary">JOIN WAITLIST</h1>
+<p class="font-label-mono text-label-mono text-on-surface-variant uppercase tracking-widest">GET EARLY ACCESS.</p>
+</header>
+<!-- Registration Form -->
+<form class="flex flex-col gap-stack-md">
+<!-- Email Field -->
+<div class="flex flex-col gap-unit">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase opacity-80" for="email">EMAIL</label>
+<input class="w-full bg-[#000000] border border-outline-variant text-primary font-label-mono text-label-mono p-4 placeholder-on-surface-variant/50 focus:outline-none focus:border-primary-fixed transition-colors rounded-none appearance-none" id="email" placeholder="USER@ATER.AI" required="" type="email">
+</div>
+<!-- Full Name Field -->
+<div class="flex flex-col gap-unit">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase opacity-80" for="fullName">FULL NAME</label>
+<input class="w-full bg-[#000000] border border-outline-variant text-primary font-label-mono text-label-mono p-4 placeholder-on-surface-variant/50 focus:outline-none focus:border-primary-fixed transition-colors rounded-none appearance-none" id="fullName" placeholder="YOUR NAME" required="" type="text">
+</div>
+<!-- Password Field -->
+<div class="flex flex-col gap-unit">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase opacity-80" for="password">PASSWORD</label>
+<input class="w-full bg-[#000000] border border-outline-variant text-primary font-label-mono text-label-mono p-4 placeholder-on-surface-variant/50 focus:outline-none focus:border-primary-fixed transition-colors rounded-none appearance-none" id="password" placeholder="••••••••" required="" type="password">
+</div>
+<!-- Submit CTA -->
+<button class="w-full mt-stack-sm bg-primary-container text-surface border border-outline-variant font-label-mono text-label-mono uppercase p-4 hover:bg-surface-tint transition-none flex justify-center items-center rounded-none" type="submit">
+                JOIN WAITLIST
+            </button>
+</form>
+<!-- Divider -->
+<hr class="w-full border-t border-outline-variant my-stack-sm">
+<!-- Footer Link -->
+<div class="text-center font-label-caps text-label-caps text-on-surface-variant uppercase">
+            REGISTERED? <a class="text-primary hover:underline transition-none ml-unit" href="#">SIGN IN</a>
+</div>
+</main>
+</div>
+
+
+</body></html>

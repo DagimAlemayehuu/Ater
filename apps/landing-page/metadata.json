@@ -1,0 +1,6 @@
+{
+  "name": "ATER INDUSTRIAL SYSTEMS",
+  "description": "Deterministic Resource Provisioning for Industrial-Grade Intelligence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

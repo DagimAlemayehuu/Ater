@@ -1,0 +1,208 @@
+@import "tailwindcss";
+
+@theme {
+  --spacing-container: 1280px;
+  --spacing-section-lg: 8rem;
+  --spacing-section-sm: 6rem;
+
+  --font-inter: var(--font-inter), sans-serif;
+  --font-mono: var(--font-jetbrains), monospace;
+
+  --radius-none: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-full: 0px;
+
+  /* Explicitly map variables to theme keys for v4 utility generation */
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-primary-fixed: var(--primary-fixed);
+  --color-primary-fixed-dim: var(--primary-fixed-dim);
+  
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--on-secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
+
+  --color-tertiary: var(--tertiary);
+  --color-on-tertiary: var(--on-tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-on-tertiary-container: var(--on-tertiary-container);
+
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-border: var(--border);
+}
+
+/* DEFAULT: LIGHT THEME */
+:root {
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-dim: #f5f5f5;
+  --surface-bright: #ffffff;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f9f9f9;
+  --surface-container: #f5f5f5;
+  --surface-container-high: #e2e2e2;
+  --surface-container-highest: #d1d1d1;
+  
+  --on-surface: #000000;
+  --on-surface-variant: #454747;
+  
+  --primary: #000000;
+  --on-primary: #ffffff;
+  --primary-container: #e2e2e2;
+  --on-primary-container: #636465;
+  --primary-fixed: #e2e2e2;
+  --primary-fixed-dim: #c6c6c6;
+  
+  --secondary: #c5c7c8;
+  --on-secondary: #2e3132;
+  --secondary-container: #e2e2e2;
+  --on-secondary-container: #444748;
+
+  --tertiary: #fffeff;
+  --on-tertiary: #342f2d;
+  --tertiary-container: #eae0dd;
+  --on-tertiary-container: #696360;
+
+  --outline: #8e9192;
+  --outline-variant: #e2e2e2;
+  --border: #e2e2e2;
+  
+  --grid-color: rgba(0, 0, 0, 0.04);
+}
+
+/* DARK THEME */
+.dark {
+  --background: #000000;
+  --surface: #131313;
+  --surface-dim: #131313;
+  --surface-bright: #393939;
+  --surface-container-lowest: #0e0e0e;
+  --surface-container-low: #1c1b1b;
+  --surface-container: #201f1f;
+  --surface-container-high: #2a2a2a;
+  --surface-container-highest: #353534;
+  
+  --on-surface: #e5e2e1;
+  --on-surface-variant: #c4c7c8;
+  
+  --primary: #ffffff;
+  --on-primary: #2f3131;
+  --primary-container: #e2e2e2;
+  --on-primary-container: #636465;
+  --primary-fixed: #e2e2e2;
+  --primary-fixed-dim: #c6c6c6;
+  
+  --secondary: #c5c7c8;
+  --on-secondary: #2e3132;
+  --secondary-container: #444748;
+  --on-secondary-container: #b3b5b6;
+
+  --tertiary: #fffeff;
+  --on-tertiary: #342f2d;
+  --tertiary-container: #eae0dd;
+  --on-tertiary-container: #696360;
+
+  --outline: #8e9192;
+  --outline-variant: #444748;
+  --border: #444748;
+  
+  --grid-color: rgba(255, 255, 255, 0.05);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface antialiased selection:bg-primary selection:text-on-primary transition-colors duration-300 font-inter;
+  }
+
+  h1, h2, h3, h4, h5, h6, .display {
+    @apply font-inter uppercase tracking-[-0.05em] leading-[0.9] text-left text-on-surface font-black;
+  }
+
+  p, .body-text {
+    @apply leading-[1.2] text-left font-inter font-bold text-on-surface;
+  }
+
+  .mono {
+    @apply font-mono uppercase text-left;
+  }
+}
+
+@layer components {
+  .industrial-container {
+    @apply max-w-(--spacing-container) mx-auto px-6 md:px-12 text-left;
+  }
+
+  .industrial-border {
+    @apply border border-outline-variant;
+  }
+
+  .industrial-btn {
+    @apply px-8 py-5 bg-surface text-on-surface border border-outline-variant font-mono text-[11px] uppercase tracking-widest transition-all duration-200 hover:bg-outline-variant/10 active:bg-outline-variant/20 inline-flex items-center justify-center;
+  }
+
+  .industrial-btn-primary {
+    @apply bg-primary text-background border border-primary font-black;
+  }
+
+  .industrial-btn-primary:hover {
+    @apply bg-primary/90;
+  }
+
+  .industrial-input {
+    @apply w-full px-6 py-5 bg-surface border border-outline-variant focus:border-primary outline-none transition-all duration-200 font-mono text-[13px] uppercase text-on-surface placeholder:text-outline/40;
+  }
+
+  .text-display-hero {
+    font-size: 72px;
+    line-height: 0.9;
+    letter-spacing: -0.05em;
+    font-weight: 900;
+    @apply uppercase text-on-surface font-black;
+  }
+
+  .technical-label {
+    font-size: 9px;
+    line-height: 1;
+    letter-spacing: 0.2em;
+    font-weight: 900;
+    @apply font-mono uppercase text-on-surface;
+  }
+
+  .text-section-heading {
+    font-size: 36px;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    font-weight: 900;
+    @apply uppercase text-on-surface font-black;
+  }
+}
+
+/* Animations */
+@keyframes pulse-active {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.active-status-pulse {
+  animation: pulse-active 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
