@@ -127,15 +127,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
-          # Enable nullglob so if an OS doesn't have a certain file extension, it doesn't fail
-          # Enable globstar to allow ** to search recursively
-          shopt -s nullglob globstar
+          # Enable nullglob so missing files/extensions are safely ignored
+          # We cannot use globstar (**) because the macOS runner uses Bash 3.2
+          shopt -s nullglob
           
-          # Upload only the specific installer/bundle files, ignoring raw .app directories
+          # Upload files matching both target-specific and default build paths
           gh release upload ${{ github.ref_name }} \
             --repo DagimAlemayehuu/Ater_Releases \
             --clobber \
-            apps/desktop/src-tauri/target/**/release/bundle/**/*.{dmg,tar.gz,AppImage,deb,exe,msi,sig,zip}
+            apps/desktop/src-tauri/target/*/release/bundle/*/*.{dmg,tar.gz,AppImage,deb,exe,msi,sig,zip} \
+            apps/desktop/src-tauri/target/release/bundle/*/*.{dmg,tar.gz,AppImage,deb,exe,msi,sig,zip}
 
   publish-release:
     needs: publish
