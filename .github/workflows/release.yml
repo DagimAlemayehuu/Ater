@@ -27,10 +27,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
+          - os: macos-13    # Intel (x86_64)
             platform: macos
             arch: x86_64
-          - os: macos-latest
+          - os: macos-14    # Silicon (aarch64)
             platform: macos
             arch: aarch64
           - os: windows-latest
@@ -101,6 +101,7 @@ jobs:
             mv dist/ater-api.exe apps/desktop/src-tauri/binaries/$TARGET.exe
           else
             mv dist/ater-api apps/desktop/src-tauri/binaries/$TARGET
+            chmod +x apps/desktop/src-tauri/binaries/$TARGET
           fi
 
       - name: Install All Monorepo Dependencies

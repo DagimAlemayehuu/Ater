@@ -90,12 +90,22 @@ pub fn run() {
 
             if should_spawn {
                 port = get_available_port(8765).unwrap_or(8765);
-                let sidecar_command = app.shell().sidecar("ater-api")
-                    .expect("failed to create sidecar command")
-                    .args(&["--port", &port.to_string()]);
-
-                let (mut _rx, _child) = sidecar_command.spawn()
-                    .expect("failed to spawn sidecar");
+                match app.shell().sidecar("ater-api") {
+                    Ok(sidecar) => {
+                        let sidecar = sidecar.args(&["--port", &port.to_string()]);
+                        match sidecar.spawn() {
+                            Ok((mut _rx, _child)) => {
+                                println!("[Sidecar] Successfully spawned on port {}", port);
+                            }
+                            Err(e) => {
+                                eprintln!("[Sidecar] Critical Error: Failed to spawn: {}", e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("[Sidecar] Configuration Error: Failed to create sidecar command: {}", e);
+                    }
+                }
             }
 
             app.manage(SidecarConfig { port });
