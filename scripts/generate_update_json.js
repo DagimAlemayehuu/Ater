@@ -4,8 +4,8 @@ const path = require('path');
 // This script generates the update.json for Tauri's auto-updater.
 // It assumes that the binaries and their .sig files are already uploaded to GitHub Releases.
 
-const ORG = 'YOUR_ORG';
-const REPO = 'ater';
+const ORG = 'DagimAlemayehuu';
+const REPO = 'Ater_Releases';
 const VERSION = process.argv[2] || '0.1.0'; // Pass version as argument
 
 const platforms = {
