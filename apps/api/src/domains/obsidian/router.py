@@ -67,6 +67,80 @@ async def sse_vault_events():
             
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+@router.post("/vault/initialize")
+async def initialize_vault(secrets: AppSecrets = Depends(get_app_secrets)):
+    """
+    Scaffolds the entire folder structure for a new Ater vault.
+    """
+    if not secrets.vault_path:
+        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
+        
+    vault_root = Path(secrets.vault_path)
+    
+    # 1. Core Hierarchy (Only essential folders)
+    folders = [
+        f"{DB_DIR_PREFIX}/years",
+        f"{DB_DIR_PREFIX}/assignments",
+        f"{DB_DIR_PREFIX}/inbox",
+        f"{DB_DIR_PREFIX}/semesters",
+        f"{DB_DIR_PREFIX}/study planner",
+        f"{DB_DIR_PREFIX}/courses",
+        f"{DB_DIR_PREFIX}/exams",
+        "Inbox/Generated",
+        "Notes"
+    ]
+    
+    # 2. Select Sources (for Properties)
+    select_sources = [
+        f"{DB_DIR_PREFIX}/study planner/status",
+        f"{DB_DIR_PREFIX}/study planner/confidence",
+        f"{DB_DIR_PREFIX}/study planner/type",
+        f"{DB_DIR_PREFIX}/courses/difficulty",
+        f"{DB_DIR_PREFIX}/courses/grade",
+        f"{DB_DIR_PREFIX}/courses/professor",
+        f"{DB_DIR_PREFIX}/courses/status",
+        f"{DB_DIR_PREFIX}/years/status",
+        f"{DB_DIR_PREFIX}/semesters/status",
+        f"{DB_DIR_PREFIX}/exams/type",
+        f"{DB_DIR_PREFIX}/assignments/status",
+        f"{DB_DIR_PREFIX}/assignments/priority",
+        f"{DB_DIR_PREFIX}/assignments/type"
+    ]
+    
+    try:
+        # 1. Create all folders
+        for folder in folders + select_sources:
+            (vault_root / folder).mkdir(parents=True, exist_ok=True)
+            
+        # 2. Pre-seed Default Property Options (.md files)
+        seeds = {
+            f"{DB_DIR_PREFIX}/courses/grade": ["A", "B", "C", "D", "F", "P"],
+            f"{DB_DIR_PREFIX}/courses/difficulty": ["Easy", "Medium", "Hard", "Expert"],
+            f"{DB_DIR_PREFIX}/study planner/status": ["Not Started", "Planned", "In Progress", "Reviewing", "Completed"],
+            f"{DB_DIR_PREFIX}/study planner/confidence": ["High", "Medium", "Low"],
+            f"{DB_DIR_PREFIX}/study planner/type": ["Hub", "Atomic", "Possible Questions"],
+            f"{DB_DIR_PREFIX}/courses/status": ["Planned", "In Progress", "Completed"],
+            f"{DB_DIR_PREFIX}/years/status": ["Active", "Completed", "Future"],
+            f"{DB_DIR_PREFIX}/semesters/status": ["Planned", "Active", "Completed"],
+            f"{DB_DIR_PREFIX}/exams/type": ["Midterm", "Final", "Quiz", "Assignment"],
+            f"{DB_DIR_PREFIX}/assignments/status": ["Planned", "In Progress", "Completed"],
+            f"{DB_DIR_PREFIX}/assignments/priority": ["Low", "Medium", "High"],
+            f"{DB_DIR_PREFIX}/assignments/type": ["Homework", "Project", "Reading", "Lab"]
+        }
+        
+        for folder, files in seeds.items():
+            for filename in files:
+                file_path = vault_root / folder / f"{filename}.md"
+                if not file_path.exists():
+                    file_path.write_text(f"---\ntitle: {filename}\n---")
+
+        # 3. Create default .obsidian folder if it doesn't exist
+        (vault_root / ".obsidian").mkdir(exist_ok=True)
+        
+        return {"success": True, "message": "Vault structure initialized with refined properties"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/vault/databases")
 async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
     if not secrets.vault_path:
@@ -98,14 +172,13 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                         }
 
             # Pre-seed schema for Study Planner to guarantee Ater properties always exist
-            if "study planer" in entry.name:
+            if "study planner" in entry.name:
                 schema.update({
                     "course": {"type": "relation", "source": f"{DB_DIR_PREFIX}/courses"},
-                    "unit": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/unit"},
-                    "status": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/status"},
-                    "confidence": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/confidence"},
+                    "status": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planner/status"},
+                    "confidence": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planner/confidence"},
                     "study date": {"type": "date"},
-                    "type": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/type"},
+                    "type": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planner/type"},
                     "generated": {"type": "bool"},
                     "source": {"type": "relation", "source": "Inbox"},
                     "source pages": {"type": "str"}
@@ -144,23 +217,29 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                                                 "credits": {"type": "number"},
                                                 "score": {"type": "number"},
                                                 "total score": {"type": "number"},
-                                                "unit": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/unit"},
-                                                "status": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/status"},
-                                                "confidence": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planer/confidence"},
+                                                "status": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planner/status"},
+                                                "confidence": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planner/confidence"},
                                                 "grade": {"type": "select", "source": f"{DB_DIR_PREFIX}/courses/grade"},
                                                 "professor": {"type": "select", "source": f"{DB_DIR_PREFIX}/courses/professor"},
+                                                "difficulty": {"type": "select", "source": f"{DB_DIR_PREFIX}/courses/difficulty"},
+                                                "priority": {"type": "select", "source": f"{DB_DIR_PREFIX}/assignments/priority"},
                                                 "generated": {"type": "bool"},
                                                 "source": {"type": "relation", "source": "inbox"},
                                                 "source pages": {"type": "str"},
-                                                "academic level": {"type": "select", "source": f"{DB_DIR_PREFIX}/years/academic level"},
-                                                "program": {"type": "select", "source": f"{DB_DIR_PREFIX}/years/program"},
                                                 "target years": {"type": "number"},
                                                 "target credits": {"type": "number"},
                                                 "earned credits": {"type": "number"},
                                                 "cumulative gpa": {"type": "number"}
                                             }
                                             
-                                            if k_low in known_types:
+                                            # Special handling for exams/assignments database 'type'
+                                            if "exams" in entry.name and k_low == "type":
+                                                schema[k] = {"type": "select", "source": f"{DB_DIR_PREFIX}/exams/type"}
+                                            elif "assignments" in entry.name and k_low == "type":
+                                                schema[k] = {"type": "select", "source": f"{DB_DIR_PREFIX}/assignments/type"}
+                                            elif "assignments" in entry.name and k_low == "status":
+                                                schema[k] = {"type": "select", "source": f"{DB_DIR_PREFIX}/assignments/status"}
+                                            elif k_low in known_types:
                                                 schema[k] = known_types[k_low]
                                             else:
                                                 # Relation detection: if value is [[...]] and not already a select

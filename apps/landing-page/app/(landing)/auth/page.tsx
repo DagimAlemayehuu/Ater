@@ -6,19 +6,27 @@ import {
   Loader2, 
   Copy, 
   Check, 
+  ArrowLeft
 } from "lucide-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { DownloadAterButton } from "@/components/DownloadAterButton";
 import { IndustrialButton } from "@/components/IndustrialButton";
 import { cn } from "@/lib/utils";
 
-export default function AuthPage() {
+import { Suspense } from "react";
+
+function AuthContent() {
+  const searchParams = useSearchParams();
+  const initialMode = searchParams.get("mode") === "signup" ? "signup" : "login";
+  
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"loading" | "auth" | "dashboard">("loading");
-  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authMode, setAuthMode] = useState<"login" | "signup">(initialMode);
   const [user, setUser] = useState<any>(null);
   const [userStatus, setUserStatus] = useState<any>(null);
   const [copied, setCopied] = useState(false);
@@ -28,7 +36,6 @@ export default function AuthPage() {
       if (session) {
         setUser(session.user);
         fetchUserStatus(session.user.email!);
-        setView("dashboard");
       } else {
         setView("auth");
       }
@@ -38,7 +45,6 @@ export default function AuthPage() {
       if (session) {
         setUser(session.user);
         fetchUserStatus(session.user.email!);
-        setView("dashboard");
       } else {
         setUser(null);
         setUserStatus(null);
@@ -50,14 +56,24 @@ export default function AuthPage() {
   }, []);
 
   async function fetchUserStatus(userEmail: string) {
-    const { data } = await supabase
-      .from('waiting_list')
-      .select('*')
-      .eq('email', userEmail)
-      .maybeSingle();
-    
-    if (data) {
+    try {
+      const { data, error } = await supabase
+        .from('waiting_list')
+        .select('*')
+        .eq('email', userEmail)
+        .maybeSingle();
+      
+      if (error || !data) {
+        await supabase.auth.signOut();
+        setView("auth");
+        return;
+      }
+
       setUserStatus(data);
+      setView("dashboard");
+    } catch (err) {
+      await supabase.auth.signOut();
+      setView("auth");
     }
   }
 
@@ -68,7 +84,6 @@ export default function AuthPage() {
 
     try {
       if (authMode === "signup") {
-        // Add to waiting list first
         const { error: waitlistError } = await supabase
           .from('waiting_list')
           .upsert(
@@ -127,6 +142,16 @@ export default function AuthPage() {
     return (
       <section className="bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant pt-16 overflow-hidden">
         <div className="industrial-container w-full flex flex-col items-center justify-center gap-6 py-12 relative z-20">
+          <div className="max-w-[440px] w-full text-left mb-4">
+            <Link 
+              href="/" 
+              className="flex items-center gap-2 technical-label opacity-40 hover:opacity-100 hover:text-primary transition-all -ml-1"
+            >
+              <ArrowLeft className="size-3" />
+              <span>RETURN TO SITE</span>
+            </Link>
+          </div>
+
           <div className="max-w-[440px] w-full text-center">
             <div className="mb-6">
               <h1 className="text-display-hero !text-[3rem] tracking-tighter">HEY, {firstName.toUpperCase()}</h1>
@@ -181,10 +206,21 @@ export default function AuthPage() {
     <section className="bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant pt-16">
       <div className="industrial-container w-full flex flex-col items-center justify-center gap-8 py-12">
         <main className="w-full max-w-[400px] flex flex-col gap-8">
+          {/* Back Button */}
+          <Link 
+            href="/" 
+            className="flex items-center gap-2 technical-label opacity-40 hover:opacity-100 hover:text-primary transition-all -ml-1"
+          >
+            <ArrowLeft className="size-3" />
+            <span>RETURN TO SITE</span>
+          </Link>
+
           {/* Header */}
           <div className="flex flex-col gap-2">
-            <h1 className="text-section-heading !text-[2rem]">SIGN IN</h1>
-            <p className="text-body !text-[11px] opacity-40">ENTER YOUR CREDENTIALS TO CONTINUE.</p>
+            <h1 className="text-section-heading !text-[2rem]">{authMode === 'signup' ? 'JOIN WAITLIST' : 'SIGN IN'}</h1>
+            <p className="text-body !text-[11px] opacity-40 uppercase">
+              {authMode === 'signup' ? 'ENTER DETAILS TO RESERVE YOUR SPOT.' : 'ENTER YOUR CREDENTIALS TO CONTINUE.'}
+            </p>
           </div>
 
           {/* Form */}
@@ -254,5 +290,13 @@ export default function AuthPage() {
         </main>
       </div>
     </section>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div className="flex-1 flex items-center justify-center bg-background min-h-[60vh]"><div className="technical-label animate-pulse opacity-20">INITIALIZING...</div></div>}>
+      <AuthContent />
+    </Suspense>
   );
 }

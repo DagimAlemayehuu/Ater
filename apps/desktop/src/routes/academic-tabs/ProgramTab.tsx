@@ -2,7 +2,7 @@ import React, {useState, useMemo} from 'react'
 import {Check, Zap, Trash2, Plus, ChevronRight} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {toast} from 'sonner'
-import {stripWL, getVal, getYearOrder, deriveStatus, wrapWL, cleanTitle} from './utils'
+import {stripWL, getVal, getBoolVal, getYearOrder, deriveStatus, wrapWL, cleanTitle} from './utils'
 import {SectionHeader, EmptyState, StatCard, AcademicRoadmap, ProgramSetupForm, BigPropertyCard, EditableTitle} from './SharedComponents'
 import type {TabProps} from './types'
 
@@ -19,7 +19,12 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  const semesterSchema = databases.find(d => d.id === 'semesters')?.schema || {}
 
  const sorted = [...years].sort((a, b) => getYearOrder(a?.title || '') - getYearOrder(b?.title || ''))
- const activeYear = sorted.find(y => y['Current Year'] === true || y['Current Year'] === 'true')
+ const activeYear = years.find(y => {
+    const isCurrent = getBoolVal(y, 'Current Year', 'current_year')
+    const status = String(stripWL(getVal(y, 'Status', 'status'))).toLowerCase()
+    return isCurrent || status.includes('active')
+  }) || years[0]
+
  const activeProgram = cleanTitle(stripWL(getVal(activeYear, 'Program', 'program')))
  const programYears = activeProgram
  ? sorted.filter(y => stripWL(getVal(y, 'Program', 'program')) === activeProgram)
@@ -31,13 +36,13 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  const relatedSemesters = semesters
  .filter(s => {
  const semYear = getVal(s, 'Year', 'year').toLowerCase().trim()
- const targetYear = (selectedYear?.title || '').toLowerCase().trim()
+ const targetYear = String(selectedYear?.title || '').toLowerCase().trim()
  return semYear === targetYear && targetYear !== ''
 })
  .sort((a, b) => {
  const order = ['Autumn', 'Fall', 'Winter', 'Spring', 'Summer']
- const ai = order.findIndex(o => a.title?.includes(o))
- const bi = order.findIndex(o => b.title?.includes(o))
+ const ai = order.findIndex(o => String(a.title || '').includes(o))
+ const bi = order.findIndex(o => String(b.title || '').includes(o))
  return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
 })
 
@@ -97,7 +102,7 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  if (!semester) {setSelectedSemesterId(null); return null}
  const semCourses = courses.filter(c => {
  const courseSem = getVal(c, 'Semester', 'semester').toLowerCase()
- const targetSem = (semester.title || '').toLowerCase()
+ const targetSem = String(semester.title || '').toLowerCase()
  return courseSem.includes(targetSem) && targetSem !== ''
 })
 
@@ -116,10 +121,13 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">{cleanTitle(activeProgram)} · {cleanTitle(selectedYear?.title || '')}</span>
  </div>
  <div className="flex items-center gap-2">
- <button onClick={() => {onDelete('semesters', selectedSemesterId); setSelectedSemesterId(null)}}
- className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
- <Trash2 size={13} />
- </button>
+                    <button onClick={() => onOpenNote(semester.path || `database/semesters/${semester.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10 rounded-none " title="Open Note">
+                        <BookOpen size={13} />
+                    </button>
+                    <button onClick={() => {onDelete('semesters', selectedSemesterId); setSelectedSemesterId(null)}}
+                            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
+                        <Trash2 size={13} />
+                    </button>
  </div>
  </div>
  
@@ -219,10 +227,13 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  Mark Complete
  </button>
  )}
- <button onClick={() => {onDelete('years', selectedYearId); setSelectedYearId(null)}}
- className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
- <Trash2 size={13} />
- </button>
+                    <button onClick={() => onOpenNote(selectedYear.path || `database/years/${selectedYear.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10 rounded-none " title="Open Note">
+                        <BookOpen size={13} />
+                    </button>
+                    <button onClick={() => {onDelete('years', selectedYearId); setSelectedYearId(null)}}
+                            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
+                        <Trash2 size={13} />
+                    </button>
  </div>
  </div>
 
@@ -393,7 +404,11 @@ export default function ProgramTab({data, databases, onUpdate, onCreate, onDelet
  </div>
 
  {(() => {
- const activeSem = semesters.find(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase().includes('active'))
+  const activeSem = semesters.find(s => {
+    const sStatus = String(stripWL(getVal(s, 'Status', 'status'))).toLowerCase()
+    const isActiveBool = getBoolVal(s, 'Active', 'active')
+    return sStatus.includes('active') || isActiveBool
+  })
  return (
  <div className="grid grid-cols-3 gap-4">
  <StatCard label="Current Year" value={cleanTitle(activeYear?.title?.split(' ').pop() || '--')} onClick={() => activeYear && setSelectedYearId(activeYear.id)} />

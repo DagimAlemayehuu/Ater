@@ -30,4 +30,5 @@ export interface TabProps {
     onRefresh: () => void
     initialSelectedId?: string | null
     onClearSelection?: () => void
+    onScaffold?: (name: string, years: number, level: string, currentYearIdx: number) => void
 }

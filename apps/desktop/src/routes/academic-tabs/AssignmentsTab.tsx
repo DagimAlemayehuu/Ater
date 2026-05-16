@@ -15,27 +15,27 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
   const allCourses = data.courses || []
   const allAssignments = data.assignments || []
 
-  const activeSemesters = (data.semesters || []).filter(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase() === 'active').map(s => (s.title || '').toLowerCase())
+  const activeSemesters = (data.semesters || []).filter(s => String(stripWL(getVal(s, 'Status', 'status'))).toLowerCase() === 'active').map(s => String(s.title || '').toLowerCase())
 
   const courses = useMemo(() => {
     if (statusFilter === 'All') return allCourses
     return allCourses.filter(c => {
-      const isCompleted = stripWL(getVal(c, 'Status', 'status')).toLowerCase().includes('complet')
-      const courseSem = stripWL(getVal(c, 'Semester', 'semester')).toLowerCase()
+      const isCompleted = String(stripWL(getVal(c, 'Status', 'status'))).toLowerCase().includes('complet')
+      const courseSem = String(stripWL(getVal(c, 'Semester', 'semester'))).toLowerCase()
       const inActiveSemester = activeSemesters.length === 0 || activeSemesters.some(s => courseSem.includes(s))
       return !isCompleted && inActiveSemester
     })
   }, [allCourses, statusFilter, activeSemesters])
 
  const filtered = useMemo(() => {
- if (courseFilter === 'All') return allAssignments.filter(a => {
-   const cName = getVal(a, 'Course', 'course')
-   return courses.find(c => cleanTitle(c.title).toLowerCase() === cleanTitle(cName).toLowerCase()) || cName === ''
- })
+  if (courseFilter === 'All') return allAssignments.filter(a => {
+    const cName = getVal(a, 'Course', 'course')
+    return courses.find(c => String(cleanTitle(c.title)).toLowerCase() === String(cleanTitle(cName)).toLowerCase()) || cName === ''
+  })
  const cName = cleanTitle(courses.find(c => c.id === courseFilter)?.title || '')
- return allAssignments.filter(a => {
- const assignmentCourse = getVal(a, 'Course', 'course').toLowerCase()
- return assignmentCourse === cName.toLowerCase() && assignmentCourse !== ''
+  return allAssignments.filter(a => {
+  const assignmentCourse = String(getVal(a, 'Course', 'course')).toLowerCase()
+  return assignmentCourse === String(cName).toLowerCase() && assignmentCourse !== ''
 })
 }, [allAssignments, courseFilter, courses])
 
@@ -132,7 +132,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <div className="h-px flex-1 bg-border/20" />
  </div>
  <div className="flex flex-col gap-2">
- {overdue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="overdue" />)}
+ {overdue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(a.path || `database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="overdue" />)}
  </div>
  </section>
  )}
@@ -146,7 +146,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <div className="h-px flex-1 bg-border/10" />
  </div>
  <div className="flex flex-col gap-2">
- {todayDue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="today" />)}
+ {todayDue.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(a.path || `database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="today" />)}
  </div>
  </section>
  )}
@@ -160,7 +160,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <div className="h-px flex-1 bg-border/10" />
  </div>
  <div className="flex flex-col gap-2">
- {thisWeek.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="week" />)}
+ {thisWeek.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(a.path || `database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="week" />)}
  </div>
  </section>
  )}
@@ -170,7 +170,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <section className="space-y-2">
  <SectionHeader title={`Upcoming — ${upcoming.length}`} />
  <div className="flex flex-col gap-2">
- {upcoming.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
+ {upcoming.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(a.path || `database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
  </div>
  </section>
  )}
@@ -180,7 +180,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  <section className="space-y-2">
  <SectionHeader title={`No Due Date — ${undated.length}`} />
  <div className="flex flex-col gap-2">
- {undated.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(`database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
+ {undated.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={handleComplete} onOpen={() => onOpenNote(a.path || `database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="normal" />)}
  </div>
  </section>
  )}
@@ -196,7 +196,7 @@ export default function AssignmentsTab({data, databases, onUpdate, onCreate, onD
  </button>
  {showDone && (
  <div className="flex flex-col gap-2">
- {done.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={() => {}} onOpen={() => onOpenNote(`database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="done" />)}
+ {done.map((a, idx) => <AssignmentRow key={idx} a={a} courses={courses} onComplete={() => {}} onOpen={() => onOpenNote(a.path || `database/assignments/${a.id}.md`)} onDelete={() => onDelete('assignments', a.id)} onUpdate={onUpdate} urgency="done" />)}
  </div>
  )}
  </section>

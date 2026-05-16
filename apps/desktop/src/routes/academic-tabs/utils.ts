@@ -18,11 +18,42 @@ export const cleanTitle = (val: string): string => {
 }
 
 export const getVal = (obj: any, ...keys: string[]): string => {
+    if (!obj) return ''
+    const props = obj.properties || obj
+    
+    const normalizedMap: Record<string, any> = {}
+    Object.keys(props).forEach(k => {
+        normalizedMap[k.toLowerCase()] = props[k]
+    })
+
     for (const k of keys) {
-        const v = obj?.[k]
+        const v = props[k]
         if (v !== undefined && v !== null && v !== '') return stripWL(String(v))
+        
+        const lowerK = k.toLowerCase()
+        const lowerV = normalizedMap[lowerK]
+        if (lowerV !== undefined && lowerV !== null && lowerV !== '') return stripWL(String(lowerV))
     }
     return ''
+}
+
+export const getBoolVal = (obj: any, ...keys: string[]): boolean => {
+    if (!obj) return false
+    const props = obj.properties || obj
+    const normalizedMap: Record<string, any> = {}
+    Object.keys(props).forEach(k => {
+        normalizedMap[k.toLowerCase()] = props[k]
+    })
+
+    for (const k of keys) {
+        const v = props[k]
+        if (v === true || v === 'true') return true
+        
+        const lowerK = k.toLowerCase()
+        const lowerV = normalizedMap[lowerK]
+        if (lowerV === true || lowerV === 'true') return true
+    }
+    return false
 }
 
 // Greyscale-only: weight/opacity conveys quality

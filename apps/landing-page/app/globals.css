@@ -150,7 +150,7 @@ html {
   }
 
   body {
-    @apply bg-background text-on-surface antialiased selection:bg-primary selection:text-on-primary transition-colors duration-300 font-inter;
+    @apply bg-background text-on-surface antialiased selection:bg-primary selection:text-on-primary font-inter;
     height: auto;
     min-height: 100vh;
     overflow-x: clip;
@@ -158,6 +158,11 @@ html {
       linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
       linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
     background-size: 40px 40px;
+    transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+  }
+
+  section, footer, div, h1, h2, h3, h4, h5, h6, p, span, a, button, input {
+    transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, opacity 0.4s ease;
   }
 
   section, footer {
@@ -184,7 +189,7 @@ html {
 
 @layer components {
   .industrial-container {
-    @apply max-w-[1400px] mx-auto px-8 text-left;
+    @apply max-w-[1400px] mx-auto px-6 md:px-8 text-left;
   }
 
   .industrial-border {
@@ -192,7 +197,7 @@ html {
   }
 
   .industrial-btn {
-    @apply px-8 py-5 text-on-surface border-2 font-mono text-[11px] uppercase tracking-[0.2em] transition-all duration-300 inline-flex items-center justify-center relative z-10 overflow-hidden;
+    @apply px-6 md:px-8 py-4 md:py-5 text-on-surface border-2 font-mono text-[10px] md:text-[11px] uppercase tracking-[0.2em] transition-all duration-300 inline-flex items-center justify-center relative z-10 overflow-hidden;
     border-color: var(--on-surface);
     background-color: var(--background);
     border-radius: 0px !important;
@@ -211,7 +216,7 @@ html {
 
   /* Fixed recursive apply issue for Tailwind v4 compatibility */
   .industrial-btn-primary {
-    @apply px-8 py-5 text-on-surface border-2 font-mono text-[11px] uppercase tracking-[0.2em] transition-all duration-300 inline-flex items-center justify-center relative z-10 overflow-hidden font-black;
+    @apply px-6 md:px-8 py-4 md:py-5 text-on-surface border-2 font-mono text-[10px] md:text-[11px] uppercase tracking-[0.2em] transition-all duration-300 inline-flex items-center justify-center relative z-10 overflow-hidden font-black;
     border-color: var(--on-surface);
     background-color: var(--background);
     border-radius: 0px !important;
@@ -224,33 +229,38 @@ html {
   }
 
   .industrial-input {
-    @apply w-full px-6 py-5 bg-surface border-2 border-outline-variant focus:border-primary outline-none transition-all duration-200 font-mono text-[13px] text-on-surface placeholder:text-outline/40 rounded-none;
+    @apply w-full px-5 md:px-6 py-4 md:py-5 bg-surface border-2 border-outline-variant focus:border-primary outline-none transition-all duration-200 font-mono text-[12px] md:text-[13px] text-on-surface placeholder:text-outline/40 rounded-none;
   }
 
   .text-display-hero {
-    @apply text-[2.5rem] md:text-[3rem] lg:text-[3.5rem] leading-[1.1] font-black tracking-tighter uppercase text-on-surface;
+    @apply text-[1.8rem] sm:text-[2.5rem] md:text-[3rem] lg:text-[3.5rem] leading-[1] font-black tracking-tighter uppercase text-on-surface;
   }
 
   .text-section-heading {
-    @apply text-[1.8rem] md:text-[2.2rem] lg:text-[2.5rem] leading-[1.1] font-black tracking-tighter uppercase text-on-surface;
+    @apply text-[1.5rem] sm:text-[1.8rem] md:text-[2.2rem] lg:text-[2.5rem] leading-[1.1] font-black tracking-tighter uppercase text-on-surface;
   }
 
   .text-body {
-    @apply text-[13px] lg:text-[14px] leading-relaxed font-bold uppercase tracking-tight text-on-surface-variant;
+    @apply text-[12px] md:text-[13px] lg:text-[14px] leading-relaxed font-bold uppercase tracking-tight text-on-surface-variant;
   }
 
   .technical-label {
-    font-size: 10px;
+    @apply font-mono uppercase text-on-surface text-[8px] md:text-[10px];
     line-height: 1;
     letter-spacing: 0.3em;
     font-weight: 900;
-    @apply font-mono uppercase text-on-surface;
   }
 
   .grid-background {
     background-image: 
       linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
       linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
-    background-size: 40px 40px;
+    background-size: 20px 20px;
+  }
+
+  @media (min-width: 768px) {
+    .grid-background {
+      background-size: 40px 40px;
+    }
   }
 }

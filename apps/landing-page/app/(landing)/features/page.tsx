@@ -185,10 +185,10 @@ export default function FeaturesPage() {
             READY FOR<br />THE UPGRADE?
           </h2>
           <IndustrialButton 
-            href="/auth" 
+            href="/auth?mode=signup" 
             className="h-16 px-16"
           >
-            SIGN IN
+            JOIN WAITLIST
           </IndustrialButton>
         </div>
       </section>

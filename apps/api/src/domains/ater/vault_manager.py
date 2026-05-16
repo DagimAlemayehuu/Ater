@@ -149,7 +149,7 @@ class VaultManager:
             filename = f"{unit_num}_{canonical_name}_Hub.md" if unit_num else f"{canonical_name}_Hub.md"
             
             # Smart Redirect: Hubs MUST live in the Study Planner for Academic Dashboard visibility
-            planner_dir = self.vault_path / "database" / "study planer"
+            planner_dir = self.vault_path / "database" / "study planner"
             
             # Existence check (case-insensitive) to prevent "of" vs "Of" duplicates
             if planner_dir.exists():

@@ -19,13 +19,13 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  const allCourses = data.courses || []
  const allHubs = data.study_sessions || []
 
- const activeSemesters = (data.semesters || []).filter(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase() === 'active').map(s => (s.title || '').toLowerCase())
+ const activeSemesters = (data.semesters || []).filter(s => String(stripWL(getVal(s, 'Status', 'status'))).toLowerCase() === 'active').map(s => String(s.title || '').toLowerCase())
 
  const courses = useMemo(() => {
   if (courseFilter === 'All') return allCourses
   return allCourses.filter(c => {
-   const isCompleted = stripWL(getVal(c, 'Status', 'status')).toLowerCase().includes('complet')
-   const courseSem = stripWL(getVal(c, 'Semester', 'semester')).toLowerCase()
+   const isCompleted = String(stripWL(getVal(c, 'Status', 'status'))).toLowerCase().includes('complet')
+   const courseSem = String(stripWL(getVal(c, 'Semester', 'semester'))).toLowerCase()
    const inActiveSemester = activeSemesters.length === 0 || activeSemesters.some(s => courseSem.includes(s))
    return !isCompleted && inActiveSemester
   })
@@ -35,8 +35,8 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  const courseStats = useMemo(() => {
  return courses.reduce((acc, c) => {
  const hubs = allHubs.filter(h => {
- const hubCourse = getVal(h, 'course', 'Course').toLowerCase()
- const targetCourse = (c.title || '').toLowerCase()
+ const hubCourse = String(getVal(h, 'course', 'Course')).toLowerCase()
+ const targetCourse = String(c.title || '').toLowerCase()
  return hubCourse === targetCourse && hubCourse !== ''
 })
  const done = hubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
@@ -55,8 +55,8 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  // Course filter
  if (selectedCourseId && selectedCourse) {
  hubs = hubs.filter(h => {
- const hubCourse = getVal(h, 'course', 'Course').toLowerCase()
- const targetCourse = (selectedCourse.title || '').toLowerCase()
+ const hubCourse = String(getVal(h, 'course', 'Course')).toLowerCase()
+ const targetCourse = String(selectedCourse.title || '').toLowerCase()
  return hubCourse === targetCourse && hubCourse !== ''
 })
 }
@@ -76,7 +76,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  // Search
  if (search.trim()) {
  hubs = hubs.filter(h =>
- (h.title || h.id || '').toLowerCase().includes(search.toLowerCase())
+ String(h.title || h.id || '').toLowerCase().includes(search.toLowerCase())
  )
 }
 
@@ -262,7 +262,7 @@ export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onO
  <div className="grid grid-cols-3 gap-3">
  {section.hubs.map((hub, idx) => (
  <HubCard key={idx} hub={hub}
- onOpen={() => onOpenNote(`database/study planer/${hub.id}.md`)}
+ onOpen={() => onOpenNote(hub.path || `database/study planner/${hub.id}.md`)}
  onPractice={() => navigateTo('PRACTICE', hub.id)}
  onSetStatus={handleSetStatus}
  onSetStudyDate={handleSetStudyDate}

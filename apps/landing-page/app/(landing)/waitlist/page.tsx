@@ -38,7 +38,7 @@ export default function WaitlistLandingPage() {
             <div className="mt-12">
               <Link href="/auth">
                 <IndustrialButton className="h-14 px-10">
-                  SIGN IN
+                  JOIN WAITLIST
                 </IndustrialButton>
               </Link>
             </div>

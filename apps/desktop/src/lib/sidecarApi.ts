@@ -81,7 +81,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 
         obsidianVaultPath,
         inboxPath: (await store.get<string>('inboxPath')) || '',
-        academicFolderPath: (await store.get<string>('academicFolderPath')) || 'Database',
+        academicFolderPath: (await store.get<string>('academicFolderPath')) || 'database',
         autoDeploy: (await store.get<boolean>('autoDeploy')) || false,
     }
 
@@ -92,7 +92,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         
         'X-Vault-Path': config.obsidianVaultPath,
         'X-Inbox-Path': config.inboxPath || '',
-        'X-Academic-Path': config.academicFolderPath || 'Database',
+        'X-Academic-Path': config.academicFolderPath || 'database',
         'X-Auto-Deploy': String(config.autoDeploy || false),
     };
 }
@@ -141,6 +141,11 @@ export const sidecarApi = {
     
     fetchVaultAreas: () =>
         request<{ areas: string[] }>(`/api/vault/areas`),
+
+    initializeVault: () =>
+        request<{ success: boolean; message: string }>('/api/vault/initialize', {
+            method: 'POST'
+        }),
 
     createVaultDatabase: (name: string, area?: string) =>
         request<{ success: boolean; id: string }>(`/api/vault/databases`, {
@@ -528,7 +533,7 @@ export const sidecarApi = {
         return {
             obsidianVaultPath: (await store.get<string>('obsidianVaultPath')) || '',
             inboxPath: (await store.get<string>('inboxPath')) || '',
-            academicFolderPath: (await store.get<string>('academicFolderPath')) || 'Database',
+            academicFolderPath: (await store.get<string>('academicFolderPath')) || 'database',
             aiProvider: (await store.get<string>('aiProvider')) || 'google',
             aiModel: (await store.get<string>('aiModel')) || 'gemini-2.0-flash',
         }

@@ -3,7 +3,7 @@ import {Check, Edit3, Plus, X} from 'lucide-react'
 import {format, parseISO} from 'date-fns'
 import {cn} from '@/lib/utils'
 import {sidecarApi} from '@/lib/sidecarApi'
-import {stripWL, statusColorClass, getYearOrder, wrapWL, cleanTitle} from './utils'
+import {stripWL, statusColorClass, getYearOrder, wrapWL, cleanTitle, getVal, getBoolVal} from './utils'
 import type {VaultDatabase} from './types'
 
 // ─── Tab Button ────────────────────────────────────────────────────────────────
@@ -253,19 +253,19 @@ export function AcademicRoadmap({items, semesters = [], activeId, onSelect}: {
  return (
  <div className="space-y-6">
  {sorted.map((item, idx) => {
- const status = stripWL(item.Status || item.properties?.Status || '').toLowerCase()
+ const status = String(stripWL(getVal(item, 'Status', 'status'))).toLowerCase()
  const isCompleted = status.includes('complet')
- const isActive = item['Current Year'] === true || item['Current Year'] === 'true' || item.properties?.['Current Year'] === true
+ const isActive = getBoolVal(item, 'Current Year', 'current_year')
  const isSelected = activeId === item.id
  
  const yearSemesters = semesters.filter(s => {
-    const semYear = stripWL(getVal(s, 'Year', 'year')).toLowerCase().trim()
-    const targetYear = (item.title || '').toLowerCase().trim()
+    const semYear = String(stripWL(getVal(s, 'Year', 'year'))).toLowerCase().trim()
+    const targetYear = String(item.title || '').toLowerCase().trim()
     return semYear === targetYear && targetYear !== ''
  }).sort((a, b) => {
     const order = ['Autumn', 'Fall', 'Winter', 'Spring', 'Summer']
-    const ai = order.findIndex(o => a.title?.includes(o))
-    const bi = order.findIndex(o => b.title?.includes(o))
+    const ai = order.findIndex(o => String(a.title || '').includes(o))
+    const bi = order.findIndex(o => String(b.title || '').includes(o))
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
  })
 
@@ -287,7 +287,7 @@ export function AcademicRoadmap({items, semesters = [], activeId, onSelect}: {
  {yearSemesters.length > 0 && (
     <div className="pl-4 flex flex-col gap-1.5 border-l border-border/20 ml-2">
         {yearSemesters.map(s => {
-            const sStatus = stripWL(getVal(s, 'Status', 'status')).toLowerCase()
+            const sStatus = String(stripWL(getVal(s, 'Status', 'status'))).toLowerCase()
             const sActive = sStatus.includes('active')
             return (
                 <div key={s.id} className="flex items-center justify-between group/sem">
@@ -308,13 +308,6 @@ export function AcademicRoadmap({items, semesters = [], activeId, onSelect}: {
  )
 }
 
-function getVal(obj: any, key: string, fallback?: string): string {
-    if (!obj) return ''
-    const val = obj[key] || (obj.properties && obj.properties[key])
-    if (val !== undefined && val !== null) return String(val)
-    if (fallback && obj[fallback]) return String(obj[fallback])
-    return ''
-}
 
 
 // ─── Select Property Editor ────────────────────────────────────────────────────

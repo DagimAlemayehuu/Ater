@@ -25,20 +25,20 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  const schema = databases.find(d => d.id === 'courses')?.schema || {}
  const now = startOfDay(new Date())
 
- const activeSemesters = (data.semesters || []).filter(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase() === 'active').map(s => (s.title || '').toLowerCase())
+ const activeSemesters = (data.semesters || []).filter(s => String(stripWL(getVal(s, 'Status', 'status'))).toLowerCase() === 'active').map(s => String(s.title || '').toLowerCase())
 
  const filtered = useMemo(() => {
  let cs = allCourses
  if (statusFilter === 'Active') {
   cs = cs.filter(c => {
-  const isCompleted = stripWL(getVal(c, 'Status', 'status')).toLowerCase().includes('complet')
-  const courseSem = stripWL(getVal(c, 'Semester', 'semester')).toLowerCase()
+  const isCompleted = String(stripWL(getVal(c, 'Status', 'status'))).toLowerCase().includes('complet')
+  const courseSem = String(stripWL(getVal(c, 'Semester', 'semester'))).toLowerCase()
   const inActiveSemester = activeSemesters.length === 0 || activeSemesters.some(s => courseSem.includes(s))
   return !isCompleted && inActiveSemester
   })
  }
- if (statusFilter === 'Completed') cs = cs.filter(c => stripWL(getVal(c, 'Status', 'status')).toLowerCase().includes('complet'))
- if (search.trim()) cs = cs.filter(c => c.title?.toLowerCase().includes(search.toLowerCase()))
+ if (statusFilter === 'Completed') cs = cs.filter(c => String(stripWL(getVal(c, 'Status', 'status'))).toLowerCase().includes('complet'))
+ if (search.trim()) cs = cs.filter(c => String(c.title || '').toLowerCase().includes(search.toLowerCase()))
  return cs
  }, [allCourses, statusFilter, search, activeSemesters])
 
@@ -52,13 +52,13 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  const professor = stripWL(getVal(course, 'Professor', 'professor'))
  const difficulty = stripWL(getVal(course, 'Difficulty', 'difficulty'))
 
- const courseAssignments = assignments.filter(a => stripWL(getVal(a, 'Course', 'course')).toLowerCase().includes(course.title?.toLowerCase()))
+ const courseAssignments = assignments.filter(a => String(stripWL(getVal(a, 'Course', 'course'))).toLowerCase().includes(String(course.title || '').toLowerCase()))
  const pendingAssignments = courseAssignments.filter(a => !a.done)
- const courseExams = exams.filter(e => stripWL(getVal(e, 'Course', 'course')).toLowerCase().includes(course.title?.toLowerCase()))
+ const courseExams = exams.filter(e => String(stripWL(getVal(e, 'Course', 'course'))).toLowerCase().includes(String(course.title || '').toLowerCase()))
  const upcomingExams = courseExams.filter(e => e.date && new Date(e.date).getTime() >= now.getTime()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
  const nextExam = upcomingExams[0]
- const courseHubs = hubs.filter(h => stripWL(getVal(h, 'course', 'Course')).toLowerCase().includes(course.title?.toLowerCase()))
- const doneHubs = courseHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
+ const courseHubs = hubs.filter(h => String(stripWL(getVal(h, 'course', 'Course'))).toLowerCase().includes(String(course.title || '').toLowerCase()))
+ const doneHubs = courseHubs.filter(h => String(stripWL(getVal(h, 'status', 'Status'))).toLowerCase().includes('complet')).length
 
  return (
  <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
@@ -79,9 +79,14 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase border', gradeColorClass(grade))}>{grade}</span>}
  </div>
  </div>
- <button onClick={() => onDelete('courses', selectedId)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
- <Trash2 size={14} />
- </button>
+  <div className="flex items-center gap-2">
+  <button onClick={() => onOpenNote(course.path || `database/courses/${course.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10 rounded-none " title="Open Note">
+  <BookOpen size={14} />
+  </button>
+  <button onClick={() => onDelete('courses', selectedId)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
+  <Trash2 size={14} />
+  </button>
+  </div>
  </div>
 
  {/* Quick Stats */}
@@ -137,7 +142,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
 }} />
  <div className="flex flex-col gap-2">
  {pendingAssignments.slice(0, 5).map((a, idx) => (
- <div key={idx} onClick={() => onOpenNote(`database/assignments/${a.id}.md`)}
+ <div key={idx} onClick={() => onOpenNote(a.path || `database/assignments/${a.id}.md`)}
  className="flex items-center gap-3 p-3 border border-border rounded-none cursor-pointer bg-background ">
  <div className="w-3 h-3 rounded-none border border-border shrink-0" />
  <span className="text-[11px] font-black uppercase flex-1">{cleanTitle(a.title)}</span>
@@ -157,7 +162,7 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  const hStatus = stripWL(getVal(hub, 'status', 'Status'))
  const isDone = hStatus.toLowerCase().includes('complet')
  return (
- <div key={idx} onClick={() => onOpenNote(`database/study planer/${hub.id}.md`)}
+ <div key={idx} onClick={() => onOpenNote(hub.path || `database/study planner/${hub.id}.md`)}
  className={cn('p-3 border rounded-none flex items-center gap-3 cursor-pointer hover:border-foreground/70 ',
  isDone ? 'border-border bg-muted/5 opacity-50' : 'border-border bg-background')}>
  <div className={cn('w-3 h-3 rounded-none border shrink-0', isDone ? 'bg-primary border-primary' : 'border-border')} />
@@ -210,13 +215,13 @@ export default function CoursesTab({data, databases, onUpdate, onCreate, onDelet
  const grade = stripWL(getVal(course, 'Grade', 'grade'))
  const credits = getVal(course, 'Credits', 'credits')
  const professor = stripWL(getVal(course, 'Professor', 'professor'))
- const courseAssignments = assignments.filter(a => stripWL(getVal(a, 'Course', 'course')).toLowerCase().includes(course.title?.toLowerCase()))
+ const courseAssignments = assignments.filter(a => String(stripWL(getVal(a, 'Course', 'course'))).toLowerCase().includes(String(course.title || '').toLowerCase()))
  const pending = courseAssignments.filter(a => !a.done).length
- const courseExams = exams.filter(e => stripWL(getVal(e, 'Course', 'course')).toLowerCase().includes(course.title?.toLowerCase()))
+ const courseExams = exams.filter(e => String(stripWL(getVal(e, 'Course', 'course'))).toLowerCase().includes(String(course.title || '').toLowerCase()))
  const nextExam = courseExams.filter(e => e.date).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
  const daysToExam = nextExam?.date ? differenceInDays(new Date(nextExam.date), now) : null
- const courseHubs = hubs.filter(h => stripWL(getVal(h, 'course', 'Course')).toLowerCase().includes(course.title?.toLowerCase()))
- const doneHubs = courseHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
+ const courseHubs = hubs.filter(h => String(stripWL(getVal(h, 'course', 'Course'))).toLowerCase().includes(String(course.title || '').toLowerCase()))
+ const doneHubs = courseHubs.filter(h => String(stripWL(getVal(h, 'status', 'Status'))).toLowerCase().includes('complet')).length
 
  return (
  <div key={idx} onClick={() => setSelectedId(course.id)}

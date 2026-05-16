@@ -25,13 +25,13 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  const allExams = data.exams || []
  const hubs = data.study_sessions || []
 
- const activeSemesters = (data.semesters || []).filter(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase() === 'active').map(s => (s.title || '').toLowerCase())
+ const activeSemesters = (data.semesters || []).filter(s => String(stripWL(getVal(s, 'Status', 'status'))).toLowerCase() === 'active').map(s => String(s.title || '').toLowerCase())
 
  const courses = useMemo(() => {
   if (statusFilter === 'All') return allCourses
   return allCourses.filter(c => {
-   const isCompleted = stripWL(getVal(c, 'Status', 'status')).toLowerCase().includes('complet')
-   const courseSem = stripWL(getVal(c, 'Semester', 'semester')).toLowerCase()
+   const isCompleted = String(stripWL(getVal(c, 'Status', 'status'))).toLowerCase().includes('complet')
+   const courseSem = String(stripWL(getVal(c, 'Semester', 'semester'))).toLowerCase()
    const inActiveSemester = activeSemesters.length === 0 || activeSemesters.some(s => courseSem.includes(s))
    return !isCompleted && inActiveSemester
   })
@@ -44,14 +44,14 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
   if (statusFilter === 'Active') {
     baseExams = allExams.filter(e => {
       const cName = getVal(e, 'Course', 'course')
-      return courses.find(c => cleanTitle(c.title).toLowerCase() === cleanTitle(cName).toLowerCase()) || cName === ''
+      return courses.find(c => String(cleanTitle(c.title)).toLowerCase() === String(cleanTitle(cName)).toLowerCase()) || cName === ''
     })
   }
   if (courseFilter === 'All') return baseExams
   const cName = courses.find(c => c.id === courseFilter)?.title || ''
   return baseExams.filter(e => {
-  const examCourse = getVal(e, 'Course', 'course').toLowerCase()
-  return examCourse === cName.toLowerCase() && examCourse !== ''
+  const examCourse = String(getVal(e, 'Course', 'course')).toLowerCase()
+  return examCourse === String(cName).toLowerCase() && examCourse !== ''
  })
  }, [allExams, courseFilter, courses, statusFilter])
 
@@ -94,9 +94,9 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  const examCourse = stripWL(getVal(exam, 'Course', 'course'))
  const relatedHubs = hubs.filter(h => {
  const hubCourse = getVal(h, 'course', 'Course').toLowerCase()
- return hubCourse === examCourse.toLowerCase() && hubCourse !== ''
+ return hubCourse === String(examCourse).toLowerCase() && hubCourse !== ''
 })
- const doneHubs = relatedHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
+ const doneHubs = relatedHubs.filter(h => String(stripWL(getVal(h, 'status', 'Status'))).toLowerCase().includes('complet')).length
 
  return (
  <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-8">
@@ -113,11 +113,14 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  />
  <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">{cleanTitle(examCourse)}</span>
  </div>
- <div className="flex items-center gap-2">
- <button onClick={() => {onDelete('exams', selectedId); setSelectedId(null)}}
- className="p-2 text-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-none ">
- <Trash2 size={13} />
- </button>
+  <div className="flex items-center gap-2">
+  <button onClick={() => onOpenNote(exam.path || `database/exams/${exam.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10 rounded-none " title="Open Note">
+  <BookOpen size={13} />
+  </button>
+  <button onClick={() => {onDelete('exams', selectedId); setSelectedId(null)}}
+  className="p-2 text-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-none ">
+  <Trash2 size={13} />
+  </button>
  <button onClick={() => setSelectedId(null)} className="px-3 py-1.5 bg-muted/10 border border-border rounded-none text-[9px] font-black uppercase hover:bg-muted/20 ">Back</button>
  </div>
  </div>

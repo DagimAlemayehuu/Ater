@@ -76,10 +76,19 @@ export default function Onboarding() {
     setFinalError('')
 
     try {
-      // 1. Initial sync to prepare databases
+      // 0. Save the vault path first so headers in sidecarApi can find it
+      await saveConfig({
+        obsidianVaultPath: vaultPath,
+        inboxPath: `${vaultPath}/Inbox`
+      })
+
+      // 1. Initialize Folder Structure
+      await sidecarApi.initializeVault()
+
+      // 2. Initial sync to prepare databases
       await sidecarApi.academicsSyncProfile()
 
-      // 2. Scaffold Academic Program
+      // 3. Scaffold Academic Program
       if (programName) {
         const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
         const cleanName = programName.replace(/_/g, ' ').trim()
@@ -88,16 +97,13 @@ export default function Onboarding() {
         for (let i = 0; i < programDuration; i++) {
           const title = `Year ${romans[i] || (i + 1)}`
           const status = i < currentIdx ? '[[Completed]]' : i === currentIdx ? '[[Active]]' : '[[Planned]]'
+          const isCurrent = i === currentIdx
           
           await sidecarApi.createVaultRow('years', title, {
-            Program: `[[${cleanName}]]`,
-            'Academic Level': `[[${programLevel}]]`,
             Status: status,
-            'Current Year': i === currentIdx,
-            'Target Years': programDuration,
-            'Earned Credits': 0,
-            'Target Credits': 0,
-            'Cumulative GPA': 0.00
+            'Academic Level': `[[${programLevel}]]`,
+            'Current Year': isCurrent,
+            Program: `[[${cleanName}]]`
           })
         }
       }
@@ -115,7 +121,7 @@ export default function Onboarding() {
         aiProvider: provider,
         displayName: name,
         inboxPath: `${vaultPath}/Inbox`,
-        academicFolderPath: 'Notes',
+        academicFolderPath: 'database',
         autoDeploy: true,
         isActivated: true,
         isProgramConfigured: true

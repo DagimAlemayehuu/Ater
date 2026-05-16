@@ -9,15 +9,24 @@ router = APIRouter()
 
 DB_DIR_PREFIX = "database"
 
-def get_note_data(file_path: Path) -> Dict[str, Any]:
+def get_note_data(file_path: Path, vault_root: Path) -> Dict[str, Any]:
     try:
         post = frontmatter.load(file_path)
         data = dict(post.metadata)
         data["id"] = file_path.stem
         data["title"] = data.get("title") or file_path.stem
+        try:
+            data["path"] = str(file_path.relative_to(vault_root))
+        except ValueError:
+            data["path"] = str(file_path)
         return data
     except Exception:
-        return {"id": file_path.stem, "title": file_path.stem}
+        path_str = ""
+        try:
+            path_str = str(file_path.relative_to(vault_root))
+        except ValueError:
+            path_str = str(file_path)
+        return {"id": file_path.stem, "title": file_path.stem, "path": path_str}
 
 @router.get("/academics/dashboard")
 async def get_academics_dashboard(secrets: AppSecrets = Depends(get_app_secrets)):
@@ -41,7 +50,7 @@ async def get_academics_dashboard(secrets: AppSecrets = Depends(get_app_secrets)
         "courses": "courses",
         "exams": "exams",
         "assignments": "assignments",
-        "study planer": "study_sessions",
+        "study planner": "study_sessions",
         "years": "years"
     }
     
@@ -50,7 +59,7 @@ async def get_academics_dashboard(secrets: AppSecrets = Depends(get_app_secrets)
         if folder_path.exists() and folder_path.is_dir():
             for f in folder_path.glob("*.md"):
                 if f.name.startswith("."): continue
-                data[key].append(get_note_data(f))
+                data[key].append(get_note_data(f, vault_root))
             
     return data
 
@@ -70,7 +79,7 @@ async def sync_academics_profile(secrets: AppSecrets = Depends(get_app_secrets))
     db_folders = [
         "database/assignments",
         "database/exams",
-        "database/study planer",
+        "database/study planner",
         "database/courses",
         "database/semesters",
         "database/years",
@@ -78,14 +87,5 @@ async def sync_academics_profile(secrets: AppSecrets = Depends(get_app_secrets))
     ]
     for f in db_folders:
         (vault_root / f).mkdir(parents=True, exist_ok=True)
-        
-    # 3. Create Seed Files (Only if they don't exist)
-    year_path = vault_root / "database/years/2025.md"
-    if not year_path.exists():
-        year_path.write_text("---\ntitle: 2025\nstatus: active\n---")
-        
-    semester_path = vault_root / "database/semesters/Autumn 2025.md"
-    if not semester_path.exists():
-        semester_path.write_text("---\ntitle: Autumn 2025\nyear: [[2025]]\nstatus: active\n---")
         
     return {"success": True}

@@ -113,72 +113,76 @@ export default function AcademicDashboard() {
  }, [setIsFullscreen])
 
  // ── Shared handlers ────────────────────────────────────────────────────────
- const onUpdate = useCallback(async (dbId: string, itemId: string, properties: Record<string, any>) => {
- console.log(`[Academic] Updating ${dbId}/${itemId}:`, properties)
- // Optimistic update
- setData(prev => {
- if (!prev) return prev
- const next = {...prev}
- let key: keyof AcademicData | undefined;
- if (dbId.includes('Years')) key = 'years';
- else if (dbId.includes('Semesters')) key = 'semesters';
- else if (dbId.includes('Courses')) key = 'courses';
- else if (dbId.includes('Study Planner')) key = 'study_sessions';
- else if (dbId.includes('Exams')) key = 'exams';
- else if (dbId.includes('Assignments')) key = 'assignments';
- if (key && Array.isArray(next[key])) {
- next[key] = (next[key] as any[]).map(item => {
- if (item.id === itemId) {
- const updated = {...item, ...properties}
- if (properties.title) updated.id = properties.title
- return updated
+  const onUpdate = useCallback(async (dbId: string, itemId: string, properties: Record<string, any>) => {
+  console.log(`[Academic] Updating ${dbId}/${itemId}:`, properties)
+  // Optimistic update
+  setData(prev => {
+  if (!prev) return prev
+  const next = {...prev}
+  let key: keyof AcademicData | undefined;
+  const dbIdLow = dbId.toLowerCase();
+  if (dbIdLow.includes('year')) key = 'years';
+  else if (dbIdLow.includes('semester')) key = 'semesters';
+  else if (dbIdLow.includes('course')) key = 'courses';
+  else if (dbIdLow.includes('study planner') || dbIdLow.includes('study_sessions')) key = 'study_sessions';
+  else if (dbIdLow.includes('exam')) key = 'exams';
+  else if (dbIdLow.includes('assignment')) key = 'assignments';
+  
+  if (key && Array.isArray(next[key])) {
+  next[key] = (next[key] as any[]).map(item => {
+  if (item.id === itemId) {
+  const updated = {...item, ...properties}
+  if (properties.title) updated.id = properties.title
+  return updated
 }
- return item
+  return item
 })
 }
- return next
+  return next
 })
 
- try {
- if (properties.title && properties.title !== itemId) {
- await sidecarApi.renameVaultFile(dbId, itemId, properties.title)
+  try {
+  if (properties.title && properties.title !== itemId) {
+  await sidecarApi.renameVaultFile(dbId, itemId, properties.title)
 } else {
- await sidecarApi.updateVaultRow(dbId, itemId, properties)
+  await sidecarApi.updateVaultRow(dbId, itemId, properties)
 }
- fetchData()
+  fetchData()
 } catch {
- toast.error('Update failed')
- fetchData() // Revert to server state
+  toast.error('Update failed')
+  fetchData() // Revert to server state
 }
 }, [fetchData])
 
- const onCreate = useCallback(async (dbId: string, title: string, props?: Record<string, any>): Promise<string | null> => {
- // Optimistic update for creation
- setData(prev => {
- if (!prev) return prev
- const next = {...prev}
- let key: keyof AcademicData | undefined;
- if (dbId.includes('Years')) key = 'years';
- else if (dbId.includes('Semesters')) key = 'semesters';
- else if (dbId.includes('Courses')) key = 'courses';
- else if (dbId.includes('Study Planner')) key = 'study_sessions';
- else if (dbId.includes('Exams')) key = 'exams';
- else if (dbId.includes('Assignments')) key = 'assignments';
- if (key && Array.isArray(next[key])) {
- const newItem = {id: title, title, ...props}
- next[key] = [...(next[key] as any[]), newItem]
+  const onCreate = useCallback(async (dbId: string, title: string, props?: Record<string, any>): Promise<string | null> => {
+  // Optimistic update for creation
+  setData(prev => {
+  if (!prev) return prev
+  const next = {...prev}
+  let key: keyof AcademicData | undefined;
+  const dbIdLow = dbId.toLowerCase();
+  if (dbIdLow.includes('year')) key = 'years';
+  else if (dbIdLow.includes('semester')) key = 'semesters';
+  else if (dbIdLow.includes('course')) key = 'courses';
+  else if (dbIdLow.includes('study planner') || dbIdLow.includes('study_sessions')) key = 'study_sessions';
+  else if (dbIdLow.includes('exam')) key = 'exams';
+  else if (dbIdLow.includes('assignment')) key = 'assignments';
+  
+  if (key && Array.isArray(next[key])) {
+  const newItem = {id: title, title, ...props}
+  next[key] = [...(next[key] as any[]), newItem]
 }
- return next
+  return next
 })
 
- try {
- const res = await sidecarApi.createVaultRow(dbId, title, props || {})
- fetchData()
- return res.id || null
+  try {
+  const res = await sidecarApi.createVaultRow(dbId, title, props || {})
+  fetchData()
+  return res.id || null
 } catch {
- toast.error('Creation failed')
- fetchData()
- return null
+  toast.error('Creation failed')
+  fetchData()
+  return null
 }
 }, [fetchData])
 
@@ -187,6 +191,31 @@ export default function AcademicDashboard() {
       await sidecarApi.deleteVaultRow(dbId, itemId)
       fetchData()
     } catch {toast.error('Delete failed')}
+  }, [fetchData])
+
+  const onScaffold = useCallback(async (name: string, years: number, level: string, currentYearIdx: number) => {
+    try {
+      const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
+      const cleanName = name.replace(/_/g, ' ').trim()
+      
+      for (let i = 0; i < years; i++) {
+        const title = `Year ${romans[i] || (i + 1)}`
+        const status = i < currentYearIdx ? '[[Completed]]' : i === currentYearIdx ? '[[Active]]' : '[[Planned]]'
+        const isCurrent = i === currentYearIdx
+        
+        await sidecarApi.createVaultRow('years', title, {
+          Status: status,
+          'Academic Level': `[[${level}]]`,
+          'Current Year': isCurrent,
+          Program: `[[${cleanName}]]`
+        })
+      }
+      toast.success('Program roadmap deployed')
+      fetchData()
+    } catch (err) {
+      console.error('Scaffold failed', err)
+      toast.error('Failed to deploy roadmap')
+    }
   }, [fetchData])
 
  const handleSync = useCallback(async () => {
@@ -265,8 +294,9 @@ export default function AcademicDashboard() {
       return prev
     })
    },
-  onRefresh: fetchData,
- }
+   onRefresh: fetchData,
+   onScaffold,
+  }
 
  // ── Loading ────────────────────────────────────────────────────────────────
  if (loading) {

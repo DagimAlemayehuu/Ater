@@ -90,7 +90,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     aiModel: 'gemini-2.0-flash',
     obsidianVaultPath: '',
     inboxPath: '',
-    academicFolderPath: 'Notes',
+    academicFolderPath: 'database',
     autoDeploy: false,
     strategistPrompt: DEFAULT_SYSTEM_PROMPT_STRATEGIST,
     strategistSliders: '',
@@ -127,17 +127,17 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
                 let obsidianVaultPath = await store.get<string>('obsidianVaultPath');
                 if (!obsidianVaultPath || obsidianVaultPath.trim() === '') {
-                    obsidianVaultPath = '/Users/dabodestroyer/code/Antigravity/Ater/Obsidian_Vault';
+                    obsidianVaultPath = '';
                     await store.set('obsidianVaultPath', obsidianVaultPath);
                     await store.save();
                 }
                 const inboxPath = (await store.get<string>('inboxPath')) || '';
                 let academicFolderPath = (await store.get<string>('academicFolderPath')) || DEFAULT_CONFIG.academicFolderPath;
                 
-                // ── MIGRATION: Force legacy "1-Academic" to "Notes" (v32.1) ──
-                if (academicFolderPath === '1-Academic') {
-                    academicFolderPath = 'Notes';
-                    await store.set('academicFolderPath', 'Notes');
+                // ── MIGRATION: Force legacy "1-Academic" or "Notes" to "database" ──
+                if (academicFolderPath === '1-Academic' || academicFolderPath === 'Notes') {
+                    academicFolderPath = 'database';
+                    await store.set('academicFolderPath', 'database');
                     await store.save();
                 }
                 const autoDeploy = (await store.get<boolean>('autoDeploy')) ?? false;

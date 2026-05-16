@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ChevronRight, Terminal, Download, Shield, Lock, Activity, Zap, Cpu, Search, Layout } from 'lucide-react';
 import { IndustrialButton } from '@/components/IndustrialButton';
+import { motion } from 'motion/react';
 
 
 export default function Home() {
@@ -13,24 +14,34 @@ export default function Home() {
       {/* Hero & Mockup Integrated Section */}
       <section className="sticky top-0 z-10 bg-background grid-background flex flex-col items-center justify-center h-screen w-full overflow-hidden border-b border-outline-variant pt-16">
         <div className="industrial-container flex flex-col items-center justify-center gap-8 w-full h-full py-20">
-          <div className="flex flex-col items-start justify-center gap-6 w-full">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col items-start justify-center gap-6 w-full"
+          >
             <h1 className="text-display-hero border-b border-outline-variant pb-4 text-left w-full">
               LEARN FASTER.<br />SCORE BETTER.
             </h1>
-          </div>
+          </motion.div>
 
           {/* Integrated Mockup */}
-          <div className="w-full max-w-4xl relative transform scale-75 md:scale-90 lg:scale-100 origin-center transition-transform duration-500 flex items-center justify-center">
+          <div className="w-full max-w-4xl relative transform scale-[0.85] sm:scale-90 md:scale-95 lg:scale-100 origin-center transition-transform duration-500 flex items-center justify-center">
              <FullMacbookMockup />
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-6 w-full items-center justify-center mt-4">
-            <Link href="/auth">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="flex flex-col sm:flex-row gap-6 w-full items-center justify-center mt-4"
+          >
+            <Link href="/auth?mode=signup">
               <IndustrialButton className="w-full sm:w-auto h-14 px-12">
-                SIGN IN
+                JOIN WAITLIST
               </IndustrialButton>
             </Link>
-          </div>
+          </motion.div>
         </div>
       </section>
 
