@@ -17,9 +17,9 @@ jobs:
             const { data: release } = await github.rest.repos.createRelease({
               owner: 'DagimAlemayehuu',
               repo: 'Ater_Releases',
-              tag_name: 'v0.0.25',
-              name: 'Ater v0.0.25',
-              body: 'Official release for Ater version v0.0.25.',
+              tag_name: 'v0.0.26',
+              name: 'Ater v0.0.26',
+              body: 'Official release for Ater version v0.0.26.',
               draft: true
             });
             console.log(`Created release: ${release.html_url}`);
@@ -123,28 +123,25 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
-          tagName: v0.0.25
-          releaseName: "Ater v0.0.25"
-          owner: DagimAlemayehuu
-          repo: Ater_Releases
           publish: false
           args: ${{ matrix.platform == 'macos' && format('--target {0}', matrix.arch == 'aarch64' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin') || '' }}
 
-      - name: Upload to Ater_Releases
+      - name: Manual Cross-Repo Delivery
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
-          # Create the release if it doesn't exist (ignore error if it does)
-          gh release create v0.0.25 --repo DagimAlemayehuu/Ater_Releases --title "Ater v0.0.25" --notes "Production Release v0.0.25" || echo "Release already exists"
+          # 1. Create the release in the target repo (Ignore error if already created by another runner)
+          gh release create v0.0.26 --repo DagimAlemayehuu/Ater_Releases --title "Ater v0.0.26" --notes "Production Build v0.0.26" || echo "Release already exists"
           
-          # Upload the Mac DMG (Silicon)
+          # 2. Upload Mac Silicon DMG
           if [ "${{ matrix.os }}" == "macos-14" ]; then
-            gh release upload v0.0.25 apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg --repo DagimAlemayehuu/Ater_Releases --clobber
+            gh release upload v0.0.26 apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg --repo DagimAlemayehuu/Ater_Releases --clobber
           fi
           
-          # Upload the Windows Setup
+          # 3. Upload Windows Setup
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            gh release upload v0.0.25 apps/desktop/src-tauri/target/release/bundle/nsis/*.exe --repo DagimAlemayehuu/Ater_Releases --clobber
+            # Note: Windows paths use backslashes in shell but forward slashes work in GH CLI
+            gh release upload v0.0.26 apps/desktop/src-tauri/target/release/bundle/nsis/*.exe --repo DagimAlemayehuu/Ater_Releases --clobber
           fi
 
   publish-release:
@@ -155,7 +152,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
-          gh release edit v0.0.25 \
+          gh release edit v0.0.26 \
             --repo DagimAlemayehuu/Ater_Releases \
             --discussion-category "Announcements" \
             --draft=false
@@ -183,5 +180,5 @@ jobs:
         with:
           token: ${{ secrets.RELEASE_PAT }}
           repository: DagimAlemayehuu/Ater_Releases
-          tag_name: v0.0.25
+          tag_name: v0.0.26
           files: update.json
