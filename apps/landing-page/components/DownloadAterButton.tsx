@@ -93,87 +93,106 @@ export function DownloadAterButton() {
         ))}
       </div>
       
-      {/* Help Link and Expandable Guide */}
+      {/* Help Link and Modal Guide */}
       <div className="border-t border-outline-variant/30 pt-3">
         <button 
-          onClick={() => setShowGuide(!showGuide)}
-          className="w-full py-1.5 flex items-center justify-between text-[8px] font-black tracking-[0.25em] text-primary/50 hover:text-primary transition-all uppercase"
+          onClick={() => setShowGuide(true)}
+          className="w-full py-2 flex items-center justify-between text-[9px] font-black tracking-[0.25em] text-primary/60 hover:text-primary transition-all uppercase"
         >
           <span>Need Installation Help?</span>
-          <span className="font-bold underline tracking-widest">{showGuide ? "HIDE INFO ▴" : "INSTALLATION GUIDE ▾"}</span>
+          <span className="font-bold underline tracking-widest">SHOW GUIDE ▾</span>
         </button>
 
         {showGuide && (
-          <div className="mt-3 p-5 bg-background border border-outline-variant/60 rounded-[0.5rem] space-y-4 animate-in slide-in-from-top-1.5 duration-200">
-            {/* Tab Selectors */}
-            <div className="flex border-b border-outline-variant/30 pb-2 gap-4">
-              <button 
-                onClick={() => setGuideTab('mac')}
-                className={cn(
-                  "text-[8px] font-black tracking-[0.2em] pb-1.5 transition-all border-b-2",
-                  guideTab === 'mac' ? "border-primary text-primary" : "border-transparent opacity-40 hover:opacity-100"
-                )}
-              >
-                MACOS BYPASS
-              </button>
-              <button 
-                onClick={() => setGuideTab('win')}
-                className={cn(
-                  "text-[8px] font-black tracking-[0.2em] pb-1.5 transition-all border-b-2",
-                  guideTab === 'win' ? "border-primary text-primary" : "border-transparent opacity-40 hover:opacity-100"
-                )}
-              >
-                WINDOWS BYPASS
-              </button>
-            </div>
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+            {/* Modal Box */}
+            <div className="w-full max-w-md bg-surface border border-outline-variant p-6 md:p-8 space-y-6 relative shadow-2xl animate-in zoom-in-95 duration-200 text-left">
+              
+              {/* Header */}
+              <div className="flex justify-between items-center border-b border-outline-variant pb-4">
+                <span className="technical-label !text-[11px] text-primary">INSTALLATION GUIDE</span>
+                <button 
+                  onClick={() => setShowGuide(false)} 
+                  className="technical-label opacity-40 hover:opacity-100 transition-opacity !text-[10px] px-3 py-1.5 border border-outline-variant hover:border-primary cursor-pointer"
+                >
+                  CLOSE [X]
+                </button>
+              </div>
 
-            {/* Tab Panes */}
-            {guideTab === 'mac' ? (
-              <div className="space-y-3 text-[10px] leading-relaxed text-body opacity-80">
-                <p className="font-bold text-primary text-[10px] uppercase tracking-wider">Fixing &quot;Ater.app is damaged&quot; Quarantine Lock:</p>
-                <ol className="list-decimal pl-4 space-y-2 font-mono text-[9px] text-body/90">
-                  <li>
-                    Open your Mac&apos;s <span className="text-primary font-bold font-sans">Terminal</span>.
-                  </li>
-                  <li>
-                    Type the following command with a space at the end:
-                    <div className="mt-1.5 p-2.5 bg-black border border-outline-variant/40 rounded flex items-center justify-between text-white font-mono text-[9px]">
-                      <span>xattr -cr </span>
-                      <button 
-                        onClick={copyCommand}
-                        className="text-[7.5px] text-primary hover:underline font-sans font-black tracking-widest uppercase"
-                      >
-                        {copiedCmd ? "COPIED" : "COPY"}
-                      </button>
-                    </div>
-                  </li>
-                  <li>
-                    Open your <span className="font-sans font-bold text-primary">Applications</span> folder in Finder, drag & drop <span className="text-primary font-bold">Ater.app</span> directly into the Terminal window to auto-fill the path.
-                  </li>
-                  <li>
-                    Press <span className="text-primary font-bold font-sans">Enter</span> and launch Ater cleanly!
-                  </li>
-                </ol>
+              {/* Tab Selectors */}
+              <div className="flex border-b border-outline-variant/30 pb-2 gap-6">
+                <button 
+                  onClick={() => setGuideTab('mac')}
+                  className={cn(
+                    "text-[10px] font-black tracking-[0.2em] pb-1.5 transition-all border-b-2 font-mono uppercase cursor-pointer",
+                    guideTab === 'mac' ? "border-primary text-primary" : "border-transparent opacity-40 hover:opacity-100"
+                  )}
+                >
+                  MACOS
+                </button>
+                <button 
+                  onClick={() => setGuideTab('win')}
+                  className={cn(
+                    "text-[10px] font-black tracking-[0.2em] pb-1.5 transition-all border-b-2 font-mono uppercase cursor-pointer",
+                    guideTab === 'win' ? "border-primary text-primary" : "border-transparent opacity-40 hover:opacity-100"
+                  )}
+                >
+                  WINDOWS
+                </button>
               </div>
-            ) : (
-              <div className="space-y-3 text-[10px] leading-relaxed text-body opacity-80">
-                <p className="font-bold text-primary text-[10px] uppercase tracking-wider">Bypassing &quot;Windows protected your PC&quot; filter:</p>
-                <ol className="list-decimal pl-4 space-y-2 font-mono text-[9px] text-body/90">
-                  <li>
-                    Double-click the downloaded <span className="text-primary font-bold">Ater_setup.exe</span> installer.
-                  </li>
-                  <li>
-                    On the blue SmartScreen alert box, click the small <span className="text-primary font-bold underline font-sans">More info</span> link in the description.
-                  </li>
-                  <li>
-                    Click the newly revealed <span className="text-primary font-bold font-sans">Run anyway</span> button at the bottom-right.
-                  </li>
-                  <li>
-                    The setup wizard will launch and set up Ater perfectly!
-                  </li>
-                </ol>
-              </div>
-            )}
+
+              {/* Tab Content */}
+              {guideTab === 'mac' ? (
+                <div className="space-y-4 text-[11px] leading-relaxed text-body">
+                  <p className="font-bold text-primary uppercase tracking-wider !text-[10px]">
+                    Quarantine Lock Bypass:
+                  </p>
+                  <ol className="list-decimal pl-4 space-y-3 font-mono text-[10px] opacity-80">
+                    <li>
+                      Open your Mac&apos;s <strong className="text-on-surface font-sans font-bold">Terminal</strong> app.
+                    </li>
+                    <li>
+                      Type the following command followed by a space:
+                      <div className="mt-2 p-3 bg-background border border-outline-variant flex items-center justify-between font-mono text-[10px]">
+                        <span>xattr -cr </span>
+                        <button 
+                          onClick={copyCommand}
+                          className="text-[9px] text-primary hover:underline font-black tracking-widest uppercase px-2 py-0.5 border border-outline-variant hover:border-primary cursor-pointer"
+                        >
+                          {copiedCmd ? "COPIED" : "COPY"}
+                        </button>
+                      </div>
+                    </li>
+                    <li>
+                      Open your Applications folder in Finder and drag <strong className="text-primary font-sans font-bold">Ater.app</strong> directly into the Terminal window.
+                    </li>
+                    <li>
+                      Press <strong className="text-primary font-sans font-bold">Enter</strong> and launch the app normally!
+                    </li>
+                  </ol>
+                </div>
+              ) : (
+                <div className="space-y-4 text-[11px] leading-relaxed text-body">
+                  <p className="font-bold text-primary uppercase tracking-wider !text-[10px]">
+                    SmartScreen Bypass:
+                  </p>
+                  <ol className="list-decimal pl-4 space-y-3 font-mono text-[10px] opacity-80">
+                    <li>
+                      Launch the downloaded <strong className="text-primary font-sans font-bold">Ater_setup.exe</strong> file.
+                    </li>
+                    <li>
+                      Click the small <strong className="text-on-surface underline font-sans font-bold">More info</strong> link on the alert window.
+                    </li>
+                    <li>
+                      Click <strong className="text-primary font-sans font-bold">Run anyway</strong>.
+                    </li>
+                    <li>
+                      The installer will finish perfectly!
+                    </li>
+                  </ol>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

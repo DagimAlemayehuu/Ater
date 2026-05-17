@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { IndustrialButton } from '@/components/IndustrialButton';
-import { Layers, BookOpen, Calendar, CheckSquare, Clock, ShieldCheck } from 'lucide-react';
+
 
 export default function AcademicDashboardPage() {
   return (
@@ -38,10 +38,6 @@ export default function AcademicDashboardPage() {
       <section className="sticky top-0 z-20 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant py-20 px-4 md:px-8">
         <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center justify-center">
           <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-2">
-              <Layers className="size-4 text-primary" />
-              <span className="technical-label text-[10px] text-primary">TABS // PROGRAM</span>
-            </div>
             <h2 className="text-section-heading">PROGRAM</h2>
             <p className="text-body opacity-85">
               Manage your entire degree and track your academic years. Keep an eye on your grades, semesters, and credits in real time.
@@ -119,10 +115,6 @@ export default function AcademicDashboardPage() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-2">
-              <BookOpen className="size-4 text-primary" />
-              <span className="technical-label text-[10px] text-primary">TABS // COURSES</span>
-            </div>
             <h2 className="text-section-heading">COURSES</h2>
             <p className="text-body opacity-85">
               Keep all your active classes in one list. Store important details like syllabus files, teacher contact information, and study progress for each subject.
@@ -140,10 +132,6 @@ export default function AcademicDashboardPage() {
       <section className="sticky top-0 z-[40] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant py-20 px-4 md:px-8">
         <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center justify-center">
           <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-2">
-              <Calendar className="size-4 text-primary" />
-              <span className="technical-label text-[10px] text-primary">TABS // STUDY PLANNER</span>
-            </div>
             <h2 className="text-section-heading">STUDY PLANNER</h2>
             <p className="text-body opacity-85">
               Break down big courses into small, manageable study blocks. Set confidence levels for different topics so you know what to focus on next.
@@ -213,10 +201,6 @@ export default function AcademicDashboardPage() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-2">
-              <CheckSquare className="size-4 text-primary" />
-              <span className="technical-label text-[10px] text-primary">TABS // ASSIGNMENTS</span>
-            </div>
             <h2 className="text-section-heading">ASSIGNMENTS</h2>
             <p className="text-body opacity-85">
               Keep track of your homework, essays, and school projects. Automatically groups your tasks by due date so you always know what needs to be done first.
@@ -234,10 +218,6 @@ export default function AcademicDashboardPage() {
       <section className="sticky top-0 z-[60] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant py-20 px-4 md:px-8">
         <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center justify-center">
           <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-2">
-              <Clock className="size-4 text-primary" />
-              <span className="technical-label text-[10px] text-primary">TABS // EXAMS</span>
-            </div>
             <h2 className="text-section-heading">EXAMS</h2>
             <p className="text-body opacity-85">
               Prepare for your exams with clear countdown alerts. Track your study readiness based on how many topics you have finished in your planner.
@@ -309,10 +289,6 @@ export default function AcademicDashboardPage() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="size-4 text-primary" />
-              <span className="technical-label text-[10px] text-primary">TABS // PRACTICE</span>
-            </div>
             <h2 className="text-section-heading">PRACTICE</h2>
             <p className="text-body opacity-85">
               Test your memory with active recall sessions. Create practice quizzes from your files and grade your answers automatically using key study terms.

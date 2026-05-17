@@ -160,7 +160,7 @@ export function Navbar() {
             </IndustrialButton>
             <div className="flex justify-between items-center px-2">
               <p className="technical-label opacity-30 text-[10px] text-on-surface">
-                ATER V0.1.0-BETA
+                BETA
               </p>
               <p className="technical-label opacity-30 text-[10px] text-on-surface">
                 EST. 2026

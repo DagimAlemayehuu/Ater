@@ -166,7 +166,7 @@ function AuthContent() {
                 </h2>
               </div>
 
-              {userStatus?.status === 'approved' && (
+              {userStatus?.status === 'approved' ? (
                 <div className="space-y-6">
                   <div className="p-6 bg-background border border-outline-variant relative group">
                     <div className="flex justify-between items-center mb-4">
@@ -186,6 +186,12 @@ function AuthContent() {
                   </div>
 
                   <DownloadAterButton />
+                </div>
+              ) : (
+                <div className="space-y-4 py-2">
+                  <p className="text-[12px] leading-relaxed text-on-surface opacity-70">
+                    Your spot on the waitlist is reserved. We are letting new users in daily. You will get an email as soon as your account is approved.
+                  </p>
                 </div>
               )}
             </div>
