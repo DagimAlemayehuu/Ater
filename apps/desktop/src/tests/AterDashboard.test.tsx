@@ -12,6 +12,7 @@ vi.mock('../lib/sidecarApi', () => ({
         aterQueueStatus: vi.fn(),
         aterListInbox: vi.fn(),
         aterWatcherToggle: vi.fn(),
+        getMachineId: vi.fn().mockResolvedValue('test-machine-id'),
     }
 }));
 

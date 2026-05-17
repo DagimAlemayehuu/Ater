@@ -1,6 +1,10 @@
 // Ater - Tauri Application Core
 // Manages plugin registration and application lifecycle.
 
+pub mod db;
+pub mod ml;
+pub mod commands;
+
 use std::net::TcpListener;
 use tauri::{Manager, State};
 use tauri_plugin_shell::ShellExt;
@@ -102,18 +106,16 @@ pub fn run() {
 
             // In debug mode, if 8765 is already in use, we assume an external 
             // sidecar (like the one from `pnpm run sidecar:dev`) is running.
-            if cfg!(debug_assertions) {
-                if TcpListener::bind(("127.0.0.1", 8765)).is_err() {
-                    should_spawn = false;
-                    port = 8765;
-                }
+            if cfg!(debug_assertions) && TcpListener::bind(("127.0.0.1", 8765)).is_err() {
+                should_spawn = false;
+                port = 8765;
             }
 
             if should_spawn {
                 port = get_available_port(8765).unwrap_or(8765);
                 match app.shell().sidecar("ater-api") {
                     Ok(sidecar) => {
-                        let sidecar = sidecar.args(&["--port", &port.to_string()]);
+                        let sidecar = sidecar.args(["--port", &port.to_string()]);
                         match sidecar.spawn() {
                             Ok((rx, _child)) => {
                                 println!("[Sidecar] Successfully spawned on port {}", port);
@@ -144,6 +146,10 @@ pub fn run() {
             }
 
             app.manage(SidecarConfig { port });
+            app.manage(commands::AppState {
+                db: std::sync::Mutex::new(None),
+                ml: std::sync::Mutex::new(None),
+            });
 
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -154,7 +160,16 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_sidecar_port, export_logs, get_machine_id])
+        .invoke_handler(tauri::generate_handler![
+            get_sidecar_port,
+            export_logs,
+            get_machine_id,
+            commands::initialize_database,
+            commands::init_app,
+            commands::add_document,
+            commands::embed_and_store_text,
+            commands::search_similar
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

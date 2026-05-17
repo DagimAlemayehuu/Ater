@@ -35,6 +35,9 @@ dependencies = [
     "langchain-core>=0.3.0",
     "psutil>=6.0.0",
     "portalocker>=2.10.1",
+    "optimum[exporters,onnx,onnxruntime]>=2.1.0",
+    "onnx>=1.21.0",
+    "onnxruntime>=1.26.0",
 ]
 
 [project.scripts]

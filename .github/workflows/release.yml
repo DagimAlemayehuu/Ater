@@ -99,8 +99,6 @@ jobs:
             --clean \
             --name ater-api \
             --paths apps/api \
-            --collect-all sentence_transformers \
-            --collect-all chromadb \
             --hidden-import uvicorn.protocols.http.httptools_impl \
             --hidden-import uvicorn.protocols.http.h11_impl \
             --hidden-import uvicorn.lifespan.on \

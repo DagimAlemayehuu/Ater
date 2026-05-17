@@ -1,93 +1,75 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { sidecarApi } from '../lib/sidecarApi';
-import { load } from '@tauri-apps/plugin-store';
+import { invoke } from '@tauri-apps/api/core';
 
-// Mock fetch
-global.fetch = vi.fn();
-
-describe('sidecarApi', () => {
+describe('sidecarApi - Native Tauri IPC Client', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    it('should call health check endpoint', async () => {
-        (global.fetch as any).mockResolvedValue({
-            ok: true,
-            json: async () => ({ status: 'ok', version: '0.1.0' }),
-        });
-
+    it('should return instant health status without fetch', async () => {
         const result = await sidecarApi.health();
-        // Base URL is discovered via get_sidecar_port mock in setup.ts (8765)
-        expect(global.fetch).toHaveBeenCalledWith('http://127.0.0.1:8765/api/health');
-        expect(result).toEqual({ status: 'ok', version: '0.1.0' });
+        expect(result).toEqual({ status: 'ok', version: '0.1.2' });
     });
 
-    it('should include auth headers from store', async () => {
-        const mockStore = {
-            get: vi.fn().mockImplementation((key) => {
-                if (key === 'aiApiKey') return 'test-key';
-                if (key === 'obsidianVaultPath') return '/test/vault';
-                return null;
-            }),
-            set: vi.fn(),
-            save: vi.fn(),
-            load: vi.fn(),
-            entries: vi.fn(),
-        };
-        (load as any).mockResolvedValue(mockStore);
+    it('should invoke native init_app command', async () => {
+        await sidecarApi.init_app('/test/db');
+        expect(invoke).toHaveBeenCalledWith('init_app', { dbPath: '/test/db' });
+    });
 
-        (global.fetch as any).mockResolvedValue({
-            ok: true,
-            json: async () => ({ status: 'watcher_active' }),
+    it('should invoke native initialize_database command', async () => {
+        await sidecarApi.initialize_database('/test/db');
+        expect(invoke).toHaveBeenCalledWith('initialize_database', { dbPath: '/test/db' });
+    });
+
+    it('should invoke native embed_and_store_text command', async () => {
+        const metadata = { source: 'test' };
+        await sidecarApi.embed_and_store_text('hello world', metadata);
+        expect(invoke).toHaveBeenCalledWith('embed_and_store_text', {
+            content: 'hello world',
+            metadata
         });
-
-        await sidecarApi.aterWatcherToggle();
-
-        expect(global.fetch).toHaveBeenCalledWith(
-            expect.stringContaining('/api/ater/watcher/toggle'),
-            expect.objectContaining({
-                headers: expect.objectContaining({
-                    'X-AI-Key': 'test-key',
-                    'X-Vault-Path': '/test/vault',
-                }),
-            })
-        );
     });
 
-    it('should throw error if AI key is missing for protected routes', async () => {
-        const mockStore = {
-            get: vi.fn().mockResolvedValue(null),
-            set: vi.fn(),
-            save: vi.fn(),
-            load: vi.fn(),
-            entries: vi.fn(),
-        };
-        (load as any).mockResolvedValue(mockStore);
-
-        await expect(sidecarApi.aterProcess({ text: 'test' }))
-            .rejects.toThrow('AI API Key is not configured');
-    });
-
-    it('should handle sidecar errors correctly', async () => {
-        const mockStore = {
-            get: vi.fn().mockImplementation((key) => {
-                if (key === 'aiApiKey') return 'test-key';
-                return 'something';
-            }),
-            set: vi.fn(),
-            save: vi.fn(),
-            load: vi.fn(),
-            entries: vi.fn(),
-        };
-        (load as any).mockResolvedValue(mockStore);
-
-        (global.fetch as any).mockResolvedValue({
-            ok: false,
-            status: 500,
-            json: async () => ({ detail: 'Internal Server Error' }),
+    it('should invoke native add_document command', async () => {
+        const metadata = { source: 'test' };
+        await sidecarApi.add_document('hello world', metadata);
+        expect(invoke).toHaveBeenCalledWith('add_document', {
+            content: 'hello world',
+            metadata
         });
+    });
 
-        await expect(sidecarApi.aterQueueStatus())
-            .rejects.toThrow('Internal Server Error');
+    it('should invoke native search_similar command and return SearchResult[]', async () => {
+        const mockResults = [
+            {
+                id: '1',
+                content: 'matched content',
+                source: '/test/doc.md',
+                filename: 'doc.md',
+                folder: '/test',
+                metadata: '{}',
+                distance: 0.1
+            }
+        ];
+        (invoke as any).mockResolvedValueOnce(mockResults);
+
+        const results = await sidecarApi.search_similar('query', 5);
+        expect(invoke).toHaveBeenCalledWith('search_similar', { query: 'query', limit: 5 });
+        expect(results).toEqual(mockResults);
+    });
+
+    it('should invoke get_machine_id native command', async () => {
+        (invoke as any).mockResolvedValueOnce('machine-1234');
+        const machineId = await sidecarApi.getMachineId();
+        expect(invoke).toHaveBeenCalledWith('get_machine_id');
+        expect(machineId).toBe('machine-1234');
+    });
+
+    it('should invoke export_logs native command', async () => {
+        (invoke as any).mockResolvedValueOnce('log content');
+        const logs = await sidecarApi.exportLogs();
+        expect(invoke).toHaveBeenCalledWith('export_logs');
+        expect(logs).toBe('log content');
     });
 });

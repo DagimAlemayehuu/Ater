@@ -33,6 +33,16 @@ dirs = "6.0.0"
 argon2 = "0.5.3"
 machine-uid = "0.6.0"
 sha2 = "0.10.9"
+lancedb = "0.14.0"
+arrow-array = "53.4.1"
+arrow-schema = "53.4.1"
+arrow-data = "53.4.1"
+futures = "0.3.32"
+tokio = { version = "1.52.3", features = ["full"] }
+chrono = "=0.4.39"
+ort = "2.0.0-rc.9"
+tokenizers = "0.23.1"
+ndarray = "0.17.2"
 
 
 [profile.release]

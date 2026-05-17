@@ -38,8 +38,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": [
-      "binaries/ater-api"
+    "resources": [
+      "../../api/onnx_model/*"
     ]
   },
   "plugins": {
