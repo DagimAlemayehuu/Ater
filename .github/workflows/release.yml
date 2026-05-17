@@ -168,10 +168,14 @@ jobs:
 
             # Updater Tarball and Signature Upload
             TAR_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/ -name "*.app.tar.gz" | head -n 1)
-            SIG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/ -name "*.app.tar.gz.sig" | head -n 1)
+            SIG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/ -name "*.app.tar.gz.sig" | head -n 1 || echo "")
             echo "Uploading Tarball: $TAR_PATH"
             gh release upload "$TAG" "$TAR_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
-            gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            if [ -n "$SIG_PATH" ]; then
+              gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            else
+              echo "Warning: No .sig file found for macOS. Is TAURI_PRIVATE_KEY set in secrets?"
+            fi
           fi
 
           if [ "${{ matrix.platform }}" == "windows" ]; then
@@ -186,10 +190,14 @@ jobs:
 
             # Updater Zip and Signature Upload
             ZIP_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*setup.nsis.zip" | head -n 1)
-            SIG_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*setup.nsis.zip.sig" | head -n 1)
+            SIG_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*setup.nsis.zip.sig" | head -n 1 || echo "")
             echo "Uploading Zip: $ZIP_PATH"
             gh release upload "$TAG" "$ZIP_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
-            gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            if [ -n "$SIG_PATH" ]; then
+              gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            else
+              echo "Warning: No .sig file found for Windows. Is TAURI_PRIVATE_KEY set in secrets?"
+            fi
           fi
 
       - name: Upload signatures as artifacts
