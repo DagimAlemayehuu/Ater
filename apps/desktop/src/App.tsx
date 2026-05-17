@@ -130,10 +130,13 @@ import PomodoroController from '@/components/intelligence/PomodoroController'
 import { AuthProvider } from '@/context/auth-context'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 
+import { UpdateChecker } from '@/components/updater/UpdateChecker'
+
 export default function App() {
   return (
     <ThemeProvider>
       <ConfigProvider>
+        <UpdateChecker />
         <AppRoutes />
       </ConfigProvider>
     </ThemeProvider>

@@ -36,6 +36,9 @@ jobs:
           - os: macos-14    # Silicon (aarch64)
             platform: macos
             arch: aarch64
+          - os: macos-13    # Intel (x86_64)
+            platform: macos
+            arch: x86_64
           - os: windows-latest
             platform: windows
             arch: x86_64
@@ -156,29 +159,48 @@ jobs:
             --notes "Production Build $TAG" \
             || echo "Release already exists — skipping create."
 
-          if [ "${{ matrix.os }}" == "macos-14" ]; then
-            DMG_PATH=$(find apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/ -name "*.dmg" | head -n 1)
+          if [ "${{ matrix.platform }}" == "macos" ]; then
+            # DMG Upload
+            DMG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/ -name "*.dmg" | head -n 1)
             echo "Uploading DMG: $DMG_PATH"
-            gh release upload "$TAG" "$DMG_PATH" \
-              --repo DagimAlemayehuu/Ater_Releases --clobber
-            # Also upload a fixed-name alias for easy download links
-            cp "$DMG_PATH" apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Ater-aarch64.dmg
-            gh release upload "$TAG" \
-              apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Ater-aarch64.dmg \
-              --repo DagimAlemayehuu/Ater_Releases --clobber
+            gh release upload "$TAG" "$DMG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            
+            # Alias copy
+            cp "$DMG_PATH" apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/Ater-${{ matrix.arch }}.dmg
+            gh release upload "$TAG" apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/Ater-${{ matrix.arch }}.dmg --repo DagimAlemayehuu/Ater_Releases --clobber
+
+            # Updater Tarball and Signature Upload
+            TAR_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/tarball/ -name "*.app.tar.gz" | head -n 1)
+            SIG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/tarball/ -name "*.app.tar.gz.sig" | head -n 1)
+            echo "Uploading Tarball: $TAR_PATH"
+            gh release upload "$TAG" "$TAR_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
           fi
 
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          if [ "${{ matrix.platform }}" == "windows" ]; then
+            # EXE Upload
             EXE_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*.exe" | head -n 1)
             echo "Uploading EXE: $EXE_PATH"
-            gh release upload "$TAG" "$EXE_PATH" \
-              --repo DagimAlemayehuu/Ater_Releases --clobber
-            # Also upload a fixed-name alias
+            gh release upload "$TAG" "$EXE_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            
+            # Alias copy
             cp "$EXE_PATH" apps/desktop/src-tauri/target/release/bundle/nsis/Ater_setup.exe
-            gh release upload "$TAG" \
-              apps/desktop/src-tauri/target/release/bundle/nsis/Ater_setup.exe \
-              --repo DagimAlemayehuu/Ater_Releases --clobber
+            gh release upload "$TAG" apps/desktop/src-tauri/target/release/bundle/nsis/Ater_setup.exe --repo DagimAlemayehuu/Ater_Releases --clobber
+
+            # Updater Zip and Signature Upload
+            ZIP_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*setup.nsis.zip" | head -n 1)
+            SIG_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*setup.nsis.zip.sig" | head -n 1)
+            echo "Uploading Zip: $ZIP_PATH"
+            gh release upload "$TAG" "$ZIP_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
           fi
+
+      - name: Upload signatures as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: signatures-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            apps/desktop/src-tauri/target/**/*.sig
 
   publish-release:
     needs: publish

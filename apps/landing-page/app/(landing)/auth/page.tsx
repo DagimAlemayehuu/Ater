@@ -99,7 +99,7 @@ function AuthContent() {
 
         if (signUpError) throw signUpError;
         
-        // 2. Ensure waitlist record exists
+        // 2. Ensure waitlist record exists (this might fail due to RLS if email confirmation is required, which is fine as it will be created on first login)
         const { error: waitlistError } = await supabase
           .from('waiting_list')
           .upsert(
@@ -107,7 +107,9 @@ function AuthContent() {
             { onConflict: 'email' }
           );
         
-        if (waitlistError) throw waitlistError;
+        if (waitlistError) {
+          console.warn('Waitlist upsert failed (likely RLS), will be created on first login:', waitlistError.message);
+        }
 
         if (!data.session) {
           setError("SUCCESS! CHECK YOUR EMAIL TO VERIFY ACCOUNT.");

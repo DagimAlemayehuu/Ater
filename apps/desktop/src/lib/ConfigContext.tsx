@@ -160,7 +160,13 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 
                 let machineId = await store.get<string>('machineId');
                 if (!machineId) {
-                    machineId = crypto.randomUUID();
+                    try {
+                        const { sidecarApi } = await import('@/lib/sidecarApi');
+                        machineId = await sidecarApi.getMachineId();
+                    } catch (err) {
+                        console.warn('[Config] Failed to get native machine ID, generating fallback:', err);
+                        machineId = crypto.randomUUID();
+                    }
                     await store.set('machineId', machineId);
                     await store.save();
                 }

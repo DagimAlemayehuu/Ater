@@ -2,15 +2,23 @@
 
 import React, { useEffect, useState } from "react";
 import { useTheme } from "@/components/theme-provider";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, LogOut } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
 
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-md flex items-center justify-between px-8 z-50">
@@ -32,6 +40,13 @@ export default function Header() {
           ) : (
             <div className="size-4" /> // Placeholder to maintain layout
           )}
+        </button>
+        <button 
+          onClick={handleLogout}
+          className="p-2 hover:bg-destructive hover:text-destructive-foreground border border-border rounded-none flex items-center justify-center transition-none"
+          title="Sign Out"
+        >
+          <LogOut className="size-4" />
         </button>
       </div>
     </header>

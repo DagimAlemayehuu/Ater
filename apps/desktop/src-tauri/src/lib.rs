@@ -32,7 +32,26 @@ async fn export_logs(_app: tauri::AppHandle) -> Result<String, String> {
 
     let zip_path = std::env::temp_dir().join("ater_logs.zip");
     
-    // Simple zip command using system zip on macOS/Linux
+    // Remove old zip if it exists to avoid Compress-Archive appending/failing
+    if zip_path.exists() {
+        let _ = std::fs::remove_file(&zip_path);
+    }
+
+    #[cfg(target_os = "windows")]
+    let status = std::process::Command::new("powershell")
+        .args(&[
+            "-NoProfile",
+            "-Command",
+            &format!(
+                "Compress-Archive -Path '{}/*' -DestinationPath '{}' -Force",
+                log_dir.to_string_lossy(),
+                zip_path.to_string_lossy()
+            ),
+        ])
+        .status()
+        .map_err(|e| format!("Failed to run Compress-Archive on Windows: {}", e))?;
+
+    #[cfg(not(target_os = "windows"))]
     let status = std::process::Command::new("zip")
         .arg("-r")
         .arg(&zip_path)
@@ -42,7 +61,7 @@ async fn export_logs(_app: tauri::AppHandle) -> Result<String, String> {
         .map_err(|e| format!("Failed to run zip: {}", e))?;
 
     if !status.success() {
-        return Err("Zip command failed".to_string());
+        return Err("Log export compression failed".to_string());
     }
 
     Ok(zip_path.to_string_lossy().to_string())
@@ -63,6 +82,8 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_stronghold::Builder::new(|password| {
             use argon2::{Argon2, Algorithm, Version, Params};
             let salt = b"ater_secure_salt"; // 16 bytes

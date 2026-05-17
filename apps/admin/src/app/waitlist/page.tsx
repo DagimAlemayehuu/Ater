@@ -198,7 +198,7 @@ export default function WaitlistManager() {
                           </span>
                         </td>
                         <td className="px-8 py-6 text-right">
-                          <div className="flex items-center justify-end gap-2 hidden group-hover:flex">
+                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                             <button
                               onClick={() => handleUpdate(entry.id, "approved")}
                               disabled={updatingId === entry.id || entry.status === "approved"}

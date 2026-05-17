@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/layout/Sidebar";
-import Header from "@/components/layout/Header";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AdminGuard } from "@/components/layout/AdminGuard";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,15 +18,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} h-screen overflow-hidden flex flex-col bg-background text-foreground antialiased selection:bg-foreground selection:text-background`}>
+      <body className={`${inter.className} h-screen overflow-hidden bg-background text-foreground antialiased selection:bg-foreground selection:text-background`}>
         <ThemeProvider>
-          <Header />
-          <div className="flex-1 flex overflow-hidden">
-            <Sidebar />
-            <main className="flex-1 h-full overflow-hidden flex flex-col">
-              {children}
-            </main>
-          </div>
+          <AdminGuard>
+            {children}
+          </AdminGuard>
         </ThemeProvider>
       </body>
     </html>

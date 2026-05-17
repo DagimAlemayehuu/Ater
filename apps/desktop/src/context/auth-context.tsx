@@ -224,7 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isActivated: true, 
         activationEmail: email, 
         activationCode: code,
-        isProgramConfigured: false,
+        isProgramConfigured: profile.is_configured || false,
         displayName: profile.full_name || ''
       })
       
