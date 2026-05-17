@@ -130,10 +130,10 @@ export function DownloadAterButton() {
             {/* Tab Panes */}
             {guideTab === 'mac' ? (
               <div className="space-y-3 text-[10px] leading-relaxed text-body opacity-80">
-                <p className="font-bold text-primary text-[10px] uppercase tracking-wider">Fixing "Ater.app is damaged" Quarantine Lock:</p>
+                <p className="font-bold text-primary text-[10px] uppercase tracking-wider">Fixing &quot;Ater.app is damaged&quot; Quarantine Lock:</p>
                 <ol className="list-decimal pl-4 space-y-2 font-mono text-[9px] text-body/90">
                   <li>
-                    Open your Mac's <span className="text-primary font-bold font-sans">Terminal</span>.
+                    Open your Mac&apos;s <span className="text-primary font-bold font-sans">Terminal</span>.
                   </li>
                   <li>
                     Type the following command with a space at the end:
@@ -157,7 +157,7 @@ export function DownloadAterButton() {
               </div>
             ) : (
               <div className="space-y-3 text-[10px] leading-relaxed text-body opacity-80">
-                <p className="font-bold text-primary text-[10px] uppercase tracking-wider">Bypassing "Windows protected your PC" filter:</p>
+                <p className="font-bold text-primary text-[10px] uppercase tracking-wider">Bypassing &quot;Windows protected your PC&quot; filter:</p>
                 <ol className="list-decimal pl-4 space-y-2 font-mono text-[9px] text-body/90">
                   <li>
                     Double-click the downloaded <span className="text-primary font-bold">Ater_setup.exe</span> installer.

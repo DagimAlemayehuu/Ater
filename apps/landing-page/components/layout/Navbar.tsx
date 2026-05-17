@@ -30,7 +30,10 @@ export function Navbar() {
 
   // Close mobile menu when pathname changes
   useEffect(() => {
-    setMobileMenuOpen(false);
+    const timer = setTimeout(() => {
+      setMobileMenuOpen(false);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [pathname]);
 
   const navLinks = [
@@ -59,19 +62,19 @@ export function Navbar() {
             <>
               <nav className="hidden lg:flex items-center gap-4 font-mono text-[12px] uppercase tracking-widest">
                 {navLinks.map((link) => {
-                  const isActive = pathname === link.href;
+                  const isActive = pathname === link.href || (link.label === "Features" && pathname.startsWith("/features"));
                   return (
-                    <Link
-                      key={link.label}
-                      href={link.href}
-                      className={`py-2 px-4 transition-all duration-150 rounded-none border-b-2 ${
-                        isActive 
-                          ? "border-on-background text-on-background" 
-                          : "border-transparent text-on-background/60 hover:text-on-background hover:border-outline-variant"
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
+                     <Link
+                       key={link.label}
+                       href={link.href}
+                       className={`py-2 px-4 transition-all duration-150 rounded-none border-b-2 ${
+                         isActive 
+                           ? "border-on-background text-on-background" 
+                           : "border-transparent text-on-background/60 hover:text-on-background hover:border-outline-variant"
+                       }`}
+                     >
+                       {link.label}
+                     </Link>
                   );
                 })}
               </nav>
@@ -121,14 +124,16 @@ export function Navbar() {
               <Menu className="size-6 rotate-90" />
             </button>
           </div>
-
           <div className="flex-1 flex flex-col p-6 gap-2 overflow-y-auto bg-background">
             {navLinks.map((link) => {
-              const isActive = pathname === link.href;
+              const isActive = pathname === link.href || (link.label === "Features" && pathname.startsWith("/features"));
               return (
                 <Link
                   key={link.label}
                   href={link.href}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                  }}
                   className={cn(
                     "p-6 technical-label text-lg border border-outline-variant transition-all flex items-center justify-between group",
                     isActive 

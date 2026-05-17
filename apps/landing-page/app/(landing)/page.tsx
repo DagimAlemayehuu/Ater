@@ -9,6 +9,18 @@ import { motion } from 'motion/react';
 
 
 export default function Home() {
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#features") {
+      const el = document.getElementById("features");
+      if (el) {
+        const timer = setTimeout(() => {
+          el.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, []);
+
   return (
     <>
       {/* Hero & Mockup Integrated Section */}
@@ -51,8 +63,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-0 industrial-border bg-outline-variant w-full">
             <div className="bg-background p-12 flex flex-col gap-6 hover:bg-surface transition-colors duration-150 border-r border-outline-variant last:border-r-0">
               <div className="flex items-center gap-3 border-b border-outline-variant pb-4">
-                <div className="w-3 h-3 bg-primary active-status-pulse"></div>
-                <h2 className="technical-label text-on-background uppercase">IMPORT</h2>
+                <h2 className="text-lg font-bold tracking-tight text-on-background uppercase">IMPORT</h2>
               </div>
               <p className="text-body">
                 Upload your PDFs and textbooks. Ater reads and understands them instantly.
@@ -61,8 +72,7 @@ export default function Home() {
             </div>
             <div className="bg-background p-12 flex flex-col gap-6 hover:bg-surface transition-colors duration-150 border-r border-outline-variant last:border-r-0">
               <div className="flex items-center gap-3 border-b border-outline-variant pb-4">
-                <div className="w-3 h-3 bg-primary active-status-pulse"></div>
-                <h2 className="technical-label text-on-background uppercase">ORGANIZE</h2>
+                <h2 className="text-lg font-bold tracking-tight text-on-background uppercase">ORGANIZE</h2>
               </div>
               <p className="text-body">
                 Turn messy notes into clear structures. Connect ideas effortlessly.
@@ -71,8 +81,7 @@ export default function Home() {
             </div>
             <div className="bg-background p-12 flex flex-col gap-6 hover:bg-surface transition-colors duration-150 border-r border-outline-variant last:border-r-0">
               <div className="flex items-center gap-3 border-b border-outline-variant pb-4">
-                <div className="w-3 h-3 bg-primary active-status-pulse"></div>
-                <h2 className="technical-label text-on-background uppercase">STUDY</h2>
+                <h2 className="text-lg font-bold tracking-tight text-on-background uppercase">STUDY</h2>
               </div>
               <p className="text-body">
                 Find exactly what you need. Review for exams with perfect accuracy.
@@ -93,16 +102,8 @@ export default function Home() {
                 <p className="text-body max-w-xl">
                   Ater runs entirely on your device. Your data never leaves your computer, ensuring absolute privacy and security for your notes.
                 </p>
-                <div className="flex items-center gap-4">
-                   <div className="size-2 bg-primary"></div>
-                   <p className="technical-label text-primary">PRIVATE STORAGE. LOCAL PROCESSING. NO DATA LEAKS.</p>
-                </div>
               </div>
               <div className="p-8 industrial-border bg-surface font-mono text-[11px] leading-relaxed text-on-surface opacity-80 relative overflow-hidden">
-                <div className="flex items-center gap-2 mb-4 border-b border-outline-variant pb-2 technical-label opacity-40">
-                  <Terminal className="size-3" />
-                  <span>SYSTEM_STATUS</span>
-                </div>
                 <div className="space-y-1">
                   <p className="text-primary">&gt; READY FOR INPUT</p>
                   <p>&gt; SECURE VAULT MOUNTED</p>
@@ -116,23 +117,47 @@ export default function Home() {
       </section>
 
       {/* FEATURES */}
-      <section className="sticky top-0 z-[35] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
+      <section id="features" className="sticky top-0 z-[35] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
         <div className="industrial-container w-full py-20">
           <div className="flex flex-col gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">FEATURES</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="bg-background p-8 industrial-border flex flex-col gap-4 hover:bg-surface transition-colors">
-                <span className="technical-label text-primary uppercase tracking-widest">[SIMULATE]</span>
-                <p className="text-body">Test your knowledge before the actual exam.</p>
-              </div>
-              <div className="bg-background p-8 industrial-border flex flex-col gap-4 hover:bg-surface transition-colors">
-                <span className="technical-label text-primary uppercase tracking-widest">[SUMMARIZE]</span>
-                <p className="text-body">Turn long chapters into short, simple notes.</p>
-              </div>
-              <div className="bg-background p-8 industrial-border flex flex-col gap-4 hover:bg-surface transition-colors">
-                <span className="technical-label text-primary uppercase tracking-widest">[CONNECT]</span>
-                <p className="text-body">See how different topics relate to each other.</p>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-0 industrial-border bg-outline-variant w-full">
+              <Link href="/features/academic-dashboard" className="bg-background p-12 flex flex-col gap-6 hover:bg-surface transition-colors duration-150 border-r border-outline-variant last:border-r-0 group cursor-pointer animate-none">
+                <div className="flex items-center gap-3 border-b border-outline-variant pb-4">
+                  <h3 className="text-lg font-bold tracking-tight text-on-background uppercase group-hover:text-primary transition-colors">ACADEMIC DASHBOARD</h3>
+                </div>
+                <p className="text-body">
+                  YOUR ENTIRE ACADEMIC LIFE IN A SINGLE VIEW. MANAGE COURSES, SEMESTERS, AND DEADLINES WITH SURGICAL PRECISION.
+                </p>
+                <div className="flex items-center gap-2 mt-auto pt-4 text-primary opacity-60 group-hover:opacity-100 transition-opacity">
+                  <span className="technical-label text-[10px]">EXPLORE</span>
+                  <ChevronRight className="size-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+              <Link href="/features/knowledge-base" className="bg-background p-12 flex flex-col gap-6 hover:bg-surface transition-colors duration-150 border-r border-outline-variant last:border-r-0 group cursor-pointer animate-none">
+                <div className="flex items-center gap-3 border-b border-outline-variant pb-4">
+                  <h3 className="text-lg font-bold tracking-tight text-on-background uppercase group-hover:text-primary transition-colors">KNOWLEDGE BASE</h3>
+                </div>
+                <p className="text-body">
+                  LOCAL-FIRST KNOWLEDGE ARCHITECTURE. SECURED WITH MAXIMUM COMPRESSION AND GRAPH TOPOLOGY CONNECTIONS DIRECTLY INSIDE YOUR VAULT.
+                </p>
+                <div className="flex items-center gap-2 mt-auto pt-4 text-primary opacity-60 group-hover:opacity-100 transition-opacity">
+                  <span className="technical-label text-[10px]">EXPLORE</span>
+                  <ChevronRight className="size-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+              <Link href="/features/agents" className="bg-background p-12 flex flex-col gap-6 hover:bg-surface transition-colors duration-150 group cursor-pointer animate-none">
+                <div className="flex items-center gap-3 border-b border-outline-variant pb-4">
+                  <h3 className="text-lg font-bold tracking-tight text-on-background uppercase group-hover:text-primary transition-colors">AGENTS</h3>
+                </div>
+                <p className="text-body">
+                  CONTEXT-AWARE ARTIFICIAL INTELLIGENCE. AGENTS DESIGNED TO REASON ACROSS THE ENTIRE KNOWLEDGE ARCHITECTURE.
+                </p>
+                <div className="flex items-center gap-2 mt-auto pt-4 text-primary opacity-60 group-hover:opacity-100 transition-opacity">
+                  <span className="technical-label text-[10px]">EXPLORE</span>
+                  <ChevronRight className="size-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
             </div>
           </div>
         </div>
@@ -153,40 +178,6 @@ export default function Home() {
                 <p className="text-body leading-relaxed">
                   Your work is your own. We never use your data to train AI models. Everything stays on your local device, private and secure.
                 </p>
-                <div className="flex items-center gap-4">
-                   <div className="size-2 bg-primary"></div>
-                   <p className="technical-label text-primary">ZERO CLOUD STORAGE. NO AI TRAINING. TOTAL PRIVACY.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* STUDY CENTER */}
-      <section className="sticky top-0 z-[45] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
-        <div className="industrial-container w-full py-20">
-          <div className="flex flex-col gap-12 w-full">
-            <h2 className="text-display-hero max-w-5xl">STUDY CENTER</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              <div className="flex flex-col gap-8">
-                <p className="text-body leading-relaxed">
-                  Track your progress with simple charts. Our study planner helps you focus on what you need to learn most.
-                </p>
-                <div className="flex items-center gap-4">
-                   <div className="size-2 bg-primary"></div>
-                   <p className="technical-label text-primary">PROGRESS TRACKING. SMART PLANNING. BETTER GRADES.</p>
-                </div>
-              </div>
-              <div className="flex flex-col gap-4 p-8 industrial-border bg-surface w-full">
-                <span className="technical-label opacity-40 uppercase tracking-widest">PROGRESS STREAM</span>
-                <div className="w-full h-2 bg-outline-variant/20 industrial-border">
-                  <div className="w-[78%] h-full bg-primary shadow-[0_0_10px_rgba(255,255,255,0.3)]"></div>
-                </div>
-                <div className="flex justify-between technical-label opacity-40 text-[10px]">
-                  <span>RECALL: 78%</span>
-                  <span>STATUS: ON TRACK</span>
-                </div>
               </div>
             </div>
           </div>

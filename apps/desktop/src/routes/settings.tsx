@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, {useState, useEffect, useRef} from 'react'
+import React, {useState, useEffect} from 'react'
 import {cn} from '@/lib/utils'
 import {useConfig, SavedApiKey} from '@/lib/ConfigContext'
 import {sidecarApi} from '@/lib/sidecarApi'
@@ -75,25 +75,25 @@ export default function Settings() {
   })
 
   // Sync config to local edits on change
-  const prevConfigId = useRef(config?.id);
-  if (config && prevConfigId.current !== config.id) {
-    prevConfigId.current = config.id;
-    setPomodoroEdit({
-      work: config.pomodoroWorkDuration,
-      short: config.pomodoroShortBreakDuration,
-      long: config.pomodoroLongBreakDuration,
-      sessions: config.pomodoroSessionsBeforeLongBreak
-    });
-    setVaultEdit({
-      vaultPath: config.obsidianVaultPath || '',
-      inboxPath: config.inboxPath || '',
-      academicPath: config.academicFolderPath || 'Notes',
-      autoDeploy: config.autoDeploy || false
-    });
-    setProfileEdit({
-      name: config.displayName || ''
-    });
-  }
+  useEffect(() => {
+    if (config) {
+      setPomodoroEdit({
+        work: config.pomodoroWorkDuration,
+        short: config.pomodoroShortBreakDuration,
+        long: config.pomodoroLongBreakDuration,
+        sessions: config.pomodoroSessionsBeforeLongBreak
+      });
+      setVaultEdit({
+        vaultPath: config.obsidianVaultPath || '',
+        inboxPath: config.inboxPath || '',
+        academicPath: config.academicFolderPath || 'Notes',
+        autoDeploy: config.autoDeploy || false
+      });
+      setProfileEdit({
+        name: config.displayName || ''
+      });
+    }
+  }, [config]);
 
   const startAiEdit = () => {
     setEditingKey('primary_engine')
