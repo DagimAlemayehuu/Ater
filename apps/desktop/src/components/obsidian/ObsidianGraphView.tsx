@@ -121,12 +121,12 @@ export function ObsidianGraphView({
         sidecarApi.getVaultGraph().then(data => {
             if (mounted) {
                 const linkCounts: Record<string, number> = {}
-                data.links.forEach(l => {
+                data.links.forEach((l: LinkData) => {
                     linkCounts[l.source] = (linkCounts[l.source] || 0) + 1
                     linkCounts[l.target] = (linkCounts[l.target] || 0) + 1
                 })
 
-                const processedNodes = data.nodes.map(n => {
+                const processedNodes = data.nodes.map((n: NodeData) => {
                     const count = linkCounts[n.id] || 0;
                     // Obsidian uses a subtle scale. log(count + 1) or similar.
                     // Range: 1 to 3 effectively for the base value.

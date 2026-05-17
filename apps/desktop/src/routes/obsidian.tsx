@@ -553,7 +553,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const linkB = `[[${normalizedLabel.replace(/ /g, '_')}]]`;
  
  let updated = false;
- const newBodyLines = hubData.content.split('\n').map(line => {
+ const newBodyLines = hubData.content.split('\n').map((line: string) => {
  const ll = line.toLowerCase();
  if (ll.includes(linkA) || ll.includes(linkB)) {
  updated = true;

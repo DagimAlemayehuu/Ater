@@ -43,6 +43,7 @@ chrono = "=0.4.39"
 ort = "2.0.0-rc.9"
 tokenizers = "0.23.1"
 ndarray = "0.17.2"
+reqwest = { version = "0.13.3", features = ["json", "multipart"] }
 
 
 [profile.release]

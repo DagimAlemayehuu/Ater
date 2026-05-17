@@ -269,7 +269,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
  // Find the latest status. Since we don't have the session_id yet, we just take the most recent one.
  const statuses = Object.values(res.status);
  if (statuses.length > 0) {
- setGenStatus(statuses[statuses.length - 1]);
+  setGenStatus(statuses[statuses.length - 1] as string);
 }
 } catch (e) {
  console.error("Status polling failed", e);

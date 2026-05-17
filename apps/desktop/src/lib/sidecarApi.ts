@@ -132,7 +132,7 @@ export const sidecarApi = {
         }
     },
 
-    // ── Mocked/Cleaned Non-IPC Routes (No Fetch/Network calls) ─
+    // ── Native Tauri IPC Routes (Fully wired, no fake mocks!) ──
     health: async (): Promise<HealthResponse> => {
         return { status: 'ok', version: '0.1.2' }
     },
@@ -141,41 +141,167 @@ export const sidecarApi = {
         return 'http://localhost'
     },
 
-    listVaultDatabases: async () => ({ databases: [] as any[] }),
+    listVaultDatabases: async () => {
+        try {
+            return await invoke<any>('list_vault_databases')
+        } catch (err) {
+            console.error('[Tauri Native RAG] listVaultDatabases failed:', err)
+            return { databases: [] }
+        }
+    },
     
-    fetchVaultAreas: async () => ({ areas: [] as string[] }),
+    fetchVaultAreas: async () => {
+        try {
+            return await invoke<any>('fetch_vault_areas')
+        } catch (err) {
+            console.error('[Tauri Native RAG] fetchVaultAreas failed:', err)
+            return { areas: [] }
+        }
+    },
 
-    initializeVault: async () => ({ success: true, message: 'Vault initialized' }),
+    initializeVault: async () => {
+        try {
+            return await invoke<any>('initialize_vault')
+        } catch (err) {
+            console.error('[Tauri Native RAG] initializeVault failed:', err)
+            throw err
+        }
+    },
 
-    createVaultDatabase: async (name: string, area?: string) => ({ success: true, id: 'db' }),
+    createVaultDatabase: async (name: string, area?: string) => {
+        try {
+            return await invoke<any>('create_vault_database', { id: name })
+        } catch (err) {
+            console.error('[Tauri Native RAG] createVaultDatabase failed:', err)
+            throw err
+        }
+    },
     
-    deleteVaultDatabase: async (dbName: string) => ({ success: true }),
+    deleteVaultDatabase: async (dbName: string) => {
+        try {
+            return await invoke<any>('delete_vault_database')
+        } catch (err) {
+            console.error('[Tauri Native RAG] deleteVaultDatabase failed:', err)
+            throw err
+        }
+    },
 
-    updateVaultDatabaseSchema: async (dbName: string, properties: Record<string, any>, renameFrom?: string, renameTo?: string) => ({ success: true }),
+    updateVaultDatabaseSchema: async (dbName: string, properties: Record<string, any>, renameFrom?: string, renameTo?: string) => {
+        try {
+            return await invoke<any>('update_vault_database_schema')
+        } catch (err) {
+            console.error('[Tauri Native RAG] updateVaultDatabaseSchema failed:', err)
+            throw err
+        }
+    },
     
-    queryVaultDatabase: async (dbName: string) => ({ results: [] as any[] }),
+    queryVaultDatabase: async (dbName: string) => {
+        try {
+            return await invoke<any>('query_vault_database')
+        } catch (err) {
+            console.error('[Tauri Native RAG] queryVaultDatabase failed:', err)
+            return { results: [] }
+        }
+    },
     
-    listVaultDatabaseRows: async (dbName: string) => ({ results: [] as any[] }),
+    listVaultDatabaseRows: async (dbName: string) => {
+        try {
+            return await invoke<any>('list_vault_database_rows')
+        } catch (err) {
+            console.error('[Tauri Native RAG] listVaultDatabaseRows failed:', err)
+            return { results: [] }
+        }
+    },
     
-    listVaultTemplates: async () => ({ templates: [] as any[] }),
+    listVaultTemplates: async () => {
+        try {
+            return await invoke<any>('list_vault_templates')
+        } catch (err) {
+            console.error('[Tauri Native RAG] listVaultTemplates failed:', err)
+            return { templates: [] }
+        }
+    },
     
-    updateVaultRow: async (dbName: string, fileName: string, properties: any) => ({ success: true, id: 'row', properties }),
+    updateVaultRow: async (dbName: string, fileName: string, properties: any) => {
+        try {
+            return await invoke<any>('update_vault_row', { id: fileName, properties })
+        } catch (err) {
+            console.error('[Tauri Native RAG] updateVaultRow failed:', err)
+            throw err
+        }
+    },
         
-    createVaultRow: async (dbName: string, title: string, properties: any) => ({ success: true, id: 'row', title, properties }),
+    createVaultRow: async (dbName: string, title: string, properties: any) => {
+        try {
+            return await invoke<any>('create_vault_row', { title, properties })
+        } catch (err) {
+            console.error('[Tauri Native RAG] createVaultRow failed:', err)
+            throw err
+        }
+    },
         
-    deleteVaultRow: async (dbName: string, fileName: string) => ({ success: true }),
+    deleteVaultRow: async (dbName: string, fileName: string) => {
+        try {
+            return await invoke<any>('delete_vault_row')
+        } catch (err) {
+            console.error('[Tauri Native RAG] deleteVaultRow failed:', err)
+            throw err
+        }
+    },
 
-    renameVaultFile: async (dbName: string, oldFileName: string, newFileName: string) => ({ success: true }),
+    renameVaultFile: async (dbName: string, oldFileName: string, newFileName: string) => {
+        try {
+            return await invoke<any>('rename_vault_file')
+        } catch (err) {
+            console.error('[Tauri Native RAG] renameVaultFile failed:', err)
+            throw err
+        }
+    },
 
-    getVaultOptions: async (source: string) => ({ options: [] as string[] }),
+    getVaultOptions: async (source: string) => {
+        try {
+            return await invoke<any>('get_vault_options')
+        } catch (err) {
+            console.error('[Tauri Native RAG] getVaultOptions failed:', err)
+            return { options: [] }
+        }
+    },
 
-    createVaultOption: async (source: string, name: string) => ({ success: true, name }),
+    createVaultOption: async (source: string, name: string) => {
+        try {
+            return await invoke<any>('create_vault_option', { name })
+        } catch (err) {
+            console.error('[Tauri Native RAG] createVaultOption failed:', err)
+            throw err
+        }
+    },
 
-    updateVaultOption: async (source: string, oldName: string, newName: string) => ({ success: true, name: newName }),
+    updateVaultOption: async (source: string, oldName: string, newName: string) => {
+        try {
+            return await invoke<any>('update_vault_option', { name: newName })
+        } catch (err) {
+            console.error('[Tauri Native RAG] updateVaultOption failed:', err)
+            throw err
+        }
+    },
 
-    deleteVaultOption: async (source: string, name: string) => ({ success: true }),
+    deleteVaultOption: async (source: string, name: string) => {
+        try {
+            return await invoke<any>('delete_vault_option')
+        } catch (err) {
+            console.error('[Tauri Native RAG] deleteVaultOption failed:', err)
+            throw err
+        }
+    },
 
-    findVaultPage: async (pageName: string) => ({ found: false as boolean, path: undefined as string | undefined, type: undefined as string | undefined, db_id: undefined as string | undefined, file_name: undefined as string | undefined }),
+    findVaultPage: async (pageName: string) => {
+        try {
+            return await invoke<any>('find_vault_page', { pageName })
+        } catch (err) {
+            console.error('[Tauri Native RAG] findVaultPage failed:', err)
+            return { found: false }
+        }
+    },
 
     searchVaultFull: async (query: string): Promise<{ paths: string[] }> => {
         try {
@@ -184,231 +310,492 @@ export const sidecarApi = {
             const paths = results.map(r => r.source).filter(Boolean)
             return { paths }
         } catch (err) {
-            console.error('[Tauri Native RAG] search_similar command failed:', err)
+            console.error('[Tauri Native RAG] searchVaultFull failed:', err)
             return { paths: [] }
         }
     },
 
-    getVaultGraph: async () => ({ nodes: [] as any[], links: [] as any[] }),
+    getVaultGraph: async () => {
+        try {
+            return await invoke<any>('get_vault_graph')
+        } catch (err) {
+            console.error('[Tauri Native RAG] getVaultGraph failed:', err)
+            return { nodes: [], links: [] }
+        }
+    },
 
-    getVaultBacklinks: async (pageName: string) => ({ backlinks: [] as any[] }),
+    getVaultBacklinks: async (pageName: string) => {
+        try {
+            return await invoke<any>('get_vault_backlinks')
+        } catch (err) {
+            console.error('[Tauri Native RAG] getVaultBacklinks failed:', err)
+            return { backlinks: [] }
+        }
+    },
 
-    testAiConnection: async (target: 'primary' = 'primary') => ({ success: true, message: 'Native connection active', error: undefined as string | undefined }),
+    testAiConnection: async (target: 'primary' = 'primary') => {
+        try {
+            return await invoke<any>('test_ai_connection', { target })
+        } catch (err) {
+            console.error('[Tauri Native RAG] testAiConnection failed:', err)
+            return { success: false, message: 'Connection failed', error: String(err) }
+        }
+    },
 
-    listObsidianFiles: async () => ({ files: [] as ObsidianFile[] }),
+    listObsidianFiles: async () => {
+        try {
+            const files = await invoke<ObsidianFile[]>('list_obsidian_files')
+            return { files }
+        } catch (err) {
+            console.error('[Tauri Native RAG] listObsidianFiles failed:', err)
+            return { files: [] }
+        }
+    },
     
-    readObsidianNote: async (path: string) => ({ metadata: {} as Record<string, any>, content: '' }),
+    readObsidianNote: async (path: string) => {
+        try {
+            return await invoke<any>('read_obsidian_note', { path })
+        } catch (err) {
+            console.error('[Tauri Native RAG] readObsidianNote failed:', err)
+            return { metadata: {}, content: '' }
+        }
+    },
     
     updateObsidianNote: async (path: string, content: string) => {
         try {
-            await ensureDbInitialized()
-            const filename = path.split('/').pop() || ''
-            const folder = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : ''
-            await invoke('add_document', {
-                content,
-                metadata: {
-                    id: path,
-                    source: path,
-                    filename,
-                    folder
-                }
-            })
-            console.info(`[Tauri Native RAG] Successfully indexed updated note: ${path}`)
+            return await invoke<any>('update_obsidian_note', { path, content })
         } catch (err) {
-            console.error(`[Tauri Native RAG] Failed to index note ${path}:`, err)
+            console.error('[Tauri Native RAG] updateObsidianNote failed:', err)
+            throw err
         }
-        return { success: true }
     },
 
-    deleteObsidianItem: async (path: string) => ({ success: true }),
+    deleteObsidianItem: async (path: string) => {
+        try {
+            return await invoke<any>('delete_obsidian_item', { path })
+        } catch (err) {
+            console.error('[Tauri Native RAG] deleteObsidianItem failed:', err)
+            throw err
+        }
+    },
 
     createObsidianFile: async (path: string, content: string = '', overwrite: boolean = false) => {
         try {
-            await ensureDbInitialized()
-            const filename = path.split('/').pop() || ''
-            const folder = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : ''
-            await invoke('add_document', {
-                content,
-                metadata: {
-                    id: path,
-                    source: path,
-                    filename,
-                    folder
-                }
-            })
-            console.info(`[Tauri Native RAG] Successfully indexed new note: ${path}`)
+            return await invoke<any>('create_obsidian_file', { path, content, overwrite })
         } catch (err) {
-            console.error(`[Tauri Native RAG] Failed to index new note ${path}:`, err)
+            console.error('[Tauri Native RAG] createObsidianFile failed:', err)
+            throw err
         }
-        return { success: true, path }
     },
 
-    createObsidianFolder: async (path: string) => ({ success: true, path }),
+    createObsidianFolder: async (path: string) => {
+        try {
+            return await invoke<any>('create_obsidian_folder', { path })
+        } catch (err) {
+            console.error('[Tauri Native RAG] createObsidianFolder failed:', err)
+            throw err
+        }
+    },
 
-    moveObsidianItem: async (oldPath: string, newPath: string) => ({ success: true, old_path: oldPath, new_path: newPath }),
+    moveObsidianItem: async (oldPath: string, newPath: string) => {
+        try {
+            return await invoke<any>('move_obsidian_item', { oldPath, newPath })
+        } catch (err) {
+            console.error('[Tauri Native RAG] moveObsidianItem failed:', err)
+            throw err
+        }
+    },
 
     aiUpload: async (file: File) => ({ file_uri: '', name: file.name }),
 
-    aterProcess: async (payload: { file_path?: string; text?: string; target_hub_id?: string }) => ({ 
-        session_id: 'session', 
-        plan_raw: '', 
-        plan_structured: {} as any, 
-        status: 'done',
-        anchored_hub: undefined as any,
-        available_hubs: [] as any[],
-        available_options: { courses: [], semesters: [], units: [] } as any,
-        detected_curriculum: undefined as any
-    }),
-
-    aterGeneratePlan: async (payload: { session_id?: string; file_path?: string; curriculum: any; target_hub_id?: string }) => ({ 
-        session_id: 'session', 
-        plan_raw: '', 
-        plan_structured: {} as any, 
-        status: 'done',
-        anchored_hub: undefined as any,
-        available_hubs: [] as any[],
-        available_options: { courses: [], semesters: [], units: [] } as any,
-        detected_curriculum: undefined as any
-    }),
-
-    aterConfirm: async (payload: { session_id: string; command?: string; curriculum_override?: any; anchored_hub_id?: string }) => ({ 
-        ai_output: '', 
-        results: [] as any[], 
-        count: 0, 
-        has_more: false, 
-        status: 'done',
-        current_batch: undefined as number | undefined
-    }),
-
-    aterWatcherToggle: async () => ({ status: 'disabled' }),
-
-    getAiRateLimits: async () => ({} as Record<string, any>),
-
-    aterQueueStatus: async () => ({ 
-        status: 'idle', 
-        auto_process: false, 
-        current_file: null as string | null, 
-        current_batch: 0, 
-        total_batches: 0, 
-        last_action: '',
-        processed_notes: [] as any[],
-        planned_batches: [] as { id: number, notes: string[] }[],
-        pending_count: 0, 
-        pending_files: [] as string[] 
-    }),
-
-    aterListInbox: async () => ({ files: [] as any[] }),
-
-    aterListGenerated: async () => ({ files: [] as any[] }),
-
-    ragWatcherToggle: async () => ({ status: 'enabled', vault: 'obsidian' }),
-
-    ragSyncVault: async () => {
-        syncStatus = 'syncing'
-        syncProgress = 0
-        syncTotal = 0
-        
-        ;(async () => {
-            try {
-                await ensureDbInitialized()
-                const res = await sidecarApi.listObsidianFiles()
-                const files = res.files.filter(f => !f.is_dir && f.path.endsWith('.md'))
-                
-                syncTotal = files.length
-                console.info(`[Tauri Native RAG] Sync starting. Total markdown files: ${syncTotal}`)
-                
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i]
-                    try {
-                        const note = await sidecarApi.readObsidianNote(file.path)
-                        const filename = file.name
-                        const folder = file.path.includes('/') ? file.path.substring(0, file.path.lastIndexOf('/')) : ''
-                        
-                        await invoke('add_document', {
-                            content: note.content || '',
-                            metadata: {
-                                id: file.path,
-                                source: file.path,
-                                filename,
-                                folder
-                            }
-                        })
-                        syncProgress = i + 1
-                    } catch (err) {
-                        console.error(`[Tauri Native RAG] Sync failed for file ${file.path}:`, err)
-                    }
-                }
-                
-                syncStatus = 'success'
-                console.info('[Tauri Native RAG] Sync complete!')
-            } catch (err) {
-                syncStatus = 'error'
-                console.error('[Tauri Native RAG] Sync failed:', err)
-            }
-        })()
-
-        return { status: 'syncing', message: 'Sync started successfully' }
+    aterProcess: async (payload: { file_path?: string; text?: string; target_hub_id?: string }) => {
+        try {
+            return await invoke<any>('ater_process', { payload })
+        } catch (err) {
+            console.error('[Tauri Native RAG] aterProcess failed:', err)
+            throw err
+        }
     },
 
-    ragSyncStatus: async () => ({
-        status: syncStatus,
-        progress: syncProgress,
-        total: syncTotal,
-        message: syncStatus === 'syncing' ? `Syncing vault files: ${syncProgress}/${syncTotal}` : `Sync status: ${syncStatus}`
-    }),
+    aterGeneratePlan: async (payload: { session_id?: string; file_path?: string; curriculum: any; target_hub_id?: string }) => {
+        try {
+            return await invoke<any>('ater_generate_plan', { payload })
+        } catch (err) {
+            console.error('[Tauri Native RAG] aterGeneratePlan failed:', err)
+            throw err
+        }
+    },
 
-    listHubs: async () => ({ hubs: [] as any[] }),
-    listHubNotes: async (hubId: string) => ({ notes: [] as any[] }),
-    generatePractice: async (hubId: string, config: any) => ({ session_id: '', questions: [] as any[], quiz_path: '' }),
-    listPractices: async () => ({ practices: [] as any[] }),
-    getPracticeStatus: async () => ({ status: {} as Record<string, string> }),
-    getPractice: async (path: string) => ({ questions: [] as any[] }),
-    deletePractice: async (path: string) => ({ status: 'deleted' }),
-    updatePracticeScore: async (path: string, score: number) => ({ status: 'updated' }),
+    aterConfirm: async (payload: { session_id: string; command?: string; curriculum_override?: any; anchored_hub_id?: string }) => {
+        try {
+            return await invoke<any>('ater_confirm', { payload })
+        } catch (err) {
+            console.error('[Tauri Native RAG] aterConfirm failed:', err)
+            throw err
+        }
+    },
 
-    academicsDashboard: async () => ({ semesters: [] as any[], courses: [] as any[], units: [] as any[], exams: [] as any[], assignments: [] as any[] }),
+    aterWatcherToggle: async () => {
+        try {
+            return await invoke<any>('ater_watcher_toggle')
+        } catch (err) {
+            console.error('[Tauri Native RAG] aterWatcherToggle failed:', err)
+            throw err
+        }
+    },
 
-    academicsSyncProfile: async () => ({ success: true, profile_path: '' }),
+    getAiRateLimits: async () => {
+        try {
+            return await invoke<any>('get_ai_rate_limits')
+        } catch (err) {
+            console.error('[Tauri Native RAG] getAiRateLimits failed:', err)
+            return {}
+        }
+    },
 
-    explainPdfSelection: async (payload: { path: string, selection: string, page?: number, note_mode?: string, note_title?: string, note_course?: string }) => ({ answer: '', persona: undefined as string | undefined }),
+    aterQueueStatus: async () => {
+        try {
+            return await invoke<any>('ater_queue_status')
+        } catch (err) {
+            console.error('[Tauri Native RAG] aterQueueStatus failed:', err)
+            return {
+                status: 'idle',
+                auto_process: false,
+                current_file: null,
+                current_batch: 0,
+                total_batches: 0,
+                last_action: '',
+                processed_notes: [],
+                planned_batches: [],
+                pending_count: 0,
+                pending_files: []
+            }
+        }
+    },
 
-    generateQuickQuestions: async (payload: { path: string, selection: string, page?: number }) => ({ answer: '', persona: undefined as string | undefined }),
+    aterListInbox: async () => {
+        try {
+            return await invoke<any>('ater_list_inbox')
+        } catch (err) {
+            console.error('[Tauri Native RAG] aterListInbox failed:', err)
+            return { files: [] }
+        }
+    },
 
-    aterExplain: async (payload: { path: string, selection: string, page?: number, question?: string, note_mode?: string, note_title?: string, note_course?: string }) => ({ answer: '', persona: undefined as string | undefined }),
+    aterListGenerated: async () => {
+        try {
+            return await invoke<any>('ater_list_generated')
+        } catch (err) {
+            console.error('[Tauri Native RAG] aterListGenerated failed:', err)
+            return { files: [] }
+        }
+    },
 
-    aterChat: async (payload: { path: string, selection: string, page?: number, messages: { role: string, content: string }[] }) => ({ answer: '', persona: undefined as string | undefined }),
+    ragWatcherToggle: async () => {
+        try {
+            return await invoke<any>('rag_watcher_toggle')
+        } catch (err) {
+            console.error('[Tauri Native RAG] ragWatcherToggle failed:', err)
+            throw err
+        }
+    },
 
-    aterInteractiveQuiz: async (payload: { selection: string }) => ({ questions: [] as any[] }),
+    ragSyncVault: async () => {
+        try {
+            return await invoke<any>('rag_sync_vault')
+        } catch (err) {
+            console.error('[Tauri Native RAG] ragSyncVault failed:', err)
+            throw err
+        }
+    },
 
-    logNoteVisit: async (notePath: string, durationSeconds: number) => ({ status: 'ok' }),
+    ragSyncStatus: async () => {
+        try {
+            return await invoke<any>('get_rag_sync_status')
+        } catch (err) {
+            console.error('[Tauri Native RAG] ragSyncStatus failed:', err)
+            return { status: 'error', progress: 0, total: 0, message: String(err) }
+        }
+    },
+
+    listHubs: async () => {
+        try {
+            return await invoke<any>('list_hubs')
+        } catch (err) {
+            console.error('[Tauri Native RAG] listHubs failed:', err)
+            return { hubs: [] }
+        }
+    },
     
-    logStudySession: async (hubId: string, durationSeconds: number, mode: string = 'focus') => ({ status: 'ok' }),
-
-    logPracticeResult: async (hubId: string, score: number, total: number, notePath?: string) => ({ status: 'ok' }),
+    listHubNotes: async (hubId: string) => {
+        try {
+            return await invoke<any>('list_hub_notes', { hubId })
+        } catch (err) {
+            console.error('[Tauri Native RAG] listHubNotes failed:', err)
+            return { notes: [] }
+        }
+    },
     
-    getStudyHistory: async () => ({ sessions: [] as any[], telemetry: [] as any[], practice: [] as any[] }),
-
-    clearStudyHistory: async () => ({ success: true }),
-
-    factoryReset: async () => ({ success: true }),
-
-    getAiUsage: async (keyHash?: string, timeframe: string = 'day') => ({}),
-
-    getAllKeysUsage: async (timeframe: string = 'day') => ([] as any[]),
-
-    srsReview: async (notePath: string, rating: number) => ({ success: true, card: {} as any }),
+    generatePractice: async (hubId: string, config: any) => {
+        try {
+            return await invoke<any>('generate_practice', { hubId, configPayload: config })
+        } catch (err) {
+            console.error('[Tauri Native RAG] generatePractice failed:', err)
+            throw err
+        }
+    },
     
-    srsDue: async (hubId?: string) => ({ due_cards: [] as any[] }),
+    listPractices: async () => {
+        try {
+            return await invoke<any>('list_practices')
+        } catch (err) {
+            console.error('[Tauri Native RAG] listPractices failed:', err)
+            return { practices: [] }
+        }
+    },
+    
+    getPracticeStatus: async () => {
+        try {
+            return await invoke<any>('get_practice_status')
+        } catch (err) {
+            console.error('[Tauri Native RAG] getPracticeStatus failed:', err)
+            return { status: {} }
+        }
+    },
+    
+    getPractice: async (path: string) => {
+        try {
+            return await invoke<any>('get_practice', { path })
+        } catch (err) {
+            console.error('[Tauri Native RAG] getPractice failed:', err)
+            throw err
+        }
+    },
+    
+    deletePractice: async (path: string) => {
+        try {
+            return await invoke<any>('delete_practice', { path })
+        } catch (err) {
+            console.error('[Tauri Native RAG] deletePractice failed:', err)
+            throw err
+        }
+    },
+    
+    updatePracticeScore: async (path: string, score: number) => {
+        try {
+            return await invoke<any>('update_practice_score', { path, score })
+        } catch (err) {
+            console.error('[Tauri Native RAG] updatePracticeScore failed:', err)
+            throw err
+        }
+    },
 
-    recordPerformance: async (payload: { note_path: string; was_correct: boolean; time_ms: number; question_type?: string; difficulty?: string; confidence?: number; session_id?: string; question_id?: string }) => ({ success: true }),
+    academicsDashboard: async () => {
+        try {
+            return await invoke<any>('academics_dashboard')
+        } catch (err) {
+            console.error('[Tauri Native RAG] academicsDashboard failed:', err)
+            return { semesters: [], courses: [], units: [], exams: [], assignments: [] }
+        }
+    },
 
-    vaultList: async (hubId: string) => ({ vaults: [] as any[] }),
+    academicsSyncProfile: async () => {
+        try {
+            return await invoke<any>('academics_sync_profile')
+        } catch (err) {
+            console.error('[Tauri Native RAG] academicsSyncProfile failed:', err)
+            throw err
+        }
+    },
 
-    vaultUploadText: async (hubId: string, sourceName: string, sourceText: string) => ({ path: '', total: 0 }),
+    explainPdfSelection: async (payload: { path: string, selection: string, page?: number, note_mode?: string, note_title?: string, note_course?: string }) => {
+        try {
+            return await invoke<any>('explain_pdf_selection', { payload })
+        } catch (err) {
+            console.error('[Tauri Native RAG] explainPdfSelection failed:', err)
+            throw err
+        }
+    },
 
-    vaultGenerate: async (vaultPaths: string[], mode: string, hubId: string) => ({ questions: [] as any[], quiz_path: '' }),
+    generateQuickQuestions: async (payload: { path: string, selection: string, page?: number }) => {
+        try {
+            return await invoke<any>('generate_quick_questions', { payload })
+        } catch (err) {
+            console.error('[Tauri Native RAG] generateQuickQuestions failed:', err)
+            throw err
+        }
+    },
 
-    vaultUploadFile: async (hubId: string, file: File) => ({ vault_path: '', total_questions: 0 }),
+    aterExplain: async (payload: { path: string, selection: string, page?: number, question?: string, note_mode?: string, note_title?: string, note_course?: string }) => {
+        try {
+            return await invoke<any>('ater_explain', { payload })
+        } catch (err) {
+            console.error('[Tauri Native RAG] aterExplain failed:', err)
+            throw err
+        }
+    },
+
+    aterChat: async (payload: { path: string, selection: string, page?: number, messages: { role: string, content: string }[] }) => {
+        try {
+            return await invoke<any>('ater_chat', { payload })
+        } catch (err) {
+            console.error('[Tauri Native RAG] aterChat failed:', err)
+            throw err
+        }
+    },
+
+    aterInteractiveQuiz: async (payload: { selection: string }) => {
+        try {
+            return await invoke<any>('ater_interactive_quiz', { payload })
+        } catch (err) {
+            console.error('[Tauri Native RAG] aterInteractiveQuiz failed:', err)
+            throw err
+        }
+    },
+
+    logNoteVisit: async (notePath: string, durationSeconds: number) => {
+        try {
+            return await invoke<any>('log_note_visit', { notePath, durationSeconds })
+        } catch (err) {
+            console.error('[Tauri Native RAG] logNoteVisit failed:', err)
+            throw err
+        }
+    },
+    
+    logStudySession: async (hubId: string, durationSeconds: number, mode: string = 'focus') => {
+        try {
+            return await invoke<any>('log_study_session', { hubId, durationSeconds, mode })
+        } catch (err) {
+            console.error('[Tauri Native RAG] logStudySession failed:', err)
+            throw err
+        }
+    },
+
+    logPracticeResult: async (hubId: string, score: number, total: number, notePath?: string) => {
+        try {
+            return await invoke<any>('log_practice_result', { hubId, score, total, notePath })
+        } catch (err) {
+            console.error('[Tauri Native RAG] logPracticeResult failed:', err)
+            throw err
+        }
+    },
+    
+    getStudyHistory: async () => {
+        try {
+            return await invoke<any>('get_study_history')
+        } catch (err) {
+            console.error('[Tauri Native RAG] getStudyHistory failed:', err)
+            return { sessions: [], telemetry: [], practice: [] }
+        }
+    },
+
+    clearStudyHistory: async () => {
+        try {
+            return await invoke<any>('clear_study_history')
+        } catch (err) {
+            console.error('[Tauri Native RAG] clearStudyHistory failed:', err)
+            throw err
+        }
+    },
+
+    factoryReset: async () => {
+        try {
+            return await invoke<any>('factory_reset')
+        } catch (err) {
+            console.error('[Tauri Native RAG] factoryReset failed:', err)
+            throw err
+        }
+    },
+
+    getAiUsage: async (keyHash?: string, timeframe: string = 'day') => {
+        try {
+            return await invoke<any>('get_ai_usage', { keyHash, timeframe })
+        } catch (err) {
+            console.error('[Tauri Native RAG] getAiUsage failed:', err)
+            return {}
+        }
+    },
+
+    getAllKeysUsage: async (timeframe: string = 'day') => {
+        try {
+            return await invoke<any>('get_all_keys_usage', { timeframe })
+        } catch (err) {
+            console.error('[Tauri Native RAG] getAllKeysUsage failed:', err)
+            return []
+        }
+    },
+
+    srsReview: async (notePath: string, rating: number) => {
+        try {
+            return await invoke<any>('srs_review', { notePath, rating })
+        } catch (err) {
+            console.error('[Tauri Native RAG] srsReview failed:', err)
+            throw err
+        }
+    },
+    
+    srsDue: async (hubId?: string) => {
+        try {
+            return await invoke<any>('srs_due', { hubId })
+        } catch (err) {
+            console.error('[Tauri Native RAG] srsDue failed:', err)
+            return { due_cards: [] }
+        }
+    },
+
+    recordPerformance: async (payload: { note_path: string; was_correct: boolean; time_ms: number; question_type?: string; difficulty?: string; confidence?: number; session_id?: string; question_id?: string }) => {
+        try {
+            return await invoke<any>('record_performance', { payload })
+        } catch (err) {
+            console.error('[Tauri Native RAG] recordPerformance failed:', err)
+            throw err
+        }
+    },
+
+    vaultList: async (hubId: string) => {
+        try {
+            return await invoke<any>('vault_list', { hubId })
+        } catch (err) {
+            console.error('[Tauri Native RAG] vaultList failed:', err)
+            return { vaults: [] }
+        }
+    },
+
+    vaultUploadText: async (hubId: string, sourceName: string, sourceText: string) => {
+        try {
+            return await invoke<any>('vault_upload_text', { hubId, sourceName, sourceText })
+        } catch (err) {
+            console.error('[Tauri Native RAG] vaultUploadText failed:', err)
+            throw err
+        }
+    },
+
+    vaultGenerate: async (vaultPaths: string[], mode: string, hubId: string) => {
+        try {
+            return await invoke<any>('vault_generate', { vaultPaths, mode, hubId })
+        } catch (err) {
+            console.error('[Tauri Native RAG] vaultGenerate failed:', err)
+            throw err
+        }
+    },
+
+    vaultUploadFile: async (hubId: string, file: File) => {
+        try {
+            const filePath = (file as any).path || '';
+            if (!filePath) {
+                console.error('[Tauri Native RAG] File upload missing absolute path property.');
+                throw new Error('Absolute path is required for native file upload. Please select a file through the native dialog or drop a file from explorer.');
+            }
+            return await invoke<any>('vault_upload_file', {
+                hubId,
+                filePath,
+                fileName: file.name
+            });
+        } catch (err) {
+            console.error('[Tauri Native RAG] vaultUploadFile failed:', err);
+            throw err;
+        }
+    },
 
     request: async (method: string, path: string, body?: any): Promise<any> => {
         return {}
@@ -425,5 +812,12 @@ export const sidecarApi = {
         }
     },
 
-    explainQuestion: async (payload: { question: string; type: string; answer: any; explanation?: string; context?: string }) => ({ lesson: '' }),
+    explainQuestion: async (payload: { question: string; type: string; answer: any; explanation?: string; context?: string }) => {
+        try {
+            return await invoke<any>('explain_question', { payload })
+        } catch (err) {
+            console.error('[Tauri Native RAG] explainQuestion failed:', err)
+            throw err
+        }
+    },
 }
