@@ -38,3 +38,25 @@ jobs:
         run: pnpm install
       - name: Run Vitest Suite
         run: cd apps/desktop && pnpm vitest run
+
+  test-rust:
+    name: Tier 3 - Desktop (Rust)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Cargo Check
+        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
