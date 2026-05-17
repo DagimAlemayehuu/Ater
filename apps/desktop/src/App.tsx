@@ -16,9 +16,9 @@ const Onboarding = lazy(() => import('@/routes/onboarding'))
 /**
  * Gate to ensure sidecar is connected before proceeding.
  */
-// Maximum wait: 180 attempts × 1s = 3 minutes
+// Maximum wait: 300 attempts × 1s = 5 minutes
 // This accounts for PyInstaller cold-start extraction time on first launch
-const SIDECAR_MAX_RETRIES = 180
+const SIDECAR_MAX_RETRIES = 300
 
 function SidecarGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<'checking' | 'connected' | 'error'>('checking')
@@ -71,7 +71,7 @@ function SidecarGate({ children }: { children: React.ReactNode }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <h2 style={{ fontWeight: 900, fontSize: '14px', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>Engine Failure</h2>
             <p style={{ fontWeight: 600, fontSize: '10px', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1.8 }}>
-              The AI Engine could not start after 3 minutes. This usually means another Ater process is already running. Quit all Ater windows, wait 10 seconds, then click Re-Initialize.
+              The AI Engine could not start after 5 minutes. This usually means another Ater process is already running. Quit all Ater windows, wait 10 seconds, then click Re-Initialize.
             </p>
           </div>
           <button
