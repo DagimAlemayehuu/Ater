@@ -17,9 +17,9 @@ jobs:
             const { data: release } = await github.rest.repos.createRelease({
               owner: 'DagimAlemayehuu',
               repo: 'Ater_Releases',
-              tag_name: 'v0.0.27',
-              name: 'Ater v0.0.27',
-              body: 'Official release for Ater version v0.0.27.',
+              tag_name: 'v0.0.28',
+              name: 'Ater v0.0.28',
+              body: 'Official release for Ater version v0.0.28.',
               draft: true
             });
             console.log(`Created release: ${release.html_url}`);
@@ -132,18 +132,26 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
           # 1. Create the release in the target repo (Ignore error if already created by another runner)
-          gh release create v0.0.27 --repo DagimAlemayehuu/Ater_Releases --title "Ater v0.0.27" --notes "Production Build v0.0.27" || echo "Release already exists"
+          gh release create v0.0.28 --repo DagimAlemayehuu/Ater_Releases --title "Ater v0.0.28" --notes "Production Build v0.0.28" || echo "Release already exists"
           
           # 2. Upload Mac Silicon DMG
           if [ "${{ matrix.os }}" == "macos-14" ]; then
-            gh release upload v0.0.27 apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg --repo DagimAlemayehuu/Ater_Releases --clobber
+            # Upload versioned DMG
+            gh release upload v0.0.28 apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg --repo DagimAlemayehuu/Ater_Releases --clobber
+            # Copy to generic name and upload
+            cp apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Ater-aarch64.dmg
+            gh release upload v0.0.28 apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Ater-aarch64.dmg --repo DagimAlemayehuu/Ater_Releases --clobber
           fi
           
           # 3. Upload Windows Setup
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
             # Note: Use find to locate the .exe safely on Windows file systems
             EXE_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*.exe" | head -n 1)
-            gh release upload v0.0.27 "$EXE_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            # Upload versioned EXE
+            gh release upload v0.0.28 "$EXE_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            # Copy to generic name and upload
+            cp "$EXE_PATH" apps/desktop/src-tauri/target/release/bundle/nsis/Ater_setup.exe
+            gh release upload v0.0.28 apps/desktop/src-tauri/target/release/bundle/nsis/Ater_setup.exe --repo DagimAlemayehuu/Ater_Releases --clobber
           fi
 
   publish-release:
@@ -154,7 +162,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
-          gh release edit v0.0.27 \
+          gh release edit v0.0.28 \
             --repo DagimAlemayehuu/Ater_Releases \
             --discussion-category "Announcements" \
             --draft=false
@@ -182,5 +190,5 @@ jobs:
         with:
           token: ${{ secrets.RELEASE_PAT }}
           repository: DagimAlemayehuu/Ater_Releases
-          tag_name: v0.0.27
+          tag_name: v0.0.28
           files: update.json
