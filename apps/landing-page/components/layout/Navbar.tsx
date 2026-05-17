@@ -168,16 +168,16 @@ export function Navbar() {
                     setMobileMenuOpen(false);
                   }}
                   className={cn(
-                    "p-5 font-mono text-sm uppercase tracking-widest border border-outline-variant transition-all flex items-center justify-between group",
+                    "p-5 font-mono text-sm uppercase tracking-widest border transition-all flex items-center justify-between group",
                     isActive 
-                      ? "bg-primary text-background font-bold" 
-                      : "bg-surface text-on-surface hover:bg-surface-container"
+                      ? "bg-surface-container text-on-background font-bold border-on-background" 
+                      : "bg-surface text-on-surface hover:bg-surface-container border-outline-variant"
                   )}
                 >
                   <span>{link.label}</span>
                   <ChevronRight className={cn(
                     "size-5 transition-all",
-                    isActive ? "text-background opacity-100" : "text-on-surface opacity-20 group-hover:opacity-100 group-hover:translate-x-1"
+                    isActive ? "text-on-background opacity-100" : "text-on-surface opacity-20 group-hover:opacity-100 group-hover:translate-x-1"
                   )} />
                 </Link>
               );

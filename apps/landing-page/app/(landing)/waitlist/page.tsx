@@ -44,7 +44,7 @@ export default function WaitlistLandingPage() {
 
 function MockupSection() {
   return (
-    <div className="absolute left-1/2 -translate-x-1/2 lg:left-0 lg:translate-x-0 w-[140%] sm:w-[120%] lg:w-[160%] aspect-[2560/1664] pointer-events-none z-10 bottom-0 translate-y-[25%] lg:translate-y-[45%]">
+    <div className="absolute left-1/2 -translate-x-1/2 lg:left-auto lg:right-0 lg:translate-x-[15%] w-[125%] sm:w-[115%] lg:w-[53%] xl:w-[57%] aspect-[2560/1664] pointer-events-none z-10 bottom-0 translate-y-[5%] lg:translate-y-[22%]">
       {/* MacBook Air M2 Lid strictly proportional */}
       <div 
         className="w-full h-full bg-[#1A1A1A] border-x border-t border-white/10 relative flex flex-col shadow-[0_80px_160px_-30px_rgba(0,0,0,0.4),0_40px_80px_-20px_rgba(0,0,0,0.3)]"
