@@ -154,22 +154,16 @@ html {
   }
 
   section, footer {
-    position: relative;
+    position: sticky;
+    top: 0;
     min-height: 100vh;
     scroll-snap-align: start;
     scroll-snap-stop: always;
     background-color: var(--background);
     z-index: 1;
-  }
-
-  @media (min-width: 768px) {
-    section, footer {
-      position: sticky;
-      top: 0;
-      will-change: transform;
-      transform: translateZ(0);
-      box-shadow: var(--card-shadow);
-    }
+    will-change: transform;
+    transform: translateZ(0);
+    box-shadow: var(--card-shadow);
   }
 
   h1, h2, h3, h4, h5, h6, .display {
@@ -227,15 +221,15 @@ html {
   }
 
   .text-display-hero {
-    @apply text-[1.8rem] sm:text-[2.5rem] md:text-[3rem] lg:text-[3.5rem] leading-[1] font-black tracking-tighter uppercase text-on-surface;
+    @apply text-[1.4rem] sm:text-[2rem] md:text-[3rem] lg:text-[3.5rem] leading-[1] font-black tracking-tighter uppercase text-on-surface;
   }
 
   .text-section-heading {
-    @apply text-[1.5rem] sm:text-[1.8rem] md:text-[2.2rem] lg:text-[2.5rem] leading-[1.1] font-black tracking-tighter uppercase text-on-surface;
+    @apply text-[1.1rem] sm:text-[1.5rem] md:text-[2.2rem] lg:text-[2.5rem] leading-[1.1] font-black tracking-tighter uppercase text-on-surface;
   }
 
   .text-body {
-    @apply text-[12px] md:text-[13px] lg:text-[14px] leading-relaxed font-bold uppercase tracking-tight text-on-surface-variant;
+    @apply text-[10px] md:text-[13px] lg:text-[14px] leading-relaxed font-bold uppercase tracking-tight text-on-surface-variant;
   }
 
   .technical-label {

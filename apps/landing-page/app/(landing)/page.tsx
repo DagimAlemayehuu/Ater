@@ -10,9 +10,9 @@ export default function Home() {
       <HeroSection />
 
       {/* SECTION 02: Core Benefits */}
-      <section className="sticky top-0 z-20 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
-        <div className="industrial-container w-full py-20">
-          <div className="flex flex-col gap-8 w-full mb-12">
+      <section className="z-20 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-t border-outline-variant">
+        <div className="industrial-container w-full py-6 sm:py-12 md:py-8 sm:py-12 md:py-20">
+          <div className="flex flex-col gap-6 md:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 w-full mb-8 md:mb-12">
             <h2 className="text-section-heading">SYSTEM BENEFITS</h2>
             <p className="text-body max-w-xl text-on-surface-variant">
               Ater integrates document parser pipelines with active learning methods to make study notes dynamic, organized, and testable.
@@ -22,10 +22,10 @@ export default function Home() {
           <div className="flex flex-col border border-outline-variant w-full">
             {/* Row 1 */}
             <div className="grid grid-cols-1 md:grid-cols-12 border-b border-outline-variant last:border-b-0">
-              <div className="md:col-span-4 p-8 border-b md:border-b-0 md:border-r border-outline-variant bg-surface-container-low flex items-center">
+              <div className="md:col-span-4 p-4 sm:p-6 md:p-8 border-b md:border-b-0 md:border-r border-outline-variant bg-surface-container-low flex items-center">
                 <h3 className="text-sm font-bold tracking-tight uppercase">1. AUTOMATIC IMPORT</h3>
               </div>
-              <div className="md:col-span-8 p-8 bg-background flex items-center">
+              <div className="md:col-span-8 p-4 sm:p-6 md:p-8 bg-background flex items-center">
                 <p className="text-body text-[11px] leading-relaxed text-on-surface-variant">
                   Drop your textbook PDFs or slides directly into your vault folder. Our background watchers scan, split, and ingest new pages instantly without manual parsing.
                 </p>
@@ -33,10 +33,10 @@ export default function Home() {
             </div>
             {/* Row 2 */}
             <div className="grid grid-cols-1 md:grid-cols-12 border-b border-outline-variant last:border-b-0">
-              <div className="md:col-span-4 p-8 border-b md:border-b-0 md:border-r border-outline-variant bg-surface-container-low flex items-center">
+              <div className="md:col-span-4 p-4 sm:p-6 md:p-8 border-b md:border-b-0 md:border-r border-outline-variant bg-surface-container-low flex items-center">
                 <h3 className="text-sm font-bold tracking-tight uppercase">2. INTUITION GRAPHS</h3>
               </div>
-              <div className="md:col-span-8 p-8 bg-background flex items-center">
+              <div className="md:col-span-8 p-4 sm:p-6 md:p-8 bg-background flex items-center">
                 <p className="text-body text-[11px] leading-relaxed text-on-surface-variant">
                   Messy textbooks are automatically organized into clear study pathways. Kahn&apos;s dependency algorithms arrange topics from simple ideas to advanced concepts.
                 </p>
@@ -44,10 +44,10 @@ export default function Home() {
             </div>
             {/* Row 3 */}
             <div className="grid grid-cols-1 md:grid-cols-12 border-b border-outline-variant last:border-b-0">
-              <div className="md:col-span-4 p-8 border-b md:border-b-0 md:border-r border-outline-variant bg-surface-container-low flex items-center">
+              <div className="md:col-span-4 p-4 sm:p-6 md:p-8 border-b md:border-b-0 md:border-r border-outline-variant bg-surface-container-low flex items-center">
                 <h3 className="text-sm font-bold tracking-tight uppercase">3. VERIFIED RETRIEVAL</h3>
               </div>
-              <div className="md:col-span-8 p-8 bg-background flex items-center">
+              <div className="md:col-span-8 p-4 sm:p-6 md:p-8 bg-background flex items-center">
                 <p className="text-body text-[11px] leading-relaxed text-on-surface-variant">
                   Locate exact formulas, definitions, or textbook pages in seconds. Ater links quiz questions directly to corresponding page metrics for reliable study review.
                 </p>
@@ -58,11 +58,11 @@ export default function Home() {
       </section>
 
       {/* SECTION 03: HOW IT WORKS */}
-      <section className="sticky top-0 z-30 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
-        <div className="industrial-container w-full py-20">
-          <div className="flex flex-col gap-12 w-full">
+      <section className="z-30 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-t border-outline-variant">
+        <div className="industrial-container w-full py-8 sm:py-12 md:py-20">
+          <div className="flex flex-col gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">HOW IT WORKS</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center">
               <div className="flex flex-col gap-6">
                 <p className="text-body leading-relaxed text-on-surface-variant">
                   Ater builds an interconnected knowledge system directly inside your local storage directories. There are no cloud logins, server sync delays, or private data leaks.
@@ -82,50 +82,50 @@ export default function Home() {
       </section>
 
       {/* SECTION 04: FEATURES */}
-      <section id="features" className="sticky top-0 z-[35] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
-        <div className="industrial-container w-full py-20">
-          <div className="flex flex-col gap-12 w-full">
+      <section id="features" className="z-[35] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-t border-outline-variant">
+        <div className="industrial-container w-full py-8 sm:py-12 md:py-20">
+          <div className="flex flex-col gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">FEATURES</h2>
             <div className="flex flex-col gap-0 border border-outline-variant w-full">
-              <Link href="/features/academic-dashboard" className="grid grid-cols-1 md:grid-cols-12 border-b border-outline-variant hover:bg-surface transition-colors group">
-                <div className="md:col-span-3 p-8 border-b md:border-b-0 md:border-r border-outline-variant flex items-center">
+              <Link href="/features/academic-dashboard" className="grid grid-cols-1 md:grid-cols-12 border-b border-outline-variant hover:bg-surface-container transition-colors group">
+                <div className="md:col-span-3 p-4 sm:p-6 md:p-8 border-b md:border-b-0 md:border-r border-outline-variant flex items-center">
                   <h3 className="text-sm font-bold tracking-tight uppercase group-hover:text-primary transition-colors">ACADEMIC DASHBOARD</h3>
                 </div>
-                <div className="md:col-span-7 p-8 flex items-center">
+                <div className="md:col-span-7 p-4 sm:p-6 md:p-8 flex items-center">
                   <p className="text-body text-[11px] text-on-surface-variant leading-relaxed">
                     Your entire study schedule in one view. Track courses, deadlines, exam goals, and review dynamic Spaced Repetition quiz cards.
                   </p>
                 </div>
-                <div className="md:col-span-2 p-8 border-t md:border-t-0 md:border-l border-outline-variant flex items-center justify-center bg-surface-container-low group-hover:bg-surface-container-high transition-colors">
-                  <span className="font-mono text-[10px] tracking-widest uppercase">EXPLORE</span>
+                <div className="md:col-span-2 p-4 sm:p-6 md:p-8 border-t md:border-t-0 md:border-l border-outline-variant flex items-center justify-center bg-surface-container-low group-hover:bg-primary transition-colors">
+                  <span className="font-mono text-[10px] tracking-widest uppercase group-hover:text-background transition-colors group-hover:translate-x-1 duration-300 transform">EXPLORE</span>
                 </div>
               </Link>
               
-              <Link href="/features/knowledge-base" className="grid grid-cols-1 md:grid-cols-12 border-b border-outline-variant hover:bg-surface transition-colors group">
-                <div className="md:col-span-3 p-8 border-b md:border-b-0 md:border-r border-outline-variant flex items-center">
+              <Link href="/features/knowledge-base" className="grid grid-cols-1 md:grid-cols-12 border-b border-outline-variant hover:bg-surface-container transition-colors group">
+                <div className="md:col-span-3 p-4 sm:p-6 md:p-8 border-b md:border-b-0 md:border-r border-outline-variant flex items-center">
                   <h3 className="text-sm font-bold tracking-tight uppercase group-hover:text-primary transition-colors">KNOWLEDGE BASE</h3>
                 </div>
-                <div className="md:col-span-7 p-8 flex items-center">
+                <div className="md:col-span-7 p-4 sm:p-6 md:p-8 flex items-center">
                   <p className="text-body text-[11px] text-on-surface-variant leading-relaxed">
                     Local-first note structure. Dynamic three-panel views, PDF reading overlays, D3 force graph visuals, and conceptual study paths.
                   </p>
                 </div>
-                <div className="md:col-span-2 p-8 border-t md:border-t-0 md:border-l border-outline-variant flex items-center justify-center bg-surface-container-low group-hover:bg-surface-container-high transition-colors">
-                  <span className="font-mono text-[10px] tracking-widest uppercase">EXPLORE</span>
+                <div className="md:col-span-2 p-4 sm:p-6 md:p-8 border-t md:border-t-0 md:border-l border-outline-variant flex items-center justify-center bg-surface-container-low group-hover:bg-primary transition-colors">
+                  <span className="font-mono text-[10px] tracking-widest uppercase group-hover:text-background transition-colors group-hover:translate-x-1 duration-300 transform">EXPLORE</span>
                 </div>
               </Link>
               
-              <Link href="/features/agents" className="grid grid-cols-1 md:grid-cols-12 border-b-0 hover:bg-surface transition-colors group">
-                <div className="md:col-span-3 p-8 border-b md:border-b-0 md:border-r border-outline-variant flex items-center">
+              <Link href="/features/agents" className="grid grid-cols-1 md:grid-cols-12 border-b-0 hover:bg-surface-container transition-colors group">
+                <div className="md:col-span-3 p-4 sm:p-6 md:p-8 border-b md:border-b-0 md:border-r border-outline-variant flex items-center">
                   <h3 className="text-sm font-bold tracking-tight uppercase group-hover:text-primary transition-colors">REASONING AGENTS</h3>
                 </div>
-                <div className="md:col-span-7 p-8 flex items-center">
+                <div className="md:col-span-7 p-4 sm:p-6 md:p-8 flex items-center">
                   <p className="text-body text-[11px] text-on-surface-variant leading-relaxed">
                     Cooperative network of 11 local agents. Epistemic note parsing, automatic topic sorting, 85+ domain rules, and self-healing.
                   </p>
                 </div>
-                <div className="md:col-span-2 p-8 border-t md:border-t-0 md:border-l border-outline-variant flex items-center justify-center bg-surface-container-low group-hover:bg-surface-container-high transition-colors">
-                  <span className="font-mono text-[10px] tracking-widest uppercase">EXPLORE</span>
+                <div className="md:col-span-2 p-4 sm:p-6 md:p-8 border-t md:border-t-0 md:border-l border-outline-variant flex items-center justify-center bg-surface-container-low group-hover:bg-primary transition-colors">
+                  <span className="font-mono text-[10px] tracking-widest uppercase group-hover:text-background transition-colors group-hover:translate-x-1 duration-300 transform">EXPLORE</span>
                 </div>
               </Link>
             </div>
@@ -134,11 +134,11 @@ export default function Home() {
       </section>
 
       {/* SECTION 05: SECURITY & DATA PRIVACY */}
-      <section className="sticky top-0 z-40 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
-        <div className="industrial-container w-full py-20">
-          <div className="flex flex-col gap-12 w-full">
+      <section className="z-40 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-t border-outline-variant">
+        <div className="industrial-container w-full py-8 sm:py-12 md:py-20">
+          <div className="flex flex-col gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">LOCAL SECURITY</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center">
               <div className="flex flex-col gap-6">
                 <p className="text-body leading-relaxed text-on-surface-variant">
                   Your study materials remain strictly your own. Ater runs fully offline on your CPU with zero remote servers or cloud tracking trackers.
@@ -160,11 +160,11 @@ export default function Home() {
       </section>
 
       {/* SECTION 06: PRICING PREVIEW */}
-      <section className="sticky top-0 z-[45] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
-        <div className="industrial-container w-full py-20">
-          <div className="flex flex-col gap-12 w-full">
+      <section className="z-[45] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-t border-outline-variant">
+        <div className="industrial-container w-full py-8 sm:py-12 md:py-20">
+          <div className="flex flex-col gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">BETA PRICING</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center">
               <div className="flex flex-col gap-6">
                 <p className="text-body leading-relaxed text-on-surface-variant">
                   We believe in highly transparent, local-first utility. Ater is currently in private beta, making all core features fully functional and free of charge. Full commercial plans will be launched during our public release.
@@ -195,8 +195,8 @@ export default function Home() {
       </section>
 
       {/* SECTION 07: WAITLIST CTA */}
-      <section className="sticky top-0 z-[48] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
-        <div className="industrial-container w-full py-20 flex flex-col items-center justify-center gap-8 text-center">
+      <section className="z-[48] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-t border-outline-variant">
+        <div className="industrial-container w-full py-8 sm:py-12 md:py-20 flex flex-col items-center justify-center gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 text-center">
           <h2 className="text-display-hero uppercase">
             JOIN THE WAITLIST
           </h2>
@@ -212,11 +212,11 @@ export default function Home() {
       </section>
 
       {/* SECTION 08: DIRECT CHANNELS */}
-      <section className="sticky top-0 z-[50] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-t border-outline-variant">
-        <div className="industrial-container w-full py-20">
-          <div className="flex flex-col gap-12 w-full">
+      <section className="z-[50] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-t border-outline-variant">
+        <div className="industrial-container w-full py-8 sm:py-12 md:py-20">
+          <div className="flex flex-col gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 w-full">
             <h2 className="text-display-hero max-w-5xl">GET IN TOUCH</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center">
               <div className="flex flex-col gap-6">
                 <p className="text-body leading-relaxed text-on-surface-variant">
                   Have questions, feature requests, or technical feedback? Reach out directly to our cooperative core labs team. We support open communication through all channels.

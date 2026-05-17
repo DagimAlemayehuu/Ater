@@ -26,8 +26,8 @@ export function HeroSection() {
   }, []);
 
   return (
-    <section className="sticky top-0 z-10 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full overflow-hidden border-b border-outline-variant pt-16">
-      <div className="industrial-container flex flex-col items-center justify-center gap-8 w-full h-full py-20">
+    <section className="relative md:sticky md:top-0 z-10 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full overflow-hidden border-b border-outline-variant pt-16">
+      <div className="industrial-container flex flex-col items-center justify-center gap-8 w-full py-12 md:py-20 flex-1">
         <div className="flex flex-col items-start justify-center gap-6 w-full">
           <motion.h1 
             className="text-display-hero border-b border-outline-variant pb-4 text-left w-full uppercase flex font-mono font-black"
@@ -61,7 +61,7 @@ export function HeroSection() {
         <motion.div 
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 1.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-4xl relative origin-center flex items-center justify-center"
         >
             <FullMacbookMockup />
@@ -89,14 +89,30 @@ export function HeroSection() {
 
 function FullMacbookMockup() {
   return (
-    <div className="w-full flex flex-col items-center">
+    <div className="w-[75%] sm:w-[80%] md:w-[90%] max-w-[800px] flex flex-col items-center">
       {/* Lid / Screen */}
-      <div className="w-[85%] aspect-[2560/1664] bg-[#1A1A1A] rounded-t-[2rem] p-[2px] border-x border-t border-white/10 relative flex flex-col shadow-2xl">
-        <div className="flex-1 bg-[#000] rounded-t-[1.8rem] overflow-hidden p-[10px] relative flex flex-col">
+      <div 
+        className="w-[85%] aspect-[2560/1664] bg-[#1A1A1A] border-x border-t border-white/10 relative flex flex-col shadow-[0_80px_160px_-30px_rgba(0,0,0,0.4)]"
+        style={{ borderTopLeftRadius: '3%', borderTopRightRadius: '3%', padding: '0.4%' }}
+      >
+        <div 
+          className="flex-1 bg-[#000] overflow-hidden relative flex flex-col"
+          style={{ borderTopLeftRadius: '2.6%', borderTopRightRadius: '2.6%', padding: '1.2%' }}
+        >
           {/* M2 Notch */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[180px] h-[34px] bg-[#000] z-30 rounded-b-[0.8rem]" />
+          <div 
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-[12%] h-[4%] bg-[#000] z-30 flex items-center justify-center"
+            style={{ borderBottomLeftRadius: '6px', borderBottomRightRadius: '6px' }}
+          >
+            <div className="w-[4%] aspect-square rounded-full bg-[#111] border border-white/10 flex items-center justify-center mt-0.5">
+              <div className="w-[40%] aspect-square rounded-full bg-blue-500/40" />
+            </div>
+          </div>
           
-          <div className="flex-1 bg-[#FFFFFF] rounded-t-[1rem] overflow-hidden relative">
+          <div 
+            className="flex-1 bg-[#131313] overflow-hidden relative shadow-inner"
+            style={{ borderTopLeftRadius: '1.5%', borderTopRightRadius: '1.5%' }}
+          >
             <Image 
               src="/dashboard.png" 
               alt="Ater Dashboard" 
@@ -105,14 +121,22 @@ function FullMacbookMockup() {
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
               priority
             />
+            {/* Subtle Screen Glare */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none z-20" />
           </div>
         </div>
       </div>
       
       {/* Base / Keyboard Area */}
-      <div className="w-full h-4 bg-[#1A1A1A] rounded-b-[1rem] border-x border-b border-white/10 shadow-xl relative">
+      <div 
+        className="w-full aspect-[800/14] bg-[#1A1A1A] border-x border-b border-white/10 shadow-xl relative"
+        style={{ borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}
+      >
         {/* Thumb Indentation */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-2 bg-black/40 rounded-b-full shadow-inner" />
+        <div 
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[12%] h-[40%] bg-black/40 shadow-inner" 
+          style={{ borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}
+        />
       </div>
     </div>
   );

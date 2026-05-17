@@ -5,8 +5,8 @@ import { IndustrialButton } from '@/components/IndustrialButton';
 
 export default function PricingPage() {
   return (
-    <section className="sticky top-0 z-10 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full py-20 px-4 md:px-8">
-      <div className="industrial-container w-full max-w-3xl mx-auto flex flex-col gap-8 text-center items-center justify-center">
+    <section className="z-10 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full py-8 sm:py-12 md:py-20 px-4 md:px-8">
+      <div className="industrial-container w-full max-w-3xl mx-auto flex flex-col gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 text-center items-center justify-center">
         <h1 className="text-display-hero uppercase">
           BETA PRICING
         </h1>
@@ -14,7 +14,7 @@ export default function PricingPage() {
           We are currently in active beta. All features are fully functional and free of charge. Pricing plans will be announced with our public launch.
         </p>
 
-        <div className="border border-outline-variant bg-surface p-8 w-full max-w-md font-mono text-[11px] text-left flex flex-col gap-6 shadow-xl relative overflow-hidden">
+        <div className="border border-outline-variant bg-surface p-4 sm:p-6 md:p-8 w-full max-w-md font-mono text-[11px] text-left flex flex-col gap-6 shadow-xl relative overflow-hidden">
           <div className="flex justify-between items-center border-b border-outline-variant pb-3">
             <span className="text-primary font-bold">CURRENT_TIER</span>
           </div>

@@ -15,7 +15,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'ATER INDUSTRIAL SYSTEMS',
+  title: 'ATER',
   description: 'A smarter way to study. Learn faster, score better.',
 };
 

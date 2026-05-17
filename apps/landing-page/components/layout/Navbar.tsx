@@ -5,7 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { usePathname } from "next/navigation";
 import { useTheme } from "../../context/ThemeContext";
-import { Sun, Moon, Menu, ChevronRight } from "lucide-react";
+import { Sun, Moon, Menu, X, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IndustrialButton } from "../IndustrialButton";
 
@@ -54,7 +54,16 @@ export function Navbar() {
           "flex items-center w-full px-4 md:px-8 h-16 max-w-(--spacing-container) mx-auto",
           showCenteredHeader ? "justify-center" : "justify-between"
         )}>
-          <Link href="/" className="text-xl md:text-2xl font-black tracking-tighter text-on-background uppercase font-inter flex items-center gap-2">
+          <Link 
+            href="/" 
+            onClick={(e) => {
+              if (pathname === '/') {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+            className="text-xl md:text-2xl font-black tracking-tighter text-on-background uppercase font-inter flex items-center gap-2"
+          >
             ATER <span className="text-on-surface-variant font-bold normal-case opacity-40">አጠር</span>
           </Link>
           
@@ -67,6 +76,12 @@ export function Navbar() {
                      <Link
                        key={link.label}
                        href={link.href}
+                       onClick={(e) => {
+                         if (link.href === '/' && pathname === '/') {
+                           e.preventDefault();
+                           window.scrollTo({ top: 0, behavior: 'smooth' });
+                         }
+                       }}
                        className={`py-2 px-4 transition-all duration-150 rounded-none border-b-2 ${
                          isActive 
                            ? "border-on-background text-on-background" 
@@ -113,10 +128,20 @@ export function Navbar() {
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div id="mobile-menu" className="lg:hidden fixed inset-0 bg-background z-[200] flex flex-col animate-in fade-in duration-300">
+        <div id="mobile-menu" className="lg:hidden fixed inset-0 bg-background grid-background z-[200] flex flex-col animate-in fade-in duration-300">
           {/* Mobile Header Inside Menu */}
           <div className="flex items-center justify-between px-4 h-16 border-b border-outline-variant bg-background">
-            <Link href="/" className="text-xl font-black tracking-tighter uppercase font-inter text-on-background">
+            <Link 
+              href="/" 
+              onClick={(e) => {
+                if (pathname === '/') {
+                  e.preventDefault();
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+                setMobileMenuOpen(false);
+              }} 
+              className="text-xl font-black tracking-tighter uppercase font-inter text-on-background"
+            >
               ATER
             </Link>
             <button 
@@ -125,27 +150,31 @@ export function Navbar() {
               aria-controls="mobile-menu"
               className="p-3 rounded-none hover:bg-surface transition-colors text-on-background min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
-              <Menu className="size-6 rotate-90" />
+              <X className="size-6" />
             </button>
           </div>
-          <div className="flex-1 flex flex-col p-6 gap-2 overflow-y-auto bg-background">
+          <div className="flex-1 flex flex-col p-6 gap-2 overflow-y-auto">
             {navLinks.map((link) => {
               const isActive = pathname === link.href || (link.label === "Features" && pathname.startsWith("/features"));
               return (
                 <Link
                   key={link.label}
                   href={link.href}
-                  onClick={() => {
+                  onClick={(e) => {
+                    if (link.href === '/' && pathname === '/') {
+                      e.preventDefault();
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
                     setMobileMenuOpen(false);
                   }}
                   className={cn(
-                    "p-6 technical-label text-lg border border-outline-variant transition-all flex items-center justify-between group",
+                    "p-5 font-mono text-sm uppercase tracking-widest border border-outline-variant transition-all flex items-center justify-between group",
                     isActive 
-                      ? "bg-primary text-background" 
+                      ? "bg-primary text-background font-bold" 
                       : "bg-surface text-on-surface hover:bg-surface-container"
                   )}
                 >
-                  <span className="font-bold tracking-widest">{link.label.toUpperCase()}</span>
+                  <span>{link.label}</span>
                   <ChevronRight className={cn(
                     "size-5 transition-all",
                     isActive ? "text-background opacity-100" : "text-on-surface opacity-20 group-hover:opacity-100 group-hover:translate-x-1"
@@ -158,15 +187,16 @@ export function Navbar() {
           <div className="p-6 border-t border-outline-variant flex flex-col gap-4 bg-surface">
             <IndustrialButton 
               href="/auth"
-              className="w-full h-16"
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-full h-14"
             >
               SIGN IN
             </IndustrialButton>
             <div className="flex justify-between items-center px-2">
-              <p className="technical-label opacity-30 text-[10px] text-on-surface">
+              <p className="font-mono uppercase text-[10px] tracking-widest opacity-40 text-on-surface">
                 BETA
               </p>
-              <p className="technical-label opacity-30 text-[10px] text-on-surface">
+              <p className="font-mono uppercase text-[10px] tracking-widest opacity-40 text-on-surface">
                 EST. 2026
               </p>
             </div>

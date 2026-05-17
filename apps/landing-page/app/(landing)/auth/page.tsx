@@ -1,20 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
-import { 
-  Loader2, 
-  Copy, 
-  Check, 
-  ArrowLeft
-} from "lucide-react";
+import { Loader2, Copy, Check, ArrowLeft, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { DownloadAterButton } from "@/components/DownloadAterButton";
 import { IndustrialButton } from "@/components/IndustrialButton";
 import { cn } from "@/lib/utils";
-
-import { Suspense } from "react";
 
 function AuthContent() {
   const searchParams = useSearchParams();
@@ -32,10 +25,43 @@ function AuthContent() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    async function fetchUserStatus(userEmail: string, currentUser: any) {
+      try {
+        const { data, error } = await supabase
+          .from('waiting_list')
+          .select('*')
+          .eq('email', userEmail)
+          .maybeSingle();
+        
+        if (error || !data) {
+          if (!data) {
+             const { data: newProfile, error: insertError } = await supabase.from('waiting_list').insert([
+               { email: userEmail, full_name: currentUser?.user_metadata?.full_name || 'User', status: 'pending' }
+             ]).select().single();
+             
+             if (!insertError && newProfile) {
+               setUserStatus(newProfile);
+               setView("dashboard");
+               return;
+             }
+          }
+          await supabase.auth.signOut();
+          setView("auth");
+          return;
+        }
+
+        setUserStatus(data);
+        setView("dashboard");
+      } catch (err) {
+        await supabase.auth.signOut();
+        setView("auth");
+      }
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user);
-        fetchUserStatus(session.user.email!);
+        fetchUserStatus(session.user.email!, session.user);
       } else {
         setView("auth");
       }
@@ -44,7 +70,7 @@ function AuthContent() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         setUser(session.user);
-        fetchUserStatus(session.user.email!);
+        fetchUserStatus(session.user.email!, session.user);
       } else {
         setUser(null);
         setUserStatus(null);
@@ -55,28 +81,6 @@ function AuthContent() {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function fetchUserStatus(userEmail: string) {
-    try {
-      const { data, error } = await supabase
-        .from('waiting_list')
-        .select('*')
-        .eq('email', userEmail)
-        .maybeSingle();
-      
-      if (error || !data) {
-        await supabase.auth.signOut();
-        setView("auth");
-        return;
-      }
-
-      setUserStatus(data);
-      setView("dashboard");
-    } catch (err) {
-      await supabase.auth.signOut();
-      setView("auth");
-    }
-  }
-
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -84,6 +88,18 @@ function AuthContent() {
 
     try {
       if (authMode === "signup") {
+        // 1. Create the user in Auth
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: fullName },
+          },
+        });
+
+        if (signUpError) throw signUpError;
+        
+        // 2. Ensure waitlist record exists
         const { error: waitlistError } = await supabase
           .from('waiting_list')
           .upsert(
@@ -93,19 +109,8 @@ function AuthContent() {
         
         if (waitlistError) throw waitlistError;
 
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-            },
-          },
-        });
-
-        if (signUpError) throw signUpError;
         if (!data.session) {
-          setError("Success! Please check your email to confirm your account.");
+          setError("SUCCESS! CHECK YOUR EMAIL TO VERIFY ACCOUNT.");
         }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -115,7 +120,7 @@ function AuthContent() {
         if (signInError) throw signInError;
       }
     } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
+      setError(err.message.toUpperCase() || "AUTHENTICATION FAILED.");
     } finally {
       setLoading(false);
     }
@@ -130,78 +135,108 @@ function AuthContent() {
 
   if (view === "loading") {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background min-h-[60vh]">
-        <div className="technical-label animate-pulse opacity-20">LOADING...</div>
+      <div className="flex-1 flex flex-col items-center justify-center bg-background min-h-[100dvh]">
+        <div className="flex gap-2 items-center text-primary font-mono text-[10px] tracking-widest uppercase">
+          <Loader2 className="size-3 animate-spin" />
+          <span>AUTHENTICATING_</span>
+        </div>
       </div>
     );
   }
 
   if (view === "dashboard") {
     const firstName = (userStatus?.full_name || user?.user_metadata?.full_name || 'USER').split(' ')[0];
+    const isApproved = userStatus?.status === 'approved';
     
     return (
-      <section className="bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant pt-16 overflow-hidden">
-        <div className="industrial-container w-full flex flex-col items-center justify-center gap-6 py-12 relative z-20">
-          <div className="max-w-[440px] w-full text-left mb-4">
+      <section className="z-10 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full pt-16 border-b border-outline-variant">
+        <div className="industrial-container w-full max-w-2xl flex flex-col gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 py-12">
+          
+          <div className="w-full flex justify-between items-center border-b border-outline-variant pb-4">
             <Link 
               href="/" 
               className="flex items-center gap-2 technical-label opacity-40 hover:opacity-100 hover:text-primary transition-all -ml-1"
             >
               <ArrowLeft className="size-3" />
-              <span>RETURN TO SITE</span>
+              <span>RETURN</span>
             </Link>
+            <button 
+              onClick={() => supabase.auth.signOut()} 
+              className="flex items-center gap-2 technical-label opacity-40 hover:opacity-100 transition-all"
+            >
+              <span>LOGOUT</span>
+              <LogOut className="size-3" />
+            </button>
           </div>
 
-          <div className="max-w-[440px] w-full text-center">
-            <div className="mb-6">
-              <h1 className="text-display-hero !text-[3rem] tracking-tighter">HEY, {firstName.toUpperCase()}</h1>
-              <p className="text-body !text-[11px] opacity-40">STATUS: {userStatus?.status?.toUpperCase() || 'ACTIVE'}</p>
+          <div className="flex flex-col gap-1 sm:gap-2">
+            <h1 className="text-display-hero !text-[1.8rem] sm:!text-[2.5rem] md:!text-[3.5rem] tracking-tighter uppercase break-words">
+              WELCOME, {firstName}.
+            </h1>
+            <div className="flex items-center gap-3">
+              <span className="technical-label opacity-40">STATUS:</span>
+              <span className={cn(
+                "technical-label px-2 py-1 border",
+                isApproved ? "border-primary text-primary bg-primary/10" : "border-outline-variant text-on-surface-variant bg-surface"
+              )}>
+                {isApproved ? 'APPROVED' : 'PENDING'}
+              </span>
             </div>
-            
-            <div className="p-8 industrial-border bg-surface relative overflow-hidden shadow-sm text-left space-y-8">
-              <div className="flex items-center gap-3 border-b border-outline-variant pb-6">
-                <div className={cn("size-2.5", userStatus?.status === 'approved' ? "bg-primary" : "bg-outline-variant")} />
-                <h2 className="text-section-heading !text-[1.5rem]">
-                  {userStatus?.status === 'approved' ? 'APPROVED' : 'PENDING'}
-                </h2>
-              </div>
+            </div>
 
-              {userStatus?.status === 'approved' ? (
-                <div className="space-y-6">
-                  <div className="p-6 bg-background border border-outline-variant relative group">
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="technical-label opacity-30 !text-[8px]">ACTIVATION_KEY</span>
-                      <button onClick={copyKey} className="opacity-40 hover:opacity-100 transition-opacity">
-                        {copied ? <Check className="size-3.5 text-primary" /> : <Copy className="size-3.5" />}
+            <div className="border border-outline-variant bg-surface flex flex-col relative overflow-hidden shadow-2xl">
+            {/* Top Bar of the Card */}
+            <div className="flex items-center justify-between border-b border-outline-variant px-6 py-4 bg-surface-container-low">
+              <span className="font-mono font-bold text-[11px] text-on-surface uppercase tracking-widest">
+                {isApproved ? 'ACTIVATION' : 'WAITLIST'}
+              </span>
+              <div className="flex gap-1.5">
+                <div className="size-1.5 rounded-full bg-outline-variant" />
+                <div className="size-1.5 rounded-full bg-outline-variant" />
+              </div>
+            </div>
+
+            {/* Inner Content */}
+            <div className="p-4 sm:p-6 md:p-10 flex flex-col gap-4 sm:gap-6 md:gap-8 bg-background">
+              {isApproved ? (
+                <>
+                  <p className="text-body !text-[12px] opacity-75">
+                    You are approved. Use this key to unlock Ater on your machine. Keep it secret.
+                  </p>
+                  
+                  <div className="p-6 border border-primary bg-primary/5 flex flex-col gap-4 relative group">
+                    <div className="flex justify-between items-center border-b border-primary/20 pb-3">
+                      <span className="technical-label text-primary">ACTIVATION_KEY</span>
+                      <button onClick={copyKey} className="text-primary hover:opacity-70 transition-opacity">
+                        {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
                       </button>
                     </div>
-                    <div className="text-3xl font-mono font-black text-center tracking-[0.4em] text-primary">
+                    <div className="text-2xl sm:text-4xl font-mono font-black text-center tracking-[0.2em] sm:tracking-[0.4em] text-primary break-all">
                       {userStatus?.activation_code || '---'}
                     </div>
                     {copied && (
                       <div className="absolute inset-0 bg-primary flex items-center justify-center animate-in fade-in duration-200">
-                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-on-primary">KEY_COPIED</span>
+                        <span className="text-[12px] font-black uppercase tracking-[0.4em] text-on-primary">KEY COPIED TO CLIPBOARD</span>
                       </div>
                     )}
                   </div>
 
                   <DownloadAterButton />
-                </div>
+                </>
               ) : (
-                <div className="space-y-4 py-2">
-                  <p className="text-[12px] leading-relaxed text-on-surface opacity-70">
-                    Your spot on the waitlist is reserved. We are letting new users in daily. You will get an email as soon as your account is approved.
-                  </p>
-                </div>
+                <>
+                  <div className="flex flex-col items-center text-center gap-6 py-8">
+                    <div className="size-16 border-2 border-outline-variant rounded-full flex items-center justify-center mb-2">
+                      <div className="size-6 bg-outline-variant animate-pulse rounded-full" />
+                    </div>
+                    <h2 className="text-section-heading !text-[1.8rem]">THANK YOU.</h2>
+                    <p className="text-body !text-[13px] opacity-60 max-w-md mx-auto">
+                      You are on the list. We invite new users every day. We will email you when your account is ready.
+                    </p>
+                  </div>
+                </>
               )}
             </div>
-            
-            <button 
-              onClick={() => supabase.auth.signOut()} 
-              className="mt-8 technical-label opacity-30 hover:opacity-100 transition-opacity"
-            >
-              NOT {firstName.toUpperCase()}? SIGN OUT
-            </button>
           </div>
         </div>
       </section>
@@ -209,91 +244,99 @@ function AuthContent() {
   }
 
   return (
-    <section className="bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant pt-16">
-      <div className="industrial-container w-full flex flex-col items-center justify-center gap-8 py-12">
-        <main className="w-full max-w-[400px] flex flex-col gap-8">
+    <section className="z-10 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full pt-16 border-b border-outline-variant">
+      <div className="industrial-container w-full flex flex-col items-center justify-center gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 py-12 relative z-20">
+        <main className="w-full max-w-[440px] flex flex-col gap-10">
           {/* Back Button */}
           <Link 
             href="/" 
-            className="flex items-center gap-2 technical-label opacity-40 hover:opacity-100 hover:text-primary transition-all -ml-1"
+            className="flex items-center gap-2 technical-label opacity-40 hover:opacity-100 hover:text-primary transition-all -ml-1 w-fit"
           >
             <ArrowLeft className="size-3" />
-            <span>RETURN TO SITE</span>
+            <span>RETURN</span>
           </Link>
 
           {/* Header */}
-          <div className="flex flex-col gap-2">
-            <h1 className="text-section-heading !text-[2rem]">{authMode === 'signup' ? 'JOIN WAITLIST' : 'SIGN IN'}</h1>
+          <div className="flex flex-col gap-3">
+            <h1 className="text-display-hero !text-[2.5rem] tracking-tighter">
+              {authMode === 'signup' ? 'JOIN WAITLIST' : 'SIGN IN'}
+            </h1>
             <p className="text-body !text-[11px] opacity-40 uppercase">
-              {authMode === 'signup' ? 'ENTER DETAILS TO RESERVE YOUR SPOT.' : 'ENTER YOUR CREDENTIALS TO CONTINUE.'}
+              ENTER YOUR DETAILS.
             </p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleAuth} className="flex flex-col gap-8">
-            {error && (
-              <div className={cn(
-                "p-6 border text-[11px] font-mono uppercase tracking-widest text-center",
-                error.includes("Success") ? "bg-primary/5 border-primary/20 text-primary" : "bg-error/10 border-error/20 text-error"
-              )}>
-                {error}
-              </div>
-            )}
-
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label htmlFor="email" className="technical-label opacity-40">EMAIL ADDRESS</label>
-                <input 
-                  id="email"
-                  type="email" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  placeholder="user@ater.ai" 
-                  required 
-                  className="industrial-input" 
-                />
-              </div>
-
-              {authMode === "signup" && (
-                <div className="space-y-2">
-                  <label htmlFor="full-name" className="technical-label opacity-40">FULL NAME</label>
-                  <input 
-                    id="full-name"
-                    type="text" 
-                    value={fullName} 
-                    onChange={(e) => setFullName(e.target.value)} 
-                    placeholder="Your Name" 
-                    required 
-                    className="industrial-input" 
-                  />
+          {/* Form Card */}
+          <div className="border border-outline-variant bg-surface p-4 sm:p-6 md:p-8 shadow-2xl relative">
+            <form onSubmit={handleAuth} className="flex flex-col gap-6 relative z-10">
+              {error && (
+                <div className={cn(
+                  "p-4 border text-[10px] font-mono font-bold uppercase tracking-widest text-left",
+                  error.includes("SUCCESS") ? "bg-primary text-background border-primary" : "bg-error/10 border-error/30 text-error"
+                )}>
+                  {error}
                 </div>
               )}
 
-              <div className="space-y-2">
-                <label htmlFor="password" className="technical-label opacity-40">PASSWORD</label>
-                <input 
-                  id="password"
-                  type="password" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  placeholder="••••••••" 
-                  required 
-                  className="industrial-input" 
-                />
+              <div className="space-y-5">
+                {authMode === "signup" && (
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="full-name" className="technical-label opacity-60">FULL NAME</label>
+                    <input 
+                      id="full-name"
+                      type="text" 
+                      value={fullName} 
+                      onChange={(e) => setFullName(e.target.value)} 
+                      placeholder="JOHN DOE" 
+                      required 
+                      className="industrial-input bg-background" 
+                    />
+                  </div>
+                )}
+                
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="email" className="technical-label opacity-60">EMAIL ADDRESS</label>
+                  <input 
+                    id="email"
+                    type="email" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    placeholder="USER@SYSTEM.IO" 
+                    required 
+                    className="industrial-input bg-background" 
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="password" className="technical-label opacity-60">PASSWORD</label>
+                  <input 
+                    id="password"
+                    type="password" 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    placeholder="••••••••" 
+                    required 
+                    className="industrial-input bg-background" 
+                    minLength={6}
+                  />
+                </div>
               </div>
-            </div>
 
-            <IndustrialButton type="submit" disabled={loading} className="w-full h-14">
-              {loading ? <Loader2 className="size-4 animate-spin" /> : (authMode === "signup" ? "CREATE" : "SIGN IN")}
-            </IndustrialButton>
-          </form>
+              <IndustrialButton type="submit" disabled={loading} className="w-full mt-2 h-14 bg-background">
+                {loading ? <Loader2 className="size-4 animate-spin" /> : (authMode === "signup" ? "JOIN WAITLIST" : "SIGN IN")}
+              </IndustrialButton>
+            </form>
+          </div>
 
-          <div className="text-center pt-8 border-t border-outline-variant">
+          <div className="text-center pt-2">
             <button 
-              onClick={() => setAuthMode(authMode === "signup" ? "login" : "signup")} 
-              className="technical-label opacity-40 hover:opacity-100 hover:text-primary transition-all"
+              onClick={() => {
+                setAuthMode(authMode === "signup" ? "login" : "signup");
+                setError(null);
+              }} 
+              className="technical-label opacity-40 hover:opacity-100 transition-all border-b border-transparent hover:border-on-surface pb-1"
             >
-              {authMode === "signup" ? "HAVE ACCOUNT? SIGN IN" : "NO ACCOUNT? CREATE ONE"}
+              {authMode === "signup" ? "ALREADY ON THE LIST? SIGN IN" : "NOT ON THE LIST? JOIN WAITLIST"}
             </button>
           </div>
         </main>
@@ -304,7 +347,14 @@ function AuthContent() {
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={<div className="flex-1 flex items-center justify-center bg-background min-h-[60vh]"><div className="technical-label animate-pulse opacity-20">INITIALIZING...</div></div>}>
+    <Suspense fallback={
+      <div className="flex-1 flex flex-col items-center justify-center bg-background min-h-[100dvh]">
+        <div className="flex gap-2 items-center text-primary font-mono text-[10px] tracking-widest uppercase">
+          <Loader2 className="size-3 animate-spin" />
+          <span>SYSTEM_BOOT_</span>
+        </div>
+      </div>
+    }>
       <AuthContent />
     </Suspense>
   );

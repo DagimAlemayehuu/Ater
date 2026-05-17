@@ -5,11 +5,11 @@ import { IndustrialButton } from '@/components/IndustrialButton';
 
 export default function FeaturesPage() {
   return (
-    <div className="min-h-screen bg-background w-full border-b border-outline-variant flex flex-col">
+    <div className="min-h-[100dvh] bg-background w-full border-b border-outline-variant flex flex-col">
       
       {/* Section 01: Academic Dashboard */}
-      <section className="sticky top-0 z-10 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant py-20">
-        <div className="industrial-container w-full flex flex-col gap-8 max-w-4xl mx-auto text-center items-center">
+      <section className="z-10 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20">
+        <div className="industrial-container w-full flex flex-col gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 max-w-4xl mx-auto text-center items-center">
           <h1 className="text-display-hero">
             ACADEMIC DASHBOARD
           </h1>
@@ -23,8 +23,8 @@ export default function FeaturesPage() {
       </section>
 
       {/* Section 02: Knowledge Base */}
-      <section className="sticky top-0 z-20 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant py-20">
-        <div className="industrial-container w-full flex flex-col gap-8 max-w-4xl mx-auto text-center items-center">
+      <section className="z-20 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20">
+        <div className="industrial-container w-full flex flex-col gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 max-w-4xl mx-auto text-center items-center">
           <h1 className="text-display-hero">
             KNOWLEDGE BASE
           </h1>
@@ -38,8 +38,8 @@ export default function FeaturesPage() {
       </section>
 
       {/* Section 03: Agents */}
-      <section className="sticky top-0 z-30 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full py-20">
-        <div className="industrial-container w-full flex flex-col gap-8 max-w-4xl mx-auto text-center items-center">
+      <section className="z-30 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full py-8 sm:py-12 md:py-20">
+        <div className="industrial-container w-full flex flex-col gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 max-w-4xl mx-auto text-center items-center">
           <h1 className="text-display-hero">
             AGENTS
           </h1>

@@ -5,7 +5,7 @@ import { ChevronRight } from 'lucide-react';
 
 export default function ContactPage() {
   return (
-    <section className="sticky top-0 z-10 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full py-20 px-4 md:px-8">
+    <section className="z-10 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full py-8 sm:py-12 md:py-20 px-4 md:px-8">
       <div className="industrial-container w-full max-w-2xl mx-auto flex flex-col gap-10 text-center items-center justify-center">
         
         <div className="space-y-4">

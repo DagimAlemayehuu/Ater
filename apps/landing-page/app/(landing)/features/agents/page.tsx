@@ -4,10 +4,10 @@ import React from 'react';
 
 export default function AgentsPage() {
   return (
-    <div className="min-h-screen bg-background w-full flex flex-col">
+    <div className="min-h-[100dvh] bg-background w-full flex flex-col">
       
       {/* SECTION 01: HERO / SYSTEM COMMAND */}
-      <section className="sticky top-0 z-10 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant py-20 px-4 md:px-8">
+      <section className="z-10 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
         <div className="industrial-container w-full max-w-5xl mx-auto flex flex-col gap-6 text-center items-center justify-center">
           <h1 className="text-display-hero text-center w-full uppercase">
             REASONING AGENTS
@@ -32,8 +32,8 @@ export default function AgentsPage() {
       </section>
 
       {/* SECTION 02: DYNAMIC TWO-STATE UI LIFECYCLE */}
-      <section className="sticky top-0 z-20 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center justify-center">
+      <section className="z-20 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
           <div className="flex flex-col gap-6">
             <h2 className="text-section-heading">LIFECYCLE</h2>
             <p className="text-body opacity-85">
@@ -78,8 +78,8 @@ export default function AgentsPage() {
       </section>
 
       {/* SECTION 03: 7-STAGE PIPELINE & SELF-HEALING */}
-      <section className="sticky top-0 z-30 bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center justify-center">
+      <section className="z-30 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
           
           {/* Pipeline Mockup */}
           <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
@@ -116,7 +116,7 @@ export default function AgentsPage() {
       </section>
 
       {/* SECTION 04: THE 11 SOVEREIGN STUDY AGENTS */}
-      <section className="sticky top-0 z-[40] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant py-20 px-4 md:px-8">
+      <section className="z-[40] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
         <div className="industrial-container w-full max-w-5xl mx-auto flex flex-col gap-6 text-center items-center justify-center">
           <h2 className="text-section-heading w-full uppercase">THE 11 STUDY AGENTS</h2>
           <p className="text-body max-w-2xl leading-relaxed opacity-85 text-center">
@@ -147,8 +147,8 @@ export default function AgentsPage() {
       </section>
 
       {/* SECTION 05: THE 85+ DOMAIN PERSONA MATRIX */}
-      <section className="sticky top-0 z-[50] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full border-b border-outline-variant py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center justify-center">
+      <section className="z-[50] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
           <div className="flex flex-col gap-6">
             <h2 className="text-section-heading">PERSONAS</h2>
             <p className="text-body opacity-85">
@@ -184,8 +184,8 @@ export default function AgentsPage() {
       </section>
 
       {/* SECTION 06: FEYNMAN HAMBURGER NOTE GEOMETRY */}
-      <section className="sticky top-0 z-[60] bg-background grid-background flex flex-col items-center justify-center min-h-screen w-full py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center justify-center">
+      <section className="z-[60] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full py-8 sm:py-12 md:py-20 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
           {/* Note Geometry Mockup */}
           <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
