@@ -16,6 +16,10 @@ const Onboarding = lazy(() => import('@/routes/onboarding'))
 /**
  * Gate to ensure sidecar is connected before proceeding.
  */
+// Maximum wait: 180 attempts × 1s = 3 minutes
+// This accounts for PyInstaller cold-start extraction time on first launch
+const SIDECAR_MAX_RETRIES = 180
+
 function SidecarGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<'checking' | 'connected' | 'error'>('checking')
   const [retryCount, setRetryCount] = useState(0)
@@ -27,16 +31,16 @@ function SidecarGate({ children }: { children: React.ReactNode }) {
         if (res.status === 'ok') {
           setStatus('connected')
         } else {
-          throw new Error("Health not ok")
+          throw new Error('Health not ok')
         }
       } catch (err) {
-        if (retryCount < 60) {
-          console.warn(`[Ater] Sidecar connection attempt ${retryCount + 1} failed. Retrying...`)
+        if (retryCount < SIDECAR_MAX_RETRIES) {
+          console.warn(`[Ater] Sidecar attempt ${retryCount + 1}/${SIDECAR_MAX_RETRIES} failed. Retrying...`)
           setTimeout(() => {
             setRetryCount(prev => prev + 1)
           }, 1000)
         } else {
-          console.error('[Ater] Sidecar failed to connect after 60 attempts.', err)
+          console.error('[Ater] Sidecar failed to connect after 3 minutes.', err)
           setStatus('error')
         }
       }
@@ -60,22 +64,22 @@ function SidecarGate({ children }: { children: React.ReactNode }) {
   if (status === 'error') {
     return (
       <div style={gateStyle}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', maxWidth: '320px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', maxWidth: '360px' }}>
           <div style={{ width: '40px', height: '40px', border: '1px solid var(--destructive)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ color: 'var(--destructive)', fontSize: '20px', fontWeight: 900 }}>!</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <h2 style={{ fontWeight: 900, fontSize: '14px', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>Engine Failure</h2>
-            <p style={{ fontWeight: 600, fontSize: '10px', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.1em', lineHeight: 1.6 }}>
-              The AI Sidecar failed to bind to a local port after 10 attempts. Ensure no other application is blocking the engine.
+            <p style={{ fontWeight: 600, fontSize: '10px', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1.8 }}>
+              The AI Engine could not start after 3 minutes. This usually means another Ater process is already running. Quit all Ater windows, wait 10 seconds, then click Re-Initialize.
             </p>
           </div>
-          <button 
-            onClick={() => window.location.reload()} 
-            style={{ 
+          <button
+            onClick={() => window.location.reload()}
+            style={{
               marginTop: '1rem',
-              padding: '0.75rem 1.5rem', 
-              border: '1px solid var(--foreground)', 
+              padding: '0.75rem 1.5rem',
+              border: '1px solid var(--foreground)',
               background: 'transparent',
               color: 'var(--foreground)',
               fontSize: '10px',
@@ -93,11 +97,20 @@ function SidecarGate({ children }: { children: React.ReactNode }) {
   }
 
   if (status === 'checking') {
+    const elapsed = retryCount
+    const isSlowStart = elapsed > 15
     return (
       <div style={gateStyle}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
           <div style={{ width: '40px', height: '40px', border: '2px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '0', animation: 'spin 1s linear infinite' }} />
-          <span style={{ fontWeight: 900, letterSpacing: '0.4em', textIndent: '0.4em', fontSize: '9px', color: 'var(--muted-foreground)', opacity: 0.4 }}>INITIALIZING ENGINE</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontWeight: 900, letterSpacing: '0.4em', textIndent: '0.4em', fontSize: '9px', color: 'var(--muted-foreground)', opacity: 0.4 }}>INITIALIZING ENGINE</span>
+            {isSlowStart && (
+              <span style={{ fontWeight: 600, fontSize: '9px', color: 'var(--muted-foreground)', opacity: 0.3, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                First launch — unpacking ({elapsed}s)
+              </span>
+            )}
+          </div>
         </div>
         <style>{`
           @keyframes spin {

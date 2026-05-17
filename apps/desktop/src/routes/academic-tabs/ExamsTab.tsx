@@ -13,13 +13,18 @@ export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete,
  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId || null)
  const [editingScore, setEditingScore] = useState<string | null>(null)
  const [scoreInput, setScoreInput] = useState('')
+ const [prevInitialId, setPrevInitialId] = useState<string | null>(initialSelectedId || null)
+
+ if (initialSelectedId && initialSelectedId !== prevInitialId) {
+   setSelectedId(initialSelectedId)
+   setPrevInitialId(initialSelectedId)
+ }
 
  useEffect(() => {
- if (initialSelectedId) {
- setSelectedId(initialSelectedId)
- if (onClearSelection) onClearSelection()
-}
-}, [initialSelectedId, onClearSelection])
+   if (initialSelectedId && onClearSelection) {
+     onClearSelection()
+   }
+ }, [initialSelectedId, onClearSelection])
 
  const allCourses = data.courses || []
  const allExams = data.exams || []

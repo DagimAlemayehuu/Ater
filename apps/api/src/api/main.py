@@ -2150,5 +2150,6 @@ if __name__ == "__main__":
         port=args.port,
         workers=1,
         reload=False,
-        log_level="info",
+        log_level="warning",   # Reduce noise — only warnings+ go to stdout
+        access_log=False,       # No per-request logs; prevents pipe buffer from filling
     )

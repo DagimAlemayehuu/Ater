@@ -8,13 +8,18 @@ import type {TabProps} from './types'
 
 export default function CoursesTab({data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, initialSelectedId, onClearSelection}: TabProps) {
  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId || null)
+ const [prevInitialId, setPrevInitialId] = useState<string | null>(initialSelectedId || null)
+
+ if (initialSelectedId && initialSelectedId !== prevInitialId) {
+   setSelectedId(initialSelectedId)
+   setPrevInitialId(initialSelectedId)
+ }
 
  useEffect(() => {
- if (initialSelectedId) {
- setSelectedId(initialSelectedId)
- if (onClearSelection) onClearSelection()
-}
-}, [initialSelectedId, onClearSelection])
+   if (initialSelectedId && onClearSelection) {
+     onClearSelection()
+   }
+ }, [initialSelectedId, onClearSelection])
  const [statusFilter, setStatusFilter] = useState<'Active' | 'All' | 'Completed'>('Active')
  const [search, setSearch] = useState('')
 

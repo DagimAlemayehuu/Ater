@@ -94,8 +94,22 @@ pub fn run() {
                     Ok(sidecar) => {
                         let sidecar = sidecar.args(&["--port", &port.to_string()]);
                         match sidecar.spawn() {
-                            Ok((mut _rx, _child)) => {
+                            Ok((rx, _child)) => {
                                 println!("[Sidecar] Successfully spawned on port {}", port);
+                                // CRITICAL: Drain stdout/stderr in a background task.
+                                // If we drop `rx` immediately, the OS pipe buffer (~64KB) fills
+                                // up and the Python process silently hangs when writing logs.
+                                // This was the primary cause of Engine Failure on first launch.
+                                tauri::async_runtime::spawn(async move {
+                                    let mut rx = rx;
+                                    while rx.recv().await.is_some() {
+                                        // Intentionally discard — just keep the pipe drained.
+                                    }
+                                    println!("[Sidecar] stdout/stderr channel closed — process exited.");
+                                });
+                                // Note: `_child` is dropped here intentionally.
+                                // tauri-plugin-shell does NOT kill the child on drop;
+                                // the OS process keeps running until Tauri quits.
                             }
                             Err(e) => {
                                 eprintln!("[Sidecar] Critical Error: Failed to spawn: {}", e);

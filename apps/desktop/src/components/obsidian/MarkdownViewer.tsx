@@ -261,15 +261,16 @@ const CodeRenderer = memo((props: any) => {
 });
 
 export function MarkdownViewer({ content, onNavigate, path, components, noteMode, noteTitle, noteCourse }: MarkdownViewerProps) {
-    // Keep callbacks stable
     const onNavigateRef = useRef(onNavigate);
-    const pathRef = useRef(path);
-    const componentsRef = useRef(components);
     useEffect(() => {
         onNavigateRef.current = onNavigate;
-        pathRef.current = path;
-        componentsRef.current = components;
-    }, [onNavigate, path, components]);
+    }, [onNavigate]);
+
+    const handleNavigate = useCallback((pageName: string) => {
+        if (onNavigateRef.current) {
+            onNavigateRef.current(pageName);
+        }
+    }, []);
 
     // Selection → Explain state
     const wrapperRef = useRef<HTMLDivElement>(null)
@@ -336,19 +337,19 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
             return (
                 <p className="mb-4 leading-relaxed text-[13px] text-foreground/80 antialiased">
                     {React.Children.map(children, (child) => 
-                        typeof child === 'string' ? renderWikiLinks(child, onNavigateRef.current) : child
+                        typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child
                     )}
                 </p>
             )
         },
         h1: ({ children }: any) => <h1 className="text-2xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-border text-foreground break-words">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigateRef.current) : child)}
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child)}
         </h1>,
         h2: ({ children }: any) => <h2 className="text-xl font-black mt-8 mb-4 tracking-tight text-foreground break-words">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigateRef.current) : child)}
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child)}
         </h2>,
         h3: ({ children }: any) => <h3 className="text-lg font-bold mt-6 mb-3 tracking-tight text-foreground/90 break-words">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, onNavigateRef.current) : child)}
+            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child)}
         </h3>,
         h4: ({ children }: any) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] text-muted-foreground/60">{children}</h4>,
         ul: ({ children, className }: any) => {
@@ -369,7 +370,7 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
                     nestedBlocks.push(child);
                 } else {
                     if (typeof child === 'string') {
-                        inlineContent.push(renderWikiLinks(child, onNavigateRef.current));
+                        inlineContent.push(renderWikiLinks(child, handleNavigate));
                     } else {
                         inlineContent.push(child);
                     }
@@ -401,7 +402,7 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
             );
         },
         pre: ({ children }: any) => <div className="not-prose">{children}</div>,
-        code: (props: any) => <CodeRenderer {...props} notePath={pathRef.current} />,
+        code: (props: any) => <CodeRenderer {...props} notePath={path} />,
         input: ({ node, type, checked, ...props }: any) => {
             if (type === 'checkbox') {
                 return (
@@ -409,18 +410,18 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
                         type="checkbox" 
                         defaultChecked={checked} 
                         onChange={async (e) => {
-                            if (!pathRef.current) return;
+                            if (!path) return;
                             const newChecked = e.target.checked;
                             const line = node?.position?.start?.line;
                             if (line) {
                                 try {
-                                    const res = await sidecarApi.readObsidianNote(pathRef.current);
+                                    const res = await sidecarApi.readObsidianNote(path);
                                     const lines = res.content.split('\n');
                                     const targetLine = lines[line - 1];
                                     if (targetLine && targetLine.match(/\[[ xX]\]/)) {
                                         lines[line - 1] = targetLine.replace(/\[[ xX]\]/, `[${newChecked ? 'x' : ' '}]`);
                                         const updatedContent = lines.join('\n');
-                                        await sidecarApi.updateObsidianNote(pathRef.current, updatedContent);
+                                        await sidecarApi.updateObsidianNote(path, updatedContent);
                                         
                                         const wikilinkMatch = targetLine.match(/\[\[(.*?)\]\]/);
                                         if (wikilinkMatch) {
@@ -532,7 +533,7 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
                 {children}
             </a>
         )
-    }), []);
+    }), [components, path, handleNavigate]);
 
     return (
         <>

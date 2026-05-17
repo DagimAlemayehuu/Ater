@@ -14,12 +14,13 @@ jobs:
         with:
           github-token: ${{ secrets.RELEASE_PAT }}
           script: |
+            const tag = context.ref.replace('refs/tags/', '');
             const { data: release } = await github.rest.repos.createRelease({
               owner: 'DagimAlemayehuu',
               repo: 'Ater_Releases',
-              tag_name: 'v0.0.28',
-              name: 'Ater v0.0.28',
-              body: 'Official release for Ater version v0.0.28.',
+              tag_name: tag,
+              name: `Ater ${tag}`,
+              body: `Official release for Ater ${tag}.`,
               draft: true
             });
             console.log(`Created release: ${release.html_url}`);
@@ -43,29 +44,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: setup node
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: install pnpm
+      - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
           version: 9
 
-      - name: install Rust stable
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-
-      - name: setup python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: install python dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r apps/api/requirements.txt
@@ -74,7 +74,7 @@ jobs:
       - name: Build Python Sidecar (PyInstaller)
         shell: bash
         run: |
-          # Set the target filename based on platform and arch
+          # Determine the Tauri-expected binary name for this platform/arch
           if [ "${{ matrix.platform }}" == "macos" ]; then
             TARGET="ater-api-${{ matrix.arch }}-apple-darwin"
           elif [ "${{ matrix.platform }}" == "windows" ]; then
@@ -83,22 +83,35 @@ jobs:
             TARGET="ater-api-x86_64-unknown-linux-gnu"
           fi
 
-          echo "Target binary name: $TARGET"
+          echo "Building binary: $TARGET"
 
-          # Run PyInstaller
+          # KEY FIX: We intentionally do NOT use --collect-all torch or --collect-all onnxruntime.
+          # Those flags bundle 1.5-3GB of data that PyInstaller --onefile extracts to a temp
+          # directory on EVERY cold start — causing a 2-5 minute delay before the API binds,
+          # which triggers "Engine Failure" in the frontend SidecarGate.
+          #
+          # PyInstaller still collects torch/onnxruntime through normal import tracing.
+          # We only use --collect-all for packages that have non-Python data files
+          # (tokenizer configs, ONNX models, etc.) that tracing would miss.
           python -m PyInstaller \
             --noconfirm \
             --onefile \
             --clean \
             --name ater-api \
-            --collect-all torch \
-            --collect-all onnxruntime \
+            --paths apps/api \
+            --collect-all sentence_transformers \
+            --collect-all chromadb \
+            --hidden-import uvicorn.protocols.http.httptools_impl \
+            --hidden-import uvicorn.protocols.http.h11_impl \
+            --hidden-import uvicorn.lifespan.on \
+            --hidden-import aiosqlite \
+            --hidden-import greenlet \
             apps/api/src/api/main.py
 
-          # Create binaries directory in Tauri src
+          # Create binaries directory
           mkdir -p apps/desktop/src-tauri/binaries/
 
-          # Move and rename the binary from dist/ to the tauri binaries folder
+          # Move and rename to match Tauri's externalBin naming convention
           if [ "${{ matrix.platform }}" == "windows" ]; then
             mv dist/ater-api.exe apps/desktop/src-tauri/binaries/$TARGET.exe
           else
@@ -106,17 +119,21 @@ jobs:
             chmod +x apps/desktop/src-tauri/binaries/$TARGET
           fi
 
-      - name: Ad-hoc Sign Sidecar
+          echo "Binary ready at: apps/desktop/src-tauri/binaries/$TARGET"
+
+      - name: Ad-hoc Sign Sidecar (macOS)
         if: matrix.platform == 'macos'
         run: |
           TARGET_BIN="apps/desktop/src-tauri/binaries/ater-api-${{ matrix.arch }}-apple-darwin"
-          # The "-" means ad-hoc signing (no identity required)
+          # Ad-hoc sign with "-" (no Developer ID required).
+          # Users bypass Gatekeeper manually on first launch for early access.
           codesign --force --deep -s - "$TARGET_BIN"
+          echo "Sidecar signed (ad-hoc)."
 
       - name: Install All Monorepo Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build and Publish Tauri App
+      - name: Build and Package Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
@@ -126,43 +143,53 @@ jobs:
           publish: false
           args: ${{ matrix.platform == 'macos' && format('--target {0}', matrix.arch == 'aarch64' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin') || '' }}
 
-      - name: Manual Cross-Repo Delivery
-        shell: bash # THIS IS THE FIX: Forces Windows to use Bash
+      - name: Upload Artifacts to Release Repo
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          TAG: ${{ github.ref_name }}
         run: |
-          # 1. Create the release in the target repo (Ignore error if already created by another runner)
-          gh release create v0.0.28 --repo DagimAlemayehuu/Ater_Releases --title "Ater v0.0.28" --notes "Production Build v0.0.28" || echo "Release already exists"
-          
-          # 2. Upload Mac Silicon DMG
+          # Ensure the release exists (idempotent — OK if another runner already created it)
+          gh release create "$TAG" \
+            --repo DagimAlemayehuu/Ater_Releases \
+            --title "Ater $TAG" \
+            --notes "Production Build $TAG" \
+            || echo "Release already exists — skipping create."
+
           if [ "${{ matrix.os }}" == "macos-14" ]; then
-            # Upload versioned DMG
-            gh release upload v0.0.28 apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg --repo DagimAlemayehuu/Ater_Releases --clobber
-            # Copy to generic name and upload
-            cp apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Ater-aarch64.dmg
-            gh release upload v0.0.28 apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Ater-aarch64.dmg --repo DagimAlemayehuu/Ater_Releases --clobber
+            DMG_PATH=$(find apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/ -name "*.dmg" | head -n 1)
+            echo "Uploading DMG: $DMG_PATH"
+            gh release upload "$TAG" "$DMG_PATH" \
+              --repo DagimAlemayehuu/Ater_Releases --clobber
+            # Also upload a fixed-name alias for easy download links
+            cp "$DMG_PATH" apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Ater-aarch64.dmg
+            gh release upload "$TAG" \
+              apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Ater-aarch64.dmg \
+              --repo DagimAlemayehuu/Ater_Releases --clobber
           fi
-          
-          # 3. Upload Windows Setup
+
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            # Note: Use find to locate the .exe safely on Windows file systems
             EXE_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*.exe" | head -n 1)
-            # Upload versioned EXE
-            gh release upload v0.0.28 "$EXE_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
-            # Copy to generic name and upload
+            echo "Uploading EXE: $EXE_PATH"
+            gh release upload "$TAG" "$EXE_PATH" \
+              --repo DagimAlemayehuu/Ater_Releases --clobber
+            # Also upload a fixed-name alias
             cp "$EXE_PATH" apps/desktop/src-tauri/target/release/bundle/nsis/Ater_setup.exe
-            gh release upload v0.0.28 apps/desktop/src-tauri/target/release/bundle/nsis/Ater_setup.exe --repo DagimAlemayehuu/Ater_Releases --clobber
+            gh release upload "$TAG" \
+              apps/desktop/src-tauri/target/release/bundle/nsis/Ater_setup.exe \
+              --repo DagimAlemayehuu/Ater_Releases --clobber
           fi
 
   publish-release:
     needs: publish
     runs-on: ubuntu-latest
     steps:
-      - name: Publish Release
+      - name: Make Release Public
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          TAG: ${{ github.ref_name }}
         run: |
-          gh release edit v0.0.28 \
+          gh release edit "$TAG" \
             --repo DagimAlemayehuu/Ater_Releases \
             --discussion-category "Announcements" \
             --draft=false
@@ -174,21 +201,22 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Download all signatures
+
+      - name: Download artifact signatures
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-      
+
       - name: Generate update.json
         run: |
           VERSION=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
           node scripts/generate_update_json.js $VERSION
-      
+
       - name: Upload update.json to Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           token: ${{ secrets.RELEASE_PAT }}
           repository: DagimAlemayehuu/Ater_Releases
-          tag_name: v0.0.28
+          tag_name: ${{ github.ref_name }}
           files: update.json
