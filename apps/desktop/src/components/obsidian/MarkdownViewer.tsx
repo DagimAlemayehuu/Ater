@@ -260,76 +260,20 @@ const CodeRenderer = memo((props: any) => {
     return <code className={cn("bg-muted/30 px-1.5 py-0.5 text-[12px] font-mono text-foreground border border-border/5 font-medium mx-0.5", className)} {...props}>{children}</code>
 });
 
-export function MarkdownViewer({ content, onNavigate, path, components, noteMode, noteTitle, noteCourse }: MarkdownViewerProps) {
-    const onNavigateRef = useRef(onNavigate);
-    useEffect(() => {
-        onNavigateRef.current = onNavigate;
-    }, [onNavigate]);
+interface AterMarkdownProps {
+    content: string
+    path?: string
+    onNavigate?: (page: string) => void
+    className?: string
+    components?: any
+}
 
+export const AterMarkdown = memo(({ content, path, onNavigate, className, components }: AterMarkdownProps) => {
     const handleNavigate = useCallback((pageName: string) => {
-        if (onNavigateRef.current) {
-            onNavigateRef.current(pageName);
+        if (onNavigate) {
+            onNavigate(pageName);
         }
-    }, []);
-
-    // Selection → Explain state
-    const wrapperRef = useRef<HTMLDivElement>(null)
-    const [selectedText, setSelectedText] = useState('')
-    const [floatPos, setFloatPos] = useState<{ x: number; y: number } | null>(null)
-    const [sidebarOpen, setSidebarOpen] = useState(false)
-    const [sidebarSelection, setSidebarSelection] = useState('')
-    const floatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-    // Use native document listener — React's synthetic onMouseUp fires BEFORE
-    // the browser finalises the selection, so getSelection() returns stale data.
-    useEffect(() => {
-        const onMouseUp = (e: MouseEvent) => {
-            if (floatTimerRef.current) clearTimeout(floatTimerRef.current)
-            floatTimerRef.current = setTimeout(() => {
-                const sel = window.getSelection()
-                const text = sel?.toString().trim() || ''
-                const wrapper = wrapperRef.current
-                if (!wrapper || !sel?.rangeCount) return
-
-                // Only act on selections inside our content wrapper
-                const range = sel.getRangeAt(0)
-                if (!wrapper.contains(range.commonAncestorContainer)) {
-                    setFloatPos(null)
-                    setSelectedText('')
-                    return
-                }
-
-                if (text.length > 3) {
-                    const rect = range.getBoundingClientRect()
-                    const wRect = wrapper.getBoundingClientRect()
-                    // scrollTop accounts for the overflow-y-auto scroll offset
-                    const scrollEl = wrapper.querySelector('.overflow-y-auto') as HTMLElement | null
-                    const scrollTop = scrollEl ? scrollEl.scrollTop : 0
-                    setSelectedText(text)
-                    setFloatPos({
-                        x: rect.left - wRect.left + rect.width / 2,
-                        y: rect.top - wRect.top + scrollTop - 44,
-                    })
-                } else {
-                    setSelectedText('')
-                    setFloatPos(null)
-                }
-            }, 20)
-        }
-        document.addEventListener('mouseup', onMouseUp)
-        return () => {
-            document.removeEventListener('mouseup', onMouseUp)
-            if (floatTimerRef.current) clearTimeout(floatTimerRef.current)
-        }
-    }, [])
-
-    const handleClickExplain = useCallback(() => {
-        setSidebarSelection(selectedText)
-        setSidebarOpen(true)
-        setFloatPos(null)
-        setSelectedText('')
-        window.getSelection()?.removeAllRanges()
-    }, [selectedText])
+    }, [onNavigate]);
 
     const markdownComponents = useMemo(() => ({
         ...(components || {}),
@@ -535,7 +479,91 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
                 {children}
             </a>
         )
-    }), [components, path, handleNavigate]);
+    }), [path, handleNavigate, components]);
+
+    return (
+        <div className={cn("prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 text-foreground select-text cursor-text", className)}>
+            <ReactMarkdown 
+                remarkPlugins={[remarkGfm, remarkMath]} 
+                rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]} 
+                components={markdownComponents}
+            >
+                {content}
+            </ReactMarkdown>
+        </div>
+    );
+});
+
+export function MarkdownViewer({ content, onNavigate, path, components, noteMode, noteTitle, noteCourse }: MarkdownViewerProps) {
+    const onNavigateRef = useRef(onNavigate);
+    useEffect(() => {
+        onNavigateRef.current = onNavigate;
+    }, [onNavigate]);
+
+    const handleNavigate = useCallback((pageName: string) => {
+        if (onNavigateRef.current) {
+            onNavigateRef.current(pageName);
+        }
+    }, []);
+
+    // Selection → Explain state
+    const wrapperRef = useRef<HTMLDivElement>(null)
+    const [selectedText, setSelectedText] = useState('')
+    const [floatPos, setFloatPos] = useState<{ x: number; y: number } | null>(null)
+    const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [sidebarSelection, setSidebarSelection] = useState('')
+    const floatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    // Use native document listener — React's synthetic onMouseUp fires BEFORE
+    // the browser finalises the selection, so getSelection() returns stale data.
+    useEffect(() => {
+        const onMouseUp = (e: MouseEvent) => {
+            if (floatTimerRef.current) clearTimeout(floatTimerRef.current)
+            floatTimerRef.current = setTimeout(() => {
+                const sel = window.getSelection()
+                const text = sel?.toString().trim() || ''
+                const wrapper = wrapperRef.current
+                if (!wrapper || !sel?.rangeCount) return
+
+                // Only act on selections inside our content wrapper
+                const range = sel.getRangeAt(0)
+                if (!wrapper.contains(range.commonAncestorContainer)) {
+                    setFloatPos(null)
+                    setSelectedText('')
+                    return
+                }
+
+                if (text.length > 3) {
+                    const rect = range.getBoundingClientRect()
+                    const wRect = wrapper.getBoundingClientRect()
+                    // scrollTop accounts for the overflow-y-auto scroll offset
+                    const scrollEl = wrapper.querySelector('.overflow-y-auto') as HTMLElement | null
+                    const scrollTop = scrollEl ? scrollEl.scrollTop : 0
+                    setSelectedText(text)
+                    setFloatPos({
+                        x: rect.left - wRect.left + rect.width / 2,
+                        y: rect.top - wRect.top + scrollTop - 44,
+                    })
+                } else {
+                    setSelectedText('')
+                    setFloatPos(null)
+                }
+            }, 20)
+        }
+        document.addEventListener('mouseup', onMouseUp)
+        return () => {
+            document.removeEventListener('mouseup', onMouseUp)
+            if (floatTimerRef.current) clearTimeout(floatTimerRef.current)
+        }
+    }, [])
+
+    const handleClickExplain = useCallback(() => {
+        setSidebarSelection(selectedText)
+        setSidebarOpen(true)
+        setFloatPos(null)
+        setSelectedText('')
+        window.getSelection()?.removeAllRanges()
+    }, [selectedText])
 
     return (
         <>
@@ -545,9 +573,7 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
             >
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 relative select-text">
                     <ErrorBoundary>
-                      <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 text-foreground select-text cursor-text">
-                          <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]} components={markdownComponents}>{content}</ReactMarkdown>
-                      </div>
+                        <AterMarkdown content={content} path={path} onNavigate={handleNavigate} components={components} />
                     </ErrorBoundary>
                 </div>
 

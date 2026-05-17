@@ -62,3 +62,85 @@ def render_atomic_note(data: Dict[str, Any], healer=None) -> str:
         artifact_content=data.get("artifact_content", ""),
         possible_questions=data.get("possible_questions", ""),
     )
+
+def build_skeleton_note(note_schema, source_snippet: str, domain: dict) -> str:
+    """
+    Deterministic minimum-viable fallback when all LLM attempts fail.
+    Parses the source snippet into structured, coherent prose sections.
+    Produces a structurally valid, pedagogically useful note without generative AI.
+    """
+    import re
+    title = note_schema.title.replace("_", " ")
+    
+    # --- Extract clean sentences from raw source ---
+    # Strip slide noise (page markers, Ø bullets, page numbers)
+    clean = re.sub(r'\[PAGE \d+\]', '', source_snippet)
+    clean = re.sub(r'^[ØÃ•\-\*>]\s*', '', clean, flags=re.MULTILINE)
+    clean = re.sub(r'\s+', ' ', clean).strip()
+    
+    # Split into sentences
+    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', clean) if len(s.strip()) > 20]
+    
+    # Partition: first third for mental model, middle for logic, last for formal
+    third = max(1, len(sentences) // 3)
+    model_sents = sentences[:third]
+    logic_sents = sentences[third:third*2]
+    formal_sents = sentences[third*2:]
+    
+    def join_prose(sents, fallback=""):
+        return ' '.join(sents) if sents else fallback
+    
+    domain_name = domain.get('name', 'this domain')
+    
+    mental_model = (
+        f"{title} is a foundational concept within {domain_name}. "
+        + join_prose(model_sents, f"{title} encompasses the core mechanisms and principles described in the source material.")
+    )
+    
+    core_logic = (
+        f"The practical operation of {title} centers on the following principles. "
+        + join_prose(logic_sents, "The source material outlines specific properties and behaviors that define this concept in practice.")
+    )
+    
+    formal_model = (
+        f"At a formal level, {title} is governed by the following constraints and definitions. "
+        + join_prose(formal_sents, "These structural constraints ensure consistent and predictable behavior when this concept is applied.")
+    )
+    
+    artifact_content = (
+        f"```markdown\n"
+        f"| Property | Value |\n"
+        f"|----------|-------|\n"
+        f"| Concept  | {title} |\n"
+        f"| Domain   | {domain_name} |\n"
+        f"| Source   | Chapter material |\n"
+        f"```"
+    )
+    
+    option_a = join_prose(model_sents[:1], title)[:80]
+    possible_questions = (
+        '```interactive-quiz\n'
+        '[\n'
+        f'  {{\n'
+        f'    "type": "mcq",\n'
+        f'    "question": "Which of the following best defines {title}?",\n'
+        f'    "options": {{"A": "{option_a}", "B": "An unrelated concept", "C": "A deprecated approach", "D": "None of the above"}},\n'
+        f'    "answer": "A",\n'
+        f'    "explanation": "{title} is defined by its relationship to {domain_name} as described in the source material."\n'
+        f'  }}\n'
+        ']\n'
+        '```'
+    )
+
+    data = {
+        "mental_model": mental_model,
+        "h1_title": domain.get("h1", "How It Actually Works"),
+        "core_logic": core_logic,
+        "h2_title": domain.get("h2", "The Formal Model"),
+        "formal_model": formal_model,
+        "artifact_type": domain.get("type", "Markdown Table"),
+        "artifact_content": artifact_content,
+        "possible_questions": possible_questions
+    }
+    
+    return render_atomic_note(data)

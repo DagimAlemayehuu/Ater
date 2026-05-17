@@ -91,7 +91,7 @@ class AterQueueManager:
     def update_status_message(self, session_id: str, message: str):
         """Updates the database with a real-time status message."""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_conn()
             conn.execute("UPDATE queue SET status_message = ? WHERE file_path = ?", (message, session_id))
             conn.commit()
             conn.close()
@@ -140,8 +140,20 @@ class AterQueueManager:
         conn.close()
 
     def _get_conn(self):
-        """Returns a simple connection to the initialized database."""
-        return sqlite3.connect(self.db_path)
+        """Returns a simple connection to the initialized database, ensuring schema exists."""
+        if not Path(self.db_path).exists() or Path(self.db_path).stat().st_size == 0:
+            self._init_db()
+            
+        conn = sqlite3.connect(self.db_path)
+        # Verify table exists to be completely bulletproof
+        try:
+            conn.execute("SELECT 1 FROM queue LIMIT 1")
+        except sqlite3.OperationalError:
+            conn.close()
+            self._init_db()
+            conn = sqlite3.connect(self.db_path)
+            
+        return conn
 
     def start(self, loop: asyncio.AbstractEventLoop, auto_process: bool = False):
         if not self.inbox_path.exists():
@@ -174,7 +186,7 @@ class AterQueueManager:
         """Scans the inbox for existing files, adds them to the database, and resets errors."""
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_conn()
             conn.execute("UPDATE queue SET status = 'pending' WHERE status = 'error'")
             conn.commit()
             conn.close()

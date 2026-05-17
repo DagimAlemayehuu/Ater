@@ -421,12 +421,15 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
             parents_to_children[p].append(child)
 
     # 2. Sorting weights based on plan_order
+    def normalize_title_for_comparison(t: str) -> str:
+        return t.strip().lower().replace(" ", "_").replace("-", "_")
+
     if plan_order:
-        order_map = {title: i for i, title in enumerate(plan_order)}
+        order_map = {normalize_title_for_comparison(title): i for i, title in enumerate(plan_order)}
     else:
-        order_map = {s: i for i, s in enumerate(sorted(list(deployed_stems)))}
+        order_map = {normalize_title_for_comparison(s): i for i, s in enumerate(sorted(list(deployed_stems)))}
     
-    all_stems_sorted = sorted(list(deployed_stems), key=lambda s: order_map.get(s, 999))
+    all_stems_sorted = sorted(list(deployed_stems), key=lambda s: order_map.get(normalize_title_for_comparison(s), 999))
 
     processed = set()
     tree_lines = []
@@ -441,7 +444,7 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
         # Children are notes that have this stem as their "Best" parent.
         # "Best" = the parent with the lowest index in plan_order.
         potential_children = parents_to_children.get(stem, [])
-        potential_children.sort(key=lambda s: order_map.get(s, 999))
+        potential_children.sort(key=lambda s: order_map.get(normalize_title_for_comparison(s), 999))
             
         for child in potential_children:
             if child not in processed:
@@ -449,7 +452,7 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
                 if not p_list: continue
                 
                 # Robust selection: pick the parent that appears EARLIEST in the plan
-                best_parent = min(p_list, key=lambda p: order_map.get(p, 999))
+                best_parent = min(p_list, key=lambda p: order_map.get(normalize_title_for_comparison(p), 999))
                 if best_parent == stem:
                     build_tree(child, depth + 1)
 
@@ -465,7 +468,7 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
                 # We have a parent in this unit that hasn't been placed yet.
                 # However, if there's a cycle, we might be the "entry point".
                 # If our parent comes AFTER us in the plan, we are the leader.
-                if order_map.get(p, 999) > order_map.get(stem, 999):
+                if order_map.get(normalize_title_for_comparison(p), 999) > order_map.get(normalize_title_for_comparison(stem), 999):
                     continue 
                 else:
                     is_truly_root = False

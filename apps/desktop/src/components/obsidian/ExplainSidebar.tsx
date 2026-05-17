@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { X, Send, Loader2, RotateCcw } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { AterMarkdown } from './MarkdownViewer'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -178,9 +177,7 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page, noteMod
                 )}
               >
                 {msg.role === 'assistant' ? (
-                  <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 prose-pre:my-2">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                  </div>
+                  <AterMarkdown content={msg.content} path={path} />
                 ) : (
                   <span>{msg.content}</span>
                 )}

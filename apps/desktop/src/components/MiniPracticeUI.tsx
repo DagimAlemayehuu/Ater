@@ -3,108 +3,17 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Check, ArrowRight, RotateCcw, Copy } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
-import remarkGfm from 'remark-gfm';
-import rehypeKatex from 'rehype-katex';
-import 'katex/dist/katex.min.css';
-import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-light';
-// @ts-ignore
-import vscDarkPlus from 'react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus.js';
-// @ts-ignore
-import vs from 'react-syntax-highlighter/dist/esm/styles/prism/vs.js';
-import { MermaidWrapper } from './obsidian/MarkdownViewer';
+import { AterMarkdown } from './obsidian/MarkdownViewer';
 import { usePomodoroStore } from '@/lib/pomodoroStore';
 import { Question } from '@/types/practice';
 import { sidecarApi } from '@/lib/sidecarApi';
-// Density optimized CodeBlock
-const CodeBlock = ({ language, value }: { language: string | null, value: string }) => {
-    const [copied, setCopied] = useState(false);
-    const isDark = document.documentElement.classList.contains('dark');
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(value);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    return (
-        <div className="relative group my-2 rounded-md border border-border/20 overflow-hidden bg-transparent  hover:border-border/40 not-prose">
-            <div className={cn(
-                "flex items-center justify-between px-3 py-1 border-b border-border/5 bg-muted/5 ",
-                !language && "opacity-0 group-hover:opacity-100"
-            )}>
-                <div className="flex items-center">
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30 select-none">
-                        {language || 'code'}
-                    </span>
-                </div>
-                <button 
-                    onClick={handleCopy}
-                    className="flex items-center gap-1 px-1.5 py-0.5 hover:bg-muted/20 rounded-md text-muted-foreground/50 hover:text-foreground group/copy"
-                    title="Copy Code"
-                >
-                    <span className="text-[8px] font-bold uppercase tracking-widest opacity-0 group-hover/copy:opacity-100 ">
-                        {copied ? 'Copied' : 'Copy'}
-                    </span>
-                    {copied ? <Check size={10} className="text-primary" /> : <Copy size={10} className="group-hover/copy:scale-110 " />}
-                </button>
-            </div>
-            
-            <div className="relative overflow-hidden">
-                <SyntaxHighlighter
-                    language={language || 'text'}
-                    style={isDark ? (vscDarkPlus as any) : (vs as any)}
-                    PreTag="div"
-                    customStyle={{
-                        background: 'transparent',
-                        padding: '0.75rem 1rem',
-                        margin: 0,
-                        fontSize: '11px',
-                        lineHeight: '1.5',
-                        fontFamily: 'JetBrains Mono, Fira Code, Menlo, monospace',
-                        overflowX: 'auto',
-                        WebkitFontSmoothing: 'antialiased'
-                    }}
-                    codeTagProps={{
-                        style: {
-                            fontFamily: 'inherit',
-                            fontSize: 'inherit',
-                            background: 'transparent'
-                        }
-                    }}
-                >
-                    {value}
-                </SyntaxHighlighter>
-            </div>
-        </div>
-    );
-};
 
 export const MarkdownBlock = ({ content }: { content: string }) => {
   return (
-    <div className="prose prose-xs prose-zinc dark:prose-invert max-w-none text-foreground/90 prose-p:my-0 prose-pre:my-0 prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-0 prose-p:inline prose-div:inline">
-      <ReactMarkdown 
-        remarkPlugins={[remarkMath, remarkGfm]} 
-        rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]}
-        components={{
-          code({ node, className, children, ...props }: any) {
-            const match = /language-([a-zA-Z0-9_-]+)/.exec(className || '')
-            const language = match ? match[1] : null
-            const isInline = !match && !String(children).includes('\n');
-            
-            if (language === 'mermaid') return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />
-            
-            if (!isInline) {
-              return <CodeBlock language={language} value={String(children).replace(/\n$/, '')} />
-            }
-            return <code className={cn("bg-muted/30 px-1 py-0.5 rounded-md text-[11px] font-mono", className)} {...props}>{children}</code>
-          }
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
+    <AterMarkdown 
+      content={content} 
+      className="inline-block align-baseline text-[13px] text-foreground/90"
+    />
   );
 };
 

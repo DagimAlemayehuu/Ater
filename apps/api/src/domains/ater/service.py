@@ -16,7 +16,7 @@ from .deployer import AterDeployer
 from src.domains.ai.factory import ModelFactory
 from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgent, CriticAgent, HubAgent, VerifierAgent, QuizAuditorAgent, EpistemicClassifierAgent, MetaScannerAgent, DOMAIN_MATRIX, get_professional_domain, get_persona
 from .router import router
-from .templates import render_atomic_note
+from .templates import render_atomic_note, build_skeleton_note
 from .healer import LogicHealer
 from .governor import governor, DailyLimitExceededException
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
@@ -1650,7 +1650,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 try:
                     from .agents import TaxonomyExtenderAgent
                     print(f"[Ater Service] New Domain Detected: '{final_course}'. Activating Cartographer Prime...")
-                    cartographer = TaxonomyExtenderAgent()
+                    cartographer = TaxonomyExtenderAgent(self.llm)
                     # Analyze first few chunks to understand the domain
                     growth_res = await cartographer.analyze_new_domain(final_course, text[:15000])
                     
@@ -1850,9 +1850,19 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     
             except Exception as e:
                 err_trace = traceback.format_exc()
-                # region agent log
-                with open("/Users/dabodestroyer/code/Antigravity/Ater/.cursor/debug-18a97e.log", "a", encoding="utf-8") as _f: _f.write(json.dumps({"sessionId":"18a97e","runId":"pre-fix","hypothesisId":"H3","location":"service.py:generate_plan","message":"Chunk planning failed","data":{"sessionId":session_id,"chunkIndex":idx+1,"errorType":type(e).__name__,"error":str(e)[:240]},"timestamp":int(time.time()*1000)}) + "\n")
-                # endregion
+                try:
+                    debug_log_path = Path.home() / ".ater" / "logs" / "chunk_failures.log"
+                    debug_log_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(debug_log_path, "a", encoding="utf-8") as _f:
+                        _f.write(json.dumps({
+                            "sessionId": session_id,
+                            "chunkIndex": idx+1,
+                            "errorType": type(e).__name__,
+                            "error": str(e)[:500],
+                            "timestamp": int(time.time()*1000)
+                        }) + "\n")
+                except Exception:
+                    pass
                 print(f"[Ater Service] CRITICAL: Chunk {idx+1} failed validation: {e}\n{err_trace}")
                 self.set_status(session_id, f"Load Failed during Architecting: {str(e)}")
                 raise e
@@ -2216,14 +2226,23 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     f"SOURCE ANCHOR (ONLY test vocabulary from here): {source_snippet[:500]}"
                                 )
                                 prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
-                                valid_qs = await q_agent.generate(
-                                    note_schema=note_schema, 
-                                    source_text=q_context, 
-                                    mechanics="Focus on multi-step causal tracing and artifact verification.",
-                                    academic_level=plan_obj.academic_level,
-                                    count=3,
-                                    prof_domain=prof_domain
-                                )
+                                
+                                q_modes = domain.get("question_modes", ["mcq", "mcq", "mcq"]).copy()
+                                while len(q_modes) < 3:
+                                    q_modes.append("mcq")
+                                
+                                valid_qs = []
+                                for q_type in q_modes[:3]:
+                                    q = await q_agent.generate(
+                                        note_schema=note_schema, 
+                                        source_text=q_context, 
+                                        mechanics="Focus on multi-step causal tracing and artifact verification.",
+                                        academic_level=plan_obj.academic_level,
+                                        count=1,
+                                        prof_domain=prof_domain,
+                                        q_type=q_type
+                                    )
+                                    valid_qs.extend(q)
 
                                 # ── SEMANTIC TOPIC LOCK (v32.1) ──────────────────────────────
                                 # Deterministically verify that quiz questions are grounded
@@ -2237,7 +2256,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 if not lock_passed:
                                     print(f"[Ater Service] Semantic Topic Lock FAILED: {lock_diag}. Triggering regeneration.")
                                     self.set_status(session_id, f"⚠️ Topic Lock Fail: Regenerating quiz for [[{current_note_title}]]...")
-                                    note_schema.source_context = (note_schema.source_context or "") + f"\n\nQUIZ FIX INSTRUCTION: {lock_diag}. Generate questions ONLY about '{note_schema.title.replace('_', ' ')}' using vocabulary from the source text."
+                                    note_schema.source_context = f"\n\nSYSTEM CONSTRAINT: The previous quiz attempt FAILED because: {lock_diag}. Generate questions ONLY about '{note_schema.title.replace('_', ' ')}' using vocabulary from the source text.\n\n" + (note_schema.source_context or "")
                                     continue
 
                                 # ── CLOSED-LOOP: Attach explanation_page metadata ────────────
@@ -2266,13 +2285,11 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     logger.warning(f"[Ater Service] Section duplication detected in [{current_note_title}] — forcing regen")
                                     self.set_status(session_id, f"⚠️ Content Dupe: Regenerating [[{current_note_title}]]...")
                                     note_schema.source_context = (
-                                        note_schema.source_context or ""
-                                    ) + (
                                         "\n\nCRITICAL FIX REQUIRED: Your previous output had Section 2 (Core Logic walkthrough) "
                                         "as an exact copy of Section 1 (Mental Model). This is a hard failure. "
                                         "Section 2 MUST be a step-by-step mechanical breakdown — ENTIRELY different prose "
-                                        "from the plain English analogy in Section 1. Do NOT repeat the Mental Model."
-                                    )
+                                        "from the plain English analogy in Section 1. Do NOT repeat the Mental Model.\n\n"
+                                    ) + (note_schema.source_context or "")
                                     continue
                                 
                                 # Standardize metadata for YAML dumper
@@ -2338,7 +2355,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                             print(f"[Ater Service] Semantic Validation HARD FAIL: {hard_diag}")
                                             self.set_status(session_id, f"⚠️ Semantic Healing: [[{current_note_title}]]...")
                                             if hard_failures:
-                                                note_schema.source_context = (note_schema.source_context or "") + f"\n\nFIX INSTRUCTION: {hard_failures[0]['fix_instruction']}"
+                                                note_schema.source_context = f"\n\nSYSTEM CONSTRAINT: The previous attempt FAILED because: {hard_diag}. Your output MUST NOT contain these issues. Fix instruction: {hard_failures[0]['fix_instruction']}\n\n" + (note_schema.source_context or "")
                                             continue  # Only hard failures trigger regen
 
                                 # 6. Deployment
@@ -2370,9 +2387,29 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         
                         # Best-effort fallback deployment to guarantee no notes are ever skipped
                         if current_note_title not in session.get("processed_notes", []) and last_candidate_markdown:
-                            logger.warning(f"[Ater Service] Max attempts reached for '{current_note_title}' with validation/verification failures. Deploying last candidate as best-effort fallback to prevent skipping.")
+                            logger.warning(f"[Ater Service] Max attempts reached for '{current_note_title}' with validation/verification failures. Deploying deterministic skeleton fallback.")
+                            
+                            skeleton_body = build_skeleton_note(note_schema, source_snippet, domain)
+                            metadata = {
+                                "title": note_data["title"],
+                                "course": note_data["course"],
+                                "unit": str(note_data["unit"]),
+                                "semester": note_data["semester"],
+                                "mode": note_data["mode"],
+                                "type": "atomic_note",
+                                "hub": note_data["hub"],
+                                "source": note_data["source"],
+                                "date": note_data["date"],
+                                "prerequisites": note_data["prerequisites"],
+                                "source_pages": note_data["source_pages"],
+                                "generated": True,
+                                "skeleton_fallback": True
+                            }
+                            yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
+                            final_markdown = f"---\n{yaml_frontmatter}---\n{skeleton_body}"
+                            
                             local_results = self.deployer.deploy_atomic_notes(
-                                session_id, [current_note_title], [last_candidate_markdown], plan_obj, session.get("path", "")
+                                session_id, [current_note_title], [final_markdown], plan_obj, session.get("path", "")
                             )
                             if current_note_title not in session.get("processed_notes", []):
                                 session.setdefault("processed_notes", []).append(current_note_title)

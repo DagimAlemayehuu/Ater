@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { AterMarkdown } from './MarkdownViewer';
 import { 
     X, Send, RefreshCw, Check, ArrowRight, Loader2
 } from 'lucide-react';
@@ -240,12 +239,12 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                     "px-4 py-3 rounded-none max-w-[95%] text-[12px] leading-relaxed",
                                     msg.role === 'user' 
                                         ? "bg-foreground/10 text-foreground rounded-none border border-border/50 shadow-sm" 
-                                        : "bg-muted/30 border border-border rounded-none prose prose-zinc dark:prose-invert prose-sm text-foreground prose-headings:text-foreground prose-headings:font-black prose-headings:uppercase prose-headings:tracking-widest prose-headings:text-[11px] prose-strong:text-foreground"
+                                        : "bg-muted/30 border border-border rounded-none"
                                 )}>
                                     {msg.role === 'user' ? (
                                         msg.content
                                     ) : (
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                                        <AterMarkdown content={msg.content} path={path} />
                                     )}
                                 </div>
                             </div>

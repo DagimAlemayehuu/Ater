@@ -120,6 +120,92 @@ class LogicHealer:
         text = re.sub(r'\n{3,}', '\n\n', text)
         return text.strip()
 
+    def bullets_to_prose(self, text: str) -> str:
+        """
+        Converts markdown bullet lists and lecture-slide bullets (Ø, -, *, •) in prose
+        sections into flowing analytical sentences. Code blocks are preserved.
+        
+        This is the primary guard against BULLET_POINTS_DETECTED validation failures
+        caused by LLMs mirroring bullet-heavy source PDFs.
+        """
+        lines = text.split("\n")
+        result = []
+        in_code_block = False
+        in_table = False
+        
+        # Collect consecutive bullet items to join as a single sentence
+        bullet_buffer: list[str] = []
+        
+        bullet_re = re.compile(r'^\s*(?:[\-\*\+•Ø➤►▸▶]|\d+\.)\s+(.*)')
+        
+        def flush_buffer():
+            if not bullet_buffer:
+                return
+            if len(bullet_buffer) == 1:
+                # Single bullet → just append as a sentence
+                sentence = bullet_buffer[0].rstrip('.')
+                result.append(sentence + '.')
+            else:
+                # Multiple bullets → join as flowing prose
+                parts = [b.rstrip('. ') for b in bullet_buffer]
+                # Oxford comma join
+                if len(parts) == 2:
+                    sentence = f"{parts[0]} and {parts[1]}."
+                else:
+                    sentence = ", ".join(parts[:-1]) + f", and {parts[-1]}."
+                # Capitalize first letter
+                sentence = sentence[0].upper() + sentence[1:]
+                result.append(sentence)
+            bullet_buffer.clear()
+        
+        for line in lines:
+            stripped = line.strip()
+            
+            # Track fenced code blocks — never touch content inside them
+            if stripped.startswith('```'):
+                flush_buffer()
+                in_code_block = not in_code_block
+                result.append(line)
+                continue
+            
+            if in_code_block:
+                result.append(line)
+                continue
+            
+            # Track markdown tables — don't touch them
+            if '|' in stripped and not stripped.startswith('##'):
+                flush_buffer()
+                in_table = True
+                result.append(line)
+                continue
+            elif in_table and stripped == '':
+                in_table = False
+                result.append(line)
+                continue
+            elif in_table:
+                result.append(line)
+                continue
+            
+            # Preserve section headers, blockquotes, and blank lines
+            if stripped.startswith('#') or stripped.startswith('>') or stripped == '':
+                flush_buffer()
+                result.append(line)
+                continue
+            
+            # Match bullet items
+            m = bullet_re.match(line)
+            if m:
+                bullet_content = m.group(1).strip()
+                # Preserve wikilinks and bold text within bullet content
+                bullet_buffer.append(bullet_content)
+            else:
+                # Normal prose line — flush any pending bullets first
+                flush_buffer()
+                result.append(line)
+        
+        flush_buffer()  # Flush any trailing bullets
+        return "\n".join(result)
+
     def sanitize_prose(self, text: str) -> str:
         """
         Violently removes LLM conversational filler and metatalk.
@@ -303,6 +389,9 @@ class LogicHealer:
         # v33.1: Strip orphaned XML tags FIRST — before any other processing
         text = self.strip_orphan_xml_tags(text)
         text = self.sanitize_prose(text)
+        # v33.3: Convert bullet lists to prose BEFORE wikilink healing and validation
+        # This is the primary guard against BULLET_POINTS_DETECTED failures
+        text = self.bullets_to_prose(text)
         text = self.heal_wikilinks(text)
         text = self.enforce_wikilink_density(text)
         text = self.verify_arithmetic(text)

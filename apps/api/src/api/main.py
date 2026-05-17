@@ -9,6 +9,19 @@ via HTTP headers (X-Notion-Key, X-Gemini-Key, X-Vault-Path).
 import signal
 import sys
 import os
+
+# Force sys.stdout and sys.stderr to UTF-8 to prevent ascii codec errors
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 import asyncio
 import traceback
 import shutil
@@ -125,6 +138,9 @@ def parent_watchdog():
     except Exception as e:
         logger.error(f"[Watchdog] Failed to start monitor: {e}")
 
+# Start the watchdog immediately in a daemon thread
+watchdog_thread = threading.Thread(target=parent_watchdog, daemon=True)
+watchdog_thread.start()
 
 app = FastAPI(
     title="Ater Python Sidecar",

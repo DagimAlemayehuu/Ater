@@ -142,6 +142,8 @@ pub fn run() {
                             match std::process::Command::new(&venv_python)
                                 .args(["-m", "uvicorn", "src.api.main:app", "--host", "127.0.0.1", "--port", &port.to_string()])
                                 .current_dir(&api_dir)
+                                .env("PYTHONUTF8", "1")
+                                .env("PYTHONIOENCODING", "utf-8")
                                 .spawn()
                             {
                                 Ok(_child) => {
@@ -157,6 +159,8 @@ pub fn run() {
                             match std::process::Command::new("uv")
                                 .args(["run", "python", "-m", "uvicorn", "src.api.main:app", "--host", "127.0.0.1", "--port", &port.to_string()])
                                 .current_dir(&api_dir)
+                                .env("PYTHONUTF8", "1")
+                                .env("PYTHONIOENCODING", "utf-8")
                                 .spawn()
                             {
                                 Ok(_child) => {
@@ -178,7 +182,10 @@ pub fn run() {
                 port = get_available_port(8765).unwrap_or(8765);
                 match app.shell().sidecar("ater-api") {
                     Ok(sidecar) => {
-                        let sidecar = sidecar.args(["--port", &port.to_string()]);
+                        let sidecar = sidecar
+                            .args(["--port", &port.to_string()])
+                            .env("PYTHONUTF8", "1")
+                            .env("PYTHONIOENCODING", "utf-8");
                         match sidecar.spawn() {
                             Ok((rx, _child)) => {
                                 println!("[Sidecar] Successfully spawned on port {}", port);
