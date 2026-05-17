@@ -9,10 +9,10 @@ export function Footer() {
           <div className="col-span-1 md:col-span-2 space-y-6">
             <div className="flex items-center gap-4">
               <span className="text-3xl font-black tracking-tighter">
-                ATER <span className="text-on-surface-variant font-bold normal-case opacity-40">አጠር</span>
+                ATER <span className="text-on-surface-variant font-bold normal-case text-on-surface-variant">አጠር</span>
               </span>
             </div>
-            <p className="text-body opacity-40 leading-relaxed max-w-sm">
+            <p className="text-body text-on-surface-variant leading-relaxed max-w-sm">
               HIGH-PERFORMANCE STUDY ENGINE. BUILT FOR STUDENTS WHO DEMAND PERFORMANCE AND PRIVACY.
             </p>
           </div>
@@ -22,7 +22,7 @@ export function Footer() {
             <ul className="space-y-4">
               {['FEATURES', 'PRICING', 'CONTACT', 'WAITLIST'].map(link => (
                 <li key={link}>
-                  <Link href={link === 'WAITLIST' ? '/waitlist' : `/${link.toLowerCase()}`} className="technical-label opacity-40 hover:opacity-100 transition-opacity">
+                  <Link href={link === 'WAITLIST' ? '/waitlist' : `/${link.toLowerCase()}`} className="technical-label text-on-surface-variant hover:text-on-surface transition-colors">
                     {link}
                   </Link>
                 </li>
@@ -40,8 +40,8 @@ export function Footer() {
               ].map((item) => (
                 <li key={item.label}>
                   <Link href="#" className="flex items-center gap-3 group">
-                    <item.icon className="size-4 opacity-40 group-hover:opacity-100 group-hover:text-primary transition-all" />
-                    <span className="technical-label opacity-40 group-hover:opacity-100 transition-opacity">
+                    <item.icon className="size-4 text-on-surface-variant group-hover:opacity-100 group-hover:text-primary transition-all" />
+                    <span className="technical-label text-on-surface-variant group-hover:text-on-surface transition-colors">
                       {item.label}
                     </span>
                   </Link>
@@ -51,7 +51,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6 technical-label opacity-20 text-[10px] border-t border-outline-variant pt-12">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6 technical-label text-on-surface-variant text-[10px] border-t border-outline-variant pt-12">
           <span>© 2026 ATER</span>
           <div className="flex gap-12">
             <span>PRIVACY</span>

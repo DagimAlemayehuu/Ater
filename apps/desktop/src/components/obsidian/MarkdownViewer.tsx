@@ -195,15 +195,16 @@ const CodeRenderer = memo((props: any) => {
     const match = /language-([a-zA-Z0-9_-]+)/.exec(className || '')
     const language = match ? match[1] : null
     
-    if (language === 'interactive-quiz') {
-        const quizData = useMemo(() => {
-            try {
-                return JSON.parse(String(children).trim());
-            } catch (e) {
-                return null;
-            }
-        }, [children]);
+    const quizData = useMemo(() => {
+        if (language !== 'interactive-quiz') return null;
+        try {
+            return JSON.parse(String(children).trim());
+        } catch (e) {
+            return null;
+        }
+    }, [children, language]);
 
+    if (language === 'interactive-quiz') {
         if (!quizData) {
             return <div className="text-destructive p-4 border border-destructive/30 bg-destructive/10 rounded-none my-4 text-xs font-mono">Failed to load interactive quiz JSON.</div>;
         }

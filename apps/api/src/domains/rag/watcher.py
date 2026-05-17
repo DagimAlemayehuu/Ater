@@ -135,7 +135,7 @@ class RAGWatcherService:
     async def _periodic_sync(self):
         """Background task that runs a full sync check every 10 minutes."""
         # Initial sync on start (not forced)
-        self.initial_sync(status_callback=self._status_callback, force=False)
+        await asyncio.to_thread(self.initial_sync, status_callback=self._status_callback, force=False)
 
         while self._is_running:
             try:

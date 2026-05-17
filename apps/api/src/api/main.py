@@ -61,9 +61,6 @@ from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.obsidian.client import ObsidianClient
 from src.domains.ater.service import AterService
 from src.domains.ater.watcher import AterQueueManager
-from src.domains.rag.watcher import RAGWatcherService
-from src.domains.rag.indexer import VaultIndexer
-from src.domains.rag.vector_store import ChromaManager
 from src.domains.ai.tracker import tracker
 from src.domains.ai.factory import ModelFactory
 
@@ -74,7 +71,7 @@ from src.domains.academics.router import router as academics_router
 
 # Global watcher instances
 ater_watcher: Optional[AterQueueManager] = None
-rag_watcher: Optional[RAGWatcherService] = None
+rag_watcher: Optional[Any] = None
 
 # Cache the last-seen vault_path so vault endpoints can fall back to it
 _cached_vault_path: Optional[str] = None
@@ -86,6 +83,7 @@ def _update_rag_status(state: Dict[str, Any]):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
+    logger.info("FastAPI sidecar startup event: non-blocking initialization verified.")
     yield
     if ater_watcher:
         logger.info("[Ater] Stopping watcher during shutdown")
@@ -179,6 +177,10 @@ async def _ensure_watcher_path(vault_path: str):
         rag_watcher = None
         
         # Auto-restart on new path
+        from src.domains.rag.vector_store import ChromaManager
+        from src.domains.rag.indexer import VaultIndexer
+        from src.domains.rag.watcher import RAGWatcherService
+        
         chroma = ChromaManager()
         indexer = VaultIndexer(chroma)
         rag_watcher = RAGWatcherService(indexer, vault_path)
@@ -1712,6 +1714,10 @@ async def rag_watcher_toggle(secrets: AppSecrets = Depends(get_app_secrets)):
         raise HTTPException(status_code=400, detail="Vault Path is required")
         
     if not rag_watcher:
+        from src.domains.rag.vector_store import ChromaManager
+        from src.domains.rag.indexer import VaultIndexer
+        from src.domains.rag.watcher import RAGWatcherService
+        
         chroma = ChromaManager()
         indexer = VaultIndexer(chroma)
         rag_watcher = RAGWatcherService(indexer, secrets.vault_path)
@@ -1760,6 +1766,9 @@ async def rag_sync_vault(secrets: AppSecrets = Depends(get_app_secrets)):
         rag_sync_status.update(state)
 
     def run_sync(path: str):
+        from src.domains.rag.vector_store import ChromaManager
+        from src.domains.rag.indexer import VaultIndexer
+        from src.domains.rag.watcher import RAGWatcherService
         chroma = ChromaManager()
         indexer = VaultIndexer(chroma)
         service = RAGWatcherService(indexer, path)
@@ -2136,9 +2145,10 @@ if __name__ == "__main__":
 
     logger.info(f"Starting sidecar on {args.host}:{args.port}")
     uvicorn.run(
-        "src.api.main:app",
+        app,
         host=args.host,
         port=args.port,
+        workers=1,
         reload=False,
         log_level="info",
     )

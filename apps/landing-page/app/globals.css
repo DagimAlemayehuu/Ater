@@ -88,55 +88,47 @@
   --border: #e2e2e2;
   
   --grid-color: rgba(0, 0, 0, 0.04);
-  
-  --button-bg: #f4f4f5;
-  --button-bg-hover: #e4e4e7;
-  --button-text: #000000;
-  --button-text-hover: #000000;
+  --card-shadow: 0 -30px 100px rgba(0, 0, 0, 0.12);
 }
 
 /* DARK THEME */
 .dark {
-  --background: #0a0a0a;
+  --background: #131313;
   --surface: #131313;
   --surface-dim: #131313;
   --surface-bright: #393939;
   --surface-container-lowest: #0e0e0e;
-  --surface-container-low: #1c1b1b;
-  --surface-container: #201f1f;
+  --surface-container-low: #1b1b1b;
+  --surface-container: #1f1f1f;
   --surface-container-high: #2a2a2a;
-  --surface-container-highest: #353534;
+  --surface-container-highest: #353535;
   
-  --on-surface: #ffffff;
-  --on-surface-variant: #c4c7c8;
+  --on-surface: #e2e2e2;
+  --on-surface-variant: #c4c7c7;
   
-  --primary: #ffffff;
-  --on-primary: #000000;
-  --primary-container: #e2e2e2;
-  --on-primary-container: #636465;
-  --primary-fixed: #e2e2e2;
+  --primary: #e8e8e8;
+  --on-primary: #2f3131;
+  --primary-container: #cccccc;
+  --on-primary-container: #555657;
+  --primary-fixed: #e3e2e2;
   --primary-fixed-dim: #c6c6c6;
   
-  --secondary: #c5c7c8;
-  --on-secondary: #2e3132;
-  --secondary-container: #444748;
-  --on-secondary-container: #b3b5b6;
+  --secondary: #c6c6c6;
+  --on-secondary: #2f3131;
+  --secondary-container: #454747;
+  --on-secondary-container: #b5b5b5;
 
-  --tertiary: #fffeff;
-  --on-tertiary: #342f2d;
-  --tertiary-container: #eae0dd;
-  --on-tertiary-container: #696360;
+  --tertiary: #ebe8e8;
+  --on-tertiary: #303030;
+  --tertiary-container: #cecccc;
+  --on-tertiary-container: #575656;
 
   --outline: #8e9192;
   --outline-variant: #444748;
   --border: #444748;
   
-  --grid-color: rgba(255, 255, 255, 0.05);
-
-  --button-bg: #1c1b1b;
-  --button-bg-hover: #2a2a2a;
-  --button-text: #ffffff;
-  --button-text-hover: #ffffff;
+  --grid-color: rgba(255, 255, 255, 0.03);
+  --card-shadow: 0 -40px 120px rgba(255, 255, 255, 0.12);
 }
 
 html {
@@ -149,16 +141,6 @@ html {
 }
 
 @layer base {
-  :root {
-    --grid-color: rgba(0, 0, 0, 0.05);
-    --card-shadow: 0 -30px 100px rgba(0, 0, 0, 0.12);
-  }
-
-  .dark {
-    --grid-color: rgba(255, 255, 255, 0.03);
-    --card-shadow: 0 -40px 120px rgba(255, 255, 255, 0.12);
-  }
-
   body {
     @apply bg-background text-on-surface antialiased selection:bg-primary selection:text-on-primary font-inter;
     height: auto;
@@ -169,12 +151,6 @@ html {
       linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
     background-size: 40px 40px;
     transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
-  }
-
-  /* Removed global element transitions to prevent scroll jank. 
-     Transitions should be applied to specific interactive components only. */
-  .transition-theme {
-    transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, opacity 0.4s ease;
   }
 
   section, footer {
@@ -207,7 +183,7 @@ html {
 
 @layer components {
   .industrial-container {
-    @apply max-w-[1400px] mx-auto px-6 md:px-8 text-left;
+    @apply max-w-[1280px] mx-auto px-6 text-left;
   }
 
   .industrial-border {
@@ -215,41 +191,35 @@ html {
   }
 
   .industrial-btn {
-    @apply px-6 md:px-8 py-4 md:py-5 border-2 font-mono text-[10px] md:text-[11px] uppercase tracking-[0.2em] transition-all duration-300 inline-flex items-center justify-center relative z-10 overflow-hidden font-bold;
-    border-color: var(--on-surface);
-    background-color: var(--button-bg);
-    color: var(--button-text);
+    @apply px-6 md:px-8 py-4 md:py-5 border font-mono text-[10px] md:text-[11px] uppercase tracking-[0.2em] transition-all duration-300 inline-flex items-center justify-center relative z-10 overflow-hidden font-bold;
+    border-color: var(--outline);
+    background-color: transparent;
+    color: var(--on-surface);
     border-radius: 0px !important;
   }
 
   .industrial-btn:hover {
-    background-color: var(--button-bg-hover);
-    color: var(--button-text-hover);
+    background-color: var(--surface-container);
+    color: var(--on-surface);
     opacity: 100;
-    transform: translateY(-2px);
-    box-shadow: 6px 6px 0px color-mix(in srgb, var(--on-surface) 20%, transparent);
   }
 
   .industrial-btn:active {
     transform: translateY(0);
-    box-shadow: 2px 2px 0px var(--on-surface);
   }
 
-  /* Fixed recursive apply issue for Tailwind v4 compatibility */
   .industrial-btn-primary {
-    @apply px-6 md:px-8 py-4 md:py-5 border-2 font-mono text-[10px] md:text-[11px] uppercase tracking-[0.2em] transition-all duration-300 inline-flex items-center justify-center relative z-10 overflow-hidden font-black;
-    border-color: var(--on-surface);
-    background-color: var(--button-bg);
-    color: var(--button-text);
+    @apply px-6 md:px-8 py-4 md:py-5 border font-mono text-[10px] md:text-[11px] uppercase tracking-[0.2em] transition-all duration-300 inline-flex items-center justify-center relative z-10 overflow-hidden font-black;
+    border-color: var(--outline);
+    background-color: transparent;
+    color: var(--on-surface);
     border-radius: 0px !important;
   }
 
   .industrial-btn-primary:hover {
-    background-color: var(--button-bg-hover);
-    color: var(--button-text-hover);
+    background-color: var(--surface-container);
+    color: var(--on-surface);
     opacity: 100;
-    transform: translateY(-2px);
-    box-shadow: 6px 6px 0px color-mix(in srgb, var(--on-surface) 20%, transparent);
   }
 
   .industrial-input {

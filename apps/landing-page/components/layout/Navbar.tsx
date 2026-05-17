@@ -49,7 +49,7 @@ export function Navbar() {
 
   return (
     <>
-      <header className="bg-background/80 backdrop-blur-md text-on-background border-b border-outline-variant fixed top-0 left-0 right-0 z-[100] rounded-none">
+      <header className="bg-background text-on-background border-b border-outline-variant fixed top-0 left-0 right-0 z-[100] rounded-none">
         <div className={cn(
           "flex items-center w-full px-4 md:px-8 h-16 max-w-(--spacing-container) mx-auto",
           showCenteredHeader ? "justify-center" : "justify-between"
@@ -70,7 +70,7 @@ export function Navbar() {
                        className={`py-2 px-4 transition-all duration-150 rounded-none border-b-2 ${
                          isActive 
                            ? "border-on-background text-on-background" 
-                           : "border-transparent text-on-background/60 hover:text-on-background hover:border-outline-variant"
+                           : "border-transparent text-on-surface-variant hover:text-on-background hover:border-outline-variant"
                        }`}
                      >
                        {link.label}
@@ -84,7 +84,7 @@ export function Navbar() {
                   onClick={toggleTheme}
                   size="icon"
                   aria-label="Toggle theme"
-                  className="size-10 md:size-11"
+                  className="size-10 md:size-11 border-none hover:bg-surface-container"
                 >
                   {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
                 </IndustrialButton>
@@ -99,7 +99,9 @@ export function Navbar() {
 
                 <button 
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="lg:hidden text-on-background p-2 rounded-none hover:bg-surface transition-colors"
+                  aria-expanded={mobileMenuOpen}
+                  aria-controls="mobile-menu"
+                  className="lg:hidden text-on-background p-3 rounded-none hover:bg-surface transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                 >
                   <Menu className="size-6" />
                 </button>
@@ -109,9 +111,9 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* Mobile Menu Overlay - Moved outside header to avoid backdrop-blur transparency issues */}
+      {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 bg-background z-[200] flex flex-col animate-in fade-in duration-300">
+        <div id="mobile-menu" className="lg:hidden fixed inset-0 bg-background z-[200] flex flex-col animate-in fade-in duration-300">
           {/* Mobile Header Inside Menu */}
           <div className="flex items-center justify-between px-4 h-16 border-b border-outline-variant bg-background">
             <Link href="/" className="text-xl font-black tracking-tighter uppercase font-inter text-on-background">
@@ -119,7 +121,9 @@ export function Navbar() {
             </Link>
             <button 
               onClick={() => setMobileMenuOpen(false)}
-              className="p-2 rounded-none hover:bg-surface transition-colors text-on-background"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-menu"
+              className="p-3 rounded-none hover:bg-surface transition-colors text-on-background min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               <Menu className="size-6 rotate-90" />
             </button>
@@ -138,7 +142,7 @@ export function Navbar() {
                     "p-6 technical-label text-lg border border-outline-variant transition-all flex items-center justify-between group",
                     isActive 
                       ? "bg-primary text-background" 
-                      : "bg-surface text-on-surface hover:bg-outline-variant/10"
+                      : "bg-surface text-on-surface hover:bg-surface-container"
                   )}
                 >
                   <span className="font-bold tracking-widest">{link.label.toUpperCase()}</span>

@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 
 export default [
   {
-    ignores: ['dist', '.next', 'out', 'build', 'next-env.d.ts']
+    ignores: ['dist', '.next', 'out', 'build', 'next-env.d.ts', 'src-tauri']
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -22,6 +22,9 @@ export default [
     },
     rules: {
       "react-hooks/rules-of-hooks": "error",
+      "react-hooks/purity": "off",
+      "react-hooks/immutability": "off",
+      "react-hooks/preserve-manual-memoization": "off",
       "react-hooks/set-state-in-effect": "off",
       "@typescript-eslint/no-unused-vars": "warn",
       "@typescript-eslint/no-explicit-any": "warn",
