@@ -156,25 +156,25 @@ function AppRoutes() {
 
   return (
     <AuthProvider>
-      <SidecarGate>
-        <HashRouter>
-          <NavigationProvider>
-            <HeaderProvider>
-              <AuthGuard>
-                <Suspense fallback={
-                  <div className="h-screen w-full flex items-center justify-center bg-background">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="w-8 h-8 border-2 border-primary border-t-transparent animate-spin rounded-none" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Loading Module</span>
-                    </div>
+      <HashRouter>
+        <NavigationProvider>
+          <HeaderProvider>
+            <AuthGuard>
+              <Suspense fallback={
+                <div className="h-screen w-full flex items-center justify-center bg-background">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-8 h-8 border-2 border-primary border-t-transparent animate-spin rounded-none" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Loading Module</span>
                   </div>
-                }>
-                  <Routes>
-                    <Route path="/onboarding" element={<Onboarding />} />
-                    <Route path="*" element={
-                      !isConfigured ? (
-                        <Navigate to="/onboarding" replace />
-                      ) : (
+                </div>
+              }>
+                <Routes>
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route path="*" element={
+                    !isConfigured ? (
+                      <Navigate to="/onboarding" replace />
+                    ) : (
+                      <SidecarGate>
                         <AuthenticatedLayout>
                           <Routes>
                             <Route path="/" element={<Navigate to="/obsidian" replace />} />
@@ -185,17 +185,17 @@ function AppRoutes() {
                             <Route path="/settings" element={<Settings />} />
                           </Routes>
                         </AuthenticatedLayout>
-                      )
-                    } />
-                  </Routes>
-                </Suspense>
-              </AuthGuard>
-              <Toaster />
-              <PomodoroController />
-            </HeaderProvider>
-          </NavigationProvider>
-        </HashRouter>
-      </SidecarGate>
+                      </SidecarGate>
+                    )
+                  } />
+                </Routes>
+              </Suspense>
+            </AuthGuard>
+            <Toaster />
+            <PomodoroController />
+          </HeaderProvider>
+        </NavigationProvider>
+      </HashRouter>
     </AuthProvider>
   );
 }
