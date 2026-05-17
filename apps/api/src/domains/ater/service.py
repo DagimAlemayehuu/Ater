@@ -194,7 +194,11 @@ class AterService:
         # parent 4: api/
         # parent 5: apps/
         # parent 6: Ater/
-        root = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
+        import sys
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            root = Path(sys._MEIPASS)
+        else:
+            root = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
         paths = [
             root / "Ater.md",
             root / ".system/prompts/ATER_System_Instruction.md"

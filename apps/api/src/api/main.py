@@ -25,8 +25,10 @@ import psutil
 # Add project root to sys.path
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
     root_dir = Path(sys._MEIPASS)
+    workspace_dir = Path(sys._MEIPASS)
 else:
     root_dir = Path(__file__).parent.parent.parent.absolute()
+    workspace_dir = Path(__file__).resolve().parent.parent.parent.parent.parent.absolute()
 
 if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
@@ -316,10 +318,10 @@ async def save_persona_prompt(payload: Dict[str, str] = Body(...)):
     if not name or not content:
         raise HTTPException(status_code=400, detail="Missing name or content")
     try:
-        # Resolve the root project path (Ater directory)
-        # apps/api/src/api/main.py -> Ater
-        root_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
-        custom_prompts_dir = root_dir / "resources" / "prompts" / "custom prompts"
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            custom_prompts_dir = Path.home() / ".ater" / "prompts" / "custom prompts"
+        else:
+            custom_prompts_dir = workspace_dir / "resources" / "prompts" / "custom prompts"
         custom_prompts_dir.mkdir(parents=True, exist_ok=True)
         
         # Make a safe filename
@@ -1516,7 +1518,7 @@ async def ater_quick_questions(
         )
         
         # Load SI
-        si_path = root_dir / ".system" / "prompts" / "pedagogical_assistant.md"
+        si_path = workspace_dir / ".system" / "prompts" / "pedagogical_assistant.md"
         si_content = si_path.read_text(encoding="utf-8") if si_path.exists() else "You are a helpful academic assistant."
         
         # Refine SI for questions
@@ -1608,7 +1610,7 @@ async def ater_chat(
         )
 
         # ── Load system instruction ──────────────────────────────────────────────
-        si_path = root_dir / ".system" / "prompts" / "pedagogical_assistant.md"
+        si_path = workspace_dir / ".system" / "prompts" / "pedagogical_assistant.md"
         si_content = si_path.read_text(encoding="utf-8") if si_path.exists() else "You are a helpful academic assistant."
         chat_messages = [SystemMessage(content=si_content)]
 
