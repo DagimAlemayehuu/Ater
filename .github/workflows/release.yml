@@ -170,8 +170,8 @@ jobs:
             gh release upload "$TAG" apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/Ater-${{ matrix.arch }}.dmg --repo DagimAlemayehuu/Ater_Releases --clobber
 
             # Updater Tarball and Signature Upload
-            TAR_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/tarball/ -name "*.app.tar.gz" | head -n 1)
-            SIG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/tarball/ -name "*.app.tar.gz.sig" | head -n 1)
+            TAR_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/ -name "*.app.tar.gz" | head -n 1)
+            SIG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/ -name "*.app.tar.gz.sig" | head -n 1)
             echo "Uploading Tarball: $TAR_PATH"
             gh release upload "$TAG" "$TAR_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
             gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
