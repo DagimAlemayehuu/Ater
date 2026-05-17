@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { ConfigProvider, useConfig } from '@/lib/ConfigContext'
@@ -141,7 +141,7 @@ function AppRoutes() {
   return (
     <AuthProvider>
       <SidecarGate>
-        <BrowserRouter>
+        <HashRouter>
           <NavigationProvider>
             <HeaderProvider>
               <AuthGuard>
@@ -178,7 +178,7 @@ function AppRoutes() {
               <PomodoroController />
             </HeaderProvider>
           </NavigationProvider>
-        </BrowserRouter>
+        </HashRouter>
       </SidecarGate>
     </AuthProvider>
   );
