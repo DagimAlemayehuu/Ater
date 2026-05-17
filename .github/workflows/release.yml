@@ -189,10 +189,14 @@ jobs:
             gh release upload "$TAG" apps/desktop/src-tauri/target/release/bundle/nsis/Ater_setup.exe --repo DagimAlemayehuu/Ater_Releases --clobber
 
             # Updater Zip and Signature Upload
-            ZIP_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*setup.nsis.zip" | head -n 1)
-            SIG_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*setup.nsis.zip.sig" | head -n 1 || echo "")
+            ZIP_PATH=$(find apps/desktop/src-tauri/target/release/bundle/ -name "*.zip" | head -n 1 || echo "")
+            SIG_PATH=$(find apps/desktop/src-tauri/target/release/bundle/ -name "*.zip.sig" | head -n 1 || echo "")
             echo "Uploading Zip: $ZIP_PATH"
-            gh release upload "$TAG" "$ZIP_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            if [ -n "$ZIP_PATH" ]; then
+              gh release upload "$TAG" "$ZIP_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            else
+              echo "Warning: No updater .zip file found for Windows."
+            fi
             if [ -n "$SIG_PATH" ]; then
               gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
             else
