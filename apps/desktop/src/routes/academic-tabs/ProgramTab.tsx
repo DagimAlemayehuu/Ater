@@ -1,478 +1,420 @@
-import React, {useState, useMemo} from 'react'
-import {Check, Zap, Trash2, Plus, ChevronRight, BookOpen, Calendar} from 'lucide-react'
-import {cn} from '@/lib/utils'
-import {toast} from 'sonner'
-import {stripWL, getVal, getBoolVal, getYearOrder, deriveStatus, wrapWL, cleanTitle} from './utils'
-import {SectionHeader, EmptyState, StatCard, AcademicRoadmap, ProgramSetupForm, BigPropertyCard, EditableTitle} from './SharedComponents'
-import type {TabProps} from './types'
+import React, { useState, useMemo } from 'react'
+import { Check, Trash2, Plus, ChevronRight, BookOpen, GraduationCap } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import { stripWL, getVal, getBoolVal, getYearOrder, deriveStatus, wrapWL, cleanTitle, calcGPA } from './utils'
+import { SectionHeader, EmptyState, StatCard, AcademicRoadmap, ProgramSetupForm, BigPropertyCard, EditableTitle, CreateBanner } from './SharedComponents'
+import type { TabProps } from './types'
 
-export default function ProgramTab({data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, onRefresh}: TabProps) {
- const [selectedYearId, setSelectedYearId] = useState<string | null>(null)
- const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null)
- const [showSetup, setShowSetup] = useState(false)
- const [showProperties, setShowProperties] = useState(true)
+const INTERNAL_YEAR_KEYS = ['id', 'title', 'path', 'last_synced', 'links', 'created_time', 'last_edited_time']
+const INTERNAL_SEM_KEYS  = ['id', 'title', 'path', 'last_synced', 'links', 'created_time', 'last_edited_time', 'Year', 'year']
 
- const years = data.years || []
- const semesters = data.semesters || []
- const courses = data.courses || []
- const yearSchema = databases.find(d => d.id === 'years')?.schema || {}
- const semesterSchema = databases.find(d => d.id === 'semesters')?.schema || {}
+export default function ProgramTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, onRefresh }: TabProps) {
+  const [selectedYearId, setSelectedYearId]     = useState<string | null>(null)
+  const [selectedSemId,  setSelectedSemId]      = useState<string | null>(null)
+  const [showSetup,      setShowSetup]          = useState(false)
+  const [addingSem,      setAddingSem]          = useState(false)
+  const [addingCourse,   setAddingCourse]       = useState(false)
 
- const sorted = [...years].sort((a, b) => getYearOrder(a?.title || '') - getYearOrder(b?.title || ''))
- const activeYear = years.find(y => {
-    const isCurrent = getBoolVal(y, 'Current Year', 'current_year')
-    const status = String(stripWL(getVal(y, 'Status', 'status'))).toLowerCase()
-    return isCurrent || status.includes('active')
-  }) || years[0]
+  const years     = data.years     || []
+  const semesters = data.semesters || []
+  const courses   = data.courses   || []
+  const yearSchema = databases.find(d => d.id === 'years')?.schema     || {}
+  const semSchema  = databases.find(d => d.id === 'semesters')?.schema || {}
 
- const activeProgram = cleanTitle(stripWL(getVal(activeYear, 'Program', 'program')))
- const programYears = activeProgram
- ? sorted.filter(y => stripWL(getVal(y, 'Program', 'program')) === activeProgram)
- : sorted
- const completedCount = programYears.filter(y => stripWL(getVal(y, 'Status', 'status')).toLowerCase().includes('complet')).length
- const targetYears = parseInt(getVal(activeYear, 'Target Years', 'target_years')) || Math.max(programYears.length, 1)
+  const sorted = useMemo(() => [...years].sort((a, b) => getYearOrder(a?.title || '') - getYearOrder(b?.title || '')), [years])
 
- const selectedYear = sorted.find(y => y.id === selectedYearId)
- const relatedSemesters = semesters
- .filter(s => {
- const semYear = getVal(s, 'Year', 'year').toLowerCase().trim()
- const targetYear = String(selectedYear?.title || '').toLowerCase().trim()
- return semYear === targetYear && targetYear !== ''
-})
- .sort((a, b) => {
- const order = ['Autumn', 'Fall', 'Winter', 'Spring', 'Summer']
- const ai = order.findIndex(o => String(a.title || '').includes(o))
- const bi = order.findIndex(o => String(b.title || '').includes(o))
- return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
-})
+  const activeYear = years.find(y => getBoolVal(y, 'Current Year', 'current_year') || stripWL(getVal(y, 'Status', 'status')).toLowerCase().includes('active')) || years[0]
+  const activeProgram = cleanTitle(stripWL(getVal(activeYear, 'Program', 'program')))
 
- const handleScaffold = async (name: string, numYears: number, level: string, currentIdx: number) => {
-  try {
-  const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
-  const cleanName = cleanTitle(name)
-  const promises = []
-  for (let i = 0; i < numYears; i++) {
-  const title = `Year ${romans[i] || (i + 1)}`
-  const status = i < currentIdx ? wrapWL('Completed') : i === currentIdx ? wrapWL('Active') : wrapWL('Planned')
-  promises.push(onCreate('years', title, {
-  Program: wrapWL(cleanName),
-  'Academic Level': wrapWL(level),
-  Status: status,
-  'Current Year': i === currentIdx,
-  'Target Years': numYears,
-  'Earned Credits': 0,
-  'Target Credits': 0,
-  'Cumulative GPA': 0.00
-}))
-}
-  await Promise.all(promises)
-  toast.success(`Program "${cleanName}" deployed!`)
-  onRefresh()
-} catch {toast.error('Scaffolding failed')}
-}
+  const programYears = activeProgram
+    ? sorted.filter(y => cleanTitle(stripWL(getVal(y, 'Program', 'program'))) === activeProgram)
+    : sorted
 
- const handleUpdateProgram = async (oldName: string, newName: string, level: string, numYears: number) => {
-  try {
-  const toUpdate = years.filter(y => stripWL(getVal(y, 'Program', 'program')) === oldName)
-  const cleanNewName = cleanTitle(newName)
-  await Promise.all(toUpdate.map(y => 
-  onUpdate('years', y.id, {
-  Program: wrapWL(cleanNewName),
-  'Academic Level': wrapWL(level),
-  'Target Years': numYears
-})
-  ))
-  toast.success('Program updated')
-  onRefresh()
-} catch {toast.error('Update failed')}
-}
+  const completedYears = programYears.filter(y => stripWL(getVal(y, 'Status', 'status')).toLowerCase().includes('complet')).length
+  const targetYears    = parseInt(getVal(activeYear, 'Target Years', 'target_years')) || Math.max(programYears.length, 1)
 
- const handleSetCurrentYear = async (id: string) => {
-  try {
-  await Promise.all(years.map(y => 
-  onUpdate('years', y.id, {'Current Year': y.id === id})
-  ))
-  toast.success('Active year set')
-} catch {toast.error('Failed to set active year')}
-}
+  const selectedYear = sorted.find(y => y.id === selectedYearId)
 
- // ── Semester Detail ────────────────────────────────────────────────────────
- if (selectedSemesterId) {
- const semester = semesters.find(s => s.id === selectedSemesterId)
- if (!semester) {setSelectedSemesterId(null); return null}
- const semCourses = courses.filter(c => {
- const courseSem = getVal(c, 'Semester', 'semester').toLowerCase()
- const targetSem = String(semester.title || '').toLowerCase()
- return courseSem.includes(targetSem) && targetSem !== ''
-})
+  const relatedSemesters = useMemo(() => semesters
+    .filter(s => {
+      const semYear   = getVal(s, 'Year', 'year').toLowerCase().trim()
+      const targetYear = String(selectedYear?.title || '').toLowerCase().trim()
+      return semYear === targetYear && targetYear !== ''
+    })
+    .sort((a, b) => {
+      const order = ['Autumn', 'Fall', 'Winter', 'Spring', 'Summer']
+      const ai = order.findIndex(o => String(a.title || '').includes(o))
+      const bi = order.findIndex(o => String(b.title || '').includes(o))
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
+    }), [semesters, selectedYear])
 
- return (
- <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
- <div className="flex items-start justify-between">
- <div>
- <button onClick={() => setSelectedSemesterId(null)} className="text-[8px] font-black uppercase tracking-widest text-foreground/50 mb-2 ">← {selectedYear?.title || 'Year'}</button>
- <EditableTitle
- value={semester.title}
- className="text-xl font-black uppercase tracking-tight"
- onSave={(next) => {
- onUpdate('semesters', semester.id, {title: next})
-}}
- />
- <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">{cleanTitle(activeProgram)} · {cleanTitle(selectedYear?.title || '')}</span>
- </div>
- <div className="flex items-center gap-2">
-                    <button onClick={() => onOpenNote(semester.path || `database/semesters/${semester.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10 rounded-none " title="Open Note">
-                        <BookOpen size={13} />
-                    </button>
-                    <button onClick={() => {onDelete('semesters', selectedSemesterId); setSelectedSemesterId(null)}}
-                            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
-                        <Trash2 size={13} />
-                    </button>
- </div>
- </div>
- 
- <div className="grid grid-cols-3 gap-4">
- <BigPropertyCard
- label="Status"
- value={semester.Status || semester.properties?.Status || 'Active'}
- schema={semesterSchema['Status']}
- onUpdate={(v) => onUpdate('semesters', selectedSemesterId, {Status: v})}
- />
- <StatCard label="Total Credits" value={semCourses.reduce((acc, c) => acc + (parseFloat(getVal(c, 'Credits', 'credits')) || 0), 0)} />
- <StatCard label="Courses" value={semCourses.length} />
- </div>
+  // ── Scaffold new program ──────────────────────────────────────────────────
+  const handleScaffold = async (name: string, numYears: number, level: string, currentIdx: number) => {
+    try {
+      const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
+      await Promise.all(Array.from({ length: numYears }, (_, i) =>
+        onCreate('years', `Year ${romans[i] || (i + 1)}`, {
+          Program:          wrapWL(name),
+          'Academic Level': wrapWL(level),
+          Status:           wrapWL(i < currentIdx ? 'Completed' : i === currentIdx ? 'Active' : 'Planned'),
+          'Current Year':   i === currentIdx,
+          'Target Years':   numYears,
+          'Earned Credits': 0,
+          'Target Credits': 0,
+          'Cumulative GPA': 0,
+        })
+      ))
+      toast.success(`Program "${name}" deployed!`)
+      onRefresh()
+    } catch { toast.error('Scaffolding failed') }
+  }
 
- <div className="grid grid-cols-4 gap-4">
- {(() => {
- const internal = ['id', 'title', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by', 'Status', 'status', 'Year', 'year', 'Term', 'term']
- const keys = new Set([...Object.keys(semesterSchema || {}), ...Object.keys(semester || {})])
- return Array.from(keys)
- .filter(k => !internal.includes(k))
- .sort((a, b) => {
- const priority = ['Status', 'Year', 'Term']
- const ai = priority.indexOf(a)
- const bi = priority.indexOf(b)
- if (ai !== -1 && bi !== -1) return ai - bi
- if (ai !== -1) return -1
- if (bi !== -1) return 1
- return a.localeCompare(b)
-})
- .map(key => (
- <BigPropertyCard
- key={key}
- label={key}
- value={semester[key]}
- schema={semesterSchema[key]}
- onUpdate={(v) => onUpdate('semesters', selectedSemesterId, {[key]: v})}
- />
- ))
-})()}
- </div>
+  // ── Set current year ───────────────────────────────────────────────────────
+  const handleSetCurrentYear = async (id: string) => {
+    try {
+      await Promise.all(years.map(y => onUpdate('years', y.id, { 'Current Year': y.id === id })))
+      toast.success('Active year set')
+    } catch { toast.error('Failed') }
+  }
 
- <section className="space-y-4">
- <div className="flex items-center justify-between">
- <SectionHeader title="Courses" count={semCourses.length} />
- <button onClick={() => {
- const title = window.prompt('Enter Course Title', 'New Course') || 'New Course'
- onCreate('courses', title, {Semester: `[[${semester.title}]]`, Status: '[[Active]]'})
-}}
- className="px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50 ">Add Course</button>
- </div>
- {semCourses.length === 0 && <EmptyState message="No courses linked to this semester." />}
- <div className="grid grid-cols-3 gap-4">
- {semCourses.map((c, idx) => (
- <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
- className="p-6 border border-border bg-muted/5  cursor-pointer group">
- <div className="flex items-center justify-between mb-2">
- <span className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/50">Course</span>
- <span className="text-[9px] font-black text-foreground/50">{getVal(c, 'Credits', 'credits')} CR</span>
- </div>
- <h3 className="text-xl font-black uppercase tracking-tight  text-foreground">{cleanTitle(stripWL(c.title))}</h3>
- <p className="text-[8px] font-black uppercase tracking-widest text-foreground/40 mt-2">{stripWL(getVal(c, 'Status', 'status'))}</p>
- </div>
- ))}
- </div>
- </section>
- </div>
- )
-}
+  // ─────────────────────────────────────────────────────────────────────────
+  // SEMESTER DETAIL VIEW
+  // ─────────────────────────────────────────────────────────────────────────
+  if (selectedSemId) {
+    const sem = semesters.find(s => s.id === selectedSemId)
+    if (!sem) { setSelectedSemId(null); return null }
+    const semCourses = courses.filter(c => {
+      const cSem = getVal(c, 'Semester', 'semester').toLowerCase()
+      const tSem = String(sem.title || '').toLowerCase()
+      return cSem.includes(tSem) && tSem !== ''
+    })
+    const totalCredits = semCourses.reduce((acc, c) => acc + (parseFloat(getVal(c, 'Credits', 'credits')) || 0), 0)
+    const semGPA = calcGPA(semCourses.filter(c => getVal(c, 'Grade', 'grade')))
+    const extraKeys = Object.keys({ ...semSchema, ...sem })
+      .filter(k => !INTERNAL_SEM_KEYS.includes(k) && !['Status', 'status'].includes(k))
 
- // ── Year Detail ────────────────────────────────────────────────────────────
- if (selectedYearId && selectedYear) {
- const earnedCredits = getVal(selectedYear, 'Earned Credits', 'earned_credits') || '0'
- const targetCredits = getVal(selectedYear, 'Target Credits', 'target_credits') || '0'
- const gpa = getVal(selectedYear, 'Cumulative GPA', 'cumulative_gpa') || '0.00'
- const level = stripWL(getVal(selectedYear, 'Academic Level', 'academic_level'))
- const derived = deriveStatus(relatedSemesters)
- const currentStatus = stripWL(getVal(selectedYear, 'Status', 'status'))
+    return (
+      <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
+        <div className="flex items-start justify-between">
+          <div>
+            <button onClick={() => setSelectedSemId(null)}
+              className="text-[8px] font-black uppercase tracking-widest text-foreground/50 mb-2">
+              ← {selectedYear?.title || 'Year'}
+            </button>
+            <EditableTitle value={sem.title} className="text-2xl font-black uppercase tracking-tight"
+              onSave={v => onUpdate('semesters', sem.id, { title: v })} />
+            <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">
+              {activeProgram} · {cleanTitle(selectedYear?.title || '')}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => onOpenNote(sem.path || `database/semesters/${sem.id}.md`)}
+              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10" title="Open Note">
+              <BookOpen size={13} />
+            </button>
+            <button onClick={() => { onDelete('semesters', selectedSemId); setSelectedSemId(null) }}
+              className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
 
- return (
- <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
- <div className="flex items-start justify-between">
- <div>
- <button onClick={() => setSelectedYearId(null)} className="text-[8px] font-black uppercase tracking-widest text-foreground/50 mb-2 ">← Program</button>
- <EditableTitle
- value={selectedYear.title}
- className="text-2xl font-black uppercase tracking-tighter mb-2"
- onSave={(next) => {
- onUpdate('years', selectedYear.id, {title: next})
- }}
- />
- <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">{cleanTitle(activeProgram)} · {cleanTitle(level)}</span>
- </div>
- <div className="flex items-center gap-2 flex-wrap">
- {derived === 'Completed' && !currentStatus.toLowerCase().includes('complet') && (
- <button onClick={() => onUpdate('years', selectedYearId, {Status: '[[Completed]]'})}
- className="px-3 py-1.5 bg-muted border border-border text-foreground text-[8px] font-black uppercase rounded-none hover:bg-muted/80 ">
- Mark Complete
- </button>
- )}
-                    <button onClick={() => onOpenNote(selectedYear.path || `database/years/${selectedYear.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10 rounded-none " title="Open Note">
-                        <BookOpen size={13} />
-                    </button>
-                    <button onClick={() => {onDelete('years', selectedYearId); setSelectedYearId(null)}}
-                            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
-                        <Trash2 size={13} />
-                    </button>
- </div>
- </div>
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-4">
+          <BigPropertyCard label="Status" value={sem.Status || sem.status || 'Active'}
+            schema={semSchema['Status']} onUpdate={v => onUpdate('semesters', sem.id, { Status: v })} />
+          <StatCard label="Total Credits" value={totalCredits} />
+          <StatCard label="Courses"       value={semCourses.length} />
+          <StatCard label="Semester GPA"  value={semGPA !== '--' ? semGPA : '--'} />
+        </div>
 
- <div className="grid grid-cols-3 gap-4">
- <BigPropertyCard
- label="Status"
- value={selectedYear.Status || selectedYear.properties?.Status || 'Active'}
- schema={yearSchema['Status']}
- onUpdate={(v) => onUpdate('years', selectedYearId, {Status: v})}
- />
- <StatCard label="Credits" value={`${earnedCredits} / ${targetCredits}`} />
- <StatCard label="GPA" value={gpa} />
- </div>
+        {/* Other properties */}
+        {extraKeys.length > 0 && (
+          <div className="grid grid-cols-4 gap-4">
+            {extraKeys.map(key => (
+              <BigPropertyCard key={key} label={key} value={sem[key]} schema={semSchema[key]}
+                onUpdate={v => onUpdate('semesters', sem.id, { [key]: v })} />
+            ))}
+          </div>
+        )}
 
- <div className="grid grid-cols-4 gap-4">
- {(() => {
- const internal = ['id', 'title', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by', 'Academic Level', 'Earned Credits', 'Target Credits', 'Current Year', 'Program', 'Target Years', 'Status', 'status']
- const keys = new Set([...Object.keys(yearSchema || {}), ...Object.keys(selectedYear || {})])
- return Array.from(keys)
- .filter(k => !internal.includes(k))
- .sort((a, b) => {
- // Prioritize important ones
- const priority = ['Status', 'Academic Level', 'Cumulative GPA', 'Earned Credits', 'Target Credits']
- const ai = priority.indexOf(a)
- const bi = priority.indexOf(b)
- if (ai !== -1 && bi !== -1) return ai - bi
- if (ai !== -1) return -1
- if (bi !== -1) return 1
- return a.localeCompare(b)
-})
- .map(key => (
- <BigPropertyCard
- key={key}
- label={key}
- value={selectedYear[key]}
- schema={yearSchema[key]}
- onUpdate={(v) => onUpdate('years', selectedYearId, {[key]: v})}
- />
- ))
-})()}
- </div>
+        {/* Courses */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <SectionHeader title="Courses" count={semCourses.length} />
+            <button onClick={() => setAddingCourse(true)}
+              className="flex items-center gap-1 px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50">
+              <Plus size={8} /> Add
+            </button>
+          </div>
+          {addingCourse && (
+            <CreateBanner label="Course"
+              onConfirm={name => {
+                onCreate('courses', name, { Semester: wrapWL(sem.title), Status: wrapWL('Active') })
+                setAddingCourse(false)
+              }}
+              onCancel={() => setAddingCourse(false)} />
+          )}
+          {semCourses.length === 0 && !addingCourse && <EmptyState message="No courses linked to this semester." />}
+          <div className="grid grid-cols-3 gap-4">
+            {semCourses.map((c, idx) => (
+              <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
+                className="p-5 border border-border bg-muted/5 cursor-pointer hover:bg-muted/10 hover:border-foreground/40">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-foreground/50">Course</span>
+                  <span className="text-[9px] font-black text-foreground/50">{getVal(c, 'Credits', 'credits')} CR</span>
+                </div>
+                <h3 className="text-base font-black uppercase tracking-tight text-foreground">{cleanTitle(c.title)}</h3>
+                <p className="text-[8px] font-black uppercase tracking-widest text-foreground/40 mt-1">{getVal(c, 'Status', 'status')}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    )
+  }
 
- <section className="space-y-4">
- <div className="flex items-center justify-between">
- <SectionHeader title="Semesters" count={relatedSemesters.length} />
- <button onClick={() => {
- const title = window.prompt('Enter Semester Title', 'New Semester') || 'New Semester'
- onCreate('semesters', title, {Year: `[[${selectedYear.title}]]`, Status: '[[Planned]]'})
-}}
- className="px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50 ">Add</button>
- </div>
- {relatedSemesters.length === 0 && <EmptyState message="No semesters yet. Add one above." />}
- <div className="roadmap-container pl-2">
- <div className="roadmap-line opacity-5" />
- {relatedSemesters.map((s, idx) => {
- const statusRaw = stripWL(getVal(s, 'Status', 'status'))
- const isCompleted = statusRaw.toLowerCase().includes('complet')
- const isActive = statusRaw.toLowerCase().includes('active')
+  // ─────────────────────────────────────────────────────────────────────────
+  // YEAR DETAIL VIEW
+  // ─────────────────────────────────────────────────────────────────────────
+  if (selectedYearId && selectedYear) {
+    const earnedCredits = getVal(selectedYear, 'Earned Credits', 'earned_credits') || '0'
+    const targetCredits = getVal(selectedYear, 'Target Credits', 'target_credits') || '0'
+    const gpa           = getVal(selectedYear, 'Cumulative GPA', 'cumulative_gpa') || '--'
+    const level         = getVal(selectedYear, 'Academic Level', 'academic_level')
+    const derived       = deriveStatus(relatedSemesters)
+    const currentStatus = stripWL(getVal(selectedYear, 'Status', 'status'))
+    const isCurrentYear = getBoolVal(selectedYear, 'Current Year', 'current_year')
 
- return (
- <div key={idx} className="roadmap-node cursor-pointer group/sem" onClick={() => setSelectedSemesterId(s.id)}>
- <div className={cn('roadmap-dot', isCompleted ? 'roadmap-dot-completed' : isActive ? 'roadmap-dot-active pulse-node' : 'roadmap-dot-planned')}>
- {isCompleted ? <Check size={10} strokeWidth={4} /> : (idx + 1)}
- </div>
- <div className="roadmap-content p-4 border border-border bg-muted/5 rounded-none  flex items-center justify-between">
- <div className="min-w-0">
- <span className="text-[12px] font-black uppercase ">{cleanTitle(s.title)}</span>
- <span className="ml-2 text-[8px] font-black uppercase tracking-widest text-foreground/50">{statusRaw}</span>
- </div>
- <div className="flex items-center gap-2 shrink-0">
- <span className="text-[8px] font-black uppercase text-muted-foreground ">View Details</span>
- <ChevronRight size={11} className="text-muted-foreground " />
- </div>
- </div>
- </div>
- )
-})}
- </div>
- </section>
- </div>
- )
-}
+    const extraKeys = Object.keys({ ...yearSchema, ...selectedYear })
+      .filter(k => !INTERNAL_YEAR_KEYS.includes(k) &&
+        !['Status', 'status', 'Academic Level', 'academic_level',
+          'Earned Credits', 'earned_credits', 'Target Credits', 'target_credits',
+          'Current Year', 'current_year', 'Program', 'program', 'Target Years', 'target_years',
+          'Cumulative GPA', 'cumulative_gpa'].includes(k))
 
- // ── Program Overview ─────────────────────────────────────────────────────────
- return (
- <div className="h-full flex overflow-hidden">
- {/* Left: Roadmap panel */}
- <aside className="w-56 shrink-0 border-r border-border flex flex-col p-5 overflow-hidden">
- <div className="flex items-center justify-between mb-4">
- <span className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/60">Roadmap</span>
- <button onClick={() => setShowSetup(!showSetup)} className="px-2 py-1 bg-foreground/5 text-[7px] font-black uppercase tracking-widest hover:bg-foreground/70  border border-border/10">
- {showSetup ? 'Back' : (programYears.length > 0 ? 'Edit' : 'Setup')}
- </button>
- </div>
- <div className="flex-1 overflow-y-auto custom-scrollbar">
- {programYears.length > 0 ? (
- <AcademicRoadmap items={programYears} semesters={semesters} activeId={selectedYearId} onSelect={setSelectedYearId} />
- ) : (
- <p className="text-[9px] font-black uppercase text-foreground/40 text-center mt-8">No program yet</p>
- )}
- </div>
- </aside>
+    return (
+      <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
+        <div className="flex items-start justify-between">
+          <div>
+            <button onClick={() => setSelectedYearId(null)}
+              className="text-[8px] font-black uppercase tracking-widest text-foreground/50 mb-2">← Program</button>
+            <EditableTitle value={selectedYear.title} className="text-2xl font-black uppercase tracking-tighter mb-1"
+              onSave={v => onUpdate('years', selectedYear.id, { title: v })} />
+            <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">
+              {activeProgram} · {cleanTitle(level)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {!isCurrentYear && (
+              <button onClick={() => handleSetCurrentYear(selectedYearId)}
+                className="px-3 py-1.5 border border-border text-[8px] font-black uppercase hover:border-foreground/50">
+                Set Active
+              </button>
+            )}
+            {derived === 'Completed' && !currentStatus.toLowerCase().includes('complet') && (
+              <button onClick={() => onUpdate('years', selectedYearId, { Status: '[[Completed]]' })}
+                className="px-3 py-1.5 bg-muted border border-border text-[8px] font-black uppercase hover:bg-muted/80">
+                Mark Complete
+              </button>
+            )}
+            <button onClick={() => onOpenNote(selectedYear.path || `database/years/${selectedYear.id}.md`)}
+              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10">
+              <BookOpen size={13} />
+            </button>
+            <button onClick={() => { onDelete('years', selectedYearId); setSelectedYearId(null) }}
+              className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
 
- {/* Right: Overview or setup */}
- <div className="flex-1 overflow-y-auto custom-scrollbar p-10 pb-24">
- {programYears.length === 0 ? (
- <ProgramSetupForm onScaffold={(n, y, l, c) => {handleScaffold(n, y, l, c); setShowSetup(false)}} />
- ) : (
- <div className="space-y-10 ">
- {showSetup && activeYear && (
-    <section className="space-y-6   zoom-in-95 ">
-       <div className="flex items-center justify-between border-b border-border pb-4">
-           <h3 className="text-[10px] font-black uppercase tracking-widest">Edit Program Details</h3>
-           <button onClick={() => setShowSetup(false)} className="text-[10px] font-black uppercase text-foreground/60 ">Close</button>
-       </div>
-       <div className="grid grid-cols-3 gap-4">
-           {(() => {
-               const internal = ['id', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by']
-               const keys = new Set([...Object.keys(yearSchema || {}), ...Object.keys(activeYear || {})])
-               return Array.from(keys)
-                   .filter(k => !internal.includes(k))
-                   .sort((a, b) => {
-                       const priority = ['Program', 'Academic Level', 'Status', 'Target Years', 'Current Year']
-                       const ai = priority.indexOf(a); const bi = priority.indexOf(b)
-                       if (ai !== -1 && bi !== -1) return ai - bi
-                       if (ai !== -1) return -1
-                       if (bi !== -1) return 1
-                       return a.localeCompare(b)
-                   })
-                   .map(key => (
-                       <BigPropertyCard
-                           key={key}
-                           label={key}
-                           value={activeYear[key]}
-                           schema={yearSchema[key]}
-                           onUpdate={(v) => {
-                               if (['Program', 'Academic Level', 'Target Years'].includes(key)) {
-                                   handleUpdateProgram(
-                                       activeProgram,
-                                       key === 'Program' ? stripWL(v) : activeProgram,
-                                       key === 'Academic Level' ? stripWL(v) : stripWL(getVal(activeYear, 'Academic Level')),
-                                       key === 'Target Years' ? parseInt(v) : targetYears
-                                   )
-                               } else {
-                                   onUpdate('years', activeYear.id, {[key]: v})
-                               }
-                           }}
-                       />
-                   ))
-           })()}
-       </div>
-    </section>
- )}
- <div className="flex items-center justify-between">
- <div className="group/protitle">
- <p className="text-[9px] font-black uppercase tracking-widest text-foreground/50">Program</p>
- <EditableTitle
- value={activeProgram || 'Your Program'}
- className="text-2xl font-black uppercase tracking-tight"
- onSave={(next) => {
- handleUpdateProgram(activeProgram, next, stripWL(getVal(activeYear, 'Academic Level')), targetYears)
-}}
- />
- <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">
- {cleanTitle(stripWL(getVal(activeYear, 'Academic Level', 'academic_level')))}
- </span>
- </div>
- </div>
+        <div className="grid grid-cols-4 gap-4">
+          <BigPropertyCard label="Status" value={selectedYear.Status || selectedYear.status || 'Planned'}
+            schema={yearSchema['Status']} onUpdate={v => onUpdate('years', selectedYearId, { Status: v })} />
+          <StatCard label="Credits" value={`${earnedCredits} / ${targetCredits}`} />
+          <StatCard label="Cumulative GPA" value={gpa} />
+          <StatCard label="Semesters" value={relatedSemesters.length} />
+        </div>
 
- {(() => {
-  const activeSem = semesters.find(s => {
-    const sStatus = String(stripWL(getVal(s, 'Status', 'status'))).toLowerCase()
-    const isActiveBool = getBoolVal(s, 'Active', 'active')
-    return sStatus.includes('active') || isActiveBool
+        {extraKeys.length > 0 && (
+          <div className="grid grid-cols-4 gap-4">
+            {extraKeys.map(key => (
+              <BigPropertyCard key={key} label={key} value={selectedYear[key]} schema={yearSchema[key]}
+                onUpdate={v => onUpdate('years', selectedYearId, { [key]: v })} />
+            ))}
+          </div>
+        )}
+
+        {/* Semesters */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <SectionHeader title="Semesters" count={relatedSemesters.length} />
+            <button onClick={() => setAddingSem(true)}
+              className="flex items-center gap-1 px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50">
+              <Plus size={8} /> Add
+            </button>
+          </div>
+          {addingSem && (
+            <CreateBanner label="Semester"
+              placeholder="e.g. Autumn 2024"
+              onConfirm={name => {
+                onCreate('semesters', name, { Year: wrapWL(selectedYear.title), Status: wrapWL('Planned') })
+                setAddingSem(false)
+              }}
+              onCancel={() => setAddingSem(false)} />
+          )}
+          {relatedSemesters.length === 0 && !addingSem && <EmptyState message="No semesters yet. Add one above." />}
+          <div className="flex flex-col gap-2">
+            {relatedSemesters.map((s, idx) => {
+              const sStatus  = stripWL(getVal(s, 'Status', 'status'))
+              const isActive = sStatus.toLowerCase().includes('active')
+              const isDone   = sStatus.toLowerCase().includes('complet')
+              const semCourses = courses.filter(c => {
+                const cSem = getVal(c, 'Semester', 'semester').toLowerCase()
+                return cSem.includes(String(s.title || '').toLowerCase()) && String(s.title || '') !== ''
+              })
+              return (
+                <div key={idx} onClick={() => setSelectedSemId(s.id)}
+                  className="flex items-center justify-between p-4 border border-border bg-muted/5 cursor-pointer hover:bg-muted/10 hover:border-foreground/40">
+                  <div className="flex items-center gap-4">
+                    <div className={cn('w-5 h-5 border flex items-center justify-center text-[8px] font-black shrink-0',
+                      isDone ? 'border-foreground bg-foreground text-background' :
+                      isActive ? 'border-foreground text-foreground' : 'border-border text-muted-foreground')}>
+                      {isDone ? <Check size={9} strokeWidth={4} /> : idx + 1}
+                    </div>
+                    <div>
+                      <span className="text-[12px] font-black uppercase">{cleanTitle(s.title)}</span>
+                      <span className="ml-2 text-[8px] font-black uppercase tracking-widest text-foreground/50">{sStatus}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-[8px] font-black uppercase text-muted-foreground">{semCourses.length} courses</span>
+                    <ChevronRight size={11} className="text-muted-foreground" />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      </div>
+    )
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PROGRAM OVERVIEW
+  // ─────────────────────────────────────────────────────────────────────────
+  const activeSem = semesters.find(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase().includes('active'))
+  const activeCourses = courses.filter(c => {
+    const isNotDone = !stripWL(getVal(c, 'Status', 'status')).toLowerCase().includes('complet')
+    const cSem = getVal(c, 'Semester', 'semester').toLowerCase()
+    const inActiveSem = activeSem ? cSem.includes(String(activeSem.title || '').toLowerCase()) : false
+    return isNotDone && inActiveSem
   })
- return (
- <div className="grid grid-cols-3 gap-4">
- <StatCard label="Current Year" value={cleanTitle(activeYear?.title?.split(' ').pop() || '--')} onClick={() => activeYear && setSelectedYearId(activeYear.id)} />
- <StatCard label="Current Semester" value={cleanTitle(activeSem?.title || '--')} accent onClick={() => activeSem && setSelectedSemesterId(activeSem.id)} />
- <StatCard label="CGPA" value={getVal(activeYear, 'Cumulative GPA', 'cumulative_gpa') || '0.00'} />
- </div>
- )
-})()}
 
+  return (
+    <div className="h-full flex overflow-hidden">
+      {/* Left Roadmap Panel */}
+      <aside className="w-56 shrink-0 border-r border-border flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <span className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/60 flex items-center gap-1.5">
+            <GraduationCap size={10} /> Roadmap
+          </span>
+          <button onClick={() => setShowSetup(!showSetup)}
+            className="px-2 py-1 bg-foreground/5 text-[7px] font-black uppercase tracking-widest hover:bg-foreground/10 border border-border/10">
+            {showSetup ? 'Back' : programYears.length > 0 ? 'Edit' : 'Setup'}
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
+          {programYears.length > 0
+            ? <AcademicRoadmap items={programYears} semesters={semesters} activeId={selectedYearId} onSelect={setSelectedYearId} />
+            : <p className="text-[9px] font-black uppercase text-foreground/40 text-center mt-8">No program yet</p>
+          }
+        </div>
+      </aside>
 
+      {/* Right: Overview */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-10 pb-24 space-y-10">
+        {programYears.length === 0 || showSetup ? (
+          <>
+            {showSetup && <button onClick={() => setShowSetup(false)} className="text-[8px] font-black uppercase tracking-widest text-foreground/50 mb-4">← Back</button>}
+            <ProgramSetupForm onScaffold={(n, y, l, c) => { handleScaffold(n, y, l, c); setShowSetup(false) }} />
+          </>
+        ) : (
+          <div className="space-y-10">
+            {/* Program Header */}
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-foreground/50 mb-1">Program</p>
+              <h1 className="text-3xl font-black uppercase tracking-tight">{activeProgram || 'Your Program'}</h1>
+              <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">
+                {cleanTitle(getVal(activeYear, 'Academic Level', 'academic_level'))}
+              </span>
+            </div>
 
+            {/* Program Stats */}
+            <div className="grid grid-cols-4 gap-4">
+              <StatCard label="Progress" value={`${completedYears} / ${targetYears} Years`}
+                sub={`${Math.round((completedYears / targetYears) * 100)}% complete`} />
+              <StatCard label="Active Year" value={cleanTitle(activeYear?.title?.split(' ').pop() || '--')}
+                onClick={() => activeYear && setSelectedYearId(activeYear.id)} />
+              <StatCard label="Active Semester" value={cleanTitle(activeSem?.title || '--')} accent
+                onClick={() => activeSem && setSelectedSemId(activeSem.id)} />
+              <StatCard label="Cumulative GPA"
+                value={getVal(activeYear, 'Cumulative GPA', 'cumulative_gpa') || '--'} />
+            </div>
 
- {/* Active Status Sections */}
- <div className="space-y-8">
- {/* Active Courses (Linked to Active Semesters) */}
- {(() => {
- const activeSemTitles = semesters
- .filter(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase().includes('active'))
- .map(s => s.title?.toLowerCase())
- 
- const activeCourses = courses.filter(c => {
- const status = stripWL(getVal(c, 'Status', 'status')).toLowerCase()
- const isNotCompleted = !status.includes('complet')
- const courseSem = getVal(c, 'Semester', 'semester').toLowerCase()
- const isInActiveSem = activeSemTitles.some(title => title && courseSem.includes(title))
- return isNotCompleted && isInActiveSem
-})
+            {/* Active Courses */}
+            {activeCourses.length > 0 && (
+              <section className="space-y-4">
+                <SectionHeader title="Active Courses" count={activeCourses.length} />
+                <div className="grid grid-cols-3 gap-4">
+                  {activeCourses.map((c, idx) => (
+                    <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
+                      className="p-4 border border-border bg-muted/5 flex items-center justify-between cursor-pointer hover:bg-muted/10 hover:border-foreground/40">
+                      <div>
+                        <span className="text-[13px] font-black uppercase text-foreground">{cleanTitle(c.title)}</span>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-foreground/40">
+                          {getVal(c, 'Credits', 'credits')} Credits
+                        </p>
+                      </div>
+                      <ChevronRight size={14} className="text-muted-foreground" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
- if (activeCourses.length === 0) return null
-
- return (
- <section className="space-y-4">
- <SectionHeader title="Active Courses" count={activeCourses.length} />
- <div className="grid grid-cols-3 gap-4">
- {activeCourses.map((c, idx) => (
- <div key={`course-${idx}`} className="p-4 border border-border bg-muted/5 rounded-none flex items-center justify-between cursor-pointer hover:bg-muted/10 "
- onClick={() => navigateTo('COURSES', c.id)}>
- <div>
-  <span className="text-[13px] font-black uppercase text-foreground">{cleanTitle(stripWL(c.title))}</span>
- <p className="text-[8px] font-black uppercase tracking-widest text-foreground/40">{getVal(c, 'Credits', 'credits')} Credits</p>
- </div>
- <ChevronRight size={14} className="text-muted-foreground" />
- </div>
- ))}
- </div>
- </section>
- )
-})()}
- </div>
- </div>
- )}
- </div>
- </div>
- )
-}
-
-// Small controlled field to avoid stale closure in the program editor
-function ProgramFieldEditor({label, defaultValue, onBlur, type = 'text'}: {label: string; defaultValue: string; onBlur: (val: string) => void; type?: string}) {
- const [val, setVal] = useState(defaultValue)
- return (
- <div className="flex flex-col gap-1">
- <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">{label}</label>
- <input type={type} value={val} onChange={e => setVal(e.target.value)} onBlur={() => onBlur(val)}
- className="bg-background border border-border/20 px-3 py-2.5 rounded-none text-sm font-bold outline-none focus:ring-1 focus:ring-primary/20" />
- </div>
- )
+            {/* All Years */}
+            <section className="space-y-4">
+              <SectionHeader title="All Years" count={programYears.length} />
+              <div className="grid grid-cols-2 gap-4">
+                {programYears.map((y, idx) => {
+                  const status = stripWL(getVal(y, 'Status', 'status'))
+                  const isDone = status.toLowerCase().includes('complet')
+                  const isActive = getBoolVal(y, 'Current Year', 'current_year')
+                  const ySems = semesters.filter(s => getVal(s, 'Year', 'year').toLowerCase() === String(y.title || '').toLowerCase())
+                  return (
+                    <div key={idx} onClick={() => setSelectedYearId(y.id)}
+                      className={cn('p-5 border cursor-pointer hover:border-foreground/40',
+                        isActive ? 'border-foreground bg-foreground/5' : 'border-border bg-muted/5 hover:bg-muted/10')}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">Year</span>
+                        {isActive && <div className="w-1.5 h-1.5 bg-foreground" />}
+                        {isDone && <Check size={11} className="text-muted-foreground/40" />}
+                      </div>
+                      <h3 className="text-xl font-black uppercase tracking-tight">{cleanTitle(y.title)}</h3>
+                      <p className="text-[8px] font-black uppercase tracking-widest text-foreground/40 mt-1">
+                        {status} · {ySems.length} semesters
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }

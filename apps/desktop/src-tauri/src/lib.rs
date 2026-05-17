@@ -111,7 +111,70 @@ pub fn run() {
                 port = 8765;
             }
 
-            if should_spawn {
+            let mut spawned_successfully = false;
+
+            #[cfg(debug_assertions)]
+            {
+                if should_spawn {
+                    let mut api_dir = std::env::current_dir().unwrap_or_default();
+                    let mut found = false;
+                    for _ in 0..4 {
+                        if api_dir.join("apps/api").exists() {
+                            api_dir = api_dir.join("apps/api");
+                            found = true;
+                            break;
+                        } else if api_dir.join("api").exists() {
+                            api_dir = api_dir.join("api");
+                            found = true;
+                            break;
+                        }
+                        if let Some(parent) = api_dir.parent() {
+                            api_dir = parent.to_path_buf();
+                        } else {
+                            break;
+                        }
+                    }
+
+                    if found {
+                        let venv_python = api_dir.join(".venv/bin/python");
+                        if venv_python.exists() {
+                            println!("[Sidecar] Debug mode: Spawning FastAPI via virtualenv Python: {:?}", venv_python);
+                            match std::process::Command::new(&venv_python)
+                                .args(["-m", "uvicorn", "src.api.main:app", "--host", "127.0.0.1", "--port", &port.to_string()])
+                                .current_dir(&api_dir)
+                                .spawn()
+                            {
+                                Ok(_child) => {
+                                    println!("[Sidecar] Successfully spawned FastAPI via virtualenv Python on port {}", port);
+                                    spawned_successfully = true;
+                                }
+                                Err(err) => {
+                                    eprintln!("[Sidecar] Failed to spawn FastAPI via virtualenv Python: {}", err);
+                                }
+                            }
+                        } else {
+                            println!("[Sidecar] Debug mode: virtualenv Python not found at {:?}. Trying 'uv'...", venv_python);
+                            match std::process::Command::new("uv")
+                                .args(["run", "python", "-m", "uvicorn", "src.api.main:app", "--host", "127.0.0.1", "--port", &port.to_string()])
+                                .current_dir(&api_dir)
+                                .spawn()
+                            {
+                                Ok(_child) => {
+                                    println!("[Sidecar] Successfully spawned FastAPI via 'uv' on port {}", port);
+                                    spawned_successfully = true;
+                                }
+                                Err(err) => {
+                                    eprintln!("[Sidecar] Failed to spawn FastAPI via 'uv': {}", err);
+                                }
+                            }
+                        }
+                    } else {
+                        eprintln!("[Sidecar] Debug mode: API directory not found at {:?}", api_dir);
+                    }
+                }
+            }
+
+            if should_spawn && !spawned_successfully {
                 port = get_available_port(8765).unwrap_or(8765);
                 match app.shell().sidecar("ater-api") {
                     Ok(sidecar) => {

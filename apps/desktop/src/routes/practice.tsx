@@ -108,14 +108,14 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   timeBoundDays: null
 }
 
-export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
- const [hubs, setHubs] = useState<Hub[]>([])
- const [searchParams, setSearchParams] = useSearchParams()
- const selectedHub = searchParams.get('hubId') || ''
- const setSelectedHub = (id: string) => setSearchParams(prev => {
-   prev.set('hubId', id)
-   return prev
- })
+ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
+  const [hubs, setHubs] = useState<Hub[]>([])
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedHub = searchParams.get('hubId') || searchParams.get('id') || ''
+  const setSelectedHub = (id: string) => setSearchParams(prev => {
+    prev.set('hubId', id)
+    return prev
+  })
  const [advancedConfig, setAdvancedConfig] = useState<AdvancedPracticeConfig>(DEFAULT_CONFIG)
  const [isLoading, setIsLoading] = useState(false)
  const view = (searchParams.get('view') || 'dashboard') as 'dashboard' | 'history' | 'configuring' | 'loading' | 'session' | 'results'
@@ -235,7 +235,7 @@ export function PracticeModule({noAnimation = false}: {noAnimation?: boolean}) {
 
  useEffect(() => {
  const searchParams = new URLSearchParams(window.location.search);
- const hubId = searchParams.get('hubId');
+ const hubId = searchParams.get('hubId') || searchParams.get('id');
  if (hubId && hubs.length > 0) {
  const hub = hubs.find(h => h.id === hubId || h.path.includes(hubId));
  if (hub) setSelectedHub(hub.id);

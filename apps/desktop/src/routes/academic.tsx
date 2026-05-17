@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react'
+import React, {useState, useEffect, useCallback, useMemo} from 'react'
 import {useNavigate, useSearchParams} from 'react-router-dom'
 import {RefreshCw, CalendarDays, GraduationCap, BookOpen, ClipboardList, FlaskConical, LayoutDashboard, Layers, ChevronLeft, ChevronRight, Activity} from 'lucide-react'
 import {format, subMonths, addMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, isToday, parseISO, startOfDay} from 'date-fns'
@@ -16,7 +16,7 @@ import StudyPlannerTab from './academic-tabs/StudyPlannerTab'
 import AssignmentsTab from './academic-tabs/AssignmentsTab'
 import ExamsTab from './academic-tabs/ExamsTab'
 // import { SIDECAR_BASE_URL } from '@/lib/sidecarApi'
-import {cleanTitle} from './academic-tabs/utils'
+import {cleanTitle, DEFAULT_SCHEMAS, wrapWL} from './academic-tabs/utils'
 import type {AcademicTab, AcademicData, VaultDatabase, TabProps} from './academic-tabs/types'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
 
@@ -155,12 +155,12 @@ export default function AcademicDashboard() {
 }, [fetchData])
 
   const onCreate = useCallback(async (dbId: string, title: string, props?: Record<string, any>): Promise<string | null> => {
+  const dbIdLow = dbId.toLowerCase();
   // Optimistic update for creation
   setData(prev => {
   if (!prev) return prev
   const next = {...prev}
   let key: keyof AcademicData | undefined;
-  const dbIdLow = dbId.toLowerCase();
   if (dbIdLow.includes('year')) key = 'years';
   else if (dbIdLow.includes('semester')) key = 'semesters';
   else if (dbIdLow.includes('course')) key = 'courses';
@@ -176,7 +176,16 @@ export default function AcademicDashboard() {
 })
 
   try {
-  const res = await sidecarApi.createVaultRow(dbId, title, props || {})
+  // Fill missing schema properties with empty strings or default wraps
+  const finalProps = { ...props }
+  const schema = DEFAULT_SCHEMAS[dbIdLow] || {}
+  for (const [k, v] of Object.entries(schema)) {
+    if (!(k in finalProps)) {
+      finalProps[k] = v.type === 'relation' ? wrapWL('') : ''
+    }
+  }
+
+  const res = await sidecarApi.createVaultRow(dbId, title, finalProps)
   fetchData()
   return res.id || null
 } catch {
@@ -247,6 +256,13 @@ export default function AcademicDashboard() {
  }, [handleSync, activeTab, setRightContent])
 
  // ── Tab definitions ────────────────────────────────────────────────────────
+ const augmentedDatabases = useMemo(() => {
+   return databases.map(db => {
+     const schema = DEFAULT_SCHEMAS[db.id.toLowerCase()] || {}
+     return { ...db, schema: { ...schema, ...db.schema } }
+   })
+ }, [databases])
+
  const tabs = React.useMemo(() => [
  {id: 'PROGRAM' as AcademicTab, label: 'Program', icon: <GraduationCap size={11} />},
  {id: 'COURSES' as AcademicTab, label: 'Courses', icon: <BookOpen size={11} />},
@@ -281,7 +297,7 @@ export default function AcademicDashboard() {
  // ── Tab props ──────────────────────────────────────────────────────────────
  const tabProps: TabProps = {
   data: data!,
-  databases,
+  databases: augmentedDatabases,
   onUpdate,
   onCreate,
   onDelete,

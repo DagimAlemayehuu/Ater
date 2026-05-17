@@ -39,8 +39,10 @@
       "icons/icon.ico"
     ],
     "resources": [
-      "../../api/onnx_model/*",
-      "../../target/**/*.dll"
+      "../../api/onnx_model/*"
+    ],
+    "externalBin": [
+      "binaries/ater-api"
     ]
   },
   "plugins": {

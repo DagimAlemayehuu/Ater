@@ -179,7 +179,7 @@ export const sidecarApi = {
     
     deleteVaultDatabase: async (dbName: string) => {
         try {
-            return await invoke<any>('delete_vault_database')
+            return await invoke<any>('delete_vault_database', { dbName })
         } catch (err) {
             console.error('[Tauri Native RAG] deleteVaultDatabase failed:', err)
             throw err
@@ -188,7 +188,7 @@ export const sidecarApi = {
 
     updateVaultDatabaseSchema: async (dbName: string, properties: Record<string, any>, renameFrom?: string, renameTo?: string) => {
         try {
-            return await invoke<any>('update_vault_database_schema')
+            return await invoke<any>('update_vault_database_schema', { dbName, properties, renameFrom, renameTo })
         } catch (err) {
             console.error('[Tauri Native RAG] updateVaultDatabaseSchema failed:', err)
             throw err
@@ -197,7 +197,7 @@ export const sidecarApi = {
     
     queryVaultDatabase: async (dbName: string) => {
         try {
-            return await invoke<any>('query_vault_database')
+            return await invoke<any>('query_vault_database', { dbName })
         } catch (err) {
             console.error('[Tauri Native RAG] queryVaultDatabase failed:', err)
             return { results: [] }
@@ -206,7 +206,7 @@ export const sidecarApi = {
     
     listVaultDatabaseRows: async (dbName: string) => {
         try {
-            return await invoke<any>('list_vault_database_rows')
+            return await invoke<any>('list_vault_database_rows', { dbName })
         } catch (err) {
             console.error('[Tauri Native RAG] listVaultDatabaseRows failed:', err)
             return { results: [] }
@@ -224,7 +224,7 @@ export const sidecarApi = {
     
     updateVaultRow: async (dbName: string, fileName: string, properties: any) => {
         try {
-            return await invoke<any>('update_vault_row', { id: fileName, properties })
+            return await invoke<any>('update_vault_row', { dbName, id: fileName, properties })
         } catch (err) {
             console.error('[Tauri Native RAG] updateVaultRow failed:', err)
             throw err
@@ -233,7 +233,7 @@ export const sidecarApi = {
         
     createVaultRow: async (dbName: string, title: string, properties: any) => {
         try {
-            return await invoke<any>('create_vault_row', { title, properties })
+            return await invoke<any>('create_vault_row', { dbName, title, properties })
         } catch (err) {
             console.error('[Tauri Native RAG] createVaultRow failed:', err)
             throw err
@@ -242,7 +242,7 @@ export const sidecarApi = {
         
     deleteVaultRow: async (dbName: string, fileName: string) => {
         try {
-            return await invoke<any>('delete_vault_row')
+            return await invoke<any>('delete_vault_row', { dbName, id: fileName })
         } catch (err) {
             console.error('[Tauri Native RAG] deleteVaultRow failed:', err)
             throw err
@@ -251,7 +251,7 @@ export const sidecarApi = {
 
     renameVaultFile: async (dbName: string, oldFileName: string, newFileName: string) => {
         try {
-            return await invoke<any>('rename_vault_file')
+            return await invoke<any>('rename_vault_file', { dbName, oldId: oldFileName, newId: newFileName })
         } catch (err) {
             console.error('[Tauri Native RAG] renameVaultFile failed:', err)
             throw err
@@ -260,7 +260,7 @@ export const sidecarApi = {
 
     getVaultOptions: async (source: string) => {
         try {
-            return await invoke<any>('get_vault_options')
+            return await invoke<any>('get_vault_options', { source })
         } catch (err) {
             console.error('[Tauri Native RAG] getVaultOptions failed:', err)
             return { options: [] }
@@ -278,7 +278,7 @@ export const sidecarApi = {
 
     updateVaultOption: async (source: string, oldName: string, newName: string) => {
         try {
-            return await invoke<any>('update_vault_option', { name: newName })
+            return await invoke<any>('update_vault_option', { source, oldName, newName })
         } catch (err) {
             console.error('[Tauri Native RAG] updateVaultOption failed:', err)
             throw err
@@ -287,7 +287,7 @@ export const sidecarApi = {
 
     deleteVaultOption: async (source: string, name: string) => {
         try {
-            return await invoke<any>('delete_vault_option')
+            return await invoke<any>('delete_vault_option', { source, name })
         } catch (err) {
             console.error('[Tauri Native RAG] deleteVaultOption failed:', err)
             throw err
@@ -326,7 +326,7 @@ export const sidecarApi = {
 
     getVaultBacklinks: async (pageName: string) => {
         try {
-            return await invoke<any>('get_vault_backlinks')
+            return await invoke<any>('get_vault_backlinks', { pageName })
         } catch (err) {
             console.error('[Tauri Native RAG] getVaultBacklinks failed:', err)
             return { backlinks: [] }

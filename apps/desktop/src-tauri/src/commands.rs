@@ -173,7 +173,6 @@ use serde::{Serialize, Deserialize};
 pub struct ObsidianFileRust {
     pub name: String,
     pub path: String,
-    #[serde(rename = "isDir")]
     pub is_dir: bool,
     pub modified: Option<String>,
     pub size: Option<u64>,
@@ -191,6 +190,8 @@ pub struct AppConfig {
     pub ai_model: Option<String>,
     #[serde(rename = "aiApiKey")]
     pub ai_api_key: Option<String>,
+    #[serde(rename = "autoDeploy")]
+    pub auto_deploy: Option<bool>,
 }
 
 fn load_app_config(app_handle: &tauri::AppHandle) -> Result<AppConfig, String> {
@@ -249,6 +250,11 @@ fn get_proxy_headers(config: &AppConfig) -> reqwest::header::HeaderMap {
             headers.insert("X-Inbox-Path", h_val);
         }
     }
+    if let Some(val) = config.auto_deploy {
+        if let Ok(h_val) = HeaderValue::from_str(&val.to_string()) {
+            headers.insert("X-Auto-Deploy", h_val);
+        }
+    }
     headers
 }
 
@@ -260,22 +266,38 @@ async fn proxy_post<T: serde::Serialize, R: serde::de::DeserializeOwned>(
 ) -> Result<R, String> {
     let client = reqwest::Client::new();
     let url = format!("http://127.0.0.1:{}{}", port, path);
-    let res = client.post(&url)
-        .headers(headers)
-        .json(body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to send request to sidecar API: {}", e))?;
-    
-    if !res.status().is_success() {
-        let status = res.status();
-        let err_text = res.text().await.unwrap_or_default();
-        return Err(format!("Sidecar API returned error status {}: {}", status, err_text));
+    let mut attempt = 0;
+    let max_attempts = 5;
+    let mut last_err = None;
+
+    while attempt < max_attempts {
+        match client.post(&url)
+            .headers(headers.clone())
+            .json(body)
+            .send()
+            .await
+        {
+            Ok(res) => {
+                if !res.status().is_success() {
+                    let status = res.status();
+                    let err_text = res.text().await.unwrap_or_default();
+                    return Err(format!("Sidecar API returned error status {}: {}", status, err_text));
+                }
+                return res.json::<R>()
+                    .await
+                    .map_err(|e| format!("Failed to parse sidecar response: {}", e));
+            }
+            Err(e) => {
+                last_err = Some(e);
+                attempt += 1;
+                if attempt < max_attempts {
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                }
+            }
+        }
     }
-    
-    res.json::<R>()
-        .await
-        .map_err(|e| format!("Failed to parse sidecar response: {}", e))
+
+    Err(format!("Failed to send request to sidecar API (after {} attempts): {}", max_attempts, last_err.unwrap()))
 }
 
 async fn proxy_get<R: serde::de::DeserializeOwned>(
@@ -285,21 +307,37 @@ async fn proxy_get<R: serde::de::DeserializeOwned>(
 ) -> Result<R, String> {
     let client = reqwest::Client::new();
     let url = format!("http://127.0.0.1:{}{}", port, path);
-    let res = client.get(&url)
-        .headers(headers)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to send request to sidecar API: {}", e))?;
-    
-    if !res.status().is_success() {
-        let status = res.status();
-        let err_text = res.text().await.unwrap_or_default();
-        return Err(format!("Sidecar API returned error status {}: {}", status, err_text));
+    let mut attempt = 0;
+    let max_attempts = 5;
+    let mut last_err = None;
+
+    while attempt < max_attempts {
+        match client.get(&url)
+            .headers(headers.clone())
+            .send()
+            .await
+        {
+            Ok(res) => {
+                if !res.status().is_success() {
+                    let status = res.status();
+                    let err_text = res.text().await.unwrap_or_default();
+                    return Err(format!("Sidecar API returned error status {}: {}", status, err_text));
+                }
+                return res.json::<R>()
+                    .await
+                    .map_err(|e| format!("Failed to parse sidecar response: {}", e));
+            }
+            Err(e) => {
+                last_err = Some(e);
+                attempt += 1;
+                if attempt < max_attempts {
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                }
+            }
+        }
     }
-    
-    res.json::<R>()
-        .await
-        .map_err(|e| format!("Failed to parse sidecar response: {}", e))
+
+    Err(format!("Failed to send request to sidecar API (after {} attempts): {}", max_attempts, last_err.unwrap()))
 }
 
 fn walk_dir(
@@ -318,7 +356,16 @@ fn walk_dir(
             .unwrap_or_default()
             .to_string();
         
-        if name.starts_with('.') || name == "node_modules" {
+        let name_lower = name.to_lowercase();
+        if name.starts_with('.') 
+            || name == "node_modules"
+            || name_lower.contains("ater_queue")
+            || name_lower.contains("ater_que")
+            || name_lower.ends_with(".db")
+            || name_lower.ends_with(".db-shm")
+            || name_lower.ends_with(".db-wal")
+            || name_lower.ends_with(".db-journal")
+        {
             continue;
         }
         
@@ -410,6 +457,48 @@ fn parse_markdown_note(content: &str) -> (serde_json::Value, String) {
     }
     
     (serde_json::Value::Object(serde_json::Map::new()), content.to_string())
+}
+
+fn serialize_frontmatter(map: &serde_json::Map<String, serde_json::Value>) -> String {
+    let mut out = String::new();
+    out.push_str("---\n");
+    for (k, v) in map {
+        match v {
+            serde_json::Value::Bool(b) => {
+                out.push_str(&format!("{}: {}\n", k, b));
+            }
+            serde_json::Value::Number(num) => {
+                out.push_str(&format!("{}: {}\n", k, num));
+            }
+            serde_json::Value::String(s) => {
+                if s.starts_with("[[") && s.ends_with("]]") {
+                    out.push_str(&format!("{}: \"{}\"\n", k, s));
+                } else {
+                    out.push_str(&format!("{}: {}\n", k, s));
+                }
+            }
+            serde_json::Value::Array(arr) => {
+                let items: Vec<String> = arr.iter().map(|item| {
+                    match item {
+                        serde_json::Value::Number(n) => n.to_string(),
+                        serde_json::Value::Bool(b) => b.to_string(),
+                        serde_json::Value::String(s) => {
+                            if s.starts_with("[[") && s.ends_with("]]") {
+                                format!("\"{}\"", s)
+                            } else {
+                                s.clone()
+                            }
+                        }
+                        _ => item.to_string(),
+                    }
+                }).collect();
+                out.push_str(&format!("{}: [{}]\n", k, items.join(", ")));
+            }
+            _ => {}
+        }
+    }
+    out.push_str("---\n");
+    out
 }
 
 #[tauri::command]
@@ -753,7 +842,59 @@ pub async fn academics_dashboard(
 ) -> Result<serde_json::Value, String> {
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
-    proxy_get(sidecar_config.port, "/api/academics/dashboard", headers).await
+    if let Ok(res) = proxy_get(sidecar_config.port, "/api/academics/dashboard", headers).await {
+        return Ok(res);
+    }
+
+    let vault_root = get_vault_path(&app_handle)?;
+    let mut data = serde_json::Map::new();
+    data.insert("semesters".to_string(), serde_json::Value::Array(Vec::new()));
+    data.insert("courses".to_string(), serde_json::Value::Array(Vec::new()));
+    data.insert("units".to_string(), serde_json::Value::Array(Vec::new()));
+    data.insert("exams".to_string(), serde_json::Value::Array(Vec::new()));
+    data.insert("assignments".to_string(), serde_json::Value::Array(Vec::new()));
+    data.insert("study_sessions".to_string(), serde_json::Value::Array(Vec::new()));
+    data.insert("years".to_string(), serde_json::Value::Array(Vec::new()));
+
+    let mapping = vec![
+        ("semesters", "semesters"),
+        ("courses", "courses"),
+        ("exams", "exams"),
+        ("assignments", "assignments"),
+        ("study planner", "study_sessions"),
+        ("years", "years"),
+    ];
+
+    for (folder_name, key) in mapping {
+        let folder_path = vault_root.join("database").join(folder_name);
+        if folder_path.exists() && folder_path.is_dir() {
+            let mut items = Vec::new();
+            if let Ok(entries) = std::fs::read_dir(&folder_path) {
+                for entry in entries.filter_map(Result::ok) {
+                    let path = entry.path();
+                    let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+                    if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") && !file_name.starts_with('.') {
+                        if let Ok(content) = std::fs::read_to_string(&path) {
+                            let (frontmatter, _) = parse_markdown_note(&content);
+                            if let serde_json::Value::Object(mut map) = frontmatter {
+                                let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_string();
+                                map.insert("id".to_string(), serde_json::Value::String(stem.clone()));
+                                if !map.contains_key("title") {
+                                    map.insert("title".to_string(), serde_json::Value::String(stem.clone()));
+                                }
+                                let rel_path = path.strip_prefix(&vault_root).map(|p| p.to_string_lossy().to_string()).unwrap_or_else(|_| path.to_string_lossy().to_string());
+                                map.insert("path".to_string(), serde_json::Value::String(rel_path));
+                                items.push(serde_json::Value::Object(map));
+                            }
+                        }
+                    }
+                }
+            }
+            data.insert(key.to_string(), serde_json::Value::Array(items));
+        }
+    }
+
+    Ok(serde_json::Value::Object(data))
 }
 
 #[tauri::command]
@@ -763,7 +904,81 @@ pub async fn academics_sync_profile(
 ) -> Result<serde_json::Value, String> {
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
-    proxy_post(sidecar_config.port, "/api/academics/sync-profile", &serde_json::Value::Object(serde_json::Map::new()), headers).await
+    let _: Result<serde_json::Value, _> = proxy_post(sidecar_config.port, "/api/academics/sync-profile", &serde_json::Value::Object(serde_json::Map::new()), headers).await;
+
+    let vault_root = get_vault_path(&app_handle)?;
+    let main_folders = vec!["Inbox", "Notes", "database"];
+    for f in main_folders {
+        let _ = std::fs::create_dir_all(vault_root.join(f));
+    }
+    
+    // Core database folders
+    let db_folders = vec![
+        "database/assignments",
+        "database/exams",
+        "database/study planner",
+        "database/courses",
+        "database/semesters",
+        "database/years",
+        "database/programs",
+        "database/inbox",
+        // Relation/Select Folders
+        "database/statuses",
+        "database/levels",
+        "database/seasons",
+        "database/difficulties",
+        "database/priorities",
+        "database/types",
+        "database/confidences"
+    ];
+    for f in db_folders {
+        let _ = std::fs::create_dir_all(vault_root.join(f));
+    }
+    
+    // Create default property md files
+    let default_files = vec![
+        ("database/statuses/Planned.md", "---\ntitle: Planned\n---\n# Planned"),
+        ("database/statuses/Active.md", "---\ntitle: Active\n---\n# Active"),
+        ("database/statuses/Completed.md", "---\ntitle: Completed\n---\n# Completed"),
+        ("database/statuses/Not Started.md", "---\ntitle: Not Started\n---\n# Not Started"),
+        ("database/statuses/In Progress.md", "---\ntitle: In Progress\n---\n# In Progress"),
+        ("database/statuses/Upcoming.md", "---\ntitle: Upcoming\n---\n# Upcoming"),
+        ("database/priorities/Low.md", "---\ntitle: Low\n---\n# Low"),
+        ("database/priorities/Medium.md", "---\ntitle: Medium\n---\n# Medium"),
+        ("database/priorities/High.md", "---\ntitle: High\n---\n# High"),
+        ("database/priorities/Critical.md", "---\ntitle: Critical\n---\n# Critical"),
+        ("database/difficulties/Easy.md", "---\ntitle: Easy\n---\n# Easy"),
+        ("database/difficulties/Medium.md", "---\ntitle: Medium\n---\n# Medium"),
+        ("database/difficulties/Hard.md", "---\ntitle: Hard\n---\n# Hard"),
+        ("database/difficulties/Expert.md", "---\ntitle: Expert\n---\n# Expert"),
+        ("database/types/Homework.md", "---\ntitle: Homework\n---\n# Homework"),
+        ("database/types/Project.md", "---\ntitle: Project\n---\n# Project"),
+        ("database/types/Midterm.md", "---\ntitle: Midterm\n---\n# Midterm"),
+        ("database/types/Final.md", "---\ntitle: Final\n---\n# Final"),
+        ("database/types/Quiz.md", "---\ntitle: Quiz\n---\n# Quiz"),
+        ("database/types/Review.md", "---\ntitle: Review\n---\n# Review"),
+        ("database/seasons/Fall.md", "---\ntitle: Fall\n---\n# Fall"),
+        ("database/seasons/Spring.md", "---\ntitle: Spring\n---\n# Spring"),
+        ("database/seasons/Summer.md", "---\ntitle: Summer\n---\n# Summer"),
+        ("database/seasons/Winter.md", "---\ntitle: Winter\n---\n# Winter"),
+        ("database/confidences/Low.md", "---\ntitle: Low\n---\n# Low"),
+        ("database/confidences/Medium.md", "---\ntitle: Medium\n---\n# Medium"),
+        ("database/confidences/High.md", "---\ntitle: High\n---\n# High"),
+        ("database/levels/Undergraduate.md", "---\ntitle: Undergraduate\n---\n# Undergraduate"),
+        ("database/levels/Graduate.md", "---\ntitle: Graduate\n---\n# Graduate"),
+        ("database/levels/PhD.md", "---\ntitle: PhD\n---\n# PhD"),
+    ];
+    
+    for (path_str, content) in default_files {
+        let p = vault_root.join(path_str);
+        if !p.exists() {
+            let _ = std::fs::write(&p, content);
+        }
+    }
+
+    let mut res = serde_json::Map::new();
+    res.insert("success".to_string(), serde_json::Value::Bool(true));
+    Ok(serde_json::Value::Object(res))
 }
 
 #[tauri::command]
@@ -1015,8 +1230,25 @@ pub async fn clear_study_history(
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
     let config = load_app_config(&app_handle)?;
+    if let Some(ref path_str) = config.obsidian_vault_path {
+        let persist_dir = std::path::PathBuf::from(path_str).join(".ater").join("vector_store");
+        if persist_dir.exists() {
+            let _ = std::fs::remove_dir_all(&persist_dir);
+        }
+        
+        let inbox_path = config.inbox_path.clone().unwrap_or_else(|| format!("{}/Inbox", path_str));
+        let db_path = std::path::PathBuf::from(inbox_path).join("ater_queue.db");
+        if db_path.exists() {
+            let _ = std::fs::remove_file(&db_path);
+        }
+    }
+    
     let headers = get_proxy_headers(&config);
-    proxy_post(sidecar_config.port, "/api/study/reset", &serde_json::Value::Object(serde_json::Map::new()), headers).await
+    let _: Result<serde_json::Value, _> = proxy_post(sidecar_config.port, "/api/study/reset", &serde_json::Value::Object(serde_json::Map::new()), headers).await;
+
+    let mut res = serde_json::Map::new();
+    res.insert("success".to_string(), serde_json::Value::Bool(true));
+    Ok(serde_json::Value::Object(res))
 }
 
 #[tauri::command]
@@ -1025,8 +1257,40 @@ pub async fn factory_reset(
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
     let config = load_app_config(&app_handle)?;
+    
+    if let Some(ref path_str) = config.obsidian_vault_path {
+        let vault_root = std::path::PathBuf::from(path_str);
+        
+        let persist_dir = vault_root.join(".ater");
+        if persist_dir.exists() {
+            let _ = std::fs::remove_dir_all(&persist_dir);
+        }
+        
+        let database_dir = vault_root.join("database");
+        if database_dir.exists() {
+            let _ = std::fs::remove_dir_all(&database_dir);
+        }
+        
+        let inbox_path = config.inbox_path.clone().unwrap_or_else(|| format!("{}/Inbox", path_str));
+        let db_path = std::path::PathBuf::from(inbox_path).join("ater_queue.db");
+        if db_path.exists() {
+            let _ = std::fs::remove_file(&db_path);
+        }
+    }
+    
+    if let Ok(app_dir) = app_handle.path().app_data_dir() {
+        let config_path = app_dir.join("ater_config.json");
+        if config_path.exists() {
+            let _ = std::fs::remove_file(&config_path);
+        }
+    }
+    
     let headers = get_proxy_headers(&config);
-    proxy_post(sidecar_config.port, "/api/system/factory-reset", &serde_json::Value::Object(serde_json::Map::new()), headers).await
+    let _: Result<serde_json::Value, _> = proxy_post(sidecar_config.port, "/api/system/factory-reset", &serde_json::Value::Object(serde_json::Map::new()), headers).await;
+
+    let mut res = serde_json::Map::new();
+    res.insert("success".to_string(), serde_json::Value::Bool(true));
+    Ok(serde_json::Value::Object(res))
 }
 
 #[tauri::command]
@@ -1280,9 +1544,32 @@ pub async fn vault_upload_file(
 }
 
 #[tauri::command]
-pub async fn list_vault_databases() -> Result<serde_json::Value, String> {
+pub async fn list_vault_databases(
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let vault_root = get_vault_path(&app_handle)?;
+    let database_dir = vault_root.join("database");
+    
+    let mut results = Vec::new();
+    if database_dir.exists() && database_dir.is_dir() {
+        if let Ok(entries) = std::fs::read_dir(&database_dir) {
+            for entry in entries.filter_map(Result::ok) {
+                let path = entry.path();
+                if path.is_dir() {
+                    let folder_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("").to_string();
+                    if !folder_name.starts_with('.') {
+                        let mut db = serde_json::Map::new();
+                        db.insert("name".to_string(), serde_json::Value::String(folder_name.clone()));
+                        db.insert("id".to_string(), serde_json::Value::String(folder_name));
+                        results.push(serde_json::Value::Object(db));
+                    }
+                }
+            }
+        }
+    }
+    
     let mut res = serde_json::Map::new();
-    res.insert("databases".to_string(), serde_json::Value::Array(Vec::new()));
+    res.insert("databases".to_string(), serde_json::Value::Array(results));
     Ok(serde_json::Value::Object(res))
 }
 
@@ -1294,7 +1581,21 @@ pub async fn fetch_vault_areas() -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
-pub async fn initialize_vault() -> Result<serde_json::Value, String> {
+pub async fn initialize_vault(
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let vault_root = get_vault_path(&app_handle)?;
+    let main_folders = vec!["Inbox", "Notes", "database"];
+    for f in main_folders {
+        let _ = std::fs::create_dir_all(vault_root.join(f));
+    }
+    
+    // Attempt proxy but return success anyway
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    let _: Result<serde_json::Value, _> = proxy_post(sidecar_config.port, "/api/vault/initialize", &serde_json::Value::Object(serde_json::Map::new()), headers).await;
+    
     let mut res = serde_json::Map::new();
     res.insert("success".to_string(), serde_json::Value::Bool(true));
     res.insert("message".to_string(), serde_json::Value::String("Vault initialized".to_string()));
@@ -1324,17 +1625,49 @@ pub async fn update_vault_database_schema() -> Result<serde_json::Value, String>
 }
 
 #[tauri::command]
-pub async fn query_vault_database() -> Result<serde_json::Value, String> {
+pub async fn query_vault_database(
+    db_name: String,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let vault_root = get_vault_path(&app_handle)?;
+    let db_path = vault_root.join("database").join(&db_name);
+    
+    let mut results = Vec::new();
+    if db_path.exists() && db_path.is_dir() {
+        if let Ok(entries) = std::fs::read_dir(&db_path) {
+            for entry in entries.filter_map(Result::ok) {
+                let path = entry.path();
+                let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") && !file_name.starts_with('.') {
+                    if let Ok(content) = std::fs::read_to_string(&path) {
+                        let (frontmatter, _) = parse_markdown_note(&content);
+                        if let serde_json::Value::Object(mut map) = frontmatter {
+                            let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_string();
+                            map.insert("id".to_string(), serde_json::Value::String(stem.clone()));
+                            if !map.contains_key("title") {
+                                map.insert("title".to_string(), serde_json::Value::String(stem.clone()));
+                            }
+                            let rel_path = path.strip_prefix(&vault_root).map(|p| p.to_string_lossy().to_string()).unwrap_or_else(|_| path.to_string_lossy().to_string());
+                            map.insert("path".to_string(), serde_json::Value::String(rel_path));
+                            results.push(serde_json::Value::Object(map));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     let mut res = serde_json::Map::new();
-    res.insert("results".to_string(), serde_json::Value::Array(Vec::new()));
+    res.insert("results".to_string(), serde_json::Value::Array(results));
     Ok(serde_json::Value::Object(res))
 }
 
 #[tauri::command]
-pub async fn list_vault_database_rows() -> Result<serde_json::Value, String> {
-    let mut res = serde_json::Map::new();
-    res.insert("results".to_string(), serde_json::Value::Array(Vec::new()));
-    Ok(serde_json::Value::Object(res))
+pub async fn list_vault_database_rows(
+    db_name: String,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    query_vault_database(db_name, app_handle).await
 }
 
 #[tauri::command]
@@ -1345,21 +1678,78 @@ pub async fn list_vault_templates() -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
-pub async fn update_vault_row(id: String, properties: serde_json::Value) -> Result<serde_json::Value, String> {
-    let mut res = serde_json::Map::new();
-    res.insert("success".to_string(), serde_json::Value::Bool(true));
+pub async fn update_vault_row(
+    db_name: String,
+    id: String,
+    properties: serde_json::Value,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let vault_root = get_vault_path(&app_handle)?;
+    let db_path = vault_root.join("database").join(&db_name);
+    let file_path = db_path.join(format!("{}.md", id));
+    
+    let props_map = if let serde_json::Value::Object(map) = properties.clone() {
+        map
+    } else {
+        serde_json::Map::new()
+    };
+    
+    if file_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(&file_path) {
+            let (mut frontmatter, body) = parse_markdown_note(&content);
+            if let serde_json::Value::Object(ref mut map) = frontmatter {
+                for (k, v) in props_map.iter() {
+                    map.insert(k.clone(), v.clone());
+                }
+                let new_frontmatter_str = serialize_frontmatter(map);
+                let new_content = format!("{}{}", new_frontmatter_str, body);
+                let _ = std::fs::write(&file_path, new_content);
+                
+                let mut res = map.clone();
+                res.insert("id".to_string(), serde_json::Value::String(id.clone()));
+                return Ok(serde_json::Value::Object(res));
+            }
+        }
+    }
+    
+    let frontmatter = serialize_frontmatter(&props_map);
+    let content = format!("{}\n# {}\n\nUpdated automatically.\n", frontmatter, id);
+    let _ = std::fs::write(&file_path, content);
+    
+    let mut res = props_map.clone();
     res.insert("id".to_string(), serde_json::Value::String(id));
-    res.insert("properties".to_string(), properties);
     Ok(serde_json::Value::Object(res))
 }
 
 #[tauri::command]
-pub async fn create_vault_row(title: String, properties: serde_json::Value) -> Result<serde_json::Value, String> {
-    let mut res = serde_json::Map::new();
-    res.insert("success".to_string(), serde_json::Value::Bool(true));
-    res.insert("id".to_string(), serde_json::Value::String("row".to_string()));
-    res.insert("title".to_string(), serde_json::Value::String(title));
-    res.insert("properties".to_string(), properties);
+pub async fn create_vault_row(
+    db_name: String,
+    title: String,
+    properties: serde_json::Value,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let vault_root = get_vault_path(&app_handle)?;
+    let db_path = vault_root.join("database").join(&db_name);
+    let _ = std::fs::create_dir_all(&db_path);
+    
+    let safe_title = title.replace("/", "-").replace("\\", "-").replace(":", "-");
+    let file_path = db_path.join(format!("{}.md", safe_title));
+    
+    let mut props_map = if let serde_json::Value::Object(map) = properties {
+        map
+    } else {
+        serde_json::Map::new()
+    };
+    
+    props_map.insert("title".to_string(), serde_json::Value::String(title.clone()));
+    
+    let frontmatter = serialize_frontmatter(&props_map);
+    let content = format!("{}\n# {}\n\nCreated automatically.\n", frontmatter, title);
+    
+    std::fs::write(&file_path, content).map_err(|e| e.to_string())?;
+    
+    let mut res = props_map.clone();
+    res.insert("id".to_string(), serde_json::Value::String(safe_title));
     Ok(serde_json::Value::Object(res))
 }
 
@@ -1408,10 +1798,107 @@ pub async fn delete_vault_option() -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
-pub async fn get_vault_graph() -> Result<serde_json::Value, String> {
+fn walk_for_graph(dir: &std::path::Path, root: &std::path::Path, nodes: &mut Vec<serde_json::Value>, links: &mut Vec<serde_json::Value>) -> Result<(), String> {
+    if !dir.exists() { return Ok(()); }
+    for entry in std::fs::read_dir(dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default().to_string();
+        
+        if name.starts_with('.') || name == "node_modules" { continue; }
+        
+        if path.is_dir() {
+            walk_for_graph(&path, root, nodes, links)?;
+        } else if path.extension().and_then(|s| s.to_str()) == Some("md") {
+            let rel_path = path.strip_prefix(root).unwrap_or(&path).to_string_lossy().to_string().replace("\\", "/");
+            let file_stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("Unknown").to_string();
+            
+            let group = match rel_path.split('/').next() {
+                Some("database") => "database",
+                Some("Notes") => "note",
+                _ => "other",
+            };
+
+            let mut node = serde_json::Map::new();
+            node.insert("id".to_string(), serde_json::Value::String(rel_path.clone()));
+            node.insert("name".to_string(), serde_json::Value::String(file_stem.clone()));
+            node.insert("group".to_string(), serde_json::Value::String(group.to_string()));
+            nodes.push(serde_json::Value::Object(node));
+
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                let mut start = 0;
+                while let Some(s) = content[start..].find("[[") {
+                    let s_idx = start + s;
+                    if let Some(e) = content[s_idx..].find("]]") {
+                        let e_idx = s_idx + e;
+                        let link_content = &content[s_idx + 2..e_idx];
+                        let target_name = link_content.split('|').next().unwrap_or("").trim();
+                        if !target_name.is_empty() {
+                            let mut link = serde_json::Map::new();
+                            link.insert("source".to_string(), serde_json::Value::String(rel_path.clone()));
+                            // The frontend resolves the target name to an ID if needed, 
+                            // but react-force-graph supports matching string IDs. 
+                            // For a naive match, we can just pass the target_name.
+                            // Obsidian Graph generally creates phantom nodes if target doesn't exist.
+                            link.insert("target".to_string(), serde_json::Value::String(target_name.to_string()));
+                            links.push(serde_json::Value::Object(link));
+                        }
+                        start = e_idx + 2;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_vault_graph(app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let vault_root = get_vault_path(&app_handle)?;
+    let mut nodes = Vec::new();
+    let mut links = Vec::new();
+    
+    walk_for_graph(&vault_root, &vault_root, &mut nodes, &mut links)?;
+
+    // Map targets that are just "names" to actual "rel_paths" where possible
+    let mut name_to_id = std::collections::HashMap::new();
+    for n in &nodes {
+        if let Some(n_obj) = n.as_object() {
+            if let (Some(id), Some(name)) = (n_obj.get("id").and_then(|v| v.as_str()), n_obj.get("name").and_then(|v| v.as_str())) {
+                name_to_id.insert(name.to_lowercase(), id.to_string());
+            }
+        }
+    }
+
+    let mut mapped_links = Vec::new();
+    for l in links {
+        if let Some(mut l_map) = l.as_object().cloned() {
+            if let Some(target) = l_map.get("target").and_then(|v| v.as_str()) {
+                if let Some(mapped_id) = name_to_id.get(&target.to_lowercase()) {
+                    l_map.insert("target".to_string(), serde_json::Value::String(mapped_id.clone()));
+                } else {
+                    // Create phantom nodes for unresolved links
+                    let phantom_id = target.to_string();
+                    if !name_to_id.contains_key(&phantom_id.to_lowercase()) {
+                        let mut phantom_node = serde_json::Map::new();
+                        phantom_node.insert("id".to_string(), serde_json::Value::String(phantom_id.clone()));
+                        phantom_node.insert("name".to_string(), serde_json::Value::String(phantom_id.clone()));
+                        phantom_node.insert("group".to_string(), serde_json::Value::String("unresolved".to_string()));
+                        nodes.push(serde_json::Value::Object(phantom_node));
+                        name_to_id.insert(phantom_id.to_lowercase(), phantom_id.clone());
+                    }
+                    l_map.insert("target".to_string(), serde_json::Value::String(phantom_id));
+                }
+            }
+            mapped_links.push(serde_json::Value::Object(l_map));
+        }
+    }
+
     let mut res = serde_json::Map::new();
-    res.insert("nodes".to_string(), serde_json::Value::Array(Vec::new()));
-    res.insert("links".to_string(), serde_json::Value::Array(Vec::new()));
+    res.insert("nodes".to_string(), serde_json::Value::Array(nodes));
+    res.insert("links".to_string(), serde_json::Value::Array(mapped_links));
     Ok(serde_json::Value::Object(res))
 }
 

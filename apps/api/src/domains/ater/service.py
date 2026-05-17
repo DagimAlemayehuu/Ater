@@ -2117,6 +2117,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         
                         generation_attempts = 0
                         max_attempts = 3
+                        last_candidate_markdown = None
                         
                         while generation_attempts < max_attempts:
                             generation_attempts += 1
@@ -2291,6 +2292,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 }
                                 yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
                                 final_markdown = f"---\n{yaml_frontmatter}---\n{body_content}"
+                                last_candidate_markdown = final_markdown
                                 
                                 # 5. Validation Check
                                 is_valid, validation_errors = self.validator.validate_structure(
@@ -2365,6 +2367,16 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     logger.warning(f"[Ater Service] Error for '{current_note_title}': {e}.")
                                     break
                                 await asyncio.sleep(5)
+                        
+                        # Best-effort fallback deployment to guarantee no notes are ever skipped
+                        if current_note_title not in session.get("processed_notes", []) and last_candidate_markdown:
+                            logger.warning(f"[Ater Service] Max attempts reached for '{current_note_title}' with validation/verification failures. Deploying last candidate as best-effort fallback to prevent skipping.")
+                            local_results = self.deployer.deploy_atomic_notes(
+                                session_id, [current_note_title], [last_candidate_markdown], plan_obj, session.get("path", "")
+                            )
+                            if current_note_title not in session.get("processed_notes", []):
+                                session.setdefault("processed_notes", []).append(current_note_title)
+                            self._persist_session(session_id, session)
                         
                     elif b_type == "pq":
                         current_note_title = b_notes[0]

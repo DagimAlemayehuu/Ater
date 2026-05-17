@@ -64,7 +64,7 @@ function AppRoutes() {
                     ) : (
                       <AuthenticatedLayout>
                         <Routes>
-                          <Route path="/" element={<Navigate to="/obsidian" replace />} />
+                          <Route path="/" element={<Navigate to="/academic" replace />} />
                           <Route path="/obsidian" element={<ObsidianVault />} />
                           <Route path="/academic" element={<AcademicDashboard />} />
                           <Route path="/agents" element={<Agents />} />

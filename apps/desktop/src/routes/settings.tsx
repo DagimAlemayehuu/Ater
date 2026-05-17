@@ -123,6 +123,11 @@ export default function Settings() {
   const handleSave = async () => {
     if (editingKey === 'primary_engine') {
       await saveConfig({aiProvider: aiEdit.provider, aiApiKey: aiEdit.key, aiModel: aiEdit.model})
+      try {
+        await sidecarApi.aterWatcherToggle();
+      } catch (e) {
+        console.error('[Tauri Native RAG] Failed to sync watcher after saving API keys:', e);
+      }
     } else if (editingKey === 'timer_settings') {
       await saveConfig({
         pomodoroWorkDuration: pomodoroEdit.work,
@@ -137,9 +142,11 @@ export default function Settings() {
         academicFolderPath: vaultEdit.academicPath,
         autoDeploy: vaultEdit.autoDeploy
       })
-      // Sync watcher state if auto-deploy changed
-      if (vaultEdit.autoDeploy !== config?.autoDeploy) {
-        try { await sidecarApi.aterWatcherToggle(); } catch(e) { console.error(e); }
+      // Always sync watcher state when folder settings are saved
+      try {
+        await sidecarApi.aterWatcherToggle();
+      } catch (e) {
+        console.error('[Tauri Native RAG] Failed to sync watcher after saving folders:', e);
       }
     }
     setEditingKey(null)

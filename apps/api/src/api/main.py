@@ -560,11 +560,17 @@ async def ater_watcher_toggle(
     """Starts or updates the Ater Queue Manager."""
     global ater_watcher
     
-    if not secrets.ai_key or not secrets.vault_path or not secrets.inbox_path:
+    effective_inbox = secrets.inbox_path
+    if not effective_inbox and secrets.vault_path:
+        effective_inbox = str(Path(secrets.vault_path) / "Inbox")
+        
+    logger.info(f"[DEBUG Toggle] ai_key: {repr(secrets.ai_key)}, vault_path: {repr(secrets.vault_path)}, inbox_path: {repr(secrets.inbox_path)}, effective_inbox: {repr(effective_inbox)}")
+        
+    if not secrets.ai_key or not secrets.vault_path or not effective_inbox:
         raise HTTPException(status_code=400, detail="AI Key, Vault Path, and Inbox Path are required")
     
     # If the watcher exists but the path changed, kill it.
-    if ater_watcher and str(ater_watcher.inbox_path.absolute()) != str(Path(secrets.inbox_path).absolute()):
+    if ater_watcher and str(ater_watcher.inbox_path.absolute()) != str(Path(effective_inbox).absolute()):
         ater_watcher.stop()
         ater_watcher = None
 
@@ -575,7 +581,6 @@ async def ater_watcher_toggle(
         except FileNotFoundError as e:
             raise HTTPException(status_code=500, detail=str(e))
         
-        effective_inbox = secrets.inbox_path or str(Path(secrets.vault_path) / "Inbox")
         service = AterService(secrets)
         ater_watcher = AterQueueManager(service, effective_inbox, str(si_path))
         
@@ -585,11 +590,11 @@ async def ater_watcher_toggle(
             loop = asyncio.get_event_loop()
             
         ater_watcher.start(loop, auto_process=secrets.auto_deploy)
-        logger.info(f"[Ater] QueueManager started for inbox: {secrets.inbox_path} | Auto: {secrets.auto_deploy}")
+        logger.info(f"[Ater] QueueManager started for inbox: {effective_inbox} | Auto: {secrets.auto_deploy}")
     else:
         ater_watcher.update_settings(auto_process=secrets.auto_deploy)
         
-    return {"status": "watcher_active", "auto_deploy": secrets.auto_deploy, "inbox": secrets.inbox_path}
+    return {"status": "watcher_active", "auto_deploy": secrets.auto_deploy, "inbox": effective_inbox}
 
 @app.get("/api/ater/queue/status")
 async def ater_queue_status(

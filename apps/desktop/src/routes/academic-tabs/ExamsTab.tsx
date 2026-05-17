@@ -1,360 +1,281 @@
-import React, {useState, useMemo, useEffect} from 'react'
-import {Hash, ChevronRight, Plus, Check, BookOpen, Trash2} from 'lucide-react'
-import {format, parseISO, differenceInDays, isBefore, startOfDay} from 'date-fns'
-import {cn} from '@/lib/utils'
-import {toast} from 'sonner'
-import {stripWL, getVal, cleanTitle, wrapWL} from './utils'
-import {SectionHeader, EmptyState, StatCard, BigPropertyCard, EditableTitle} from './SharedComponents'
-import type {TabProps} from './types'
+import React, { useState, useMemo } from 'react'
+import { Check, Trash2, BookOpen, Plus, Search, Target } from 'lucide-react'
+import { format, parseISO, differenceInDays, startOfDay } from 'date-fns'
+import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import { stripWL, getVal, getDaysUntil, typeColorClass, gradeColorClass, wrapWL, cleanTitle, getNumVal, getBoolVal } from './utils'
+import { EmptyState, BigPropertyCard, EditableTitle, CreateBanner, CountdownBadge, StatusBadge } from './SharedComponents'
+import type { TabProps } from './types'
 
-export default function ExamsTab({data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, initialSelectedId, onClearSelection}: TabProps) {
- const [statusFilter, setStatusFilter] = useState<'Active' | 'All'>('Active')
- const [courseFilter, setCourseFilter] = useState<string>('All')
- const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId || null)
- const [editingScore, setEditingScore] = useState<string | null>(null)
- const [scoreInput, setScoreInput] = useState('')
- const [prevInitialId, setPrevInitialId] = useState<string | null>(initialSelectedId || null)
+const INTERNAL = ['id', 'title', 'path', 'last_synced', 'links']
+const EXAM_TYPES = ['Quiz', 'Midterm', 'Final', 'Lab Exam', 'Practical', 'Oral', 'Online']
+const GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D', 'F']
 
- if (initialSelectedId && initialSelectedId !== prevInitialId) {
-   setSelectedId(initialSelectedId)
-   setPrevInitialId(initialSelectedId)
- }
+export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo }: TabProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [filter,     setFilter]     = useState<'Upcoming' | 'All' | 'Past'>('Upcoming')
+  const [course,     setCourse]     = useState<string>('All')
+  const [search,     setSearch]     = useState('')
+  const [adding,     setAdding]     = useState(false)
+  const [showGrader, setShowGrader] = useState(false)
 
- useEffect(() => {
-   if (initialSelectedId && onClearSelection) {
-     onClearSelection()
-   }
- }, [initialSelectedId, onClearSelection])
+  const allExams  = data.exams   || []
+  const courses   = data.courses || []
+  const hubs      = data.study_sessions || []
+  const schema    = databases.find(d => d.id === 'exams')?.schema || {}
+  const now       = startOfDay(new Date())
 
- const allCourses = data.courses || []
- const allExams = data.exams || []
- const hubs = data.study_sessions || []
+  const courseOptions = useMemo(() =>
+    ['All', ...Array.from(new Set(allExams.map(e => stripWL(getVal(e, 'Course', 'course'))).filter(Boolean)))],
+    [allExams])
 
- const activeSemesters = (data.semesters || []).filter(s => String(stripWL(getVal(s, 'Status', 'status'))).toLowerCase() === 'active').map(s => String(s.title || '').toLowerCase())
-
- const courses = useMemo(() => {
-  if (statusFilter === 'All') return allCourses
-  return allCourses.filter(c => {
-   const isCompleted = String(stripWL(getVal(c, 'Status', 'status'))).toLowerCase().includes('complet')
-   const courseSem = String(stripWL(getVal(c, 'Semester', 'semester'))).toLowerCase()
-   const inActiveSemester = activeSemesters.length === 0 || activeSemesters.some(s => courseSem.includes(s))
-   return !isCompleted && inActiveSemester
-  })
- }, [allCourses, statusFilter, activeSemesters])
-
- const now = startOfDay(new Date())
-
- const filtered = useMemo(() => {
-  let baseExams = allExams
-  if (statusFilter === 'Active') {
-    baseExams = allExams.filter(e => {
-      const cName = getVal(e, 'Course', 'course')
-      return courses.find(c => String(cleanTitle(c.title)).toLowerCase() === String(cleanTitle(cName)).toLowerCase()) || cName === ''
+  const filtered = useMemo(() => {
+    let items = allExams
+    if (filter === 'Upcoming') items = items.filter(e => !e.date || new Date(e.date) >= now)
+    if (filter === 'Past')     items = items.filter(e => e.date && new Date(e.date) < now)
+    if (course !== 'All')      items = items.filter(e => stripWL(getVal(e, 'Course', 'course')) === course)
+    if (search.trim())         items = items.filter(e => String(e.title || '').toLowerCase().includes(search.toLowerCase()))
+    return [...items].sort((a, b) => {
+      const da = a.date ? new Date(a.date).getTime() : Infinity
+      const db = b.date ? new Date(b.date).getTime() : Infinity
+      return filter === 'Past' ? db - da : da - db
     })
+  }, [allExams, filter, course, search])
+
+  const upcoming = allExams.filter(e => e.date && new Date(e.date) >= now)
+  const next = upcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DETAIL VIEW
+  // ─────────────────────────────────────────────────────────────────────────
+  if (selectedId) {
+    const exam = allExams.find(e => e.id === selectedId)
+    if (!exam) { setSelectedId(null); return null }
+
+    const grade    = stripWL(getVal(exam, 'Grade', 'grade'))
+    const score    = getVal(exam, 'Score', 'score')
+    const maxScore = getVal(exam, 'Max Score', 'max_score')
+    const examType = stripWL(getVal(exam, 'Type', 'type', 'Exam Type'))
+    const examCourse = stripWL(getVal(exam, 'Course', 'course'))
+    const isPast   = exam.date && new Date(exam.date) < now
+    const daysLeft = getDaysUntil(exam.date)
+
+    // linked hubs for this exam
+    const examHubs = hubs.filter(h => {
+      const hExam = stripWL(getVal(h, 'exam', 'Exam', 'linked_exam')).toLowerCase()
+      const hName = String(exam.title || '').toLowerCase()
+      return hExam.includes(hName) && hName !== ''
+    })
+    const studyHubDone = examHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
+    const totalStudyTime = examHubs.reduce((acc, h) => acc + (getNumVal(h, 'study_time', 'total_time') || 0), 0)
+
+    const extraKeys = Object.keys({ ...schema, ...exam }).filter(k =>
+      !INTERNAL.includes(k) && !['Status', 'Grade', 'Score', 'Max Score', 'Type', 'Course', 'date', 'Exam Type', 'Difficulty', 'Confidence'].includes(k))
+
+    return (
+      <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <button onClick={() => setSelectedId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-2">← Exams</button>
+            <EditableTitle value={cleanTitle(exam.title)} className="text-2xl font-black uppercase tracking-tight"
+              onSave={v => onUpdate('exams', exam.id, { title: v })} />
+            <div className="flex items-center gap-3 mt-1">
+              {examCourse && <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">{examCourse}</span>}
+              {examType   && <span className={cn('px-2 py-0.5 text-[8px] font-black uppercase border', typeColorClass(examType))}>{examType}</span>}
+              {grade      && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase border', gradeColorClass(grade))}>{grade}</span>}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {!isPast && daysLeft !== null && (
+              <div className={cn('px-4 py-2 border text-center', daysLeft <= 3 ? 'border-foreground' : 'border-border')}>
+                <div className="text-2xl font-black">{daysLeft}</div>
+                <div className="text-[7px] font-black uppercase text-muted-foreground">days</div>
+              </div>
+            )}
+            <button onClick={() => onOpenNote(exam.path || `database/exams/${exam.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10"><BookOpen size={14} /></button>
+            <button onClick={() => { onDelete('exams', selectedId); setSelectedId(null) }} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 size={14} /></button>
+          </div>
+        </div>
+
+        {/* Score entry if past */}
+        {isPast && !grade && (
+          <div className="p-5 bg-muted/5 border border-border space-y-3">
+            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Enter Your Result</p>
+            <div className="grid grid-cols-4 gap-3">
+              {GRADES.map(g => (
+                <button key={g} onClick={() => onUpdate('exams', exam.id, { Grade: wrapWL(g), Status: wrapWL('Graded') })}
+                  className={cn('py-2 border text-[10px] font-black uppercase hover:border-foreground/50 hover:bg-muted/5', gradeColorClass(g))}>
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-4">
+          <BigPropertyCard label="Status" value={getVal(exam, 'Status', 'status') || (isPast ? 'Past' : 'Upcoming')}
+            schema={{ type: 'select' }} onUpdate={v => onUpdate('exams', exam.id, { Status: v })} />
+          <BigPropertyCard label="Date" value={exam.date || ''}
+            schema={{ type: 'date' }} onUpdate={v => onUpdate('exams', exam.id, { date: v })} />
+          <BigPropertyCard label="Grade" value={grade}
+            schema={{ type: 'select', source: 'grade' }} onUpdate={v => onUpdate('exams', exam.id, { Grade: v })} />
+          <BigPropertyCard label="Course" value={getVal(exam, 'Course', 'course')}
+            schema={{ type: 'select', source: 'courses' }} onUpdate={v => onUpdate('exams', exam.id, { Course: v })} />
+        </div>
+
+        {/* Preparation tracking */}
+        {!isPast && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground">Preparation</span>
+              <button onClick={() => navigateTo('PLANNER')} className="text-[8px] font-black uppercase text-muted-foreground hover:text-foreground">View Hubs →</button>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="p-4 border border-border bg-muted/5">
+                <span className="text-[8px] font-black uppercase text-muted-foreground">Study Hubs Done</span>
+                <p className="text-xl font-black mt-1">{studyHubDone} / {examHubs.length}</p>
+              </div>
+              <div className="p-4 border border-border bg-muted/5">
+                <span className="text-[8px] font-black uppercase text-muted-foreground">Total Study Time</span>
+                <p className="text-xl font-black mt-1">{totalStudyTime > 0 ? `${Math.round(totalStudyTime / 60)}h` : '--'}</p>
+              </div>
+              <BigPropertyCard label="Confidence" value={getVal(exam, 'Confidence', 'confidence') || ''}
+                schema={{ type: 'select', source: 'confidence' }} onUpdate={v => onUpdate('exams', exam.id, { Confidence: v })} />
+            </div>
+            {examHubs.length > 0 && (
+              <div className="space-y-1.5">
+                {examHubs.map((h, i) => {
+                  const done = stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')
+                  return (
+                    <div key={i} onClick={() => onOpenNote(h.path || `database/study planner/${h.id}.md`)}
+                      className={cn('flex items-center gap-3 p-2.5 border cursor-pointer hover:border-foreground/40',
+                        done ? 'border-border/20 opacity-50' : 'border-border')}>
+                      <div className={cn('w-3 h-3 border flex items-center justify-center', done ? 'bg-foreground border-foreground' : 'border-border')}>
+                        {done && <Check size={8} strokeWidth={4} className="text-background" />}
+                      </div>
+                      <span className={cn('text-[10px] font-black uppercase flex-1', done && 'line-through text-muted-foreground')}>
+                        {cleanTitle(h.title || h.id)}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Extra properties */}
+        {extraKeys.length > 0 && (
+          <div className="grid grid-cols-4 gap-4">
+            {extraKeys.map(key => (
+              <BigPropertyCard key={key} label={key} value={exam[key]} schema={schema[key]}
+                onUpdate={v => onUpdate('exams', exam.id, { [key]: v })} />
+            ))}
+          </div>
+        )}
+      </div>
+    )
   }
-  if (courseFilter === 'All') return baseExams
-  const cName = courses.find(c => c.id === courseFilter)?.title || ''
-  return baseExams.filter(e => {
-  const examCourse = String(getVal(e, 'Course', 'course')).toLowerCase()
-  return examCourse === String(cName).toLowerCase() && examCourse !== ''
- })
- }, [allExams, courseFilter, courses, statusFilter])
 
- const upcoming = filtered.filter(e => {
- const d = getVal(e, 'date', 'Exam Date')
- return d && !isBefore(parseISO(d), now)
-}).sort((a, b) => {
- const da = getVal(a, 'date', 'Exam Date')
- const db = getVal(b, 'date', 'Exam Date')
- return new Date(da).getTime() - new Date(db).getTime()
-})
- const past = filtered.filter(e => {
- const d = getVal(e, 'date', 'Exam Date')
- return !d || isBefore(parseISO(d), now)
-}).sort((a, b) => {
- const da = getVal(a, 'date', 'Exam Date')
- const db = getVal(b, 'date', 'Exam Date')
- return new Date(db).getTime() - new Date(da).getTime()
-})
-
- const nextExam = upcoming[0]
- const nextDate = nextExam ? getVal(nextExam, 'date', 'Exam Date') : null
- const daysToNext = nextDate ? differenceInDays(parseISO(nextDate), now) : null
-
- const handleAddScore = async (exam: any) => {
- if (!scoreInput.trim()) return
- try {
- await onUpdate('exams', exam.id, {score: scoreInput.trim()})
- toast.success('Score saved')
- setEditingScore(null)
- setScoreInput('')
-} catch {toast.error('Update failed')}
-}
-
- // Selected exam detail
- if (selectedId) {
- const exam = allExams.find(e => e.id === selectedId)
- if (!exam) {setSelectedId(null); return null}
- const schema = databases.find(d => d.id === 'exams')?.schema || {}
- const examCourse = stripWL(getVal(exam, 'Course', 'course'))
- const relatedHubs = hubs.filter(h => {
- const hubCourse = getVal(h, 'course', 'Course').toLowerCase()
- return hubCourse === String(examCourse).toLowerCase() && hubCourse !== ''
-})
- const doneHubs = relatedHubs.filter(h => String(stripWL(getVal(h, 'status', 'Status'))).toLowerCase().includes('complet')).length
-
- return (
- <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-8">
- <div className="flex items-center justify-between">
- <div>
- <span className="text-[9px] font-black uppercase tracking-widest text-foreground/50">Exam Detail</span>
- <EditableTitle
- value={exam.title}
- className="text-2xl font-black uppercase"
- onSave={(next) => {
- onUpdate('exams', exam.id, {title: next})
- setSelectedId(next)
-}}
- />
- <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">{cleanTitle(examCourse)}</span>
- </div>
-  <div className="flex items-center gap-2">
-  <button onClick={() => onOpenNote(exam.path || `database/exams/${exam.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10 rounded-none " title="Open Note">
-  <BookOpen size={13} />
-  </button>
-  <button onClick={() => {onDelete('exams', selectedId); setSelectedId(null)}}
-  className="p-2 text-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-none ">
-  <Trash2 size={13} />
-  </button>
- <button onClick={() => setSelectedId(null)} className="px-3 py-1.5 bg-muted/10 border border-border rounded-none text-[9px] font-black uppercase hover:bg-muted/20 ">Back</button>
- </div>
- </div>
-
- {/* Quick Info */}
- <div className="grid grid-cols-2 gap-4">
- <StatCard label="Preparation Progress" value={`${doneHubs} / ${relatedHubs.length} Hubs`} accent />
- {getVal(exam, 'date', 'Exam Date') && !isBefore(parseISO(getVal(exam, 'date', 'Exam Date')), now) && (
- <StatCard label="Countdown" value={`${differenceInDays(parseISO(getVal(exam, 'date', 'Exam Date')), now)} Days Left`} />
- )}
- </div>
-
- {/* Properties */}
- <div className="grid grid-cols-4 gap-4">
- {(() => {
- const internal = ['id', 'last_synced', 'links', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by']
- const keys = new Set([...Object.keys(schema || {}), ...Object.keys(exam || {})])
- return Array.from(keys)
- .filter(k => !internal.includes(k))
- .sort((a, b) => {
- const priority = ['date', 'score', 'Course', 'Type']
- const ai = priority.indexOf(a)
- const bi = priority.indexOf(b)
- if (ai !== -1 && bi !== -1) return ai - bi
- if (ai !== -1) return -1
- if (bi !== -1) return 1
- return a.localeCompare(b)
-})
- .map(key => (
- <BigPropertyCard
- key={key}
- label={key}
- value={exam[key]}
- schema={schema[key]}
- onUpdate={(v) => onUpdate('exams', exam.id, {[key]: v})}
- />
- ))
-})()}
- </div>
-
- {relatedHubs.length > 0 && (
- <section className="space-y-4">
- <SectionHeader title="Study Material Prep" count={relatedHubs.length} />
- <div className="grid grid-cols-2 gap-3">
- {relatedHubs.map((hub, idx) => {
- const hubStatus = stripWL(getVal(hub, 'status', 'Status'))
- const isDone = hubStatus.toLowerCase().includes('complet')
- return (
- <div key={idx} className={cn('p-3 border border-border rounded-none flex items-center gap-3', isDone ? 'bg-muted/5 opacity-60' : 'bg-background')}>
- <div className={cn('w-4 h-4 rounded-none border flex items-center justify-center shrink-0', isDone ? 'bg-primary border-primary' : 'border-border')}>
- {isDone && <Check size={9} strokeWidth={4} className="text-primary-foreground" />}
- </div>
- <div className="flex-1 min-w-0">
- <span className={cn('text-[10px] font-black uppercase truncate block', isDone ? 'text-foreground/40' : 'text-foreground')}>
- {cleanTitle(hub.title || hub.id)}
- </span>
- <span className="text-[7px] font-black text-foreground/50 uppercase">Unit {getVal(hub, 'unit', 'Unit') || '?'}</span>
- </div>
- </div>
- )
-})}
- </div>
- </section>
- )}
- </div>
- )
-}
-
- return (
- <div className="h-full flex flex-col overflow-hidden">
- {/* Next Exam Hero */}
- {nextExam && (
- <div className="mx-6 mt-6 mb-2 shrink-0">
- <div className="p-8 border border-border bg-muted/5 rounded-none flex items-center justify-between gap-6">
- <div className="space-y-1">
- <span className="text-[9px] font-black uppercase tracking-[0.3em] text-foreground/50">Next Exam</span>
- <h2 className="text-xl font-black uppercase tracking-tighter text-foreground">{cleanTitle(nextExam.title)}</h2>
- <p className="text-[10px] font-black uppercase tracking-widest text-foreground/50">
- {cleanTitle(stripWL(getVal(nextExam, 'Course', 'course')))} · {getVal(nextExam, 'date', 'Exam Date') ? format(parseISO(getVal(nextExam, 'date', 'Exam Date')), 'MMM dd, yyyy') : '--'}
- </p>
- </div>
- <div className="text-right shrink-0">
- <div className="text-3xl font-black tracking-tighter text-foreground">
- {daysToNext ?? '--'}
- </div>
- <div className="text-[9px] font-black uppercase tracking-widest text-foreground/50">Days Left</div>
- </div>
- </div>
- </div>
- )}
-
-  {/* Filter + Add bar */}
-  <div className="px-6 py-4 border-b border-border flex flex-col gap-4 shrink-0">
-  <div className="flex items-center justify-between w-full">
-   {/* Stats */}
-   <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest">
-   {upcoming.length > 0 && <span className="text-foreground">{upcoming.length} <span className="text-foreground/50">upcoming</span></span>}
-   {past.length > 0 && <span className="text-foreground/40">{past.length} past</span>}
-   </div>
-   
-   {/* Filters */}
-   <div className="flex items-center gap-2">
-    <div className="flex bg-muted/5 p-1 rounded-none border border-border">
-     <button onClick={() => setStatusFilter('Active')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-none ", statusFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>Active</button>
-     <button onClick={() => setStatusFilter('All')} className={cn("px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-none ", statusFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>All</button>
-    </div>
-   </div>
-  </div>
-  
-  <div className="flex items-center gap-2 w-full">
-  {/* Course filter pills */}
-  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1">
-  {['All', ...courses.map(c => c.id)].map(id => {
-  const label = id === 'All' ? 'All' : cleanTitle(courses.find(c => c.id === id)?.title || id)
+  // ─────────────────────────────────────────────────────────────────────────
+  // LIST VIEW
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-  <button key={id} onClick={() => setCourseFilter(id)}
-  className={cn(
-  'px-3 py-1 rounded-none text-[8px] font-black uppercase tracking-wide whitespace-nowrap ',
-  courseFilter === id ? 'text-foreground border border-foreground bg-muted/5' : 'border border-transparent bg-muted/5 text-foreground/50  hover:border-border'
-  )}>{label}</button>
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Next Exam banner */}
+      {next && (
+        <div className="px-6 py-3 bg-muted/5 border-b border-border flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            <Target size={12} className="text-foreground/60" />
+            <div>
+              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Next Exam</span>
+              <p className="text-[12px] font-black uppercase text-foreground">{cleanTitle(next.title)}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-xl font-black">{differenceInDays(new Date(next.date), now)}</span>
+            <p className="text-[8px] font-black uppercase text-muted-foreground">days</p>
+          </div>
+        </div>
+      )}
+
+      {/* Filter bar */}
+      <div className="px-6 py-3 border-b border-border flex items-center gap-3 shrink-0 flex-wrap">
+        <div className="flex items-center gap-1 bg-muted/5 border border-border p-1">
+          {(['Upcoming', 'All', 'Past'] as const).map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest',
+                filter === f ? 'bg-muted/20 text-foreground border border-border' : 'text-muted-foreground hover:bg-muted/5')}>
+              {f}
+            </button>
+          ))}
+        </div>
+        <select value={course} onChange={e => setCourse(e.target.value)}
+          className="bg-background border border-border px-3 py-2 text-[9px] font-black uppercase tracking-widest focus:outline-none">
+          {courseOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+        <div className="flex items-center gap-2 flex-1 bg-muted/5 border border-border px-3 py-2">
+          <Search size={11} className="text-muted-foreground" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exams..."
+            className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none" />
+        </div>
+        <button onClick={() => setAdding(true)}
+          className="flex items-center gap-1.5 px-3 py-2 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50">
+          <Plus size={10} /> Add
+        </button>
+      </div>
+
+      {adding && (
+        <div className="px-6 pt-3 shrink-0">
+          <CreateBanner label="Exam" placeholder="e.g. Calculus Midterm"
+            onConfirm={name => {
+              onCreate('exams', name, { Status: wrapWL('Upcoming'), Type: wrapWL('Midterm') })
+              setAdding(false)
+            }}
+            onCancel={() => setAdding(false)} />
+        </div>
+      )}
+
+      {/* Grid */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-24">
+        {filtered.length === 0 && !adding && <EmptyState message="No exams found." />}
+        <div className="grid grid-cols-3 gap-4">
+          {filtered.map((exam, idx) => {
+            const grade    = stripWL(getVal(exam, 'Grade', 'grade'))
+            const examType = stripWL(getVal(exam, 'Type', 'type'))
+            const examCourse = stripWL(getVal(exam, 'Course', 'course'))
+            const daysLeft = getDaysUntil(exam.date)
+            const isPast   = exam.date && new Date(exam.date) < now
+            const isUrgent = !isPast && daysLeft !== null && daysLeft <= 7
+
+            return (
+              <div key={idx} onClick={() => setSelectedId(exam.id)}
+                className={cn('p-5 border cursor-pointer flex flex-col gap-3 hover:border-foreground/40',
+                  isUrgent ? 'border-foreground/40 bg-muted/5' : 'border-border bg-background hover:bg-muted/5')}>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    {examType && <span className={cn('inline-block px-2 py-0.5 text-[7px] font-black uppercase border mb-2', typeColorClass(examType))}>{examType}</span>}
+                    <h3 className="text-[13px] font-black uppercase leading-tight">{cleanTitle(exam.title)}</h3>
+                    {examCourse && <p className="text-[8px] font-black uppercase tracking-widest text-foreground/40 mt-1">{examCourse}</p>}
+                  </div>
+                  {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase border shrink-0', gradeColorClass(grade))}>{grade}</span>}
+                </div>
+                <div className="flex items-center justify-between border-t border-border pt-2">
+                  {exam.date && (
+                    <span className="text-[9px] font-black uppercase text-muted-foreground">
+                      {format(parseISO(exam.date), 'MMM d, yyyy')}
+                    </span>
+                  )}
+                  {!isPast && daysLeft !== null && <CountdownBadge days={daysLeft} />}
+                  {isPast && !grade && <span className="text-[8px] font-black uppercase text-foreground/40">Grade?</span>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
   )
- })}
-  </div>
-   <button onClick={() => {
-   const title = window.prompt('Enter Exam Title', 'New Exam') || 'New Exam'
-   const cleanAsgnTitle = cleanTitle(title)
-   const props = courseFilter !== 'All' ? {Course: wrapWL(courses.find(c => c.id === courseFilter)?.title)} : {}
-   onCreate('exams', cleanAsgnTitle, props)
- }}
-   className="flex items-center gap-1.5 px-3 py-1.5 text-foreground bg-background border border-border text-[8px] font-black uppercase rounded-none hover:border-foreground/70  shrink-0">
-   <Plus size={10} /> Add
-   </button>
-  </div>
-  </div>
-
- {/* Exam lists */}
- <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-10 pb-24">
- {/* Upcoming */}
- <section className="space-y-3">
- <SectionHeader title={`Upcoming — ${upcoming.length}`} />
- {upcoming.length === 0 && <EmptyState message="No upcoming exams." />}
- <div className="grid grid-cols-2 gap-3">
- {upcoming.map((exam, idx) => {
- const edate = getVal(exam, 'date', 'Exam Date')
- const days = edate ? differenceInDays(parseISO(edate), now) : 0
- const examCourse = stripWL(getVal(exam, 'Course', 'course')).toLowerCase()
- const relatedHubs = hubs.filter(h => {
- const hubCourse = stripWL(getVal(h, 'course', 'Course')).toLowerCase()
- return hubCourse === examCourse && hubCourse !== ''
-})
- const doneHubs = relatedHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
- const prepPct = relatedHubs.length > 0 ? Math.round((doneHubs / relatedHubs.length) * 100) : null
-
- return (
- <div key={idx} onClick={() => setSelectedId(exam.id)}
- className={cn('p-5 border border-border rounded-none cursor-pointer bg-background ')}>
- <div className="flex items-start justify-between gap-3 mb-3">
- <div className="flex-1 min-w-0">
- <span className="text-[13px] font-black uppercase block truncate">{cleanTitle(exam.title)}</span>
- <span className="text-[8px] font-black uppercase tracking-widest text-foreground/50">{cleanTitle(examCourse)}</span>
- </div>
- <div className="text-right shrink-0">
- <div className={cn('text-xl font-black')}>{days}</div>
- <div className="text-[7px] font-black uppercase text-foreground/50">days</div>
- </div>
- </div>
- <div className="text-[8px] font-black uppercase tracking-widest text-foreground/40 mb-2">
- {getVal(exam, 'date', 'Exam Date') ? format(parseISO(getVal(exam, 'date', 'Exam Date')), 'EEE, MMM dd') : 'No Date'}
- </div>
- {prepPct !== null && (
- <div className="space-y-1">
- <div className="flex justify-between items-center">
- <span className="text-[7px] font-black uppercase tracking-widest text-foreground/50">Prep</span>
- <span className="text-[7px] font-black text-foreground/50">{doneHubs}/{relatedHubs.length} hubs</span>
- </div>
- <div className="h-1 bg-muted/20 rounded-none overflow-hidden">
- <div className="h-full bg-foreground/70 " style={{width: `${prepPct}%`}} />
- </div>
- </div>
- )}
- </div>
- )
-})}
- </div>
- </section>
-
- {/* Past */}
- {past.length > 0 && (
- <section className="space-y-3 opacity-60">
- <SectionHeader title={`Past — ${past.length}`} />
- <div className="grid grid-cols-2 gap-3">
- {past.map((exam, idx) => {
- const isEditing = editingScore === exam.id
- const score = getVal(exam, 'score', 'Score')
- return (
- <div key={idx} onClick={() => !isEditing && setSelectedId(exam.id)}
- className="p-5 border border-border rounded-none bg-background cursor-pointer ">
- <div className="flex items-start justify-between gap-3">
- <div className="flex-1 min-w-0">
- <span className="text-[13px] font-black uppercase block truncate">{cleanTitle(exam.title)}</span>
- <span className="text-[8px] font-black uppercase tracking-widest text-foreground/40">
- {cleanTitle(stripWL(getVal(exam, 'Course', 'course')))} · {getVal(exam, 'date', 'Exam Date') ? format(parseISO(getVal(exam, 'date', 'Exam Date')), 'MMM dd') : '--'}
- </span>
- </div>
- <div onClick={e => e.stopPropagation()}>
- {score ? (
- <span className="px-2 py-1 bg-foreground/5 border border-border text-[10px] font-black text-foreground">{score}</span>
- ) : isEditing ? (
- <div className="flex items-center gap-1">
- <input autoFocus value={scoreInput} onChange={e => setScoreInput(e.target.value)} placeholder="Score"
- className="w-20 bg-background border border-border px-2 py-1 text-[10px] font-black focus:outline-none"
- onKeyDown={e => {if (e.key === 'Enter') handleAddScore(exam); if (e.key === 'Escape') setEditingScore(null)}} />
- <button onClick={() => handleAddScore(exam)} className="p-1 text-primary"><Check size={11} /></button>
- </div>
- ) : (
- <button onClick={() => {setEditingScore(exam.id); setScoreInput('')}}
- className="px-2 py-1 text-[8px] font-black uppercase tracking-wide text-foreground/50 border border-border  ">
- + Score
- </button>
- )}
- </div>
- </div>
- </div>
- )
-})}
- </div>
- </section>
- )}
- </div>
- </div>
- )
 }

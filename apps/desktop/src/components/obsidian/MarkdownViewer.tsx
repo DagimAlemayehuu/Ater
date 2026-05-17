@@ -456,8 +456,10 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
             </div>
         ),
         thead: ({ children }: any) => <thead className="bg-muted/50 border-b border-border">{children}</thead>,
-        th: ({ children }: any) => <th className="px-4 py-2 font-black uppercase tracking-widest text-[10px] text-muted-foreground text-left">{children}</th>,
-        td: ({ children }: any) => <td className="px-4 py-2 border-b border-border/10 text-foreground/80">{children}</td>,
+        tbody: ({ children }: any) => <tbody className="divide-y divide-border/10">{children}</tbody>,
+        tr: ({ children }: any) => <tr className="hover:bg-muted/5 transition-none">{children}</tr>,
+        th: ({ children }: any) => <th className="px-4 py-3 font-black uppercase tracking-widest text-[10px] text-muted-foreground text-left">{children}</th>,
+        td: ({ children }: any) => <td className="px-4 py-3 text-foreground/80">{children}</td>,
         blockquote: ({ children, node }: any) => {
             let isCallout = false;
             let calloutType = '';

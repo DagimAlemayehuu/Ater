@@ -1,369 +1,245 @@
-import React, {useState, useMemo} from 'react'
-import {Search, SortAsc, BookOpen, PlayCircle, Target, Check, Plus, Trash2} from 'lucide-react'
-import {cn} from '@/lib/utils'
-import {toast} from 'sonner'
-import {stripWL, getVal, statusColorClass, confidenceColorClass, groupBy, wrapWL, cleanTitle} from './utils'
-import {SectionHeader, EmptyState, ProgressRing, EditableTitle} from './SharedComponents'
-import type {TabProps} from './types'
+import React, { useState, useMemo } from 'react'
+import { Check, BookOpen, Plus, Search, Clock, Trash2 } from 'lucide-react'
+import { format } from 'date-fns'
+import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import { stripWL, getVal, getNumVal, wrapWL, cleanTitle, groupBy, statusColorClass } from './utils'
+import { SectionHeader, EmptyState, BigPropertyCard, EditableTitle, StatCard, CreateBanner } from './SharedComponents'
+import type { TabProps } from './types'
 
-type SortKey = 'unit' | 'status' | 'confidence' | 'study_date'
-type StatusFilter = 'All' | 'Not Started' | 'In Progress' | 'Reviewing' | 'Completed'
+const INTERNAL = ['id', 'title', 'path', 'last_synced', 'links']
 
-export default function StudyPlannerTab({data, onUpdate, onCreate, onDelete, onOpenNote, navigateTo}: TabProps) {
- const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
- const [statusFilter, setStatusFilter] = useState<StatusFilter>('All')
- const [sortKey, setSortKey] = useState<SortKey>('unit')
- const [search, setSearch] = useState('')
- const [courseFilter, setCourseFilter] = useState<'Active' | 'All'>('Active')
+// NOTE: folder = "study planner" (2 n's) — matches Rust backend "study planner"
+const DB_ID = 'study planner'
 
- const allCourses = data.courses || []
- const allHubs = data.study_sessions || []
+type GroupMode = 'course' | 'status' | 'none'
 
- const activeSemesters = (data.semesters || []).filter(s => String(stripWL(getVal(s, 'Status', 'status'))).toLowerCase() === 'active').map(s => String(s.title || '').toLowerCase())
+export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo }: TabProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [groupMode,  setGroupMode]  = useState<GroupMode>('course')
+  const [filter,     setFilter]     = useState<'Active' | 'All' | 'Completed'>('Active')
+  const [search,     setSearch]     = useState('')
+  const [adding,     setAdding]     = useState(false)
 
- const courses = useMemo(() => {
-  if (courseFilter === 'All') return allCourses
-  return allCourses.filter(c => {
-   const isCompleted = String(stripWL(getVal(c, 'Status', 'status'))).toLowerCase().includes('complet')
-   const courseSem = String(stripWL(getVal(c, 'Semester', 'semester'))).toLowerCase()
-   const inActiveSemester = activeSemesters.length === 0 || activeSemesters.some(s => courseSem.includes(s))
-   return !isCompleted && inActiveSemester
-  })
- }, [allCourses, courseFilter, activeSemesters])
+  // study_sessions maps to "study planner" folder
+  const allHubs    = data.study_sessions || []
+  const courses    = data.courses        || []
+  const exams      = data.exams          || []
+  const schema     = databases.find(d => d.id === DB_ID)?.schema || {}
 
- // ── Stats per course ──────────────────────────────────────────────────────
- const courseStats = useMemo(() => {
- return courses.reduce((acc, c) => {
- const hubs = allHubs.filter(h => {
- const hubCourse = String(getVal(h, 'course', 'Course')).toLowerCase()
- const targetCourse = String(c.title || '').toLowerCase()
- return hubCourse === targetCourse && hubCourse !== ''
-})
- const done = hubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
- acc[c.id] = {total: hubs.length, done}
- return acc
-}, {} as Record<string, {total: number; done: number}>)
-}, [courses, allHubs])
+  const filtered = useMemo(() => {
+    let items = allHubs
+    if (filter === 'Active')    items = items.filter(h => !stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet'))
+    if (filter === 'Completed') items = items.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet'))
+    if (search.trim()) items = items.filter(h => String(h.title || h.id || '').toLowerCase().includes(search.toLowerCase()))
+    return items
+  }, [allHubs, filter, search])
 
- const totalDone = allHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
+  const groups = useMemo(() => {
+    if (groupMode === 'none') return { All: filtered }
+    if (groupMode === 'course') return groupBy(filtered, h => cleanTitle(stripWL(getVal(h, 'course', 'Course'))) || 'Uncategorized')
+    if (groupMode === 'status') return groupBy(filtered, h => cleanTitle(stripWL(getVal(h, 'status', 'Status'))) || 'No Status')
+    return { All: filtered }
+  }, [filtered, groupMode])
 
- // ── Filtered + sorted hubs ────────────────────────────────────────────────
- const visibleHubs = useMemo(() => {
- const selectedCourse = courses.find(c => c.id === selectedCourseId)
- let hubs = allHubs
+  const totalDone    = allHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
+  const totalStudyMs = allHubs.reduce((acc, h) => acc + (getNumVal(h, 'total_time', 'study_time') || 0), 0)
 
- // Course filter
- if (selectedCourseId && selectedCourse) {
- hubs = hubs.filter(h => {
- const hubCourse = String(getVal(h, 'course', 'Course')).toLowerCase()
- const targetCourse = String(selectedCourse.title || '').toLowerCase()
- return hubCourse === targetCourse && hubCourse !== ''
-})
-}
+  // ─────────────────────────────────────────────────────────────────────────
+  // DETAIL VIEW
+  // ─────────────────────────────────────────────────────────────────────────
+  if (selectedId) {
+    const hub = allHubs.find(h => h.id === selectedId)
+    if (!hub) { setSelectedId(null); return null }
 
- // Status filter
- if (statusFilter !== 'All') {
- hubs = hubs.filter(h => {
-  const s = stripWL(getVal(h, 'status', 'Status')).toLowerCase()
-  if (statusFilter === 'Not Started') return !s || s.includes('not') || s === ''
-  if (statusFilter === 'In Progress') return s.includes('progress')
-  if (statusFilter === 'Reviewing') return s.includes('review')
-  if (statusFilter === 'Completed') return s.includes('complet')
- return true
-})
-}
+    const isDone     = stripWL(getVal(hub, 'status', 'Status')).toLowerCase().includes('complet')
+    const course     = stripWL(getVal(hub, 'course', 'Course'))
+    const studyTime  = getNumVal(hub, 'total_time', 'study_time')
+    const practiceScore = getNumVal(hub, 'practice_score', 'score')
+    const practiceTotal = getNumVal(hub, 'practice_total', 'total_questions')
+    const accuracy   = practiceTotal > 0 ? Math.round((practiceScore / practiceTotal) * 100) : null
 
- // Search
- if (search.trim()) {
- hubs = hubs.filter(h =>
- String(h.title || h.id || '').toLowerCase().includes(search.toLowerCase())
- )
-}
+    const linkedExam = stripWL(getVal(hub, 'exam', 'Exam', 'linked_exam'))
+    const examItem   = exams.find(e => cleanTitle(e.title).toLowerCase() === linkedExam.toLowerCase())
 
- // Sort
- return [...hubs].sort((a, b) => {
- if (sortKey === 'unit') return (parseInt(getVal(a, 'unit', 'Unit')) || 99) - (parseInt(getVal(b, 'unit', 'Unit')) || 99)
- if (sortKey === 'status') return getVal(a, 'status', 'Status').localeCompare(getVal(b, 'status', 'Status'))
- if (sortKey === 'confidence') return getVal(b, 'confidence', 'Confidence').localeCompare(getVal(a, 'confidence', 'Confidence'))
- if (sortKey === 'study_date') {
- const da = getVal(a, 'study date', 'study_date') || '9999'
- const db = getVal(b, 'study date', 'study_date') || '9999'
- return da.localeCompare(db)
-}
- return 0
-})
-}, [allHubs, courses, selectedCourseId, statusFilter, sortKey, search])
+    const extraKeys = Object.keys({ ...schema, ...hub }).filter(k =>
+      !INTERNAL.includes(k) && !['status', 'Status', 'course', 'Course', 'exam', 'Exam', 'total_time', 'study_time', 'practice_score', 'practice_total'].includes(k))
 
- // ── Grouping ──────────────────────────────────────────────────────────────
- // When a course is selected: group by unit
- // When "All" is selected: group by course
- const sections: {title: string; hubs: any[]}[] = useMemo(() => {
- if (selectedCourseId) {
- const grouped = groupBy(visibleHubs, h => {
- const u = getVal(h, 'unit', 'Unit')
- return u ? `Unit ${u}` : 'General'
-})
- const keys = Object.keys(grouped).sort((a, b) => {
- const na = parseInt(a.replace('Unit ', '')) || 99
- const nb = parseInt(b.replace('Unit ', '')) || 99
- return na - nb
-})
- return keys.map(k => ({title: k, hubs: grouped[k]}))
-} else {
- // Group by course
- const withCourse = courses.map(course => {
- const hubs = visibleHubs.filter(h => {
- const hubCourse = getVal(h, 'course', 'Course').toLowerCase()
- const targetCourse = (course.title || '').toLowerCase()
- return hubCourse === targetCourse && hubCourse !== ''
-})
- return {title: course.title, hubs}
-}).filter(s => s.hubs.length > 0)
+    return (
+      <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
+        <div className="flex items-start justify-between">
+          <div>
+            <button onClick={() => setSelectedId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-2">← Study Planner</button>
+            <EditableTitle value={cleanTitle(hub.title || hub.id)} className="text-2xl font-black uppercase tracking-tight"
+              onSave={v => onUpdate(DB_ID, hub.id, { title: v })} />
+            <div className="flex items-center gap-3 mt-1">
+              {course && <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">{course}</span>}
+              {linkedExam && <span className="text-[9px] font-black uppercase text-foreground/40">→ {linkedExam}</span>}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {!isDone && (
+              <button onClick={() => onUpdate(DB_ID, hub.id, { status: wrapWL('Completed') })}
+                className="px-3 py-2 border border-foreground text-foreground bg-background text-[8px] font-black uppercase hover:bg-muted/5">
+                Mark Complete
+              </button>
+            )}
+            <button onClick={() => onOpenNote(hub.path || `database/study planner/${hub.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10"><BookOpen size={14} /></button>
+            <button onClick={() => { onDelete(DB_ID, selectedId); setSelectedId(null) }} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 size={14} /></button>
+          </div>
+        </div>
 
- // Hubs with no linked course
- const linked = new Set(withCourse.flatMap(s => s.hubs.map((h: any) => h.id)))
- const unclaimed = visibleHubs.filter(h => !linked.has(h.id))
- if (unclaimed.length > 0) withCourse.push({title: 'Uncategorized', hubs: unclaimed})
+        <div className="grid grid-cols-4 gap-4">
+          <BigPropertyCard label="Status" value={getVal(hub, 'status', 'Status') || 'Active'}
+            schema={{ type: 'select' }} onUpdate={v => onUpdate(DB_ID, hub.id, { status: v })} />
+          <BigPropertyCard label="Course" value={getVal(hub, 'course', 'Course')}
+            schema={{ type: 'select', source: 'courses' }} onUpdate={v => onUpdate(DB_ID, hub.id, { course: v })} />
+          <StatCard label="Study Time" value={studyTime > 0 ? `${Math.round(studyTime / 60)}m` : '--'} />
+          <StatCard label="Practice Accuracy" value={accuracy !== null ? `${accuracy}%` : '--'} />
+        </div>
 
- return withCourse
-}
-}, [visibleHubs, selectedCourseId, courses])
+        {linkedExam && examItem && (
+          <div className="p-4 border border-border bg-muted/5 flex items-center justify-between">
+            <div>
+              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Linked Exam</span>
+              <p className="text-[13px] font-black uppercase mt-0.5">{cleanTitle(examItem.title)}</p>
+            </div>
+            <button onClick={() => navigateTo('EXAMS', examItem.id)}
+              className="text-[8px] font-black uppercase text-muted-foreground hover:text-foreground">View →</button>
+          </div>
+        )}
 
- const handleSetStatus = async (hub: any, status: string) => {
- try {
- await onUpdate('study planer', hub.id, {status: wrapWL(status)})
-} catch {toast.error('Update failed')}
-}
+        {extraKeys.length > 0 && (
+          <div className="grid grid-cols-4 gap-4">
+            {extraKeys.map(key => (
+              <BigPropertyCard key={key} label={key} value={hub[key]} schema={schema[key]}
+                onUpdate={v => onUpdate(DB_ID, hub.id, { [key]: v })} />
+            ))}
+          </div>
+        )}
 
- const handleSetStudyDate = async (hub: any, date: string) => {
- try {
- await onUpdate('study planer', hub.id, {'study date': date})
- toast.success('Study date set')
-} catch {toast.error('Update failed')}
-}
+        <div className="flex gap-3">
+          <button onClick={() => navigateTo('PRACTICE', hub.id)}
+            className="flex-1 px-4 py-3 border border-border text-[10px] font-black uppercase tracking-widest text-foreground hover:border-foreground/50 hover:bg-muted/5">
+            Practice This Hub →
+          </button>
+          <button onClick={() => navigateTo('CALENDAR')}
+            className="flex-1 px-4 py-3 border border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:border-foreground/30">
+            View in Calendar
+          </button>
+        </div>
+      </div>
+    )
+  }
 
- const selectedCourse = courses.find(c => c.id === selectedCourseId)
+  // ─────────────────────────────────────────────────────────────────────────
+  // LIST VIEW
+  // ─────────────────────────────────────────────────────────────────────────
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Filter & controls */}
+      <div className="px-6 py-3 border-b border-border flex items-center gap-3 shrink-0 flex-wrap">
+        <div className="flex items-center gap-1 bg-muted/5 border border-border p-1">
+          {(['Active', 'All', 'Completed'] as const).map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest',
+                filter === f ? 'bg-muted/20 text-foreground border border-border' : 'text-muted-foreground hover:bg-muted/5')}>
+              {f}
+            </button>
+          ))}
+        </div>
 
- return (
- <div className="h-full flex overflow-hidden">
- {/* ── Left Course Sidebar ── */}
- <aside className="w-56 shrink-0 border-r border-border flex flex-col overflow-hidden">
-  <div className="p-4 border-b border-border flex flex-col gap-3">
-   <div className="flex items-center justify-between">
-    <p className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/50 flex items-center gap-1.5"><Target size={10} />Courses</p>
-   </div>
-   <div className="flex bg-muted/5 p-1 rounded-none border border-border w-full">
-    <button onClick={() => setCourseFilter('Active')} className={cn("flex-1 px-2 py-1 text-[8px] font-black uppercase tracking-widest rounded-none ", courseFilter === 'Active' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>Active</button>
-    <button onClick={() => setCourseFilter('All')} className={cn("flex-1 px-2 py-1 text-[8px] font-black uppercase tracking-widest rounded-none ", courseFilter === 'All' ? "bg-muted/20 text-foreground border border-border" : "text-foreground/50  hover:bg-muted/5")}>All</button>
-   </div>
-  </div>
- <div className="flex-1 overflow-y-auto custom-scrollbar">
- {/* All Hubs option */}
- <button
- onClick={() => setSelectedCourseId(null)}
- className={cn(
- 'w-full flex items-center justify-between px-4 py-3 text-left border-b border-border ',
- !selectedCourseId ? 'bg-foreground/5 text-foreground' : 'text-foreground/50'
- )}>
- <div className="min-w-0">
- <p className="text-[11px] font-black uppercase">All Hubs</p>
- <p className="text-[8px] font-black text-foreground/40">{totalDone}/{allHubs.length} done</p>
- </div>
- <ProgressRing done={totalDone} total={allHubs.length} size={28} />
- </button>
+        {/* Group mode */}
+        <div className="flex items-center gap-1 bg-muted/5 border border-border p-1">
+          {(['course', 'status', 'none'] as GroupMode[]).map(g => (
+            <button key={g} onClick={() => setGroupMode(g)}
+              className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest',
+                groupMode === g ? 'bg-muted/20 text-foreground border border-border' : 'text-muted-foreground hover:bg-muted/5')}>
+              {g === 'none' ? 'Flat' : `By ${g}`}
+            </button>
+          ))}
+        </div>
 
- {courses.map((course, idx) => {
- const stats = courseStats[course.id] || {total: 0, done: 0}
- return (
- <button key={idx} onClick={() => setSelectedCourseId(course.id)}
- className={cn(
- 'w-full flex items-center justify-between px-4 py-3 text-left border-b border-border ',
- selectedCourseId === course.id ? 'bg-foreground/5 text-foreground' : 'text-foreground/50'
- )}>
- <div className="min-w-0 pr-2">
- <p className="text-[10px] font-black uppercase truncate">{cleanTitle(course.title)}</p>
- <p className="text-[8px] font-black text-foreground/40">{stats.done}/{stats.total} done</p>
- </div>
- <ProgressRing done={stats.done} total={stats.total} size={28} />
- </button>
- )
-})}
- </div>
- <div className="p-3 border-t border-border">
- <button
- onClick={() => {
- const title = window.prompt('Enter Hub Title', 'New Hub') || 'New Hub'
- const cleanHubTitle = cleanTitle(title)
- onCreate('study planer', cleanHubTitle, selectedCourseId && selectedCourse ? {course: wrapWL(selectedCourse.title)} : {})
-}}
- className="w-full py-2 bg-foreground/5 text-[8px] font-black uppercase tracking-widest rounded-none ">
- + Add Hub
- </button>
- </div>
- </aside>
+        <div className="flex items-center gap-2 flex-1 bg-muted/5 border border-border px-3 py-2">
+          <Search size={11} className="text-muted-foreground" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search hubs..."
+            className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none" />
+        </div>
+        <button onClick={() => setAdding(true)}
+          className="flex items-center gap-1.5 px-3 py-2 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50">
+          <Plus size={10} /> Add
+        </button>
+      </div>
 
- {/* ── Main Content ── */}
- <div className="flex-1 flex flex-col overflow-hidden">
- {/* Controls bar */}
- <div className="px-6 py-3 border-b border-border flex items-center gap-3 flex-wrap shrink-0">
- <div className="flex items-center gap-2 flex-1 min-w-[140px]">
- <Search size={12} className="text-foreground/40 shrink-0" />
- <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search hubs..."
- className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none placeholder:text-foreground/30" />
- </div>
- <div className="flex items-center gap-1 bg-muted/5 p-0.5 rounded-none flex-wrap">
- {(['All', 'Not Started', 'In Progress', 'Reviewing', 'Completed'] as StatusFilter[]).map(s => (
- <button key={s} onClick={() => setStatusFilter(s)}
- className={cn('px-2 py-1 text-[7px] font-black uppercase tracking-wide  whitespace-nowrap',
- statusFilter === s ? 'bg-background text-foreground shadow-sm' : 'text-foreground/40'
- )}>{s}</button>
- ))}
- </div>
- <div className="flex items-center gap-1.5">
- <SortAsc size={11} className="text-foreground/50" />
- <select value={sortKey} onChange={e => setSortKey(e.target.value as SortKey)}
- className="bg-transparent text-[9px] font-black uppercase text-foreground/60 focus:outline-none cursor-pointer">
- <option value="unit">Unit</option>
- <option value="status">Status</option>
- <option value="confidence">Confidence</option>
- <option value="study_date">Study Date</option>
- </select>
- </div>
- </div>
+      {adding && (
+        <div className="px-6 pt-3 shrink-0">
+          <CreateBanner label="Hub" placeholder="e.g. Chapter 3 - Derivatives"
+            onConfirm={name => {
+              onCreate(DB_ID, name, { status: wrapWL('Active') })
+              setAdding(false)
+            }}
+            onCancel={() => setAdding(false)} />
+        </div>
+      )}
 
- {/* Stats strip for selected course */}
- {selectedCourse && (
- <div className="px-6 py-2.5 border-b border-border flex items-center gap-5 shrink-0 bg-muted/[0.03]">
- <span className="text-[12px] font-black uppercase">{cleanTitle(selectedCourse.title)}</span>
- <div className="flex items-center gap-4 text-[8px] font-black uppercase tracking-widest text-foreground/50">
- <span>{visibleHubs.length} hubs</span>
- <span className="text-foreground">{visibleHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length} done</span>
- <span className="text-foreground/50">{visibleHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('progress')).length} in progress</span>
- </div>
- </div>
- )}
+      {/* Stats */}
+      <div className="px-6 py-2 border-b border-border flex items-center gap-5 text-[8px] font-black uppercase tracking-widest text-muted-foreground shrink-0">
+        <span>{allHubs.length} hubs</span>
+        <span>{totalDone} done</span>
+        <span className="flex items-center gap-1"><Clock size={9} />{totalStudyMs > 0 ? `${Math.round(totalStudyMs / 3600)}h total` : '--'}</span>
+        <span className="ml-auto">{allHubs.length > 0 ? Math.round((totalDone / allHubs.length) * 100) : 0}% complete</span>
+      </div>
 
- {/* Hub content */}
- <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
- {visibleHubs.length === 0 && (
- <EmptyState
-  message={allHubs.length === 0 ? "No study hubs yet. Process course materials to generate them." : "No hubs match your filter."}
- icon={<Target size={24} />}
- />
- )}
+      {/* Groups */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-24 space-y-8">
+        {Object.entries(groups).map(([groupName, items]) => (
+          <section key={groupName} className="space-y-3">
+            {groupMode !== 'none' && <SectionHeader title={groupName} count={items.length} />}
+            {items.length === 0 && <EmptyState message="No hubs." />}
+            <div className="grid grid-cols-3 gap-4">
+              {items.map((hub, idx) => {
+                const isDone   = stripWL(getVal(hub, 'status', 'Status')).toLowerCase().includes('complet')
+                const course   = stripWL(getVal(hub, 'course', 'Course'))
+                const time     = getNumVal(hub, 'total_time', 'study_time')
+                const score    = getNumVal(hub, 'practice_score', 'score')
+                const total    = getNumVal(hub, 'practice_total', 'total_questions')
+                const accuracy = total > 0 ? Math.round((score / total) * 100) : null
 
- {sections.map((section, si) => (
- <section key={si} className="space-y-3">
- <div className="flex items-center gap-3">
- <span className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/50 shrink-0">{section.title}</span>
- <div className="h-px flex-1 bg-border" />
- <span className="text-[8px] font-black text-foreground/50">{section.hubs.length}</span>
- </div>
- <div className="grid grid-cols-3 gap-3">
- {section.hubs.map((hub, idx) => (
- <HubCard key={idx} hub={hub}
- onOpen={() => onOpenNote(hub.path || `database/study planner/${hub.id}.md`)}
- onPractice={() => navigateTo('PRACTICE', hub.id)}
- onSetStatus={handleSetStatus}
- onSetStudyDate={handleSetStudyDate}
- onDelete={() => onDelete('study planer', hub.id)}
- onUpdate={onUpdate}
- />
- ))}
- </div>
- </section>
- ))}
- </div>
- </div>
- </div>
- )
-}
-
-// ─── Hub Card ─────────────────────────────────────────────────────────────────
-function HubCard({hub, onOpen, onPractice, onSetStatus, onSetStudyDate, onDelete, onUpdate}: {
- hub: any
- onOpen: () => void
- onPractice: () => void
- onSetStatus: (hub: any, status: string) => void
- onSetStudyDate: (hub: any, date: string) => void
- onDelete: () => void
- onUpdate: (folder: string, id: string, props: any) => void
-}) {
- const [showStatusMenu, setShowStatusMenu] = useState(false)
- const status = stripWL(getVal(hub, 'status', 'Status'))
- const confidence = stripWL(getVal(hub, 'confidence', 'Confidence'))
- const studyDate = getVal(hub, 'study date', 'study_date')
- const isCompleted = status.toLowerCase().includes('complet')
- const displayTitle = cleanTitle(hub.title || hub.id || '').replace(/_Hub$/i, '').replace(/Hub$/i, '').trim()
-
- return (
- <div className={cn(
- 'relative p-4 border rounded-none flex flex-col gap-3  group/hub',
- isCompleted ? 'border-border bg-muted/5 opacity-60' : 'border-border bg-background hover:bg-muted/5'
- )}>
- {/* Header */}
- <div className="flex items-start gap-2">
- <EditableTitle
- value={displayTitle}
- className={cn('text-[11px] font-black uppercase leading-tight flex-1', isCompleted ? 'text-muted-foreground line-through' : 'text-foreground')}
- onSave={(next) => onUpdate('study planer', hub.id, {title: next})}
- />
- <div className="flex items-center gap-1">
- {isCompleted && <Check size={12} className="text-foreground/40 shrink-0" />}
- <button onClick={(e) => {e.stopPropagation(); onDelete()}}
- className="p-1.5 text-muted-foreground/0 group-hover/hub:text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-none ">
- <Trash2 size={11} />
- </button>
- </div>
- </div>
-
- {/* Badges */}
- <div className="flex items-center gap-1.5 flex-wrap">
- <div className="relative">
- <button
- onClick={() => setShowStatusMenu(!showStatusMenu)}
- className={cn('px-2 py-0.5 text-[7px] font-black uppercase tracking-widest border ',
- statusColorClass(status) || 'text-foreground/40 bg-muted/10 border-border')}>
- {status || 'Not Started'}
- </button>
- {showStatusMenu && (
- <div className="absolute top-full left-0 mt-1 bg-background border border-border rounded-none shadow-xl z-20 p-1 min-w-[150px]">
- {['Planned', 'In Progress', 'Completed'].map(s => (
- <button key={s} onClick={(e) => {e.stopPropagation(); onUpdate('study planer', hub.id, {Status: wrapWL(s)}); setShowStatusMenu(false)}}
- className={cn('w-full text-left px-3 py-1.5 text-[8px] font-black uppercase hover:bg-muted/10 ', statusColorClass(s))}>
- {s}
- </button>
- ))}
- </div>
- )}
- </div>
- {confidence && (
- <span className={cn('text-[7px] font-black uppercase tracking-wide', confidenceColorClass(confidence))}>
- {confidence}
- </span>
- )}
- </div>
-
- {/* Study date */}
- <div className="flex items-center gap-2">
- <span className="text-[7px] font-black uppercase tracking-widest text-foreground/50 shrink-0">Study Date</span>
- <input
- type="date"
- value={studyDate || ''}
- onChange={e => onSetStudyDate(hub, e.target.value)}
- className="flex-1 bg-transparent text-[9px] font-black text-foreground/40 focus:text-foreground focus:outline-none border-b border-transparent focus:border-primary  cursor-pointer min-w-0"
- />
- </div>
-
- {/* Actions */}
- <div className="flex gap-2 pt-1 border-t border-border">
- <button onClick={onOpen} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[8px] font-black uppercase text-foreground/50  hover:bg-muted/10 rounded-none ">
- <BookOpen size={10} />Open
- </button>
- <button onClick={onPractice} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[8px] font-black uppercase text-primary/70  hover:bg-primary/5 rounded-none  border border-primary/10">
- <PlayCircle size={10} />Practice
- </button>
- </div>
- </div>
- )
+                return (
+                  <div key={idx} onClick={() => setSelectedId(hub.id)}
+                    className={cn('p-5 border cursor-pointer flex flex-col gap-3 hover:border-foreground/40',
+                      isDone ? 'border-border/20 bg-muted/3 opacity-60' : 'border-border bg-background hover:bg-muted/5')}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className={cn('w-3 h-3 border shrink-0 mt-0.5 flex items-center justify-center',
+                        isDone ? 'bg-foreground border-foreground' : 'border-border')}>
+                        {isDone && <Check size={8} strokeWidth={4} className="text-background" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className={cn('text-[12px] font-black uppercase truncate leading-tight',
+                          isDone ? 'line-through text-muted-foreground' : 'text-foreground')}>
+                          {cleanTitle(hub.title || hub.id)}
+                        </h3>
+                        {course && <p className="text-[8px] font-black uppercase tracking-widest text-foreground/40 mt-0.5">{course}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 text-[8px] font-black uppercase tracking-widest border-t border-border/40 pt-2">
+                      {time > 0 && <span className="text-muted-foreground flex items-center gap-1"><Clock size={8} />{Math.round(time / 60)}m</span>}
+                      {accuracy !== null && <span className="text-muted-foreground">{accuracy}%</span>}
+                      {!isDone && (
+                        <button onClick={e => { e.stopPropagation(); onUpdate(DB_ID, hub.id, { status: wrapWL('Completed') }) }}
+                          className="ml-auto text-muted-foreground/50 hover:text-foreground">
+                          <Check size={11} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        ))}
+        {Object.values(groups).every(g => g.length === 0) && !adding && <EmptyState message="No hubs. Create one to start organizing your studies." />}
+      </div>
+    </div>
+  )
 }
