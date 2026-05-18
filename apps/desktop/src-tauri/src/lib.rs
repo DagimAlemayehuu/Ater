@@ -111,6 +111,7 @@ pub fn run() {
                 port = 8765;
             }
 
+            #[allow(unused_mut)]
             let mut spawned_successfully = false;
 
             #[cfg(debug_assertions)]
