@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
 import { useConfig } from '@/lib/ConfigContext';
 import { useTheme } from '@/context/theme-provider';
 import { ExplainSidebar } from './ExplainSidebar';
+import { invoke } from '@tauri-apps/api/core';
 
 interface PdfViewerProps {
     path: string;
@@ -33,6 +34,20 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     const { config } = useConfig();
     const { theme } = useTheme();
     const [page, setPage] = useState(initialPage);
+    const [sidecarPort, setSidecarPort] = useState<number>(8765);
+
+    useEffect(() => {
+        const fetchPort = async () => {
+            try {
+                const activePort = await invoke<number>('get_sidecar_port');
+                setSidecarPort(activePort);
+                console.info(`[PdfViewer] Dynamically resolved sidecar port: ${activePort}`);
+            } catch (e) {
+                console.error("[PdfViewer] Failed to get dynamic sidecar port from Tauri, falling back to 8765:", e);
+            }
+        };
+        fetchPort();
+    }, []);
     
     // Sync internal page state when initialPage prop changes (Render-time sync pattern)
     const prevInitialPage = useRef(initialPage);
@@ -132,7 +147,8 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
         const fetchMetadata = async () => {
             try {
                 const vaultPath = config?.obsidianVaultPath || '';
-                const url = `http://127.0.0.1:8765/api/obsidian/pdf-metadata/${encodeURI(path)}?vault_path=${encodeURIComponent(vaultPath)}`;
+                const normalizedPath = path.replace(/\\/g, '/');
+                const url = `http://127.0.0.1:${sidecarPort}/api/obsidian/pdf-metadata/${encodeURI(normalizedPath)}?vault_path=${encodeURIComponent(vaultPath)}`;
                 const res = await fetch(url);
                 const data = await res.json();
                 if (data.page_count) {
@@ -141,7 +157,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
             } catch (e) { console.error("PDF metadata fetch failed", e); }
         };
         fetchMetadata();
-    }, [path, config?.obsidianVaultPath]);
+    }, [path, config?.obsidianVaultPath, sidecarPort]);
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -184,8 +200,9 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     const pdfUrl = useMemo(() => {
         const vaultPath = config?.obsidianVaultPath || '';
         const filterStr = filterPages && filterPages.length > 0 ? `&filter_pages=${filterPages.join(',')}` : '';
-        return `http://127.0.0.1:8765/api/obsidian/viewer/${encodeURI(path)}?vault_path=${encodeURIComponent(vaultPath)}&page=${initialPage}${filterStr}&theme=${resolvedTheme}`;
-    }, [path, resolvedTheme, filterPages, config?.obsidianVaultPath]);
+        const normalizedPath = path.replace(/\\/g, '/');
+        return `http://127.0.0.1:${sidecarPort}/api/obsidian/viewer/${encodeURI(normalizedPath)}?vault_path=${encodeURIComponent(vaultPath)}&page=${initialPage}${filterStr}&theme=${resolvedTheme}`;
+    }, [path, resolvedTheme, filterPages, config?.obsidianVaultPath, sidecarPort]);
 
     const handleAskAI = () => {
         // Use the page title and page number as context since we can't get iframe selection

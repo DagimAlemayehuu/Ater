@@ -16,16 +16,16 @@ def get_note_data(file_path: Path, vault_root: Path) -> Dict[str, Any]:
         data["id"] = file_path.stem
         data["title"] = data.get("title") or file_path.stem
         try:
-            data["path"] = str(file_path.relative_to(vault_root))
+            data["path"] = file_path.relative_to(vault_root).as_posix()
         except ValueError:
-            data["path"] = str(file_path)
+            data["path"] = file_path.as_posix()
         return data
     except Exception:
         path_str = ""
         try:
-            path_str = str(file_path.relative_to(vault_root))
+            path_str = file_path.relative_to(vault_root).as_posix()
         except ValueError:
-            path_str = str(file_path)
+            path_str = file_path.as_posix()
         return {"id": file_path.stem, "title": file_path.stem, "path": path_str}
 
 @router.get("/academics/dashboard")

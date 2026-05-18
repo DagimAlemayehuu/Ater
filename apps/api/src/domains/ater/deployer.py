@@ -112,7 +112,7 @@ class AterDeployer:
             self.vm.write_note(target_path, full_content)
             
             try:
-                display_path = str(target_path.relative_to(self.vm.vault_path))
+                display_path = target_path.relative_to(self.vm.vault_path).as_posix()
             except Exception:
                 display_path = str(target_path)
                 
@@ -155,7 +155,7 @@ class AterDeployer:
         self.vm.write_note(target_path, full_content)
         
         try:
-            display_path = str(target_path.relative_to(self.vm.vault_path))
+            display_path = target_path.relative_to(self.vm.vault_path).as_posix()
         except Exception:
             display_path = str(target_path)
             
@@ -359,7 +359,7 @@ class AterDeployer:
             self.vm.write_note(target_path, full_content)
 
             try:
-                display_path = str(target_path.relative_to(self.vm.vault_path))
+                display_path = target_path.relative_to(self.vm.vault_path).as_posix()
             except Exception:
                 display_path = str(target_path)
 

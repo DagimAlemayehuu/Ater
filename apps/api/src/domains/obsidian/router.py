@@ -190,7 +190,7 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                     if md_count > 0:
                         schema[sub.name] = {
                             "type": "select",
-                            "source": str(sub.relative_to(vault_root))
+                            "source": sub.relative_to(vault_root).as_posix()
                         }
 
             # Pre-seed schema for Study Planner to guarantee Ater properties always exist
@@ -706,7 +706,7 @@ async def find_vault_page(page_name: str, secrets: AppSecrets = Depends(get_app_
         return {
             "found": True,
             "type": "note" if direct_path.suffix == ".md" else "pdf",
-            "path": str(direct_path.relative_to(vault_root))
+            "path": direct_path.relative_to(vault_root).as_posix()
         }
 
     def find_case_insensitive(root: Path, pattern: str, recursive: bool = True):
@@ -733,7 +733,7 @@ async def find_vault_page(page_name: str, secrets: AppSecrets = Depends(get_app_
             # Try exact
             found = find_case_insensitive(pdf_store, target_pdf_name)
             if found:
-                return {"found": True, "type": "note", "path": str(found.relative_to(vault_root))}
+                return {"found": True, "type": "note", "path": found.relative_to(vault_root).as_posix()}
 
     # 2. Search in 3-Database (prioritize database views)
     return {"found": False}
@@ -753,7 +753,7 @@ async def search_vault_full(query: str, secrets: AppSecrets = Depends(get_app_se
         if any(p in item.parts for p in ['.trash', 'node_modules', '.git', '.obsidian']):
             continue
         
-        rel_path = str(item.relative_to(vault_root))
+        rel_path = item.relative_to(vault_root).as_posix()
         if query_low in rel_path.lower():
             results.append(rel_path)
             continue
@@ -785,19 +785,19 @@ async def search_vault_full(query: str, secrets: AppSecrets = Depends(get_app_se
     target_md = f"{page_name}.md" if not page_name.lower().endswith('.md') else page_name
     found = find_case_insensitive(vault_root, target_md)
     if found:
-        return {"found": True, "type": "note", "path": str(found.relative_to(vault_root))}
+        return {"found": True, "type": "note", "path": found.relative_to(vault_root).as_posix()}
 
     # Search for .pdf if not found yet
     if not page_name.lower().endswith('.pdf'):
         target_pdf = f"{page_name}.pdf"
         found = find_case_insensitive(vault_root, target_pdf)
         if found:
-            return {"found": True, "type": "note", "path": str(found.relative_to(vault_root))}
+            return {"found": True, "type": "note", "path": found.relative_to(vault_root).as_posix()}
 
     # Finally try exact name (whatever it is) case-insensitive
     found = find_case_insensitive(vault_root, page_name)
     if found:
-        return {"found": True, "type": "note", "path": str(found.relative_to(vault_root))}
+        return {"found": True, "type": "note", "path": found.relative_to(vault_root).as_posix()}
                 
     return {"found": False}
 
@@ -938,7 +938,7 @@ async def get_vault_graph(secrets: AppSecrets = Depends(get_app_secrets)):
     for f in all_files:
         if '.trash' in f.parts or 'node_modules' in f.parts:
             continue
-        rel_path = str(f.relative_to(vault_root))
+        rel_path = f.relative_to(vault_root).as_posix()
         path_map[f.stem] = rel_path
         
         # Determine group from root-level folder 
@@ -955,7 +955,7 @@ async def get_vault_graph(secrets: AppSecrets = Depends(get_app_secrets)):
     for f in all_files:
         if '.trash' in f.parts or 'node_modules' in f.parts:
             continue
-        rel_path = str(f.relative_to(vault_root))
+        rel_path = f.relative_to(vault_root).as_posix()
         try:
             content = f.read_text(encoding="utf-8")
         except Exception:
@@ -1029,7 +1029,7 @@ async def get_vault_backlinks(page_name: str, secrets: AppSecrets = Depends(get_
             content = md_file.read_text(encoding="utf-8")
             if pattern.search(content):
                 # Calculate relative path
-                rel_path = str(md_file.relative_to(vault_root))
+                rel_path = md_file.relative_to(vault_root).as_posix()
                 # Check if it is a database file to give better UI info
                 is_db = DB_DIR_PREFIX in rel_path
                 backlinks.append({
@@ -1053,7 +1053,8 @@ async def get_pdf_metadata(
     if not effective_vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
         
-    full_path = Path(effective_vault_path) / unquote(path)
+    decoded_path = unquote(path).replace("\\", "/")
+    full_path = Path(effective_vault_path) / decoded_path
     if not full_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -1081,7 +1082,8 @@ async def get_pdf_viewer(
     """Returns an HTML wrapper for the PDF that handles selection and scrolling locks using PDF.js."""
     effective_vault_path = secrets.vault_path or vault_path
     auth_query = f"?vault_path={quote(effective_vault_path)}" if effective_vault_path else ""
-    pdf_src = f"/api/obsidian/serve/{path}{auth_query}"
+    normalized_path = path.replace("\\", "/")
+    pdf_src = f"/api/obsidian/serve/{normalized_path}{auth_query}"
     
     # Process filter pages
     filter_list_json = "null"
@@ -1388,7 +1390,7 @@ async def serve_obsidian_file(
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing and no vault_path query param")
     
     # Unquote to handle encoded spaces/chars from frontend
-    decoded_path = unquote(path)
+    decoded_path = unquote(path).replace("\\", "/")
     full_path = Path(effective_vault_path) / decoded_path
     
     if not full_path.exists():

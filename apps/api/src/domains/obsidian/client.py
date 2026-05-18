@@ -37,7 +37,7 @@ class ObsidianClient:
                     continue
 
                 try:
-                    rel_path = str(entry.relative_to(abs_vault))
+                    rel_path = entry.relative_to(abs_vault).as_posix()
                     
                     if entry.is_dir():
                         items.append({

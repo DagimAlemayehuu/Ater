@@ -544,7 +544,7 @@ class ReferenceVaultPipeline:
         _status("Done.")
         return {
             "path": str(file_path.absolute()),
-            "relative_path": str(file_path.relative_to(self.vault_path)),
+            "relative_path": file_path.relative_to(self.vault_path).as_posix(),
             "total": len(solved),
             "questions": solved,
         }

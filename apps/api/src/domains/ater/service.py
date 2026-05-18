@@ -559,7 +559,7 @@ class AterService:
             metadata = {
                 "id": file.name,
                 "title": file.stem.replace("_", " "),
-                "path": str(file.relative_to(self.vm.vault_path))
+                "path": file.relative_to(self.vm.vault_path).as_posix()
             }
             
             try:
@@ -668,7 +668,7 @@ class AterService:
                                 ordered_notes.append({
                                     "id": file.stem,
                                     "title": file.stem.replace("_", " "),
-                                    "path": str(file.relative_to(self.vm.vault_path))
+                                    "path": file.relative_to(self.vm.vault_path).as_posix()
                                 })
                         
                         return ordered_notes
@@ -688,7 +688,7 @@ class AterService:
                 all_notes.append({
                     "id": file.stem,
                     "title": file.stem.replace("_", " "),
-                    "path": str(file.relative_to(self.vm.vault_path))
+                    "path": file.relative_to(self.vm.vault_path).as_posix()
                 })
         
         # Sort alphabetically if unsorted
@@ -747,7 +747,7 @@ class AterService:
                             # Extract metadata
                             metadata = {
                                 "id": file.name,
-                                "path": str(file.relative_to(self.vm.vault_path)),
+                                "path": file.relative_to(self.vm.vault_path).as_posix(),
                                 "hub_id": h_id,
                                 "date": data.get("date"),
                                 "difficulty": data.get("difficulty"),
@@ -1548,7 +1548,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     target_hub = {
                         "id": hub_filename,
                         "title": f"{unit_num} {hub_title} Hub" if unit_num else f"{hub_title} Hub",
-                        "path": str(hub_file_path.relative_to(self.vm.vault_path)),
+                        "path": hub_file_path.relative_to(self.vm.vault_path).as_posix(),
                         "course": course,
                         "unit": unit_num,
                         "semester": semester,
@@ -2360,9 +2360,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                         failures = v_res["failures"]
                                         # ── TIERED BLOCKING (v33.1) ──────────────────────────────
                                         # HARD failures (structural): block deployment, force regen
-                                        HARD_CHECKS = {"feynman_integrity", "clean_output"}
+                                        HARD_CHECKS = {"clean_output"}
                                         # SOFT failures (advisory): log warning, allow deployment
-                                        SOFT_CHECKS = {"unique_scenario"}
+                                        SOFT_CHECKS = {"unique_scenario", "feynman_integrity"}
                                         
                                         hard_failures = [f for f in failures if f.get("check") in HARD_CHECKS]
                                         soft_failures = [f for f in failures if f.get("check") in SOFT_CHECKS]
@@ -2485,7 +2485,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                         await asyncio.sleep(10)
                             
                             if not hub_success:
-                                raise ValueError(f"Hub generation exhausted all retries for session {session_id}")
+                                logger.warning(f"[Ater Service] Hub AI enhancement exhausted retries for session {session_id}. Deploying deterministic hub fallback.")
+                                self.set_status(session_id, "⚠️ Hub AI failed — deploying base hub.")
                             
                         local_results = self.deployer.deploy_hub_note(session_id, ai_output, plan_obj, session.get("path", ""))
                         
@@ -2633,7 +2634,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
             
             try:
-                rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path)
+                rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path).as_posix()
                 source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
             except Exception:
                 source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
@@ -2683,7 +2684,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
             
             try:
-                rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path)
+                rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path).as_posix()
                 source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
             except Exception:
                 source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"

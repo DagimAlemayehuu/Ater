@@ -54,3 +54,7 @@ codegen-units = 1
 panic = "abort"
 opt-level = "s" # Optimize for size
 
+[patch.crates-io]
+esaxx-rs = { path = "./esaxx-rs" }
+
+
