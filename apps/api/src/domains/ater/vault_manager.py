@@ -403,7 +403,7 @@ class VaultManager:
         final_lines = []
         in_code_block = False
         
-        FORBIDDEN_LANGS = ["python", "mermaid", "sql", "c++", "cpp", "javascript", "json", "yaml", "java", "c#"]
+        FORBIDDEN_LANGS = ["python", "mermaid", "sql", "c++", "cpp", "javascript", "json", "yaml", "java", "c#", "interactive-quiz"]
         
         for line in lines:
             stripped = line.strip()

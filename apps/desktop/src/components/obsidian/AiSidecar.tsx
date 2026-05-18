@@ -136,7 +136,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
         setIsAnswered(true);
         
         const currentQ = quizQuestions[currentQuestionIndex];
-        const isCorrect = answer.toLowerCase() === currentQ.answer.toLowerCase();
+        const isCorrect = String(answer || "").toLowerCase() === String(currentQ.answer || "").toLowerCase();
         
         if (isCorrect) setScore(score + 1);
         
@@ -291,14 +291,14 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                                     className={cn(
                                                         "w-full px-4 py-3 rounded-none border text-[12px] text-left transition-none [0.98] flex items-center justify-between group",
                                                         isAnswered 
-                                                            ? (opt.toLowerCase() === quizQuestions[currentQuestionIndex].answer.toLowerCase() 
+                                                            ? (String(opt || "").toLowerCase() === String(quizQuestions[currentQuestionIndex].answer || "").toLowerCase() 
                                                                 ? "bg-foreground/10 border-foreground/30 text-foreground font-black" 
                                                                 : (userAnswer === opt ? "bg-destructive/5 border-destructive/20 text-destructive/60" : "bg-muted/10 border-border/40 opacity-40"))
                                                             : "bg-muted/20 border-border hover:border-foreground/40 hover:bg-foreground/[0.02] text-foreground"
                                                     )}
                                                 >
                                                     <span>{opt}</span>
-                                                    {isAnswered && opt.toLowerCase() === quizQuestions[currentQuestionIndex].answer.toLowerCase() && <Check size={14} />}
+                                                    {isAnswered && String(opt || "").toLowerCase() === String(quizQuestions[currentQuestionIndex].answer || "").toLowerCase() && <Check size={14} />}
                                                 </button>
                                             ))
                                         ) : (
@@ -311,7 +311,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                                         className={cn(
                                                             "px-4 py-4 rounded-none border text-[10px] font-black uppercase tracking-widest transition-none  flex flex-col items-center gap-2",
                                                             isAnswered 
-                                                                ? (opt.toLowerCase() === quizQuestions[currentQuestionIndex].answer.toLowerCase() 
+                                                                ? (String(opt || "").toLowerCase() === String(quizQuestions[currentQuestionIndex].answer || "").toLowerCase() 
                                                                     ? "bg-foreground/10 border-foreground/30 text-foreground font-black" 
                                                                     : (userAnswer === opt ? "bg-destructive/5 border-destructive/20 text-destructive/60" : "bg-muted/10 border-border/40 opacity-40"))
                                                                 : "bg-muted/20 border-border hover:border-foreground/40 hover:bg-foreground/[0.02] text-muted-foreground hover:text-foreground"

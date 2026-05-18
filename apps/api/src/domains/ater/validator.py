@@ -142,8 +142,13 @@ class AterValidator:
         prose_content = content[:prose_boundary]
         # Regex to find markdown lists: lines starting with -, *, or 1. (allowing for some indent)
         # We exclude the artifact block if it's a table or code, which we do by stripping fences/tables first
-        prose_clean = re.sub(r"```.*?```", "", prose_content, flags=re.DOTALL)
+        prose_clean = re.sub(r"```mermaid.*?```", "", prose_content, flags=re.DOTALL | re.IGNORECASE)
+        prose_clean = re.sub(r"```.*?```", "", prose_clean, flags=re.DOTALL)
+        prose_clean = re.sub(r"^---.*?---\s*\n", "", prose_clean, flags=re.DOTALL) # strip YAML frontmatter
         prose_clean = re.sub(r"(?m)^\|.*?\|$", "", prose_clean) # strip multiline tables
+        prose_clean = re.sub(r"\$\$.*?\$\$", "", prose_clean, flags=re.DOTALL) # strip multiline LaTeX blocks
+        prose_clean = re.sub(r"\$.*?\$", "", prose_clean) # strip inline math
+        prose_clean = re.sub(r"(?m)^>.*$", "", prose_clean) # strip blockquotes
         
         list_matches = re.findall(r"^\s*[\-\*\u2022]\s|^\s*\d+\.\s", prose_clean, re.MULTILINE)
         if list_matches:
@@ -420,20 +425,10 @@ class AterValidator:
     @staticmethod
     def repair_code_fences(content: str) -> str:
         """
-        If the note body has an unclosed code fence, appends a closing
-        fence just before the ```interactive-quiz block (or at end-of-body)
-        so the Obsidian renderer isn't corrupted. This is a last-resort patch
-        applied AFTER generation but BEFORE validation.
+        Delegates all code fence repairs, standardizations, and closures to 
+        VaultManager.process_code_blocks to avoid state conflicts and incorrect tag stripping.
         """
-        body_no_quiz = re.sub(r"```interactive-quiz.*?```", "", content, flags=re.DOTALL)
-        if body_no_quiz.count("```") % 2 == 0:
-            return content  # Already balanced
-        import logging
-        logging.getLogger("Ater").warning("[AterValidator] Injecting closing fence to repair odd count.")
-        quiz_pos = content.find("```interactive-quiz")
-        if quiz_pos > 0:
-            return content[:quiz_pos].rstrip() + "\n```\n\n" + content[quiz_pos:]
-        return content.rstrip() + "\n```\n"
+        return content
 
     @staticmethod
     def semantic_topic_lock(note_title: str, source_context: str, quiz_questions: list, min_keyword_hits: int = 1) -> Tuple[bool, str]:

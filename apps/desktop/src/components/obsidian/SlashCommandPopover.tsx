@@ -22,7 +22,7 @@ export function SlashCommandPopover({ onSelect, onClose, position }: SlashComman
     }, [])
 
     const filteredDbs = databases.filter(db => 
-        db.name.toLowerCase().includes(searchQuery.toLowerCase())
+        db && typeof db.name === 'string' && db.name.toLowerCase().includes((searchQuery || '').toLowerCase())
     )
 
     return (

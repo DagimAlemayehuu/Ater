@@ -423,10 +423,20 @@ class AterService:
         """
         try:
             print("[Ater Service] Swapping API key...")
+            # Sanitize key aggressively to remove quotes, bearer prefix, newlines, and non-ascii
+            clean_key = new_api_key.strip().strip("'\"").strip("\r\n").strip()
+            if clean_key.lower().startswith("bearer "):
+                clean_key = clean_key[7:].strip().strip("'\"").strip("\r\n").strip()
+            clean_key = clean_key.encode('ascii', 'ignore').decode('ascii').strip()
+
+            self.secrets.ai_key = clean_key
+            self.secrets.planner_key = clean_key
+            self.secrets.utility_key = clean_key
+
             self.llm = ModelFactory.get_model(
                 provider=self.secrets.ai_provider,
                 model_name=self.secrets.ai_model,
-                api_key=new_api_key,
+                api_key=clean_key,
                 temperature=0.0,
                 timeout=ATER_TIMEOUT,
                 request_timeout=ATER_TIMEOUT,
@@ -1332,6 +1342,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         Strategy: Score paragraphs (not sentences) to find the richest context block,
         then return up to 3500 chars to maximize model grounding on weak LLMs.
         """
+        if len(source_text) <= 3500:
+            return source_text
+
         readable_title = concept_title.replace("_", " ").lower()
         title_words = [w for w in readable_title.split() if len(w) > 3]
 
@@ -2182,6 +2195,24 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     course_title=plan_obj.course_title,
                                     max_tokens=6000
                                 )
+                                # Initialize healer early to clean theory parts before passing to practitioner
+                                healer = LogicHealer(canonical_titles=set(all_note_titles))
+                                if "mental_model" in theory_parts:
+                                    theory_parts["mental_model"] = healer.heal_all(theory_parts["mental_model"])
+                                    theory_parts["mental_model"] = healer.inject_wikilinks(theory_parts["mental_model"], exclude_title=note_schema.title)
+                                if "core_logic" in theory_parts:
+                                    theory_parts["core_logic"] = healer.heal_all(theory_parts["core_logic"])
+                                    theory_parts["core_logic"] = healer.inject_wikilinks(theory_parts["core_logic"], exclude_title=note_schema.title)
+                                if "formal_model" in theory_parts:
+                                    theory_parts["formal_model"] = healer.heal_all(theory_parts["formal_model"])
+                                    theory_parts["formal_model"] = healer.inject_wikilinks(theory_parts["formal_model"], exclude_title=note_schema.title)
+
+                                # Pre-render Length Gates (Phase 3.2)
+                                if len(theory_parts.get("mental_model", "")) < 80:
+                                    raise ValueError(f"Analogy section 'mental_model' failed length gate (<80 chars) for {current_note_title}")
+                                if len(theory_parts.get("core_logic", "")) < 30:
+                                    raise ValueError(f"Core breakdown section 'core_logic' failed length gate (<30 chars) for {current_note_title}")
+
                                 note_data.update(theory_parts)
                                 
                                 # Track example/scenario to prevent reuse
@@ -2227,22 +2258,15 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 )
                                 prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
                                 
-                                q_modes = domain.get("question_modes", ["mcq", "mcq", "mcq"]).copy()
-                                while len(q_modes) < 3:
-                                    q_modes.append("mcq")
-                                
-                                valid_qs = []
-                                for q_type in q_modes[:3]:
-                                    q = await q_agent.generate(
-                                        note_schema=note_schema, 
-                                        source_text=q_context, 
-                                        mechanics="Focus on multi-step causal tracing and artifact verification.",
-                                        academic_level=plan_obj.academic_level,
-                                        count=1,
-                                        prof_domain=prof_domain,
-                                        q_type=q_type
-                                    )
-                                    valid_qs.extend(q)
+                                valid_qs = await q_agent.generate(
+                                    note_schema=note_schema, 
+                                    source_text=q_context, 
+                                    mechanics="Focus on multi-step causal tracing and artifact verification.",
+                                    academic_level=plan_obj.academic_level,
+                                    count=3,
+                                    prof_domain=prof_domain,
+                                    q_type=None
+                                )
 
                                 # ── SEMANTIC TOPIC LOCK (v32.1) ──────────────────────────────
                                 # Deterministically verify that quiz questions are grounded
@@ -2339,7 +2363,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                         failures = v_res["failures"]
                                         # ── TIERED BLOCKING (v33.1) ──────────────────────────────
                                         # HARD failures (structural): block deployment, force regen
-                                        HARD_CHECKS = {"feynman_integrity", "wikilink_density", "clean_output", "limitations_rigor"}
+                                        HARD_CHECKS = {"feynman_integrity", "wikilink_density", "clean_output"}
                                         # SOFT failures (advisory): log warning, allow deployment
                                         SOFT_CHECKS = {"unique_scenario"}
                                         

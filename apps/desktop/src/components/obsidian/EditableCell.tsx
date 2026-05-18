@@ -388,7 +388,7 @@ export function EditableCell({ initialValue, type, onSave, onNavigate, row, read
     if (['select', 'relation', 'status'].includes(typeStr) && source) {
         const cleanValue = String(value || "").replace(/^\[\[/, "").replace(/\]\]$/, "")
         const getStatusColor = (val: string) => {
-            const low = val.toLowerCase();
+            const low = String(val || "").toLowerCase();
             if (['todo', 'to-do', 'backlog', 'not started'].includes(low)) return "bg-muted/40 text-muted-foreground/60 border-border/20";
             if (['in progress', 'doing', 'reviewing', 'active'].includes(low)) return "bg-muted text-foreground border-border";
             if (['done', 'complete', 'finished', 'archived', 'mastered'].includes(low)) return "bg-foreground text-background border-foreground";

@@ -32,7 +32,7 @@ export function parseHubTree(content: string): NavNode[] {
       ? (wm[2] || wm[1]).trim().split('/').pop() || wm[1]
       : text.replace(/\[x\]|\[ \]/ig, '').replace(/\*\*/g, '').trim()
 
-    const isChecked = text.toLowerCase().startsWith('[x]')
+    const isChecked = typeof text === 'string' && text.toLowerCase().startsWith('[x]')
     const node: NavNode = {label, target, depth: 0, children: [], isChecked}
 
     while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
@@ -66,7 +66,7 @@ export const HubConnectionsNav = React.memo(({
   onToggleCheckbox, 
   searchQuery
 }: HubConnectionsNavProps) => {
-  const activeNoteName = activePath?.split('/').pop()?.replace('.md', '').replace('.pdf', '')?.toLowerCase() || ''
+  const activeNoteName = typeof activePath === 'string' ? activePath.split('/').pop()?.replace('.md', '').replace('.pdf', '')?.toLowerCase() || '' : ''
   
   const tree = useMemo(() => {
     const baseTree = parseHubTree(content);
@@ -74,7 +74,7 @@ export const HubConnectionsNav = React.memo(({
     
     const filterNodes = (nodes: NavNode[]): NavNode[] => {
       return nodes.filter(node => {
-        const matches = node.label.toLowerCase().includes(searchQuery.toLowerCase());
+        const matches = typeof node.label === 'string' && node.label.toLowerCase().includes((searchQuery || '').toLowerCase());
         const childrenMatches = node.children.length > 0 ? filterNodes(node.children) : [];
         if (matches || childrenMatches.length > 0) {
           node.children = childrenMatches;
@@ -117,7 +117,7 @@ export const HubConnectionsNav = React.memo(({
   };
 
   function renderNode(node: NavNode, idx: number): React.ReactNode {
-    const active = node.target?.split('/').pop()?.replace('.md', '')?.replace('.pdf', '')?.toLowerCase() === activeNoteName;
+    const active = (typeof node.target === 'string' ? node.target.split('/').pop()?.replace('.md', '')?.replace('.pdf', '')?.toLowerCase() : '') === activeNoteName;
     const hasChildren = node.children.length > 0;
     const isExpanded = expandedNodes.has(node.label);
 

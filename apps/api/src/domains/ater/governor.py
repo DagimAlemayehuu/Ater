@@ -57,15 +57,15 @@ class TokenGovernor:
         if not api_keys_str:
             return ""
         
-        # Strip ALL non-ascii characters to prevent httpx Header crash
+        # Strip ALL non-ascii characters first to prevent httpx Header crash
         api_keys_str = api_keys_str.encode('ascii', 'ignore').decode('ascii')
         
-        # Strip 'Bearer ' if the user accidentally copied it
+        # Strip quotes, 'Bearer ', carriage returns, and newlines aggressively
         keys = []
         for k in api_keys_str.split(","):
-            cleaned = k.strip()
+            cleaned = k.strip().strip("'\"").strip("\r\n").strip()
             if cleaned.lower().startswith("bearer "):
-                cleaned = cleaned[7:].strip()
+                cleaned = cleaned[7:].strip().strip("'\"").strip("\r\n").strip()
             if cleaned:
                 keys.append(cleaned)
                 
@@ -116,20 +116,20 @@ class TokenGovernor:
         if "," in api_key:
             keys = []
             for k in api_key.split(","):
-                cleaned = k.strip()
+                cleaned = k.strip().strip("'\"").strip("\r\n").strip()
                 if cleaned.lower().startswith("bearer "):
-                    cleaned = cleaned[7:].strip()
+                    cleaned = cleaned[7:].strip().strip("'\"").strip("\r\n").strip()
                 if cleaned:
                     keys.append(cleaned)
             if keys:
                 self._all_keys = keys
                 api_key = keys[0] # Use first by default, let get_permit rotate
         else:
-            api_key = api_key.strip()
+            api_key = api_key.strip().strip("'\"").strip("\r\n").strip()
             if api_key.lower().startswith("bearer "):
-                api_key = api_key[7:].strip()
+                api_key = api_key[7:].strip().strip("'\"").strip("\r\n").strip()
             
-        new_hash = hashlib.sha256(api_key.strip().encode()).hexdigest()[:16]
+        new_hash = hashlib.sha256(api_key.encode()).hexdigest()[:16]
         if new_hash == self._current_key_hash:
             return  # Same key — nothing to do
 

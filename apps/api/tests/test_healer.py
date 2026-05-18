@@ -59,3 +59,18 @@ def test_healer_mermaid_pipes():
     healed = healer.fix_mermaid_pipes(text)
     assert "    A[Node]" in healed
     assert "| A[Node]" not in healed
+
+def test_healer_preserves_latex_blocks():
+    healer = LogicHealer(canonical_titles=set())
+    text = """This is standard text.
+
+$$
+- x_1 + x_2 = 0
+- y_1 + y_2 = 0
+$$
+
+More text."""
+    healed = healer.bullets_to_prose(text)
+    assert "$$" in healed
+    assert "- x_1 + x_2 = 0" in healed
+    assert "- y_1 + y_2 = 0" in healed

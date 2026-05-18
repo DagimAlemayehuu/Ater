@@ -110,3 +110,60 @@ Empty.
     is_valid, errors = AterValidator.validate_structure(sparse_content)
     assert not is_valid
     assert any("INSUFFICIENT_WIKILINKS" in e for e in errors)
+
+def test_validator_latex_math_blocks():
+    """Test that notes containing math blocks with leading minus/bullet characters do not trigger BULLET_POINTS_DETECTED."""
+    math_content = """---
+title: Math_Concept
+type: Atomic Note
+course: Computer_Science
+semester: Spring_2026
+unit: "1"
+---
+
+## Mental Model
+
+The [[CPU]] manages operations like standard addition and subtraction of [[State_Variables]].
+
+## Math Core (domain.h1)
+
+We represent equations inline as $ -x + y = z $ or inside math blocks:
+
+$$
+- x_1 + x_2 = 0
+- y_1 + y_2 = 0
+$$
+
+The above equation describes the basic system state.
+
+## Formal Definition (domain.h2)
+
+A mathematical definition containing [[Control_Unit]] and [[Clock_Sync]] concepts.
+
+> **Execution Pipeline (artifact)**
+
+```cpp
+void execute() {}
+```
+
+This code represents the logic.
+
+---
+
+## The Proving Grounds
+
+```interactive-quiz
+[
+  {
+    "id": "q1",
+    "type": "recall",
+    "difficulty": "L1",
+    "question": "What is the CPU compared to in the mental model?",
+    "answer": "A conductor",
+    "explanation": "The analogy maps the CPU to an orchestra conductor."
+  }
+]
+```
+"""
+    is_valid, errors = AterValidator.validate_structure(math_content, course="Computer_Science")
+    assert is_valid, f"Expected note with math blocks to pass, but got errors: {errors}"

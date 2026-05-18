@@ -132,6 +132,7 @@ class LogicHealer:
         result = []
         in_code_block = False
         in_table = False
+        in_math_block = False
         
         # Collect consecutive bullet items to join as a single sentence
         bullet_buffer: list[str] = []
@@ -171,6 +172,18 @@ class LogicHealer:
             if in_code_block:
                 result.append(line)
                 continue
+
+            # Track LaTeX math blocks — never touch content inside them
+            if stripped.startswith('$$'):
+                flush_buffer()
+                if len(stripped) == 2 or not stripped.endswith('$$'):
+                    in_math_block = not in_math_block
+                result.append(line)
+                continue
+            
+            if in_math_block:
+                result.append(line)
+                continue
             
             # Track markdown tables — don't touch them
             if '|' in stripped and not stripped.startswith('##'):
@@ -178,13 +191,13 @@ class LogicHealer:
                 in_table = True
                 result.append(line)
                 continue
-            elif in_table and stripped == '':
-                in_table = False
-                result.append(line)
-                continue
             elif in_table:
-                result.append(line)
-                continue
+                if '|' in stripped:
+                    result.append(line)
+                    continue
+                else:
+                    in_table = False
+                    # Fall through to process this line normally as prose or headers
             
             # Preserve section headers, blockquotes, and blank lines
             if stripped.startswith('#') or stripped.startswith('>') or stripped == '':
@@ -382,6 +395,23 @@ class LogicHealer:
                 result.append(line)
         return '\n'.join(result)
 
+    def inject_wikilinks(self, text: str, exclude_title: str = "") -> str:
+        """
+        Deterministically links the first occurrence of each canonical title in prose.
+        Matches case-insensitively with strict word boundaries.
+        """
+        # Sort titles by length descending so longer titles match first
+        for title in sorted(self.canonical_titles, key=len, reverse=True):
+            if title == exclude_title:
+                continue
+            readable = title.replace("_", " ")
+            # Only link if neither capitalized nor normalized version is already linkified
+            if f"[[{title}]]" not in text and f"[[{readable}]]" not in text:
+                # Use a case-insensitive word-boundary pattern
+                pattern = re.compile(r'\b' + re.escape(readable) + r'\b', re.IGNORECASE)
+                text = pattern.sub(f"[[{title}]]", text, count=1)
+        return text
+
     def heal_all(self, text: str, is_quiz: bool = False) -> str:
         if is_quiz:
             return self.heal_quiz_json(text)
@@ -399,3 +429,4 @@ class LogicHealer:
         # v33.2: Fix invalid leading pipes in Mermaid blocks
         text = self.fix_mermaid_pipes(text)
         return text
+

@@ -215,7 +215,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
            </>
          )}
  
-         {selectedPath && selectedPath.toLowerCase().endsWith('.pdf') && (
+         {selectedPath && typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf') && (
             <div className="flex items-center gap-1.5">
               {/* Waypoint Navigation (if multiple) */}
               {waypoints.length > 1 && (
@@ -413,7 +413,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
 
  // Heuristic: If it's a Hub note itself, the hub is "self"
- const isHubNote = selectedPath?.toLowerCase().includes('_hub.md') || noteMetadata?.type?.toLowerCase() === 'hub'
+ const isHubNote = (typeof selectedPath === 'string' && selectedPath.toLowerCase().includes('_hub.md')) || noteMetadata?.type?.toLowerCase() === 'hub'
  
  if (!rawHub && !isHubNote) {
  setHubConnections(null)
@@ -534,7 +534,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  cleanHubName = String(hubItems[0] || '').replace(/\[\[/g, '').replace(/\]\]/g, '').trim();
 }
  
- const isCurrentAHub = selectedPath.toLowerCase().includes('_hub.md') || noteMetadata?.type?.toLowerCase() === 'hub';
+ const isCurrentAHub = (typeof selectedPath === 'string' && selectedPath.toLowerCase().includes('_hub.md')) || noteMetadata?.type?.toLowerCase() === 'hub';
  if (!cleanHubName && isCurrentAHub) {
  cleanHubName = selectedPath.split('/').pop()?.replace('.md', '') || '';
 }
@@ -903,7 +903,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
     }
 
     // PDFs are handled by an iframe, we don't need to read content here
-    if (path.toLowerCase().endsWith('.pdf')) {
+    if (typeof path === 'string' && path.toLowerCase().endsWith('.pdf')) {
       console.log(`[selectFile] PDF detected: ${path}`);
       if (!keepMetadata) {
         setNoteMetadata({})
@@ -1029,8 +1029,8 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
     const groups: Record<string, any[]> = {}
     hubs.filter(hub => {
       if (!searchQuery) return true;
-      return hub.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-             (hub.course && hub.course.toLowerCase().includes(searchQuery.toLowerCase()));
+      return (typeof hub.title === 'string' && hub.title.toLowerCase().includes((searchQuery || '').toLowerCase())) || 
+             (hub.course && typeof hub.course === 'string' && hub.course.toLowerCase().includes((searchQuery || '').toLowerCase()));
     }).forEach(hub => {
       const course = hub.course || 'Uncategorized'
       if (!groups[course]) groups[course] = []
@@ -1046,11 +1046,11 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
   // Grouping logic for PDFs
   const groupedPdfs = useMemo(() => {
     const pdfFiles = files.filter(f => {
-      const isPdf = f.path.toLowerCase().endsWith('.pdf');
+      const isPdf = typeof f.path === 'string' && f.path.toLowerCase().endsWith('.pdf');
       if (!isPdf) return false;
       if (!searchQuery) return true;
-      return f.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-             f.path.toLowerCase().includes(searchQuery.toLowerCase());
+      return (typeof f.name === 'string' && f.name.toLowerCase().includes((searchQuery || '').toLowerCase())) || 
+             (typeof f.path === 'string' && f.path.toLowerCase().includes((searchQuery || '').toLowerCase()));
     })
     const groups: Record<string, any[]> = {}
     pdfFiles.forEach(file => {
@@ -1245,7 +1245,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
 
   const matchesSearch = useCallback((node: FileNode, query: string): boolean => {
     if (!query) return true
-    if (node.path.toLowerCase().includes(query.toLowerCase())) return true
+    if (typeof node.path === 'string' && node.path.toLowerCase().includes((query || '').toLowerCase())) return true
     if (contentMatchPaths.has(node.path)) return true
     if (node.children) {
       return node.children.some(child => matchesSearch(child, query))
@@ -1409,7 +1409,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  
  {node.isFolder ? (
  <Folder className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/60")} />
- ) : node.path.toLowerCase().endsWith('.pdf') ? (
+ ) : (typeof node.path === 'string' && node.path.toLowerCase().endsWith('.pdf')) ? (
  <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/50")} />
  ) : (
  <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/40")} />
@@ -1793,7 +1793,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">Select an asset to visualize</p>
  </div>
  ) : (
-  <div className={cn("mx-auto w-full max-w-full relative", selectedPath.toLowerCase().endsWith('.pdf') ? "p-0 h-full overflow-hidden flex flex-col" : "py-12 px-16 max-w-5xl")}>
+  <div className={cn("mx-auto w-full max-w-full relative", (typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? "p-0 h-full overflow-hidden flex flex-col" : "py-12 px-16 max-w-5xl")}>
   {loadingNote && (
   <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background">
   <RefreshCw size={24} className="text-primary/40" />
@@ -1806,7 +1806,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
   </button>
   </div>
   )}
-  {!selectedPath.toLowerCase().endsWith('.pdf') && (
+  {!(typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) && (
   <div className="flex items-start justify-between mb-12 group">
   <h1 className="text-5xl font-extrabold text-foreground tracking-tight leading-tight flex-1 break-words">
   {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
@@ -1814,7 +1814,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
   </div>
   )}
 
-  {selectedPath.toLowerCase().endsWith('.pdf') ? (
+  {(typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? (
   <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
   <div className="flex-1 min-h-0">
   <PdfViewer 

@@ -50,8 +50,8 @@ export const KnowledgeFooter = React.memo(({
   const prevNode = currentIndex > 0 ? flattened[currentIndex - 1] : null;
   const nextNode = currentIndex < flattened.length - 1 && currentIndex !== -1 ? flattened[currentIndex + 1] : null;
 
-  const isHub = activePath?.toLowerCase().includes('_hub.md');
-  const hubId = activePath?.split('/').pop()?.replace('.md', '');
+  const isHub = typeof activePath === 'string' && activePath.toLowerCase().includes('_hub.md');
+  const hubId = typeof activePath === 'string' ? activePath.split('/').pop()?.replace('.md', '') : '';
 
   if (!activePath) return null;
 
@@ -98,7 +98,7 @@ export const KnowledgeFooter = React.memo(({
             </button>
           )}
 
-          {(!nextNode || isHub) && !activePath.toLowerCase().endsWith('.pdf') && (
+          {(!nextNode || isHub) && !(typeof activePath === 'string' && activePath.toLowerCase().endsWith('.pdf')) && (
             <button 
               onClick={() => navigate(`/practice?hubId=${hubId}`)}
               className="flex items-center gap-3 px-10 py-3 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-none border border-border/40 font-bold uppercase tracking-widest text-[10px] transition-none w-full min-w-[200px]"

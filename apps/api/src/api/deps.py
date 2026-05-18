@@ -24,6 +24,17 @@ class AppSecrets(BaseModel):
     auto_deploy: bool = False
     google_calendar_token: Optional[str] = None
 
+def sanitize_api_key(key: Optional[str]) -> Optional[str]:
+    if not key:
+        return None
+    # Strip carriage return, newline, spaces, and quotes
+    cleaned = key.strip().strip("'\"").strip("\r\n").strip()
+    if cleaned.lower().startswith("bearer "):
+        cleaned = cleaned[7:].strip().strip("'\"").strip("\r\n").strip()
+    # Decode ascii & ignore non-ascii characters to prevent httpx Header crash
+    cleaned = cleaned.encode('ascii', 'ignore').decode('ascii').strip()
+    return cleaned if cleaned else None
+
 async def get_app_secrets(
     x_ai_provider: str = Header("google"),
     x_ai_key: Optional[str] = Header(None),
@@ -51,19 +62,23 @@ async def get_app_secrets(
     """
     primary_provider = x_ai_provider.lower()
     
+    # Sanitize all incoming keys to prevent quotes, newlines, and non-ascii from crashing httpx
+    clean_ai_key = sanitize_api_key(x_ai_key)
+    clean_planner_key = sanitize_api_key(x_planner_key) or clean_ai_key
+    clean_utility_key = sanitize_api_key(x_utility_key) or clean_ai_key
 
     return AppSecrets(
         ai_provider=primary_provider,
-        ai_key=x_ai_key,
+        ai_key=clean_ai_key,
         ai_model=x_ai_model,
         
         # Consolidate all tiers to primary to enforce "Strict Single Provider" mode
         planner_provider=primary_provider,
-        planner_key=x_ai_key,
+        planner_key=clean_ai_key,
         planner_model=x_ai_model,
 
         utility_provider=primary_provider,
-        utility_key=x_ai_key,
+        utility_key=clean_ai_key,
         utility_model=x_ai_model,
 
         vault_path=x_vault_path,
@@ -72,3 +87,4 @@ async def get_app_secrets(
         auto_deploy=x_auto_deploy.lower() == "true",
         google_calendar_token=x_google_calendar_token
     )
+
