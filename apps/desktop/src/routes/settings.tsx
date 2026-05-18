@@ -188,9 +188,8 @@ export default function Settings() {
   }
 
   const handleFactoryReset = async () => {
-    if (!confirm('CRITICAL ACTION: This will wipe your academic dashboard, ALL API keys, and study history. Atomic notes will be preserved. Proceed?')) return;
-    
     try {
+      toast.info('Factory reset in progress...');
       const res = await sidecarApi.factoryReset();
       if (res.success) {
         // Clear local config completely
@@ -235,9 +234,12 @@ export default function Settings() {
     try {
       toast.info('Packaging system logs...');
       const logPath = await sidecarApi.exportLogs();
-      toast.success('Logs exported successfully');
-      // In a real app we might open the folder, but for now just show the path
-      alert(`System logs packaged and saved to:\n${logPath}\n\nPlease attach this file to your support request.`);
+      try {
+        await navigator.clipboard.writeText(logPath);
+        toast.success(`System logs exported successfully & path copied to clipboard:\n${logPath}`);
+      } catch (clipErr) {
+        toast.success(`System logs exported and saved to:\n${logPath}`);
+      }
     } catch (err: any) {
       toast.error('Log export failed: ' + err.message);
     }

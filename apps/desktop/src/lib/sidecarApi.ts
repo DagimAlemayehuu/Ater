@@ -14,6 +14,8 @@ let syncProgress = 0
 let syncTotal = 0
 let syncStatus = 'idle'
 
+const optionsCache = new Map<string, any>()
+
 async function ensureDbInitialized(): Promise<void> {
     if (isInitialized) return
     try {
@@ -258,9 +260,26 @@ export const sidecarApi = {
         }
     },
 
+    clearOptionsCache: () => {
+        optionsCache.clear()
+    },
+
     getVaultOptions: async (source: string) => {
+        if (optionsCache.has(source)) {
+            // Trigger a background refresh to keep it fresh (Stale-While-Revalidate)
+            invoke<any>('get_vault_options', { source }).then(res => {
+                if (res && res.options) {
+                    optionsCache.set(source, res)
+                }
+            }).catch(() => {})
+            return optionsCache.get(source)
+        }
         try {
-            return await invoke<any>('get_vault_options', { source })
+            const res = await invoke<any>('get_vault_options', { source })
+            if (res && res.options) {
+                optionsCache.set(source, res)
+            }
+            return res
         } catch (err) {
             console.error('[Tauri Native RAG] getVaultOptions failed:', err)
             return { options: [] }
@@ -268,8 +287,9 @@ export const sidecarApi = {
     },
 
     createVaultOption: async (source: string, name: string) => {
+        optionsCache.delete(source)
         try {
-            return await invoke<any>('create_vault_option', { name })
+            return await invoke<any>('create_vault_option', { source, name })
         } catch (err) {
             console.error('[Tauri Native RAG] createVaultOption failed:', err)
             throw err
@@ -277,6 +297,7 @@ export const sidecarApi = {
     },
 
     updateVaultOption: async (source: string, oldName: string, newName: string) => {
+        optionsCache.delete(source)
         try {
             return await invoke<any>('update_vault_option', { source, oldName, newName })
         } catch (err) {
@@ -286,6 +307,7 @@ export const sidecarApi = {
     },
 
     deleteVaultOption: async (source: string, name: string) => {
+        optionsCache.delete(source)
         try {
             return await invoke<any>('delete_vault_option', { source, name })
         } catch (err) {

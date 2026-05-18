@@ -216,9 +216,9 @@ export default function Onboarding() {
             <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
               Step 1
             </div>
-            <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
+            <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
               Define Your Profile
-            </h1>
+            </h2>
             <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-8">
               What should we call you? Your data remains private and local.
             </p>
@@ -258,9 +258,9 @@ export default function Onboarding() {
             <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
               Step 2
             </div>
-            <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
+            <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
               Select Your Vault
-            </h1>
+            </h2>
             <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-8">
               Point Ater to your local Obsidian vault folder. All notes are read locally — nothing leaves your machine.
             </p>
@@ -312,9 +312,9 @@ export default function Onboarding() {
             <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
               Step 3
             </div>
-            <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
+            <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
               Connect AI
-            </h1>
+            </h2>
             <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-8">
               Ater uses your own API key — stored locally, never shared.
             </p>
@@ -414,9 +414,9 @@ export default function Onboarding() {
             <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
               Step 4
             </div>
-            <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
+            <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
               Your Academic Program
-            </h1>
+            </h2>
             <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-8">
               Define your course of study to scaffold your local knowledge roadmap.
             </p>
@@ -518,9 +518,9 @@ export default function Onboarding() {
             <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
               Step 5
             </div>
-            <h1 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
+            <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-3">
               Confirm Setup
-            </h1>
+            </h2>
             <p className="text-[13px] font-medium text-muted-foreground leading-relaxed mb-8">
               Review your configuration before generating your vault roadmap.
             </p>

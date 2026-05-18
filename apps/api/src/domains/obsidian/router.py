@@ -1109,8 +1109,8 @@ async def get_pdf_viewer(
     <html class="{theme}">
     <head>
         <meta charset="UTF-8">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css">
+        <script src="/api/obsidian/assets/pdf.min.js"></script>
+        <link rel="stylesheet" href="/api/obsidian/assets/pdf_viewer.min.css">
         <style>
             body, html {{ 
                 margin: 0; padding: 0; width: 100%; height: 100%; 
@@ -1207,7 +1207,7 @@ async def get_pdf_viewer(
         <script>
             const url = "{pdf_src}";
             const pdfjsLib = window['pdfjs-dist/build/pdf'];
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '/api/obsidian/assets/pdf.worker.min.js';
 
             let pdfDoc = null;
             let pageNum = {page};

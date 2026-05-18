@@ -388,6 +388,7 @@ export const AterMarkdown = memo(({ content, path, onNavigate, className, compon
                                 }
                             }
                         }}
+                        aria-label="Toggle task state"
                         className="mt-1 size-3.5 appearance-none border border-border/50 bg-transparent rounded-none checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[4px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer " 
                     />
                 );

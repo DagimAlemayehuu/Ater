@@ -48,9 +48,15 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
   // ─────────────────────────────────────────────────────────────────────────
   // DETAIL VIEW
   // ─────────────────────────────────────────────────────────────────────────
-  if (selectedId) {
-    const exam = allExams.find(e => e.id === selectedId)
-    if (!exam) { setSelectedId(null); return null }
+  const exam = useMemo(() => allExams.find(e => e.id === selectedId), [allExams, selectedId])
+
+  React.useEffect(() => {
+    if (selectedId && !exam && allExams.length > 0) {
+      setSelectedId(null)
+    }
+  }, [selectedId, exam, allExams, setSelectedId])
+
+  if (selectedId && exam) {
 
     const grade    = stripWL(getVal(exam, 'Grade', 'grade'))
     const score    = getVal(exam, 'Score', 'score')

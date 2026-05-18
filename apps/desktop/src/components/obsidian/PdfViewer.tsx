@@ -49,6 +49,16 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
         fetchPort();
     }, []);
     
+    const [iframeLoaded, setIframeLoaded] = useState(false);
+    const prevPathRef = useRef(path);
+    const firstPageRef = useRef(initialPage);
+
+    if (prevPathRef.current !== path) {
+        prevPathRef.current = path;
+        firstPageRef.current = initialPage;
+        setIframeLoaded(false);
+    }
+    
     // Sync internal page state when initialPage prop changes (Render-time sync pattern)
     const prevInitialPage = useRef(initialPage);
     if (prevInitialPage.current !== initialPage) {
@@ -56,9 +66,28 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
         setPage(initialPage);
     }
 
+    const handleIframeLoad = () => {
+        setIframeLoaded(true);
+        setTimeout(() => {
+            handleJump(initialPage);
+        }, 150);
+    };
+
     useEffect(() => {
-        handleJump(initialPage);
-    }, [initialPage]);
+        if (iframeLoaded) {
+            handleJump(initialPage);
+        }
+    }, [initialPage, iframeLoaded]);
+
+    useEffect(() => {
+        return () => {
+            const isFs = !!(document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement || (document as any).msFullscreenElement);
+            if (isFs) {
+                const exitMethod = document.exitFullscreen || (document as any).exitFullscreen || (document as any).webkitExitFullscreen || (document as any).mozCancelFullScreen || (document as any).msExitFullscreen;
+                exitMethod?.call(document);
+            }
+        };
+    }, []);
 
     const [isFiltered, setIsFiltered] = useState(false);
     const [filteredList, setFilteredList] = useState<number[]>([]);
@@ -201,7 +230,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
         const vaultPath = config?.obsidianVaultPath || '';
         const filterStr = filterPages && filterPages.length > 0 ? `&filter_pages=${filterPages.join(',')}` : '';
         const normalizedPath = path.replace(/\\/g, '/');
-        return `http://127.0.0.1:${sidecarPort}/api/obsidian/viewer/${encodeURI(normalizedPath)}?vault_path=${encodeURIComponent(vaultPath)}&page=${initialPage}${filterStr}&theme=${resolvedTheme}`;
+        return `http://127.0.0.1:${sidecarPort}/api/obsidian/viewer/${encodeURI(normalizedPath)}?vault_path=${encodeURIComponent(vaultPath)}&page=${firstPageRef.current}${filterStr}&theme=${resolvedTheme}`;
     }, [path, resolvedTheme, filterPages, config?.obsidianVaultPath, sidecarPort]);
 
     const handleAskAI = () => {
@@ -253,6 +282,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                         <iframe 
                             ref={iframeRef} 
                             src={pdfUrl} 
+                            onLoad={handleIframeLoad}
                             className="w-full h-full border-none overflow-hidden bg-background" 
                             title={title} 
                             allowFullScreen 

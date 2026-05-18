@@ -219,6 +219,27 @@ async def validate_vault_path(vault_path: Optional[str] = None, secrets: AppSecr
     await _ensure_watcher_path(effective_vault_path)
     return effective_vault_path
 
+import base64
+from fastapi import Response
+
+@app.get("/api/obsidian/assets/pdf.min.js")
+async def get_pdf_js():
+    from src.domains.obsidian.assets_data import PDF_JS_B64
+    content = base64.b64decode(PDF_JS_B64)
+    return Response(content=content, media_type="application/javascript")
+
+@app.get("/api/obsidian/assets/pdf.worker.min.js")
+async def get_pdf_worker_js():
+    from src.domains.obsidian.assets_data import PDF_WORKER_B64
+    content = base64.b64decode(PDF_WORKER_B64)
+    return Response(content=content, media_type="application/javascript")
+
+@app.get("/api/obsidian/assets/pdf_viewer.min.css")
+async def get_pdf_css():
+    from src.domains.obsidian.assets_data import PDF_CSS_B64
+    content = base64.b64decode(PDF_CSS_B64)
+    return Response(content=content, media_type="text/css")
+
 # Mount routers
 app.include_router(obsidian_router, prefix="/api", dependencies=[Depends(validate_vault_path)])
 app.include_router(academics_router, prefix="/api", dependencies=[Depends(validate_vault_path)])

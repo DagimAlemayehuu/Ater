@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 
 interface NotePropertiesProps {
   metadata: Record<string, any>
-  onNavigate: (link: string) => void
+  onNavigate: (link: string, page?: number) => void
   onAddProperty: (name: string, type: string) => void
   onUpdateProperty: (name: string, value: any) => void
   onDeleteProperty: (name: string) => void
@@ -67,7 +67,12 @@ export const NoteProperties = React.memo(({
   
   const formatValue = (val: unknown): string => {
     if (val === null || val === undefined) return 'Empty'
-    if (Array.isArray(val)) return JSON.stringify(val)
+    if (Array.isArray(val)) {
+      if (val.every(item => typeof item === 'number' || typeof item === 'string')) {
+        return val.join(', ')
+      }
+      return JSON.stringify(val)
+    }
     return String(val)
   }
 
@@ -95,6 +100,7 @@ export const NoteProperties = React.memo(({
   }
 
   const renderPropertyValue = (key: string, value: any) => {
+    const k = key.toLowerCase()
     const type = getPropertyType(key, value)
     const valStr = formatValue(value)
 
@@ -107,6 +113,43 @@ export const NoteProperties = React.memo(({
           className="h-3.5 w-3.5 rounded-none border-border/50 bg-transparent text-primary focus:ring-0 cursor-pointer"
         />
       )
+    }
+
+    // Source and Page Waypoint navigation
+    const sourceKey = Object.keys(metadata).find(mk => mk.toLowerCase() === 'source')
+    const sourcePagesPattern = /source[ _-]pages|page|pages/
+    const isSourcePagesKey = sourcePagesPattern.test(k)
+    
+    if (sourceKey && (k === 'source' || isSourcePagesKey)) {
+      const sourceVal = metadata[sourceKey]
+      const sourcePagesKey = Object.keys(metadata).find(mk => sourcePagesPattern.test(mk.toLowerCase()))
+      
+      const extractPageNumber = (v: any): number | undefined => {
+        if (v === null || v === undefined) return undefined
+        if (Array.isArray(v)) {
+          const first = v.find(item => !isNaN(Number(item)))
+          return first !== undefined ? Number(first) : undefined
+        }
+        const match = String(v).match(/\d+/)
+        return match ? parseInt(match[0], 10) : undefined
+      }
+      
+      const pageNum = sourcePagesKey ? extractPageNumber(metadata[sourcePagesKey]) : undefined
+      const cleanSource = typeof sourceVal === 'string' ? sourceVal.replace(/[\[\]]/g, '').split('|')[0].trim() : ''
+
+      if (cleanSource) {
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onNavigate(cleanSource, pageNum)
+            }}
+            className="text-primary hover:underline underline-offset-4 decoration-primary/30 text-left font-bold truncate max-w-full"
+          >
+            {valStr}
+          </button>
+        )
+      }
     }
 
     if (type === 'link' || valStr.includes('[[')) {

@@ -35,7 +35,8 @@ SKIP_DIRS = {
     'node_modules', '.next', 'dist', 'build', '.git', '.github',
     '__pycache__', '.vscode', '.idea', 'coverage', 'test', 'tests',
     '__tests__', 'spec', 'docs', 'documentation', 'examples', '.venv',
-    'stitch_ater_industrial_ecosystem', 'Obsidian_Vault'
+    'stitch_ater_industrial_ecosystem', 'Obsidian_Vault',
+    'admin', 'waitlist', 'landing-page'
 }
 
 # Files to skip (not pages)

@@ -8,7 +8,10 @@ export function AppSidebar() {
   const isOnboarding = location.pathname === '/onboarding'
 
   return (
-    <aside className="w-12 bg-background border-r border-border flex flex-col items-center py-6 shrink-0 z-50 h-full">
+    <aside 
+      onMouseEnter={() => window.focus()}
+      className="w-12 bg-background border-r border-border flex flex-col items-center py-6 shrink-0 z-50 h-full"
+    >
         {/* Navigation Links */}
         <div className="flex flex-col gap-6 flex-1 items-center">
             <NavLink 

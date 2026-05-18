@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { usePomodoroStore } from '@/lib/pomodoroStore';
 import { useConfig } from '@/lib/ConfigContext';
 import { toast } from 'sonner';
@@ -11,7 +11,7 @@ export default function PomodoroController() {
   const { config } = useConfig();
   const { 
     timeLeft, isActive, mode, sessionCount, isMuted, showOverlay, showStats, currentHub,
-    tick, setTimeLeft, setMode, setSessionCount, setIsActive, addHistory, setShowOverlay
+    setTimeLeft, setMode, setSessionCount, setIsActive, addHistory, setShowOverlay
   } = usePomodoroStore();
 
   const settings = {
@@ -21,10 +21,45 @@ export default function PomodoroController() {
     sessionsBeforeLong: config?.pomodoroSessionsBeforeLongBreak || 4
   };
 
+  // Web Audio API Synthesizer - 100% self-contained, offline-compatible, and zero-dependency
   const playSound = useCallback((type: 'work' | 'break') => {
     if (isMuted) return;
-    const audio = new Audio(type === 'work' ? '/sounds/work.mp3' : '/sounds/break.mp3');
-    audio.play().catch(e => console.log('Audio playback failed', e));
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      const now = ctx.currentTime;
+      
+      const playBeep = (freq: number, startTime: number, duration: number, volume: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.frequency.setValueAtTime(freq, startTime);
+        osc.type = 'sine';
+        
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(volume, startTime + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration - 0.01);
+        
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+      
+      if (type === 'work') {
+        // High-fidelity ascending focus double chime (C5 to E5)
+        playBeep(523.25, now, 0.22, 0.15);
+        playBeep(659.25, now + 0.12, 0.32, 0.15);
+      } else {
+        // Relaxing descending break triple chime (D5 to B4 to G4)
+        playBeep(587.33, now, 0.20, 0.12);
+        playBeep(493.88, now + 0.12, 0.20, 0.12);
+        playBeep(392.00, now + 0.24, 0.40, 0.12);
+      }
+    } catch (e) {
+      console.warn('Web Audio playback failed', e);
+    }
   }, [isMuted]);
 
   const switchMode = useCallback(() => {
@@ -47,17 +82,59 @@ export default function PomodoroController() {
     }
   }, [mode, sessionCount, settings, setMode, setTimeLeft, setSessionCount, playSound, currentHub, addHistory, setIsActive]);
 
+  // Synchronize timeLeft with new settings when timer is inactive and settings duration changes
+  const prevSettingsTimeRef = useRef(settings.focus);
+  useEffect(() => {
+    const currentSettingsTime = mode === 'focus' ? settings.focus : (mode === 'short_break' ? settings.shortBreak : settings.longBreak);
+    const prevSettingsTime = mode === 'focus' ? prevSettingsTimeRef.current : (mode === 'short_break' ? settings.shortBreak : settings.longBreak);
+    
+    if (!isActive && currentSettingsTime !== timeLeft && currentSettingsTime !== prevSettingsTime) {
+      setTimeLeft(currentSettingsTime);
+    }
+    prevSettingsTimeRef.current = settings.focus;
+  }, [settings.focus, settings.shortBreak, settings.longBreak, isActive, mode, setTimeLeft, timeLeft]);
+
+  // Timestamp-based drift-free sync to support OS background sleep, browser suspension and timer accuracy
+  const expectedEndTimeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isActive) {
+      const now = Date.now();
+      const currentExpected = expectedEndTimeRef.current;
+      if (!currentExpected) {
+        expectedEndTimeRef.current = now + timeLeft * 1000;
+      } else {
+        const remaining = Math.max(0, Math.ceil((currentExpected - now) / 1000));
+        // If drift is significant (e.g. from manual skip, reset or settings changes), synchronize Ref with new value
+        if (Math.abs(remaining - timeLeft) > 1) {
+          expectedEndTimeRef.current = now + timeLeft * 1000;
+        }
+      }
+    } else {
+      expectedEndTimeRef.current = null;
+    }
+  }, [isActive, timeLeft]);
+
   useEffect(() => {
     let interval: any;
-    if (isActive && timeLeft > 0) {
+    if (isActive) {
       interval = setInterval(() => {
-        tick();
-      }, 1000);
-    } else if (isActive && timeLeft === 0) {
-      switchMode();
+        const now = Date.now();
+        if (expectedEndTimeRef.current) {
+          const remaining = Math.max(0, Math.ceil((expectedEndTimeRef.current - now) / 1000));
+          if (remaining !== timeLeft) {
+            setTimeLeft(remaining);
+          }
+          if (remaining === 0) {
+            clearInterval(interval);
+            expectedEndTimeRef.current = null;
+            switchMode();
+          }
+        }
+      }, 200); // 5Hz polling guarantees high precision and responsive UI updates
     }
     return () => clearInterval(interval);
-  }, [isActive, timeLeft, tick, switchMode]);
+  }, [isActive, timeLeft, setTimeLeft, switchMode]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

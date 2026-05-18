@@ -385,8 +385,8 @@ function AiPressureBar() {
         />
       </div>
       {throttleEvent && (
-        <p className="mt-1 text-[9px] font-bold text-amber-500 uppercase tracking-widest flex items-center gap-1 animate-pulse">
-          <Zap size={10} fill="currentColor" /> Throttled: {throttleEvent}
+        <p className="mt-1 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest animate-pulse">
+          Throttled: {throttleEvent}
         </p>
       )}
     </div>

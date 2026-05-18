@@ -151,6 +151,7 @@ export const HubConnectionsNav = React.memo(({
               type="checkbox" 
               checked={node.isChecked} 
               onChange={(e) => onToggleCheckbox(node.label, e.target.checked, node.target)}
+              aria-label={`Toggle check state for ${node.label}`}
               className={cn(
                 "h-3 w-3 shrink-0 appearance-none border border-muted-foreground/40 bg-transparent rounded-none checked:bg-primary/20 checked:border-primary relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[3px] after:top-[0px] after:w-[3.5px] after:h-[6.5px] after:border-r-2 after:border-b-2 after:border-primary after:rotate-45 cursor-pointer ",
                 node.isChecked && "opacity-30"

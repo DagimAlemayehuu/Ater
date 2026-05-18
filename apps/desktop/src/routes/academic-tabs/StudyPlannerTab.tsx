@@ -48,9 +48,15 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
   // ─────────────────────────────────────────────────────────────────────────
   // DETAIL VIEW
   // ─────────────────────────────────────────────────────────────────────────
-  if (selectedId) {
-    const hub = allHubs.find(h => h.id === selectedId)
-    if (!hub) { setSelectedId(null); return null }
+  const hub = useMemo(() => allHubs.find(h => h.id === selectedId), [allHubs, selectedId])
+
+  React.useEffect(() => {
+    if (selectedId && !hub && allHubs.length > 0) {
+      setSelectedId(null)
+    }
+  }, [selectedId, hub, allHubs, setSelectedId])
+
+  if (selectedId && hub) {
 
     const isDone     = stripWL(getVal(hub, 'status', 'Status')).toLowerCase().includes('complet')
     const course     = stripWL(getVal(hub, 'course', 'Course'))

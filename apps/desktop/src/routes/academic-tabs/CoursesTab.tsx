@@ -51,10 +51,15 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
   // ─────────────────────────────────────────────────────────────────────────
   // COURSE DETAIL
   // ─────────────────────────────────────────────────────────────────────────
-  if (selectedId) {
-    const course = allCourses.find(c => c.id === selectedId)
-    if (!course) { setSelectedId(null); return null }
+  const course = useMemo(() => allCourses.find(c => c.id === selectedId), [allCourses, selectedId])
 
+  useEffect(() => {
+    if (selectedId && !course && allCourses.length > 0) {
+      setSelectedId(null)
+    }
+  }, [selectedId, course, allCourses, setSelectedId])
+
+  if (selectedId && course) {
     const grade      = stripWL(getVal(course, 'Grade', 'grade'))
     const credits    = getVal(course, 'Credits', 'credits')
     const professor  = stripWL(getVal(course, 'Professor', 'professor'))

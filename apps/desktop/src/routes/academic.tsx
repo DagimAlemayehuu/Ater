@@ -93,7 +93,10 @@ export default function AcademicDashboard() {
         es.onmessage = (ev) => {
           try {
             const d = JSON.parse(ev.data)
-            if (['vault_change', 'file_create', 'file_delete'].includes(d.type)) fetchData()
+            if (['vault_change', 'file_create', 'file_delete'].includes(d.type)) {
+              sidecarApi.clearOptionsCache()
+              fetchData()
+            }
           } catch {}
         }
       } catch (err) {

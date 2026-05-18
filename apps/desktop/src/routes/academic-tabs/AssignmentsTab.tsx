@@ -74,9 +74,15 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
   // ─────────────────────────────────────────────────────────────────────────
   // DETAIL VIEW
   // ─────────────────────────────────────────────────────────────────────────
-  if (selectedId) {
-    const assignment = allAssignments.find(a => a.id === selectedId)
-    if (!assignment) { setSelectedId(null); return null }
+  const assignment = useMemo(() => allAssignments.find(a => a.id === selectedId), [allAssignments, selectedId])
+
+  useEffect(() => {
+    if (selectedId && !assignment && allAssignments.length > 0) {
+      setSelectedId(null)
+    }
+  }, [selectedId, assignment, allAssignments, setSelectedId])
+
+  if (selectedId && assignment) {
 
     const isDone    = assignment.done === true || assignment.done === 'true' ||
       stripWL(getVal(assignment, 'Status', 'status')).toLowerCase().includes('complet')

@@ -103,6 +103,7 @@ export default function SettingsPage() {
                   <textarea 
                     value={config}
                     onChange={(e) => setConfig(e.target.value)}
+                    aria-label="Runtime configuration JSON"
                     className="w-full h-[400px] p-6 bg-card border border-border font-mono text-[12px] leading-relaxed text-foreground focus:outline-none focus:border-primary custom-scrollbar resize-none"
                     spellCheck={false}
                   />

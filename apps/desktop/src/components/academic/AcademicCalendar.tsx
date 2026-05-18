@@ -37,6 +37,16 @@ const EVENT_COLORS: Record<string, { bg: string; border: string; text: string; d
 const getEventColor = (type: string) => EVENT_COLORS[type] || EVENT_COLORS['Note Visit'];
 const cleanTitle = (title: string) => title.replace(/\.(md|pdf)$/, '').split('/').pop() || title;
 
+const safeParseDate = (dateStr: any): Date | null => {
+  if (!dateStr) return null;
+  try {
+    const d = typeof dateStr === 'string' ? parseISO(dateStr) : new Date(dateStr);
+    return isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
+  }
+};
+
 // ─── Sub-Components ───────────────────────────────────────────────────────────
 
 function MiniCalendar({ currentDate, setCurrentDate, view, setView }: { currentDate: Date, setCurrentDate: (d: Date) => void, view: ViewMode, setView: (v: ViewMode) => void }) {
@@ -152,12 +162,15 @@ function TimelineView({ days, events, currentDate, setCurrentDate, setView, onSe
             )}
 
             {days.map((day, dayIdx) => {
-              const dayEvents = events.filter(e => isSameDay(parseISO(e._date), day));
+              const dayEvents = events.filter(e => {
+                const d = safeParseDate(e._date);
+                return d ? isSameDay(d, day) : false;
+              });
               
               return (
                 <div key={dayIdx} className="flex-1 relative border-l border-border/40 first:border-l-0 min-w-0">
                   {dayEvents.map((ev, i) => {
-                    const date = parseISO(ev._date);
+                    const date = safeParseDate(ev._date) || new Date();
                     const top = (date.getHours() * 64) + (date.getMinutes() / 60 * 64);
                     const durationMins = ev.duration ? ev.duration / 60 : 30;
                     const height = Math.max(22, (durationMins / 60) * 64);
@@ -165,7 +178,8 @@ function TimelineView({ days, events, currentDate, setCurrentDate, setView, onSe
                     const isClickable = ev._type === 'Assignment' || ev._type === 'Exam' || ev._type === 'Note Visit';
 
                     const overlapping = dayEvents.filter(e => {
-                      const d = parseISO(e._date);
+                      const d = safeParseDate(e._date);
+                      if (!d) return false;
                       const t = (d.getHours() * 64) + (d.getMinutes() / 60 * 64);
                       const dur = e.duration ? e.duration / 60 : 30;
                       const h = Math.max(22, (dur / 60) * 64);
@@ -239,7 +253,10 @@ function MonthView({ currentDate, setCurrentDate, events, setView, onOpenDayOver
       <div className="flex-1 grid grid-cols-7 auto-rows-fr bg-muted/10">
         {days.map((day, i) => {
           const isCurrMonth = isSameMonth(day, currentDate);
-          const dayEvents = events.filter(e => isSameDay(parseISO(e._date), day));
+          const dayEvents = events.filter(e => {
+            const d = safeParseDate(e._date);
+            return d ? isSameDay(d, day) : false;
+          });
           
           return (
             <div 
@@ -304,7 +321,10 @@ function YearView({ currentDate, setCurrentDate, events, setView }: { currentDat
               <div className="grid grid-cols-7 gap-y-1">
                 {days.map((day, i) => {
                   const isCurr = isSameMonth(day, month);
-                  const hasEvents = events.some(e => isSameDay(parseISO(e._date), day));
+                  const hasEvents = events.some(e => {
+                    const d = safeParseDate(e._date);
+                    return d ? isSameDay(d, day) : false;
+                  });
                   
                   return (
                     <button

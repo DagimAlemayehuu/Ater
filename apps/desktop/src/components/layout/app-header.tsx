@@ -66,7 +66,10 @@ export function AppHeader() {
   }
 
   return (
-    <header className="relative h-12 w-full bg-background border-b border-border/40 flex items-center shrink-0 z-40 sticky top-0 px-4 select-none">
+    <header 
+      onMouseEnter={() => window.focus()}
+      className="relative h-12 w-full bg-background border-b border-border/40 flex items-center shrink-0 z-40 sticky top-0 px-4 select-none"
+    >
       {/* Left: Navigation */}
       <div className="flex items-center gap-2 shrink-0 z-10">
         <div className="flex items-center gap-1 bg-muted/20 p-0.5 rounded-none border border-border/40 shadow-inner">

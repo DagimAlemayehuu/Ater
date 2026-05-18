@@ -210,6 +210,105 @@ fn load_app_config(app_handle: &tauri::AppHandle) -> Result<AppConfig, String> {
         .map_err(|e| format!("Failed to parse config JSON: {}", e))
 }
 
+fn heal_vault_structure(vault_root: &std::path::Path) {
+    let main_folders = vec!["Inbox", "Notes", "database", "generated"];
+    for f in main_folders {
+        let _ = std::fs::create_dir_all(vault_root.join(f));
+    }
+    
+    // Core database folders
+    let db_folders = vec![
+        "database/assignments",
+        "database/exams",
+        "database/study planner",
+        "database/courses",
+        "database/semesters",
+        "database/years",
+        "database/programs",
+        "database/inbox",
+        // Nested Select property subfolders
+        "database/courses/status",
+        "database/courses/difficulty",
+        "database/courses/grade",
+        "database/courses/professor",
+        "database/semesters/status",
+        "database/years/status",
+        "database/years/academic level",
+        "database/assignments/status",
+        "database/assignments/priority",
+        "database/assignments/type",
+        "database/exams/type",
+        "database/study planner/status",
+        "database/study planner/confidence",
+        "database/study planner/type"
+    ];
+    for f in db_folders {
+        let _ = std::fs::create_dir_all(vault_root.join(f));
+    }
+    
+    // Create default property md files
+    let default_files = vec![
+        ("database/courses/status/Planned.md", "---\ntitle: Planned\n---\n# Planned"),
+        ("database/courses/status/In Progress.md", "---\ntitle: In Progress\n---\n# In Progress"),
+        ("database/courses/status/Completed.md", "---\ntitle: Completed\n---\n# Completed"),
+        ("database/courses/difficulty/Easy.md", "---\ntitle: Easy\n---\n# Easy"),
+        ("database/courses/difficulty/Medium.md", "---\ntitle: Medium\n---\n# Medium"),
+        ("database/courses/difficulty/Hard.md", "---\ntitle: Hard\n---\n# Hard"),
+        ("database/courses/difficulty/Expert.md", "---\ntitle: Expert\n---\n# Expert"),
+        ("database/courses/grade/A.md", "---\ntitle: A\n---\n# A"),
+        ("database/courses/grade/B.md", "---\ntitle: B\n---\n# B"),
+        ("database/courses/grade/C.md", "---\ntitle: C\n---\n# C"),
+        ("database/courses/grade/D.md", "---\ntitle: D\n---\n# D"),
+        ("database/courses/grade/F.md", "---\ntitle: F\n---\n# F"),
+        ("database/courses/grade/P.md", "---\ntitle: P\n---\n# P"),
+        
+        ("database/semesters/status/Planned.md", "---\ntitle: Planned\n---\n# Planned"),
+        ("database/semesters/status/Active.md", "---\ntitle: Active\n---\n# Active"),
+        ("database/semesters/status/Completed.md", "---\ntitle: Completed\n---\n# Completed"),
+        
+        ("database/years/status/Active.md", "---\ntitle: Active\n---\n# Active"),
+        ("database/years/status/Completed.md", "---\ntitle: Completed\n---\n# Completed"),
+        ("database/years/status/Future.md", "---\ntitle: Future\n---\n# Future"),
+        ("database/years/academic level/Undergraduate.md", "---\ntitle: Undergraduate\n---\n# Undergraduate"),
+        ("database/years/academic level/Graduate.md", "---\ntitle: Graduate\n---\n# Graduate"),
+        ("database/years/academic level/PhD.md", "---\ntitle: PhD\n---\n# PhD"),
+        
+        ("database/assignments/status/Planned.md", "---\ntitle: Planned\n---\n# Planned"),
+        ("database/assignments/status/In Progress.md", "---\ntitle: In Progress\n---\n# In Progress"),
+        ("database/assignments/status/Completed.md", "---\ntitle: Completed\n---\n# Completed"),
+        ("database/assignments/priority/Low.md", "---\ntitle: Low\n---\n# Low"),
+        ("database/assignments/priority/Medium.md", "---\ntitle: Medium\n---\n# Medium"),
+        ("database/assignments/priority/High.md", "---\ntitle: High\n---\n# High"),
+        ("database/assignments/type/Homework.md", "---\ntitle: Homework\n---\n# Homework"),
+        ("database/assignments/type/Project.md", "---\ntitle: Project\n---\n# Project"),
+        ("database/assignments/type/Reading.md", "---\ntitle: Reading\n---\n# Reading"),
+        ("database/assignments/type/Lab.md", "---\ntitle: Lab\n---\n# Lab"),
+        
+        ("database/exams/type/Midterm.md", "---\ntitle: Midterm\n---\n# Midterm"),
+        ("database/exams/type/Final.md", "---\ntitle: Final\n---\n# Final"),
+        ("database/exams/type/Quiz.md", "---\ntitle: Quiz\n---\n# Quiz"),
+        ("database/exams/type/Assignment.md", "---\ntitle: Assignment\n---\n# Assignment"),
+        
+        ("database/study planner/status/Not Started.md", "---\ntitle: Not Started\n---\n# Not Started"),
+        ("database/study planner/status/Planned.md", "---\ntitle: Planned\n---\n# Planned"),
+        ("database/study planner/status/In Progress.md", "---\ntitle: In Progress\n---\n# In Progress"),
+        ("database/study planner/status/Reviewing.md", "---\ntitle: Reviewing\n---\n# Reviewing"),
+        ("database/study planner/status/Completed.md", "---\ntitle: Completed\n---\n# Completed"),
+        ("database/study planner/confidence/Low.md", "---\ntitle: Low\n---\n# Low"),
+        ("database/study planner/confidence/Medium.md", "---\ntitle: Medium\n---\n# Medium"),
+        ("database/study planner/confidence/High.md", "---\ntitle: High\n---\n# High"),
+        ("database/study planner/type/Hub.md", "---\ntitle: Hub\n---\n# Hub"),
+        ("database/study planner/type/Atomic.md", "---\ntitle: Atomic\n---\n# Atomic"),
+        ("database/study planner/type/Possible Questions.md", "---\ntitle: Possible Questions\n---\n# Possible Questions"),
+    ];
+    for (path_str, content) in default_files {
+        let p = vault_root.join(path_str);
+        if !p.exists() {
+            let _ = std::fs::write(&p, content);
+        }
+    }
+}
+
 fn get_vault_path(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
     let config = load_app_config(app_handle)?;
     let p = config.obsidian_vault_path
@@ -218,6 +317,10 @@ fn get_vault_path(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
     if !path.exists() {
         return Err(format!("Obsidian Vault Path does not exist on disk: {:?}", path));
     }
+    
+    // HEAL VAULT DYNAMICALLY & INSTANTLY
+    heal_vault_structure(&path);
+    
     Ok(path)
 }
 
@@ -264,7 +367,10 @@ async fn proxy_post<T: serde::Serialize, R: serde::de::DeserializeOwned>(
     body: &T,
     headers: reqwest::header::HeaderMap,
 ) -> Result<R, String> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_millis(150))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
     let mut attempt = 0;
     let max_attempts = 5;
@@ -288,10 +394,14 @@ async fn proxy_post<T: serde::Serialize, R: serde::de::DeserializeOwned>(
                     .map_err(|e| format!("Failed to parse sidecar response: {}", e));
             }
             Err(e) => {
+                let is_connect = e.is_connect() || e.is_timeout();
                 last_err = Some(e);
+                if is_connect {
+                    break;
+                }
                 attempt += 1;
                 if attempt < max_attempts {
-                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 }
             }
         }
@@ -305,7 +415,10 @@ async fn proxy_get<R: serde::de::DeserializeOwned>(
     path: &str,
     headers: reqwest::header::HeaderMap,
 ) -> Result<R, String> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_millis(150))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
     let mut attempt = 0;
     let max_attempts = 5;
@@ -328,10 +441,14 @@ async fn proxy_get<R: serde::de::DeserializeOwned>(
                     .map_err(|e| format!("Failed to parse sidecar response: {}", e));
             }
             Err(e) => {
+                let is_connect = e.is_connect() || e.is_timeout();
                 last_err = Some(e);
+                if is_connect {
+                    break;
+                }
                 attempt += 1;
                 if attempt < max_attempts {
-                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 }
             }
         }
@@ -346,7 +463,10 @@ async fn proxy_patch<T: serde::Serialize, R: serde::de::DeserializeOwned>(
     body: &T,
     headers: reqwest::header::HeaderMap,
 ) -> Result<R, String> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_millis(150))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
     let mut attempt = 0;
     let max_attempts = 5;
@@ -370,10 +490,14 @@ async fn proxy_patch<T: serde::Serialize, R: serde::de::DeserializeOwned>(
                     .map_err(|e| format!("Failed to parse sidecar response: {}", e));
             }
             Err(e) => {
+                let is_connect = e.is_connect() || e.is_timeout();
                 last_err = Some(e);
+                if is_connect {
+                    break;
+                }
                 attempt += 1;
                 if attempt < max_attempts {
-                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 }
             }
         }
@@ -387,7 +511,10 @@ async fn proxy_delete<R: serde::de::DeserializeOwned>(
     path: &str,
     headers: reqwest::header::HeaderMap,
 ) -> Result<R, String> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_millis(150))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
     let mut attempt = 0;
     let max_attempts = 5;
@@ -410,10 +537,14 @@ async fn proxy_delete<R: serde::de::DeserializeOwned>(
                     .map_err(|e| format!("Failed to parse sidecar response: {}", e));
             }
             Err(e) => {
+                let is_connect = e.is_connect() || e.is_timeout();
                 last_err = Some(e);
+                if is_connect {
+                    break;
+                }
                 attempt += 1;
                 if attempt < max_attempts {
-                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 }
             }
         }
@@ -494,15 +625,60 @@ fn parse_markdown_note(content: &str) -> (serde_json::Value, String) {
         let remaining_content = &content[actual_second_idx + 3..];
         
         let mut map = serde_json::Map::new();
+        let mut current_key: Option<String> = None;
+        let mut current_list: Option<Vec<serde_json::Value>> = None;
+
         for line in frontmatter_str.lines() {
-            let line = line.trim();
-            if line.is_empty() {
+            let line_trimmed = line.trim();
+            if line_trimmed.is_empty() {
                 continue;
             }
-            if let Some(colon_idx) = line.find(':') {
-                let key = line[..colon_idx].trim().to_string();
-                let mut value_str = line[colon_idx + 1..].trim().to_string();
+            
+            // Check if this is a list item in a block list
+            if line_trimmed.starts_with("- ") {
+                if let Some(ref key) = current_key {
+                    let mut item_val = line_trimmed[2..].trim().to_string();
+                    // Strip optional quotes
+                    if (item_val.starts_with('"') && item_val.ends_with('"')) || 
+                       (item_val.starts_with('\'') && item_val.ends_with('\'')) {
+                        if item_val.len() >= 2 {
+                            item_val = item_val[1..item_val.len() - 1].to_string();
+                        }
+                    }
+                    
+                    let parsed_item = if let Ok(num) = item_val.parse::<i64>() {
+                        serde_json::Value::Number(num.into())
+                    } else if item_val.to_lowercase() == "true" {
+                        serde_json::Value::Bool(true)
+                    } else if item_val.to_lowercase() == "false" {
+                        serde_json::Value::Bool(false)
+                    } else {
+                        serde_json::Value::String(item_val)
+                    };
+                    
+                    if let Some(ref mut list) = current_list {
+                        list.push(parsed_item);
+                    } else {
+                        let mut new_list = Vec::new();
+                        new_list.push(parsed_item);
+                        current_list = Some(new_list);
+                    }
+                    continue;
+                }
+            }
+            
+            // If we have a pending list, insert it before moving to the next key
+            if let Some(key) = current_key.take() {
+                if let Some(list) = current_list.take() {
+                    map.insert(key, serde_json::Value::Array(list));
+                }
+            }
+            
+            if let Some(colon_idx) = line_trimmed.find(':') {
+                let key = line_trimmed[..colon_idx].trim().to_string();
+                let mut value_str = line_trimmed[colon_idx + 1..].trim().to_string();
                 
+                // Strip optional quotes
                 if (value_str.starts_with('"') && value_str.ends_with('"')) || 
                    (value_str.starts_with('\'') && value_str.ends_with('\'')) {
                     if value_str.len() >= 2 {
@@ -510,7 +686,11 @@ fn parse_markdown_note(content: &str) -> (serde_json::Value, String) {
                     }
                 }
                 
-                if value_str.to_lowercase() == "true" {
+                if value_str.is_empty() {
+                    // This could be the start of a block list
+                    current_key = Some(key);
+                    current_list = Some(Vec::new());
+                } else if value_str.to_lowercase() == "true" {
                     map.insert(key, serde_json::Value::Bool(true));
                 } else if value_str.to_lowercase() == "false" {
                     map.insert(key, serde_json::Value::Bool(false));
@@ -522,10 +702,17 @@ fn parse_markdown_note(content: &str) -> (serde_json::Value, String) {
                     for item in items_str.split(',') {
                         let item_trim = item.trim();
                         if !item_trim.is_empty() {
-                            if let Ok(num) = item_trim.parse::<i64>() {
+                            let mut inner_item = item_trim.to_string();
+                            if (inner_item.starts_with('"') && inner_item.ends_with('"')) || 
+                               (inner_item.starts_with('\'') && inner_item.ends_with('\'')) {
+                                if inner_item.len() >= 2 {
+                                    inner_item = inner_item[1..inner_item.len() - 1].to_string();
+                                }
+                            }
+                            if let Ok(num) = inner_item.parse::<i64>() {
                                 arr.push(serde_json::Value::Number(num.into()));
                             } else {
-                                arr.push(serde_json::Value::String(item_trim.to_string()));
+                                arr.push(serde_json::Value::String(inner_item));
                             }
                         }
                     }
@@ -533,6 +720,13 @@ fn parse_markdown_note(content: &str) -> (serde_json::Value, String) {
                 } else {
                     map.insert(key, serde_json::Value::String(value_str));
                 }
+            }
+        }
+        
+        // Handle any final pending list
+        if let Some(key) = current_key {
+            if let Some(list) = current_list {
+                map.insert(key, serde_json::Value::Array(list));
             }
         }
         

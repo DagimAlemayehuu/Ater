@@ -36,6 +36,20 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
 
   const selectedYear = sorted.find(y => y.id === selectedYearId)
 
+  const sem = useMemo(() => semesters.find(s => s.id === selectedSemId), [semesters, selectedSemId])
+
+  React.useEffect(() => {
+    if (selectedYearId && !selectedYear && sorted.length > 0) {
+      setSelectedYearId(null)
+    }
+  }, [selectedYearId, selectedYear, sorted])
+
+  React.useEffect(() => {
+    if (selectedSemId && !sem && semesters.length > 0) {
+      setSelectedSemId(null)
+    }
+  }, [selectedSemId, sem, semesters])
+
   const relatedSemesters = useMemo(() => semesters
     .filter(s => {
       const semYear   = getVal(s, 'Year', 'year').toLowerCase().trim()
@@ -82,9 +96,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
   // ─────────────────────────────────────────────────────────────────────────
   // SEMESTER DETAIL VIEW
   // ─────────────────────────────────────────────────────────────────────────
-  if (selectedSemId) {
-    const sem = semesters.find(s => s.id === selectedSemId)
-    if (!sem) { setSelectedSemId(null); return null }
+  if (selectedSemId && sem) {
     const semCourses = courses.filter(c => {
       const cSem = getVal(c, 'Semester', 'semester').toLowerCase()
       const tSem = String(sem.title || '').toLowerCase()

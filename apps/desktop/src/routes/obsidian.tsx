@@ -862,6 +862,9 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
       return;
     }
 
+    // Always hide Graph View when a file/PDF is explicitly selected to show the main panel content
+    setShowGraphView(false);
+
     selectRequestId.current += 1
     const currentReq = selectRequestId.current
     
@@ -1532,6 +1535,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  {/* ExplorerSidebar */}
  {!isFullscreen && (
  <aside 
+ onMouseEnter={() => window.focus()}
  className="relative border-r border-border flex flex-col bg-background shrink-0 group/sidebar z-40  "
  style={{width: `${sidebarWidth}px`}}
  >
@@ -1726,6 +1730,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  {/* Sticky Connections Column (Left-Contextual) */}
   {selectedPath && (
   <aside 
+  onMouseEnter={() => window.focus()}
   className="relative border-r border-border flex flex-col bg-background shrink-0 group/connections overflow-hidden  "
   style={{width: `${connectionsWidth}px`}}
   >
@@ -1787,8 +1792,8 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  </aside>
  )}
 
- {/* Scrollable Content Column */}
- <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
+  {/* Scrollable Content Column */}
+  <div className={cn("flex-1 min-h-0", (typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? "h-full overflow-hidden flex flex-col" : "overflow-y-auto custom-scrollbar")}>
  {!selectedPath ? (
  <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-muted-foreground/30 gap-4 mt-32">
  <FileText size={64} strokeWidth={1} />
@@ -1917,6 +1922,9 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
   </div>
   </main>
   </div>
+  {(isResizing || isResizingConnections) && (
+     <div className="fixed inset-0 z-[9999] cursor-col-resize select-none bg-transparent" />
+   )}
   </div>
   )
 }
