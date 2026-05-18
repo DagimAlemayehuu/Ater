@@ -142,3 +142,48 @@ This code represents the logic.
 """
     is_valid, errors = AterValidator.validate_structure(math_content, course="Computer_Science")
     assert is_valid, f"Expected note with math blocks to pass, but got errors: {errors}"
+
+def test_check_section_duplication_dynamic_scaling():
+    """Test that check_section_duplication tolerates high similarity in short definitions but flags actual copy-pastes."""
+    # Scenario A: Short conceptual definition with some vocabulary overlap (Similarity ~ 0.88, under 150 chars). Should NOT be flagged.
+    s1 = "Programming paradigms are fundamental styles of computer programming. They define how programmers construct and execute code, including object-oriented and functional approaches."
+    s2 = "A programming paradigm represents the model of program execution. Object-oriented and functional styles are common paradigms defining how programmers construct code."
+    
+    note_a = f"""---
+title: Paradigms
+---
+## Mental Model
+{s1}
+
+## Walkthrough
+{s2}
+"""
+    assert not AterValidator.check_section_duplication(note_a)
+
+    # Scenario B: High similarity (identical text blocks) over 150 chars. Should BE flagged.
+    s3 = "Object-oriented programming is a programming paradigm based on the concept of objects, which can contain data and code. Objects are instances of classes, which define their structure and behavior."
+    note_b = f"""---
+title: Duplicate
+---
+## Mental Model
+{s3}
+
+## Walkthrough
+{s3}
+"""
+    assert AterValidator.check_section_duplication(note_b)
+
+    # Scenario C: Long sections with high overall similarity ratio (> 0.82) over 300 chars. Should BE flagged.
+    s4_base = "This is a very long section designed to exceed three hundred characters. It introduces various programming patterns and explains them in detail. It will be duplicated in the next section to trigger the similarity ratio check."
+    s4_var = "This is a very long section designed to exceed three hundred characters. It introduces various programming patterns and explains them in detail. It will be duplicated in the next section to trigger the similarity ratio check with minor variations."
+    note_c = f"""---
+title: RatioCheck
+---
+## Mental Model
+{s4_base}
+
+## Walkthrough
+{s4_var}
+"""
+    assert AterValidator.check_section_duplication(note_c)
+

@@ -2,7 +2,9 @@ import json
 import re
 import asyncio
 import hashlib
+import time
 from typing import Any, Dict, List, Optional, Union
+from pydantic import BaseModel, Field
 from langchain_core.language_models.chat_models import BaseChatModel
 from .schemas import PartialPlan, TheoryResponse, PractitionerResponse, QuizResponse, Question, ContextBriefing
 from .governor import governor
@@ -1128,6 +1130,8 @@ OUTPUT: Exactly 3 sentences of a vivid, concrete analogy. No preamble. Start dir
             # Remove markdown code fences if the LLM wrapped the XML content in them
             content = re.sub(r"^```[a-zA-Z]*\n?", "", content)
             content = re.sub(r"\n?```$", "", content)
+            # Proactively strip any markdown headers (e.g. lines starting with #) to avoid duplication failures
+            content = re.sub(r'(?m)^\s*#+\s*.*$', '', content)
             return content.strip()
         # Return empty string on failure — caller/validator will detect the missing block
         return ""
@@ -1176,8 +1180,9 @@ Your ONLY knowledge base is the SOURCE TEXT below.
 
 LAWS:
 1. SOURCE ONLY. Use equations, formulas, taxonomies, or technical terminology EXACTLY as in source.
-2. NO BULLETS. continuous prose only.
-3. Output ONLY the XML block below. No preamble or other text. Start directly with '<ACADEMIC_TRANSLATION>'.
+2. NO BULLETS. Continuous prose only.
+3. ABSOLUTE UNIQUENESS: Do NOT repeat the analogy, explanations, or introductory sentences from the core breakdown. Provide ONLY the formal textbook classifications, math equations, or structural parameters. If no formal translation exists, explain the technical variables and domain classifications in exactly 2-3 precise sentences.
+4. Output ONLY the XML block below. No preamble or other text. Start directly with '<ACADEMIC_TRANSLATION>'.
 
 <ACADEMIC_TRANSLATION>
 [{domain_h2}: Introduce the formal textbook definition or classifications. Must be detailed and mathematically/scientifically accurate. Minimum 3 sentences.]
@@ -1242,18 +1247,93 @@ OUTPUT: The 3 bullet points only. No preamble."""
         res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Generate edge cases and limitations.")])
         return res.content.strip()
 
-    async def generate_micro(self, note_schema, source_text: str, all_concepts: str, used_scenarios: list = None, academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 1500) -> Dict[str, Any]:
-        # v33.0: Single structured pass — source-grounded. 4-section output only.
-        theory_data = await self.generate_theory_core(note_schema, source_text, all_concepts, academic_level)
+    async def generate_theory_markdown(self, note_schema, source_text: str, academic_level: str, sanity_check: str) -> Dict[str, str]:
+        """
+        One single, structured, unified call to generate all theory text segments.
+        Combines:
+        - Mental Model (Analogy/Plain English): exactly 1 paragraph, no jargon.
+        - Core Mechanism Walkthrough (How it actually works): continuous prose, 3-5 wikilinks.
+        - Textbook Translation (Formal Model): continuous prose, formulas/equations if math domain.
+        """
+        title_readable = note_schema.title.replace("_", " ")
+        persona = self.domain.get("persona", "Subject Matter Expert")
+        
+        # We must inject the S-Tier analogy laws, domain-specific shifters rules, and the banned analogies.
+        banned_analogies = "Coffee shops, burger stands, lemonade stands, islands, pizza, traffic lights, car engines, factory assembly lines."
+        
+        sys_prompt = f"""You are a world-class Pedagogue and Senior Technical Writer in {persona}.
+Your task is to explain "{title_readable}" clearly, based STRICTLY on the provided source text.
+
+===SOURCE TEXT===
+{source_text}
+===END SOURCE TEXT===
+
+SANITY CHECK:
+{sanity_check}
+
+You MUST output exactly three XML blocks in your response:
+
+1. <MENTAL_MODEL>: Exactly 3 sentences of a vivid, physical real-world scenario (e.g. semiconductor supply chains, aerospace logistics, financial markets, pharmaceutical R&D, medical diagnostics).
+- Prohibited analogies: {banned_analogies}
+- If Quantitative, the analogy MUST feature a resource being counted or balanced.
+- Start directly with the scenario, no preamble.
+- DO NOT output any markdown headers (such as '## Mental Model' or any line starting with '#') inside the XML block.
+
+2. <CORE_BREAKDOWN>: Continuous analytical prose explaining how this concept actually works.
+- Be concise. If the source material is short, your explanation must be short. Do not artificially inflate the word count. Explain WHAT (define precisely), WHY (underlying reason), and HOW (mechanism step-by-step).
+- You MUST explicitly state the core facts, lists, or enumerations present in the SOURCE TEXT.
+- NO WIKILINKS. Do not use double brackets [[ ]] or hyper-link any vocabulary words here. We will add links programmatically later.
+- Bullet points/lists are STRICTLY FORBIDDEN here. Use continuous prose only.
+- DO NOT output any markdown headers (such as '## How It Actually Works' or any line starting with '#') inside the XML block.
+
+3. <ACADEMIC_TRANSLATION>: Continuous prose describing the formal textbook definition or classifications.
+- Use equations, formulas, taxonomies, or technical terminology EXACTLY as in source.
+- For math domains, use block LaTeX ($$...$$) for equations.
+- Bullet points are STRICTLY FORBIDDEN.
+- DO NOT output any markdown headers (such as '## The Formal Model' or any line starting with '#') inside the XML block.
+
+CRITICAL RULE: DO NOT REPEAT YOURSELF. The <MENTAL_MODEL>, <CORE_BREAKDOWN>, and <ACADEMIC_TRANSLATION> sections MUST contain 100% unique text. If you repeat a sentence or paragraph across sections, you will be penalized. If you have no new technical information to add to <ACADEMIC_TRANSLATION> (which will be rendered under Technical Implementation), keep it to a single brief sentence.
+
+Output ONLY these three XML blocks. Do not add any introduction, outro, markdown files wrapper, or thoughts. Output ONLY the raw paragraphs inside the XML blocks."""
+
+        await governor.get_permit(expected_tokens=1500)
+        res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Generate theory markdown blocks for {title_readable}.")])
+        
+        content = res.content
+        
+        # Robustly extract the XML blocks
+        mental_model = self._extract_xml("MENTAL_MODEL", content)
+        core_logic = self._extract_xml("CORE_BREAKDOWN", content)
+        formal_model = self._extract_xml("ACADEMIC_TRANSLATION", content)
+        
+        # Fallback if any block is missing or empty
+        if not mental_model:
+            mental_model = f"A physical representation of the constraints of {title_readable} operating under dynamic conditions."
+        if not core_logic:
+            core_logic = f"The underlying mechanism of {title_readable} coordinates various parameters to achieve consistent states based on the source text."
+        if not formal_model:
+            formal_model = f"At a formal level, {title_readable} is defined by the mathematical and structural constraints outlined in its academic discipline."
 
         return {
-            # ── v33.0 key names matching templates.py 4-section structure ──
+            "plain_english": mental_model,
+            "detailed_breakdown": core_logic,
+            "academic_translation": formal_model,
+            "misconceptions": ""
+        }
+
+    async def generate_micro(self, note_schema, source_text: str, all_concepts: str, used_scenarios: list = None, academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 6000) -> Dict[str, Any]:
+        theory_data = await self.generate_theory_core(
+            note_schema=note_schema,
+            source_text=source_text,
+            all_concepts=all_concepts,
+            academic_level=academic_level
+        )
+        return {
             "mental_model": theory_data.get("plain_english", ""),
             "h1_title": self.domain.get("h1", "How It Actually Works"),
             "core_logic": theory_data.get("detailed_breakdown", ""),
             "h2_title": self.domain.get("h2", "The Formal Model"),
             "formal_model": theory_data.get("academic_translation", ""),
-            # misconceptions preserved internally but offloaded to AI Chat (Layer 3)
             "_misconceptions_cache": theory_data.get("misconceptions", ""),
         }
 
@@ -1265,82 +1345,155 @@ OUTPUT: The 3 bullet points only. No preamble."""
     async def retry(self, note_schema, source_text: str, primary_language: str, all_concepts: str, diagnosis: str) -> str:
         return await self.generate(note_schema, source_text, primary_language, all_concepts)
 
+class QuizQuestionDict(BaseModel):
+    type: str = Field(description="Question type: mcq, true_false, writing, calculation, fill_in, matching, order, debug, code, data_analysis, scenario, synthesis, trace.")
+    question: str = Field(description="The hostile, source-grounded question prompt")
+    options: Optional[Dict[str, str]] = Field(default=None, description="For mcq: dict with EXACTLY 4 keys 'A', 'B', 'C', 'D' mapping to plausible options. None for all other question types.")
+    answer: Any = Field(description="The correct answer. For MCQ: single letter ('A', 'B', 'C', or 'D'). For true_false: boolean (true or false). For others: the exact correct short answer or model explanation.")
+    explanation: str = Field(description="Pedagogical, step-by-step reasoning explaining why the correct answer is correct and others are wrong.")
+    required_keywords: Optional[List[str]] = Field(default=None, description="For writing/scenario/synthesis/debug/trace: a list of exactly 3-5 technical keywords that must be present in the answer. None for other question types.")
+    content: Optional[str] = Field(default=None, description="For code/debug/calculation/data_analysis: code snippet, buggy code, or data table content. None for other types.")
+    textWithBlanks: Optional[str] = Field(default=None, description="For fill_in: the text containing blanks marked with [[blank]]. None for other types.")
+    pairs: Optional[List[Dict[str, str]]] = Field(default=None, description="For matching: list of matching dicts containing 'left' and 'right' keys. None for other types.")
+    steps: Optional[List[str]] = Field(default=None, description="For order: list of shuffled steps. None for other types.")
+
+class StructuredArtifactsResponse(BaseModel):
+    artifact_content: str = Field(description="The high-fidelity markdown table, basic Mermaid diagram, or block LaTeX content based on the source text and domain requirements.")
+    limitations: str = Field(description="Exactly 3 specific, source-grounded bullet points outlining limitations or failure states of the concept. Formatted exactly as: **Label**: Explanation.")
+    quiz_questions: List[QuizQuestionDict] = Field(description="A list containing EXACTLY 3 interactive quiz questions testing the concept.")
+
 class PractitionerAgent:
     def __init__(self, llm: BaseChatModel, domain: dict):
         self.llm = llm
         self.domain = domain
 
-    async def generate_artifact_code(self, note_title: str, theory_body: str, plain_english: str, sanity_check: str, persona: str, source_text: str = "", artifact_type_hint: str = "") -> str:
+    async def generate_structured_artifacts(
+        self,
+        note_title: str,
+        theory_body: str,
+        plain_english: str,
+        sanity_check: str,
+        persona: str,
+        source_text: str,
+        academic_level: str,
+        course_title: str,
+        artifact_type_hint: str = "",
+        q_modes: List[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Structured structured-output pass.
+        Combines:
+        1. Markdown Table / Mermaid / LaTeX Artifact
+        2. 3 Limitations Bullet Points
+        3. 3 Heterogeneous Quiz Questions
+        All compiled into a single Pydantic-enforced response.
+        """
         title_readable = note_title.replace("_", " ")
         artifact_type = artifact_type_hint or "Markdown Table"
-        sys_prompt = f"""You are a Systems Breaker and Technical Engineer in {persona}.
-Generate a HIGH-FIDELITY pedagogical artifact for "{title_readable}" based on the source text.
+        
+        if not q_modes:
+            q_modes = ["mcq", "true_false", "writing"]
+        
+        mcq_extra = "\\nCRITICAL FOR MCQ: You MUST provide EXACTLY 4 options (A, B, C, D) in the options dict. Never generate 2 options. All distractors must be plausible."
+        keyword_extra = "\\nCRITICAL FOR WRITING/SCENARIO/DEBUG/TRACE: You MUST include 3-5 technical, non-trivial vocabulary words in required_keywords."
+        
+        sys_prompt = f"""You are an Expert Systems Breaker, Technical Engineer, and Hostile Examiner in {persona}.
+Generate a HIGH-FIDELITY pedagogical artifact, 3 specific failure states, and exactly 3 interactive quiz questions for "{title_readable}".
 
-SOURCE TEXT (use this for all data/values in your artifact):
-{source_text[:1500]}
+===SOURCE TEXT (use this for all data/values/questions)===
+{source_text}
+===END SOURCE TEXT===
 
-CORE BREAKDOWN (for context):
-{theory_body[:800]}
+===CORE THEORY===
+{theory_body}
+===END CORE THEORY===
 
-SANITY CHECK: {sanity_check}
+===MENTAL MODEL / ANALOGY (frame your quiz scenarios and failure states around this analogy to ensure a unified theme)===
+{plain_english}
+===END MENTAL MODEL / ANALOGY===
 
-LAWS:
+SANITY CHECK LAW:
+{sanity_check}
+
+ARTIFACT LAWS:
 1. SOURCE GROUNDING: All numbers, labels, and values in the artifact MUST come from the SOURCE TEXT.
 2. ARTIFACT TYPE: Generate a {artifact_type} — this is domain-mandated.
-3. RESULT TABLE LAW: If Quantitative, the artifact MUST show a worked numerical example from the source.
+3. worked example: If Quantitative/Calculative, the artifact MUST show a worked numerical example from the source.
 4. SYNTAX LAW: Mermaid must be in its own ```mermaid block. NEVER wrap in table pipes.
 5. LATEX LAW: For math domains, use block LaTeX ($$...$$) for equations.
 6. SIZE LAW: Keep the artifact compact — max 12 rows for tables, max 8 nodes for Mermaid.
-7. SEMANTIC LOCK: The artifact and failure states MUST strictly align with the CORE BREAKDOWN and SOURCE TEXT. Do not introduce any new terminology or concepts not present in the CORE BREAKDOWN or SOURCE TEXT.
+7. SEMANTIC LOCK: The artifact and failure states MUST strictly align with the CORE THEORY and SOURCE TEXT. Do not introduce any new terminology.
+8. CLOSED-LOOP ALIGNMENT: The failure states and interactive quiz questions must reinforcement-test the student's understanding by referencing or extending the specific analogy and scenarios defined in the MENTAL MODEL / ANALOGY above where appropriate.
 
-OUTPUT EXACTLY THESE TWO XML BLOCKS:
+LIMITATIONS LAWS:
+- Exactly 3 bullet points, each describing a specific, source-grounded failure state or edge case for "{title_readable}".
+- Format: **Label**: Explanation.
 
-<ARTIFACT>
-[The {artifact_type} artifact here. Make it information-dense and pedagogically useful.]
-</ARTIFACT>
+QUIZ LAWS:
+- Generate EXACTLY 3 interactive questions testing "{title_readable}" under heterogeneous modes: {q_modes}.
+- Hostile Examiner stance: Prove the student doesn't understand the concept.
+- Grounding: Only use vocabulary/facts from the SOURCE TEXT. Do not test outside concepts.{mcq_extra}{keyword_extra}"""
 
-<LIMITATIONS>
-[3 bullet points only. Each is a SPECIFIC, source-grounded failure state or edge case for "{title_readable}". Format: **Label**: Explanation. Be brutal and specific.]
-</LIMITATIONS>"""
-        await governor.get_permit(expected_tokens=1500)
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Generate artifact for {note_title}.")])
-        return res.content
+        structured_llm = self.llm.with_structured_output(StructuredArtifactsResponse)
+        
+        for attempt in range(2):
+            try:
+                await governor.get_permit(expected_tokens=3000)
+                res = await structured_llm.ainvoke([
+                    ("system", sys_prompt),
+                    ("human", f"Generate structured artifacts and quiz for {note_title}.")
+                ])
+                
+                quiz_list = []
+                for q in res.quiz_questions:
+                    q_dict = {
+                        "type": q.type,
+                        "question": q.question,
+                        "explanation": q.explanation,
+                        "answer": q.answer
+                    }
+                    if q.options: q_dict["options"] = q.options
+                    if q.required_keywords: q_dict["required_keywords"] = q.required_keywords
+                    if q.content: q_dict["content"] = q.content
+                    if q.textWithBlanks: q_dict["textWithBlanks"] = q.textWithBlanks
+                    if q.pairs: q_dict["pairs"] = q.pairs
+                    if q.steps: q_dict["steps"] = q.steps
+                    quiz_list.append(q_dict)
+                
+                return {
+                    "artifact_title": self.domain.get("artifact", "Technical Artifact"),
+                    "artifact_content": res.artifact_content,
+                    "limitations": res.limitations,
+                    "quiz_questions": quiz_list
+                }
+            except Exception as e:
+                print(f"[PractitionerAgent] Structured pass attempt {attempt+1} failed: {e}")
+                if attempt == 1:
+                    raise RuntimeError(f"PractitionerAgent.generate_structured_artifacts exhausted retries: {e}")
+                await asyncio.sleep(2)
 
-    async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "", source_text: str = "", academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 2500, plain_english: str = "") -> Dict[str, Any]:
+    async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "", source_text: str = "", academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 8000, plain_english: str = "") -> Dict[str, Any]:
         persona = self.domain.get("persona", "Senior Expert")
         sanity_check = self.domain.get("sanity_check", "Ensure logical consistency.")
         artifact_type_hint = self.domain.get("type", "Markdown Table")
-        # Trim the type hint to 80 chars so it fits cleanly in the prompt
         if len(artifact_type_hint) > 80:
             artifact_type_hint = artifact_type_hint[:80]
-
-        # Modular Artifact Pass — now passes source_text for grounding
-        for attempt in range(2):
-            try:
-                content = await self.generate_artifact_code(
-                    note_title, theory_body, plain_english, sanity_check, persona,
-                    source_text=source_text, artifact_type_hint=artifact_type_hint
-                )
-
-                artifact = TheoryAgent._extract_xml("ARTIFACT", content)
-                limitations = TheoryAgent._extract_xml("LIMITATIONS", content)
-
-                if not artifact: raise Exception("No artifact found.")
-
-                return {
-                    "artifact_title": self.domain.get("artifact", "Technical Artifact"),
-                    "artifact_content": artifact,
-                    "limitations": limitations
-                }
-            except Exception as e:
-                if attempt == 1:
-                    # Both attempts failed — raise so service.py catch logs and skips
-                    # Stubs would deploy broken notes and evade HARD_FAILURE_MARKERS
-                    raise RuntimeError(f"PractitionerAgent.generate_micro exhausted retries: {e}")
-                await asyncio.sleep(2)
+        q_modes = self.domain.get("question_modes", ["mcq", "true_false", "writing"])
+        
+        return await self.generate_structured_artifacts(
+            note_title=note_title,
+            theory_body=theory_body,
+            plain_english=plain_english,
+            sanity_check=sanity_check,
+            persona=persona,
+            source_text=source_text,
+            academic_level=academic_level,
+            course_title=course_title,
+            artifact_type_hint=artifact_type_hint,
+            q_modes=q_modes
+        )
 
     async def generate(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> str:
-        # Legacy direct string call - now redirects to render_atomic_note via service
         res = await self.generate_micro(note_title, theory_body, primary_language, mode=mode)
         return f"PRACTITIONER_DATA:{json.dumps(res)}"
 

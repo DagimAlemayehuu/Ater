@@ -147,9 +147,13 @@ class ModelFactory:
                 "X-Title": "Ater"
             }
 
-        # Merge additional kwargs
+        # Merge additional kwargs safely
         for k, v in kwargs.items():
             if k not in config:
-                config[k] = v
+                if k in ["presence_penalty", "frequency_penalty"]:
+                    if provider in ["openai", "openrouter", "groq"]:
+                        config[k] = v
+                else:
+                    config[k] = v
 
         return model_class(**config)

@@ -2136,22 +2136,91 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         else:
                             note_schema = AtomicNoteSchema(**note_schema_dict)
 
-                        final_output = ""
+                        modality = getattr(note_schema, 'concept_modality', 'Qualitative/Definitional')
+                        domain = get_persona(note_schema.mode, modality)
+                        source_snippet = self._extract_source_snippet(
+                            note_schema.source_context or "No context", 
+                            note_schema.title, 
+                            0,
+                            used_examples=session.get("used_examples", [])
+                        )
                         
                         generation_attempts = 0
-                        max_attempts = 3
                         last_candidate_markdown = None
                         
-                        while generation_attempts < max_attempts:
+                        while True:
                             generation_attempts += 1
-                            phase_prefix = f"(Attempt {generation_attempts}/{max_attempts})" if generation_attempts > 1 else ""
-                            try:
-                                # ── EXOSKELETON ASSEMBLER v29.0 (HYDRA) ──
-                                modality = getattr(note_schema, 'concept_modality', 'Qualitative/Definitional')
-                                domain = get_persona(note_schema.mode, modality)
+                            current_temp = 0.0 + (generation_attempts - 1) * 0.15
+                            current_topp = 0.9 + (generation_attempts - 1) * 0.05
+                            if current_topp > 1.0:
+                                current_topp = 1.0
                                 
-                                theory_agent = TheoryAgent(self.llm_creative, domain)
-                                practitioner_agent = PractitionerAgent(self.llm_creative, domain)
+                            phase_prefix = f"(Attempt {generation_attempts}, Temp={current_temp:.2f})" if generation_attempts > 1 else ""
+                            
+                            if current_temp >= 1.5:
+                                # Max entropy hit — deploy the skeleton fallback gracefully to prevent stalling!
+                                logger.warning(f"[Ater Service] Max entropy/attempts reached for '{current_note_title}'. Deploying deterministic skeleton fallback.")
+                                self.set_status(session_id, f"⚠️ Max attempts reached: Deploying fallback skeleton for [[{current_note_title}]]...")
+                                
+                                skeleton_body = build_skeleton_note(note_schema, source_snippet, domain)
+                                metadata = {
+                                    "title": note_schema.title,
+                                    "course": course,
+                                    "unit": str(unit_num),
+                                    "semester": semester,
+                                    "mode": note_schema.mode,
+                                    "type": "atomic_note",
+                                    "hub": f"[[{plan_obj.hub_note.title}]]",
+                                    "source": self._get_source_link(plan_obj, session.get("path", "")),
+                                    "date": datetime.now().strftime("%Y-%m-%d"),
+                                    "prerequisites": note_schema.prerequisites,
+                                    "source_pages": note_schema.source_pages,
+                                    "generated": True,
+                                    "skeleton_fallback": True
+                                }
+                                yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
+                                final_markdown = f"---\n{yaml_frontmatter}---\n{skeleton_body}"
+                                
+                                local_results = self.deployer.deploy_atomic_notes(
+                                    session_id, [current_note_title], [final_markdown], plan_obj, session.get("path", "")
+                                )
+                                if current_note_title not in session.get("processed_notes", []):
+                                    session.setdefault("processed_notes", []).append(current_note_title)
+                                self._persist_session(session_id, session)
+                                break
+                            
+                            try:
+                                # Dynamic LLMs: one precise for structures, one creative for prose/explanations
+                                temp_llm = ModelFactory.get_model(
+                                    provider=self.secrets.ai_provider,
+                                    model_name=self.secrets.ai_model,
+                                    api_key=self.secrets.ai_key,
+                                    temperature=current_temp,
+                                    top_p=current_topp,
+                                    timeout=ATER_TIMEOUT,
+                                    request_timeout=ATER_TIMEOUT,
+                                    max_retries=0,
+                                    max_tokens=4096,
+                                ) if self.secrets.ai_key else self.llm
+                                
+                                temp_llm_creative = ModelFactory.get_model(
+                                    provider=self.secrets.ai_provider,
+                                    model_name=self.secrets.ai_model,
+                                    api_key=self.secrets.ai_key,
+                                    temperature=max(0.3, current_temp), # minimum 0.3 creative floor
+                                    top_p=current_topp,
+                                    timeout=ATER_TIMEOUT,
+                                    request_timeout=ATER_TIMEOUT,
+                                    max_retries=0,
+                                    max_tokens=4096,
+                                    presence_penalty=0.1,
+                                    frequency_penalty=0.1,
+                                ) if self.secrets.ai_key else self.llm_creative
+                                
+                                theory_agent = TheoryAgent(temp_llm_creative, domain)
+                                practitioner_agent = PractitionerAgent(temp_llm, domain)
+
+                                # ── EXOSKELETON ASSEMBLER v29.0 (HYDRA) ──
                                 
                                 note_data = {
                                     "title": note_schema.title,
@@ -2241,7 +2310,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 self.set_status(session_id, f"{phase_prefix} Assessment: [[{current_note_title}]]...")
                                 await self.governor.get_permit(expected_tokens=2500)
 
-                                q_agent = QuestionAgent(self.planner_llm, domain)
+                                q_agent = QuestionAgent(temp_llm, domain)
                                 # v33.1: Expanded source anchor + strict domain lock header
                                 _concept_label = current_note_title.replace('_', ' ')
                                 q_context = (
@@ -2401,14 +2470,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     else:
                                         self.governor.report_error()
                                     raise e # Propagate up to confirm_plan
-                                if generation_attempts >= max_attempts:
-                                    logger.warning(f"[Ater Service] Error for '{current_note_title}': {e}.")
+                                if current_temp >= 1.5:
+                                    logger.warning(f"[Ater Service] Max attempts/entropy reached for '{current_note_title}': {e}.")
                                     break
                                 await asyncio.sleep(5)
                         
                         # Best-effort fallback deployment to guarantee no notes are ever skipped
-                        if current_note_title not in session.get("processed_notes", []) and last_candidate_markdown:
-                            logger.warning(f"[Ater Service] Max attempts reached for '{current_note_title}' with validation/verification failures. Deploying deterministic skeleton fallback.")
+                        if current_note_title not in session.get("processed_notes", []):
+                            logger.warning(f"[Ater Service] Max attempts reached for '{current_note_title}'. Deploying deterministic skeleton fallback.")
                             
                             skeleton_body = build_skeleton_note(note_schema, source_snippet, domain)
                             metadata = {

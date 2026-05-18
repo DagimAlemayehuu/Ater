@@ -389,28 +389,86 @@ class AterValidator:
     @staticmethod
     def check_section_duplication(body: str) -> bool:
         """
-        Returns True if Section 1 (Mental Model) text is a near-exact
-        duplicate of Section 2 (domain H1 walkthrough). Prevents the
-        Scarcity.md-class copy-paste failure where the model reuses the
-        exact same prose block in both sections.
+        Returns True if any section (Mental Model, walkthrough, or mathematical model) text is a near-exact
+        duplicate of another section. Prevents the Scarcity.md-class copy-paste failure
+        where the model reuses the exact same prose block across different sections.
+
+        v33.4: Hardened to perform pairwise cross-comparisons between all sections in the note body.
+        Allows overlapping definitions while strictly blocking copy-paste blocks.
         """
+        import logging
+        import re
+        logger = logging.getLogger("Ater")
+
         sections = re.findall(
             r'(?:^|\n)(?:#{1,3})\s+[^\n]+\n(.*?)(?=(?:^|\n)(?:#{1,3})\s+|```interactive-quiz|\Z)',
             body, re.DOTALL
         )
         if len(sections) < 2:
             return False
-        s1 = sections[0].strip()
-        s2 = sections[1].strip()
-        if not s1 or not s2 or len(s1) < 100:
+            
+        normalized_sections = []
+        for i, s in enumerate(sections):
+            stripped = s.strip()
+            if len(stripped) >= 80:
+                # Normalize: lowercase, remove punctuation, reduce extra whitespace to compare semantic core
+                norm = re.sub(r'[\#\*\_\`\[\]\(\)\-\+\=\|\:\;\.\,\?\!\'\"]', '', stripped)
+                normalized_sections.append((i, stripped, " ".join(norm.lower().split())))
+
+        if len(normalized_sections) < 2:
             return False
-        # Exact duplicate or pure substring
-        if s1 in s2 or s2 in s1:
-            return True
-        # Near-duplicate: use SequenceMatcher
+
         from difflib import SequenceMatcher
-        similarity = SequenceMatcher(None, s1, s2).ratio()
-        return similarity > 0.80
+        for i in range(len(normalized_sections)):
+            for j in range(i + 1, len(normalized_sections)):
+                idx1, raw1, norm1 = normalized_sections[i]
+                idx2, raw2, norm2 = normalized_sections[j]
+                
+                # 1. Exact or near-exact match
+                if norm1 == norm2:
+                    logger.warning(f"[Duplication Guard] Critical: Normalized sections {idx1 + 1} and {idx2 + 1} are identical.")
+                    return True
+                    
+                # 2. Check for exact copy-paste substring block
+                matcher = SequenceMatcher(None, norm1, norm2)
+                match = matcher.find_longest_match(0, len(norm1), 0, len(norm2))
+                
+                shorter_len = min(len(norm1), len(norm2))
+                longer_len = max(len(norm1), len(norm2))
+                
+                if match.size > 0:
+                    overlap_ratio_shorter = match.size / shorter_len
+                    # If a massive block (e.g. > 150 chars) is an exact copy-paste that constitutes
+                    # more than 80% of the shorter section, reject it as a copy-paste failure.
+                    if match.size >= 150 and overlap_ratio_shorter > 0.80:
+                        logger.warning(
+                            f"[Duplication Guard] Critical copy-paste block detected between sections {idx1 + 1} and {idx2 + 1}! "
+                            f"Longest match size: {match.size} chars (constitutes {overlap_ratio_shorter:.2%} of shorter section). "
+                            f"Matched text: '{norm1[match.a:match.a+match.size][:100]}...'"
+                        )
+                        return True
+
+                # 3. Overall SequenceMatcher similarity ratio check
+                similarity = matcher.ratio()
+                
+                # Scale similarity threshold dynamically based on character length
+                if shorter_len < 150:
+                    threshold = 0.92
+                elif shorter_len < 300:
+                    threshold = 0.88
+                else:
+                    threshold = 0.82
+                    
+                if similarity > threshold:
+                    logger.warning(
+                        f"[Duplication Guard] Similarity ratio {similarity:.4f} between sections {idx1 + 1} and {idx2 + 1} "
+                        f"exceeds threshold {threshold:.4f} (shorter section length: {shorter_len} chars). Rejecting section."
+                    )
+                    logger.info(f"--- Section {idx1 + 1} (len={len(raw1)}) ---\n{raw1}\n-----------------------------")
+                    logger.info(f"--- Section {idx2 + 1} (len={len(raw2)}) ---\n{raw2}\n-----------------------------")
+                    return True
+                    
+        return False
 
     @staticmethod
     def repair_code_fences(content: str) -> str:
@@ -503,11 +561,28 @@ class AterValidator:
         clean_json = clean_json.replace("\\\\n", "\\n")
 
         def _sanitize_backslashes(s: str) -> str:
-            r"""Escape lone backslashes that are not valid JSON escape sequences.
-            This handles LaTeX like \\frac, \\Delta, \\sigma etc. inside JSON strings.
-            Valid JSON escapes: \\ \" \/ \b \f \n \r \t \uXXXX
+            r"""Escape backslashes for LaTeX control sequences inside JSON strings.
+            E.g., \frac -> \\frac, \sigma -> \\sigma, \Delta -> \\Delta, \times -> \\times, etc.
             """
-            return re.sub(r'\\(?![\\"/bfnrtu])', r'\\\\', s)
+            # 1. Escape backslashes followed by letters, except valid JSON escapes (like \n, \t, etc.)
+            def replace_backslash_word(match):
+                word = match.group(1)
+                # Valid single-char escapes
+                if word in ('n', 't', 'r', 'b', 'f'):
+                    return match.group(0)
+                # Unicode escape \uXXXX
+                if word.startswith('u') and len(word) >= 5 and all(c in '0123456789abcdefABCDEF' for c in word[1:5]):
+                    return match.group(0)
+                return '\\\\' + word
+
+            s = re.sub(r'(?m)(?<!\\)\\([a-zA-Z]+)', replace_backslash_word, s)
+            
+            # 2. Escape backslashes followed by non-letters that are not valid JSON escape characters.
+            # Valid JSON non-letter escape characters: ", \, /
+            # Any other non-letter following a backslash (like {, }, $, _, etc.) should be escaped.
+            s = re.sub(r'(?m)(?<!\\)\\(?![\\"/])', r'\\\\', s)
+            
+            return s
 
         def _try_parse(s: str):
             try:
