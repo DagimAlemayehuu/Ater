@@ -58,5 +58,11 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Create dummy sidecar for Cargo Check
+        run: |
+          mkdir -p apps/desktop/src-tauri/binaries
+          touch apps/desktop/src-tauri/binaries/ater-api-x86_64-unknown-linux-gnu
+
       - name: Run Cargo Check
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+
