@@ -159,6 +159,7 @@ dependencies = [
  "machine-uid",
  "ndarray",
  "ort",
+ "percent-encoding",
  "reqwest 0.13.3",
  "serde",
  "serde_json",

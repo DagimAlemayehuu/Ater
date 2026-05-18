@@ -93,7 +93,7 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
           <BigPropertyCard label="Status" value={getVal(hub, 'status', 'Status') || 'Active'}
             schema={{ type: 'select' }} onUpdate={v => onUpdate(DB_ID, hub.id, { status: v })} />
           <BigPropertyCard label="Course" value={getVal(hub, 'course', 'Course')}
-            schema={{ type: 'select', source: 'courses' }} onUpdate={v => onUpdate(DB_ID, hub.id, { course: v })} />
+            schema={{ type: 'relation', source: 'database/courses' }} onUpdate={v => onUpdate(DB_ID, hub.id, { course: v })} />
           <StatCard label="Study Time" value={studyTime > 0 ? `${Math.round(studyTime / 60)}m` : '--'} />
           <StatCard label="Practice Accuracy" value={accuracy !== null ? `${accuracy}%` : '--'} />
         </div>

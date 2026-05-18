@@ -77,7 +77,27 @@ async def initialize_vault(secrets: AppSecrets = Depends(get_app_secrets)):
         
     vault_root = Path(secrets.vault_path)
     
-    # 1. Core Hierarchy (Only essential folders)
+    # 1. Try to copy from monorepo Obsidian_Vault template folder
+    template_path = Path(__file__).parents[4] / "Obsidian_Vault"
+    if template_path.exists() and template_path.is_dir():
+        try:
+            def copy_tree(src: Path, dst: Path):
+                dst.mkdir(parents=True, exist_ok=True)
+                for item in src.iterdir():
+                    if item.name.startswith("."):
+                        continue
+                    dst_item = dst / item.name
+                    if item.is_dir():
+                        copy_tree(item, dst_item)
+                    else:
+                        if not dst_item.exists():
+                            shutil.copy2(item, dst_item)
+            copy_tree(template_path, vault_root)
+            return {"success": True, "message": "Vault structure successfully initialized from Obsidian_Vault template"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to copy template: {str(e)}")
+
+    # 2. Fallback: Core Hierarchy (Only essential folders)
     folders = [
         f"{DB_DIR_PREFIX}/years",
         f"{DB_DIR_PREFIX}/assignments",
@@ -90,7 +110,7 @@ async def initialize_vault(secrets: AppSecrets = Depends(get_app_secrets)):
         "Notes"
     ]
     
-    # 2. Select Sources (for Properties)
+    # 3. Select Sources (for Properties)
     select_sources = [
         f"{DB_DIR_PREFIX}/study planner/status",
         f"{DB_DIR_PREFIX}/study planner/confidence",
@@ -100,6 +120,7 @@ async def initialize_vault(secrets: AppSecrets = Depends(get_app_secrets)):
         f"{DB_DIR_PREFIX}/courses/professor",
         f"{DB_DIR_PREFIX}/courses/status",
         f"{DB_DIR_PREFIX}/years/status",
+        f"{DB_DIR_PREFIX}/years/academic level",
         f"{DB_DIR_PREFIX}/semesters/status",
         f"{DB_DIR_PREFIX}/exams/type",
         f"{DB_DIR_PREFIX}/assignments/status",
@@ -121,6 +142,7 @@ async def initialize_vault(secrets: AppSecrets = Depends(get_app_secrets)):
             f"{DB_DIR_PREFIX}/study planner/type": ["Hub", "Atomic", "Possible Questions"],
             f"{DB_DIR_PREFIX}/courses/status": ["Planned", "In Progress", "Completed"],
             f"{DB_DIR_PREFIX}/years/status": ["Active", "Completed", "Future"],
+            f"{DB_DIR_PREFIX}/years/academic level": ["Undergraduate", "Graduate", "PhD"],
             f"{DB_DIR_PREFIX}/semesters/status": ["Planned", "Active", "Completed"],
             f"{DB_DIR_PREFIX}/exams/type": ["Midterm", "Final", "Quiz", "Assignment"],
             f"{DB_DIR_PREFIX}/assignments/status": ["Planned", "In Progress", "Completed"],
@@ -217,12 +239,13 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                                                 "credits": {"type": "number"},
                                                 "score": {"type": "number"},
                                                 "total score": {"type": "number"},
-                                                "status": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planner/status"},
-                                                "confidence": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planner/confidence"},
-                                                "grade": {"type": "select", "source": f"{DB_DIR_PREFIX}/courses/grade"},
-                                                "professor": {"type": "select", "source": f"{DB_DIR_PREFIX}/courses/professor"},
-                                                "difficulty": {"type": "select", "source": f"{DB_DIR_PREFIX}/courses/difficulty"},
-                                                "priority": {"type": "select", "source": f"{DB_DIR_PREFIX}/assignments/priority"},
+                                                "status": {"type": "select", "source": f"{DB_DIR_PREFIX}/{entry.name}/status"},
+                                                "confidence": {"type": "select", "source": f"{DB_DIR_PREFIX}/{entry.name}/confidence"},
+                                                "academic level": {"type": "select", "source": f"{DB_DIR_PREFIX}/{entry.name}/academic level"},
+                                                "grade": {"type": "select", "source": f"{DB_DIR_PREFIX}/{entry.name}/grade"},
+                                                "professor": {"type": "select", "source": f"{DB_DIR_PREFIX}/{entry.name}/professor"},
+                                                "difficulty": {"type": "select", "source": f"{DB_DIR_PREFIX}/{entry.name}/difficulty"},
+                                                "priority": {"type": "select", "source": f"{DB_DIR_PREFIX}/{entry.name}/priority"},
                                                 "generated": {"type": "bool"},
                                                 "source": {"type": "relation", "source": "inbox"},
                                                 "source pages": {"type": "str"},

@@ -126,7 +126,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
           <BigPropertyCard label="Due Date" value={assignment.due_date || ''}
             schema={{ type: 'date' }} onUpdate={v => onUpdate('assignments', assignment.id, { due_date: v })} />
           <BigPropertyCard label="Course" value={getVal(assignment, 'Course', 'course') || ''}
-            schema={{ type: 'select', source: 'courses' }} onUpdate={v => onUpdate('assignments', assignment.id, { Course: v })} />
+            schema={{ type: 'relation', source: 'database/courses' }} onUpdate={v => onUpdate('assignments', assignment.id, { Course: v })} />
         </div>
 
         {/* Extra properties */}

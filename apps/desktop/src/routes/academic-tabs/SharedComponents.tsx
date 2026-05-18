@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { Check, Edit3, Plus, X, ChevronRight, AlertTriangle } from 'lucide-react'
+import { Check, Edit3, Plus, X, ChevronRight, AlertTriangle, Trash2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { stripWL, statusColorClass, getYearOrder, wrapWL, cleanTitle, getVal, getBoolVal } from './utils'
@@ -230,6 +230,8 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
   )
 }
 
+import { sidecarApi } from '@/lib/sidecarApi'
+
 // ─── Select Property Editor ────────────────────────────────────────────────────
 export function SelectPropertyEditor({ value, source, onSave, onCancel, label }: {
   value: string; source?: string; onSave: (val: string) => void; onCancel: () => void; label?: string
@@ -238,8 +240,8 @@ export function SelectPropertyEditor({ value, source, onSave, onCancel, label }:
   const [search, setSearch] = useState('')
   const rawValue = stripWL(value)
 
-  // Default options for known sources
   useEffect(() => {
+    let active = true
     const defaults: Record<string, string[]> = {
       status: ['Active', 'Completed', 'Planned', 'Upcoming', 'In Progress', 'On Hold'],
       priority: ['Low', 'Medium', 'High', 'Critical'],
@@ -249,13 +251,51 @@ export function SelectPropertyEditor({ value, source, onSave, onCancel, label }:
       confidence: ['Low', 'Medium', 'High', 'Expert'],
       'academic level': ['High School', 'Undergraduate', "Master's", 'PhD'],
     }
-    const key = (label || source || '').toLowerCase()
-    for (const [k, v] of Object.entries(defaults)) {
-      if (key.includes(k)) { setOptions(v); return }
+
+    const loadOptions = async () => {
+      if (source) {
+        try {
+          const res = await sidecarApi.getVaultOptions(source)
+          if (active && res && res.options && res.options.length > 0) {
+            setOptions(res.options)
+            return
+          }
+        } catch (err) {
+          console.error('[SelectPropertyEditor] Failed to load options:', err)
+        }
+      }
+      
+      const key = (label || source || '').toLowerCase()
+      for (const [k, v] of Object.entries(defaults)) {
+        if (key.includes(k)) {
+          if (active) setOptions(v)
+          return
+        }
+      }
+    }
+
+    loadOptions()
+    return () => {
+      active = false
     }
   }, [source, label])
 
   const filtered = options.filter(o => o.toLowerCase().includes(search.toLowerCase()))
+
+  const handleSelect = async (opt: string) => {
+    onSave(wrapWL(opt))
+  }
+
+  const handleAddNew = async (newVal: string) => {
+    if (source) {
+      try {
+        await sidecarApi.createVaultOption(source, newVal)
+      } catch (err) {
+        console.error('[SelectPropertyEditor] Failed to create option:', err)
+      }
+    }
+    onSave(wrapWL(newVal))
+  }
 
   return (
     <div className="absolute top-full left-0 mt-1 w-full min-w-[200px] bg-background border border-border z-50 p-2"
@@ -264,14 +304,33 @@ export function SelectPropertyEditor({ value, source, onSave, onCancel, label }:
         className="w-full bg-muted/5 text-[10px] font-black uppercase px-3 py-2 mb-2 focus:outline-none" />
       <div className="max-h-44 overflow-y-auto flex flex-col gap-0.5">
         {filtered.map(opt => (
-          <button key={opt} onClick={e => { e.stopPropagation(); onSave(wrapWL(opt)) }}
-            className={cn('px-3 py-1.5 text-[10px] font-black uppercase text-left hover:bg-muted/10',
-              rawValue === opt ? 'bg-primary/10 text-primary' : 'text-foreground')}>
-            {opt}
-          </button>
+          <div key={opt} className={cn('flex items-center justify-between group hover:bg-muted/10', rawValue === opt ? 'bg-primary/5' : '')}>
+            <button onClick={e => { e.stopPropagation(); handleSelect(opt) }}
+              className={cn('flex-1 px-3 py-1.5 text-[10px] font-black uppercase text-left',
+                rawValue === opt ? 'text-primary' : 'text-foreground')}>
+              {opt}
+            </button>
+            {source && (
+              <button 
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    await sidecarApi.deleteVaultOption(source, opt);
+                    setOptions(prev => prev.filter(o => o !== opt));
+                  } catch (err) {
+                    console.error('[SelectPropertyEditor] Failed to delete option:', err);
+                  }
+                }}
+                className="hidden group-hover:flex items-center justify-center px-2 py-1.5 hover:text-destructive text-muted-foreground transition-colors"
+                title="Delete option"
+              >
+                <Trash2 size={10} />
+              </button>
+            )}
+          </div>
         ))}
         {filtered.length === 0 && search && (
-          <button onClick={e => { e.stopPropagation(); onSave(wrapWL(search)); }}
+          <button onClick={e => { e.stopPropagation(); handleAddNew(search); }}
             className="px-3 py-1.5 text-[10px] font-black uppercase text-left text-primary hover:bg-primary/5">
             + Use "{search}"
           </button>

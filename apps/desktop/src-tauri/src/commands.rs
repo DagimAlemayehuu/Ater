@@ -340,6 +340,88 @@ async fn proxy_get<R: serde::de::DeserializeOwned>(
     Err(format!("Failed to send request to sidecar API (after {} attempts): {}", max_attempts, last_err.unwrap()))
 }
 
+async fn proxy_patch<T: serde::Serialize, R: serde::de::DeserializeOwned>(
+    port: u16,
+    path: &str,
+    body: &T,
+    headers: reqwest::header::HeaderMap,
+) -> Result<R, String> {
+    let client = reqwest::Client::new();
+    let url = format!("http://127.0.0.1:{}{}", port, path);
+    let mut attempt = 0;
+    let max_attempts = 5;
+    let mut last_err = None;
+
+    while attempt < max_attempts {
+        match client.patch(&url)
+            .headers(headers.clone())
+            .json(body)
+            .send()
+            .await
+        {
+            Ok(res) => {
+                if !res.status().is_success() {
+                    let status = res.status();
+                    let err_text = res.text().await.unwrap_or_default();
+                    return Err(format!("Sidecar API returned error status {}: {}", status, err_text));
+                }
+                return res.json::<R>()
+                    .await
+                    .map_err(|e| format!("Failed to parse sidecar response: {}", e));
+            }
+            Err(e) => {
+                last_err = Some(e);
+                attempt += 1;
+                if attempt < max_attempts {
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                }
+            }
+        }
+    }
+
+    Err(format!("Failed to send request to sidecar API (after {} attempts): {}", max_attempts, last_err.unwrap()))
+}
+
+async fn proxy_delete<R: serde::de::DeserializeOwned>(
+    port: u16,
+    path: &str,
+    headers: reqwest::header::HeaderMap,
+) -> Result<R, String> {
+    let client = reqwest::Client::new();
+    let url = format!("http://127.0.0.1:{}{}", port, path);
+    let mut attempt = 0;
+    let max_attempts = 5;
+    let mut last_err = None;
+
+    while attempt < max_attempts {
+        match client.delete(&url)
+            .headers(headers.clone())
+            .send()
+            .await
+        {
+            Ok(res) => {
+                if !res.status().is_success() {
+                    let status = res.status();
+                    let err_text = res.text().await.unwrap_or_default();
+                    return Err(format!("Sidecar API returned error status {}: {}", status, err_text));
+                }
+                return res.json::<R>()
+                    .await
+                    .map_err(|e| format!("Failed to parse sidecar response: {}", e));
+            }
+            Err(e) => {
+                last_err = Some(e);
+                attempt += 1;
+                if attempt < max_attempts {
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                }
+            }
+        }
+    }
+
+    Err(format!("Failed to send request to sidecar API (after {} attempts): {}", max_attempts, last_err.unwrap()))
+}
+
 fn walk_dir(
     dir: &std::path::Path,
     root: &std::path::Path,
@@ -922,14 +1004,21 @@ pub async fn academics_sync_profile(
         "database/years",
         "database/programs",
         "database/inbox",
-        // Relation/Select Folders
-        "database/statuses",
-        "database/levels",
-        "database/seasons",
-        "database/difficulties",
-        "database/priorities",
-        "database/types",
-        "database/confidences"
+        // Nested Select property subfolders
+        "database/courses/status",
+        "database/courses/difficulty",
+        "database/courses/grade",
+        "database/courses/professor",
+        "database/semesters/status",
+        "database/years/status",
+        "database/years/academic level",
+        "database/assignments/status",
+        "database/assignments/priority",
+        "database/assignments/type",
+        "database/exams/type",
+        "database/study planner/status",
+        "database/study planner/confidence",
+        "database/study planner/type"
     ];
     for f in db_folders {
         let _ = std::fs::create_dir_all(vault_root.join(f));
@@ -937,36 +1026,58 @@ pub async fn academics_sync_profile(
     
     // Create default property md files
     let default_files = vec![
-        ("database/statuses/Planned.md", "---\ntitle: Planned\n---\n# Planned"),
-        ("database/statuses/Active.md", "---\ntitle: Active\n---\n# Active"),
-        ("database/statuses/Completed.md", "---\ntitle: Completed\n---\n# Completed"),
-        ("database/statuses/Not Started.md", "---\ntitle: Not Started\n---\n# Not Started"),
-        ("database/statuses/In Progress.md", "---\ntitle: In Progress\n---\n# In Progress"),
-        ("database/statuses/Upcoming.md", "---\ntitle: Upcoming\n---\n# Upcoming"),
-        ("database/priorities/Low.md", "---\ntitle: Low\n---\n# Low"),
-        ("database/priorities/Medium.md", "---\ntitle: Medium\n---\n# Medium"),
-        ("database/priorities/High.md", "---\ntitle: High\n---\n# High"),
-        ("database/priorities/Critical.md", "---\ntitle: Critical\n---\n# Critical"),
-        ("database/difficulties/Easy.md", "---\ntitle: Easy\n---\n# Easy"),
-        ("database/difficulties/Medium.md", "---\ntitle: Medium\n---\n# Medium"),
-        ("database/difficulties/Hard.md", "---\ntitle: Hard\n---\n# Hard"),
-        ("database/difficulties/Expert.md", "---\ntitle: Expert\n---\n# Expert"),
-        ("database/types/Homework.md", "---\ntitle: Homework\n---\n# Homework"),
-        ("database/types/Project.md", "---\ntitle: Project\n---\n# Project"),
-        ("database/types/Midterm.md", "---\ntitle: Midterm\n---\n# Midterm"),
-        ("database/types/Final.md", "---\ntitle: Final\n---\n# Final"),
-        ("database/types/Quiz.md", "---\ntitle: Quiz\n---\n# Quiz"),
-        ("database/types/Review.md", "---\ntitle: Review\n---\n# Review"),
-        ("database/seasons/Fall.md", "---\ntitle: Fall\n---\n# Fall"),
-        ("database/seasons/Spring.md", "---\ntitle: Spring\n---\n# Spring"),
-        ("database/seasons/Summer.md", "---\ntitle: Summer\n---\n# Summer"),
-        ("database/seasons/Winter.md", "---\ntitle: Winter\n---\n# Winter"),
-        ("database/confidences/Low.md", "---\ntitle: Low\n---\n# Low"),
-        ("database/confidences/Medium.md", "---\ntitle: Medium\n---\n# Medium"),
-        ("database/confidences/High.md", "---\ntitle: High\n---\n# High"),
-        ("database/levels/Undergraduate.md", "---\ntitle: Undergraduate\n---\n# Undergraduate"),
-        ("database/levels/Graduate.md", "---\ntitle: Graduate\n---\n# Graduate"),
-        ("database/levels/PhD.md", "---\ntitle: PhD\n---\n# PhD"),
+        ("database/courses/status/Planned.md", "---\ntitle: Planned\n---\n# Planned"),
+        ("database/courses/status/In Progress.md", "---\ntitle: In Progress\n---\n# In Progress"),
+        ("database/courses/status/Completed.md", "---\ntitle: Completed\n---\n# Completed"),
+        ("database/courses/difficulty/Easy.md", "---\ntitle: Easy\n---\n# Easy"),
+        ("database/courses/difficulty/Medium.md", "---\ntitle: Medium\n---\n# Medium"),
+        ("database/courses/difficulty/Hard.md", "---\ntitle: Hard\n---\n# Hard"),
+        ("database/courses/difficulty/Expert.md", "---\ntitle: Expert\n---\n# Expert"),
+        ("database/courses/grade/A.md", "---\ntitle: A\n---\n# A"),
+        ("database/courses/grade/B.md", "---\ntitle: B\n---\n# B"),
+        ("database/courses/grade/C.md", "---\ntitle: C\n---\n# C"),
+        ("database/courses/grade/D.md", "---\ntitle: D\n---\n# D"),
+        ("database/courses/grade/F.md", "---\ntitle: F\n---\n# F"),
+        ("database/courses/grade/P.md", "---\ntitle: P\n---\n# P"),
+        
+        ("database/semesters/status/Planned.md", "---\ntitle: Planned\n---\n# Planned"),
+        ("database/semesters/status/Active.md", "---\ntitle: Active\n---\n# Active"),
+        ("database/semesters/status/Completed.md", "---\ntitle: Completed\n---\n# Completed"),
+        
+        ("database/years/status/Active.md", "---\ntitle: Active\n---\n# Active"),
+        ("database/years/status/Completed.md", "---\ntitle: Completed\n---\n# Completed"),
+        ("database/years/status/Future.md", "---\ntitle: Future\n---\n# Future"),
+        ("database/years/academic level/Undergraduate.md", "---\ntitle: Undergraduate\n---\n# Undergraduate"),
+        ("database/years/academic level/Graduate.md", "---\ntitle: Graduate\n---\n# Graduate"),
+        ("database/years/academic level/PhD.md", "---\ntitle: PhD\n---\n# PhD"),
+        
+        ("database/assignments/status/Planned.md", "---\ntitle: Planned\n---\n# Planned"),
+        ("database/assignments/status/In Progress.md", "---\ntitle: In Progress\n---\n# In Progress"),
+        ("database/assignments/status/Completed.md", "---\ntitle: Completed\n---\n# Completed"),
+        ("database/assignments/priority/Low.md", "---\ntitle: Low\n---\n# Low"),
+        ("database/assignments/priority/Medium.md", "---\ntitle: Medium\n---\n# Medium"),
+        ("database/assignments/priority/High.md", "---\ntitle: High\n---\n# High"),
+        ("database/assignments/type/Homework.md", "---\ntitle: Homework\n---\n# Homework"),
+        ("database/assignments/type/Project.md", "---\ntitle: Project\n---\n# Project"),
+        ("database/assignments/type/Reading.md", "---\ntitle: Reading\n---\n# Reading"),
+        ("database/assignments/type/Lab.md", "---\ntitle: Lab\n---\n# Lab"),
+        
+        ("database/exams/type/Midterm.md", "---\ntitle: Midterm\n---\n# Midterm"),
+        ("database/exams/type/Final.md", "---\ntitle: Final\n---\n# Final"),
+        ("database/exams/type/Quiz.md", "---\ntitle: Quiz\n---\n# Quiz"),
+        ("database/exams/type/Assignment.md", "---\ntitle: Assignment\n---\n# Assignment"),
+        
+        ("database/study planner/status/Not Started.md", "---\ntitle: Not Started\n---\n# Not Started"),
+        ("database/study planner/status/Planned.md", "---\ntitle: Planned\n---\n# Planned"),
+        ("database/study planner/status/In Progress.md", "---\ntitle: In Progress\n---\n# In Progress"),
+        ("database/study planner/status/Reviewing.md", "---\ntitle: Reviewing\n---\n# Reviewing"),
+        ("database/study planner/status/Completed.md", "---\ntitle: Completed\n---\n# Completed"),
+        ("database/study planner/confidence/Low.md", "---\ntitle: Low\n---\n# Low"),
+        ("database/study planner/confidence/Medium.md", "---\ntitle: Medium\n---\n# Medium"),
+        ("database/study planner/confidence/High.md", "---\ntitle: High\n---\n# High"),
+        ("database/study planner/type/Hub.md", "---\ntitle: Hub\n---\n# Hub"),
+        ("database/study planner/type/Atomic.md", "---\ntitle: Atomic\n---\n# Atomic"),
+        ("database/study planner/type/Possible Questions.md", "---\ntitle: Possible Questions\n---\n# Possible Questions"),
     ];
     
     for (path_str, content) in default_files {
@@ -1682,8 +1793,25 @@ pub async fn update_vault_row(
     db_name: String,
     id: String,
     properties: serde_json::Value,
+    sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    
+    // Attempt sidecar proxy
+    let proxy_path = format!(
+        "/api/vault/databases/{}/{}",
+        percent_encoding::utf8_percent_encode(&db_name, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(&id, percent_encoding::NON_ALPHANUMERIC)
+    );
+    let mut payload = serde_json::Map::new();
+    payload.insert("properties".to_string(), properties.clone());
+    if let Ok(res) = proxy_patch(sidecar_config.port, &proxy_path, &serde_json::Value::Object(payload), headers).await {
+        return Ok(res);
+    }
+
+    // Direct filesystem fallback
     let vault_root = get_vault_path(&app_handle)?;
     let db_path = vault_root.join("database").join(&db_name);
     let file_path = db_path.join(format!("{}.md", id));
@@ -1726,8 +1854,25 @@ pub async fn create_vault_row(
     db_name: String,
     title: String,
     properties: serde_json::Value,
+    sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    
+    // Attempt sidecar proxy
+    let proxy_path = format!(
+        "/api/vault/databases/{}",
+        percent_encoding::utf8_percent_encode(&db_name, percent_encoding::NON_ALPHANUMERIC)
+    );
+    let mut payload = serde_json::Map::new();
+    payload.insert("title".to_string(), serde_json::Value::String(title.clone()));
+    payload.insert("properties".to_string(), properties.clone());
+    if let Ok(res) = proxy_post(sidecar_config.port, &proxy_path, &serde_json::Value::Object(payload), headers).await {
+        return Ok(res);
+    }
+
+    // Direct filesystem fallback
     let vault_root = get_vault_path(&app_handle)?;
     let db_path = vault_root.join("database").join(&db_name);
     let _ = std::fs::create_dir_all(&db_path);
@@ -1754,28 +1899,146 @@ pub async fn create_vault_row(
 }
 
 #[tauri::command]
-pub async fn delete_vault_row() -> Result<serde_json::Value, String> {
+pub async fn delete_vault_row(
+    db_name: String,
+    id: String,
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    
+    // Attempt sidecar proxy
+    let proxy_path = format!(
+        "/api/vault/databases/{}/{}",
+        percent_encoding::utf8_percent_encode(&db_name, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(&id, percent_encoding::NON_ALPHANUMERIC)
+    );
+    if let Ok(res) = proxy_delete(sidecar_config.port, &proxy_path, headers).await {
+        return Ok(res);
+    }
+
+    // Direct filesystem fallback
+    let vault_root = get_vault_path(&app_handle)?;
+    let db_path = vault_root.join("database").join(&db_name);
+    let file_path = db_path.join(format!("{}.md", id));
+    if file_path.exists() {
+        std::fs::remove_file(file_path).map_err(|e| e.to_string())?;
+        let mut res = serde_json::Map::new();
+        res.insert("success".to_string(), serde_json::Value::Bool(true));
+        return Ok(serde_json::Value::Object(res));
+    }
+    Err("Row not found".to_string())
+}
+
+#[tauri::command]
+pub async fn rename_vault_file(
+    db_name: String,
+    old_id: String,
+    new_id: String,
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    
+    // Attempt sidecar proxy
+    let proxy_path = format!(
+        "/api/vault/databases/{}/{}/rename",
+        percent_encoding::utf8_percent_encode(&db_name, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(&old_id, percent_encoding::NON_ALPHANUMERIC)
+    );
+    let mut payload = serde_json::Map::new();
+    payload.insert("new_name".to_string(), serde_json::Value::String(new_id.clone()));
+    if let Ok(res) = proxy_post(sidecar_config.port, &proxy_path, &serde_json::Value::Object(payload), headers).await {
+        return Ok(res);
+    }
+
+    // Direct filesystem fallback
+    let vault_root = get_vault_path(&app_handle)?;
+    let db_path = vault_root.join("database").join(&db_name);
+    let old_file = db_path.join(format!("{}.md", old_id));
+    let new_file = db_path.join(format!("{}.md", new_id));
+    if old_file.exists() {
+        std::fs::rename(old_file, new_file).map_err(|e| e.to_string())?;
+        let mut res = serde_json::Map::new();
+        res.insert("success".to_string(), serde_json::Value::Bool(true));
+        res.insert("name".to_string(), serde_json::Value::String(new_id));
+        return Ok(serde_json::Value::Object(res));
+    }
+    Err("Row not found".to_string())
+}
+
+#[tauri::command]
+pub async fn get_vault_options(
+    source: String,
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    
+    // Attempt sidecar proxy
+    let proxy_path = format!("/api/vault/options?source={}", percent_encoding::utf8_percent_encode(&source, percent_encoding::NON_ALPHANUMERIC));
+    if let Ok(res) = proxy_get(sidecar_config.port, &proxy_path, headers).await {
+        return Ok(res);
+    }
+
+    // Direct filesystem fallback
+    let vault_root = get_vault_path(&app_handle)?;
+    let source_path = vault_root.join(&source);
+    let mut options = Vec::new();
+    
+    if source_path.exists() && source_path.is_dir() {
+        if let Ok(entries) = std::fs::read_dir(source_path) {
+            for entry in entries.filter_map(Result::ok) {
+                let path = entry.path();
+                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {
+                    if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                        options.push(serde_json::Value::String(stem.to_string()));
+                    }
+                }
+            }
+        }
+    }
+    
+    options.sort_by(|a, b| a.as_str().unwrap_or("").cmp(b.as_str().unwrap_or("")));
+    
     let mut res = serde_json::Map::new();
-    res.insert("success".to_string(), serde_json::Value::Bool(true));
+    res.insert("options".to_string(), serde_json::Value::Array(options));
     Ok(serde_json::Value::Object(res))
 }
 
 #[tauri::command]
-pub async fn rename_vault_file() -> Result<serde_json::Value, String> {
-    let mut res = serde_json::Map::new();
-    res.insert("success".to_string(), serde_json::Value::Bool(true));
-    Ok(serde_json::Value::Object(res))
-}
+pub async fn create_vault_option(
+    source: String,
+    name: String,
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    
+    // Attempt sidecar proxy
+    let proxy_path = "/api/vault/options";
+    let mut payload = serde_json::Map::new();
+    payload.insert("source".to_string(), serde_json::Value::String(source.clone()));
+    payload.insert("name".to_string(), serde_json::Value::String(name.clone()));
+    if let Ok(res) = proxy_post(sidecar_config.port, proxy_path, &serde_json::Value::Object(payload), headers).await {
+        return Ok(res);
+    }
 
-#[tauri::command]
-pub async fn get_vault_options() -> Result<serde_json::Value, String> {
-    let mut res = serde_json::Map::new();
-    res.insert("options".to_string(), serde_json::Value::Array(Vec::new()));
-    Ok(serde_json::Value::Object(res))
-}
+    // Direct filesystem fallback
+    let vault_root = get_vault_path(&app_handle)?;
+    let source_path = vault_root.join(&source);
+    if !source_path.exists() {
+        std::fs::create_dir_all(&source_path).map_err(|e| e.to_string())?;
+    }
+    let md_file = source_path.join(format!("{}.md", name));
+    if !md_file.exists() {
+        std::fs::write(&md_file, format!("---\ntitle: {}\n---", name)).map_err(|e| e.to_string())?;
+    }
 
-#[tauri::command]
-pub async fn create_vault_option(name: String) -> Result<serde_json::Value, String> {
     let mut res = serde_json::Map::new();
     res.insert("success".to_string(), serde_json::Value::Bool(true));
     res.insert("name".to_string(), serde_json::Value::String(name));
@@ -1783,18 +2046,71 @@ pub async fn create_vault_option(name: String) -> Result<serde_json::Value, Stri
 }
 
 #[tauri::command]
-pub async fn update_vault_option(name: String) -> Result<serde_json::Value, String> {
-    let mut res = serde_json::Map::new();
-    res.insert("success".to_string(), serde_json::Value::Bool(true));
-    res.insert("name".to_string(), serde_json::Value::String(name));
-    Ok(serde_json::Value::Object(res))
+pub async fn update_vault_option(
+    source: String,
+    old_name: String,
+    new_name: String,
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    
+    // Attempt sidecar proxy
+    let proxy_path = format!("/api/vault/options?old_name={}", percent_encoding::utf8_percent_encode(&old_name, percent_encoding::NON_ALPHANUMERIC));
+    let mut payload = serde_json::Map::new();
+    payload.insert("source".to_string(), serde_json::Value::String(source.clone()));
+    payload.insert("name".to_string(), serde_json::Value::String(new_name.clone()));
+    if let Ok(res) = proxy_patch(sidecar_config.port, &proxy_path, &serde_json::Value::Object(payload), headers).await {
+        return Ok(res);
+    }
+
+    // Direct filesystem fallback
+    let vault_root = get_vault_path(&app_handle)?;
+    let source_path = vault_root.join(&source);
+    let old_file = source_path.join(format!("{}.md", old_name));
+    let new_file = source_path.join(format!("{}.md", new_name));
+    if old_file.exists() {
+        std::fs::rename(old_file, new_file).map_err(|e| e.to_string())?;
+        let mut res = serde_json::Map::new();
+        res.insert("success".to_string(), serde_json::Value::Bool(true));
+        res.insert("name".to_string(), serde_json::Value::String(new_name));
+        return Ok(serde_json::Value::Object(res));
+    }
+    Err("Option not found".to_string())
 }
 
 #[tauri::command]
-pub async fn delete_vault_option() -> Result<serde_json::Value, String> {
-    let mut res = serde_json::Map::new();
-    res.insert("success".to_string(), serde_json::Value::Bool(true));
-    Ok(serde_json::Value::Object(res))
+pub async fn delete_vault_option(
+    source: String,
+    name: String,
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    
+    // Attempt sidecar proxy
+    let proxy_path = format!(
+        "/api/vault/options?source={}&name={}",
+        percent_encoding::utf8_percent_encode(&source, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(&name, percent_encoding::NON_ALPHANUMERIC)
+    );
+    if let Ok(res) = proxy_delete(sidecar_config.port, &proxy_path, headers).await {
+        return Ok(res);
+    }
+
+    // Direct filesystem fallback
+    let vault_root = get_vault_path(&app_handle)?;
+    let source_path = vault_root.join(&source);
+    let md_file = source_path.join(format!("{}.md", name));
+    if md_file.exists() {
+        std::fs::remove_file(md_file).map_err(|e| e.to_string())?;
+        let mut res = serde_json::Map::new();
+        res.insert("success".to_string(), serde_json::Value::Bool(true));
+        return Ok(serde_json::Value::Object(res));
+    }
+    Err("Option not found".to_string())
 }
 
 #[tauri::command]

@@ -266,53 +266,53 @@ import type { SchemaProperty } from './types'
 
 export const DEFAULT_SCHEMAS: Record<string, Record<string, SchemaProperty>> = {
   years: {
-    Status: { type: 'relation', source: 'statuses' },
-    'Academic Level': { type: 'relation', source: 'levels' },
+    Status: { type: 'select', source: 'database/years/status' },
+    'Academic Level': { type: 'select', source: 'database/years/academic level' },
     'Current Year': { type: 'bool' },
-    Program: { type: 'relation', source: 'programs' }
+    Program: { type: 'relation', source: 'database/programs' }
   },
   semesters: {
-    Status: { type: 'relation', source: 'statuses' },
-    Year: { type: 'relation', source: 'years' },
-    Season: { type: 'relation', source: 'seasons' }
+    Status: { type: 'select', source: 'database/semesters/status' },
+    Year: { type: 'relation', source: 'database/years' },
+    Season: { type: 'select', source: 'database/semesters/season' }
   },
   courses: {
-    Status: { type: 'relation', source: 'statuses' },
-    Semester: { type: 'relation', source: 'semesters' },
-    Grade: { type: 'str' },
+    Status: { type: 'select', source: 'database/courses/status' },
+    Semester: { type: 'relation', source: 'database/semesters' },
+    Grade: { type: 'select', source: 'database/courses/grade' },
     Credits: { type: 'number' },
-    Professor: { type: 'str' },
-    Difficulty: { type: 'relation', source: 'difficulties' },
+    Professor: { type: 'select', source: 'database/courses/professor' },
+    Difficulty: { type: 'select', source: 'database/courses/difficulty' },
     Location: { type: 'str' },
     Schedule: { type: 'str' },
   },
   assignments: {
-    Status: { type: 'relation', source: 'statuses' },
-    Priority: { type: 'relation', source: 'priorities' },
-    Course: { type: 'relation', source: 'courses' },
-    Type: { type: 'relation', source: 'types' },
+    Status: { type: 'select', source: 'database/assignments/status' },
+    Priority: { type: 'select', source: 'database/assignments/priority' },
+    Course: { type: 'relation', source: 'database/courses' },
+    Type: { type: 'select', source: 'database/assignments/type' },
     due_date: { type: 'date' },
     'Estimated Hours': { type: 'number' },
     Grade: { type: 'str' }
   },
   exams: {
-    Status: { type: 'relation', source: 'statuses' },
-    Course: { type: 'relation', source: 'courses' },
-    Type: { type: 'relation', source: 'types' },
+    Status: { type: 'str' },
+    Course: { type: 'relation', source: 'database/courses' },
+    Type: { type: 'select', source: 'database/exams/type' },
     date: { type: 'date' },
     Time: { type: 'str' },
     Location: { type: 'str' },
     Grade: { type: 'str' },
-    'Confidence Level': { type: 'relation', source: 'confidences' }
+    'Confidence Level': { type: 'select', source: 'database/exams/confidence' }
   },
   'study planner': {
-    Status: { type: 'relation', source: 'statuses' },
-    Course: { type: 'relation', source: 'courses' },
-    Type: { type: 'relation', source: 'types' },
+    Status: { type: 'select', source: 'database/study planner/status' },
+    Course: { type: 'relation', source: 'database/courses' },
+    Type: { type: 'select', source: 'database/study planner/type' },
     due_date: { type: 'date' },
     'Target Hours': { type: 'number' },
     'Actual Hours': { type: 'number' },
-    'Confidence Level': { type: 'relation', source: 'confidences' }
+    'Confidence Level': { type: 'select', source: 'database/study planner/confidence' }
   }
 }
 

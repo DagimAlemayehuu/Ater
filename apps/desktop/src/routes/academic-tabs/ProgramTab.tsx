@@ -75,6 +75,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
     try {
       await Promise.all(years.map(y => onUpdate('years', y.id, { 'Current Year': y.id === id })))
       toast.success('Active year set')
+      onRefresh()
     } catch { toast.error('Failed') }
   }
 
@@ -356,7 +357,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
             <div className="grid grid-cols-4 gap-4">
               <StatCard label="Progress" value={`${completedYears} / ${targetYears} Years`}
                 sub={`${Math.round((completedYears / targetYears) * 100)}% complete`} />
-              <StatCard label="Active Year" value={cleanTitle(activeYear?.title?.split(' ').pop() || '--')}
+              <StatCard label="Active Year" value={cleanTitle(activeYear?.title || '--')}
                 onClick={() => activeYear && setSelectedYearId(activeYear.id)} />
               <StatCard label="Active Semester" value={cleanTitle(activeSem?.title || '--')} accent
                 onClick={() => activeSem && setSelectedSemId(activeSem.id)} />

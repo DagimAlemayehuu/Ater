@@ -116,13 +116,13 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
         {/* Stats */}
         <div className="grid grid-cols-4 gap-4">
           <BigPropertyCard label="Status" value={getVal(exam, 'Status', 'status') || (isPast ? 'Past' : 'Upcoming')}
-            schema={{ type: 'select' }} onUpdate={v => onUpdate('exams', exam.id, { Status: v })} />
+            schema={{ type: 'select', source: 'database/exams/status' }} onUpdate={v => onUpdate('exams', exam.id, { Status: v })} />
           <BigPropertyCard label="Date" value={exam.date || ''}
             schema={{ type: 'date' }} onUpdate={v => onUpdate('exams', exam.id, { date: v })} />
           <BigPropertyCard label="Grade" value={grade}
-            schema={{ type: 'select', source: 'grade' }} onUpdate={v => onUpdate('exams', exam.id, { Grade: v })} />
+            schema={{ type: 'select', source: 'database/courses/grade' }} onUpdate={v => onUpdate('exams', exam.id, { Grade: v })} />
           <BigPropertyCard label="Course" value={getVal(exam, 'Course', 'course')}
-            schema={{ type: 'select', source: 'courses' }} onUpdate={v => onUpdate('exams', exam.id, { Course: v })} />
+            schema={{ type: 'relation', source: 'database/courses' }} onUpdate={v => onUpdate('exams', exam.id, { Course: v })} />
         </div>
 
         {/* Preparation tracking */}
@@ -142,7 +142,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                 <p className="text-xl font-black mt-1">{totalStudyTime > 0 ? `${Math.round(totalStudyTime / 60)}h` : '--'}</p>
               </div>
               <BigPropertyCard label="Confidence" value={getVal(exam, 'Confidence', 'confidence') || ''}
-                schema={{ type: 'select', source: 'confidence' }} onUpdate={v => onUpdate('exams', exam.id, { Confidence: v })} />
+                schema={{ type: 'select', source: 'database/exams/confidence' }} onUpdate={v => onUpdate('exams', exam.id, { Confidence: v })} />
             </div>
             {examHubs.length > 0 && (
               <div className="space-y-1.5">
