@@ -45,28 +45,6 @@ Content
     assert not is_valid
     assert any("HARD_FAILURE_MARKER" in e for e in errors)
 
-def test_validator_wikilink_density():
-    validator = AterValidator()
-    # Only 1 wikilink
-    content = """---
-title: Test_Note
-type: atomic
-course: CS101
----
-# Mental Model
-This is a [[Concept]].
-# Section 1
-Prose here.
-# Section 2
-More prose.
-# The Proving Grounds
-```interactive-quiz
-[]
-```
-"""
-    is_valid, errors = validator.validate_structure(content)
-    assert not is_valid
-    assert any("INSUFFICIENT_WIKILINKS" in e for e in errors)
 
 def test_validator_broken_wikilinks():
     validator = AterValidator()

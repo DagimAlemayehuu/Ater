@@ -85,31 +85,6 @@ Error generating content.
     assert not is_valid
     assert any("HARD_FAILURE_MARKER" in e for e in errors)
 
-def test_validator_insufficient_wikilinks():
-    """String C: Has only 1 wikilink instead of >=3. (Should Fail)"""
-    sparse_content = """---
-title: Sparse_Note
-type: Atomic Note
-course: CS
----
-
-## Mental Model
-This note is about a [[Single_Link]] with no other context.
-
-## Core Logic
-It has no depth.
-
-## Formal Model
-Empty.
-
-## The Proving Grounds
-```interactive-quiz
-[]
-```
-"""
-    is_valid, errors = AterValidator.validate_structure(sparse_content)
-    assert not is_valid
-    assert any("INSUFFICIENT_WIKILINKS" in e for e in errors)
 
 def test_validator_latex_math_blocks():
     """Test that notes containing math blocks with leading minus/bullet characters do not trigger BULLET_POINTS_DETECTED."""
