@@ -18,7 +18,7 @@ export function AppHeader() {
   // Dynamic Breadcrumb Logic
   const renderBreadcrumbs = () => {
     const entry = history[currentIndex]
-    if (!entry) return null
+    if (!entry || typeof entry.path !== 'string') return null
 
     // Parse path and search from history entry
     const [entryPath, entrySearch] = entry.path.split('?')

@@ -57,7 +57,18 @@ class TokenGovernor:
         if not api_keys_str:
             return ""
         
-        keys = [k.strip() for k in api_keys_str.split(",") if k.strip()]
+        # Strip ALL non-ascii characters to prevent httpx Header crash
+        api_keys_str = api_keys_str.encode('ascii', 'ignore').decode('ascii')
+        
+        # Strip 'Bearer ' if the user accidentally copied it
+        keys = []
+        for k in api_keys_str.split(","):
+            cleaned = k.strip()
+            if cleaned.lower().startswith("bearer "):
+                cleaned = cleaned[7:].strip()
+            if cleaned:
+                keys.append(cleaned)
+                
         if not keys:
             return ""
         
@@ -99,12 +110,24 @@ class TokenGovernor:
         if not api_key:
             return
             
+        api_key = api_key.encode('ascii', 'ignore').decode('ascii')
+        
         # Support comma-separated pool registration
         if "," in api_key:
-            keys = [k.strip() for k in api_key.split(",") if k.strip()]
+            keys = []
+            for k in api_key.split(","):
+                cleaned = k.strip()
+                if cleaned.lower().startswith("bearer "):
+                    cleaned = cleaned[7:].strip()
+                if cleaned:
+                    keys.append(cleaned)
             if keys:
                 self._all_keys = keys
                 api_key = keys[0] # Use first by default, let get_permit rotate
+        else:
+            api_key = api_key.strip()
+            if api_key.lower().startswith("bearer "):
+                api_key = api_key[7:].strip()
             
         new_hash = hashlib.sha256(api_key.strip().encode()).hexdigest()[:16]
         if new_hash == self._current_key_hash:

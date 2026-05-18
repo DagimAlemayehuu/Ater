@@ -132,8 +132,10 @@ class AterValidator:
 
         # ── 1. No Bullets in Prose Law (v33.0) ───────────────────────────────
         # Sections 1, 2, and 3 must be continuous prose. Lists/bullets are forbidden.
-        # We check the content before 'The Proving Grounds'
-        prose_boundary = content.lower().find("## the proving grounds")
+        # We check the content before the artifact block or 'The Proving Grounds'
+        prose_boundary = content.find("\n> **")
+        if prose_boundary == -1:
+            prose_boundary = content.lower().find("## the proving grounds")
         if prose_boundary == -1:
             prose_boundary = len(content)
         
@@ -141,7 +143,7 @@ class AterValidator:
         # Regex to find markdown lists: lines starting with -, *, or 1. (allowing for some indent)
         # We exclude the artifact block if it's a table or code, which we do by stripping fences/tables first
         prose_clean = re.sub(r"```.*?```", "", prose_content, flags=re.DOTALL)
-        prose_clean = re.sub(r"\|.*?\|", "", prose_clean) # strip tables
+        prose_clean = re.sub(r"(?m)^\|.*?\|$", "", prose_clean) # strip multiline tables
         
         list_matches = re.findall(r"^\s*[\-\*\u2022]\s|^\s*\d+\.\s", prose_clean, re.MULTILINE)
         if list_matches:
