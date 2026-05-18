@@ -216,12 +216,8 @@ class AterValidator:
         # Hub/PQ notes don't need prose wikilinks — they ARE wikilinks
         note_type_match = re.search(r"type:\s*(.+)", content[:500])
         note_type = note_type_match.group(1).strip().lower() if note_type_match else ""
-        if note_type not in ("hub", "possible questions") and wikilink_count < 3:
-            errors.append(
-                f"INSUFFICIENT_WIKILINKS: Found {wikilink_count} non-self wikilinks, need ≥ 3. "
-                "Section 2 must wrap related concepts in [[Wikilinks]]. "
-                "Note: self-referential links (linking to the note's own title) do not count."
-            )
+        
+        # [v33.0]: We no longer check for minimum wikilinks here, as the Auto-Weaver script will weave them in post-deployment.
 
         # Closed Knowledge Graph Check
         if unit_stems:
@@ -239,12 +235,7 @@ class AterValidator:
         if AterValidator._has_math_domain_drift(body, course, mode):
             errors.append("MATH_DOMAIN_DRIFT: Continuous math signals detected in discrete course.")
 
-        # Intra-unit wikilinks check
-        if unit_stems and note_type not in ("hub", "possible questions"):
-            meta_title = meta.get("title", "") if 'meta' in locals() and isinstance(meta, dict) else ""
-            intra_links = [w for w in wikilinks if w.replace(' ', '_') in unit_stems and w.replace(' ', '_') != meta_title]
-            if not intra_links:
-                errors.append("NO_INTRA_UNIT_LINKS: Must wikilink to at least 1 other note in this unit")
+        # [v33.0]: NO_INTRA_UNIT_LINKS check removed since Auto-Weaver handles link injection.
 
         # -- 4. Code block balance -------------------------------------------
         # Exclude the interactive-quiz block (it contains its own fences)
@@ -413,14 +404,13 @@ class AterValidator:
         s2 = sections[1].strip()
         if not s1 or not s2 or len(s1) < 100:
             return False
-        # Exact duplicate
-        if s1 == s2:
+        # Exact duplicate or pure substring
+        if s1 in s2 or s2 in s1:
             return True
-        # Near-duplicate: >85% character overlap on the shorter text
-        shorter = min(len(s1), len(s2))
-        common = sum(1 for a, b in zip(s1, s2) if a == b)
-        similarity = common / shorter if shorter > 0 else 0
-        return similarity > 0.85
+        # Near-duplicate: use SequenceMatcher
+        from difflib import SequenceMatcher
+        similarity = SequenceMatcher(None, s1, s2).ratio()
+        return similarity > 0.80
 
     @staticmethod
     def repair_code_fences(content: str) -> str:

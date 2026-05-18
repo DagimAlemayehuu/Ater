@@ -1,8 +1,0 @@
-{
-  "bundle": {
-    "resources": [
-      "../../api/onnx_model/*",
-      "target/release/onnxruntime.dll"
-    ]
-  }
-}

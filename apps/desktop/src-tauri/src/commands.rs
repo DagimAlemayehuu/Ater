@@ -455,7 +455,8 @@ fn walk_dir(
         let relative_path = path.strip_prefix(root)
             .map_err(|e| e.to_string())?
             .to_string_lossy()
-            .to_string();
+            .to_string()
+            .replace('\\', "/");
             
         let mut modified = None;
         let mut size = None;
@@ -797,19 +798,57 @@ pub async fn find_vault_page(
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
     let vault_path = get_vault_path(&app_handle)?;
-    let normalized_query = page_name.to_lowercase().replace(' ', "_").replace(".md", "");
+    let query_lower = page_name.to_lowercase();
+    let is_pdf = query_lower.ends_with(".pdf");
+    
+    let normalized_query = query_lower
+        .replace(' ', "_")
+        .replace(".md", "")
+        .replace(".pdf", "");
     
     let mut files = Vec::new();
     walk_dir(&vault_path, &vault_path, &mut files)?;
     
-    for f in files {
-        if !f.is_dir && f.path.ends_with(".md") {
-            let name_clean = f.name.to_lowercase().replace(' ', "_").replace(".md", "");
+    // Phase 1: Try exact match including extension if specified
+    for f in &files {
+        if !f.is_dir {
+            let f_path_lower = f.path.to_lowercase();
+            let f_name_lower = f.name.to_lowercase();
+            
+            if is_pdf && f_path_lower.ends_with(".pdf") {
+                let name_clean = f_name_lower.replace(' ', "_").replace(".pdf", "");
+                if name_clean == normalized_query {
+                    let mut res = serde_json::Map::new();
+                    res.insert("found".to_string(), serde_json::Value::Bool(true));
+                    res.insert("path".to_string(), serde_json::Value::String(f.path.clone()));
+                    res.insert("file_name".to_string(), serde_json::Value::String(f.name.clone()));
+                    return Ok(serde_json::Value::Object(res));
+                }
+            } else if !is_pdf && f_path_lower.ends_with(".md") {
+                let name_clean = f_name_lower.replace(' ', "_").replace(".md", "");
+                if name_clean == normalized_query {
+                    let mut res = serde_json::Map::new();
+                    res.insert("found".to_string(), serde_json::Value::Bool(true));
+                    res.insert("path".to_string(), serde_json::Value::String(f.path.clone()));
+                    res.insert("file_name".to_string(), serde_json::Value::String(f.name.clone()));
+                    return Ok(serde_json::Value::Object(res));
+                }
+            }
+        }
+    }
+    
+    // Phase 2: Try loose match across both .md and .pdf
+    for f in &files {
+        if !f.is_dir && (f.path.ends_with(".md") || f.path.ends_with(".pdf")) {
+            let name_clean = f.name.to_lowercase()
+                .replace(' ', "_")
+                .replace(".md", "")
+                .replace(".pdf", "");
             if name_clean == normalized_query {
                 let mut res = serde_json::Map::new();
                 res.insert("found".to_string(), serde_json::Value::Bool(true));
-                res.insert("path".to_string(), serde_json::Value::String(f.path));
-                res.insert("file_name".to_string(), serde_json::Value::String(f.name));
+                res.insert("path".to_string(), serde_json::Value::String(f.path.clone()));
+                res.insert("file_name".to_string(), serde_json::Value::String(f.name.clone()));
                 return Ok(serde_json::Value::Object(res));
             }
         }

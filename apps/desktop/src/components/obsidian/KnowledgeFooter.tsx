@@ -37,7 +37,7 @@ export const KnowledgeFooter = React.memo(({
 
   // Find current index with robust matching
   const currentIndex = useMemo(() => {
-    if (!activePath) return -1;
+    if (!activePath || typeof activePath !== 'string') return -1;
     const activeNoteName = activePath.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '';
     
     return flattened.findIndex(n => {

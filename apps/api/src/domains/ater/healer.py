@@ -412,7 +412,7 @@ class LogicHealer:
                 text = pattern.sub(f"[[{title}]]", text, count=1)
         return text
 
-    def heal_all(self, text: str, is_quiz: bool = False) -> str:
+    def heal_all(self, text: str, is_quiz: bool = False, exclude_title: str = "") -> str:
         if is_quiz:
             return self.heal_quiz_json(text)
 
@@ -423,7 +423,8 @@ class LogicHealer:
         # This is the primary guard against BULLET_POINTS_DETECTED failures
         text = self.bullets_to_prose(text)
         text = self.heal_wikilinks(text)
-        text = self.enforce_wikilink_density(text)
+        # Weave in links deterministically since the LLM no longer does it
+        text = self.inject_wikilinks(text, exclude_title=exclude_title)
         text = self.verify_arithmetic(text)
         text = self.heal_markdown_tables(text)
         # v33.2: Fix invalid leading pipes in Mermaid blocks

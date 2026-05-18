@@ -565,7 +565,73 @@ def purge_pedagogical_artifacts(unit_dir: Path):
             text = normalized_walk
             changed = True
             
-        if changed:
-            note_file.write_text(text, encoding="utf-8")
-            print(f"[PedagogyPurge] Cleaned: {note_file.name}")
+            if changed:
+                note_file.write_text(text, encoding="utf-8")
+                print(f"[PedagogyPurge] Cleaned: {note_file.name}")
 
+def auto_weave_wikilinks(unit_dir: Path):
+    """
+    Go through all notes' body text, find occurrences of deployed concept titles,
+    and wrap them in [[wikilinks]]. This replaces the LLM's role in link generation.
+    """
+    all_stems = {f.stem for f in unit_dir.glob("*.md") if "Hub" not in f.stem and "PQ" not in f.stem}
+    
+    # Sort stems by length descending so we match longer titles first (e.g., "Demand Curve" before "Demand")
+    sorted_stems = sorted(list(all_stems), key=len, reverse=True)
+    
+    def weave(text: str, stem: str, display: str) -> str:
+        # We only replace if it's outside of [[...]]
+        links = []
+        def save_link(m):
+            links.append(m.group(0))
+            return f"__WIKILINK_{len(links)-1}__"
+        
+        temp_text = re.sub(r'\[\[.*?\]\]', save_link, text)
+        
+        # also protect code blocks, math blocks, etc
+        blocks = []
+        def save_block(m):
+            blocks.append(m.group(0))
+            return f"__BLOCK_{len(blocks)-1}__"
+        
+        temp_text = re.sub(r'```.*?```', save_block, temp_text, flags=re.DOTALL)
+        temp_text = re.sub(r'\$\$.*?\$\$', save_block, temp_text, flags=re.DOTALL)
+        temp_text = re.sub(r'`[^`]*`', save_block, temp_text)
+        
+        # now replace the display text
+        pattern = re.compile(rf'\b({re.escape(display)})\b', re.IGNORECASE)
+        new_text = pattern.sub(rf'[[{stem}|\1]]', temp_text)
+        
+        # restore blocks
+        for i in range(len(blocks)):
+            new_text = new_text.replace(f"__BLOCK_{i}__", blocks[i])
+        
+        # restore links
+        for i in range(len(links)):
+            new_text = new_text.replace(f"__WIKILINK_{i}__", links[i])
+            
+        return new_text
+
+    for note_file in unit_dir.glob("*.md"):
+        content = note_file.read_text(encoding="utf-8")
+        parts = content.split("---", 2)
+        if len(parts) < 3:
+            continue
+            
+        frontmatter = parts[1]
+        body = parts[2]
+        changed = False
+        
+        for stem in sorted_stems:
+            if stem == note_file.stem:
+                continue # don't link to self
+                
+            display_text = stem.replace("_", " ")
+            new_body = weave(body, stem, display_text)
+            if new_body != body:
+                body = new_body
+                changed = True
+                
+        if changed:
+            note_file.write_text(f"---{frontmatter}---{body}", encoding="utf-8")
+            print(f"[AutoWeaver] Wove links into: {note_file.stem}")

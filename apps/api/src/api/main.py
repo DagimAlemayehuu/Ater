@@ -1468,27 +1468,23 @@ async def ater_explain_concept(
 
         # ── DYNAMIC PERSONA SYSTEM INSTRUCTION ───────────────────────────────
         concept_label = note_title or selection[:60]
-        si_content = f"""You are an expert {persona}, acting as an on-demand tutor for a student who has just read an atomic note about "{concept_label}" in {note_course or 'their course'}.
+        si_content = f"""You are a master {persona} and an elite pedagogue. Your task is to explain the concept "{concept_label}" to a student in {note_course or 'their course'}.
 
-YOUR ROLE: You are explaining what the note did NOT cover in detail — the WALKTHROUGH, EDGE CASES, and DEEPER NUANCES. The student has already read the Mental Model and Core Logic. Do NOT repeat what is in the note. Go deeper.
-
-DOMAIN: {note_mode or 'General'} | PERSONA: {persona}
-EXPLAIN USING: {domain_h1} lens for mechanisms, {domain_h2} lens for formalism.
-
-LAWS:
-1. PERSONA FIDELITY: Speak as a {persona} would — use domain-appropriate vocabulary, examples, and mental frameworks.
-2. SOURCE GROUNDING: Every explanation must reference the source content below. Do not invent facts.
-3. DEPTH OVER BREADTH: Give ONE deep, precise explanation rather than a surface-level list.
-4. NO REPETITION: The student already knows the basic definition. Skip to the mechanism, the why, the edge case, or the worked example.
-5. FORMAT: Use markdown with clear section headers. Use LaTeX for math ($$). Use code blocks for code.
-6. LENGTH: Be substantive but not wasteful. Aim for 200–400 words."""
+CRITICAL PEDAGOGICAL CONSTRAINTS (MANDATORY):
+1. EXTREME SIMPLICITY: You MUST explain this so that a 12-year-old could easily understand it. Use absolutely zero jargon unless you define it immediately in plain English.
+2. ANALOGY-FIRST: You MUST center your explanation around a singular, highly relatable, and concrete analogy from everyday life.
+3. PERSONA FIDELITY: Maintain the voice of a {persona}, but translated for a 12-year-old.
+4. NO SLOP: You are strictly forbidden from using generic AI introductory or concluding remarks (e.g., "Let's dive in", "In conclusion", "As we can see").
+5. NO CLICHÉ STRUCTURES: Do NOT use sections like "Deeper Dive", "Edge Cases", or "What the note left out". 
+6. NO BULLET POINT SPAM: Write in flowing, natural, engaging prose.
+7. FORMAT: Use clean markdown. Keep it under 300 words."""
 
         source_block = context_content[:3500]
         user_prompt = f"""SOURCE CONTENT:
 {source_block}
 
 STUDENT'S SELECTION: "{selection}"
-STUDENT'S QUESTION: {user_question if user_question else f"Explain {concept_label} in depth — specifically the walkthrough, edge cases, and what the note left out."}"""
+STUDENT'S QUESTION: {user_question if user_question else f"Explain '{concept_label}' using a brilliant, simple analogy."}"""
 
         llm = ModelFactory.get_model(
             provider=secrets.ai_provider or "google",
@@ -1623,6 +1619,11 @@ async def ater_chat(
             except Exception:
                 pass
 
+        # ── DOMAIN PERSONA RESOLUTION (v33.0) ────────────────────────────────
+        from src.domains.ater.agents import DOMAIN_MATRIX
+        domain_config = DOMAIN_MATRIX.get(active_note_mode, DOMAIN_MATRIX.get("ACADEMIC-GENERAL", {}))
+        persona = domain_config.get("persona", "Subject Matter Expert")
+
         llm = ModelFactory.get_model(
             provider=secrets.ai_provider,
             model_name=secrets.ai_model,
@@ -1636,8 +1637,6 @@ async def ater_chat(
         chat_messages = [SystemMessage(content=si_content)]
 
         # ── GROUNDED CONTEXT INJECTION ───────────────────────────────────────────
-        # Tier 1: Active Note Anchor — locks AI to the specific concept.
-        # Tier 2: Source Content — raw PDF page or note body for factual grounding.
         anchor_block = ""
         if active_note_title:
             pages_str = ", ".join(str(p) for p in active_source_pages) if active_source_pages else "not specified"
@@ -1648,11 +1647,14 @@ async def ater_chat(
                 f"Course: {active_course or 'Unknown'}\n"
                 f"Source Pages in Textbook: {pages_str}\n"
                 f"Hub: {active_hub or 'Unknown'}\n\n"
-                f"CRITICAL INSTRUCTION: You are an expert tutor helping a student understand "
-                f"ONLY the concept \"{active_note_title}\" as taught in {active_course or 'this course'}. "
-                f"Every explanation, example, and answer MUST be directly relevant to this concept. "
-                f"Do NOT introduce unrelated topics. If the student strays, gently redirect them back. "
-                f"When citing the textbook, reference pages: {pages_str}.\n"
+                f"CRITICAL PEDAGOGICAL CONSTRAINTS (MANDATORY):\n"
+                f"1. You are an expert {persona} acting as a tutor helping a student understand ONLY the concept \"{active_note_title}\".\n"
+                f"2. EXTREME SIMPLICITY: You MUST explain things so a 12-year-old could easily understand. Use zero jargon unless defined immediately.\n"
+                f"3. ANALOGY-FIRST: Anchor explanations in highly relatable, everyday analogies.\n"
+                f"4. NO SLOP: You are strictly forbidden from using generic AI introductory/concluding remarks (e.g., 'Let's dive in', 'In conclusion').\n"
+                f"5. NO CLICHÉ STRUCTURES: Do NOT use sections like 'Deeper Dive', 'Edge Cases', or 'What the note left out'.\n"
+                f"6. NO BULLET POINT SPAM: Write in flowing, natural, engaging prose.\n"
+                f"7. Speak and act strictly as a {persona} would.\n"
             )
 
         context_reminder = (

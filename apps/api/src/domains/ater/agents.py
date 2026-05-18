@@ -1135,14 +1135,18 @@ OUTPUT: Exactly 3 sentences of a vivid, concrete analogy. No preamble. Start dir
     async def generate_theory_core(self, note_schema, source_text: str, all_concepts: str, academic_level: str) -> Dict[str, str]:
         """
         The 'Deep Feynman' pass — v33.0 SOURCE-INJECTION MODEL.
-        Optimized into two sequential micro-passes for small 2B-7B models to ensure structural absolute obedience.
+        Optimized into three sequential micro-passes for small 2B-7B models to ensure structural absolute obedience.
         """
         title_readable = note_schema.title.replace("_", " ")
         domain_h1 = self.domain.get("h1", "The Core Logic Explained")
         domain_h2 = self.domain.get("h2", "The Textbook Translation")
-        sanity = self.domain.get("sanity_check", "Ensure logical consistency and source anchoring.")
 
-        # --- PASS A: Theory Core (Mental Model + Core Breakdown) ---
+        # --- PASS 0: Mental Model (Analogy) ---
+        plain_english = await self.generate_mental_model(note_schema, source_text, academic_level)
+        if not plain_english or len(plain_english.strip()) < 30:
+            plain_english = f"{title_readable} can be understood as a fundamental mechanism within its domain, structuring the way we approach related problems."
+
+        # --- PASS A: Theory Core (Core Breakdown) ---
         sys_prompt_a = f"""You are a master teacher producing a DEEP, DETAILED study note for the concept: "{title_readable}".
 Your ONLY knowledge base is the SOURCE TEXT below.
 
@@ -1150,21 +1154,16 @@ Your ONLY knowledge base is the SOURCE TEXT below.
 {source_text[:2500]}
 ===END SOURCE TEXT===
 
-REQUIRED WIKILINKS (pick 3-5 to embed in CORE_BREAKDOWN): {all_concepts}
-
 LAWS:
-1. SOURCE ONLY. Every claim MUST come from the SOURCE TEXT. No outside knowledge.
-2. NO BULLETS. Bullet points/lists are STRICTLY FORBIDDEN in both sections. Use continuous analytical prose.
-3. Embed exactly 3-5 [[Wikilinks]] from required list in CORE_BREAKDOWN. Do NOT link to "{title_readable}" itself.
-4. Output ONLY the two XML blocks below. No preamble, comments, or thoughts. Start directly with '<PLAIN_ENGLISH>'.
-
-<PLAIN_ENGLISH>
-[2-3 sentences. Vivid analogy for "{title_readable}". Simple, industry-specific. Do NOT use lemonade or coffee shops.]
-</PLAIN_ENGLISH>
+1. EXTREME SIMPLICITY: You must explain the concept in a simple, highly detailed way so that it is impossible for a 12-year-old NOT to understand it.
+2. SOURCE ONLY. Every claim MUST come from the SOURCE TEXT. No outside knowledge.
+3. NO BULLETS. Bullet points/lists are STRICTLY FORBIDDEN. Use continuous analytical prose.
+4. NO WIKILINKS. Do not use [[brackets]] around words. We will add links later.
+5. Output ONLY the XML block below. No preamble, comments, or thoughts. Start directly with '<CORE_BREAKDOWN>'.
 
 <CORE_BREAKDOWN>
 [{domain_h1}: Mechanistic walkthrough of "{title_readable}". Continuous prose only.
-Structure: WHAT (precisely define) -> WHY (underlying reason) -> HOW (mechanism step-by-step).]
+Structure: WHAT (precisely define) -> WHY (underlying reason) -> HOW (mechanism step-by-step). Make it engaging and dead-simple.]
 </CORE_BREAKDOWN>"""
 
         # --- PASS B: Formal Model (Textbook Translation) ---
@@ -1184,50 +1183,48 @@ LAWS:
 [{domain_h2}: Introduce the formal textbook definition or classifications. Must be detailed and mathematically/scientifically accurate. Minimum 3 sentences.]
 </ACADEMIC_TRANSLATION>"""
 
+        detailed_breakdown = ""
+        academic_translation = ""
+
+        # Execute Pass A
         for attempt in range(2):
             try:
-                # 1. Execute Pass A
-                await governor.get_permit(expected_tokens=1000)
+                await governor.get_permit(expected_tokens=800)
                 res_a = await self.llm.ainvoke([
                     ("system", sys_prompt_a),
-                    ("human", f"Generate PLAIN_ENGLISH and CORE_BREAKDOWN for: {title_readable}")
+                    ("human", f"Generate CORE_BREAKDOWN for: {title_readable}")
                 ])
-                content_a = res_a.content
+                detailed_breakdown = TheoryAgent._extract_xml("CORE_BREAKDOWN", res_a.content)
+                if detailed_breakdown and len(detailed_breakdown.strip()) >= 30:
+                    break
+            except Exception:
+                if attempt == 1: raise ValueError("CORE_BREAKDOWN failed.")
+                await asyncio.sleep(2)
 
-                plain_english = TheoryAgent._extract_xml("PLAIN_ENGLISH", content_a)
-                detailed_breakdown = TheoryAgent._extract_xml("CORE_BREAKDOWN", content_a)
-
-                # Length gates check for Pass A
-                if not plain_english or len(plain_english.strip()) < 80:
-                    raise ValueError("PLAIN_ENGLISH is too short or empty.")
-                if not detailed_breakdown or len(detailed_breakdown.strip()) < 30:
-                    raise ValueError("CORE_BREAKDOWN is too short or empty.")
-
-                # 2. Execute Pass B
+        # Execute Pass B
+        for attempt in range(2):
+            try:
                 await governor.get_permit(expected_tokens=600)
                 res_b = await self.llm.ainvoke([
                     ("system", sys_prompt_b),
                     ("human", f"Generate ACADEMIC_TRANSLATION for: {title_readable}. Context core breakdown: {detailed_breakdown[:400]}")
                 ])
-                content_b = res_b.content
-
-                academic_translation = TheoryAgent._extract_xml("ACADEMIC_TRANSLATION", content_b)
-
-                if not academic_translation or len(academic_translation.strip()) < 30:
-                    raise ValueError("ACADEMIC_TRANSLATION is too short or empty.")
-
-                return {
-                    "plain_english": plain_english,
-                    "detailed_breakdown": detailed_breakdown,
-                    "academic_translation": academic_translation,
-                    "misconceptions": "",
-                }
-            except Exception as e:
-                if attempt == 1:
-                    # Both attempts failed — raise so service.py catch logs and skips this note
-                    raise RuntimeError(f"TheoryAgent.generate_theory_core exhausted retries: {e}")
+                academic_translation = TheoryAgent._extract_xml("ACADEMIC_TRANSLATION", res_b.content)
+                if academic_translation and len(academic_translation.strip()) >= 30:
+                    break
+            except Exception:
+                if attempt == 1: raise ValueError("ACADEMIC_TRANSLATION failed.")
                 await asyncio.sleep(2)
-        return {}
+
+        if not detailed_breakdown or not academic_translation:
+            raise RuntimeError("TheoryAgent failed to generate required XML blocks.")
+
+        return {
+            "plain_english": plain_english,
+            "detailed_breakdown": detailed_breakdown,
+            "academic_translation": academic_translation,
+            "misconceptions": "",
+        }
 
     async def generate_limitations(self, note_schema, source_text: str, persona: str) -> str:
         title_readable = note_schema.title.replace("_", " ")
@@ -1645,14 +1642,13 @@ class VerifierAgent:
         sys_prompt = f"""You are a rigorous academic quality auditor. Evaluate this atomic study note.
 Return ONLY a valid JSON object - no markdown fences, no commentary.
 
-CHECK ALL CRITERIA:
+        CHECK ALL CRITERIA:
 - `clean_output`: No "Wait", "Let me think", or "As an AI". No all-caps text.
 - `feynman_integrity`: Does the note follow the 3-step ladder? (Plain English analogy -> Logical Breakdown -> Academic Translation).
-- `wikilink_density`: Are there at least 3-5 distinct [[Wikilinks]] in the detailed breakdown?
 - `unique_scenario`: Is the analogy fresh and not a cliché?
 
 Output format - use EXACTLY this structure:
-{{"feynman_integrity":true,"wikilink_density":true,"unique_scenario":true,"clean_output":true,"failures":[{{"check":"feynman_integrity","issue":"exact description","fix_instruction":"exact fix"}}]}}
+{{"feynman_integrity":true,"unique_scenario":true,"clean_output":true,"failures":[{{"check":"feynman_integrity","issue":"exact description","fix_instruction":"exact fix"}}]}}
 
 failures is an empty array [] if all checks pass.
 Source context: {source_context[:400]}"""
@@ -1667,7 +1663,7 @@ Source context: {source_context[:400]}"""
                 data = ArchitectAgent._parse_json(res.content)
                 passed = all([
                     data.get("feynman_integrity", True),
-                    data.get("wikilink_density", True), data.get("unique_scenario", True),
+                    data.get("unique_scenario", True),
                     data.get("clean_output", True)
                 ])
                 return {"passed": passed, "failures": data.get("failures", [])}

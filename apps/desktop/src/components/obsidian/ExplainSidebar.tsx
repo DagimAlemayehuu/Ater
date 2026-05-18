@@ -1,8 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { X, Send, Loader2, RotateCcw } from 'lucide-react'
+import { X, Send, Loader2, RotateCcw, Copy, Check } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 import { AterMarkdown } from './MarkdownViewer'
+
+const MessageCopyButton = ({ text }: { text: string }) => {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-1.5 mt-3 pt-3 border-t border-border/20 text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground transition-none w-full justify-end"
+    >
+      {copied ? <Check size={10} className="text-primary" /> : <Copy size={10} />}
+      {copied ? 'Copied to Clipboard' : 'Copy Explanation'}
+    </button>
+  )
+}
 
 interface Message {
   role: 'user' | 'assistant'
@@ -115,11 +133,11 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page, noteMod
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
+      <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
       <div
-        className="fixed right-0 top-0 h-full w-[400px] max-w-[90vw] bg-background border-l border-border flex flex-col z-50 shadow-2xl transition-none"
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[80vh] w-[800px] max-w-[95vw] bg-background border border-border flex flex-col z-50 shadow-2xl transition-none"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/40 shrink-0">
@@ -173,11 +191,14 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page, noteMod
                   'max-w-[95%] rounded-none px-4 py-3 text-[12px] leading-relaxed',
                   msg.role === 'user'
                     ? 'bg-foreground/10 border border-border/30 text-foreground'
-                    : 'bg-muted/30 border border-border/20 text-foreground/80'
+                    : 'bg-muted/30 border border-border/20 text-foreground/80 w-full'
                 )}
               >
                 {msg.role === 'assistant' ? (
-                  <AterMarkdown content={msg.content} path={path} />
+                  <div className="flex flex-col">
+                    <AterMarkdown content={msg.content} path={path} />
+                    <MessageCopyButton text={msg.content} />
+                  </div>
                 ) : (
                   <span>{msg.content}</span>
                 )}

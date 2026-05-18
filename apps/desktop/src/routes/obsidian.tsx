@@ -159,12 +159,14 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                       onClick={async () => {
                         const src = noteMetadata.source_file || noteMetadata.source
                         if (!src) return;
-                        
-                        // 1. Clean Wikilink (handle [[Path/File.pdf|Alias]])
-                        let cleanPath = src
-                        if (typeof src === 'string') {
-                          cleanPath = src.replace(/^\[\[/, '').replace(/\]\]$/, '').split('|')[0]
-                        }
+                                                // 1. Clean Wikilink (handle [[Path/File.pdf|Alias]])
+                         let cleanPath = src
+                         if (typeof src === 'string') {
+                           cleanPath = src.replace(/^\[\[/, '').replace(/\]\]$/, '').split('|')[0]
+                           if (cleanPath.includes('#')) {
+                             cleanPath = cleanPath.split('#')[0]
+                           }
+                         }
                         
                         // 2. Resolve Waypoints
                         const wps = Array.isArray(noteMetadata.source_pages) 

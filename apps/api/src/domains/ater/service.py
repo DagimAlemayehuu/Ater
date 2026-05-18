@@ -1897,7 +1897,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             all_atomic_notes.sort(key=_min_page)
             print(f"[Ater Service] Reading-order sort applied. First note: {all_atomic_notes[0]['title'] if all_atomic_notes else 'N/A'}")
 
-            all_atomic_notes = self._topological_sort_prerequisites(all_atomic_notes)
+            # all_atomic_notes = self._topological_sort_prerequisites(all_atomic_notes)
 
             # Phase 1.5: Epistemic Classification (HYDRA)
             self.set_status(session_id, "Classifying Concept Modalities...")
@@ -2198,14 +2198,11 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 # Initialize healer early to clean theory parts before passing to practitioner
                                 healer = LogicHealer(canonical_titles=set(all_note_titles))
                                 if "mental_model" in theory_parts:
-                                    theory_parts["mental_model"] = healer.heal_all(theory_parts["mental_model"])
-                                    theory_parts["mental_model"] = healer.inject_wikilinks(theory_parts["mental_model"], exclude_title=note_schema.title)
+                                    theory_parts["mental_model"] = healer.heal_all(theory_parts["mental_model"], exclude_title=current_note_title)
                                 if "core_logic" in theory_parts:
-                                    theory_parts["core_logic"] = healer.heal_all(theory_parts["core_logic"])
-                                    theory_parts["core_logic"] = healer.inject_wikilinks(theory_parts["core_logic"], exclude_title=note_schema.title)
+                                    theory_parts["core_logic"] = healer.heal_all(theory_parts["core_logic"], exclude_title=current_note_title)
                                 if "formal_model" in theory_parts:
-                                    theory_parts["formal_model"] = healer.heal_all(theory_parts["formal_model"])
-                                    theory_parts["formal_model"] = healer.inject_wikilinks(theory_parts["formal_model"], exclude_title=note_schema.title)
+                                    theory_parts["formal_model"] = healer.heal_all(theory_parts["formal_model"], exclude_title=current_note_title)
 
                                 # Pre-render Length Gates (Phase 3.2)
                                 if len(theory_parts.get("mental_model", "")) < 80:
@@ -2363,7 +2360,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                         failures = v_res["failures"]
                                         # ── TIERED BLOCKING (v33.1) ──────────────────────────────
                                         # HARD failures (structural): block deployment, force regen
-                                        HARD_CHECKS = {"feynman_integrity", "wikilink_density", "clean_output"}
+                                        HARD_CHECKS = {"feynman_integrity", "clean_output"}
                                         # SOFT failures (advisory): log warning, allow deployment
                                         SOFT_CHECKS = {"unique_scenario"}
                                         
@@ -2497,8 +2494,27 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             from .post_processing import (
                                 canonicalize_unit, infer_unit_prerequisites, enforce_gutter,
                                 audit_walkthroughs, audit_intra_links, sync_hub_connections,
-                                purge_pedagogical_artifacts
+                                purge_pedagogical_artifacts, auto_weave_wikilinks
                             )
+                            unit_dir = self.vm.get_note_path({"title": hub_title, "type": "hub"}, session_metadata=session["metadata"]).parent
+                            print(f"[Ater Service] Running post-processing pipeline on {unit_dir}")
+                            
+                            # Standard cleanup
+                            purge_pedagogical_artifacts(unit_dir)
+                            canonicalize_unit(unit_dir)
+                            infer_unit_prerequisites(unit_dir)
+                            enforce_gutter(unit_dir)
+                            
+                            plan_order = [n.title for n in plan_obj.atomic_notes]
+                            sync_hub_connections(
+                                self.vm.get_note_path({"title": canonical_hub_title, "type": "hub"}, session_metadata=session["metadata"]),
+                                unit_dir,
+                                plan_order=plan_order
+                            )
+                            
+                            # ── Auto-Weaver Script ──
+                            print(f"[Ater Service] Running Auto-Weaver script...")
+                            auto_weave_wikilinks(unit_dir)
                             # Resolve hub file (may be the anchored Study Planner hub)
                             relative_path = local_results[0]["path"]
                             hub_file = self.deployer.vm.vault_path / relative_path
