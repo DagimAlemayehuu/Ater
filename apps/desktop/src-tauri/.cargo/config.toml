@@ -1,0 +1,5 @@
+# Force dynamic CRT (/MD) on Windows MSVC to resolve RuntimeLibrary mismatch
+# between esaxx-rs (static /MT) and ort-sys/onnxruntime (dynamic /MD).
+# Without this, linking fails with LNK2038 on Windows release builds.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=-crt-static"]
