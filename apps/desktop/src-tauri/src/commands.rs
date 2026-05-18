@@ -636,7 +636,7 @@ fn parse_markdown_note(content: &str) -> (serde_json::Value, String) {
             
             // Check if this is a list item in a block list
             if line_trimmed.starts_with("- ") {
-                if let Some(ref key) = current_key {
+                if current_key.is_some() {
                     let mut item_val = line_trimmed[2..].trim().to_string();
                     // Strip optional quotes
                     if (item_val.starts_with('"') && item_val.ends_with('"')) || 
