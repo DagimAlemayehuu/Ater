@@ -1042,6 +1042,27 @@ async def get_vault_backlinks(page_name: str, secrets: AppSecrets = Depends(get_
             
     return {"backlinks": backlinks}
     
+def resolve_absolute_or_vault_path(decoded_path: str, effective_vault_path: Optional[str]) -> Optional[Path]:
+    # 1. Check if it's already an absolute path
+    path_obj = Path(decoded_path)
+    if decoded_path.startswith("/") or path_obj.is_absolute():
+        return path_obj
+        
+    # 2. Check Windows absolute path starting with drive letter (e.g. C:/...)
+    if len(decoded_path) > 1 and decoded_path[1] == ":" and decoded_path[0].isalpha():
+        return path_obj
+        
+    # 3. Check if it's a Unix absolute path with the leading slash stripped
+    potential_unix_abs = Path("/" + decoded_path)
+    if potential_unix_abs.exists():
+        return potential_unix_abs
+        
+    # 4. Fallback to vault path
+    if effective_vault_path:
+        return Path(effective_vault_path) / decoded_path
+        
+    return None
+
 @router.get("/obsidian/pdf-metadata/{path:path}")
 async def get_pdf_metadata(
     path: str,
@@ -1050,17 +1071,15 @@ async def get_pdf_metadata(
 ):
     """Returns total pages and dimensions for a PDF."""
     effective_vault_path = secrets.vault_path or vault_path
-    if not effective_vault_path:
-        raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
-        
     decoded_path = unquote(path).replace("\\", "/")
-    full_path = Path(effective_vault_path) / decoded_path
-    if not full_path.exists():
+    resolved_path = resolve_absolute_or_vault_path(decoded_path, effective_vault_path)
+    
+    if not resolved_path or not resolved_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
 
     try:
         from pypdf import PdfReader
-        reader = PdfReader(str(full_path))
+        reader = PdfReader(str(resolved_path))
         page = reader.pages[0]
         return {
             "page_count": len(reader.pages),
@@ -1081,9 +1100,18 @@ async def get_pdf_viewer(
 ):
     """Returns an HTML wrapper for the PDF that handles selection and scrolling locks using PDF.js."""
     effective_vault_path = secrets.vault_path or vault_path
+    decoded_path = unquote(path).replace("\\", "/")
+    resolved_path = resolve_absolute_or_vault_path(decoded_path, effective_vault_path)
+    
+    if not resolved_path or not resolved_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    resolved_str = str(resolved_path.as_posix())
+    if resolved_str.startswith("/"):
+        resolved_str = resolved_str[1:]
+        
     auth_query = f"?vault_path={quote(effective_vault_path)}" if effective_vault_path else ""
-    normalized_path = path.replace("\\", "/")
-    pdf_src = f"/api/obsidian/serve/{normalized_path}{auth_query}"
+    pdf_src = f"/api/obsidian/serve/{resolved_str}{auth_query}"
     
     # Process filter pages
     filter_list_json = "null"
@@ -1382,18 +1410,12 @@ async def serve_obsidian_file(
     vault_path: Optional[str] = None,
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
-    """Serves a file directly from the vault (for PDFs, images, etc.)"""
-    # Use vault_path from query param if header is missing (important for iframes/direct links)
+    """Serves a file directly from the vault or absolute path (for PDFs, images, etc.)"""
     effective_vault_path = secrets.vault_path or vault_path
-    
-    if not effective_vault_path:
-        raise HTTPException(status_code=401, detail="X-Vault-Path header missing and no vault_path query param")
-    
-    # Unquote to handle encoded spaces/chars from frontend
     decoded_path = unquote(path).replace("\\", "/")
-    full_path = Path(effective_vault_path) / decoded_path
+    resolved_path = resolve_absolute_or_vault_path(decoded_path, effective_vault_path)
     
-    if not full_path.exists():
+    if not resolved_path or not resolved_path.exists():
         raise HTTPException(status_code=404, detail=f"File not found: {decoded_path}")
         
-    return FileResponse(str(full_path))
+    return FileResponse(str(resolved_path))

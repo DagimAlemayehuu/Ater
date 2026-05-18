@@ -324,6 +324,34 @@ fn get_vault_path(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(path)
 }
 
+fn resolve_path_robust(path_str: &str, app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let path = PathBuf::from(path_str);
+    
+    // 1. If it already exists or is absolute, use it directly!
+    if path.exists() || path.is_absolute() {
+        return Ok(path);
+    }
+    
+    // 2. Check Windows absolute path starting with drive letter (e.g. C:\...)
+    let chars: Vec<char> = path_str.chars().collect();
+    if chars.len() > 1 && chars[1] == ':' && chars[0].is_alphabetic() {
+        return Ok(path);
+    }
+    
+    // 3. Check if it's Unix absolute path with the leading slash stripped
+    #[cfg(not(target_os = "windows"))]
+    {
+        let potential_abs = PathBuf::from("/").join(path_str);
+        if potential_abs.exists() {
+            return Ok(potential_abs);
+        }
+    }
+    
+    // 4. Fallback to vault path
+    let vault_path = get_vault_path(app_handle)?;
+    Ok(vault_path.join(path_str))
+}
+
 fn get_proxy_headers(config: &AppConfig) -> reqwest::header::HeaderMap {
     use reqwest::header::{HeaderMap, HeaderValue};
     let mut headers = HeaderMap::new();
@@ -368,7 +396,7 @@ async fn proxy_post<T: serde::Serialize, R: serde::de::DeserializeOwned>(
     headers: reqwest::header::HeaderMap,
 ) -> Result<R, String> {
     let client = reqwest::Client::builder()
-        .connect_timeout(std::time::Duration::from_millis(150))
+        .connect_timeout(std::time::Duration::from_millis(3000))
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
@@ -394,14 +422,10 @@ async fn proxy_post<T: serde::Serialize, R: serde::de::DeserializeOwned>(
                     .map_err(|e| format!("Failed to parse sidecar response: {}", e));
             }
             Err(e) => {
-                let is_connect = e.is_connect() || e.is_timeout();
                 last_err = Some(e);
-                if is_connect {
-                    break;
-                }
                 attempt += 1;
                 if attempt < max_attempts {
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 }
             }
         }
@@ -416,7 +440,7 @@ async fn proxy_get<R: serde::de::DeserializeOwned>(
     headers: reqwest::header::HeaderMap,
 ) -> Result<R, String> {
     let client = reqwest::Client::builder()
-        .connect_timeout(std::time::Duration::from_millis(150))
+        .connect_timeout(std::time::Duration::from_millis(3000))
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
@@ -441,14 +465,10 @@ async fn proxy_get<R: serde::de::DeserializeOwned>(
                     .map_err(|e| format!("Failed to parse sidecar response: {}", e));
             }
             Err(e) => {
-                let is_connect = e.is_connect() || e.is_timeout();
                 last_err = Some(e);
-                if is_connect {
-                    break;
-                }
                 attempt += 1;
                 if attempt < max_attempts {
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 }
             }
         }
@@ -464,7 +484,7 @@ async fn proxy_patch<T: serde::Serialize, R: serde::de::DeserializeOwned>(
     headers: reqwest::header::HeaderMap,
 ) -> Result<R, String> {
     let client = reqwest::Client::builder()
-        .connect_timeout(std::time::Duration::from_millis(150))
+        .connect_timeout(std::time::Duration::from_millis(3000))
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
@@ -490,14 +510,10 @@ async fn proxy_patch<T: serde::Serialize, R: serde::de::DeserializeOwned>(
                     .map_err(|e| format!("Failed to parse sidecar response: {}", e));
             }
             Err(e) => {
-                let is_connect = e.is_connect() || e.is_timeout();
                 last_err = Some(e);
-                if is_connect {
-                    break;
-                }
                 attempt += 1;
                 if attempt < max_attempts {
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 }
             }
         }
@@ -512,7 +528,7 @@ async fn proxy_delete<R: serde::de::DeserializeOwned>(
     headers: reqwest::header::HeaderMap,
 ) -> Result<R, String> {
     let client = reqwest::Client::builder()
-        .connect_timeout(std::time::Duration::from_millis(150))
+        .connect_timeout(std::time::Duration::from_millis(3000))
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
@@ -537,14 +553,10 @@ async fn proxy_delete<R: serde::de::DeserializeOwned>(
                     .map_err(|e| format!("Failed to parse sidecar response: {}", e));
             }
             Err(e) => {
-                let is_connect = e.is_connect() || e.is_timeout();
                 last_err = Some(e);
-                if is_connect {
-                    break;
-                }
                 attempt += 1;
                 if attempt < max_attempts {
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 }
             }
         }
@@ -791,8 +803,7 @@ pub async fn read_obsidian_note(
     path: String,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    let vault_path = get_vault_path(&app_handle)?;
-    let full_path = vault_path.join(&path);
+    let full_path = resolve_path_robust(&path, &app_handle)?;
     
     let content = std::fs::read_to_string(&full_path)
         .map_err(|e| format!("Failed to read note {}: {}", path, e))?;
@@ -812,8 +823,7 @@ pub async fn update_obsidian_note(
     content: String,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    let vault_path = get_vault_path(&app_handle)?;
-    let full_path = vault_path.join(&path);
+    let full_path = resolve_path_robust(&path, &app_handle)?;
     
     if let Some(parent) = full_path.parent() {
         std::fs::create_dir_all(parent)
@@ -848,8 +858,7 @@ pub async fn delete_obsidian_item(
     path: String,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    let vault_path = get_vault_path(&app_handle)?;
-    let full_path = vault_path.join(&path);
+    let full_path = resolve_path_robust(&path, &app_handle)?;
     
     if full_path.is_dir() {
         std::fs::remove_dir_all(&full_path)
@@ -881,8 +890,7 @@ pub async fn create_obsidian_file(
     overwrite: bool,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    let vault_path = get_vault_path(&app_handle)?;
-    let full_path = vault_path.join(&path);
+    let full_path = resolve_path_robust(&path, &app_handle)?;
     
     if full_path.exists() && !overwrite {
         return Err("File already exists".to_string());
@@ -921,8 +929,7 @@ pub async fn create_obsidian_folder(
     path: String,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    let vault_path = get_vault_path(&app_handle)?;
-    let full_path = vault_path.join(&path);
+    let full_path = resolve_path_robust(&path, &app_handle)?;
     
     std::fs::create_dir_all(&full_path)
         .map_err(|e| format!("Failed to create folder: {}", e))?;
@@ -940,9 +947,8 @@ pub async fn move_obsidian_item(
     new_path: String,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    let vault_path = get_vault_path(&app_handle)?;
-    let old_full = vault_path.join(&old_path);
-    let new_full = vault_path.join(&new_path);
+    let old_full = resolve_path_robust(&old_path, &app_handle)?;
+    let new_full = resolve_path_robust(&new_path, &app_handle)?;
     
     if let Some(parent) = new_full.parent() {
         std::fs::create_dir_all(parent)

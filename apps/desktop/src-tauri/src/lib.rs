@@ -145,6 +145,7 @@ pub fn run() {
                                 .current_dir(&api_dir)
                                 .env("PYTHONUTF8", "1")
                                 .env("PYTHONIOENCODING", "utf-8")
+                                .env("ATER_PARENT_PID", &std::process::id().to_string())
                                 .spawn()
                             {
                                 Ok(_child) => {
@@ -162,6 +163,7 @@ pub fn run() {
                                 .current_dir(&api_dir)
                                 .env("PYTHONUTF8", "1")
                                 .env("PYTHONIOENCODING", "utf-8")
+                                .env("ATER_PARENT_PID", &std::process::id().to_string())
                                 .spawn()
                             {
                                 Ok(_child) => {
@@ -186,7 +188,8 @@ pub fn run() {
                         let sidecar = sidecar
                             .args(["--port", &port.to_string()])
                             .env("PYTHONUTF8", "1")
-                            .env("PYTHONIOENCODING", "utf-8");
+                            .env("PYTHONIOENCODING", "utf-8")
+                            .env("ATER_PARENT_PID", &std::process::id().to_string());
                         match sidecar.spawn() {
                             Ok((rx, _child)) => {
                                 println!("[Sidecar] Successfully spawned on port {}", port);
