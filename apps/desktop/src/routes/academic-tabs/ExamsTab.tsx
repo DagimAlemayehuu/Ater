@@ -68,8 +68,8 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
 
     // linked hubs for this exam
     const examHubs = hubs.filter(h => {
-      const hExam = stripWL(getVal(h, 'exam', 'Exam', 'linked_exam')).toLowerCase()
-      const hName = String(exam.title || '').toLowerCase()
+      const hExam = stripWL(getVal(h, 'exam', 'Exam', 'linked_exam')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim()
+      const hName = String(exam.title || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim()
       return hExam.includes(hName) && hName !== ''
     })
     const studyHubDone = examHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length

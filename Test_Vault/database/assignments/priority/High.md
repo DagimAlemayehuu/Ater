@@ -1,4 +1,0 @@
----
-title: High
----
-# High

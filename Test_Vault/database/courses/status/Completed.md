@@ -1,4 +1,0 @@
----
-title: Completed
----
-# Completed

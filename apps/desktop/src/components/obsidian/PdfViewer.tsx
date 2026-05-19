@@ -141,6 +141,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     };
 
     const handleJump = (page: number) => {
+        setPage(page);
         if (iframeRef.current?.contentWindow) {
             iframeRef.current.contentWindow.postMessage({ type: 'jump', page }, '*');
         }

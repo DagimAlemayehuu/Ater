@@ -135,7 +135,15 @@ export const NoteProperties = React.memo(({
       }
       
       const pageNum = sourcePagesKey ? extractPageNumber(metadata[sourcePagesKey]) : undefined
-      const cleanSource = typeof sourceVal === 'string' ? sourceVal.replace(/[\[\]]/g, '').split('|')[0].trim() : ''
+      let cleanSource = ''
+      if (Array.isArray(sourceVal) && sourceVal.length > 0) {
+        const first = sourceVal[0]
+        if (typeof first === 'string') {
+          cleanSource = first.replace(/[\[\]]/g, '').split('|')[0].trim()
+        }
+      } else if (typeof sourceVal === 'string') {
+        cleanSource = sourceVal.replace(/[\[\]]/g, '').split('|')[0].trim()
+      }
 
       if (cleanSource) {
         return (

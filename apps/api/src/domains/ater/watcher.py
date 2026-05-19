@@ -199,7 +199,7 @@ class AterQueueManager:
 
     def add_to_queue(self, file_path: Path):
         path_str = str(file_path.absolute())
-        if "_Generated" in path_str:
+        if "Generated" in path_str:
             return
             
         conn = self._get_conn()

@@ -159,10 +159,12 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                       onClick={async () => {
                         const src = noteMetadata.source_file || noteMetadata.source
                         if (!src) return;
-                                                // 1. Clean Wikilink (handle [[Path/File.pdf|Alias]])
-                         let cleanPath = src
-                         if (typeof src === 'string') {
-                           cleanPath = src.replace(/^\[\[/, '').replace(/\]\]$/, '').split('|')[0]
+                                                 let cleanPath = src
+                         if (Array.isArray(src) && src.length > 0) {
+                           cleanPath = src[0]
+                         }
+                         if (typeof cleanPath === 'string') {
+                           cleanPath = cleanPath.replace(/^\[+/, '').replace(/\]+$/, '').split('|')[0]
                            if (cleanPath.includes('#')) {
                              cleanPath = cleanPath.split('#')[0]
                            }
@@ -176,17 +178,25 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                         const numericWaypoints = wps.map(Number).filter(n => !isNaN(n))
                         const firstPage = numericWaypoints.length > 0 ? numericWaypoints[0] : 1
 
-                        // 3. Resolve Path via sidecar if it doesn't look like a direct path
+                        // 3. Resolve Path via sidecar to ensure exact match even if moved/nested
                         let resolvedPath = cleanPath
-                        if (!cleanPath.includes('/') && !cleanPath.includes('\\')) {
-                          try {
-                            const searchRes = await sidecarApi.findVaultPage(cleanPath)
-                            if (searchRes.found && searchRes.path) {
-                              resolvedPath = searchRes.path
+                        try {
+                          const searchRes = await sidecarApi.findVaultPage(cleanPath)
+                          if (searchRes.found && searchRes.path) {
+                            resolvedPath = searchRes.path
+                          } else {
+                            // Fallback to searching only by filename in case the PDF was moved (e.g. to Inbox/Generated)
+                            const parts = cleanPath.split(/[/\\]/)
+                            const filename = parts[parts.length - 1]
+                            if (filename) {
+                              const searchRes2 = await sidecarApi.findVaultPage(filename)
+                              if (searchRes2.found && searchRes2.path) {
+                                resolvedPath = searchRes2.path
+                              }
                             }
-                          } catch (err) {
-                            console.error("[Jump] Path resolution failed", err)
                           }
+                        } catch (err) {
+                          console.error("[Jump] Path resolution failed", err)
                         }
 
                         // 4. Trigger Select
@@ -427,58 +437,59 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  
  const extractSection = (content: string) => {
  if (!content) return null
- const match = content.match(/(?:#+\s*(?:Core Topologies|Connections|Structure|Nav|Outline|Course Map|Curriculum).*?)\s*\n([\s\S]*?)(?=\n#+\s|$)/i)
+ const normalized = content.replace(/\r\n/g, '\n');
+ const match = normalized.match(/(?:#+\s*(?:Core Topologies|Connections|Structure|Nav|Outline|Course Map|Curriculum).*?)\s*\n([\s\S]*?)(?=\n#+\s|$)/i)
  if (match && match[1]) return match[1].trim()
- const listMatch = content.match(/(?:^|\n)(\s*[-*]\s+[\s\S]*?)(?=\n\n|\n#|$)/)
+ const listMatch = normalized.match(/(?:^|\n)(\s*[-*]\s+[\s\S]*?)(?=\n\n|\n#|$)/)
  if (listMatch && listMatch[1]) return listMatch[1].trim()
- return content.trim()
+ return normalized.trim()
 }
 
  if (isHubNote && noteContent) {
  topologies = extractSection(noteContent)
 }
 
- if (!topologies && rawHub) {
- const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub]
- const hubVal = hubItems[0]
- const cleanHubName = String(hubVal).replace(/\[\[/g, '').replace(/\]\]/g, '').split('|')[0].trim()
- 
- if (cleanHubName) {
- const res = await sidecarApi.findVaultPage(cleanHubName)
- const tryPath = async (p: string) => {
- try {
- const note = await sidecarApi.readObsidianNote(p)
- return extractSection(note.content)
+  if (!topologies && rawHub) {
+  const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub]
+  const hubVal = hubItems[0]
+  const cleanHubName = String(hubVal).replace(/^\[+/, '').replace(/\]+$/, '').split('|')[0].trim()
+  
+  if (cleanHubName) {
+  const res = await sidecarApi.findVaultPage(cleanHubName)
+  const tryPath = async (p: string) => {
+  try {
+  const note = await sidecarApi.readObsidianNote(p)
+  return extractSection(note.content)
 } catch(e) {console.error(e);}
- return null
+  return null
 }
 
- if (res.found && res.path) {
- topologies = await tryPath(res.path)
+  if (res.found && res.path) {
+  topologies = await tryPath(res.path)
 }
- 
- if (!topologies) {
- const searchPaths = [
-  `database/study planer/${cleanHubName}.md`,
-  `database/study planer/${cleanHubName}_Hub.md`,
-  `database/areas/${cleanHubName}.md`,
-  `database/areas/${cleanHubName}_Hub.md`,
- `${cleanHubName}_Hub.md`
- ]
- for (const p of searchPaths) {
- topologies = await tryPath(p)
- if (topologies) break
+  
+  if (!topologies) {
+  const searchPaths = [
+   `database/study planner/${cleanHubName}.md`,
+   `database/study planner/${cleanHubName}_Hub.md`,
+   `database/areas/${cleanHubName}.md`,
+   `database/areas/${cleanHubName}_Hub.md`,
+  `${cleanHubName}_Hub.md`
+  ]
+  for (const p of searchPaths) {
+  topologies = await tryPath(p)
+  if (topologies) break
 }
 }
 }
 }
  
  if (topologies) {
- const pageName = selectedPath?.split('/').pop()?.replace('.md', '').replace('.pdf', '') || ''
- if (pageName) {
- const escapedPageName = pageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
- const regex = new RegExp(`(\\[\\[${escapedPageName}(?:\\|[^\\]]*)?\\]\\])`, 'gi')
- topologies = topologies.replace(regex, `**$1**`)
+  const pageName = typeof selectedPath === 'string' ? selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '' : ''
+  if (pageName) {
+  const escapedPageName = pageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(\\[\\[${escapedPageName}(?:\\|[^\\]]*)?\\]\\])`, 'gi')
+  topologies = topologies.replace(regex, `**$1**`)
 }
  setHubConnections(topologies)
 } else {
@@ -533,12 +544,12 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  let cleanHubName = '';
  if (rawHub) {
  const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub];
- cleanHubName = String(hubItems[0] || '').replace(/\[\[/g, '').replace(/\]\]/g, '').trim();
+ cleanHubName = String(hubItems[0] || '').replace(/^\[+/, '').replace(/\]+$/, '').trim();
 }
  
  const isCurrentAHub = (typeof selectedPath === 'string' && selectedPath.toLowerCase().includes('_hub.md')) || noteMetadata?.type?.toLowerCase() === 'hub';
  if (!cleanHubName && isCurrentAHub) {
- cleanHubName = selectedPath.split('/').pop()?.replace('.md', '') || '';
+ cleanHubName = typeof selectedPath === 'string' ? selectedPath.split('/').pop()?.replace('.md', '') || '' : '';
 }
 
  if (cleanHubName) {
@@ -734,8 +745,14 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
         toExpand.forEach(p => next.add(p))
         return next
       })
-    } else if (initSearch) {
-      setSearchQuery(initSearch)
+    } else {
+      setSelectedPath(null)
+      setNoteMetadata({})
+      setNoteContent('')
+      setEditedContent('')
+      if (initSearch) {
+        setSearchQuery(initSearch)
+      }
     }
   }, [location.search, selectedPath, selectedPage])
 
@@ -856,6 +873,24 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
 
 const selectFile = async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = [], keepMetadata: boolean = false) => {
+    // If the PDF is already active in the viewer, execute a direct jump without reloading or returning early
+    if (selectedPath === path && path.toLowerCase().endsWith('.pdf')) {
+      setSelectedPage(page);
+      pdfRef.current?.handleJump(page);
+      
+      // Sync URL search params
+      if (!fromHistory) {
+        const searchParams = new URLSearchParams(location.search);
+        searchParams.set('path', path);
+        if (page > 1) searchParams.set('page', page.toString());
+        else searchParams.delete('page');
+        if (filterPages.length > 0) searchParams.set('filterPages', filterPages.join(','));
+        else searchParams.delete('filterPages');
+        navigate({ search: searchParams.toString() }, { replace: false });
+      }
+      return;
+    }
+
     // 0. Skip if already loading the exact same thing
     if (selectedPath === path && selectedPage === page && !fromHistory) {
       console.log(`[selectFile] Skip: Already on ${path}`);
@@ -958,28 +993,48 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
   }
 
   const handleWikiLinkClick = async (pageName: string, pageNumber?: number, filterPages: number[] = []) => {
+    let cleanPageName = pageName;
+    let resolvedPageNumber = pageNumber;
+
+    if (pageName && typeof pageName === 'string' && pageName.includes('#')) {
+      const parts = pageName.split('#');
+      cleanPageName = parts[0];
+      const anchor = parts[1];
+      if (anchor.startsWith('page=')) {
+        const parsed = parseInt(anchor.replace('page=', ''), 10);
+        if (!isNaN(parsed)) {
+          resolvedPageNumber = parsed;
+        }
+      } else {
+        const parsed = parseInt(anchor, 10);
+        if (!isNaN(parsed)) {
+          resolvedPageNumber = parsed;
+        }
+      }
+    }
+
     selectRequestId.current += 1;
     const currentReq = selectRequestId.current;
     
     setLoadingNote(true);
     const safetyTimeout = setTimeout(() => {
       if (selectRequestId.current === currentReq) {
-        console.warn(`[WikiLink] Safety timeout triggered for ${pageName}`);
+        console.warn(`[WikiLink] Safety timeout triggered for ${cleanPageName}`);
         setLoadingNote(false);
       }
     }, 15000);
 
     try {
-      console.log(`[WikiLink] Finding page: ${pageName}`);
-      const res = await sidecarApi.findVaultPage(pageName);
+      console.log(`[WikiLink] Finding page: ${cleanPageName} (resolvedPageNumber: ${resolvedPageNumber})`);
+      const res = await sidecarApi.findVaultPage(cleanPageName);
       
       if (selectRequestId.current !== currentReq) return;
       if (res.found && res.path) {
-        await selectFile(res.path, pageNumber, false, filterPages);
+        await selectFile(res.path, resolvedPageNumber, false, filterPages);
       } else if (res.found && res.type === 'database') {
-        await selectFile(`database/${res.db_id}/${res.file_name}`, pageNumber, false, filterPages);
+        await selectFile(`database/${res.db_id}/${res.file_name}`, resolvedPageNumber, false, filterPages);
       } else {
-        console.warn(`[WikiLink] Page not found: ${pageName}. Creating new...`);
+        console.warn(`[WikiLink] Page not found: ${cleanPageName}. Creating new...`);
         // If the pageName looks like a path (contains slashes), resolve it from root instead of current folder.
         let newPath = "";
         if (pageName.includes('/')) {
@@ -1728,7 +1783,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  ) : (
  <>
  {/* Sticky Connections Column (Left-Contextual) */}
-  {selectedPath && (
+  {selectedPath && !(typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) && (
   <aside 
   onMouseEnter={() => window.focus()}
   className="relative border-r border-border flex flex-col bg-background shrink-0 group/connections overflow-hidden  "

@@ -63,3 +63,6 @@ scratch/
 # Ater Volatile
 Obsidian_Vault/5-Pdf Store/ater_queue.db
 apps/api/mock_inbox/
+
+# Tauri sidecar binaries
+apps/desktop/src-tauri/ater-api-*

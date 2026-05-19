@@ -82,8 +82,7 @@ async def sync_academics_profile(secrets: AppSecrets = Depends(get_app_secrets))
         "database/study planner",
         "database/courses",
         "database/semesters",
-        "database/years",
-        "database/inbox"
+        "database/years"
     ]
     for f in db_folders:
         (vault_root / f).mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,0 @@
----
-title: Critical
----
-# Critical

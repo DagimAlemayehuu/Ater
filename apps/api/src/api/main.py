@@ -122,19 +122,25 @@ def parent_watchdog():
     """
     Monitors the parent process (Tauri). If Tauri dies, this kills the Python sidecar instantly,
     preventing zombie processes and port blocking on the next boot.
+    Handles PID recycling on Windows by tracking the process creation time.
     """
-    # Tauri typically sets ATER_PARENT_PID via env var, fallback to os.getppid()
     try:
         parent_pid = int(os.getenv("ATER_PARENT_PID", os.getppid()))
-        logger.info(f"[Watchdog] Assigned to monitor Parent PID: {parent_pid}")
+        parent_process = psutil.Process(parent_pid)
+        parent_create_time = parent_process.create_time()
+        logger.info(f"[Watchdog] Assigned to monitor Parent PID: {parent_pid} (Created: {parent_create_time})")
         
         while True:
             time.sleep(5)
-            if not psutil.pid_exists(parent_pid):
-                logger.critical(f"[Watchdog] FATAL: Parent Tauri process {parent_pid} vanished. Committing sepuku.")
-                # os._exit bypasses Python's graceful shutdown and forces OS-level termination. 
-                # Necessary to prevent Uvicorn/asyncio from hanging.
+            try:
+                current_process = psutil.Process(parent_pid)
+                if current_process.create_time() != parent_create_time:
+                    raise psutil.NoSuchProcess(parent_pid)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                logger.critical(f"[Watchdog] FATAL: Parent Tauri process {parent_pid} vanished or was recycled. Committing sepuku.")
                 os._exit(1)
+            except Exception:
+                pass
     except Exception as e:
         logger.error(f"[Watchdog] Failed to start monitor: {e}")
 
@@ -507,11 +513,11 @@ async def ater_confirm_plan(
             anchored_hub_id=anchored_hub_id
         )
         
-        # Move file to _Generated only when all batches are done
+        # Move file to Generated only when all batches are done
         if not results.get("has_more") and not session_id.startswith("text_"):
             path = Path(session_id)
             if path.exists():
-                processed_dir = path.parent / "_Generated"
+                processed_dir = path.parent / "Generated"
                 processed_dir.mkdir(exist_ok=True)
                 new_path = processed_dir / path.name
                 if new_path.exists():
@@ -558,7 +564,7 @@ async def ater_resume_paused_session(
         if not result.get("has_more") and result.get("status") != "rate_limited" and not session_id.startswith("text_"):
             path = Path(session_id)
             if path.exists():
-                processed_dir = path.parent / "_Generated"
+                processed_dir = path.parent / "Generated"
                 processed_dir.mkdir(exist_ok=True)
                 new_path = processed_dir / path.name
                 if new_path.exists():
@@ -702,7 +708,7 @@ async def ater_list_generated(
     if not secrets.inbox_path:
         return {"files": []}
     
-    generated_dir = Path(secrets.inbox_path) / "_Generated"
+    generated_dir = Path(secrets.inbox_path) / "Generated"
     if not generated_dir.exists() or not generated_dir.is_dir():
         return {"files": []}
         
@@ -710,7 +716,7 @@ async def ater_list_generated(
     supported_extensions = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
     try:
         import json
-        for f in generated_dir.iterdir():
+        for f in generated_dir.rglob("*"):
             if f.is_file() and not f.name.startswith('.') and f.suffix.lower() in supported_extensions:
                 hub_path = None
                 meta_file = f.with_suffix(".ater.json")
@@ -754,10 +760,10 @@ async def ater_list_inbox(
     files = []
     supported_extensions = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
     try:
-        generated_dir = inbox / "_Generated"
+        generated_dir = inbox / "Generated"
         for f in inbox.rglob("*"):
             if f.is_file() and not f.name.startswith('.') and f.suffix.lower() in supported_extensions:
-                # Ignore files in the _Generated archive
+                # Ignore files in the Generated archive
                 if generated_dir in f.parents or str(f.absolute()).startswith(str(generated_dir.absolute())):
                     continue
                     
@@ -1364,7 +1370,7 @@ async def factory_reset_system(
         academic_folders = [
             "database/assignments",
             "database/exams",
-            "database/study planer",
+            "database/study planner",
             "database/courses",
             "database/semesters",
             "database/years",

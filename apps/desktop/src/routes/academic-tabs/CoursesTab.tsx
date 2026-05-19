@@ -65,16 +65,25 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
     const professor  = stripWL(getVal(course, 'Professor', 'professor'))
     const semester   = stripWL(getVal(course, 'Semester', 'semester'))
 
-    const courseAssignments = assignments.filter(a =>
-      stripWL(getVal(a, 'Course', 'course')).toLowerCase().includes(String(course.title || '').toLowerCase()))
+    const courseTitleNorm = String(course.title || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+    const courseAssignments = assignments.filter(a => {
+      const aCourse = stripWL(getVal(a, 'Course', 'course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+      return aCourse.includes(courseTitleNorm) || courseTitleNorm.includes(aCourse);
+    });
     const pending = courseAssignments.filter(a => !a.done && a.done !== 'true')
     const done    = courseAssignments.filter(a => a.done === true || a.done === 'true')
 
-    const courseExams    = exams.filter(e => stripWL(getVal(e, 'Course', 'course')).toLowerCase().includes(String(course.title || '').toLowerCase()))
+    const courseExams    = exams.filter(e => {
+      const eCourse = stripWL(getVal(e, 'Course', 'course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+      return eCourse.includes(courseTitleNorm) || courseTitleNorm.includes(eCourse);
+    });
     const upcomingExams  = courseExams.filter(e => e.date && new Date(e.date) >= now).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     const nextExam       = upcomingExams[0]
 
-    const courseHubs  = hubs.filter(h => stripWL(getVal(h, 'course', 'Course')).toLowerCase().includes(String(course.title || '').toLowerCase()))
+    const courseHubs  = hubs.filter(h => {
+      const hCourse = stripWL(getVal(h, 'course', 'Course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+      return hCourse.includes(courseTitleNorm) || courseTitleNorm.includes(hCourse);
+    });
     const doneHubs    = courseHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
 
     const extraKeys = Object.keys({ ...schema, ...course }).filter(k => !INTERNAL.includes(k))
@@ -234,12 +243,22 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
             const credits     = getVal(course, 'Credits', 'credits')
             const professor   = stripWL(getVal(course, 'Professor', 'professor'))
             const semester    = stripWL(getVal(course, 'Semester', 'semester'))
-            const cAssign     = assignments.filter(a => stripWL(getVal(a, 'Course', 'course')).toLowerCase().includes(String(course.title || '').toLowerCase()))
+            const courseTitleNorm = String(course.title || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+            const cAssign     = assignments.filter(a => {
+              const aCourse = stripWL(getVal(a, 'Course', 'course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+              return aCourse.includes(courseTitleNorm) || courseTitleNorm.includes(aCourse);
+            });
             const pendingCt   = cAssign.filter(a => !a.done).length
-            const cExams      = exams.filter(e => stripWL(getVal(e, 'Course', 'course')).toLowerCase().includes(String(course.title || '').toLowerCase()))
+            const cExams      = exams.filter(e => {
+              const eCourse = stripWL(getVal(e, 'Course', 'course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+              return eCourse.includes(courseTitleNorm) || courseTitleNorm.includes(eCourse);
+            });
             const nextEx      = cExams.filter(e => e.date).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
             const daysToExam  = nextEx?.date ? differenceInDays(new Date(nextEx.date), now) : null
-            const cHubs       = hubs.filter(h => stripWL(getVal(h, 'course', 'Course')).toLowerCase().includes(String(course.title || '').toLowerCase()))
+            const cHubs       = hubs.filter(h => {
+              const hCourse = stripWL(getVal(h, 'course', 'Course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+              return hCourse.includes(courseTitleNorm) || courseTitleNorm.includes(hCourse);
+            });
             const doneH       = cHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
 
             return (

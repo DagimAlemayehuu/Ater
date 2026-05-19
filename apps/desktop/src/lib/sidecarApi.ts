@@ -24,7 +24,9 @@ async function ensureDbInitialized(): Promise<void> {
         
         let dbPath = ''
         if (vaultPath) {
-            dbPath = `${vaultPath}/.ater/vector_store`
+            const isWindows = navigator.userAgent.toLowerCase().includes('win');
+            const separator = isWindows ? '\\' : '/';
+            dbPath = `${vaultPath}${separator}.ater${separator}vector_store`
         }
         
         await invoke('initialize_database', { dbPath })

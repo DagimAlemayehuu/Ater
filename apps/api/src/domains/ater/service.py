@@ -499,8 +499,8 @@ class AterService:
 
     def _get_planner_path(self) -> Path:
         """Resolves the absolute path to the Study Planner database."""
-        # Standard location: database/study planer
-        path = Path(self.secrets.vault_path) / "database" / "study planer"
+        # Standard location: database/study planner
+        path = Path(self.secrets.vault_path) / "database" / "study planner"
         return path
 
     def list_available_options(self) -> Dict[str, List[str]]:
@@ -514,9 +514,9 @@ class AterService:
         courses = safe_glob(base_path / "courses", "*.md")
         semesters = safe_glob(base_path / "semesters", "*.md")
         years = safe_glob(base_path / "years", "*.md")
-        hubs = safe_glob(base_path / "study planer", "*.md")
+        hubs = safe_glob(base_path / "study planner", "*.md")
         units = []
-        try: units = [f.stem for f in (base_path / "study planer" / "_Units").glob("*.md")]
+        try: units = [f.stem for f in (base_path / "study planner" / "_Units").glob("*.md")]
         except Exception: pass
         
         # Sort units numerically if possible

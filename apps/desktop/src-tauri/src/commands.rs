@@ -215,7 +215,7 @@ fn load_app_config(app_handle: &tauri::AppHandle) -> Result<AppConfig, String> {
 }
 
 fn heal_vault_structure(vault_root: &std::path::Path) {
-    let main_folders = vec!["Inbox", "Notes", "database", "generated"];
+    let main_folders = vec!["Inbox", "Notes", "database"];
     for f in main_folders {
         let _ = std::fs::create_dir_all(vault_root.join(f));
     }
@@ -228,8 +228,6 @@ fn heal_vault_structure(vault_root: &std::path::Path) {
         "database/courses",
         "database/semesters",
         "database/years",
-        "database/programs",
-        "database/inbox",
         // Nested Select property subfolders
         "database/courses/status",
         "database/courses/difficulty",
@@ -712,7 +710,7 @@ fn parse_markdown_note(content: &str) -> (serde_json::Value, String) {
                     map.insert(key, serde_json::Value::Bool(false));
                 } else if let Ok(num) = value_str.parse::<i64>() {
                     map.insert(key, serde_json::Value::Number(num.into()));
-                } else if value_str.starts_with('[') && value_str.ends_with(']') {
+                } else if value_str.starts_with('[') && value_str.ends_with(']') && !(value_str.starts_with("[[") && value_str.ends_with("]]")) {
                     let items_str = &value_str[1..value_str.len() - 1];
                     let mut arr = Vec::new();
                     for item in items_str.split(',') {
@@ -1002,35 +1000,67 @@ pub async fn find_vault_page(
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
     let vault_path = get_vault_path(&app_handle)?;
-    let query_lower = page_name.to_lowercase();
-    let is_pdf = query_lower.ends_with(".pdf");
     
-    let normalized_query = query_lower
+    // 1. Strip hash anchors if present (e.g. Chapter_Two.pdf#page=12 -> Chapter_Two.pdf)
+    let clean_page_name = if page_name.contains('#') {
+        page_name.split('#').next().unwrap_or(&page_name).to_string()
+    } else {
+        page_name
+    };
+    
+    // 2. Normalize query: lowercase, replace spaces with underscores, normalise slashes
+    let query_norm = clean_page_name
+        .to_lowercase()
+        .replace('\\', "/")
         .replace(' ', "_")
         .replace(".md", "")
         .replace(".pdf", "");
     
+    // Extract just the filename component of the query
+    let query_filename = query_norm
+        .split('/')
+        .last()
+        .unwrap_or(&query_norm)
+        .to_string();
+    
+    let is_pdf = clean_page_name.to_lowercase().ends_with(".pdf") || clean_page_name.to_lowercase().contains(".pdf");
+    
     let mut files = Vec::new();
     walk_dir(&vault_path, &vault_path, &mut files)?;
     
-    // Phase 1: Try exact match including extension if specified
+    // Phase 1: Try exact relative path match first
     for f in &files {
         if !f.is_dir {
-            let f_path_lower = f.path.to_lowercase();
-            let f_name_lower = f.name.to_lowercase();
+            let f_path_norm = f.path
+                .to_lowercase()
+                .replace('\\', "/")
+                .replace(' ', "_")
+                .replace(".md", "")
+                .replace(".pdf", "");
             
-            if is_pdf && f_path_lower.ends_with(".pdf") {
-                let name_clean = f_name_lower.replace(' ', "_").replace(".pdf", "");
-                if name_clean == normalized_query {
-                    let mut res = serde_json::Map::new();
-                    res.insert("found".to_string(), serde_json::Value::Bool(true));
-                    res.insert("path".to_string(), serde_json::Value::String(f.path.clone()));
-                    res.insert("file_name".to_string(), serde_json::Value::String(f.name.clone()));
-                    return Ok(serde_json::Value::Object(res));
-                }
-            } else if !is_pdf && f_path_lower.ends_with(".md") {
-                let name_clean = f_name_lower.replace(' ', "_").replace(".md", "");
-                if name_clean == normalized_query {
+            if f_path_norm == query_norm {
+                let mut res = serde_json::Map::new();
+                res.insert("found".to_string(), serde_json::Value::Bool(true));
+                res.insert("path".to_string(), serde_json::Value::String(f.path.clone()));
+                res.insert("file_name".to_string(), serde_json::Value::String(f.name.clone()));
+                return Ok(serde_json::Value::Object(res));
+            }
+        }
+    }
+    
+    // Phase 2: Try match against just the filename (exact match)
+    for f in &files {
+        if !f.is_dir {
+            let f_name_norm = f.name
+                .to_lowercase()
+                .replace(' ', "_")
+                .replace(".md", "")
+                .replace(".pdf", "");
+            
+            if f_name_norm == query_filename {
+                // If it's a PDF query, make sure we return a PDF file, or vice versa if possible
+                let is_f_pdf = f.path.to_lowercase().ends_with(".pdf");
+                if is_pdf == is_f_pdf {
                     let mut res = serde_json::Map::new();
                     res.insert("found".to_string(), serde_json::Value::Bool(true));
                     res.insert("path".to_string(), serde_json::Value::String(f.path.clone()));
@@ -1041,14 +1071,16 @@ pub async fn find_vault_page(
         }
     }
     
-    // Phase 2: Try loose match across both .md and .pdf
+    // Phase 3: Loose filename match as last resort (ignoring exact pdf/md type)
     for f in &files {
-        if !f.is_dir && (f.path.ends_with(".md") || f.path.ends_with(".pdf")) {
-            let name_clean = f.name.to_lowercase()
+        if !f.is_dir {
+            let f_name_norm = f.name
+                .to_lowercase()
                 .replace(' ', "_")
                 .replace(".md", "")
                 .replace(".pdf", "");
-            if name_clean == normalized_query {
+            
+            if f_name_norm == query_filename {
                 let mut res = serde_json::Map::new();
                 res.insert("found".to_string(), serde_json::Value::Bool(true));
                 res.insert("path".to_string(), serde_json::Value::String(f.path.clone()));
@@ -1093,6 +1125,7 @@ pub async fn list_hubs(app_handle: tauri::AppHandle) -> Result<serde_json::Value
                         .unwrap_or_else(|| f.name.replace("_Hub", "").replace(".md", "").replace("_", " "));
                     hub.insert("id".to_string(), serde_json::Value::String(id));
                     hub.insert("title".to_string(), serde_json::Value::String(title));
+                    hub.insert("path".to_string(), serde_json::Value::String(f.path.clone()));
                     
                     if let Some(course) = meta.get("course").and_then(|c| c.as_str()) {
                         hub.insert("course".to_string(), serde_json::Value::String(course.to_string()));
@@ -1124,7 +1157,9 @@ pub async fn list_hub_notes(
     let mut files = Vec::new();
     walk_dir(&vault_path, &vault_path, &mut files)?;
     
-    let normalized_hub = hub_id.to_lowercase().replace(' ', "_").replace("_hub", "");
+    // Extract only the filename stem of the hub_id to handle directory nesting consistently
+    let hub_filename = hub_id.split('/').last().unwrap_or(&hub_id).to_string();
+    let normalized_hub = hub_filename.to_lowercase().replace(' ', "_").replace("_hub", "");
     
     let mut notes = Vec::new();
     for f in files {
@@ -1139,7 +1174,8 @@ pub async fn list_hub_notes(
                             .to_lowercase()
                             .replace(' ', "_")
                             .replace("_hub", "");
-                        if clean_hub == normalized_hub {
+                        let clean_hub_filename = clean_hub.split('/').last().unwrap_or(&clean_hub).to_string();
+                        if clean_hub_filename == normalized_hub {
                             let mut note = serde_json::Map::new();
                             note.insert("path".to_string(), serde_json::Value::String(f.path.clone()));
                             note.insert("name".to_string(), serde_json::Value::String(f.name.clone()));
@@ -1245,8 +1281,6 @@ pub async fn academics_sync_profile(
         "database/courses",
         "database/semesters",
         "database/years",
-        "database/programs",
-        "database/inbox",
         // Nested Select property subfolders
         "database/courses/status",
         "database/courses/difficulty",
@@ -2385,6 +2419,25 @@ fn walk_for_graph(dir: &std::path::Path, root: &std::path::Path, nodes: &mut Vec
             nodes.push(serde_json::Value::Object(node));
 
             if let Ok(content) = std::fs::read_to_string(&path) {
+                let (frontmatter, _) = parse_markdown_note(&content);
+                if let Some(fm_obj) = frontmatter.as_object() {
+                    // Bidirectional frontmatter hub linking: extract hub link if present
+                    if let Some(hub_val) = fm_obj.get("hub").and_then(|h| h.as_str()) {
+                        let clean_hub = hub_val.trim_matches('[')
+                            .trim_matches(']')
+                            .split('|')
+                            .next()
+                            .unwrap_or("")
+                            .trim();
+                        if !clean_hub.is_empty() {
+                            let mut link = serde_json::Map::new();
+                            link.insert("source".to_string(), serde_json::Value::String(rel_path.clone()));
+                            link.insert("target".to_string(), serde_json::Value::String(clean_hub.to_string()));
+                            links.push(serde_json::Value::Object(link));
+                        }
+                    }
+                }
+
                 let mut start = 0;
                 while let Some(s) = content[start..].find("[[") {
                     let s_idx = start + s;

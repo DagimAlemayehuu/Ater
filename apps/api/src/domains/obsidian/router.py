@@ -77,9 +77,19 @@ async def initialize_vault(secrets: AppSecrets = Depends(get_app_secrets)):
         
     vault_root = Path(secrets.vault_path)
     
-    # 1. Try to copy from monorepo Obsidian_Vault template folder
-    template_path = Path(__file__).parents[4] / "Obsidian_Vault"
-    if template_path.exists() and template_path.is_dir():
+    # 1. Try to copy from monorepo vault_template or Obsidian_Vault template folder
+    candidates = [
+        Path(__file__).parents[5] / "vault_template",
+        Path(__file__).parents[4] / "vault_template",
+        Path(__file__).parents[4] / "Obsidian_Vault",
+    ]
+    template_path = None
+    for cand in candidates:
+        if cand.exists() and cand.is_dir():
+            template_path = cand
+            break
+
+    if template_path:
         try:
             def copy_tree(src: Path, dst: Path):
                 dst.mkdir(parents=True, exist_ok=True)
@@ -93,9 +103,8 @@ async def initialize_vault(secrets: AppSecrets = Depends(get_app_secrets)):
                         if not dst_item.exists():
                             shutil.copy2(item, dst_item)
             copy_tree(template_path, vault_root)
-            return {"success": True, "message": "Vault structure successfully initialized from Obsidian_Vault template"}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to copy template: {str(e)}")
+            print(f"Warning: Failed to copy template folder: {e}")
 
     # 2. Fallback: Core Hierarchy (Only essential folders)
     folders = [
@@ -203,7 +212,7 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                     "type": {"type": "select", "source": f"{DB_DIR_PREFIX}/study planner/type"},
                     "generated": {"type": "bool"},
                     "source": {"type": "relation", "source": "Inbox"},
-                    "source pages": {"type": "str"}
+                    "source_pages": {"type": "str"}
                 })
 
             # 2. Infer property types from .md files in the main folder
@@ -248,7 +257,7 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                                                 "priority": {"type": "select", "source": f"{DB_DIR_PREFIX}/{entry.name}/priority"},
                                                 "generated": {"type": "bool"},
                                                 "source": {"type": "relation", "source": "inbox"},
-                                                "source pages": {"type": "str"},
+                                                "source_pages": {"type": "str"},
                                                 "target years": {"type": "number"},
                                                 "target credits": {"type": "number"},
                                                 "earned credits": {"type": "number"},
@@ -736,6 +745,35 @@ async def find_vault_page(page_name: str, secrets: AppSecrets = Depends(get_app_
                 return {"found": True, "type": "note", "path": found.relative_to(vault_root).as_posix()}
 
     # 2. Search in 3-Database (prioritize database views)
+    db_root = vault_root / DB_DIR_PREFIX
+    if db_root.exists():
+        for db_dir in db_root.iterdir():
+            if db_dir.is_dir():
+                target_md = f"{page_name}.md" if not page_name.endswith('.md') else page_name
+                # Check within this specific database dir
+                found = find_case_insensitive(db_dir, target_md, recursive=False)
+                if found:
+                    return {"found": True, "type": "database", "db_id": db_dir.name, "file_name": found.name, "path": found.relative_to(vault_root).as_posix()}
+
+    # 3. Search everywhere else (targeted extensions first)
+    # Search for .md
+    target_md = f"{page_name}.md" if not page_name.lower().endswith('.md') else page_name
+    found = find_case_insensitive(vault_root, target_md)
+    if found:
+        return {"found": True, "type": "note", "path": found.relative_to(vault_root).as_posix()}
+
+    # Search for .pdf if not found yet
+    if not page_name.lower().endswith('.pdf'):
+        target_pdf = f"{page_name}.pdf"
+        found = find_case_insensitive(vault_root, target_pdf)
+        if found:
+            return {"found": True, "type": "note", "path": found.relative_to(vault_root).as_posix()}
+
+    # Finally try exact name (whatever it is) case-insensitive
+    found = find_case_insensitive(vault_root, page_name)
+    if found:
+        return {"found": True, "type": "note", "path": found.relative_to(vault_root).as_posix()}
+                
     return {"found": False}
 
 @router.get("/vault/search-full")
@@ -770,36 +808,6 @@ async def search_vault_full(query: str, secrets: AppSecrets = Depends(get_app_se
                 continue
                 
     return {"paths": list(set(results))}
-    db_root = vault_root / DB_DIR_PREFIX
-    if db_root.exists():
-        for db_dir in db_root.iterdir():
-            if db_dir.is_dir():
-                target_md = f"{page_name}.md" if not page_name.endswith('.md') else page_name
-                # Check within this specific database dir
-                found = find_case_insensitive(db_dir, target_md, recursive=False)
-                if found:
-                    return {"found": True, "type": "database", "db_id": db_dir.name, "file_name": found.name}
-
-    # 3. Search everywhere else (targeted extensions first)
-    # Search for .md
-    target_md = f"{page_name}.md" if not page_name.lower().endswith('.md') else page_name
-    found = find_case_insensitive(vault_root, target_md)
-    if found:
-        return {"found": True, "type": "note", "path": found.relative_to(vault_root).as_posix()}
-
-    # Search for .pdf if not found yet
-    if not page_name.lower().endswith('.pdf'):
-        target_pdf = f"{page_name}.pdf"
-        found = find_case_insensitive(vault_root, target_pdf)
-        if found:
-            return {"found": True, "type": "note", "path": found.relative_to(vault_root).as_posix()}
-
-    # Finally try exact name (whatever it is) case-insensitive
-    found = find_case_insensitive(vault_root, page_name)
-    if found:
-        return {"found": True, "type": "note", "path": found.relative_to(vault_root).as_posix()}
-                
-    return {"found": False}
 
 @router.get("/vault/options")
 async def get_property_options(source: str, secrets: AppSecrets = Depends(get_app_secrets)):
