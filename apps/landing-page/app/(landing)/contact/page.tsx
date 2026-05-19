@@ -19,13 +19,16 @@ export default function ContactPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mt-4 text-left">
           {[
-            { label: 'EMAIL', value: 'hello@ater.io' },
-            { label: 'TWITTER', value: '@ater_app' },
-            { label: 'GITHUB', value: 'ater-labs' },
-            { label: 'DISCORD', value: 'ater_community' }
+            { label: 'EMAIL', value: 'hello@ater.io', href: 'mailto:hello@ater.io' },
+            { label: 'TWITTER', value: '@ater_app', href: 'https://x.com/ater_app' },
+            { label: 'GITHUB', value: 'DagimAlemayehuu/Ater', href: 'https://github.com/DagimAlemayehuu/Ater' },
+            { label: 'DISCORD', value: 'ater_community', href: 'https://discord.com' }
           ].map((channel) => (
-            <div 
+            <a
               key={channel.label} 
+              href={channel.href}
+              target={channel.href.startsWith('http') ? '_blank' : undefined}
+              rel={channel.href.startsWith('http') ? 'noreferrer' : undefined}
               className="p-6 border border-outline-variant bg-surface flex items-center justify-between group hover:border-primary transition-colors font-mono text-[11px]"
             >
               <div className="flex flex-col gap-1">
@@ -35,7 +38,7 @@ export default function ContactPage() {
                 </span>
               </div>
               <ChevronRight className="size-4 opacity-20 group-hover:opacity-100 group-hover:text-primary transition-opacity" />
-            </div>
+            </a>
           ))}
         </div>
       </div>

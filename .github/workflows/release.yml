@@ -231,7 +231,6 @@ jobs:
         run: |
           gh release edit "$TAG" \
             --repo DagimAlemayehuu/Ater_Releases \
-            --discussion-category "Announcements" \
             --draft=false
 
   generate-updater-json:

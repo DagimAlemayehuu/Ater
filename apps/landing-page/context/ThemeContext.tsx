@@ -17,14 +17,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const timer = setTimeout(() => {
       const savedTheme = localStorage.getItem("theme") as Theme;
-      if (savedTheme) {
-        setTheme(savedTheme);
-        document.documentElement.classList.toggle("dark", savedTheme === "dark");
-      } else {
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        setTheme(prefersDark ? "dark" : "light");
-        document.documentElement.classList.toggle("dark", prefersDark);
-      }
+      const nextTheme = savedTheme || "dark";
+      setTheme(nextTheme);
+      document.documentElement.classList.toggle("dark", nextTheme === "dark");
     }, 0);
     return () => clearTimeout(timer);
   }, []);

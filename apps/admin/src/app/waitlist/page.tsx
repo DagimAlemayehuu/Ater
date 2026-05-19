@@ -23,6 +23,10 @@ function generateActivationCode(): string {
   return Array.from(array, (byte) => chars[byte % chars.length]).join("");
 }
 
+function codeForApproval(entry: Entry): string {
+  return entry.activation_code || generateActivationCode();
+}
+
 export default function WaitlistManager() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,11 +36,29 @@ export default function WaitlistManager() {
 
   async function handleUpdate(id: string, action: "approved" | "rejected") {
     setUpdatingId(id);
-    const activation_code = action === "approved" ? generateActivationCode() : null;
+    const current = entries.find((entry) => entry.id === id);
+    if (!current) {
+      setUpdatingId(null);
+      return;
+    }
+
+    const activation_code = action === "approved" ? codeForApproval(current) : null;
     const { error } = await supabase
       .from("waiting_list")
       .update({ status: action, activation_code })
       .eq("id", id);
+
+    if (!error) {
+      await supabase
+        .from("profiles")
+        .update({
+          activation_code,
+          is_approved: action === "approved",
+          waitlist_status: action,
+        })
+        .eq("email", current.email);
+    }
+
     if (!error) {
       setEntries((prev) =>
         prev.map((e) => (e.id === id ? { ...e, status: action, activation_code } : e))
@@ -95,8 +117,8 @@ export default function WaitlistManager() {
   return (
     <div className="flex-1 flex flex-col h-full bg-background text-foreground font-sans">
 
-      <header className="bg-background border-b border-border py-8 px-10 shrink-0">
-        <div className="max-w-5xl mx-auto flex items-end justify-between">
+      <header className="bg-background border-b border-border py-6 sm:py-8 px-4 sm:px-10 shrink-0">
+        <div className="max-w-5xl mx-auto flex flex-col lg:flex-row lg:items-end justify-between gap-4">
           <div>
             <h1 className="text-4xl font-black tracking-tighter text-foreground leading-none uppercase">
               Waitlist
@@ -105,15 +127,15 @@ export default function WaitlistManager() {
               {loading ? "Loading..." : `${filtered.length} ${filtered.length === 1 ? "entry" : "entries"}`}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex items-center gap-3 w-full lg:w-auto">
+            <div className="relative flex-1 lg:flex-none">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="bg-card border border-border pl-10 pr-5 py-2.5 text-[11px] font-bold uppercase tracking-widest focus:border-foreground outline-none w-56 text-foreground placeholder:text-muted-foreground"
+                className="bg-card border border-border pl-10 pr-5 py-2.5 text-[11px] font-bold uppercase tracking-widest focus:border-foreground outline-none w-full lg:w-56 text-foreground placeholder:text-muted-foreground"
               />
             </div>
             <button
@@ -127,10 +149,10 @@ export default function WaitlistManager() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-10 custom-scrollbar">
+      <div className="flex-1 overflow-auto p-4 sm:p-10 custom-scrollbar">
         <div className="max-w-5xl mx-auto">
-          <div className="bg-card border border-border">
-            <table className="w-full text-left">
+          <div className="bg-card border border-border overflow-x-auto custom-scrollbar">
+            <table className="w-full min-w-[900px] text-left">
               <thead>
                 <tr className="border-b border-border">
                   <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground">
@@ -198,7 +220,7 @@ export default function WaitlistManager() {
                           </span>
                         </td>
                         <td className="px-8 py-6 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                          <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => handleUpdate(entry.id, "approved")}
                               disabled={updatingId === entry.id || entry.status === "approved"}

@@ -22,9 +22,9 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-background text-foreground antialiased selection:bg-foreground selection:text-background">
       <Header />
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-w-0">
         <Sidebar />
-        <main className="flex-1 h-full overflow-hidden flex flex-col">
+        <main className="flex-1 h-full overflow-hidden flex flex-col min-w-0">
           {children}
         </main>
       </div>

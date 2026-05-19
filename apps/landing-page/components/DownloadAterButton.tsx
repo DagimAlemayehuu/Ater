@@ -4,11 +4,18 @@ import React, { useState, useEffect } from 'react';
 import { Cpu, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const FALLBACK_VERSION = 'v0.4.1';
+
+type ReleaseAsset = {
+  name: string;
+  browser_download_url: string;
+};
+
 export function DownloadAterButton() {
   const [downloads, setDownloads] = useState({
     mac: 'https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/Ater-aarch64.dmg',
     windows: 'https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/Ater_setup.exe',
-    version: 'v0.0.27',
+    version: FALLBACK_VERSION,
     loading: true
   });
 
@@ -24,15 +31,15 @@ export function DownloadAterButton() {
         const data = await response.json();
         
         const assets = data.assets || [];
-        const version = data.tag_name || 'v0.0.27';
+        const version = data.tag_name || FALLBACK_VERSION;
 
         // Find the Silicon Mac DMG (aarch64 and .dmg)
-        const macAsset = assets.find((a: any) => 
+        const macAsset = assets.find((a: ReleaseAsset) =>
           a.name.toLowerCase().includes('aarch64') && a.name.endsWith('.dmg')
         );
         
         // Find the Windows Setup EXE (.exe)
-        const winAsset = assets.find((a: any) => 
+        const winAsset = assets.find((a: ReleaseAsset) =>
           a.name.endsWith('.exe')
         );
 
@@ -145,7 +152,7 @@ export function DownloadAterButton() {
               {guideTab === 'mac' ? (
                 <div className="space-y-4 text-[11px] leading-relaxed text-body">
                   <p className="font-bold text-primary uppercase tracking-wider !text-[10px]">
-                    Quarantine Lock Bypass:
+                    If macOS blocks launch:
                   </p>
                   <ol className="list-decimal pl-4 space-y-3 font-mono text-[10px] opacity-80">
                     <li>
@@ -167,14 +174,14 @@ export function DownloadAterButton() {
                       Open your Applications folder in Finder and drag <strong className="text-primary font-sans font-bold">Ater.app</strong> directly into the Terminal window.
                     </li>
                     <li>
-                      Press <strong className="text-primary font-sans font-bold">Enter</strong> and launch the app normally!
+                      Press <strong className="text-primary font-sans font-bold">Enter</strong> and launch the app normally.
                     </li>
                   </ol>
                 </div>
               ) : (
                 <div className="space-y-4 text-[11px] leading-relaxed text-body">
                   <p className="font-bold text-primary uppercase tracking-wider !text-[10px]">
-                    SmartScreen Bypass:
+                    If Windows blocks launch:
                   </p>
                   <ol className="list-decimal pl-4 space-y-3 font-mono text-[10px] opacity-80">
                     <li>
@@ -187,7 +194,7 @@ export function DownloadAterButton() {
                       Click <strong className="text-primary font-sans font-bold">Run anyway</strong>.
                     </li>
                     <li>
-                      The installer will finish perfectly!
+                      The installer will finish normally.
                     </li>
                   </ol>
                 </div>
@@ -198,7 +205,7 @@ export function DownloadAterButton() {
       </div>
 
       <p className="technical-label opacity-20 text-center text-[7px] pt-1">
-        {downloads.loading ? 'CHECKING LATEST RELEASE...' : `${downloads.version.toUpperCase()}-BETA_PRODUCTION_STABLE`}
+        {downloads.loading ? 'CHECKING LATEST RELEASE...' : `${downloads.version.toUpperCase()}-BETA`}
       </p>
     </div>
   );

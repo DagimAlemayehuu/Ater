@@ -35,6 +35,20 @@ export default function SettingsPage() {
     setSuccess(false);
     try {
       const parsed = JSON.parse(config);
+      const allowedKeys = ["token_price_per_1k", "registration_open", "engine_version"];
+      const unexpectedKeys = Object.keys(parsed).filter((key) => !allowedKeys.includes(key));
+      if (unexpectedKeys.length > 0) {
+        throw new Error(`Unsupported setting: ${unexpectedKeys.join(", ")}`);
+      }
+      if (typeof parsed.token_price_per_1k !== "number") {
+        throw new Error("token_price_per_1k must be a number");
+      }
+      if (typeof parsed.registration_open !== "boolean") {
+        throw new Error("registration_open must be true or false");
+      }
+      if (typeof parsed.engine_version !== "string") {
+        throw new Error("engine_version must be a string");
+      }
       const { error } = await supabase
         .from('app_settings')
         .upsert({ id: 'global_config', config: parsed, updated_at: new Date().toISOString() });
@@ -55,8 +69,8 @@ export default function SettingsPage() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background text-foreground font-sans">
-      <header className="bg-background border-b border-border py-8 px-10 shrink-0">
-        <div className="max-w-5xl mx-auto flex items-end justify-between">
+      <header className="bg-background border-b border-border py-6 sm:py-8 px-4 sm:px-10 shrink-0">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <h1 className="text-4xl font-black tracking-tighter text-foreground leading-none uppercase">
               Settings
@@ -76,10 +90,10 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-10 custom-scrollbar">
+      <div className="flex-1 overflow-auto p-4 sm:p-10 custom-scrollbar">
         <div className="max-w-5xl mx-auto space-y-10">
           
-          <div className="grid grid-cols-1 grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-10">
             {/* Editor Area */}
             <div className="col-span-2 space-y-4">
               <div className="flex items-center justify-between">

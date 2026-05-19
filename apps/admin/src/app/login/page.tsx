@@ -63,8 +63,8 @@ export default function AdminLogin() {
       }
 
       router.push("/");
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
       setLoading(false);
     }

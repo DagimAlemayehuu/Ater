@@ -30,9 +30,9 @@ export default function Dashboard() {
     setError(null);
     try {
       const [approvedRes, pendingRes, rejectedRes, logsRes, recentRes] = await Promise.all([
-        supabase.from("waiting_list").select("id", { count: "exact" }).eq("status", "approved"),
-        supabase.from("waiting_list").select("id", { count: "exact" }).eq("status", "pending"),
-        supabase.from("waiting_list").select("id", { count: "exact" }).eq("status", "rejected"),
+        supabase.from("waiting_list").select("id", { count: "exact", head: true }).eq("status", "approved"),
+        supabase.from("waiting_list").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("waiting_list").select("id", { count: "exact", head: true }).eq("status", "rejected"),
         supabase.from("usage_logs").select("token_count"),
         supabase
           .from("waiting_list")
@@ -44,6 +44,8 @@ export default function Dashboard() {
       if (approvedRes.error) throw approvedRes.error;
       if (pendingRes.error) throw pendingRes.error;
       if (rejectedRes.error) throw rejectedRes.error;
+      if (logsRes.error) throw logsRes.error;
+      if (recentRes.error) throw recentRes.error;
 
       setStats({
         totalApproved: approvedRes.count || 0,
@@ -100,8 +102,8 @@ export default function Dashboard() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background text-foreground font-sans overflow-auto custom-scrollbar">
-      <header className="bg-background border-b border-border py-8 px-10 shrink-0">
-        <div className="max-w-5xl mx-auto flex items-end justify-between">
+      <header className="bg-background border-b border-border py-6 sm:py-8 px-4 sm:px-10 shrink-0">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <h1 className="text-4xl font-black tracking-tighter text-foreground leading-none uppercase">
               Overview
@@ -123,11 +125,11 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex-1 p-10">
+      <div className="flex-1 p-4 sm:p-10">
         <div className="max-w-5xl mx-auto space-y-8">
 
           {/* Stat Cards */}
-          <div className="grid grid-cols-2 grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {statCards.map((stat, i) => (
               <div key={i} className="p-6 bg-card border border-border">
                 <div className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
@@ -165,7 +167,8 @@ export default function Dashboard() {
               )}
             </div>
 
-            <table className="w-full text-left">
+            <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full min-w-[560px] text-left">
               <thead>
                 <tr className="border-b border-border">
                   <th className="px-8 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground">
@@ -216,6 +219,7 @@ export default function Dashboard() {
                     ))}
               </tbody>
             </table>
+            </div>
 
             {!loading && recentEntries.length === 0 && (
               <div className="py-16 text-center">

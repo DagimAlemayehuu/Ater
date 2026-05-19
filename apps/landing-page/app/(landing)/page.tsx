@@ -65,11 +65,11 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center">
               <div className="flex flex-col gap-6">
                 <p className="text-body leading-relaxed text-on-surface-variant">
-                  Ater builds an interconnected knowledge system directly inside your local storage directories. There are no cloud logins, server sync delays, or private data leaks.
+                  Ater builds an interconnected knowledge system inside your local vault. Account access is used for beta activation, while your study files stay on your machine.
                 </p>
                 <div className="space-y-3 font-mono text-[11px] leading-relaxed text-on-surface-variant">
                   <div>&gt; <strong>Scan</strong>: Background watchdog parses PDFs.</div>
-                  <div>&gt; <strong>Analyze</strong>: 11 cooperative agents classify context blocks.</div>
+                  <div>&gt; <strong>Analyze</strong>: Specialized agents classify context blocks.</div>
                   <div>&gt; <strong>Sort</strong>: Dependency algorithms build non-cyclic study guides.</div>
                   <div>&gt; <strong>Deploy</strong>: Markdown files are written straight to your vault.</div>
                 </div>
@@ -121,7 +121,7 @@ export default function Home() {
                 </div>
                 <div className="md:col-span-7 p-4 sm:p-6 md:p-8 flex items-center">
                   <p className="text-body text-[11px] text-on-surface-variant leading-relaxed">
-                    Cooperative network of 11 local agents. Epistemic note parsing, automatic topic sorting, 85+ domain rules, and self-healing.
+                    Cooperative reasoning tools for note parsing, topic sorting, domain rules, and recovery from malformed inputs.
                   </p>
                 </div>
                 <div className="md:col-span-2 p-4 sm:p-6 md:p-8 border-t md:border-t-0 md:border-l border-outline-variant flex items-center justify-center bg-surface-container-low group-hover:bg-primary transition-colors">
@@ -141,11 +141,11 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center">
               <div className="flex flex-col gap-6">
                 <p className="text-body leading-relaxed text-on-surface-variant">
-                  Your study materials remain strictly your own. Ater runs fully offline on your CPU with zero remote servers or cloud tracking trackers.
+                  Your study materials remain under your control. Ater writes to local files and uses user-selected providers only when a feature needs model inference.
                 </p>
                 <div className="space-y-3 font-mono text-[11px] leading-relaxed text-on-surface-variant">
                   <div>&gt; <strong>Data Ownership</strong>: 100% local markdown file structure.</div>
-                  <div>&gt; <strong>Zero Training</strong>: None of your documents are uploaded to cloud servers.</div>
+                  <div>&gt; <strong>Provider Control</strong>: You choose which model endpoints, if any, receive context.</div>
                   <div>&gt; <strong>Portability</strong>: Take your notes anywhere, completely tool-agnostic.</div>
                 </div>
               </div>

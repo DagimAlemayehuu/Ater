@@ -13,9 +13,9 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="h-16 border-b border-border bg-background/80 backdrop-blur-md flex items-center justify-between px-8 z-50">
-      <div className="flex items-center gap-6">
-        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Admin Portal</span>
+    <header className="h-16 border-b border-border bg-background/80 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 z-50">
+      <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground truncate">Admin Portal</span>
         <div className="flex items-center gap-2 px-3 py-1 border border-border bg-accent/20">
           <div className="size-1.5 bg-primary rounded-none" />
           <span className="text-[9px] font-black uppercase tracking-widest text-foreground">Live</span>

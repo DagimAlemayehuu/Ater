@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, Activity, MoreHorizontal, Mail, Calendar } from "lucide-react";
+import { User, Activity, Mail, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type UserProfile = {
@@ -43,6 +43,14 @@ export default function UsersPage() {
       .from('profiles')
       .update({ is_approved: false, waitlist_status: 'revoked' })
       .eq('id', id);
+
+    const current = users.find((user) => user.id === id);
+    if (!error && current?.email) {
+      await supabase
+        .from('waiting_list')
+        .update({ status: 'rejected', activation_code: null })
+        .eq('email', current.email);
+    }
     
     if (!error) {
       setUsers(prev => prev.map(u => u.id === id ? { ...u, is_approved: false, waitlist_status: 'revoked' } : u));
@@ -56,6 +64,14 @@ export default function UsersPage() {
       .from('profiles')
       .update({ is_approved: true, waitlist_status: 'approved' })
       .eq('id', id);
+
+    const current = users.find((user) => user.id === id);
+    if (!error && current?.email) {
+      await supabase
+        .from('waiting_list')
+        .update({ status: 'approved' })
+        .eq('email', current.email);
+    }
     
     if (!error) {
       setUsers(prev => prev.map(u => u.id === id ? { ...u, is_approved: true, waitlist_status: 'approved' } : u));
@@ -65,8 +81,8 @@ export default function UsersPage() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background text-foreground font-sans">
-      <header className="bg-background border-b border-border py-8 px-10 shrink-0">
-        <div className="max-w-5xl mx-auto flex items-end justify-between">
+      <header className="bg-background border-b border-border py-6 sm:py-8 px-4 sm:px-10 shrink-0">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <h1 className="text-4xl font-black tracking-tighter text-foreground leading-none uppercase">
               Users
@@ -87,8 +103,8 @@ export default function UsersPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-10 custom-scrollbar">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 gap-6">
+      <div className="flex-1 overflow-auto p-4 sm:p-10 custom-scrollbar">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 xl:grid-cols-2 gap-6">
           {loading
             ? Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="p-8 bg-card border border-border">
@@ -116,7 +132,7 @@ export default function UsersPage() {
                     <div className="size-12 bg-accent/50 border border-border flex items-center justify-center">
                       <User className="size-5 text-foreground" />
                     </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-2">
                       {user.waitlist_status === 'revoked' ? (
                         <button 
                           onClick={() => handleRestore(user.id)}
@@ -128,7 +144,7 @@ export default function UsersPage() {
                       ) : (
                         <button 
                           onClick={() => handleRevoke(user.id)}
-                          disabled={updatingId === user.id || user.role === 'Admin'}
+                          disabled={updatingId === user.id || user.role?.toLowerCase() === 'admin'}
                           className="px-3 py-1.5 bg-destructive text-white text-[9px] font-black uppercase tracking-widest border border-destructive hover:opacity-90 disabled:opacity-50 transition-none"
                         >
                           Revoke
@@ -157,7 +173,7 @@ export default function UsersPage() {
                       </div>
                       <div className={cn(
                         "px-2 py-0.5 border text-[10px] font-black uppercase tracking-widest inline-block",
-                        user.role === 'Admin' ? "bg-primary/5 border-primary/20 text-primary" : "bg-muted/30 border-border text-muted-foreground"
+                        user.role?.toLowerCase() === 'admin' ? "bg-primary/5 border-primary/20 text-primary" : "bg-muted/30 border-border text-muted-foreground"
                       )}>
                         {user.role || "User"}
                       </div>
