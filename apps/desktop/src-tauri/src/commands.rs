@@ -22,6 +22,10 @@ fn find_model_dir(app_handle: &tauri::AppHandle) -> Result<std::path::PathBuf, S
         if path.exists() {
             return Ok(path);
         }
+        // Fallback: check if the files exist directly in the resource root (flattened packaging)
+        if res_dir.join("model.onnx").exists() && res_dir.join("tokenizer.json").exists() {
+            return Ok(res_dir);
+        }
     }
 
     Err("Could not locate onnx_model directory containing model.onnx and tokenizer.json".to_string())

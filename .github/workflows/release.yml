@@ -100,34 +100,23 @@ jobs:
           # (tokenizer configs, ONNX models, etc.) that tracing would miss.
           python -m PyInstaller \
             --noconfirm \
-            --onefile \
             --clean \
-            --name ater-api \
-            --paths apps/api \
-            --hidden-import uvicorn.protocols.http.httptools_impl \
-            --hidden-import uvicorn.protocols.http.h11_impl \
-            --hidden-import uvicorn.lifespan.on \
-            --hidden-import aiosqlite \
-            --hidden-import greenlet \
-            apps/api/src/api/main.py
-
-          # Create binaries directory
-          mkdir -p apps/desktop/src-tauri/binaries/
+            apps/api/ater-api.spec
 
           # Move and rename to match Tauri's externalBin naming convention
           if [ "${{ matrix.platform }}" == "windows" ]; then
-            mv dist/ater-api.exe apps/desktop/src-tauri/binaries/$TARGET.exe
+            mv dist/ater-api.exe apps/desktop/src-tauri/$TARGET.exe
           else
-            mv dist/ater-api apps/desktop/src-tauri/binaries/$TARGET
-            chmod +x apps/desktop/src-tauri/binaries/$TARGET
+            mv dist/ater-api apps/desktop/src-tauri/$TARGET
+            chmod +x apps/desktop/src-tauri/$TARGET
           fi
 
-          echo "Binary ready at: apps/desktop/src-tauri/binaries/$TARGET"
+          echo "Binary ready at: apps/desktop/src-tauri/$TARGET"
 
       - name: Ad-hoc Sign Sidecar (macOS)
         if: matrix.platform == 'macos'
         run: |
-          TARGET_BIN="apps/desktop/src-tauri/binaries/ater-api-${{ matrix.arch }}-apple-darwin"
+          TARGET_BIN="apps/desktop/src-tauri/ater-api-${{ matrix.arch }}-apple-darwin"
           # Ad-hoc sign with "-" (no Developer ID required).
           # Users bypass Gatekeeper manually on first launch for early access.
           codesign --force --deep -s - "$TARGET_BIN"

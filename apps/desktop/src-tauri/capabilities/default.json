@@ -16,7 +16,7 @@
       "identifier": "shell:allow-spawn",
       "allow": [
         {
-          "name": "binaries/ater-api",
+          "name": "ater-api",
           "sidecar": true,
           "args": true
         }
@@ -26,7 +26,7 @@
       "identifier": "shell:allow-execute",
       "allow": [
         {
-          "name": "binaries/ater-api",
+          "name": "ater-api",
           "sidecar": true,
           "args": true
         }

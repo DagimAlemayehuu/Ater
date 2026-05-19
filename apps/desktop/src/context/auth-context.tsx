@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', user.id)
         .single()
 
-      const localMachineId = await sidecarApi.getMachineId()
+      const localMachineId = config?.machineId || ''
 
       if (error) {
         if (error.code === 'PGRST116') {
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Allow a special bypass activation code for developers/demonstrations:
       if (code === 'DEVELOPER' || code === 'DEMO' || code === 'ATER2026' || email === 'demo@ater.app') {
         console.log('[DRM] Developer Bypass Activation Key detected.');
-        const localMachineId = await sidecarApi.getMachineId();
+        const localMachineId = config?.machineId || '';
         await saveConfig({ 
           isActivated: true, 
           activationEmail: email, 
@@ -200,8 +200,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('[DRM] Activation Key is valid.');
 
       // Check 2: Hardware Lock (Anti-Piracy)
-      console.log('[DRM] Fetching machine_id from Rust core...');
-      const localMachineId = await sidecarApi.getMachineId()
+      console.log('[DRM] Loading machine_id from config context...');
+      const localMachineId = config?.machineId || ''
       console.log('[DRM] Machine ID received:', localMachineId);
 
       if (!profile.machine_id) {

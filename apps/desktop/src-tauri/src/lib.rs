@@ -183,7 +183,7 @@ pub fn run() {
 
             if should_spawn && !spawned_successfully {
                 port = get_available_port(8765).unwrap_or(8765);
-                match app.shell().sidecar("binaries/ater-api") {
+                match app.shell().sidecar("ater-api") {
                     Ok(sidecar) => {
                         let sidecar = sidecar
                             .args(["--port", &port.to_string()])
