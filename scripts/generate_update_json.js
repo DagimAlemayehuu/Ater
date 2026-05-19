@@ -15,11 +15,6 @@ const platforms = {
     artifactPattern: /Ater_.*_aarch64\.app\.tar\.gz$/,
     urlName: `Ater_${VERSION}_aarch64.app.tar.gz`
   },
-  'darwin-x86_64': {
-    sigPattern: /Ater_.*_x64\.app\.tar\.gz\.sig$/,
-    artifactPattern: /Ater_.*_x64\.app\.tar\.gz$/,
-    urlName: `Ater_${VERSION}_x64.app.tar.gz`
-  },
   'windows-x86_64': {
     sigPattern: /Ater_.*_x64-setup\.nsis\.zip\.sig$/,
     artifactPattern: /Ater_.*_x64-setup\.nsis\.zip$/,
@@ -65,8 +60,7 @@ Object.keys(platforms).forEach(platformKey => {
     console.log(`Found signature file for ${platformKey} at: ${sigFilePath}`);
     signature = fs.readFileSync(sigFilePath, 'utf-8').trim();
   } else {
-    console.warn(`⚠️ Warning: No signature file found matching pattern ${sigPattern} for ${platformKey}. Using placeholder.`);
-    signature = 'PLACEHOLDER_SIGNATURE';
+    throw new Error(`Missing updater signature for ${platformKey}. Expected a file matching ${sigPattern}.`);
   }
 
   updateJson.platforms[platformKey] = {

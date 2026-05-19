@@ -123,7 +123,6 @@ export default function Onboarding() {
         inboxPath: `${vaultPath}/Inbox`,
         academicFolderPath: 'database',
         autoDeploy: true,
-        isActivated: true,
         isProgramConfigured: true
       })
 

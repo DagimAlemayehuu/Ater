@@ -15,15 +15,25 @@ jobs:
           github-token: ${{ secrets.RELEASE_PAT }}
           script: |
             const tag = context.ref.replace('refs/tags/', '');
-            const { data: release } = await github.rest.repos.createRelease({
-              owner: 'DagimAlemayehuu',
-              repo: 'Ater_Releases',
-              tag_name: tag,
-              name: `Ater ${tag}`,
-              body: `Official release for Ater ${tag}.`,
-              draft: true
-            });
-            console.log(`Created release: ${release.html_url}`);
+            try {
+              const { data: release } = await github.rest.repos.createRelease({
+                owner: 'DagimAlemayehuu',
+                repo: 'Ater_Releases',
+                tag_name: tag,
+                name: `Ater ${tag}`,
+                body: `Official release for Ater ${tag}.`,
+                draft: true
+              });
+              console.log(`Created release: ${release.html_url}`);
+            } catch (error) {
+              if (error.status !== 422) throw error;
+              const { data: release } = await github.rest.repos.getReleaseByTag({
+                owner: 'DagimAlemayehuu',
+                repo: 'Ater_Releases',
+                tag
+              });
+              console.log(`Release already exists: ${release.html_url}`);
+            }
 
   publish:
     needs: create-release
@@ -57,7 +67,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos' && 'aarch64-apple-darwin' || '' }}
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
@@ -138,7 +148,7 @@ jobs:
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           publish: false
-          args: ${{ matrix.platform == 'macos' && format('--target {0}', matrix.arch == 'aarch64' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin') || '' }}
+          args: ${{ matrix.platform == 'macos' && '--target aarch64-apple-darwin' || '' }}
 
       - name: Upload Artifacts to Release Repo
         shell: bash
@@ -146,6 +156,8 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
           TAG: ${{ github.ref_name }}
         run: |
+          set -euo pipefail
+
           # Ensure the release exists (idempotent — OK if another runner already created it)
           gh release create "$TAG" \
             --repo DagimAlemayehuu/Ater_Releases \
@@ -156,6 +168,8 @@ jobs:
           if [ "${{ matrix.platform }}" == "macos" ]; then
             # DMG Upload
             DMG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/ -name "*.dmg" | head -n 1)
+            test -n "$DMG_PATH"
+            test -f "$DMG_PATH"
             echo "Uploading DMG: $DMG_PATH"
             gh release upload "$TAG" "$DMG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
             
@@ -166,18 +180,20 @@ jobs:
             # Updater Tarball and Signature Upload
             TAR_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/ -name "*.app.tar.gz" | head -n 1)
             SIG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/ -name "*.app.tar.gz.sig" | head -n 1 || echo "")
+            test -n "$TAR_PATH"
+            test -f "$TAR_PATH"
+            test -n "$SIG_PATH"
+            test -f "$SIG_PATH"
             echo "Uploading Tarball: $TAR_PATH"
             gh release upload "$TAG" "$TAR_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
-            if [ -n "$SIG_PATH" ]; then
-              gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
-            else
-              echo "Warning: No .sig file found for macOS. Is TAURI_PRIVATE_KEY set in secrets?"
-            fi
+            gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
           fi
 
           if [ "${{ matrix.platform }}" == "windows" ]; then
             # EXE Upload
             EXE_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*.exe" | head -n 1)
+            test -n "$EXE_PATH"
+            test -f "$EXE_PATH"
             echo "Uploading EXE: $EXE_PATH"
             gh release upload "$TAG" "$EXE_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
             
@@ -188,17 +204,13 @@ jobs:
             # Updater Zip and Signature Upload
             ZIP_PATH=$(find apps/desktop/src-tauri/target/release/bundle/ -name "*.zip" | head -n 1 || echo "")
             SIG_PATH=$(find apps/desktop/src-tauri/target/release/bundle/ -name "*.zip.sig" | head -n 1 || echo "")
+            test -n "$ZIP_PATH"
+            test -f "$ZIP_PATH"
+            test -n "$SIG_PATH"
+            test -f "$SIG_PATH"
             echo "Uploading Zip: $ZIP_PATH"
-            if [ -n "$ZIP_PATH" ]; then
-              gh release upload "$TAG" "$ZIP_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
-            else
-              echo "Warning: No updater .zip file found for Windows."
-            fi
-            if [ -n "$SIG_PATH" ]; then
-              gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
-            else
-              echo "Warning: No .sig file found for Windows. Is TAURI_PRIVATE_KEY set in secrets?"
-            fi
+            gh release upload "$TAG" "$ZIP_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
           fi
 
       - name: Upload signatures as artifacts
@@ -209,7 +221,7 @@ jobs:
             apps/desktop/src-tauri/target/**/*.sig
 
   publish-release:
-    needs: publish
+    needs: generate-updater-json
     runs-on: ubuntu-latest
     steps:
       - name: Make Release Public
@@ -223,7 +235,7 @@ jobs:
             --draft=false
 
   generate-updater-json:
-    needs: publish-release
+    needs: publish
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Ater",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "identifier": "com.dagim.ater",
   "build": {
     "frontendDist": "../dist",
@@ -42,7 +42,7 @@
       "../../api/onnx_model"
     ],
     "externalBin": [
-      "ater-api"
+      "binaries/ater-api"
     ]
   },
   "plugins": {

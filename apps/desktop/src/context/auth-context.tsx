@@ -123,23 +123,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('[DRM] Starting activation...')
 
     try {
-      // Allow a special bypass activation code for developers/demonstrations:
-      if (code === 'DEVELOPER' || code === 'DEMO' || code === 'ATER2026' || email === 'demo@ater.app') {
-        console.log('[DRM] Developer Bypass Activation Key detected.');
-        const localMachineId = config?.machineId || '';
-        await saveConfig({ 
-          isActivated: true, 
-          activationEmail: email, 
-          activationCode: code,
-          isProgramConfigured: true,
-          displayName: 'Ater Developer'
-        })
-        setStatus('approved')
-        setProfile({ full_name: 'Ater Developer' })
-        setLoading(false)
-        return;
-      }
-
       // 1. Authenticate with Supabase Auth
       console.log('[DRM] Authenticating with Supabase...');
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({

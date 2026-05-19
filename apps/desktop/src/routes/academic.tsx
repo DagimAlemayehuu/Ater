@@ -70,44 +70,16 @@ export default function AcademicDashboard() {
   useEffect(() => {
     fetchData()
     fetchDatabases()
-    
-    let es: EventSource | null = null;
 
-    // SSE for real-time vault changes
-    const setupSSE = async () => {
-      try {
-        const config = await sidecarApi.getConfig()
-        const vaultPath = config.obsidianVaultPath
-        if (!vaultPath) return
-
-        const baseUrl = await sidecarApi.getBaseUrl()
-        es = new EventSource(`${baseUrl}/api/vault/events?vault_path=${encodeURIComponent(vaultPath)}`)
-        
-        es.onerror = () => {
-          if (es) {
-            es.close()
-            es = null
-          }
-        }
-
-        es.onmessage = (ev) => {
-          try {
-            const d = JSON.parse(ev.data)
-            if (['vault_change', 'file_create', 'file_delete'].includes(d.type)) {
-              sidecarApi.clearOptionsCache()
-              fetchData()
-            }
-          } catch {}
-        }
-      } catch (err) {
-        console.error('[Academic] SSE Setup failed:', err)
-      }
+    const handleFocus = () => {
+      sidecarApi.clearOptionsCache()
+      fetchData()
+      fetchDatabases()
     }
+    window.addEventListener('focus', handleFocus)
 
-    setupSSE()
-    
     return () => {
-      if (es) es.close()
+      window.removeEventListener('focus', handleFocus)
     }
   }, [fetchData, fetchDatabases])
 

@@ -22,12 +22,7 @@ async function ensureDbInitialized(): Promise<void> {
         const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} })
         const vaultPath = (await store.get<string>('obsidianVaultPath')) || ''
         
-        let dbPath = ''
-        if (vaultPath) {
-            const isWindows = navigator.userAgent.toLowerCase().includes('win');
-            const separator = isWindows ? '\\' : '/';
-            dbPath = `${vaultPath}${separator}.ater${separator}vector_store`
-        }
+        const dbPath = vaultPath
         
         await invoke('initialize_database', { dbPath })
         isInitialized = true

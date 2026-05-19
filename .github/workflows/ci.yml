@@ -35,9 +35,13 @@ jobs:
         with:
           version: 9
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+      - name: Run Typecheck
+        run: pnpm --filter @ater/desktop typecheck
       - name: Run Vitest Suite
         run: cd apps/desktop && pnpm vitest run
+      - name: Run Production Build
+        run: pnpm --filter @ater/desktop build
 
   test-rust:
     name: Tier 3 - Desktop (Rust)
@@ -60,9 +64,8 @@ jobs:
 
       - name: Create dummy sidecar for Cargo Check
         run: |
-          mkdir -p apps/desktop/src-tauri
-          touch apps/desktop/src-tauri/ater-api-x86_64-unknown-linux-gnu
+          mkdir -p apps/desktop/src-tauri/binaries
+          touch apps/desktop/src-tauri/binaries/ater-api-x86_64-unknown-linux-gnu
 
       - name: Run Cargo Check
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
-
