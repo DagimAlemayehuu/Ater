@@ -19,3 +19,15 @@ ruamel-yaml>=0.19.1
 nuitka
 psutil
 portalocker
+langchain-core
+langchain-community
+langchain-google-genai
+langchain-openai
+langchain-anthropic
+langchain-groq
+langchain-core
+langchain-community
+langchain-google-genai
+langchain-openai
+langchain-anthropic
+langchain-groq
