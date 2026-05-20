@@ -32,6 +32,9 @@ SyntaxHighlighter.registerLanguage('python', py)
 SyntaxHighlighter.registerLanguage('bash', bash)
 import { ExplainSidebar } from './ExplainSidebar'
 
+const MARKDOWN_REMARK_PLUGINS = [remarkGfm, remarkMath]
+const MARKDOWN_REHYPE_PLUGINS = [[rehypeKatex, {strict: false, throwOnError: false}]]
+
 mermaid.initialize({
   startOnLoad: false,
   securityLevel: 'loose',
@@ -126,7 +129,7 @@ interface MarkdownViewerProps {
 
 
 
-const CodeBlock = ({ language, value }: { language: string | null, value: string }) => {
+const CodeBlock = memo(({ language, value }: { language: string | null, value: string }) => {
     const [copied, setCopied] = useState(false);
     const isDark = document.documentElement.classList.contains('dark');
 
@@ -188,7 +191,7 @@ const CodeBlock = ({ language, value }: { language: string | null, value: string
             </div>
         </div>
     );
-};
+});
 
 const CodeRenderer = memo((props: any) => {
     const { className, children, node, notePath } = props;
@@ -218,7 +221,7 @@ const CodeRenderer = memo((props: any) => {
     if (language === 'markdown') {
         return (
             <div className="my-6 p-6 bg-muted/5 border border-border/20 rounded-none prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-table:my-0">
-                <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]}>
+                <ReactMarkdown remarkPlugins={MARKDOWN_REMARK_PLUGINS as any} rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any}>
                     {String(children).replace(/\n$/, '')}
                 </ReactMarkdown>
             </div>
@@ -242,7 +245,7 @@ const CodeRenderer = memo((props: any) => {
         return (
             <div className="my-6 p-6 bg-muted/10 border border-border/30 rounded-none">
                 <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-2">
-                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]}>
+                    <ReactMarkdown remarkPlugins={MARKDOWN_REMARK_PLUGINS as any} rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any}>
                         {mathContent}
                     </ReactMarkdown>
                 </div>
@@ -483,10 +486,10 @@ export const AterMarkdown = memo(({ content, path, onNavigate, className, compon
     }), [path, handleNavigate, components]);
 
     return (
-        <div className={cn("prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 text-foreground select-text cursor-text", className)}>
+        <div className={cn("prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 text-foreground select-text cursor-text content-visibility-auto", className)}>
             <ReactMarkdown 
-                remarkPlugins={[remarkGfm, remarkMath]} 
-                rehypePlugins={[[rehypeKatex, {strict: false, throwOnError: false}]]} 
+                remarkPlugins={MARKDOWN_REMARK_PLUGINS as any} 
+                rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any} 
                 components={markdownComponents}
             >
                 {content}
@@ -513,7 +516,30 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
     const [floatPos, setFloatPos] = useState<{ x: number; y: number } | null>(null)
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [sidebarSelection, setSidebarSelection] = useState('')
+    const [sidebarContext, setSidebarContext] = useState('')
     const floatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    const buildSelectionContext = useCallback((text: string) => {
+        const normalizedText = text.trim()
+        if (!normalizedText) return ''
+        const index = content.indexOf(normalizedText)
+        if (index >= 0) {
+            const start = Math.max(0, index - 1600)
+            const end = Math.min(content.length, index + normalizedText.length + 1600)
+            return content.slice(start, end)
+        }
+
+        const compactSelection = normalizedText.replace(/\s+/g, ' ')
+        const compactContent = content.replace(/\s+/g, ' ')
+        const compactIndex = compactContent.indexOf(compactSelection)
+        if (compactIndex >= 0) {
+            const start = Math.max(0, compactIndex - 1600)
+            const end = Math.min(compactContent.length, compactIndex + compactSelection.length + 1600)
+            return compactContent.slice(start, end)
+        }
+
+        return content.slice(0, 3200)
+    }, [content])
 
     // Use native document listener — React's synthetic onMouseUp fires BEFORE
     // the browser finalises the selection, so getSelection() returns stale data.
@@ -560,11 +586,12 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
 
     const handleClickExplain = useCallback(() => {
         setSidebarSelection(selectedText)
+        setSidebarContext(buildSelectionContext(selectedText))
         setSidebarOpen(true)
         setFloatPos(null)
         setSelectedText('')
         window.getSelection()?.removeAllRanges()
-    }, [selectedText])
+    }, [selectedText, buildSelectionContext])
 
     return (
         <>
@@ -603,6 +630,9 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
                 noteMode={noteMode}
                 noteTitle={noteTitle}
                 noteCourse={noteCourse}
+                scope="selection"
+                sourceKind="markdown"
+                selectionContext={sidebarContext}
             />
         </>
     )

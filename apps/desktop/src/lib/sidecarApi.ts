@@ -645,7 +645,18 @@ export const sidecarApi = {
         }
     },
 
-    aterExplain: async (payload: { path: string, selection: string, page?: number, question?: string, note_mode?: string, note_title?: string, note_course?: string }) => {
+    aterExplain: async (payload: {
+        path: string,
+        selection: string,
+        page?: number,
+        question?: string,
+        note_mode?: string,
+        note_title?: string,
+        note_course?: string,
+        scope?: 'selection' | 'page' | 'note',
+        source_kind?: 'markdown' | 'pdf',
+        selection_context?: string,
+    }) => {
         try {
             return await invoke<any>('ater_explain', { payload })
         } catch (err) {
@@ -654,7 +665,18 @@ export const sidecarApi = {
         }
     },
 
-    aterChat: async (payload: { path: string, selection: string, page?: number, messages: { role: string, content: string }[] }) => {
+    aterChat: async (payload: {
+        path: string,
+        selection: string,
+        page?: number,
+        messages: { role: string, content: string }[],
+        scope?: 'selection' | 'page' | 'note',
+        source_kind?: 'markdown' | 'pdf',
+        selection_context?: string,
+        note_mode?: string,
+        note_title?: string,
+        note_course?: string,
+    }) => {
         try {
             return await invoke<any>('ater_chat', { payload })
         } catch (err) {

@@ -4,6 +4,7 @@ import { useConfig } from '@/lib/ConfigContext';
 import { useTheme } from '@/context/theme-provider';
 import { ExplainSidebar } from './ExplainSidebar';
 import { invoke } from '@tauri-apps/api/core';
+import { PanelLoader } from '@/components/ui/loading-state';
 
 interface PdfViewerProps {
     path: string;
@@ -56,21 +57,24 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     if (prevPathRef.current !== path) {
         prevPathRef.current = path;
         firstPageRef.current = initialPage;
+    }
+
+    useEffect(() => {
         setIframeLoaded(false);
-    }
-    
-    // Sync internal page state when initialPage prop changes (Render-time sync pattern)
-    const prevInitialPage = useRef(initialPage);
-    if (prevInitialPage.current !== initialPage) {
-        prevInitialPage.current = initialPage;
+        setPage(firstPageRef.current);
+        setPageCount(null);
+        setFloatPos(null);
+    }, [path]);
+
+    useEffect(() => {
         setPage(initialPage);
-    }
+    }, [initialPage]);
 
     const handleIframeLoad = () => {
         setIframeLoaded(true);
         setTimeout(() => {
             handleJump(initialPage);
-        }, 150);
+        }, 60);
     };
 
     useEffect(() => {
@@ -97,6 +101,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     // Explain sidebar state
     const [explainOpen, setExplainOpen] = useState(false);
     const [explainSelection, setExplainSelection] = useState('');
+    const [explainScope, setExplainScope] = useState<'selection' | 'page'>('selection');
     const [floatPos, setFloatPos] = useState<{ x: number, y: number } | null>(null);
 
     const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -174,6 +179,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
         setIsFiltered(false);
         setFilteredList([]);
 
+        let active = true;
         const fetchMetadata = async () => {
             try {
                 const vaultPath = config?.obsidianVaultPath || '';
@@ -181,12 +187,13 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                 const url = `http://127.0.0.1:${sidecarPort}/api/obsidian/pdf-metadata/${encodeURI(normalizedPath)}?vault_path=${encodeURIComponent(vaultPath)}`;
                 const res = await fetch(url);
                 const data = await res.json();
-                if (data.page_count) {
+                if (active && data.page_count) {
                     setPageCount(data.page_count);
                 }
             } catch (e) { console.error("PDF metadata fetch failed", e); }
         };
         fetchMetadata();
+        return () => { active = false };
     }, [path, config?.obsidianVaultPath, sidecarPort]);
 
     useEffect(() => {
@@ -203,6 +210,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
             } else if (event.data.type === 'selection') {
                 if (event.data.text?.trim()) {
                     setExplainSelection(event.data.text.trim())
+                    setExplainScope('selection')
                     // Position button slightly above selection
                     setFloatPos({ x: event.data.mouseX, y: event.data.mouseY - 40 })
                 } else {
@@ -235,9 +243,9 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     }, [path, resolvedTheme, filterPages, config?.obsidianVaultPath, sidecarPort]);
 
     const handleAskAI = () => {
-        // Use the page title and page number as context since we can't get iframe selection
-        const pageContext = `Page ${page}${pageCount ? ` of ${pageCount}` : ''} from "${title}"`;
+        const pageContext = `Full page ${page}${pageCount ? ` of ${pageCount}` : ''} from "${title}"`;
         setExplainSelection(pageContext);
+        setExplainScope('page');
         setExplainOpen(true);
     };
 
@@ -245,14 +253,14 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
         <>
             <div ref={containerRef} className="flex flex-row h-full bg-background relative overflow-hidden">
                 <div className="flex-1 flex flex-col min-w-0 relative bg-background">
-                    {/* Ask AI button overlay */}
+                    {/* Explain page button overlay */}
                     <div className="absolute top-3 right-3 z-20">
                         <button
                             onClick={handleAskAI}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-background border border-border/50 shadow-md rounded-none text-[9px] font-black uppercase tracking-widest text-foreground/50 hover:text-foreground hover:border-foreground/30 transition-none"
-                            title="Ask AI about this page"
+                            title="Explain the current PDF page"
                         >
-                            Ask AI
+                            Explain Page
                         </button>
                     </div>
 
@@ -269,6 +277,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                         >
                             <button
                                 onClick={() => {
+                                    setExplainScope('selection');
                                     setExplainOpen(true);
                                     setFloatPos(null);
                                 }}
@@ -280,6 +289,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                     )}
 
                     <div className="flex-1 w-full h-full overflow-hidden flex items-center justify-center">
+                        {!iframeLoaded && <PanelLoader label="Opening PDF" />}
                         <iframe 
                             ref={iframeRef} 
                             src={pdfUrl} 
@@ -298,6 +308,8 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                 selection={explainSelection}
                 path={path}
                 page={page}
+                scope={explainScope}
+                sourceKind="pdf"
             />
         </>
     );

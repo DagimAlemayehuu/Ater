@@ -2,7 +2,7 @@ import React from 'react'
 import { useAuth } from '@/context/auth-context'
 import Login from '@/routes/login'
 import { useConfig } from '@/lib/ConfigContext'
-import { cn } from '@/lib/utils'
+import { BlockingLoader } from '@/components/ui/loading-state'
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isActivated, status, loading } = useAuth()
@@ -19,11 +19,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (loading) {
-    return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-background text-foreground">
-        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground">Verifying</span>
-      </div>
-    )
+    return <BlockingLoader label="Verifying" />
   }
 
   if (!isActivated) {

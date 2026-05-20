@@ -81,11 +81,8 @@
     @apply h-full overflow-hidden;
   }
 
-  /* Remove expensive global filters from transitions to protect GPU pipeline */
   *, ::before, ::after {
-    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
+    transition-duration: 0ms;
   }
 }
 
@@ -98,13 +95,38 @@
 
 .gpu-accelerated {
   transform: translateZ(0);
-  will-change: transform, opacity, filter;
+  will-change: transform, opacity;
 }
 
 .optimize-scrolling {
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
-  will-change: scroll-position;
+  scroll-behavior: auto;
+}
+
+.ater-mini-loader {
+  width: 18px;
+  height: 18px;
+  border: 1px solid currentColor;
+  position: relative;
+  color: currentColor;
+}
+
+.ater-mini-loader::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  background: currentColor;
+  animation: ater-loader-pulse 700ms steps(2, end) infinite;
+}
+
+@keyframes ater-loader-pulse {
+  0%, 100% { opacity: 0.2; transform: scale(0.65); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 640px;
 }
 
 @layer utilities {

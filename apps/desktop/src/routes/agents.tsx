@@ -12,6 +12,7 @@ import {useConfig} from '@/lib/ConfigContext'
 import {useHeader} from '@/context/header-context'
 import {useNavigate} from 'react-router-dom'
 import { useVirtualizer } from '@tanstack/react-virtual'
+import { MiniLoader } from '@/components/ui/loading-state'
 
 /* ─── Utilities ─── */
 const cleanTitle = (val: any): string => {
@@ -803,15 +804,14 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  {/* Processing Indicator */}
  {processing && !activePlan && !batchFeed.length && (
  <div className="py-24 flex flex-col items-center justify-center text-center ">
- <div className="w-4 h-4 border-2 border-foreground border-t-transparent rounded-none mb-6" />
- <h4 className="text-[11px] font-black uppercase tracking-[0.3em] mb-4 text-foreground/40">Generating...</h4>
+ <MiniLoader label="Generating" />
  </div>
  )}
 
  {processing && (activePlan || batchFeed.length > 0) && (
  <div className="mb-8 p-6 rounded-none bg-muted/5 border border-border shrink-0 flex items-center justify-between ">
  <div className="flex items-center gap-4">
- <div className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-none" />
+ <div className="ater-mini-loader text-muted-foreground" />
  <div>
  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-1">Status</p>
  <p className="text-sm font-black uppercase tracking-tight text-foreground">Executing Plan...</p>

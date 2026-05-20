@@ -69,17 +69,35 @@ def build_skeleton_note(note_schema, source_snippet: str, domain: dict, all_titl
     Parses the source snippet into structured, coherent prose sections.
     Produces a structurally valid, pedagogically useful note without generative AI.
     """
+    import json
     import re
     title = note_schema.title.replace("_", " ")
     
     # --- Extract clean sentences from raw source ---
-    # Strip slide noise (page markers, Ø bullets, page numbers)
-    clean = re.sub(r'\[PAGE \d+\]', '', source_snippet)
-    clean = re.sub(r'^[ØÃ•\-\*>]\s*', '', clean, flags=re.MULTILINE)
+    clean = re.sub(r'\[SOURCE EXCERPT\]', '', source_snippet or '', flags=re.IGNORECASE)
+    clean = re.sub(r'\[PAGE \d+\]', '', clean)
+    clean = re.sub(r'\b\d{1,2}/\d{1,2}/\d{4}\b', '', clean)
+    clean = re.sub(r'[“”]', '"', clean)
+    clean = re.sub(r'[‘’]', "'", clean)
+    clean = re.sub(r'^[ØÃ•\-\*>–]+\s*', '', clean, flags=re.MULTILINE)
     clean = re.sub(r'\s+', ' ', clean).strip()
+
+    title_terms = [w.lower() for w in re.findall(r'[A-Za-z][A-Za-z0-9+]*', title) if len(w) > 2]
     
     # Split into sentences
-    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', clean) if len(s.strip()) > 20]
+    raw_sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', clean) if len(s.strip()) > 20]
+    scored = []
+    for idx, sentence in enumerate(raw_sentences):
+        lower = sentence.lower()
+        score = sum(3 for term in title_terms if term in lower)
+        score += sum(1 for cue in ("class", "object", "method", "parameter", "constructor", "static", "reference", "value", "return", "java") if cue in lower)
+        score -= idx * 0.01
+        scored.append((score, idx, sentence))
+    if scored:
+        best_indexes = sorted(i for _, i, _ in sorted(scored, reverse=True)[:9])
+        sentences = [raw_sentences[i] for i in best_indexes]
+    else:
+        sentences = []
     
     # Partition: first third for mental model, middle for logic, last for formal
     third = max(1, len(sentences) // 3)
@@ -90,15 +108,15 @@ def build_skeleton_note(note_schema, source_snippet: str, domain: dict, all_titl
     def join_prose(sents, fallback=""):
         return ' '.join(sents) if sents else fallback
     
-    domain_name = domain.get('name', 'this domain')
+    domain_name = domain.get('persona', domain.get('name', 'the subject'))
     
     mental_model = (
-        f"{title} is a foundational concept within {domain_name}. "
-        + join_prose(model_sents, f"{title} encompasses the core mechanisms and principles described in the source material.")
+        f"Think of {title} as a labeled tool in a Java workshop: the label tells you what the tool is allowed to hold, and the handle tells you how other code can safely use it. "
+        + join_prose(model_sents, f"The source frames {title} as a specific Java programming idea with behavior that must be tracked precisely.")
     )
     
     core_logic = (
-        f"The practical operation of {title} centers on the following principles. "
+        f"{title} works by enforcing a specific relationship between Java code structure, stored data, and method behavior. "
         + join_prose(logic_sents, "The source material outlines specific properties and behaviors that define this concept in practice.")
     )
     
@@ -127,34 +145,67 @@ def build_skeleton_note(note_schema, source_snippet: str, domain: dict, all_titl
                 core_logic += f" This concept is directly related to {', '.join(related_links)}."
     
     formal_model = (
-        f"At a formal level, {title} is governed by the following constraints and definitions. "
+        f"In formal Java terminology, {title} must be read through the exact syntax and runtime behavior shown in the source. "
         + join_prose(formal_sents, "These structural constraints ensure consistent and predictable behavior when this concept is applied.")
     )
     
-    artifact_content = (
-        f"```markdown\n"
-        f"| Property | Value |\n"
-        f"|----------|-------|\n"
-        f"| Concept  | {title} |\n"
-        f"| Domain   | {domain_name} |\n"
-        f"| Source   | Chapter material |\n"
-        f"```"
-    )
+    if "Software" in domain_name or "CS" in str(domain.get("type", "")) or "Java" in clean:
+        safe_class = re.sub(r'[^A-Za-z0-9]', '', title.title()) or "ConceptDemo"
+        artifact_content = (
+            "```java\n"
+            f"class {safe_class}Demo {{\n"
+            f"    private String state;\n\n"
+            f"    {safe_class}Demo(String state) {{\n"
+            f"        this.state = state;\n"
+            "    }\n\n"
+            "    String describe() {\n"
+            f"        return \"{title}: \" + state;\n"
+            "    }\n"
+            "}\n"
+            "```"
+        )
+    else:
+        artifact_content = (
+            "| Source Detail | Meaning |\n"
+            "|---|---|\n"
+            f"| {title} | The focused concept being studied. |\n"
+            f"| {domain_name} | The disciplinary lens used for examples and questions. |\n"
+            "| Source excerpt | The only authority for definitions and constraints. |"
+        )
     
-    option_a = join_prose(model_sents[:1], title)[:80]
-    possible_questions = (
-        '```interactive-quiz\n'
-        '[\n'
-        f'  {{\n'
-        f'    "type": "mcq",\n'
-        f'    "question": "Which of the following best defines {title}?",\n'
-        f'    "options": {{"A": "{option_a}", "B": "An unrelated concept", "C": "A deprecated approach", "D": "None of the above"}},\n'
-        f'    "answer": "A",\n'
-        f'    "explanation": "{title} is defined by its relationship to {domain_name} as described in the source material."\n'
-        f'  }}\n'
-        ']\n'
-        '```'
-    )
+    option_a = join_prose(model_sents[:1], title)[:120].strip() or title
+    page = min((int(p) for p in getattr(note_schema, "source_pages", []) if str(p).isdigit()), default=1)
+    questions = [
+        {
+            "type": "mcq",
+            "question": f"Which statement best matches the source's treatment of {title}?",
+            "options": {
+                "A": option_a,
+                "B": f"{title} is unrelated to Java program behavior.",
+                "C": f"{title} only describes comments and formatting.",
+                "D": f"{title} can be ignored without changing program behavior."
+            },
+            "answer": "A",
+            "explanation": f"The source context connects {title} to concrete Java behavior, syntax, or object structure.",
+            "explanation_page": page
+        },
+        {
+            "type": "true_false",
+            "question": f"{title} should be interpreted using the exact Java behavior shown in the source rather than a generic definition alone.",
+            "answer": True,
+            "explanation": f"The note is source-grounded, so the source's examples and constraints determine the correct interpretation of {title}.",
+            "explanation_page": page
+        },
+        {
+            "type": "writing",
+            "question": f"Explain {title} in one precise paragraph and include one Java-specific consequence from the source.",
+            "answer": f"A strong answer defines {title}, states how it affects Java code behavior, and anchors the explanation in the source example or definition.",
+            "required_keywords": ["Java", "source", "behavior"],
+            "explanation": f"This checks whether the learner can move from the source wording to a usable programming explanation of {title}.",
+            "explanation_page": page
+        }
+    ]
+    possible_questions = "```interactive-quiz\n" + json.dumps(questions, indent=2) + "\n```"
 
     data = {
         "mental_model": mental_model,

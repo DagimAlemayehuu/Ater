@@ -1,7 +1,7 @@
 import re
 import json
 from typing import Dict, List, Any
-from .agents import DOMAIN_MATRIX, MODE_SPECIALITIES
+from .agents import DOMAIN_MATRIX, MODE_SPECIALITIES, normalize_mode
 from .keywords import DOMAIN_KEYWORDS
 
 class DomainRouter:
@@ -61,6 +61,13 @@ class DomainRouter:
                 ("biology",             "BIOLOGY"),
                 ("physics",             "PHYSICS-KINEMATICS"),
                 # Computer Science
+                ("object oriented programming", "CS-SOFTWARE"),
+                ("object-oriented programming", "CS-SOFTWARE"),
+                ("oop with java",       "CS-SOFTWARE"),
+                ("java programming",    "CS-SOFTWARE"),
+                ("programming in java", "CS-SOFTWARE"),
+                ("java",                "CS-SOFTWARE"),
+                ("oop",                 "CS-SOFTWARE"),
                 ("web development",     "CS-WEB-DEV"),
                 ("html",                "CS-WEB-DEV"),
                 ("javascript",          "CS-WEB-DEV"),
@@ -110,7 +117,7 @@ class DomainRouter:
                 total_matches += 1
 
         if total_matches == 0:
-            return parent_mode if parent_mode else "DOMAIN-UNKNOWN"
+            return normalize_mode(parent_mode, "DOMAIN-UNKNOWN") if parent_mode else "DOMAIN-UNKNOWN"
 
         # 3. Confidence Threshold (v30.0 Pantheon)
         sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
@@ -131,7 +138,7 @@ class DomainRouter:
             import logging
             logging.getLogger("Ater").warning(f"[Taxonomy Gap] Confidence: {confidence:.2f} for top_mode: {top_mode}. Text snippet: {text[:50]}...")
 
-        return top_mode
+        return normalize_mode(top_mode)
 
     async def route_with_oracle(self, llm, briefing: Dict[str, Any], text: str, course: str = "") -> str:
         """Uses LLM-based wisdom to pick the single best domain from the taxonomy."""
@@ -168,15 +175,16 @@ Based on the briefing, which of the available departments is the single best fit
             if "```" in mode:
                 mode = mode.split("```")[1].strip()
             
-            if mode in available_domains:
-                print(f"[DomainRouter] Oracle routing successful: {mode}")
-                return mode
+            normalized = normalize_mode(mode)
+            if mode in available_domains or normalized != "ACADEMIC-GENERAL":
+                print(f"[DomainRouter] Oracle routing successful: {mode} -> {normalized}")
+                return normalized
             
             print(f"[DomainRouter] Oracle hallucinated mode '{mode}'. Falling back to deterministic hint: {hint}")
-            return hint
+            return normalize_mode(hint)
         except Exception as e:
             print(f"[DomainRouter] Oracle routing failed: {e}")
-            return self.route(text, course=course)
+            return normalize_mode(self.route(text, course=course))
 
 # Global instance
 router = DomainRouter()

@@ -10,7 +10,6 @@ import {
  ChevronRight,
  Clock,
  Check,
- Loader2,
  Info,
  X,
  TrendingUp,
@@ -65,6 +64,7 @@ import {cn} from '@/lib/utils'
 
 import {AdvancedPracticeConfig, Question} from '@/types/practice'
 import { MarkdownBlock } from '@/components/MiniPracticeUI'
+import { BlockingLoader, MiniLoader } from '@/components/ui/loading-state'
 
 interface Hub {
  id: string
@@ -954,17 +954,7 @@ const handleStartSession = async () => {
  // LOADING RENDERER
  // ──────────────────────────────────────────────────────────────────────────
  if (view === 'loading') {
- return (
- <div className="h-full flex-1 flex flex-col items-center justify-center bg-background text-foreground">
- <div className="flex flex-col items-center gap-6 ">
- <Loader2 size={32} className="text-primary" />
- <div className="flex flex-col items-center gap-2">
- <span className="text-[10px] font-black uppercase tracking-widest text-primary">{genStatus}</span>
- <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Rate-Limit Protection Active</span>
- </div>
- </div>
- </div>
- )
+ return <BlockingLoader label={genStatus} detail="Rate-limit protection active" />
 }
 
  // ──────────────────────────────────────────────────────────────────────────
@@ -988,8 +978,7 @@ const handleStartSession = async () => {
        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5">
          {explainLoading ? (
            <div className="flex flex-col items-center justify-center py-20 gap-4">
-             <Loader2 size={28} className="text-primary/40" />
-             <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Generating your lesson...</span>
+             <MiniLoader label="Generating Lesson" />
            </div>
          ) : (
            <div className="prose prose-sm max-w-none text-foreground/80 leading-relaxed">

@@ -699,7 +699,78 @@ def get_domain_instruction(mode: str) -> str:
         instr = f"{instr}\n\nSTRICT PROHIBITION: {prohibition}"
     return instr
 
+MODE_ALIASES = {
+    # Canonical taxonomy keys that do not have first-class generation templates yet.
+    # Route them to the closest concrete DOMAIN_MATRIX entry so every downstream
+    # persona, artifact law, validator, and prompt remains defined.
+    "CS-GENERAL": "CS-SOFTWARE",
+    "CS-DATA-SYSTEMS": "CS-DB",
+    "CS-AI-ML": "CS-AI",
+    "CS-CYBER-SEC": "CS-CYBERSECURITY",
+    "CS-NETWORKS": "CS-NETWORKING",
+    "CS-OS": "CS-SYSTEMS",
+    "ENGINEERING-SOFTWARE": "CS-SOFTWARE",
+    "MATH-STATS": "MATH-STAT",
+    "PHYS-MECHANICS": "PHYSICS-KINEMATICS",
+    "PHYS-ASTRO": "SPACE-ASTRO",
+    "BIO-CELL": "BIOLOGY",
+    "BIO-MOLECULAR": "BIOLOGY",
+    "BIO-EVOLUTION": "BIOLOGY",
+    "CHEM-INORGANIC": "CHEMISTRY",
+    "CHEM-ANALYTICAL": "CHEMISTRY",
+    "MEDICINE-GENERAL": "MED-PHYSIO",
+    "MED-PHYSIOLOGY": "MED-PHYSIO",
+    "BUSINESS-FINANCE": "ECON-FINANCE",
+    "BUSINESS-MANAGEMENT": "BIZ-OPERATIONS",
+    "BIZ-MANAGEMENT": "BIZ-OPERATIONS",
+    "BIZ-ACCOUNTING": "ECON-FINANCE",
+    "LAW-GENERAL": "LAW-CASE",
+    "LAW-TORT": "LAW-CASE",
+    "LAW-INTERNATIONAL": "LAW-CASE",
+    "HISTORY-GENERAL": "HIST-CATALYST",
+    "HIST-ANCIENT": "HIST-CATALYST",
+    "HIST-MODERN": "HIST-CATALYST",
+    "HIST-MEDIEVAL": "HIST-CATALYST",
+    "HIST-REGIONAL": "HIST-CATALYST",
+    "SOCIOLOGY": "SOC-POLITICAL",
+    "SOC-STRATIFICATION": "SOC-POLITICAL",
+    "SOC-CULTURE": "SOC-ANTHRO",
+    "SOC-DEMOGRAPHICS": "SOC-POLITICAL",
+    "PSYCHOLOGY": "PSYCH-SOCIOLOGY",
+    "PSYCH-COGNITIVE": "PSYCH-SOCIOLOGY",
+    "PSYCH-CLINICAL": "PSYCH-SOCIOLOGY",
+    "PSYCH-DEVELOPMENTAL": "PSYCH-SOCIOLOGY",
+    "PSYCH-BEHAVIORAL": "PSYCH-SOCIOLOGY",
+    "PHIL-ETHICS": "PHILOSOPHY",
+    "PHIL-METAPHYSICS": "PHILOSOPHY",
+    "PHIL-EPISTEMOLOGY": "PHILOSOPHY",
+    "PHIL-AESTHETICS": "PHILOSOPHY",
+    "LINGUISTICS": "LANG-LINGUISTICS",
+    "LING-SYNTAX": "LANG-LINGUISTICS",
+    "LING-PHONOLOGY": "LANG-LINGUISTICS",
+    "LING-SEMANTICS": "LANG-LINGUISTICS",
+    "LITERATURE": "LANG-LIT",
+    "LIT-FICTION": "LANG-LIT",
+    "LIT-POETRY": "LANG-LIT",
+    "LIT-DRAMA": "LANG-LIT",
+    "LIT-CRITICISM": "LANG-LIT",
+    "ARTS-HISTORY": "HUM-ART_HIST",
+    "MUSIC-THEORY": "HUM-MUSIC",
+    "MUSIC-HISTORY": "HUM-MUSIC",
+    "DESIGN-UX-UI": "ARTS-DESIGN",
+}
+
 VALID_MODES = set(DOMAIN_MATRIX.keys()) | set(DYNAMIC_DOMAIN_MATRIX.keys())
+
+def normalize_mode(mode: str, default: str = "ACADEMIC-GENERAL") -> str:
+    """Return a generation-safe mode with a defined persona/template."""
+    mode = str(mode or "").strip().upper()
+    if mode in VALID_MODES:
+        return mode
+    alias = MODE_ALIASES.get(mode)
+    if alias in VALID_MODES:
+        return alias
+    return default
 
 # ── MODE-AWARE PROFESSIONAL DOMAINS (v26.6) ───────────────────────────────────
 MODE_SPECIALITIES = {
@@ -830,6 +901,7 @@ DOMAIN_QUESTION_PROTOCOLS = {
 
 def get_persona(mode: str, modality: str = "Qualitative/Definitional") -> dict:
     """Helper to fetch the congruent persona based on domain and epistemic nature."""
+    mode = normalize_mode(mode)
     
     # 1. Unknown Domain Fallback (v30.0 Pantheon Protocol)
     if mode == "DOMAIN-UNKNOWN":
@@ -943,7 +1015,8 @@ class ArchitectAgent:
         modes_str = ", ".join(DOMAIN_MATRIX.keys())
         
         mode_instruction = f"mode: EXACTLY one code from this list: {modes_str}"
-        if forced_mode and forced_mode in DOMAIN_MATRIX:
+        forced_mode = normalize_mode(forced_mode, "") if forced_mode else ""
+        if forced_mode and forced_mode in VALID_MODES:
             mode_instruction = f"mode: You MUST use `{forced_mode}` for all notes in this plan. This has been pre-verified by a domain specialist."
 
         system = (
@@ -973,8 +1046,7 @@ class ArchitectAgent:
                 data.setdefault("atomic_notes", [])
                 data.setdefault("possible_questions", [])
                 for note in data["atomic_notes"]:
-                    if note.get("mode") not in VALID_MODES:
-                        note["mode"] = "ACADEMIC-GENERAL"
+                    note["mode"] = normalize_mode(note.get("mode"), "ACADEMIC-GENERAL")
                     raw_title = note.get("title", "Unknown").strip()
                     words = re.split(r'[\s_\-]+', raw_title)
                     note["title"] = "_".join(w.capitalize() for w in words if w)

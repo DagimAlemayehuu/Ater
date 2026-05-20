@@ -14,7 +14,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from .vault_manager import VaultManager
 from .deployer import AterDeployer
 from src.domains.ai.factory import ModelFactory
-from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgent, CriticAgent, HubAgent, VerifierAgent, QuizAuditorAgent, EpistemicClassifierAgent, MetaScannerAgent, DOMAIN_MATRIX, get_professional_domain, get_persona
+from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgent, CriticAgent, HubAgent, VerifierAgent, QuizAuditorAgent, EpistemicClassifierAgent, MetaScannerAgent, DOMAIN_MATRIX, get_professional_domain, get_persona, normalize_mode
 from .router import router
 from .templates import render_atomic_note, build_skeleton_note
 from .healer import LogicHealer
@@ -1342,6 +1342,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         Strategy: Score paragraphs (not sentences) to find the richest context block,
         then return up to 3500 chars to maximize model grounding on weak LLMs.
         """
+        source_text = re.sub(r"\[SOURCE EXCERPT\]", "", source_text or "", flags=re.IGNORECASE).strip()
         if len(source_text) <= 3500:
             return source_text
 
@@ -1392,6 +1393,42 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             window = window[:3500]
 
         return window if window else source_text[:3500]
+
+    def _compact_source_context(
+        self,
+        full_text: str,
+        seed_context: str,
+        title: str,
+        source_pages: List[int],
+        max_chars: int = 2600,
+    ) -> str:
+        """Build a deterministic, concept-local source packet for generation.
+
+        The packet favors architect-selected pages, then title-matched text. It
+        avoids whole-chapter prefixes so even tiny models receive one clean task.
+        """
+        seed = re.sub(r"\[SOURCE EXCERPT\]", "", seed_context or "", flags=re.IGNORECASE).strip()
+        page_blocks = re.findall(
+            r"\[PAGE\s+(\d+)\]\s*(.*?)(?=\n\[PAGE\s+\d+\]|\Z)",
+            full_text or "",
+            flags=re.DOTALL | re.IGNORECASE,
+        )
+
+        selected: List[str] = []
+        wanted_pages = {int(p) for p in source_pages or [] if str(p).isdigit()}
+        if wanted_pages:
+            for page_no, page_text in page_blocks:
+                if int(page_no) in wanted_pages:
+                    selected.append(f"[PAGE {page_no}]\n{page_text.strip()}")
+
+        candidate_text = "\n\n".join(selected) if selected else (full_text or "")
+        snippet = self._extract_source_snippet(candidate_text, title, 0)
+        packet_parts = [p for p in [seed, snippet] if p]
+        packet = "\n\n".join(packet_parts)
+        packet = re.sub(r"\s+", " ", packet).strip()
+        if len(packet) > max_chars:
+            packet = packet[:max_chars].rsplit(" ", 1)[0].strip()
+        return packet or seed or snippet
 
     def get_active_academic_context(self) -> Dict[str, str]:
         """Reads the vault to find the currently active semester and year."""
@@ -1758,16 +1795,16 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         print(f"[Ater Service] Oracle Briefing: {context_briefing.primary_discipline}")
 
         if fast_mode != "DOMAIN-UNKNOWN":
-            detected_mode = fast_mode
+            detected_mode = normalize_mode(fast_mode)
             print(f"[Ater Service] Fast Router Confirmed: {detected_mode}")
         else:
             self.set_status(session_id, "Oracle Domain Routing...")
-            detected_mode = await router.route_with_oracle(
+            detected_mode = normalize_mode(await router.route_with_oracle(
                 self.planner_llm, 
                 context_briefing.model_dump(), 
                 full_text, 
                 course=course
-            )
+            ))
             print(f"[Ater Service] Oracle Router Detected: {detected_mode}")
 
         # Invoke Architect Agent
@@ -1831,17 +1868,20 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                     norm_title = note.title
                     if norm_title not in seen_titles:
                         # Law of Cognitive Anchoring: Enforced in generation phase
-                        note.mode = detected_mode
+                        note.mode = normalize_mode(detected_mode)
                         
                         note_dict = note.model_dump()
                         
-                        # SOURCE ENRICHMENT: Append the originating chunk text so TheoryAgent
-                        # has rich definitional material, not just the architect's 1-2 sentence summary.
-                        # Cap at 3000 chars to stay within token budget.
-                        arch_context = note_dict.get("source_context") or ""
-                        chunk_supplement = chunk[:3000] if chunk else ""
-                        if chunk_supplement and chunk_supplement not in arch_context:
-                            note_dict["source_context"] = f"{arch_context}\n\n[SOURCE EXCERPT]\n{chunk_supplement}"
+                        # SOURCE ENRICHMENT: keep a tight, concept-local window. Older
+                        # builds appended the first 3k chars of the chapter chunk, which
+                        # caused weak models and the deterministic fallback to copy
+                        # unrelated slide text into every note.
+                        note_dict["source_context"] = self._compact_source_context(
+                            full_text=full_text,
+                            seed_context=note_dict.get("source_context") or "",
+                            title=note_dict.get("title") or "",
+                            source_pages=note_dict.get("source_pages") or [],
+                        )
                         
                         print(f"[Ater Service] Adding concept: {note.title} (Mode: {note.mode})")
                         all_atomic_notes.append(note_dict)
@@ -1922,6 +1962,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         # Sanitize all atomic note titles in the plan
         for note in all_atomic_notes:
             note["title"] = self.validator.sanitize_title(note["title"])
+            note["mode"] = normalize_mode(note.get("mode"), detected_mode)
             if "prerequisites" in note:
                 note["prerequisites"] = self.validator.sanitize_prerequisites(note["prerequisites"])
         
@@ -2147,22 +2188,22 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         
                         generation_attempts = 0
                         last_candidate_markdown = None
+                        max_generation_attempts = 3
                         
                         while True:
                             generation_attempts += 1
-                            current_temp = 0.0 + (generation_attempts - 1) * 0.15
-                            current_topp = 0.9 + (generation_attempts - 1) * 0.05
-                            if current_topp > 1.0:
-                                current_topp = 1.0
+                            current_temp = 0.0
+                            current_topp = 0.9
                                 
                             phase_prefix = f"(Attempt {generation_attempts}, Temp={current_temp:.2f})" if generation_attempts > 1 else ""
                             
-                            if current_temp >= 1.5:
-                                # Max entropy hit — deploy the skeleton fallback gracefully to prevent stalling!
-                                logger.warning(f"[Ater Service] Max entropy/attempts reached for '{current_note_title}'. Deploying deterministic skeleton fallback.")
+                            if generation_attempts > max_generation_attempts:
+                                # Keep weak models deterministic: after bounded retries, use the
+                                # source-grounded compiler instead of increasing randomness.
+                                logger.warning(f"[Ater Service] Max attempts reached for '{current_note_title}'. Deploying deterministic skeleton fallback.")
                                 self.set_status(session_id, f"⚠️ Max attempts reached: Deploying fallback skeleton for [[{current_note_title}]]...")
                                 
-                                skeleton_body = build_skeleton_note(note_schema, source_snippet, domain)
+                                skeleton_body = build_skeleton_note(note_schema, source_snippet, domain, all_titles=all_note_titles)
                                 metadata = {
                                     "title": note_schema.title,
                                     "course": course,
@@ -2470,7 +2511,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     else:
                                         self.governor.report_error()
                                     raise e # Propagate up to confirm_plan
-                                if current_temp >= 1.5:
+                                if generation_attempts >= max_generation_attempts:
                                     logger.warning(f"[Ater Service] Max attempts/entropy reached for '{current_note_title}': {e}.")
                                     break
                                 await asyncio.sleep(5)
@@ -2479,7 +2520,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         if current_note_title not in session.get("processed_notes", []):
                             logger.warning(f"[Ater Service] Max attempts reached for '{current_note_title}'. Deploying deterministic skeleton fallback.")
                             
-                            skeleton_body = build_skeleton_note(note_schema, source_snippet, domain)
+                            skeleton_body = build_skeleton_note(note_schema, source_snippet, domain, all_titles=all_note_titles)
                             metadata = {
                                 "title": note_data["title"],
                                 "course": note_data["course"],

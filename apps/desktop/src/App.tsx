@@ -19,6 +19,7 @@ import PomodoroController from '@/components/intelligence/PomodoroController'
 import { AuthProvider } from '@/context/auth-context'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { UpdateChecker } from '@/components/updater/UpdateChecker'
+import { BlockingLoader } from '@/components/ui/loading-state'
 
 export default function App() {
   return (
@@ -35,11 +36,7 @@ function AppRoutes() {
   const { isConfigured, isLoading: configLoading } = useConfig();
   
   if (configLoading) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-background text-foreground">
-        <span className="text-[10px] font-black uppercase tracking-[0.4em]">Initializing</span>
-      </div>
-    );
+    return <BlockingLoader label="Initializing" />
   }
 
   return (
@@ -49,12 +46,7 @@ function AppRoutes() {
           <HeaderProvider>
             <AuthGuard>
               <Suspense fallback={
-                <div className="h-screen w-full flex items-center justify-center bg-background">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-8 h-8 border-2 border-primary border-t-transparent animate-spin rounded-none" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Loading Module</span>
-                  </div>
-                </div>
+                <BlockingLoader label="Loading Module" />
               }>
                 <Routes>
                   <Route path="/onboarding" element={<Onboarding />} />
@@ -85,5 +77,4 @@ function AppRoutes() {
     </AuthProvider>
   );
 }
-
 

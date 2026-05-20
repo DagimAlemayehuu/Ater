@@ -19,6 +19,7 @@ import ExamsTab from './academic-tabs/ExamsTab'
 import {cleanTitle, DEFAULT_SCHEMAS, wrapWL} from './academic-tabs/utils'
 import type {AcademicTab, AcademicData, VaultDatabase, TabProps} from './academic-tabs/types'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
+import { BlockingLoader } from '@/components/ui/loading-state'
 
 export default function AcademicDashboard() {
   const { history: storeHistory } = usePomodoroStore()
@@ -50,14 +51,17 @@ export default function AcademicDashboard() {
  // ── Data fetching ──────────────────────────────────────────────────────────
  const fetchData = useCallback(async () => {
  try {
-  const [dashRes, studyRes] = await Promise.all([
-    sidecarApi.academicsDashboard(),
-    sidecarApi.getStudyHistory()
-  ])
+  const dashRes = await sidecarApi.academicsDashboard()
   setData(dashRes as any)
-  setApiStudyHistory(studyRes || { sessions: [], telemetry: [], practice: [] })
- } catch {toast.error('Could not connect to vault')}
-  finally {setLoading(false)}
+  setLoading(false)
+
+  sidecarApi.getStudyHistory()
+    .then(studyRes => setApiStudyHistory(studyRes || { sessions: [], telemetry: [], practice: [] }))
+    .catch(() => setApiStudyHistory({ sessions: [], telemetry: [], practice: [] }))
+ } catch {
+  toast.error('Could not connect to vault')
+  setLoading(false)
+ }
 }, [])
 
  const fetchDatabases = useCallback(async () => {
@@ -291,11 +295,7 @@ export default function AcademicDashboard() {
 
  // ── Loading ────────────────────────────────────────────────────────────────
  if (loading) {
-  return (
-   <div className="h-full flex items-center justify-center bg-background">
-    <div className="w-5 h-5 border-2 border-border border-t-foreground rounded-none" />
-   </div>
-  )
+  return <BlockingLoader label="Opening Academic Dashboard" />
  }
 
   // ── Upcoming items for the calendar ───────────────────────────────────────

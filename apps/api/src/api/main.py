@@ -1432,6 +1432,9 @@ async def ater_explain_concept(
     selection = payload.get("selection", "")
     page_num = payload.get("page", 1)
     user_question = payload.get("question", "")
+    scope = payload.get("scope", "selection")
+    source_kind = payload.get("source_kind", "pdf" if relative_path.lower().endswith(".pdf") else "markdown")
+    selection_context = payload.get("selection_context", "")
     # v33.0: active note context injected by AiSidecar
     note_mode = payload.get("note_mode", "")
     note_title = payload.get("note_title", "")
@@ -1459,7 +1462,7 @@ async def ater_explain_concept(
 
     try:
         from src.domains.ai.factory import ModelFactory
-        from src.domains.ater.agents import DOMAIN_MATRIX
+        from src.domains.ater.agents import DOMAIN_MATRIX, normalize_mode
         from langchain_core.messages import HumanMessage
 
         # ── DOMAIN PERSONA RESOLUTION (v33.0) ────────────────────────────────
@@ -1477,41 +1480,73 @@ async def ater_explain_concept(
             except Exception:
                 pass
 
+        note_mode = normalize_mode(note_mode)
         domain_config = DOMAIN_MATRIX.get(note_mode, DOMAIN_MATRIX.get("ACADEMIC-GENERAL", {}))
         persona = domain_config.get("persona", "Subject Matter Expert")
         domain_h1 = domain_config.get("h1", "How It Actually Works")
         domain_h2 = domain_config.get("h2", "The Formal Model")
 
-        # ── SOURCE CONTENT (capped at 3500 chars for token efficiency) ────────
+        def _normalize_ws(text: str) -> str:
+            return re.sub(r"\s+", " ", text or "").strip()
+
+        def _window_around_selection(text: str, selected: str, radius: int = 2600) -> str:
+            if not text:
+                return ""
+            if not selected or scope == "page":
+                return text[:7000]
+            idx = text.find(selected)
+            if idx < 0:
+                idx = _normalize_ws(text).find(_normalize_ws(selected))
+                if idx >= 0:
+                    compact = _normalize_ws(text)
+                    return compact[max(0, idx - radius): idx + len(selected) + radius]
+                return text[:7000]
+            return text[max(0, idx - radius): idx + len(selected) + radius]
+
+        # ── SOURCE CONTENT (strictly scoped for token efficiency) ─────────────
         context_content = ""
+        source_locator = ""
         if is_pdf and full_path.exists():
             from langchain_community.document_loaders import PyPDFLoader
             loader = PyPDFLoader(str(full_path))
             pages = loader.load_and_split()
-            page_idx = min(page_num - 1, len(pages) - 1) if pages else 0
+            try:
+                page_idx = min(max(int(page_num) - 1, 0), len(pages) - 1) if pages else 0
+            except Exception:
+                page_idx = 0
             context_content = pages[page_idx].page_content if pages else ""
+            source_locator = f"PDF page {page_idx + 1}"
         elif full_path.exists() and full_path.suffix == ".md":
             context_content = full_path.read_text(encoding="utf-8")
+            source_locator = "Markdown note"
+
+        focused_context = selection_context.strip() or _window_around_selection(context_content, selection)
+        focused_context = focused_context[:9000]
 
         # ── DYNAMIC PERSONA SYSTEM INSTRUCTION ───────────────────────────────
-        concept_label = note_title or selection[:60]
-        si_content = f"""You are a master {persona} and an elite pedagogue. Your task is to explain the concept "{concept_label}" to a student in {note_course or 'their course'}.
+        concept_label = note_title or (selection[:80] if selection else source_locator or "the selected material")
+        scope_label = "the entire current PDF page" if scope == "page" else "the exact selected text"
+        si_content = f"""You are a master {persona} and an elite pedagogue. Your task is to explain {scope_label} for a student in {note_course or 'their course'}.
 
 CRITICAL PEDAGOGICAL CONSTRAINTS (MANDATORY):
-1. EXTREME SIMPLICITY: You MUST explain this so that a 12-year-old could easily understand it. Use absolutely zero jargon unless you define it immediately in plain English.
-2. ANALOGY-FIRST: You MUST center your explanation around a singular, highly relatable, and concrete analogy from everyday life.
-3. PERSONA FIDELITY: Maintain the voice of a {persona}, but translated for a 12-year-old.
-4. NO SLOP: You are strictly forbidden from using generic AI introductory or concluding remarks (e.g., "Let's dive in", "In conclusion", "As we can see").
-5. NO CLICHÉ STRUCTURES: Do NOT use sections like "Deeper Dive", "Edge Cases", or "What the note left out". 
-6. NO BULLET POINT SPAM: Write in flowing, natural, engaging prose.
-7. FORMAT: Use clean markdown. Keep it under 300 words."""
+1. EXACT SCOPE: Explain ONLY the selected text or page identified below. Do not wander into adjacent concepts unless needed to decode the selection.
+2. SOURCE GROUNDING: Use the provided source context as the authority. If the selected text is ambiguous, say what the source context makes most likely.
+3. EXTREME CLARITY: Make it impossible to misunderstand. Define every technical word in plain English before using it.
+4. STRUCTURE: Use exactly these markdown sections: `What It Says`, `What It Means`, `How It Works`, `Why It Matters`, `Check Yourself`.
+5. SELECTION FIRST: In `What It Says`, restate the exact selected words or page target in simpler language.
+6. DYNAMIC PERSONA: Explain like a {persona}, but translated into simple student language.
+7. NO SLOP: No greetings, no generic conclusions, no "as an AI", no filler.
+8. LENGTH: 350 to 650 words unless the selection is tiny."""
 
-        source_block = context_content[:3500]
         user_prompt = f"""SOURCE CONTENT:
-{source_block}
+{focused_context}
 
-STUDENT'S SELECTION: "{selection}"
-STUDENT'S QUESTION: {user_question if user_question else f"Explain '{concept_label}' using a brilliant, simple analogy."}"""
+SCOPE: {scope}
+SOURCE KIND: {source_kind}
+SOURCE LOCATOR: {source_locator}
+ACTIVE NOTE OR CONCEPT: {concept_label}
+EXACT STUDENT SELECTION OR PAGE TARGET: "{selection}"
+STUDENT'S QUESTION: {user_question if user_question else f"Explain the {scope_label} with the correct source scope and no outside drift."}"""
 
         llm = ModelFactory.get_model(
             provider=secrets.ai_provider or "google",
@@ -1529,6 +1564,8 @@ STUDENT'S QUESTION: {user_question if user_question else f"Explain '{concept_lab
             "answer": res.content,
             "persona": persona,
             "mode": note_mode,
+            "scope": scope,
+            "source_locator": source_locator,
         }
     except Exception as e:
         logger.error(f"[AI Explain] Error: {traceback.format_exc()}")
@@ -1590,6 +1627,12 @@ async def ater_chat(
     selection = payload.get("selection", "")
     page_num = payload.get("page", 1)
     messages_input = payload.get("messages", [])  # List of {role, content}
+    scope = payload.get("scope", "selection")
+    source_kind = payload.get("source_kind", "pdf" if path.lower().endswith(".pdf") else "markdown")
+    selection_context = payload.get("selection_context", "")
+    note_mode_hint = payload.get("note_mode", "")
+    note_title_hint = payload.get("note_title", "")
+    note_course_hint = payload.get("note_course", "")
 
     try:
         # ── Resolve document path ────────────────────────────────────────────────
@@ -1623,11 +1666,11 @@ async def ater_chat(
         # ── ACTIVE NOTE METADATA EXTRACTION (v32.1 Ask AI Grounding) ────────────
         # Parse YAML frontmatter of the active .md note to anchor every AI response
         # to the exact concept and source pages the student is currently studying.
-        active_note_title = ""
-        active_note_mode = ""
+        active_note_title = note_title_hint
+        active_note_mode = note_mode_hint
         active_source_pages: list = []
         active_hub = ""
-        active_course = ""
+        active_course = note_course_hint
 
         if full_path.exists() and full_path.suffix == ".md":
             try:
@@ -1647,7 +1690,8 @@ async def ater_chat(
                 pass
 
         # ── DOMAIN PERSONA RESOLUTION (v33.0) ────────────────────────────────
-        from src.domains.ater.agents import DOMAIN_MATRIX
+        from src.domains.ater.agents import DOMAIN_MATRIX, normalize_mode
+        active_note_mode = normalize_mode(active_note_mode)
         domain_config = DOMAIN_MATRIX.get(active_note_mode, DOMAIN_MATRIX.get("ACADEMIC-GENERAL", {}))
         persona = domain_config.get("persona", "Subject Matter Expert")
 
@@ -1664,32 +1708,33 @@ async def ater_chat(
         chat_messages = [SystemMessage(content=si_content)]
 
         # ── GROUNDED CONTEXT INJECTION ───────────────────────────────────────────
-        anchor_block = ""
-        if active_note_title:
-            pages_str = ", ".join(str(p) for p in active_source_pages) if active_source_pages else "not specified"
-            anchor_block = (
-                f"\n[ACTIVE NOTE ANCHOR]\n"
-                f"Concept: {active_note_title}\n"
-                f"Domain Mode: {active_note_mode or 'General'}\n"
-                f"Course: {active_course or 'Unknown'}\n"
-                f"Source Pages in Textbook: {pages_str}\n"
-                f"Hub: {active_hub or 'Unknown'}\n\n"
-                f"CRITICAL PEDAGOGICAL CONSTRAINTS (MANDATORY):\n"
-                f"1. You are an expert {persona} acting as a tutor helping a student understand ONLY the concept \"{active_note_title}\".\n"
-                f"2. EXTREME SIMPLICITY: You MUST explain things so a 12-year-old could easily understand. Use zero jargon unless defined immediately.\n"
-                f"3. ANALOGY-FIRST: Anchor explanations in highly relatable, everyday analogies.\n"
-                f"4. NO SLOP: You are strictly forbidden from using generic AI introductory/concluding remarks (e.g., 'Let's dive in', 'In conclusion').\n"
-                f"5. NO CLICHÉ STRUCTURES: Do NOT use sections like 'Deeper Dive', 'Edge Cases', or 'What the note left out'.\n"
-                f"6. NO BULLET POINT SPAM: Write in flowing, natural, engaging prose.\n"
-                f"7. Speak and act strictly as a {persona} would.\n"
-            )
+        pages_str = ", ".join(str(p) for p in active_source_pages) if active_source_pages else "not specified"
+        scope_label = "the current PDF page" if scope == "page" else "the exact selected text"
+        focused_context = (selection_context or context_content)[:9000]
+        anchor_block = (
+            f"\n[ACTIVE EXPLAIN ANCHOR]\n"
+            f"Scope: {scope}\n"
+            f"Source Kind: {source_kind}\n"
+            f"Selection or Page Target: \"{selection}\"\n"
+            f"Concept: {active_note_title or 'Unknown'}\n"
+            f"Domain Mode: {active_note_mode or 'General'}\n"
+            f"Course: {active_course or 'Unknown'}\n"
+            f"Source Pages in Textbook: {pages_str}\n"
+            f"Hub: {active_hub or 'Unknown'}\n\n"
+            f"CRITICAL PEDAGOGICAL CONSTRAINTS (MANDATORY):\n"
+            f"1. You are an expert {persona} helping the student understand ONLY {scope_label}.\n"
+            f"2. Preserve exact scope. Do not answer with unrelated textbook material.\n"
+            f"3. Make every answer impossible to misunderstand: define jargon immediately and use concrete cause-effect language.\n"
+            f"4. If the student asks a follow-up, connect it back to the original selection/page before expanding.\n"
+            f"5. No greetings, no generic conclusions, no filler.\n"
+        )
 
         context_reminder = (
             f"\n[SYSTEM CONTEXT]\n"
             f"Document: {relative_path}\n"
             f"Selection: \"{selection}\"\n"
             f"{anchor_block}"
-            f"Source Content (Page {page_num}):\n{context_content[:8000]}\n"
+            f"Focused Source Context (Page {page_num}):\n{focused_context}\n"
         )
         chat_messages.append(SystemMessage(content=context_reminder))
 

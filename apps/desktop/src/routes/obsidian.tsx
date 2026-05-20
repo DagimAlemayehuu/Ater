@@ -16,6 +16,7 @@ import { useConfig } from '@/lib/ConfigContext'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { PanelLoader } from '@/components/ui/loading-state'
 import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
 import { PdfViewer } from '@/components/obsidian/PdfViewer'
 import { ObsidianGraphView } from '@/components/obsidian/ObsidianGraphView'
@@ -92,6 +93,14 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   const { push, history, currentIndex } = useNavigation()
   const { setCenterContent, setRightContent } = useHeader()
   const { isFullscreen, setIsFullscreen } = useLayout()
+  const handlePdfStateChange = useCallback((state: any) => {
+    setPdfState({
+      page: state.page,
+      pageCount: state.pageCount || 1,
+      sidebarOpen: state.sidebarOpen,
+      isFullscreen: state.isFullscreen
+    })
+  }, [])
 
   // --- Focus Tracking Effect ---
   useEffect(() => {
@@ -1857,16 +1866,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  ) : (
   <div className={cn("mx-auto w-full max-w-full relative", (typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? "p-0 h-full overflow-hidden flex flex-col" : "py-12 px-16 max-w-5xl")}>
   {loadingNote && (
-  <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background">
-  <RefreshCw size={24} className="text-primary/40" />
-  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Loading Document...</p>
-  <button 
-    onClick={() => setLoadingNote(false)}
-    className="mt-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 hover:text-primary transition-none border border-border/20 px-2 py-1 rounded-none"
-  >
-    Dismiss
-  </button>
-  </div>
+  <PanelLoader label="Loading Document" />
   )}
   {!(typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) && (
   <div className="flex items-start justify-between mb-12 group">
@@ -1885,12 +1885,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
   title={selectedPath.split('/').pop() || ''} 
   initialPage={selectedPage} 
   filterPages={selectedFilteredPages}
-  onStateChange={(state) => setPdfState({
-  page: state.page,
-  pageCount: state.pageCount || 1,
-  sidebarOpen: state.sidebarOpen,
-  isFullscreen: state.isFullscreen
-})}
+  onStateChange={handlePdfStateChange}
   />
   </div>
   

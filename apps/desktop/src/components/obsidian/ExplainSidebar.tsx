@@ -37,9 +37,24 @@ interface ExplainSidebarProps {
   noteMode?: string
   noteTitle?: string
   noteCourse?: string
+  scope?: 'selection' | 'page' | 'note'
+  sourceKind?: 'markdown' | 'pdf'
+  selectionContext?: string
 }
 
-export function ExplainSidebar({ isOpen, onClose, selection, path, page, noteMode, noteTitle, noteCourse }: ExplainSidebarProps) {
+export function ExplainSidebar({
+  isOpen,
+  onClose,
+  selection,
+  path,
+  page,
+  noteMode,
+  noteTitle,
+  noteCourse,
+  scope = 'selection',
+  sourceKind,
+  selectionContext = '',
+}: ExplainSidebarProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -49,13 +64,14 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page, noteMod
   const prevSelectionRef = useRef('')
 
   useEffect(() => {
-    if (isOpen && selection && selection !== prevSelectionRef.current) {
-      prevSelectionRef.current = selection
+    const selectionKey = `${scope}:${path || ''}:${page || ''}:${selection}:${selectionContext.slice(0, 120)}`
+    if (isOpen && selection && selectionKey !== prevSelectionRef.current) {
+      prevSelectionRef.current = selectionKey
       setMessages([])
       setInput('')
       triggerInitialExplain(selection)
     }
-  }, [isOpen, selection])
+  }, [isOpen, selection, scope, path, page, selectionContext])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
@@ -69,7 +85,10 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page, noteMod
   // for context — efficient because it only fetches the relevant page/section.
   const triggerInitialExplain = async (sel: string) => {
     setLoading(true)
-    const initMsg: Message = { role: 'user', content: `Explain: "${sel}"` }
+    const initMsg: Message = {
+      role: 'user',
+      content: scope === 'page' ? `Explain this full page: ${sel}` : `Explain exactly this selection: "${sel}"`,
+    }
     setMessages([initMsg])
     try {
       const res = await sidecarApi.aterExplain({
@@ -80,6 +99,9 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page, noteMod
         note_mode: noteMode,
         note_title: noteTitle,
         note_course: noteCourse,
+        scope,
+        source_kind: sourceKind,
+        selection_context: selectionContext,
       })
       // v33.0: Show dynamic persona returned from backend
       if (res.persona) setPersonaLabel(res.persona)
@@ -109,6 +131,12 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page, noteMod
         selection,
         page,
         messages: next,
+        scope,
+        source_kind: sourceKind,
+        selection_context: selectionContext,
+        note_mode: noteMode,
+        note_title: noteTitle,
+        note_course: noteCourse,
       })
       setMessages(prev => [...prev, { role: 'assistant', content: res.answer }])
     } catch (e: any) {
@@ -151,6 +179,11 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page, noteMod
                   {noteTitle.replace(/_/g, ' ')}
                 </span>
               )}
+              {!noteTitle && sourceKind === 'pdf' && (
+                <span className="text-[9px] text-muted-foreground/30 font-medium truncate max-w-[200px]">
+                  PDF page {page || 1}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -174,7 +207,7 @@ export function ExplainSidebar({ isOpen, onClose, selection, path, page, noteMod
         {selection && (
           <div className="px-5 py-3 border-b border-border/20 bg-muted/5 shrink-0">
             <div className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 mb-1">
-              Selection
+              {scope === 'page' ? 'Page Scope' : 'Selection'}
             </div>
             <div className="text-[11px] text-foreground/50 leading-relaxed line-clamp-2 italic">
               &ldquo;{selection}&rdquo;
