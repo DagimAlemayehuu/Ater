@@ -11,10 +11,10 @@ from src.api.deps import AppSecrets
 async def test_generate():
     secrets = AppSecrets(
         ai_provider="groq",
-        ai_key=os.getenv("GROQ_API_KEY"),
+        ai_key="dummy",
         ai_model="meta-llama/llama-4-scout-17b-16e-instruct",
         vault_path="/Users/dabodestroyer/code/Antigravity/Ater/Test",
-        academic_path="database",
+        academic_path="Notes",
         inbox_path="/Users/dabodestroyer/code/Antigravity/Ater/Test/Inbox",
         auto_deploy=True
     )
@@ -39,12 +39,28 @@ async def test_generate():
         "hubId": hub_id,
         "selectedAtomicNotes": selected_notes,
         "questionDistribution": {
-            "mcq": 1
+            "mcq": 1, "true_false": 0, "writing": 0, "fill_in": 0, "matching": 0, "order": 0, "debug": 0, "synthesis": 0, "trace": 0, "calculation": 0, "data_analysis": 0, "scenario": 0, "code": 0
         },
         "difficulty": "Mixed",
+        "gradingStrictness": "Lenient",
+        "distractorPlausibility": "High",
         "injectTrickAnswers": False,
-        "distractorPlausibility": "Medium"
+        "prioritizeWeaknesses": False,
+        "progressionGatekeeper": False,
+        "enableProgressiveHints": False,
+        "requireConfidenceWager": False,
+        "globalTimeLimitMinutes": None,
+        "perQuestionTimeLimitSeconds": None,
+        "timeBoundDays": None
     }
+    
+    from src.domains.ater.schemas import AdvancedPracticeConfig
+    try:
+        parsed = AdvancedPracticeConfig(**config)
+        print("Pydantic Validation Succeeded!")
+    except Exception as err:
+        print("Pydantic Validation FAILED:", err)
+
     
     try:
         res = await service.generate_practice(hub_id, config)

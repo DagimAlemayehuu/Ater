@@ -208,6 +208,8 @@ pub struct AppConfig {
     pub ai_api_key: Option<String>,
     #[serde(rename = "autoDeploy")]
     pub auto_deploy: Option<bool>,
+    #[serde(rename = "academicFolderPath")]
+    pub academic_folder_path: Option<String>,
 }
 
 fn load_app_config(app_handle: &tauri::AppHandle) -> Result<AppConfig, String> {
@@ -425,6 +427,11 @@ fn get_proxy_headers(config: &AppConfig) -> reqwest::header::HeaderMap {
     if let Some(ref val) = config.inbox_path {
         if let Ok(h_val) = HeaderValue::from_str(val) {
             headers.insert("X-Inbox-Path", h_val);
+        }
+    }
+    if let Some(ref val) = config.academic_folder_path {
+        if let Ok(h_val) = HeaderValue::from_str(val) {
+            headers.insert("X-Academic-Path", h_val);
         }
     }
     if let Some(val) = config.auto_deploy {
@@ -1534,10 +1541,40 @@ pub async fn get_all_keys_usage(
 #[tauri::command]
 pub async fn test_ai_connection(
     target: String,
+    override_config: Option<AppConfig>,
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    let config = load_app_config(&app_handle)?;
+    let mut config = load_app_config(&app_handle)?;
+    if let Some(overrides) = override_config {
+        if let Some(val) = overrides.ai_provider {
+            config.ai_provider = Some(val);
+        }
+        if let Some(val) = overrides.ai_api_key {
+            config.ai_api_key = Some(val);
+        }
+        if let Some(val) = overrides.ai_model {
+            config.ai_model = Some(val);
+        }
+        if let Some(val) = overrides.ai_base_url {
+            config.ai_base_url = Some(val);
+        }
+        if let Some(val) = overrides.ai_max_tpm {
+            config.ai_max_tpm = Some(val);
+        }
+        if let Some(val) = overrides.ai_max_rpm {
+            config.ai_max_rpm = Some(val);
+        }
+        if let Some(val) = overrides.ai_max_tpd {
+            config.ai_max_tpd = Some(val);
+        }
+        if let Some(val) = overrides.ai_max_rpd {
+            config.ai_max_rpd = Some(val);
+        }
+        if let Some(val) = overrides.ai_max_concurrency {
+            config.ai_max_concurrency = Some(val);
+        }
+    }
     let headers = get_proxy_headers(&config);
     let mut payload = serde_json::Map::new();
     payload.insert("target".to_string(), serde_json::Value::String(target));

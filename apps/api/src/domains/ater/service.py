@@ -602,6 +602,45 @@ class AterService:
             hubs.append(metadata)
         return hubs
 
+    def _find_hub(self, hub_id: str) -> Optional[Dict[str, Any]]:
+        """Robustly locates a hub by ID, path, filename, or stem, handling nesting and format differences."""
+        if not hub_id:
+            return None
+            
+        hubs = self.list_planner_hubs()
+        
+        target_normalized = hub_id.replace("\\", "/").strip().lower()
+        target_stem = Path(target_normalized).stem.replace("_hub", "")
+        
+        # 1. Exact match by ID or path
+        for h in hubs:
+            h_id = h["id"].strip().lower()
+            h_path = h["path"].replace("\\", "/").strip().lower()
+            if h_id == target_normalized or h_path == target_normalized:
+                return h
+                
+        # 2. Match without extensions
+        for h in hubs:
+            h_id_no_ext = h["id"].replace(".md", "").strip().lower()
+            h_path_no_ext = h["path"].replace(".md", "").replace("\\", "/").strip().lower()
+            if h_id_no_ext == target_normalized or h_path_no_ext == target_normalized:
+                return h
+                
+        # 3. Stem matching (comparing basenames only)
+        for h in hubs:
+            h_stem = Path(h["id"]).stem.strip().lower().replace("_hub", "")
+            if h_stem == target_stem:
+                return h
+                
+        # 4. Ends-with suffix matching
+        for h in hubs:
+            h_stem = Path(h["id"]).stem.strip().lower().replace("_hub", "")
+            h_path_no_ext = h["path"].replace(".md", "").replace("\\", "/").strip().lower()
+            if target_normalized.endswith(h_stem) or h_path_no_ext.endswith(target_normalized):
+                return h
+                
+        return None
+
     def _get_unit_dir(self, hub: Dict[str, Any]) -> Path:
         """Resolves the academic unit directory for a given hub.
         If the direct path (Semester/Course/Unit) doesn't exist, it performs a search.
@@ -617,31 +656,37 @@ class AterService:
         unit_prefix = f"{unit_num}_" if unit_num else ""
         unit_folder_name = f"{unit_prefix}{canonical_hub}"
         
-        # 1. Try direct path (Academic Root)
-        academic_unit_dir = self.vm.academic_root / semester / self.vm.get_canonical_title(course) / unit_folder_name
-        if academic_unit_dir.exists():
-            return academic_unit_dir
+        # List of roots to search (active academic root, then fallback Notes/ directory)
+        roots_to_try = [self.vm.academic_root]
+        notes_root = self.vm.vault_path / "Notes"
+        if notes_root.exists() and notes_root != self.vm.academic_root:
+            roots_to_try.append(notes_root)
             
-        # 2. Try alternate path (Search inside academic root)
-        try:
-            matches = list(self.vm.academic_root.rglob(unit_folder_name))
-            if matches:
-                for m in matches:
-                    if m.is_dir():
-                        return m
-        except Exception:
-            pass
-
-        # 3. Try without semester (search inside academic root)
-        try:
-            matches = list(self.vm.academic_root.rglob(unit_folder_name))
+        for root in roots_to_try:
+            # 1. Try direct path (in current root)
+            academic_unit_dir = root / semester / self.vm.get_canonical_title(course) / unit_folder_name
+            if academic_unit_dir.exists():
+                return academic_unit_dir
                 
-            if matches:
-                for m in matches:
-                    if m.is_dir():
-                        return m
-        except Exception:
-            pass
+            # 2. Try alternate path (Search inside root)
+            try:
+                matches = list(root.rglob(unit_folder_name))
+                if matches:
+                    for m in matches:
+                        if m.is_dir():
+                            return m
+            except Exception:
+                pass
+
+            # 3. Try without semester (rglob search inside root)
+            try:
+                matches = list(root.rglob(unit_folder_name))
+                if matches:
+                    for m in matches:
+                        if m.is_dir():
+                            return m
+            except Exception:
+                pass
 
         # 4. Fallback to hub directory
         return hub_path.parent
@@ -651,8 +696,7 @@ class AterService:
         STRICT: Extracts ordered links from the 'Connections' or 'Core Topologies' section.
         If no section is found, returns an empty list to enforce project structure.
         """
-        hubs = self.list_planner_hubs()
-        hub = next((h for h in hubs if h["id"] == hub_id), None)
+        hub = self._find_hub(hub_id)
         if not hub:
             return []
             
@@ -849,11 +893,7 @@ class AterService:
         if not self.planner_llm:
             raise ValueError("Planner AI is not configured. Go to Settings > AI Configuration and add your API key.")
 
-        hubs = self.list_planner_hubs()
-        hub = next((h for h in hubs if h["id"] == config.hubId), None)
-        if not hub:
-            # Fallback: try matching by stem (without .md extension)
-            hub = next((h for h in hubs if h["id"].replace(".md", "") == config.hubId.replace(".md", "")), None)
+        hub = self._find_hub(config.hubId)
         if not hub:
             available = [h["id"] for h in hubs]
             raise ValueError(f"Hub not found: '{config.hubId}'. Available hubs: {available}")
@@ -881,13 +921,39 @@ class AterService:
             elif "selected_atomic_notes" in config_raw and config_raw["selected_atomic_notes"] == []:
                 is_explicitly_empty = True
 
+        selected_stems = set()
+        selected_names = set()
+        selected_rel_paths = set()
+        if selected_notes:
+            for n in selected_notes:
+                selected_stems.add(Path(n).stem)
+                selected_names.add(Path(n).name)
+                selected_rel_paths.add(Path(n).as_posix())
+
         notes_to_process = []
         if not is_explicitly_empty:
             for note_path in atomic_notes:
                 if note_path.name == hub_path.name or "Possible_Questions" in note_path.name or "Practice" in note_path.name or note_path.name.startswith("_"):
                     continue
-                if selected_notes and note_path.stem not in selected_notes and note_path.name not in selected_notes:
-                    continue
+                if selected_notes:
+                    # Robust matching logic
+                    try:
+                        rel_p = note_path.relative_to(self.vm.vault_path).as_posix()
+                    except ValueError:
+                        rel_p = note_path.as_posix()
+
+                    match_found = False
+                    if note_path.stem in selected_stems:
+                        match_found = True
+                    elif note_path.name in selected_names:
+                        match_found = True
+                    elif rel_p in selected_rel_paths:
+                        match_found = True
+                    elif any(n.endswith(rel_p) or rel_p.endswith(n) for n in selected_rel_paths):
+                        match_found = True
+
+                    if not match_found:
+                        continue
                 notes_to_process.append(note_path)
 
         if not notes_to_process:
@@ -936,6 +1002,8 @@ class AterService:
         
         distribution = config.questionDistribution
         total_q = sum(distribution.values())
+        if total_q <= 0:
+            raise ValueError("Total requested questions is 0. Please ensure the question distribution specifies at least one question type with a count greater than 0.")
         
         dist_str = ", ".join([f"{count} {type}" for type, count in distribution.items() if count > 0])
         
@@ -2147,7 +2215,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             "current_batch": 0,
             "total_batches": total_batches,
             "processed_notes": [],
-            "target_hub": next((h for h in self.list_planner_hubs() if h["id"] == target_hub_id), None) if target_hub_id else None,
+            "target_hub": self._find_hub(target_hub_id) if target_hub_id else None,
             "messages": [] # We don't need to persist messages anymore if we use the Agent pattern
         }
         
@@ -2231,10 +2299,10 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         
         if anchored_hub_id:
             session["metadata"]["anchored_hub_id"] = anchored_hub_id
-            session["target_hub"] = next((h for h in self.list_planner_hubs() if h["id"] == anchored_hub_id), None)
+            session["target_hub"] = self._find_hub(anchored_hub_id)
         elif session.get("metadata", {}).get("anchored_hub_id"):
             saved_id = session["metadata"]["anchored_hub_id"]
-            session["target_hub"] = next((h for h in self.list_planner_hubs() if h["id"] == saved_id), None)
+            session["target_hub"] = self._find_hub(saved_id)
         
         # THIN CONTEXT PROTOCOL
         initial_messages = session["messages"][:2]

@@ -121,7 +121,7 @@ export default function Onboarding() {
         aiProvider: provider,
         displayName: name,
         inboxPath: `${vaultPath}/Inbox`,
-        academicFolderPath: 'database',
+        academicFolderPath: 'Notes',
         autoDeploy: true,
         isProgramConfigured: true
       })

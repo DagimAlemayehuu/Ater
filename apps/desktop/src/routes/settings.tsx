@@ -53,8 +53,10 @@ const SettingsCard = ({title, value, children, onEdit, isEditing, onSave, onCanc
   </Card>
 )
 
-const parseOptionalNumber = (value: string) => {
-  const trimmed = value.trim()
+const parseOptionalNumber = (value: any) => {
+  if (value === undefined || value === null) return undefined
+  const str = typeof value === 'string' ? value : String(value)
+  const trimmed = str.trim()
   if (!trimmed) return undefined
   const parsed = Number(trimmed)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
@@ -65,6 +67,7 @@ export default function Settings() {
   const {clearHistory: clearLocalHistory} = usePomodoroStore()
   
   const [editingKey, setEditingKey] = useState<string | null>(null)
+  const [selectedVaultKeyId, setSelectedVaultKeyId] = useState<string | null>(null)
   
   // Local state for edits
   const [aiEdit, setAiEdit] = useState({provider: '', key: '', model: '', baseUrl: '', maxTpm: '', maxRpm: '', maxTpd: '', maxRpd: '', maxConcurrency: ''})
@@ -107,6 +110,8 @@ export default function Settings() {
 
   const startAiEdit = () => {
     setEditingKey('primary_engine')
+    const matchingKey = config?.savedApiKeys?.find(k => k.key === config?.aiApiKey)
+    setSelectedVaultKeyId(matchingKey ? matchingKey.id : null)
     setAiEdit({
       provider: config?.aiProvider || 'google',
       key: config?.aiApiKey || '',
@@ -141,45 +146,77 @@ export default function Settings() {
   }
 
   const handleSave = async () => {
-    if (editingKey === 'primary_engine') {
-      await saveConfig({
-        aiProvider: aiEdit.provider,
-        aiApiKey: aiEdit.key,
-        aiModel: aiEdit.model,
-        aiBaseUrl: aiEdit.baseUrl,
-        aiMaxTpm: parseOptionalNumber(aiEdit.maxTpm),
-        aiMaxRpm: parseOptionalNumber(aiEdit.maxRpm),
-        aiMaxTpd: parseOptionalNumber(aiEdit.maxTpd),
-        aiMaxRpd: parseOptionalNumber(aiEdit.maxRpd),
-        aiMaxConcurrency: parseOptionalNumber(aiEdit.maxConcurrency)
-      })
-      try {
-        await sidecarApi.aterWatcherToggle();
-      } catch (e) {
-        console.error('[Tauri Native RAG] Failed to sync watcher after saving API keys:', e);
+    try {
+      if (editingKey === 'primary_engine') {
+        const updatedConfig: any = {
+          aiProvider: aiEdit.provider,
+          aiApiKey: aiEdit.key,
+          aiModel: aiEdit.model,
+          aiBaseUrl: aiEdit.baseUrl,
+          aiMaxTpm: parseOptionalNumber(aiEdit.maxTpm),
+          aiMaxRpm: parseOptionalNumber(aiEdit.maxRpm),
+          aiMaxTpd: parseOptionalNumber(aiEdit.maxTpd),
+          aiMaxRpd: parseOptionalNumber(aiEdit.maxRpd),
+          aiMaxConcurrency: parseOptionalNumber(aiEdit.maxConcurrency)
+        }
+
+        // Sync active modifications back to Key Vault if a key was selected
+        if (selectedVaultKeyId) {
+          const currentKeys = config?.savedApiKeys || []
+          const updatedKeys = currentKeys.map(k => {
+            if (k.id === selectedVaultKeyId) {
+              return {
+                ...k,
+                provider: aiEdit.provider,
+                key: aiEdit.key,
+                model: aiEdit.model || undefined,
+                baseUrl: aiEdit.provider === 'custom' ? aiEdit.baseUrl : undefined,
+                maxTpm: parseOptionalNumber(aiEdit.maxTpm),
+                maxRpm: parseOptionalNumber(aiEdit.maxRpm),
+                maxTpd: parseOptionalNumber(aiEdit.maxTpd),
+                maxRpd: parseOptionalNumber(aiEdit.maxRpd),
+                maxConcurrency: parseOptionalNumber(aiEdit.maxConcurrency)
+              }
+            }
+            return k
+          })
+          updatedConfig.savedApiKeys = updatedKeys
+        }
+
+        await saveConfig(updatedConfig)
+        try {
+          await sidecarApi.aterWatcherToggle();
+        } catch (e) {
+          console.error('[Tauri Native RAG] Failed to sync watcher after saving API keys:', e);
+        }
+      } else if (editingKey === 'timer_settings') {
+        await saveConfig({
+          pomodoroWorkDuration: pomodoroEdit.work,
+          pomodoroShortBreakDuration: pomodoroEdit.short,
+          pomodoroLongBreakDuration: pomodoroEdit.long,
+          pomodoroSessionsBeforeLongBreak: pomodoroEdit.sessions
+        })
+      } else if (editingKey === 'folder_settings') {
+        await saveConfig({
+          obsidianVaultPath: vaultEdit.vaultPath,
+          inboxPath: vaultEdit.inboxPath,
+          academicFolderPath: vaultEdit.academicPath,
+          autoDeploy: vaultEdit.autoDeploy
+        })
+        // Always sync watcher state when folder settings are saved
+        try {
+          await sidecarApi.aterWatcherToggle();
+        } catch (e) {
+          console.error('[Tauri Native RAG] Failed to sync watcher after saving folders:', e);
+        }
       }
-    } else if (editingKey === 'timer_settings') {
-      await saveConfig({
-        pomodoroWorkDuration: pomodoroEdit.work,
-        pomodoroShortBreakDuration: pomodoroEdit.short,
-        pomodoroLongBreakDuration: pomodoroEdit.long,
-        pomodoroSessionsBeforeLongBreak: pomodoroEdit.sessions
-      })
-    } else if (editingKey === 'folder_settings') {
-      await saveConfig({
-        obsidianVaultPath: vaultEdit.vaultPath,
-        inboxPath: vaultEdit.inboxPath,
-        academicFolderPath: vaultEdit.academicPath,
-        autoDeploy: vaultEdit.autoDeploy
-      })
-      // Always sync watcher state when folder settings are saved
-      try {
-        await sidecarApi.aterWatcherToggle();
-      } catch (e) {
-        console.error('[Tauri Native RAG] Failed to sync watcher after saving folders:', e);
-      }
+      setEditingKey(null)
+      setSelectedVaultKeyId(null)
+      toast.success('Configuration saved successfully.')
+    } catch (err: any) {
+      console.error('[Settings] Save failed:', err)
+      toast.error('Failed to save settings: ' + err.message)
     }
-    setEditingKey(null)
   }
 
   const handleSaveProfile = async () => {
@@ -249,7 +286,21 @@ export default function Settings() {
   const handleTestConnection = async () => {
     setTestStatus({loading: true, success: null, message: ''})
     try {
-      const res = await sidecarApi.testAiConnection('primary')
+      let overrideConfig = undefined
+      if (editingKey === 'primary_engine') {
+        overrideConfig = {
+          aiProvider: aiEdit.provider,
+          aiApiKey: aiEdit.key,
+          aiModel: aiEdit.model,
+          aiBaseUrl: aiEdit.baseUrl || undefined,
+          aiMaxTpm: parseOptionalNumber(aiEdit.maxTpm),
+          aiMaxRpm: parseOptionalNumber(aiEdit.maxRpm),
+          aiMaxTpd: parseOptionalNumber(aiEdit.maxTpd),
+          aiMaxRpd: parseOptionalNumber(aiEdit.maxRpd),
+          aiMaxConcurrency: parseOptionalNumber(aiEdit.maxConcurrency),
+        }
+      }
+      const res = await sidecarApi.testAiConnection('primary', overrideConfig)
       if (res.success) {
         setTestStatus({loading: false, success: true, message: res.message || 'Authenticated successfully. System online.'})
       } else {
@@ -502,6 +553,7 @@ export default function Settings() {
                         key={k.id}
                         disabled={editingKey !== 'primary_engine'}
                         onClick={() => {
+                          setSelectedVaultKeyId(k.id);
                           setAiEdit({
                             provider: k.provider,
                             key: k.key,
@@ -654,7 +706,7 @@ export default function Settings() {
                 <div className="pt-4">
                   <button
                     onClick={() => handleTestConnection()}
-                    disabled={testStatus.loading || !config?.aiApiKey}
+                    disabled={testStatus.loading || (editingKey === 'primary_engine' ? !aiEdit.key : !config?.aiApiKey)}
                     className={cn(
                       "w-full px-4 py-3 text-[10px] font-black uppercase tracking-widest border transition-none",
                       testStatus.loading ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground" :

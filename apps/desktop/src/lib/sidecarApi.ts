@@ -352,9 +352,9 @@ export const sidecarApi = {
         }
     },
 
-    testAiConnection: async (target: 'primary' = 'primary') => {
+    testAiConnection: async (target: 'primary' = 'primary', overrideConfig?: any) => {
         try {
-            return await invoke<any>('test_ai_connection', { target })
+            return await invoke<any>('test_ai_connection', { target, overrideConfig })
         } catch (err) {
             console.error('[Tauri Native RAG] testAiConnection failed:', err)
             return { success: false, message: 'Connection failed', error: String(err) }
@@ -459,7 +459,7 @@ export const sidecarApi = {
             return await invoke<any>('ater_watcher_toggle')
         } catch (err) {
             console.error('[Tauri Native RAG] aterWatcherToggle failed:', err)
-            throw err
+            return null  // Non-critical: watcher failure must not surface as a settings save error
         }
     },
 
@@ -847,7 +847,7 @@ export const sidecarApi = {
         return {
             obsidianVaultPath: (await store.get<string>('obsidianVaultPath')) || '',
             inboxPath: (await store.get<string>('inboxPath')) || '',
-            academicFolderPath: (await store.get<string>('academicFolderPath')) || 'database',
+            academicFolderPath: (await store.get<string>('academicFolderPath')) || 'Notes',
             aiProvider: (await store.get<string>('aiProvider')) || 'google',
             aiModel: (await store.get<string>('aiModel')) || 'gemini-2.0-flash',
         }

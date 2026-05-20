@@ -259,10 +259,21 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  const res = await sidecarApi.listHubNotes(hubId); 
  const notes = Array.isArray(res?.notes) ? res.notes : [];
  setAvailableNotes(notes);
- setAdvancedConfig(prev => ({
- ...prev,
- selectedAtomicNotes: notes.map((n: any) => n.id)
-}))
+ setAdvancedConfig(prev => {
+  const totalQuestions = Object.values(prev.questionDistribution).reduce((a, b) => a + b, 0);
+  const nextDistribution = totalQuestions === 0 
+    ? { ...ZERO_DISTRIBUTION, ...PRESETS.balanced } 
+    : prev.questionDistribution;
+  
+  // Omit label property
+  const { label: _l, ...cleanedDist } = nextDistribution as any;
+  
+  return {
+    ...prev,
+    selectedAtomicNotes: notes.map((n: any) => n.path),
+    questionDistribution: cleanedDist
+  };
+ })
 } catch (err) {
  console.error("Error loading notes:", err); 
  setAvailableNotes([]);
@@ -335,6 +346,43 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     }
   }, [questions, view])
 
+  const getCleanErrorMessage = (err: any): string => {
+    if (!err) return 'Error starting.';
+    
+    let msg = '';
+    if (typeof err === 'string') {
+      msg = err;
+    } else if (err.message) {
+      msg = err.message;
+    } else {
+      try {
+        msg = JSON.stringify(err);
+      } catch {
+        msg = String(err);
+      }
+    }
+
+    const sidecarPattern = /Sidecar API returned error status \d+:\s*([\s\S]*)/i;
+    const match = msg.match(sidecarPattern);
+    if (match && match[1]) {
+      const rawDetail = match[1].trim();
+      try {
+        const parsed = JSON.parse(rawDetail);
+        if (parsed && parsed.detail) {
+          if (typeof parsed.detail === 'string') {
+            return parsed.detail;
+          } else if (typeof parsed.detail === 'object') {
+            return JSON.stringify(parsed.detail);
+          }
+        }
+      } catch {
+        return rawDetail;
+      }
+    }
+
+    return msg || 'Error starting.';
+  };
+
   const loadPastPractices = async () => {try {const res = await sidecarApi.listPractices(); setPastPractices(res.practices);} catch {console.error("Error");}}
   const loadHubs = async () => {try {const res = await sidecarApi.listHubs(); setHubs(res.hubs); if (res.hubs.length > 0) setSelectedHub(res.hubs[0].id);} catch {console.error("Error");}}
   const loadAnalytics = async () => {
@@ -352,6 +400,12 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   
 const handleStartSession = async () => {
  if (!selectedHub) {toast.error('Choose a topic.'); return;}
+ 
+ const totalQuestions = Object.values(advancedConfig.questionDistribution).reduce((a, b) => a + b, 0);
+ if (totalQuestions <= 0) {
+  toast.error('Please select at least one question type or apply a preset.');
+  return;
+ }
  
  setIsLoading(true);
  setView('loading');
@@ -387,8 +441,8 @@ const handleStartSession = async () => {
  if (advancedConfig.globalTimeLimitMinutes) setGlobalTimeLeft(advancedConfig.globalTimeLimitMinutes * 60);
  if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
 }, 1000);
-} catch (err) {
- toast.error('Error starting.'); 
+} catch (err: any) {
+ toast.error(getCleanErrorMessage(err)); 
  setView('configuring');
 } finally {setIsLoading(false);}
 }
@@ -923,14 +977,14 @@ const handleStartSession = async () => {
  <Command className="bg-transparent">
  <div className="p-3 border-b border-border flex justify-between items-center bg-muted/10">
  <span className="text-[8px] font-black uppercase text-muted-foreground/40">{availableNotes.length} Total</span>
- <Button variant="ghost" size="default" className="h-7 text-[8px] font-black uppercase" onClick={() => {if (advancedConfig.selectedAtomicNotes.length === availableNotes.length) {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: []}))} else {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: availableNotes.map(n => n.id)}))}}}>Toggle All</Button>
+ <Button variant="ghost" size="default" className="h-7 text-[8px] font-black uppercase" onClick={() => {if (advancedConfig.selectedAtomicNotes.length === availableNotes.length) {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: []}))} else {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: availableNotes.map(n => n.path)}))}}}>Toggle All</Button>
  </div>
  <CommandInput placeholder="Search..." className="h-10 text-[10px] font-black uppercase border-none" />
  <CommandList className="max-h-60 p-1">
  {availableNotes.map(note => {
- const isSelected = advancedConfig.selectedAtomicNotes.includes(note.id); 
+ const isSelected = advancedConfig.selectedAtomicNotes.includes(note.path); 
  return (
- <CommandItem key={note.id} onSelect={() => toggleAtomicNote(note.id)} className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-none text-[9px] font-black uppercase">
+ <CommandItem key={note.path} onSelect={() => toggleAtomicNote(note.path)} className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-none text-[9px] font-black uppercase">
  <div className={cn("w-3 h-3 border flex items-center justify-center rounded-none ", isSelected ? "bg-foreground border-foreground text-background" : "border-border")}>{isSelected && <Check size={8} />}</div>
  <span className="truncate">{note.title}</span>
  </CommandItem>

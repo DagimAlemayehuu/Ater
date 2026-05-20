@@ -109,7 +109,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     aiMaxConcurrency: undefined,
     obsidianVaultPath: '',
     inboxPath: '',
-    academicFolderPath: 'database',
+    academicFolderPath: 'Notes',
     autoDeploy: false,
     strategistPrompt: DEFAULT_SYSTEM_PROMPT_STRATEGIST,
     strategistSliders: '',
@@ -159,10 +159,11 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const inboxPath = (await store.get<string>('inboxPath')) || '';
                 let academicFolderPath = (await store.get<string>('academicFolderPath')) || DEFAULT_CONFIG.academicFolderPath;
                 
-                // ── MIGRATION: Force legacy "1-Academic" or "Notes" to "database" ──
-                if (academicFolderPath === '1-Academic' || academicFolderPath === 'Notes') {
-                    academicFolderPath = 'database';
-                    await store.set('academicFolderPath', 'database');
+                // ── MIGRATION: 'database' was wrongly used as academic root. Correct to 'Notes'. ──
+                // Atomic notes belong in Notes/, NOT database/ (which is reserved for hubs/metadata).
+                if (academicFolderPath === 'database' || academicFolderPath === '1-Academic') {
+                    academicFolderPath = 'Notes';
+                    await store.set('academicFolderPath', 'Notes');
                     await store.save();
                 }
                 const autoDeploy = (await store.get<boolean>('autoDeploy')) ?? false;
@@ -273,9 +274,15 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const store = await load(STORE_FILENAME, { autoSave: true, defaults: DEFAULT_CONFIG });
             const updatedConfig = { ...config, ...newConfig } as any;
 
-            // Update store for keys present in newConfig
+            // Update store — skip undefined values (not JSON-serializable by Tauri IPC).
+            // Delete the key from the store instead so it cleanly reverts to default.
             for (const key of Object.keys(newConfig)) {
-                await store.set(key, (newConfig as any)[key]);
+                const val = (newConfig as any)[key];
+                if (val === undefined) {
+                    try { await store.delete(key); } catch { /* key may not exist yet */ }
+                } else {
+                    await store.set(key, val);
+                }
             }
 
             await store.save();
