@@ -184,12 +184,16 @@ jobs:
               gh release upload "$TAG" "Ater-${{ matrix.arch }}.dmg" --repo DagimAlemayehuu/Ater_Releases --clobber
             fi
 
-            TAR_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/ -name "*.app.tar.gz" | head -n 1 || echo "")
+            TAR_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/macos/ -name "*.app.tar.gz" | head -n 1 || echo "")
             if [ -f "$TAR_PATH" ]; then
-              gh release upload "$TAG" "$TAR_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+              # Force versioned name for updater
+              VERSION_TAR="Ater_${TAG#v}_${{ matrix.arch }}.app.tar.gz"
+              cp "$TAR_PATH" "$VERSION_TAR"
+              echo "Uploading versioned TAR: $VERSION_TAR"
+              gh release upload "$TAG" "$VERSION_TAR" --repo DagimAlemayehuu/Ater_Releases --clobber
             fi
             
-            SIG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/ -name "*.app.tar.gz.sig" | head -n 1 || echo "")
+            SIG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/macos/ -name "*.app.tar.gz.sig" | head -n 1 || echo "")
             if [ -f "$SIG_PATH" ]; then
               gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
             fi
@@ -204,12 +208,16 @@ jobs:
               gh release upload "$TAG" "Ater_setup.exe" --repo DagimAlemayehuu/Ater_Releases --clobber
             fi
 
-            ZIP_PATH=$(find apps/desktop/src-tauri/target/release/bundle/ -name "*.zip" | head -n 1 || echo "")
+            ZIP_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*.zip" | head -n 1 || echo "")
             if [ -f "$ZIP_PATH" ]; then
-              gh release upload "$TAG" "$ZIP_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+              # Force versioned name for updater
+              VERSION_ZIP="Ater_${TAG#v}_x64-setup.nsis.zip"
+              cp "$ZIP_PATH" "$VERSION_ZIP"
+              echo "Uploading versioned ZIP: $VERSION_ZIP"
+              gh release upload "$TAG" "$VERSION_ZIP" --repo DagimAlemayehuu/Ater_Releases --clobber
             fi
 
-            SIG_PATH=$(find apps/desktop/src-tauri/target/release/bundle/ -name "*.zip.sig" | head -n 1 || echo "")
+            SIG_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*.zip.sig" | head -n 1 || echo "")
             if [ -f "$SIG_PATH" ]; then
               gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
             fi
