@@ -1,21 +1,22 @@
 ---
-title: Android_Development
-course: Oop_With_Java
-unit: '1'
-semester: Winter2026
-mode: CS-SOFTWARE
-type: atomic_note
-hub: "[[1_Object_Oriented_Programming_Hub]]"
-source: "[[Inbox/Generated/Winter2026/Oop_With_Java/Chapter1.pdf]]"
-date: '2026-05-20'
-prerequisites: []
-source_pages:
-- 2
-- 3
-- 20
-- 25
+course: "Oop_With_Java"
+date: "2026-05-20"
 generated: true
+hub: "[[1_Object_Oriented_Programming_Hub]]"
+mode: "CS-SOFTWARE"
+prerequisites:
+
 read: false
+semester: "Winter2026"
+source: "[[Inbox/Generated/Winter2026/Oop_With_Java/Chapter1.pdf]]"
+source_pages:
+ - "2"
+ - "3"
+ - "20"
+ - "25"
+title: "Android_Development"
+type: "atomic_note"
+unit: 1
 ---
 
 ## Mental Model

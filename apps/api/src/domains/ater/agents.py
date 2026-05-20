@@ -1494,7 +1494,7 @@ class QuizQuestionDict(BaseModel):
     question: str = Field(description="The hostile, source-grounded question prompt")
     options: Optional[Dict[str, str]] = Field(default=None, description="For mcq: dict with EXACTLY 4 keys 'A', 'B', 'C', 'D' mapping to plausible options. None for all other question types.")
     answer: Any = Field(description="The correct answer. For MCQ: single letter ('A', 'B', 'C', or 'D'). For true_false: boolean (true or false). For others: the exact correct short answer or model explanation.")
-    explanation: str = Field(description="Pedagogical, step-by-step reasoning explaining why the correct answer is correct and others are wrong.")
+    explanation: Optional[str] = Field(default=None, description="Pedagogical, step-by-step reasoning explaining why the correct answer is correct and others are wrong.")
     required_keywords: Optional[List[str]] = Field(default=None, description="For writing/scenario/synthesis/debug/trace: a list of exactly 3-5 technical keywords that must be present in the answer. None for other question types.")
     content: Optional[str] = Field(default=None, description="For code/debug/calculation/data_analysis: code snippet, buggy code, or data table content. None for other types.")
     textWithBlanks: Optional[str] = Field(default=None, description="For fill_in: the text containing blanks marked with [[blank]]. None for other types.")
@@ -1594,7 +1594,7 @@ QUIZ LAWS:
                     q_dict = {
                         "type": q.type,
                         "question": q.question,
-                        "explanation": q.explanation,
+                        "explanation": q.explanation or f"Self-evident based on the core mechanics of {title_readable}.",
                         "answer": q.answer
                     }
                     if q.options: q_dict["options"] = q.options

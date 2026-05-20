@@ -861,4 +861,19 @@ export const sidecarApi = {
             throw err
         }
     },
+    getPracticeAnalytics: async () => {
+        try {
+            return await invoke<any>('get_practice_analytics')
+        } catch (err) {
+            console.error('[Tauri Native RAG] getPracticeAnalytics failed:', err)
+            return { modalities: {}, weakest_concepts: [] }
+        }
+    },
+    logPracticeAttempt: async (noteId: string, questionType: string, isCorrect: boolean, timeTakenSeconds: number) => {
+        try {
+            return await invoke<any>('log_practice_attempt', { noteId, questionType, isCorrect, timeTakenSeconds })
+        } catch (err) {
+            console.error('[Tauri Native RAG] logPracticeAttempt failed:', err)
+        }
+    },
 }

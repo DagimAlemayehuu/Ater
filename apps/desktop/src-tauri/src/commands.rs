@@ -1146,8 +1146,12 @@ pub async fn list_hubs(app_handle: tauri::AppHandle) -> Result<serde_json::Value
     walk_dir(&vault_path, &vault_path, &mut files)?;
     
     let mut hubs = Vec::new();
+    let mut seen_paths = std::collections::HashSet::new();
     for f in files {
         if !f.is_dir && f.path.ends_with(".md") {
+            if !seen_paths.insert(f.path.clone()) {
+                continue;
+            }
             let is_hub_file = f.name.ends_with("_Hub.md");
             let full_path = vault_path.join(&f.path);
             if let Ok(content) = std::fs::read_to_string(&full_path) {
@@ -1202,7 +1206,8 @@ pub async fn list_hub_notes(
     walk_dir(&vault_path, &vault_path, &mut files)?;
     
     // Extract only the filename stem of the hub_id to handle directory nesting consistently
-    let hub_filename = hub_id.split('/').last().unwrap_or(&hub_id).to_string();
+    let normalized_hub_id = hub_id.replace('\\', "/");
+    let hub_filename = normalized_hub_id.split('/').last().unwrap_or(&normalized_hub_id).to_string();
     let normalized_hub = hub_filename.to_lowercase().replace(' ', "_").replace("_hub", "");
     
     let mut notes = Vec::new();
@@ -1218,7 +1223,8 @@ pub async fn list_hub_notes(
                             .to_lowercase()
                             .replace(' ', "_")
                             .replace("_hub", "");
-                        let clean_hub_filename = clean_hub.split('/').last().unwrap_or(&clean_hub).to_string();
+                        let clean_hub_normalized = clean_hub.replace('\\', "/");
+                        let clean_hub_filename = clean_hub_normalized.split('/').last().unwrap_or(&clean_hub_normalized).to_string();
                         if clean_hub_filename == normalized_hub {
                             let mut note = serde_json::Map::new();
                             note.insert("path".to_string(), serde_json::Value::String(f.path.clone()));
@@ -1902,6 +1908,35 @@ pub async fn generate_practice(
     payload.insert("hub_id".to_string(), serde_json::Value::String(hub_id));
     payload.insert("config".to_string(), config_payload);
     proxy_post(sidecar_config.port, "/api/practice/generate", &serde_json::Value::Object(payload), headers).await
+}
+
+#[tauri::command]
+pub async fn get_practice_analytics(
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    proxy_get(sidecar_config.port, "/api/practice/analytics", headers).await
+}
+
+#[tauri::command]
+pub async fn log_practice_attempt(
+    note_id: String,
+    question_type: String,
+    is_correct: bool,
+    time_taken_seconds: i64,
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    let mut payload = serde_json::Map::new();
+    payload.insert("note_id".to_string(), serde_json::Value::String(note_id));
+    payload.insert("question_type".to_string(), serde_json::Value::String(question_type));
+    payload.insert("is_correct".to_string(), serde_json::Value::Bool(is_correct));
+    payload.insert("time_taken_seconds".to_string(), serde_json::Value::Number(time_taken_seconds.into()));
+    proxy_post(sidecar_config.port, "/api/practice/log", &serde_json::Value::Object(payload), headers).await
 }
 
 #[tauri::command]

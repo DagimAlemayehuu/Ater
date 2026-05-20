@@ -138,7 +138,11 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  const [pastPractices, setPastPractices] = useState<any[]>([])
  const [currentPracticePath, setCurrentPracticePath] = useState<string | null>(null)
  const [genStatus, setGenStatus] = useState<string>('Initializing...')
- const [availableNotes, setAvailableNotes] = useState<any[]>([])
+  const [availableNotes, setAvailableNotes] = useState<any[]>([])
+  const [analytics, setAnalytics] = useState<{ modalities: Record<string, number>; weakest_concepts: any[] }>({
+    modalities: {},
+    weakest_concepts: []
+  })
   const [globalTimeLeft, setGlobalTimeLeft] = useState<number | null>(null)
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -180,6 +184,11 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
       setElapsedSec(val);
     }
   }, [view]);
+
+  const questionStartTimeRef = useRef<number>(Date.now());
+  useEffect(() => {
+    questionStartTimeRef.current = Date.now();
+  }, [currentQuestionIdx, view]);
 
   // ── Reference Vault handlers ─────────────────────────────────────────────
   const loadVaultFiles = async (hubId: string) => {
@@ -230,7 +239,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     } finally { setIsLoading(false) }
   }
 
-  useEffect(() => {loadHubs(); loadPastPractices();}, [])
+  useEffect(() => {loadHubs(); loadPastPractices(); loadAnalytics();}, [])
 
 
  useEffect(() => {
@@ -328,11 +337,21 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
 
   const loadPastPractices = async () => {try {const res = await sidecarApi.listPractices(); setPastPractices(res.practices);} catch {console.error("Error");}}
   const loadHubs = async () => {try {const res = await sidecarApi.listHubs(); setHubs(res.hubs); if (res.hubs.length > 0) setSelectedHub(res.hubs[0].id);} catch {console.error("Error");}}
+  const loadAnalytics = async () => {
+    try {
+      const res = await sidecarApi.getPracticeAnalytics();
+      setAnalytics({
+        modalities: res.modalities || {},
+        weakest_concepts: res.weakest_concepts || []
+      });
+    } catch {
+      console.error("Error loading analytics");
+    }
+  };
 
   
 const handleStartSession = async () => {
  if (!selectedHub) {toast.error('Choose a topic.'); return;}
- if (advancedConfig.selectedAtomicNotes.length === 0) {toast.error('Select notes.'); return;}
  
  setIsLoading(true);
  setView('loading');
@@ -453,26 +472,43 @@ const handleStartSession = async () => {
  }
 
   const nextQuestion = async (latestGrade?: boolean) => {
-  if (latestGrade !== undefined) setStreak(prev => latestGrade ? prev + 1 : 0);
-  if (currentQuestionIdx < questions.length - 1) {
-  setCurrentQuestionIdx(currentQuestionIdx + 1); 
-  setIsRevealed(false); 
-  setKeywordChecks({});
-  setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds || null);
- } else {
-  const newGradedAnswers = latestGrade !== undefined ? {...gradedAnswers, [questions[currentQuestionIdx].id]: latestGrade} : gradedAnswers;
-  let correct = 0;
-  const total = questions.length;
-  questions.forEach(q => {
-   if (newGradedAnswers[q.id] === true) correct++;
-  });
-  const score = Math.round((correct / (total || 1)) * 100);
+    const currentQ = questions[currentQuestionIdx];
+    if (currentQ) {
+      const isCorrect = latestGrade !== undefined ? latestGrade : gradedAnswers[currentQ.id] === true;
+      const timeTaken = Math.max(1, Math.round((Date.now() - questionStartTimeRef.current) / 1000));
+      try {
+        await sidecarApi.logPracticeAttempt(
+          currentQ.note_id || selectedHub || 'unknown',
+          currentQ.type || 'unknown',
+          isCorrect,
+          timeTaken
+        );
+      } catch (err) {
+        console.error("Failed to log practice attempt:", err);
+      }
+    }
 
-  if (currentPracticePath) await sidecarApi.updatePracticeScore(currentPracticePath, score); 
-  loadPastPractices(); 
-  setView('results'); 
- }
- }
+    if (latestGrade !== undefined) setStreak(prev => latestGrade ? prev + 1 : 0);
+    if (currentQuestionIdx < questions.length - 1) {
+      setCurrentQuestionIdx(currentQuestionIdx + 1); 
+      setIsRevealed(false); 
+      setKeywordChecks({});
+      setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds || null);
+    } else {
+      const newGradedAnswers = latestGrade !== undefined ? {...gradedAnswers, [questions[currentQuestionIdx].id]: latestGrade} : gradedAnswers;
+      let correct = 0;
+      const total = questions.length;
+      questions.forEach(q => {
+        if (newGradedAnswers[q.id] === true) correct++;
+      });
+      const score = Math.round((correct / (total || 1)) * 100);
+ 
+      if (currentPracticePath) await sidecarApi.updatePracticeScore(currentPracticePath, score); 
+      loadPastPractices(); 
+      loadAnalytics();
+      setView('results'); 
+    }
+  }
 
   const calculateScore = () => {
    let correct = 0;
@@ -601,6 +637,19 @@ const handleStartSession = async () => {
  // DASHBOARD RENDERER
  // ──────────────────────────────────────────────────────────────────────────
  if (view === 'dashboard') {
+ const getModalityScore = (types: string[]) => {
+   let sum = 0;
+   let count = 0;
+   types.forEach(t => {
+     if (analytics.modalities[t] !== undefined) {
+       sum += analytics.modalities[t];
+       count++;
+     }
+   });
+   return count > 0 ? Math.round((sum / count) * 100) : 0;
+ };
+ const hasLogs = Object.keys(analytics.modalities).length > 0;
+
  const safePractices = Array.isArray(pastPractices) ? pastPractices : [];
  const validPractices = safePractices.filter(p => p?.completed && p?.score !== undefined);
  const totalPrecision = validPractices.length ? Math.round(validPractices.reduce((acc, p) => acc + parseInt(p.score || 0), 0) / validPractices.length) : 0;
@@ -659,18 +708,25 @@ const handleStartSession = async () => {
  </div>
 
  <div className="p-8 bg-muted/5 border border-border rounded-none space-y-8">
- <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Cognitive Modalities</h3>
+ <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 flex items-center gap-2">
+ <span>Cognitive Modalities</span>
+ {!hasLogs && (
+ <span className="text-[8px] font-medium tracking-normal text-muted-foreground/30 normal-case">
+ (No practice logs yet. Start practicing to generate telemetry)
+ </span>
+ )}
+ </h3>
  <div className="grid grid-cols-3 gap-x-12 gap-y-8">
  {[
- {type: 'Choice (MCQ/TF)', p: 88},
- {type: 'Synthesis & Analysis', p: 72},
- {type: 'Logic & State Trace', p: 41},
- {type: 'Sequence & Order', p: 65},
- {type: 'Debug & Extraction', p: 29},
- {type: 'Relational Matching', p: 47},
- {type: 'Technical Fill-in', p: 54},
- {type: 'Edge Case Mastery', p: 19},
- {type: 'Industrial Application', p: 33}
+ {type: 'Choice (MCQ/TF)', p: getModalityScore(['mcq', 'true_false'])},
+ {type: 'Synthesis & Analysis', p: getModalityScore(['synthesis', 'scenario'])},
+ {type: 'Logic & State Trace', p: getModalityScore(['trace'])},
+ {type: 'Sequence & Order', p: getModalityScore(['order'])},
+ {type: 'Debug & Extraction', p: getModalityScore(['debug'])},
+ {type: 'Relational Matching', p: getModalityScore(['matching'])},
+ {type: 'Technical Fill-in', p: getModalityScore(['fill_in'])},
+ {type: 'Edge Case Mastery', p: getModalityScore(['calculation', 'data_analysis'])},
+ {type: 'Industrial Application', p: getModalityScore(['code'])}
  ].map((stat, i) => (
  <div key={i} className="space-y-3">
  <div className="flex justify-between text-[9px] font-black uppercase tracking-[0.2em]">

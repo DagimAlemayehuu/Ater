@@ -606,7 +606,7 @@ class AterService:
         """Resolves the academic unit directory for a given hub.
         If the direct path (Semester/Course/Unit) doesn't exist, it performs a search.
         """
-        hub_path = Path(hub["path"])
+        hub_path = self.vm.vault_path / hub["path"]
         semester = hub.get("semester") or "General"
         course = hub.get("course") or "General_Knowledge"
         unit_num = hub.get("unit", "")
@@ -656,7 +656,7 @@ class AterService:
         if not hub:
             return []
             
-        hub_path = Path(hub["path"])
+        hub_path = self.vm.vault_path / hub["path"]
         unit_dir = self._get_unit_dir(hub)
         
         # 1. Try to extract ordered notes from Hub content
@@ -858,7 +858,7 @@ class AterService:
             available = [h["id"] for h in hubs]
             raise ValueError(f"Hub not found: '{config.hubId}'. Available hubs: {available}")
         
-        hub_path = Path(hub["path"])
+        hub_path = self.vm.vault_path / hub["path"]
         
         unit_dir = self._get_unit_dir(hub)
         practice_dir = self.vm.academic_root / "Practice"
@@ -873,15 +873,24 @@ class AterService:
         atomic_notes = list(unit_dir.glob("*.md"))
         selected_notes = config.selectedAtomicNotes
         
-        notes_to_process = []
-        for note_path in atomic_notes:
-            if note_path.name == hub_path.name or "Possible_Questions" in note_path.name or "Practice" in note_path.name or note_path.name.startswith("_"):
-                continue
-            if selected_notes and note_path.stem not in selected_notes and note_path.name not in selected_notes:
-                continue
-            notes_to_process.append(note_path)
+        # Check if selectedAtomicNotes was explicitly provided as an empty list (0 notes selected)
+        is_explicitly_empty = False
+        if isinstance(config_raw, dict):
+            if "selectedAtomicNotes" in config_raw and config_raw["selectedAtomicNotes"] == []:
+                is_explicitly_empty = True
+            elif "selected_atomic_notes" in config_raw and config_raw["selected_atomic_notes"] == []:
+                is_explicitly_empty = True
 
-        if not notes_to_process and not selected_notes:
+        notes_to_process = []
+        if not is_explicitly_empty:
+            for note_path in atomic_notes:
+                if note_path.name == hub_path.name or "Possible_Questions" in note_path.name or "Practice" in note_path.name or note_path.name.startswith("_"):
+                    continue
+                if selected_notes and note_path.stem not in selected_notes and note_path.name not in selected_notes:
+                    continue
+                notes_to_process.append(note_path)
+
+        if not notes_to_process:
              # If no specific notes selected, we might want the Hub itself
              with open(hub_path, "r", encoding="utf-8") as f:
                 context_parts.append(f"## Hub Note: {hub['title']}\n{f.read()}")
@@ -901,14 +910,14 @@ class AterService:
             found_selected = False
 
         # 2. Add Possible Questions only if no specific notes are selected (full unit mode)
-        if not selected_notes:
+        if not selected_notes or is_explicitly_empty:
             pq_file = next(unit_dir.glob("*_Possible_Questions.md"), None)
             if pq_file:
                 with open(pq_file, "r", encoding="utf-8") as f:
                     context_parts.append(f"## Reference Questions\n{f.read()}")
         
         # STRICT ERROR: If notes were selected but none were found/processed, abort.
-        if selected_notes and not found_selected:
+        if selected_notes and not found_selected and not is_explicitly_empty:
             raise Exception(f"Strict Error: None of the selected notes ({selected_notes}) were found in the unit directory.")
         
         # Randomize context order to break structural bias
@@ -2192,7 +2201,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             # Sync back to the anchored hub file if it exists
             hub_to_update = session.get("target_hub")
             if hub_to_update and hub_to_update.get("path"):
-                hub_path = Path(hub_to_update["path"])
+                hub_path = self.vm.vault_path / hub_to_update["path"]
                 if hub_path.exists():
                     try:
                         with open(hub_path, "r", encoding="utf-8") as f:
@@ -2959,7 +2968,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         
         body += "## Unit Objectives\n"
         # Gap 2 Fix: Dynamic Objectives referencing plan concepts
-        top_concepts = [f"[[{n.title}]]" for n in plan.atomic_notes[:3]]
+        top_concepts = [f"[[{self.vm.get_canonical_title(n.title)}]]" for n in plan.atomic_notes[:3]]
         body += f"- [ ] Master core technical definitions for {', '.join(top_concepts)}.\n"
         body += "- [ ] Internalize the mental models and professional analogies for each unit concept.\n"
         body += "- [ ] Trace and understand every source-anchored worked example and walkthrough.\n"
@@ -2978,9 +2987,10 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             if hasattr(note, 'prerequisites') and note.prerequisites:
                 # Find the first prerequisite that is also in this unit to act as the 'parent'
                 for prereq in note.prerequisites:
+                    canonical_prereq = self.vm.get_canonical_title(prereq)
                     for potential_parent in tree:
                         if potential_parent == note.title: continue
-                        if prereq.lower() in potential_parent.lower() or potential_parent.lower() in prereq.lower():
+                        if canonical_prereq == self.vm.get_canonical_title(potential_parent):
                             tree[potential_parent]["children"].append(note.title)
                             parent_found = True
                             break

@@ -290,6 +290,8 @@ pub fn run() {
             commands::delete_practice,
             commands::update_practice_score,
             commands::generate_practice,
+            commands::get_practice_analytics,
+            commands::log_practice_attempt,
             commands::rag_watcher_toggle,
             commands::get_rag_sync_status,
             commands::rag_sync_vault,

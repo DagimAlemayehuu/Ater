@@ -25,8 +25,10 @@ export const NoteProperties = React.memo(({
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
 
+  const safeMetadata = metadata || {}
+
   // Filter out common internal keys that shouldn't be displayed as "properties"
-  const displayMetadata = Object.entries(metadata).filter(([key]) => 
+  const displayMetadata = Object.entries(safeMetadata).filter(([key]) => 
     !['title', 'position', 'frontmatter'].includes(key.toLowerCase())
   )
 
@@ -77,7 +79,7 @@ export const NoteProperties = React.memo(({
   }
 
   const handleValueSubmit = (key: string) => {
-    const type = getPropertyType(key, metadata[key])
+    const type = getPropertyType(key, safeMetadata[key])
     let finalVal: any = editValue
     
     if (type === 'list') {
@@ -116,13 +118,13 @@ export const NoteProperties = React.memo(({
     }
 
     // Source and Page Waypoint navigation
-    const sourceKey = Object.keys(metadata).find(mk => mk.toLowerCase() === 'source')
+    const sourceKey = Object.keys(safeMetadata).find(mk => mk.toLowerCase() === 'source')
     const sourcePagesPattern = /source[ _-]pages|page|pages/
     const isSourcePagesKey = sourcePagesPattern.test(k)
     
     if (sourceKey && (k === 'source' || isSourcePagesKey)) {
-      const sourceVal = metadata[sourceKey]
-      const sourcePagesKey = Object.keys(metadata).find(mk => sourcePagesPattern.test(mk.toLowerCase()))
+      const sourceVal = safeMetadata[sourceKey]
+      const sourcePagesKey = Object.keys(safeMetadata).find(mk => sourcePagesPattern.test(mk.toLowerCase()))
       
       const extractPageNumber = (v: any): number | undefined => {
         if (v === null || v === undefined) return undefined
@@ -134,7 +136,7 @@ export const NoteProperties = React.memo(({
         return match ? parseInt(match[0], 10) : undefined
       }
       
-      const pageNum = sourcePagesKey ? extractPageNumber(metadata[sourcePagesKey]) : undefined
+      const pageNum = sourcePagesKey ? extractPageNumber(safeMetadata[sourcePagesKey]) : undefined
       let cleanSource = ''
       if (Array.isArray(sourceVal) && sourceVal.length > 0) {
         const first = sourceVal[0]

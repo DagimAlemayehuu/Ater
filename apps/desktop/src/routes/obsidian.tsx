@@ -220,17 +220,17 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                    </button>
                  )}
                    <button 
-                     onClick={() => config && saveConfig({ ...config, showProperties: !config.showProperties })}
-                     className={cn(
-                       "w-8 h-8 flex items-center justify-center rounded-none border  shadow-sm",
-                        config?.showProperties 
-                        ? "bg-foreground/10 border-foreground/50 text-foreground" 
-                        : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
-                     )}
-                     title="Toggle Properties"
-                   >
-                     <Info size={14} />
-                   </button>
+                      onClick={() => config && saveConfig({ showProperties: !config.showProperties })}
+                      className={cn(
+                        "w-8 h-8 flex items-center justify-center rounded-none border  shadow-sm",
+                         config?.showProperties 
+                         ? "bg-foreground/10 border-foreground/50 text-foreground" 
+                         : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
+                      )}
+                      title="Toggle Properties"
+                    >
+                      <Info size={14} />
+                    </button>
                </div>
              )}
            </>
@@ -258,7 +258,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                         )}
                         title={`Jump to Page ${page}`}
                       >
-                        {idx + 1}
+                        {page}
                       </button>
                     ))}
                   </div>
@@ -568,19 +568,44 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  if (hubPath) {
  const hubData = await sidecarApi.readObsidianNote(hubPath);
  if (hubData.content) {
- const normalizedLabel = label.toLowerCase().trim().replace(/_/g, ' ');
- const linkA = `[[${normalizedLabel}]]`;
- const linkB = `[[${normalizedLabel.replace(/ /g, '_')}]]`;
- 
- let updated = false;
- const newBodyLines = hubData.content.split('\n').map((line: string) => {
- const ll = line.toLowerCase();
- if (ll.includes(linkA) || ll.includes(linkB)) {
- updated = true;
- return line.replace(/\[(?: |x|X)\]/, isChecked ? '[x]' : '[ ]');
-}
- return line;
-});
+          const targetNoteFile = (target || label || '')
+            .split('/')
+            .pop()
+            ?.replace(/\.md$/i, '')
+            .replace(/_/g, ' ')
+            .toLowerCase()
+            .trim() || '';
+
+          let updated = false;
+          const newBodyLines = hubData.content.split('\n').map((line: string) => {
+            const checklistMatch = line.match(/^(\s*[-*]\s+\[)([ xX])(\]\s+)(.*)/);
+            if (!checklistMatch) return line;
+
+            const prefix = checklistMatch[1];
+            const oldVal = checklistMatch[2];
+            const suffix = checklistMatch[3];
+            const remainder = checklistMatch[4];
+
+            const wikilinkRegex = /\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/gi;
+            let match;
+            let containsTarget = false;
+
+            while ((match = wikilinkRegex.exec(remainder)) !== null) {
+              const dest = match[1].trim();
+              const destBase = dest.split('/').pop()?.replace(/_/g, ' ').toLowerCase().trim() || '';
+              if (destBase === targetNoteFile) {
+                containsTarget = true;
+                break;
+              }
+            }
+
+            if (containsTarget) {
+              updated = true;
+              return `${prefix}${isChecked ? 'x' : ' '}${suffix}${remainder}`;
+            }
+
+            return line;
+          });
 
  if (updated) {
  const hubMeta: Record<string, any> = hubData.metadata ?? {};
@@ -882,6 +907,40 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
 
 const selectFile = async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = [], keepMetadata: boolean = false) => {
+    if (!keepMetadata) {
+      // Check if we are opening a PDF that matches the currently open note's source file,
+      // in which case we want to extract and preserve the waypoints from the current note's metadata
+      const isOpeningPdf = typeof path === 'string' && path.toLowerCase().endsWith('.pdf');
+      const noteSource = noteMetadata?.source_file || noteMetadata?.source;
+      let sourceMatches = false;
+      if (isOpeningPdf && noteSource) {
+        let cleanSource = '';
+        if (Array.isArray(noteSource) && noteSource.length > 0) {
+          cleanSource = noteSource[0];
+        } else if (typeof noteSource === 'string') {
+          cleanSource = noteSource;
+        }
+        cleanSource = cleanSource.replace(/^\[+/, '').replace(/\]+$/, '').split('|')[0].trim();
+        const cleanSourceBase = cleanSource.split('/').pop()?.toLowerCase();
+        const pathBase = path.split('/').pop()?.toLowerCase();
+        if (cleanSourceBase && pathBase && (cleanSourceBase === pathBase || path.toLowerCase().includes(cleanSource.toLowerCase()))) {
+          sourceMatches = true;
+        }
+      }
+
+      if (sourceMatches) {
+        const wps = Array.isArray(noteMetadata.source_pages) 
+          ? noteMetadata.source_pages 
+          : (noteMetadata.source_pages ? [noteMetadata.source_pages] : (noteMetadata.source_page ? [noteMetadata.source_page] : []));
+        const numericWaypoints = wps.map(Number).filter(n => !isNaN(n));
+        setWaypoints(numericWaypoints);
+        const wpIndex = numericWaypoints.indexOf(page);
+        setCurrentWaypointIndex(wpIndex >= 0 ? wpIndex : 0);
+      } else {
+        setWaypoints([]);
+      }
+    }
+
     // If the PDF is already active in the viewer, execute a direct jump without reloading or returning early
     if (selectedPath === path && path.toLowerCase().endsWith('.pdf')) {
       setSelectedPage(page);
