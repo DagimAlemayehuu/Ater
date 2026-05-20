@@ -283,9 +283,10 @@ class AterQueueManager:
 
     async def process_file(self, file_path_str: str):
         """Worker task for a single file."""
-        # The worker will block here if 4 tasks are already processing
-        async with self.worker_semaphore:
-            path = Path(file_path_str)
+        # The worker will block here if 4 files are already processing.
+        # Keep the semaphore for the full generation/deployment lifecycle.
+        await self.worker_semaphore.acquire()
+        path = Path(file_path_str)
         try:
             # Mark as active
             conn = self._get_conn()
@@ -432,6 +433,8 @@ class AterQueueManager:
                 pass
             self._mark_error(file_path_str)
             self.last_action = f"Error: {str(e)}"
+        finally:
+            self.worker_semaphore.release()
 
     def get_status(self) -> Dict[str, Any]:
         conn = self._get_conn()

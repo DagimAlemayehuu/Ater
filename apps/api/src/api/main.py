@@ -442,7 +442,13 @@ async def test_ai_connection(
             provider=provider,
             model_name=model,
             api_key=key,
-            temperature=0.1
+            temperature=0.1,
+            base_url=secrets.ai_base_url,
+            max_tpm=secrets.ai_max_tpm,
+            max_rpm=secrets.ai_max_rpm,
+            max_tpd=secrets.ai_max_tpd,
+            max_rpd=secrets.ai_max_rpd,
+            max_concurrency=secrets.ai_max_concurrency,
         )
         
         response = await llm.ainvoke([HumanMessage(content="Hello. Respond with exactly one word: 'Connected'.")])

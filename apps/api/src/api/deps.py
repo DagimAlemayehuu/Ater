@@ -7,6 +7,11 @@ class AppSecrets(BaseModel):
     ai_key: Optional[str] = None
     ai_model: str = "gemini-2.0-flash"
     ai_base_url: Optional[str] = None
+    ai_max_tpm: Optional[int] = None
+    ai_max_rpm: Optional[int] = None
+    ai_max_tpd: Optional[int] = None
+    ai_max_rpd: Optional[int] = None
+    ai_max_concurrency: Optional[int] = None
     
     # Level 2: Planner/Router
     planner_provider: str = "google"
@@ -39,6 +44,12 @@ async def get_app_secrets(
     x_ai_provider: str = Header("google"),
     x_ai_key: Optional[str] = Header(None),
     x_ai_model: str = Header("gemini-2.0-flash"),
+    x_ai_base_url: Optional[str] = Header(None),
+    x_ai_max_tpm: Optional[int] = Header(None),
+    x_ai_max_rpm: Optional[int] = Header(None),
+    x_ai_max_tpd: Optional[int] = Header(None),
+    x_ai_max_rpd: Optional[int] = Header(None),
+    x_ai_max_concurrency: Optional[int] = Header(None),
     
     # Level 2 Headers
     x_planner_provider: Optional[str] = Header(None),
@@ -71,6 +82,12 @@ async def get_app_secrets(
         ai_provider=primary_provider,
         ai_key=clean_ai_key,
         ai_model=x_ai_model,
+        ai_base_url=x_ai_base_url,
+        ai_max_tpm=x_ai_max_tpm,
+        ai_max_rpm=x_ai_max_rpm,
+        ai_max_tpd=x_ai_max_tpd,
+        ai_max_rpd=x_ai_max_rpd,
+        ai_max_concurrency=x_ai_max_concurrency,
         
         # Consolidate all tiers to primary to enforce "Strict Single Provider" mode
         planner_provider=primary_provider,
@@ -87,4 +104,3 @@ async def get_app_secrets(
         auto_deploy=x_auto_deploy.lower() == "true",
         google_calendar_token=x_google_calendar_token
     )
-

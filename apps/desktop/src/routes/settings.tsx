@@ -53,6 +53,13 @@ const SettingsCard = ({title, value, children, onEdit, isEditing, onSave, onCanc
   </Card>
 )
 
+const parseOptionalNumber = (value: string) => {
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  const parsed = Number(trimmed)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
 export default function Settings() {
   const {config, saveConfig} = useConfig()
   const {clearHistory: clearLocalHistory} = usePomodoroStore()
@@ -60,7 +67,7 @@ export default function Settings() {
   const [editingKey, setEditingKey] = useState<string | null>(null)
   
   // Local state for edits
-  const [aiEdit, setAiEdit] = useState({provider: '', key: '', model: ''})
+  const [aiEdit, setAiEdit] = useState({provider: '', key: '', model: '', baseUrl: '', maxTpm: '', maxRpm: '', maxTpd: '', maxRpd: '', maxConcurrency: ''})
   const [pomodoroEdit, setPomodoroEdit] = useState({work: 25, short: 5, long: 15, sessions: 4})
   const [vaultEdit, setVaultEdit] = useState({vaultPath: '', inboxPath: '', academicPath: '', autoDeploy: false})
   const [profileEdit, setProfileEdit] = useState({name: ''})
@@ -69,6 +76,9 @@ export default function Settings() {
   const [newKeyName, setNewKeyName] = useState('')
   const [newKeyProvider, setNewKeyProvider] = useState('google')
   const [newKeyValue, setNewKeyValue] = useState('')
+  const [newKeyModel, setNewKeyModel] = useState('')
+  const [newKeyBaseUrl, setNewKeyBaseUrl] = useState('')
+  const [newKeyLimits, setNewKeyLimits] = useState({maxTpm: '', maxRpm: '', maxTpd: '', maxRpd: '', maxConcurrency: ''})
   
   const [testStatus, setTestStatus] = useState<{loading: boolean, success: boolean | null, message: string}>({
     loading: false, success: null, message: ''
@@ -97,7 +107,17 @@ export default function Settings() {
 
   const startAiEdit = () => {
     setEditingKey('primary_engine')
-    setAiEdit({provider: config?.aiProvider || 'google', key: config?.aiApiKey || '', model: config?.aiModel || 'gemini-2.0-flash'})
+    setAiEdit({
+      provider: config?.aiProvider || 'google',
+      key: config?.aiApiKey || '',
+      model: config?.aiModel || 'gemini-2.0-flash',
+      baseUrl: config?.aiBaseUrl || '',
+      maxTpm: config?.aiMaxTpm?.toString() || '',
+      maxRpm: config?.aiMaxRpm?.toString() || '',
+      maxTpd: config?.aiMaxTpd?.toString() || '',
+      maxRpd: config?.aiMaxRpd?.toString() || '',
+      maxConcurrency: config?.aiMaxConcurrency?.toString() || ''
+    })
   }
 
   const startPomodoroEdit = () => {
@@ -122,7 +142,17 @@ export default function Settings() {
 
   const handleSave = async () => {
     if (editingKey === 'primary_engine') {
-      await saveConfig({aiProvider: aiEdit.provider, aiApiKey: aiEdit.key, aiModel: aiEdit.model})
+      await saveConfig({
+        aiProvider: aiEdit.provider,
+        aiApiKey: aiEdit.key,
+        aiModel: aiEdit.model,
+        aiBaseUrl: aiEdit.baseUrl,
+        aiMaxTpm: parseOptionalNumber(aiEdit.maxTpm),
+        aiMaxRpm: parseOptionalNumber(aiEdit.maxRpm),
+        aiMaxTpd: parseOptionalNumber(aiEdit.maxTpd),
+        aiMaxRpd: parseOptionalNumber(aiEdit.maxRpd),
+        aiMaxConcurrency: parseOptionalNumber(aiEdit.maxConcurrency)
+      })
       try {
         await sidecarApi.aterWatcherToggle();
       } catch (e) {
@@ -251,12 +281,22 @@ export default function Settings() {
       id: Math.random().toString(36).substring(2),
       name: newKeyName,
       provider: newKeyProvider,
-      key: newKeyValue
+      key: newKeyValue,
+      model: newKeyModel || undefined,
+      baseUrl: newKeyProvider === 'custom' ? newKeyBaseUrl : undefined,
+      maxTpm: parseOptionalNumber(newKeyLimits.maxTpm),
+      maxRpm: parseOptionalNumber(newKeyLimits.maxRpm),
+      maxTpd: parseOptionalNumber(newKeyLimits.maxTpd),
+      maxRpd: parseOptionalNumber(newKeyLimits.maxRpd),
+      maxConcurrency: parseOptionalNumber(newKeyLimits.maxConcurrency)
     }
     const currentKeys = config?.savedApiKeys || []
     await saveConfig({savedApiKeys: [...currentKeys, newKey]})
     setNewKeyName('')
     setNewKeyValue('')
+    setNewKeyModel('')
+    setNewKeyBaseUrl('')
+    setNewKeyLimits({maxTpm: '', maxRpm: '', maxTpd: '', maxRpd: '', maxConcurrency: ''})
     setIsAddingKey(false)
   }
 
@@ -340,6 +380,11 @@ export default function Settings() {
                       <span className="text-[9px] px-1.5 py-0.5 border border-border font-bold uppercase text-muted-foreground">{k.provider}</span>
                     </div>
                     <div className="text-[12px] font-mono text-muted-foreground truncate">••••••••{k.key.slice(-4)}</div>
+                    {(k.model || k.maxTpm || k.maxRpm) && (
+                      <div className="mt-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground truncate">
+                        {k.model || 'model unset'}{k.maxTpm ? ` · ${k.maxTpm} TPM` : ''}{k.maxRpm ? ` · ${k.maxRpm} RPM` : ''}
+                      </div>
+                    )}
                     
                     <button 
                       onClick={() => {deleteApiKey(k.id)}}
@@ -361,7 +406,17 @@ export default function Settings() {
                     />
                     <select
                       value={newKeyProvider}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setNewKeyProvider(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                        const provider = e.target.value
+                        setNewKeyProvider(provider)
+                        if (!newKeyModel) {
+                          if (provider === 'google') setNewKeyModel('gemini-2.0-flash')
+                          if (provider === 'openai') setNewKeyModel('gpt-4o')
+                          if (provider === 'anthropic') setNewKeyModel('claude-3-5-sonnet-latest')
+                          if (provider === 'groq') setNewKeyModel('llama-3.3-70b-versatile')
+                          if (provider === 'openrouter') setNewKeyModel('google/gemini-2.0-flash-001')
+                        }
+                      }}
                       className="w-full bg-background border border-border px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary"
                     >
                       <option value="google">Google</option>
@@ -369,12 +424,39 @@ export default function Settings() {
                       <option value="anthropic">Anthropic</option>
                       <option value="groq">Groq</option>
                       <option value="openrouter">OpenRouter</option>
+                      <option value="custom">Custom OpenAI-Compatible</option>
                     </select>
+                    <input
+                      placeholder="Model ID"
+                      value={newKeyModel}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyModel(e.target.value)}
+                      className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary"
+                    />
+                    {newKeyProvider === 'custom' && (
+                      <input
+                        placeholder="Base URL"
+                        value={newKeyBaseUrl}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyBaseUrl(e.target.value)}
+                        className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary"
+                      />
+                    )}
                     <input 
                       type="password"
                       placeholder="Secret API Key"
                       value={newKeyValue}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyValue(e.target.value)}
+                      className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input placeholder="TPM hint" value={newKeyLimits.maxTpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpm: e.target.value})} className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary" />
+                      <input placeholder="RPM hint" value={newKeyLimits.maxRpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpm: e.target.value})} className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary" />
+                      <input placeholder="TPD hint" value={newKeyLimits.maxTpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpd: e.target.value})} className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary" />
+                      <input placeholder="RPD hint" value={newKeyLimits.maxRpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpd: e.target.value})} className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary" />
+                    </div>
+                    <input
+                      placeholder="Max concurrency hint"
+                      value={newKeyLimits.maxConcurrency}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxConcurrency: e.target.value})}
                       className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary"
                     />
                     <div className="flex gap-2 pt-2">
@@ -423,7 +505,13 @@ export default function Settings() {
                           setAiEdit({
                             provider: k.provider,
                             key: k.key,
-                            model: k.provider === 'google' ? 'gemini-2.0-flash' : aiEdit.model
+                            model: k.model || (k.provider === 'google' ? 'gemini-2.0-flash' : aiEdit.model),
+                            baseUrl: k.baseUrl || '',
+                            maxTpm: k.maxTpm?.toString() || '',
+                            maxRpm: k.maxRpm?.toString() || '',
+                            maxTpd: k.maxTpd?.toString() || '',
+                            maxRpd: k.maxRpd?.toString() || '',
+                            maxConcurrency: k.maxConcurrency?.toString() || ''
                           });
                         }}
                         className={cn(
@@ -453,6 +541,7 @@ export default function Settings() {
                       if (provider === 'anthropic') defaultModel = 'claude-3-5-sonnet-latest';
                       if (provider === 'groq') defaultModel = 'llama-3.3-70b-versatile';
                       if (provider === 'openrouter') defaultModel = 'google/gemini-2.0-flash-001';
+                      if (provider === 'custom') defaultModel = aiEdit.model || 'openai-compatible-model';
                       setAiEdit({...aiEdit, provider, model: defaultModel});
                     }}
                     className="w-full bg-background border border-border px-4 py-3 text-[11px] font-bold uppercase focus:outline-none focus:border-primary disabled:opacity-50"
@@ -462,6 +551,7 @@ export default function Settings() {
                     <option value="anthropic">Anthropic</option>
                     <option value="groq">Groq (Inference-Fast)</option>
                     <option value="openrouter">OpenRouter</option>
+                    <option value="custom">Custom OpenAI-Compatible</option>
                   </select>
                 </div>
 
@@ -492,6 +582,71 @@ export default function Settings() {
                     disabled={editingKey !== 'primary_engine'}
                     value={editingKey === 'primary_engine' ? aiEdit.model : config?.aiModel || ''}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, model: e.target.value})}
+                    className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50"
+                  />
+                </div>
+
+                {(editingKey === 'primary_engine' ? aiEdit.provider : config?.aiProvider) === 'custom' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-foreground uppercase tracking-widest">Base URL</label>
+                    <input
+                      type="text"
+                      disabled={editingKey !== 'primary_engine'}
+                      value={editingKey === 'primary_engine' ? aiEdit.baseUrl : config?.aiBaseUrl || ''}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, baseUrl: e.target.value})}
+                      placeholder="https://provider.example.com/v1"
+                      className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-foreground uppercase tracking-widest">Limit Hints</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      disabled={editingKey !== 'primary_engine'}
+                      value={editingKey === 'primary_engine' ? aiEdit.maxTpm : config?.aiMaxTpm || ''}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxTpm: e.target.value})}
+                      placeholder="TPM"
+                      className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      disabled={editingKey !== 'primary_engine'}
+                      value={editingKey === 'primary_engine' ? aiEdit.maxRpm : config?.aiMaxRpm || ''}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxRpm: e.target.value})}
+                      placeholder="RPM"
+                      className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      disabled={editingKey !== 'primary_engine'}
+                      value={editingKey === 'primary_engine' ? aiEdit.maxTpd : config?.aiMaxTpd || ''}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxTpd: e.target.value})}
+                      placeholder="TPD"
+                      className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      disabled={editingKey !== 'primary_engine'}
+                      value={editingKey === 'primary_engine' ? aiEdit.maxRpd : config?.aiMaxRpd || ''}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxRpd: e.target.value})}
+                      placeholder="RPD"
+                      className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50"
+                    />
+                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    disabled={editingKey !== 'primary_engine'}
+                    value={editingKey === 'primary_engine' ? aiEdit.maxConcurrency : config?.aiMaxConcurrency || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxConcurrency: e.target.value})}
+                    placeholder="Max concurrency"
                     className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50"
                   />
                 </div>

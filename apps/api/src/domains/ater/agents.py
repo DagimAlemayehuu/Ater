@@ -71,7 +71,7 @@ DOMAIN_MATRIX = {
     "ARTS-DESIGN":        {"persona":"Designer","h1":"Design Principle","h2":"Breaking the Rule","artifact":"Composition Matrix","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
     "SKILLS-HARD":        {"persona":"Master Craftsman","h1":"Core Technique","h2":"Troubleshooting","artifact":"Execution Steps","type":"Basic Mermaid flowchart or Numbered list","question_modes":["fill_in", "scenario", "writing", "order"]},
     "SKILLS-FITNESS":     {"persona":"Kinesiologist","h1":"Biomechanics","h2":"Injury Prevention","artifact":"Movement Trace","type":"Markdown Kinematic Table","question_modes":["fill_in", "scenario", "writing", "trace"]},
-    "EDUCATION":          {"persona":"Teacher","h1":"Learning Theory","h2":"Knowledge Gaps","artifact":"Curriculum Flow","type":"Markdown Table","question_modes":["fill_in", "scenario", "writing", "matching"]},
+    "EDUCATION":          {"persona":"Inclusive Educator","h1":"How Participation Works","h2":"The Inclusion Rules","artifact":"Participation Map","type":"Markdown Table","question_modes":["fill_in", "scenario", "writing", "matching"], "sanity_check": "Stay inside education, inclusion, accessibility, stakeholders, classroom/community participation, and source-defined roles. Do not use medicine or physics unless explicitly present in the source.", "l3_law": "L3 MUST be an applied inclusion scenario where the learner identifies who is excluded, why, and what source-grounded action fixes it."},
     "RESEARCH-METHODS":   {"persona":"Researcher","h1":"Research Method","h2":"Validity Threats","artifact":"Methodology Setup","type":"Markdown Research Matrix","question_modes":["mcq", "scenario", "writing", "matching"]},
     "MATH-CALCULUS":      {"persona":"Mathematician","h1":"Limit & Rate","h2":"Boundary Conditions","artifact":"Function Trace","type":"Block LaTeX ($$)","question_modes":["mcq", "fill_in", "debug", "trace"]},
     "MATH-ALGEBRA":       {"persona":"Algebraist","h1":"Algebraic Structure","h2":"Edge Cases","artifact":"Matrix / Function","type":"Block LaTeX ($$)","question_modes":["mcq", "fill_in", "debug", "synthesis"]},
@@ -724,6 +724,10 @@ MODE_ALIASES = {
     "BUSINESS-MANAGEMENT": "BIZ-OPERATIONS",
     "BIZ-MANAGEMENT": "BIZ-OPERATIONS",
     "BIZ-ACCOUNTING": "ECON-FINANCE",
+    "EDU-PEDAGOGY": "EDUCATION",
+    "EDU-CURRICULUM": "EDUCATION",
+    "EDU-ASSESSMENT": "EDUCATION",
+    "EDU-TECHNOLOGY": "EDUCATION",
     "LAW-GENERAL": "LAW-CASE",
     "LAW-TORT": "LAW-CASE",
     "LAW-INTERNATIONAL": "LAW-CASE",
@@ -819,6 +823,7 @@ MODE_SPECIALITIES = {
     "SOC-POLITICAL": ["International Relations", "Public Policy", "Comparative Politics", "Political Campaigns"],
     "SOC-ANTHRO": ["Cultural Anthropology", "Archaeology", "Ethnography", "Linguistic Anthropology"],
     "PSYCH-SOCIOLOGY": ["Clinical Psychology", "Urban Sociology", "Organizational Behavior", "Demography"],
+    "EDUCATION": ["Inclusive Classroom Practice", "Community Participation", "Stakeholder Collaboration", "Accessible Communication"],
     "HUM-RELIGION": ["Comparative Religion", "Theological Studies", "Ethics", "Religious History"],
     "HUM-MUSIC": ["Music Theory", "Ethnomusicology", "Composition", "Acoustics"],
     "HUM-ART_HIST": ["Curating", "Art Conservation", "Visual Culture", "Museum Studies"],
@@ -1150,6 +1155,50 @@ class TheoryAgent:
         self.llm = llm
         self.domain = domain
 
+    @staticmethod
+    def _source_allows_medical_context(source_text: str) -> bool:
+        medical_terms = {
+            "medicine", "medical", "diagnosis", "diagnostic", "clinical",
+            "patient", "hospital", "healthcare", "pharmaceutical", "drug",
+            "therapy", "disease", "surgery"
+        }
+        source_lower = (source_text or "").lower()
+        return any(term in source_lower for term in medical_terms)
+
+    @staticmethod
+    def _has_forbidden_medical_drift(text: str, source_text: str) -> bool:
+        if TheoryAgent._source_allows_medical_context(source_text):
+            return False
+        drift_terms = {
+            "medical", "medicine", "diagnostic", "diagnostics", "clinical",
+            "patient", "patients", "hospital", "healthcare", "pharmaceutical",
+            "doctor", "doctors", "nurse", "surgery"
+        }
+        lower = (text or "").lower()
+        return any(term in lower for term in drift_terms)
+
+    @staticmethod
+    def _fallback_mental_model(title_readable: str, source_text: str) -> str:
+        clean = re.sub(r"\[PAGE\s+\d+\]", "", source_text or "", flags=re.IGNORECASE)
+        source_lower = clean.lower()
+        if any(term in source_lower for term in ["community", "stakeholder", "participation", "inclusive", "inclusion", "diversity"]):
+            return (
+                f"Imagine a community meeting where every person affected by {title_readable} gets a real seat at the table. "
+                f"The idea works only when people with different needs can speak, be understood, and help shape the final decision. "
+                f"If one group is left outside the conversation, the plan may look complete on paper but it will fail the people it was supposed to include."
+            )
+        if any(term in source_lower for term in ["classroom", "student", "teacher", "school", "education"]):
+            return (
+                f"Imagine a classroom activity where {title_readable} is the rule that keeps every student able to join the work. "
+                f"The teacher does not treat participation as a bonus for a few students, but as something the lesson must make possible for everyone. "
+                f"When the rule is followed, the class learns from the full group instead of only from the loudest or easiest-to-serve students."
+            )
+        return (
+            f"Imagine {title_readable} as one labeled piece in a larger source-based system. "
+            f"You understand it by asking what job that piece performs, what it connects to, and what would break if it were missing. "
+            f"The source pages are the boundary: the mental model should make those exact pages easier to understand, not replace them."
+        )
+
     async def generate_mental_model(self, note_schema, source_text: str, academic_level: str, used_scenarios: list = None) -> str:
         """
         The 'Analogy Specialist' pass. 
@@ -1159,16 +1208,16 @@ class TheoryAgent:
         title_readable = note_schema.title.replace("_", " ")
         persona = self.domain.get("persona", "Subject Matter Expert")
         
-        # S-TIER ANALOGY LAWS — now source-grounded
         sys_prompt = f"""You are a world-class Pedagogue and Expert in {persona}.
 Your ONLY job is to create ONE perfect analogy for {title_readable} based strictly on the source text below.
 
 S-TIER ANALOGY LAWS:
 1. GROUND IN SOURCE: Your analogy MUST reflect what the SOURCE TEXT actually says. Do not invent.
 2. NO CLICHÉS: Prohibited: Coffee shops, burger stands, lemonade stands, islands, pizza, traffic lights.
-3. INDUSTRY RIGOR: Use real-world scenarios relevant to: Semiconductor supply chains, Pharmaceutical R&D, Aerospace logistics, financial markets, medical diagnostics.
-4. COGNITIVE SIMPLICITY: A smart 14-year-old must understand it in one read. Start the narrative directly.
-5. EPISTEMIC FIDELITY: If the concept is Quantitative, the analogy MUST feature a resource being counted or balanced.
+3. SOURCE-RELEVANT REAL WORLD: Use a concrete scenario from the same world as the source text. For education, inclusion, stakeholders, participation, or community development, use classrooms, community meetings, public services, families, schools, local organizations, or stakeholder planning.
+4. DOMAIN QUARANTINE: Do NOT use medicine, hospitals, patients, diagnostics, drugs, finance, aerospace, semiconductors, physics, or engineering unless those ideas appear explicitly in the SOURCE TEXT.
+5. COGNITIVE SIMPLICITY: A smart 12-year-old must understand it in one read. Start the narrative directly.
+6. EPISTEMIC FIDELITY: If the concept is Quantitative, the analogy MUST feature a resource being counted or balanced.
 
 SOURCE TEXT (your only allowed knowledge base):
 {source_text[:1800]}
@@ -1182,9 +1231,13 @@ OUTPUT: Exactly 3 sentences of a vivid, concrete analogy. No preamble. Start dir
             try:
                 await governor.get_permit(expected_tokens=600)
                 res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Generate the perfect S-Tier mental model for {title_readable}.")])
-                return res.content.strip()
+                candidate = res.content.strip()
+                if self._has_forbidden_medical_drift(candidate, source_text):
+                    return self._fallback_mental_model(title_readable, source_text)
+                return candidate
             except Exception as e:
-                if attempt == 1: return f"A scenario involving the resource constraints of {title_readable} in a production environment."
+                if attempt == 1:
+                    return self._fallback_mental_model(title_readable, source_text)
                 await asyncio.sleep(governor._rpm_wait_seconds(time.time()) or 1)
 
     @staticmethod
@@ -1294,7 +1347,25 @@ LAWS:
                 await asyncio.sleep(2)
 
         if not detailed_breakdown or not academic_translation:
-            raise RuntimeError("TheoryAgent failed to generate required XML blocks.")
+            clean_source = re.sub(r"\[PAGE\s+\d+\]|\[ARCHITECT SOURCE HINT\]", "", source_text or "", flags=re.IGNORECASE)
+            sentences = [
+                s.strip()
+                for s in re.split(r"(?<=[.!?])\s+", clean_source)
+                if len(s.strip()) > 30
+            ]
+            if not detailed_breakdown:
+                basis = " ".join(sentences[:3]) or f"The source defines {title_readable} as the focused concept for this note."
+                detailed_breakdown = (
+                    f"{title_readable} means the specific idea isolated by the source excerpt. "
+                    f"To understand it, first identify the source's exact words, then ask what role the idea plays, "
+                    f"and finally connect that role to the example or rule shown in the source. {basis}"
+                )
+            if not academic_translation:
+                basis = " ".join(sentences[3:5]) or sentences[0] if sentences else ""
+                academic_translation = (
+                    f"In formal terms, {title_readable} is bounded by the attached source pages. "
+                    f"The correct technical version is whatever can be traced back to those pages, not a generic outside definition. {basis}"
+                ).strip()
 
         return {
             "plain_english": plain_english,
@@ -1345,8 +1416,9 @@ SANITY CHECK:
 
 You MUST output exactly three XML blocks in your response:
 
-1. <MENTAL_MODEL>: Exactly 3 sentences of a vivid, physical real-world scenario (e.g. semiconductor supply chains, aerospace logistics, financial markets, pharmaceutical R&D, medical diagnostics).
+1. <MENTAL_MODEL>: Exactly 3 sentences of a vivid, source-relevant real-world scenario. Use the same world as the source text; for education, inclusion, stakeholders, participation, or community development, use classrooms, community meetings, families, local organizations, public services, or stakeholder planning.
 - Prohibited analogies: {banned_analogies}
+- Domain quarantine: Do NOT use medicine, hospitals, patients, diagnostics, drugs, finance, aerospace, semiconductors, physics, or engineering unless those ideas appear explicitly in the SOURCE TEXT.
 - If Quantitative, the analogy MUST feature a resource being counted or balanced.
 - Start directly with the scenario, no preamble.
 - DO NOT output any markdown headers (such as '## Mental Model' or any line starting with '#') inside the XML block.
@@ -1495,7 +1567,8 @@ ARTIFACT LAWS:
 5. LATEX LAW: For math domains, use block LaTeX ($$...$$) for equations.
 6. SIZE LAW: Keep the artifact compact — max 12 rows for tables, max 8 nodes for Mermaid.
 7. SEMANTIC LOCK: The artifact and failure states MUST strictly align with the CORE THEORY and SOURCE TEXT. Do not introduce any new terminology.
-8. CLOSED-LOOP ALIGNMENT: The failure states and interactive quiz questions must reinforcement-test the student's understanding by referencing or extending the specific analogy and scenarios defined in the MENTAL MODEL / ANALOGY above where appropriate.
+8. DOMAIN QUARANTINE: Do NOT introduce medicine, hospitals, patients, diagnostics, drugs, finance, aerospace, physics, or engineering unless those ideas appear explicitly in the SOURCE TEXT.
+9. CLOSED-LOOP ALIGNMENT: The failure states and interactive quiz questions must reinforce-test the student's understanding by referencing or extending the specific analogy and scenarios defined in the MENTAL MODEL / ANALOGY above where appropriate.
 
 LIMITATIONS LAWS:
 - Exactly 3 bullet points, each describing a specific, source-grounded failure state or edge case for "{title_readable}".
@@ -1551,19 +1624,49 @@ QUIZ LAWS:
         if len(artifact_type_hint) > 80:
             artifact_type_hint = artifact_type_hint[:80]
         q_modes = self.domain.get("question_modes", ["mcq", "true_false", "writing"])
-        
-        return await self.generate_structured_artifacts(
-            note_title=note_title,
-            theory_body=theory_body,
-            plain_english=plain_english,
-            sanity_check=sanity_check,
-            persona=persona,
-            source_text=source_text,
-            academic_level=academic_level,
-            course_title=course_title,
-            artifact_type_hint=artifact_type_hint,
-            q_modes=q_modes
-        )
+
+        try:
+            return await self.generate_structured_artifacts(
+                note_title=note_title,
+                theory_body=theory_body,
+                plain_english=plain_english,
+                sanity_check=sanity_check,
+                persona=persona,
+                source_text=source_text,
+                academic_level=academic_level,
+                course_title=course_title,
+                artifact_type_hint=artifact_type_hint,
+                q_modes=q_modes
+            )
+        except Exception as e:
+            print(f"[PractitionerAgent] Falling back to deterministic artifact for {note_title}: {e}")
+            title_readable = note_title.replace("_", " ")
+            clean_source = re.sub(r"\[PAGE\s+\d+\]|\[ARCHITECT SOURCE HINT\]", "", source_text or "", flags=re.IGNORECASE)
+            sentences = [
+                s.strip()
+                for s in re.split(r"(?<=[.!?])\s+", clean_source)
+                if len(s.strip()) > 30
+            ][:3]
+            source_fact = sentences[0] if sentences else theory_body[:180]
+            source_fact = re.sub(r"[\r\n|]+", " ", source_fact)
+            source_fact = re.sub(r"\s+", " ", source_fact).strip()
+            artifact = (
+                "| Source Anchor | Student Meaning |\n"
+                "|---|---|\n"
+                f"| {title_readable} | The concept this note isolates. |\n"
+                f"| {source_fact[:160] or title_readable} | The source detail the explanation must stay attached to. |"
+            )
+            limitations = (
+                f"**Scope Boundary**: {title_readable} should only be interpreted through the source excerpt for this note. "
+                f"**Common Miss**: A student may memorize the name without explaining how the source says it works. "
+                f"**Check Point**: If an example cannot be tied back to the listed source pages, it should be treated as outside this atomic note."
+            )
+            return {
+                "artifact_title": self.domain.get("artifact", "Source Artifact"),
+                "artifact_content": artifact,
+                "limitations": limitations,
+                "quiz_questions": []
+            }
 
     async def generate(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> str:
         res = await self.generate_micro(note_title, theory_body, primary_language, mode=mode)
@@ -1653,7 +1756,8 @@ LAWS (non-negotiable):
 3. APPLICATION: No simple recall. Test application, tracing, or analysis.
 4. SOURCE LOCK: Every single question MUST test ONLY vocabulary and concepts found in the SOURCE CONTEXT below. If a term or idea is NOT in the source context, you MUST NOT use it.
 5. DOMAIN DRIFT PROHIBITION: You are STRICTLY FORBIDDEN from introducing advanced topics not in the source (e.g. aggregate demand curves, monetary policy, game theory, regression analysis, quantum mechanics, etc.) unless they are explicitly stated in the source context.
-6. JSON ONLY: Output ONLY the JSON array inside <QUIZ_JSON></QUIZ_JSON> tags. Zero other text.
+6. CONTEXT QUARANTINE: Do NOT use medical, hospital, patient, diagnostic, finance, aerospace, physics, or engineering scenarios unless those exact domains appear in the SOURCE CONTEXT.
+7. JSON ONLY: Output ONLY the JSON array inside <QUIZ_JSON></QUIZ_JSON> tags. Zero other text.
 {mcq_extra}
 {keyword_extra}
 
@@ -1794,7 +1898,40 @@ Domain axioms: {axioms[:300]}"""
                 
                 print(f"[QuestionAgent] Attempt {attempt+1} failed: {e}")
                 if attempt == 3:
-                    raise e
+                    clean_source = re.sub(r"\[PAGE\s+\d+\]|\[ARCHITECT SOURCE HINT\]", "", source_text or "", flags=re.IGNORECASE)
+                    fact_sentences = [
+                        s.strip()
+                        for s in re.split(r"(?<=[.!?])\s+", clean_source)
+                        if len(s.strip()) > 30
+                    ]
+                    anchor = fact_sentences[0] if fact_sentences else title_readable
+                    return [
+                        {
+                            "type": "mcq",
+                            "question": f"Which statement best matches the source's treatment of {title_readable}?",
+                            "options": {
+                                "A": anchor[:180],
+                                "B": f"{title_readable} is unrelated to the source excerpt.",
+                                "C": f"{title_readable} can be explained without checking the source.",
+                                "D": f"{title_readable} is only a label with no mechanism."
+                            },
+                            "answer": "A",
+                            "explanation": f"The correct answer is the only option anchored directly in the source context for {title_readable}."
+                        },
+                        {
+                            "type": "true_false",
+                            "question": f"{title_readable} should be understood using the exact source pages attached to this note.",
+                            "answer": True,
+                            "explanation": "The atomic note is source-bounded, so the attached pages define the valid scope."
+                        },
+                        {
+                            "type": "writing",
+                            "question": f"Explain {title_readable} in two simple sentences using one detail from the source.",
+                            "answer": f"A strong answer states what {title_readable} means and connects it to a concrete source detail.",
+                            "required_keywords": [w for w in re.findall(r"[A-Za-z]{4,}", title_readable.lower())[:3]] or ["source"],
+                            "explanation": "This checks whether the student can turn the source wording into a usable explanation."
+                        },
+                    ][:count]
 
                 wait_time = _extract_wait_time(err_msg, default=2 * (attempt + 1)) if is_429 else (attempt + 1)
                 await asyncio.sleep(wait_time)

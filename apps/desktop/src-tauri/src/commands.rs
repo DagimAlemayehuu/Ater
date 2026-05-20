@@ -192,6 +192,18 @@ pub struct AppConfig {
     pub ai_provider: Option<String>,
     #[serde(rename = "aiModel")]
     pub ai_model: Option<String>,
+    #[serde(rename = "aiBaseUrl")]
+    pub ai_base_url: Option<String>,
+    #[serde(rename = "aiMaxTpm")]
+    pub ai_max_tpm: Option<u32>,
+    #[serde(rename = "aiMaxRpm")]
+    pub ai_max_rpm: Option<u32>,
+    #[serde(rename = "aiMaxTpd")]
+    pub ai_max_tpd: Option<u32>,
+    #[serde(rename = "aiMaxRpd")]
+    pub ai_max_rpd: Option<u32>,
+    #[serde(rename = "aiMaxConcurrency")]
+    pub ai_max_concurrency: Option<u32>,
     #[serde(rename = "aiApiKey")]
     pub ai_api_key: Option<String>,
     #[serde(rename = "autoDeploy")]
@@ -371,6 +383,38 @@ fn get_proxy_headers(config: &AppConfig) -> reqwest::header::HeaderMap {
     if let Some(ref val) = config.ai_model {
         if let Ok(h_val) = HeaderValue::from_str(val) {
             headers.insert("X-AI-Model", h_val);
+        }
+    }
+    if let Some(ref val) = config.ai_base_url {
+        if !val.trim().is_empty() {
+            if let Ok(h_val) = HeaderValue::from_str(val) {
+                headers.insert("X-AI-Base-Url", h_val);
+            }
+        }
+    }
+    if let Some(val) = config.ai_max_tpm {
+        if let Ok(h_val) = HeaderValue::from_str(&val.to_string()) {
+            headers.insert("X-AI-Max-TPM", h_val);
+        }
+    }
+    if let Some(val) = config.ai_max_rpm {
+        if let Ok(h_val) = HeaderValue::from_str(&val.to_string()) {
+            headers.insert("X-AI-Max-RPM", h_val);
+        }
+    }
+    if let Some(val) = config.ai_max_tpd {
+        if let Ok(h_val) = HeaderValue::from_str(&val.to_string()) {
+            headers.insert("X-AI-Max-TPD", h_val);
+        }
+    }
+    if let Some(val) = config.ai_max_rpd {
+        if let Ok(h_val) = HeaderValue::from_str(&val.to_string()) {
+            headers.insert("X-AI-Max-RPD", h_val);
+        }
+    }
+    if let Some(val) = config.ai_max_concurrency {
+        if let Ok(h_val) = HeaderValue::from_str(&val.to_string()) {
+            headers.insert("X-AI-Max-Concurrency", h_val);
         }
     }
     if let Some(ref val) = config.obsidian_vault_path {

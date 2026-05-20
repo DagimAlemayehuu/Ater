@@ -41,6 +41,14 @@ class DomainRouter:
             # Fast-path deterministic course → domain mapping
             # ORDER MATTERS: more specific entries first
             course_map = [
+                # Education / social inclusion
+                ("special needs education", "EDUCATION"),
+                ("inclusive education", "EDUCATION"),
+                ("inclusiveness",       "EDUCATION"),
+                ("inclusion",           "EDUCATION"),
+                ("disability",          "EDUCATION"),
+                ("diversity",           "EDUCATION"),
+                ("education",           "EDUCATION"),
                 # Statistics / Probability — must come BEFORE economics to avoid ECON-METRICS bleed
                 ("statistics",          "MATH-STAT"),
                 ("probability",         "MATH-STAT"),
@@ -137,6 +145,8 @@ class DomainRouter:
         if confidence < 0.40:
             import logging
             logging.getLogger("Ater").warning(f"[Taxonomy Gap] Confidence: {confidence:.2f} for top_mode: {top_mode}. Text snippet: {text[:50]}...")
+        if confidence < 0.25:
+            return normalize_mode(parent_mode, "DOMAIN-UNKNOWN") if parent_mode else "DOMAIN-UNKNOWN"
 
         return normalize_mode(top_mode)
 

@@ -73,16 +73,30 @@ export const TokenTracker: React.FC = () => {
 
     let newKey = '';
     let newProvider = config.aiProvider;
+    let newModel = config.aiModel;
+    let newBaseUrl = config.aiBaseUrl;
 
     const found = config.savedApiKeys.find(k => k.id === newId);
     if (found) {
       newKey = found.key;
       newProvider = found.provider;
+      newModel = found.model || newModel;
+      newBaseUrl = found.baseUrl || '';
     }
 
     if (newKey && newKey !== config.aiApiKey) {
       try {
-        await saveConfig({ aiApiKey: newKey, aiProvider: newProvider });
+        await saveConfig({
+          aiApiKey: newKey,
+          aiProvider: newProvider,
+          aiModel: newModel,
+          aiBaseUrl: newBaseUrl,
+          aiMaxTpm: found?.maxTpm,
+          aiMaxRpm: found?.maxRpm,
+          aiMaxTpd: found?.maxTpd,
+          aiMaxRpd: found?.maxRpd,
+          aiMaxConcurrency: found?.maxConcurrency
+        });
         toast.success('API key updated.');
       } catch (err) {
         toast.error('Failed to update key.');

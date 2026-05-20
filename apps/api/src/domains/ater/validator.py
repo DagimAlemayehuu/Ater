@@ -51,6 +51,7 @@ HARD_FAILURE_MARKERS = [
     "Content for LIMITATIONS could not be generated.",
     "Content for QUIZ_JSON could not be generated.",
     "could not be generated.",
+    "[ARCHITECT SOURCE HINT]",
     "Content pending.",
     "Artifact generation pending.",
     "Edge cases pending.",
@@ -97,6 +98,19 @@ class AterValidator:
         return hits >= 2
 
     @staticmethod
+    def _has_medical_domain_drift(body: str, course: str, mode: str) -> bool:
+        allowed = "med" in mode.lower() or "medicine" in course.lower() or "health" in course.lower()
+        if allowed:
+            return False
+        body_lower = body.lower()
+        medical_terms = {
+            "medical diagnostics", "medical diagnostic", "clinical", "patient",
+            "patients", "hospital", "healthcare", "pharmaceutical", "diagnosis",
+            "diagnostic lab", "surgery"
+        }
+        return any(term in body_lower for term in medical_terms)
+
+    @staticmethod
     def validate_structure(content: str, course: str = "", mode: str = "", unit_stems: List[str] = None) -> Tuple[bool, List[str]]:
         """
         Returns (is_valid, error_messages).
@@ -120,9 +134,12 @@ class AterValidator:
             if not re.search(section, content, re.IGNORECASE):
                 errors.append(f"MISSING_SECTION: {section}")
         # Require at least 4 '## '-level headings total (Mental Model + h1 + h2 + The Proving Grounds)
-        heading_count = len(re.findall(r'^#{1,3}\s+\S', content, re.MULTILINE))
+        content_for_heading_count = re.sub(r"```.*?```", "", content, flags=re.DOTALL)
+        heading_count = len(re.findall(r'^#{1,3}\s+\S', content_for_heading_count, re.MULTILINE))
         if heading_count < 4:
             errors.append(f"INSUFFICIENT_SECTIONS: Found {heading_count} headings, expected ≥ 4 (v33.0 requires Mental Model, Domain H1, Domain H2, The Proving Grounds)")
+        if heading_count > 6:
+            errors.append(f"TOO_MANY_SECTIONS: Found {heading_count} headings, expected 4-6 compact atomic-note headings")
         for marker in HARD_FAILURE_MARKERS:
             if marker in content:
                 errors.append(f"HARD_FAILURE_MARKER: '{marker}' found in content. Note must be regenerated.")
@@ -234,6 +251,8 @@ class AterValidator:
         # Math Domain Guard
         if AterValidator._has_math_domain_drift(body, course, mode):
             errors.append("MATH_DOMAIN_DRIFT: Continuous math signals detected in discrete course.")
+        if AterValidator._has_medical_domain_drift(body, course, mode):
+            errors.append("MEDICAL_DOMAIN_DRIFT: Medical/clinical analogy detected in a non-medical note.")
 
         # [v33.0]: NO_INTRA_UNIT_LINKS check removed since Auto-Weaver handles link injection.
 

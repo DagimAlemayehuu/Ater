@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Cpu, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const FALLBACK_VERSION = 'v0.4.1';
+const FALLBACK_VERSION = 'v0.4.2';
 
 type ReleaseAsset = {
   name: string;

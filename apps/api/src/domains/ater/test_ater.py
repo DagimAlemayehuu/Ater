@@ -213,6 +213,58 @@ def test_router_economics_anchors():
     assert router.route("National income and aggregate demand") == "ECON-MACRO"
     assert router.route("Perfect competition and marginal cost") == "ECON-MICRO"
 
+def test_router_inclusiveness_course_lock():
+    router = DomainRouter()
+    text = "Collaborative partnership among stakeholders uses participation, communication, and community development."
+    assert router.route(text, course="Inclusiveness") == "EDUCATION"
+
+def test_router_low_confidence_does_not_force_physics():
+    router = DomainRouter()
+    text = "Inclusive development and community participation include all stakeholders in local decisions."
+    assert router.route(text) != "PHYSICS-KINEMATICS"
+
+def test_validator_blocks_medical_drift_in_non_medical_note():
+    from src.domains.ater.validator import AterValidator
+    content = """---
+title: Partnership_Definition
+type: atomic_note
+course: Inclusiveness
+---
+## Mental Model
+In a medical diagnostics lab, patients and clinical staff coordinate diagnosis.
+## How Participation Works
+[[Stakeholder_Definition]] [[Communication]] [[Respect]]
+## The Inclusion Rules
+Partnership means equal participation.
+## The Proving Grounds
+```interactive-quiz
+[]
+```
+"""
+    _, errors = AterValidator.validate_structure(content, course="Inclusiveness", mode="EDUCATION")
+    assert any("MEDICAL_DOMAIN_DRIFT" in e for e in errors)
+
+def test_validator_blocks_internal_source_hint_leak():
+    from src.domains.ater.validator import AterValidator
+    content = """---
+title: Inclusive_Development_Strategies
+type: atomic_note
+course: Inclusiveness
+---
+## Mental Model
+A community meeting includes every affected group.
+## How Participation Works
+[[Community_Development]] [[Communication]] [[Respect]]
+## The Inclusion Rules
+[ARCHITECT SOURCE HINT]
+## The Proving Grounds
+```interactive-quiz
+[]
+```
+"""
+    _, errors = AterValidator.validate_structure(content, course="Inclusiveness", mode="EDUCATION")
+    assert any("HARD_FAILURE_MARKER" in e for e in errors)
+
 # ── NEW HARDENING TESTS ────────────────────────────────────────────────────────
 
 def test_wikilink_density_enforcement():

@@ -16,7 +16,7 @@ from .deployer import AterDeployer
 from src.domains.ai.factory import ModelFactory
 from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgent, CriticAgent, HubAgent, VerifierAgent, QuizAuditorAgent, EpistemicClassifierAgent, MetaScannerAgent, DOMAIN_MATRIX, get_professional_domain, get_persona, normalize_mode
 from .router import router
-from .templates import render_atomic_note, build_skeleton_note
+from .templates import render_atomic_note, build_skeleton_note, build_dynamic_section_plan
 from .healer import LogicHealer
 from .governor import governor, DailyLimitExceededException
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
@@ -42,6 +42,25 @@ class AterService:
     _session_file = Path.home() / ".ater" / "ater" / "sessions.json"
     _status_callback: Optional[Any] = None # (session_id, message) -> None
 
+    def _model_kwargs(self) -> Dict[str, Any]:
+        return {
+            "base_url": getattr(self.secrets, "ai_base_url", None),
+            "max_tpm": getattr(self.secrets, "ai_max_tpm", None),
+            "max_rpm": getattr(self.secrets, "ai_max_rpm", None),
+            "max_tpd": getattr(self.secrets, "ai_max_tpd", None),
+            "max_rpd": getattr(self.secrets, "ai_max_rpd", None),
+            "max_concurrency": getattr(self.secrets, "ai_max_concurrency", None),
+        }
+
+    def _build_model(self, provider: str, model_name: str, api_key: str, **kwargs):
+        return ModelFactory.get_model(
+            provider=provider,
+            model_name=model_name,
+            api_key=api_key,
+            **self._model_kwargs(),
+            **kwargs,
+        )
+
     @classmethod
     def clear_sessions(cls):
         """Wipes all active and persisted sessions."""
@@ -60,7 +79,7 @@ class AterService:
         self._ensure_session_dir()
 
         # Initialize LLM with extended timeout for Ater workloads
-        self.llm = ModelFactory.get_model(
+        self.llm = self._build_model(
             provider=secrets.ai_provider,
             model_name=secrets.ai_model,
             api_key=secrets.ai_key,
@@ -79,7 +98,7 @@ class AterService:
         planner_key = secrets.planner_key or secrets.ai_key
         planner_model = secrets.planner_model or secrets.ai_model
         
-        self.planner_llm = ModelFactory.get_model(
+        self.planner_llm = self._build_model(
             provider=planner_provider,
             model_name=planner_model,
             api_key=planner_key,
@@ -91,7 +110,7 @@ class AterService:
         ) if planner_key else self.llm
 
         # Initialize the Writer Agent for creative generation
-        self.llm_creative = ModelFactory.get_model(
+        self.llm_creative = self._build_model(
             provider=secrets.ai_provider,
             model_name=secrets.ai_model,
             api_key=secrets.ai_key,
@@ -110,7 +129,7 @@ class AterService:
         self.governor = governor
         # Register the active key with the governor so daily quota is tracked per-key
         if secrets.ai_key:
-            self.governor.set_api_key(secrets.ai_key)
+            self.governor.set_api_key(secrets.ai_key, provider=secrets.ai_provider, model=secrets.ai_model, base_url=secrets.ai_base_url)
 
         from .validator import AterValidator
         self.validator = AterValidator()
@@ -349,6 +368,12 @@ class AterService:
         if (self.secrets.ai_key == secrets.ai_key and 
             self.secrets.ai_provider == secrets.ai_provider and
             self.secrets.ai_model == secrets.ai_model and
+            getattr(self.secrets, "ai_base_url", None) == getattr(secrets, "ai_base_url", None) and
+            getattr(self.secrets, "ai_max_tpm", None) == getattr(secrets, "ai_max_tpm", None) and
+            getattr(self.secrets, "ai_max_rpm", None) == getattr(secrets, "ai_max_rpm", None) and
+            getattr(self.secrets, "ai_max_tpd", None) == getattr(secrets, "ai_max_tpd", None) and
+            getattr(self.secrets, "ai_max_rpd", None) == getattr(secrets, "ai_max_rpd", None) and
+            getattr(self.secrets, "ai_max_concurrency", None) == getattr(secrets, "ai_max_concurrency", None) and
             self.secrets.planner_provider == secrets.planner_provider and
             self.secrets.planner_key == secrets.planner_key and
             self.secrets.planner_model == secrets.planner_model):
@@ -359,10 +384,10 @@ class AterService:
         
         # 2. Update Governor
         if secrets.ai_key:
-            self.governor.set_api_key(secrets.ai_key)
+            self.governor.set_api_key(secrets.ai_key, provider=secrets.ai_provider, model=secrets.ai_model, base_url=secrets.ai_base_url)
 
         # 3. Re-initialize Core LLM
-        self.llm = ModelFactory.get_model(
+        self.llm = self._build_model(
             provider=secrets.ai_provider,
             model_name=secrets.ai_model,
             api_key=secrets.ai_key,
@@ -378,7 +403,7 @@ class AterService:
         planner_key = secrets.planner_key or secrets.ai_key
         planner_model = secrets.planner_model or secrets.ai_model
         
-        self.planner_llm = ModelFactory.get_model(
+        self.planner_llm = self._build_model(
             provider=planner_provider,
             model_name=planner_model,
             api_key=planner_key,
@@ -390,7 +415,7 @@ class AterService:
         ) if planner_key else self.llm
 
         # 5. Re-initialize Creative/Writer LLM
-        self.llm_creative = ModelFactory.get_model(
+        self.llm_creative = self._build_model(
             provider=secrets.ai_provider,
             model_name=secrets.ai_model,
             api_key=secrets.ai_key,
@@ -433,7 +458,8 @@ class AterService:
             self.secrets.planner_key = clean_key
             self.secrets.utility_key = clean_key
 
-            self.llm = ModelFactory.get_model(
+            self.governor.set_api_key(clean_key, provider=self.secrets.ai_provider, model=self.secrets.ai_model, base_url=self.secrets.ai_base_url)
+            self.llm = self._build_model(
                 provider=self.secrets.ai_provider,
                 model_name=self.secrets.ai_model,
                 api_key=clean_key,
@@ -1430,6 +1456,81 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             packet = packet[:max_chars].rsplit(" ", 1)[0].strip()
         return packet or seed or snippet
 
+    def _build_concept_source_packet(
+        self,
+        full_text: str,
+        seed_context: str,
+        title: str,
+        source_pages: List[int],
+        max_chars: int = 3200,
+        max_pages: int = 4,
+    ) -> Tuple[str, List[int]]:
+        """Build a compact source packet plus multiple page anchors.
+
+        This is the core 2B-model hardening step: the model sees a small,
+        concept-local packet instead of a broad chapter slice, while metadata
+        preserves all relevant PDF pages for jump/explain flows.
+        """
+        title_words = [
+            w.lower()
+            for w in re.findall(r"[A-Za-z][A-Za-z0-9+]*", title.replace("_", " "))
+            if len(w) > 2
+        ]
+        wanted_pages = [int(p) for p in source_pages or [] if str(p).isdigit()]
+        page_blocks = re.findall(
+            r"\[PAGE\s+(\d+)\]\s*(.*?)(?=\n\[PAGE\s+\d+\]|\Z)",
+            full_text or "",
+            flags=re.DOTALL | re.IGNORECASE,
+        )
+
+        scored_pages: List[Tuple[int, int, str]] = []
+        for page_no_raw, page_text in page_blocks:
+            page_no = int(page_no_raw)
+            lower = page_text.lower()
+            score = sum(4 for w in title_words if w in lower)
+            score += sum(1 for w in title_words if any(w in s.lower() for s in re.split(r"(?<=[.!?])\s+", page_text)))
+            if page_no in wanted_pages:
+                score += 12
+            if score > 0:
+                scored_pages.append((score, page_no, page_text.strip()))
+
+        selected_pages: List[int] = []
+        for p in wanted_pages:
+            if p not in selected_pages:
+                selected_pages.append(p)
+
+        for _score, page_no, _text in sorted(scored_pages, key=lambda item: (-item[0], item[1])):
+            if page_no not in selected_pages:
+                selected_pages.append(page_no)
+            if len(selected_pages) >= max_pages:
+                break
+
+        if not selected_pages and page_blocks:
+            selected_pages = [int(page_blocks[0][0])]
+
+        page_map = {int(p): text for p, text in page_blocks}
+        packet_parts = []
+        seed = re.sub(r"\[SOURCE EXCERPT\]", "", seed_context or "", flags=re.IGNORECASE).strip()
+        if seed:
+            packet_parts.append(f"[ARCHITECT SOURCE HINT]\n{seed}")
+
+        per_page_budget = max(500, max_chars // max(1, len(selected_pages)))
+        for page_no in selected_pages:
+            page_text = page_map.get(page_no, "")
+            snippet = self._extract_source_snippet(page_text, title, page_no)
+            if len(snippet) > per_page_budget:
+                snippet = snippet[:per_page_budget].rsplit(" ", 1)[0].strip()
+            if snippet:
+                packet_parts.append(f"[PAGE {page_no}]\n{snippet}")
+
+        packet = "\n\n".join(packet_parts)
+        packet = re.sub(r"[ \t]+", " ", packet).strip()
+        if len(packet) > max_chars:
+            packet = packet[:max_chars].rsplit(" ", 1)[0].strip()
+
+        source_page_anchors = sorted(set(int(p) for p in selected_pages if str(p).isdigit()))
+        return packet or self._compact_source_context(full_text, seed_context, title, source_pages, max_chars), source_page_anchors
+
     def get_active_academic_context(self) -> Dict[str, str]:
         """Reads the vault to find the currently active semester and year."""
         try:
@@ -1831,8 +1932,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             primary_language = "C++"
         
         # --- CHUNKING LOGIC ---
-        chunk_size = 15000
-        text_chunks = [full_text[i:i+chunk_size] for i in range(0, min(len(full_text), MAX_SOURCE_CHARS), chunk_size)]
+        chunk_size = 12000
+        text_chunks = [full_text[i:i+chunk_size] for i in range(0, len(full_text), chunk_size)] or [full_text]
         all_atomic_notes = []
         all_pq_notes = []
         seen_titles = set(existing_notes)
@@ -1876,12 +1977,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         # builds appended the first 3k chars of the chapter chunk, which
                         # caused weak models and the deterministic fallback to copy
                         # unrelated slide text into every note.
-                        note_dict["source_context"] = self._compact_source_context(
+                        source_packet, source_page_anchors = self._build_concept_source_packet(
                             full_text=full_text,
                             seed_context=note_dict.get("source_context") or "",
                             title=note_dict.get("title") or "",
                             source_pages=note_dict.get("source_pages") or [],
                         )
+                        note_dict["source_context"] = source_packet
+                        note_dict["source_pages"] = source_page_anchors
                         
                         print(f"[Ater Service] Adding concept: {note.title} (Mode: {note.mode})")
                         all_atomic_notes.append(note_dict)
@@ -1896,11 +1999,6 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         all_pq_notes.append(pq.model_dump())
                         seen_titles.add(pq.title)
                         
-                # Hard limit to avoid rate-limit death
-                if len(all_atomic_notes) >= 25:
-                    print("[Ater Service] Reached maximum atomic notes (25), stopping chunking.")
-                    break
-                    
             except Exception as e:
                 err_trace = traceback.format_exc()
                 try:
@@ -1948,6 +2046,25 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 print(f"[Ater Service] Epistemic Congruence: {note['title']} -> {modality}")
         except Exception as e:
             print(f"[Ater Service] Deduplication / Sorting / Classification failed: {e}")
+
+        if not all_atomic_notes:
+            fallback_title = self.validator.sanitize_title(hub_title or "Source Overview")
+            source_packet, source_page_anchors = self._build_concept_source_packet(
+                full_text=full_text,
+                seed_context=full_text[:1000],
+                title=fallback_title,
+                source_pages=[],
+            )
+            all_atomic_notes = [{
+                "title": fallback_title,
+                "description": "Deterministic source overview created because the planner returned no atomic concepts.",
+                "source_context": source_packet,
+                "source_pages": source_page_anchors,
+                "prerequisites": [],
+                "concept_modality": "Qualitative/Definitional",
+                "mode": normalize_mode(detected_mode),
+            }]
+            print(f"[Ater Service] Planner returned no notes. Added fallback concept: {fallback_title}")
 
         # Synthesize the Hub Note with strict Title_Case_With_Underscores
         hub_base = self.validator.sanitize_title(hub_title.replace(" Hub", "").replace("_Hub", ""))
@@ -2185,6 +2302,23 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             0,
                             used_examples=session.get("used_examples", [])
                         )
+                        note_data = {
+                            "title": note_schema.title,
+                            "course": course,
+                            "unit": unit_num,
+                            "semester": semester,
+                            "mode": note_schema.mode,
+                            "date": datetime.now().strftime("%Y-%m-%d"),
+                            "prerequisites": note_schema.prerequisites,
+                            "source_pages": note_schema.source_pages,
+                            "h1_title": domain.get("h1", "The Core Logic Explained"),
+                            "h2_title": domain.get("h2", "The Textbook Translation"),
+                            "artifact_title": domain.get("artifact", "Source Artifact"),
+                            "artifact_type": domain.get("type", "Markdown Table"),
+                            "section_plan": build_dynamic_section_plan(domain, modality),
+                            "hub": f"[[{plan_obj.hub_note.title}]]",
+                            "source": self._get_source_link(plan_obj, session.get("path", ""))
+                        }
                         
                         generation_attempts = 0
                         last_candidate_markdown = None
@@ -2232,7 +2366,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             
                             try:
                                 # Dynamic LLMs: one precise for structures, one creative for prose/explanations
-                                temp_llm = ModelFactory.get_model(
+                                temp_llm = self._build_model(
                                     provider=self.secrets.ai_provider,
                                     model_name=self.secrets.ai_model,
                                     api_key=self.secrets.ai_key,
@@ -2244,7 +2378,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     max_tokens=4096,
                                 ) if self.secrets.ai_key else self.llm
                                 
-                                temp_llm_creative = ModelFactory.get_model(
+                                temp_llm_creative = self._build_model(
                                     provider=self.secrets.ai_provider,
                                     model_name=self.secrets.ai_model,
                                     api_key=self.secrets.ai_key,
@@ -2263,21 +2397,13 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
                                 # ── EXOSKELETON ASSEMBLER v29.0 (HYDRA) ──
                                 
-                                note_data = {
-                                    "title": note_schema.title,
-                                    "course": course,
-                                    "unit": unit_num,
-                                    "semester": semester,
-                                    "mode": note_schema.mode,
-                                    "date": datetime.now().strftime("%Y-%m-%d"),
-                                    "prerequisites": note_schema.prerequisites,
-                                    "source_pages": note_schema.source_pages,
-                                    "h1_title": domain["h1"],
-                                    "h2_title": domain["h2"],
-                                    "artifact_title": domain["artifact"],
-                                    "hub": f"[[{plan_obj.hub_note.title}]]",
-                                    "source": self._get_source_link(plan_obj, session.get("path", ""))
-                                }
+                                note_data.update({
+                                    "h1_title": domain.get("h1", "The Core Logic Explained"),
+                                    "h2_title": domain.get("h2", "The Textbook Translation"),
+                                    "artifact_title": domain.get("artifact", "Source Artifact"),
+                                    "artifact_type": domain.get("type", "Markdown Table"),
+                                    "section_plan": build_dynamic_section_plan(domain, modality),
+                                })
 
                                 # 1. Micro-Theory Pass
                                 self.set_status(session_id, f"{phase_prefix} Theory: [[{current_note_title}]]...")
@@ -2346,6 +2472,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     plain_english=note_data.get("mental_model", "")
                                 )
                                 note_data.update(prac_parts)
+                                note_data["dynamic3_content"] = prac_parts.get("limitations", "")
                                 # 3. Micro-Question Pass (Dynamic Assessment)
                                 # v33.0: Compressed context — saves ~8k tokens per note
                                 self.set_status(session_id, f"{phase_prefix} Assessment: [[{current_note_title}]]...")
@@ -2400,6 +2527,8 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                         for q in valid_qs:
                                             if isinstance(q, dict) and "explanation_page" not in q:
                                                 q["explanation_page"] = first_page
+                                            if isinstance(q, dict) and "source_pages" not in q:
+                                                q["source_pages"] = sorted(set(int(p) for p in source_pages if str(p).isdigit()))
 
                                 note_data["possible_questions"] = "\n```interactive-quiz\n" + json.dumps(valid_qs, indent=2) + "\n```"
 
@@ -2470,9 +2599,9 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                         failures = v_res["failures"]
                                         # ── TIERED BLOCKING (v33.1) ──────────────────────────────
                                         # HARD failures (structural): block deployment, force regen
-                                        HARD_CHECKS = {"clean_output"}
+                                        HARD_CHECKS = {"clean_output", "feynman_integrity"}
                                         # SOFT failures (advisory): log warning, allow deployment
-                                        SOFT_CHECKS = {"unique_scenario", "feynman_integrity"}
+                                        SOFT_CHECKS = {"unique_scenario"}
                                         
                                         hard_failures = [f for f in failures if f.get("check") in HARD_CHECKS]
                                         soft_failures = [f for f in failures if f.get("check") in SOFT_CHECKS]

@@ -111,7 +111,7 @@ DOMAIN_KEYWORDS = {
     "BIZ-OPERATIONS": ["operations management", "supply chain", "logistics", "inventory", "quality control", "six sigma"],
     "BIZ-MANAGEMENT": ["management", "leadership", "organization", "hr", "motivation", "delegation"],
     "BIZ-ACCOUNTING": ["accounting", "balance sheet", "income statement", "cash flow", "audit", "tax", "ledger"],
-    "EDUCATION": ["education", "school", "teaching", "literacy", "classroom"],
+    "EDUCATION": ["education", "school", "teaching", "literacy", "classroom", "inclusiveness", "inclusion", "inclusive", "special needs", "disability", "diversity", "stakeholder", "collaboration", "partnership", "community development", "participation"],
     "EDU-PEDAGOGY": ["pedagogy", "instruction", "scaffolding", "constructivism", "differentiation"],
     "EDU-CURRICULUM": ["curriculum", "syllabus", "lesson plan", "standards", "rubric"],
     "EDU-ASSESSMENT": ["assessment", "evaluation", "grading", "formative", "summative", "standardized test"],

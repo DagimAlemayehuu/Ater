@@ -37,6 +37,13 @@ export interface SavedApiKey {
     name: string;
     key: string;
     provider: string;
+    model?: string;
+    baseUrl?: string;
+    maxTpm?: number;
+    maxRpm?: number;
+    maxTpd?: number;
+    maxRpd?: number;
+    maxConcurrency?: number;
 }
 
 export interface AppConfig {
@@ -44,6 +51,12 @@ export interface AppConfig {
     aiProvider: string;
     aiApiKey: string;
     aiModel: string;
+    aiBaseUrl: string;
+    aiMaxTpm?: number;
+    aiMaxRpm?: number;
+    aiMaxTpd?: number;
+    aiMaxRpd?: number;
+    aiMaxConcurrency?: number;
     obsidianVaultPath: string;
     inboxPath: string;
     academicFolderPath: string;
@@ -88,6 +101,12 @@ export const DEFAULT_CONFIG: AppConfig = {
     aiProvider: 'google',
     aiApiKey: '',
     aiModel: 'gemini-2.0-flash',
+    aiBaseUrl: '',
+    aiMaxTpm: undefined,
+    aiMaxRpm: undefined,
+    aiMaxTpd: undefined,
+    aiMaxRpd: undefined,
+    aiMaxConcurrency: undefined,
     obsidianVaultPath: '',
     inboxPath: '',
     academicFolderPath: 'database',
@@ -124,6 +143,12 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const aiProvider = (await store.get<string>('aiProvider')) || DEFAULT_CONFIG.aiProvider;
                 const aiApiKey = (await store.get<string>('aiApiKey')) || '';
                 const aiModel = (await store.get<string>('aiModel')) || DEFAULT_CONFIG.aiModel;
+                const aiBaseUrl = (await store.get<string>('aiBaseUrl')) || '';
+                const aiMaxTpm = await store.get<number>('aiMaxTpm');
+                const aiMaxRpm = await store.get<number>('aiMaxRpm');
+                const aiMaxTpd = await store.get<number>('aiMaxTpd');
+                const aiMaxRpd = await store.get<number>('aiMaxRpd');
+                const aiMaxConcurrency = await store.get<number>('aiMaxConcurrency');
 
                 let obsidianVaultPath = await store.get<string>('obsidianVaultPath');
                 if (!obsidianVaultPath || obsidianVaultPath.trim() === '') {
@@ -175,6 +200,12 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     aiProvider,
                     aiApiKey,
                     aiModel,
+                    aiBaseUrl,
+                    aiMaxTpm,
+                    aiMaxRpm,
+                    aiMaxTpd,
+                    aiMaxRpd,
+                    aiMaxConcurrency,
                     obsidianVaultPath,
                     inboxPath,
                     academicFolderPath,
@@ -203,9 +234,23 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     const first = savedApiKeys[0];
                     loadedConfig.aiApiKey = first.key;
                     loadedConfig.aiProvider = first.provider;
+                    loadedConfig.aiModel = first.model || loadedConfig.aiModel;
+                    loadedConfig.aiBaseUrl = first.baseUrl || '';
+                    loadedConfig.aiMaxTpm = first.maxTpm;
+                    loadedConfig.aiMaxRpm = first.maxRpm;
+                    loadedConfig.aiMaxTpd = first.maxTpd;
+                    loadedConfig.aiMaxRpd = first.maxRpd;
+                    loadedConfig.aiMaxConcurrency = first.maxConcurrency;
                     // Persist this selection
                     await store.set('aiApiKey', first.key);
                     await store.set('aiProvider', first.provider);
+                    if (first.model) await store.set('aiModel', first.model);
+                    await store.set('aiBaseUrl', first.baseUrl || '');
+                    await store.set('aiMaxTpm', first.maxTpm);
+                    await store.set('aiMaxRpm', first.maxRpm);
+                    await store.set('aiMaxTpd', first.maxTpd);
+                    await store.set('aiMaxRpd', first.maxRpd);
+                    await store.set('aiMaxConcurrency', first.maxConcurrency);
                     await store.save();
                 }
 

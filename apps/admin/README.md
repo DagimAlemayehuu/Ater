@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ater Admin Portal
 
-## Getting Started
+The administrative control center for Ater, built with Next.js (App Router, Tailwind, Shadcn UI) and directly integrated with the Supabase backend. It allows administrators to govern waitlist applications, enforce DRM hardware bindings, and audit system usage statistics.
 
-First, run the development server:
+## Core Responsibilities
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Waitlist Management**: Interface to view, approve, reject, or revoke access for waiting list applicants in real-time (integrated via Supabase real-time channels).
+- **Hardware Binding & DRM Enforcement**: 
+  - Governs user profiles and hardware registration ("Burn-In" locks).
+  - Approves initial client machine bindings and manages hardware resets or access revocations via Row Level Security (RLS) policies.
+- **System Usage Auditing**: Monitors global token counts, API call rates, and telemetry logs submitted by the distributed Ater clients.
+- **Admin Authentication**: Secure gatekeeping using Supabase Auth (Cookie-based session persistence and role validation).
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Technology Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Framework**: Next.js 15 (App Router, Server Components)
+- **Styling & UI**: Tailwind CSS + Shadcn UI (Monochrome High-Fidelity theme matching the Ater ecosystem design system)
+- **Database Client**: Supabase Client SDK (`@supabase/supabase-js`)
+- **Icons**: Lucide React
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setup & Local Development
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Ensure the root dependencies are installed (`pnpm install`).
+2. Configure `.env.local` inside this directory:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+   ```
+3. Run the development server:
+   ```bash
+   pnpm dev
+   ```
+   Or launch it from the root workspace using Turborepo filter commands:
+   ```bash
+   pnpm --filter admin dev
+   ```

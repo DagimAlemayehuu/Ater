@@ -1,24 +1,14 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 
-# ── ATOMIC NOTE TEMPLATE v33.0 (4-Section, Token-Efficient) ──────────────────
-# Sections: Mental Model | Domain H1 | Domain H2 + Artifact | Proving Grounds
-# Removed from body: Walkthrough, Edge Cases, Misconceptions → offloaded to AI Chat (Layer 3)
+# ── ATOMIC NOTE TEMPLATE v34.0 (Dynamic Middle, Compact Body) ────────────────
+# Sections: Mental Model | 2-4 controlled domain sections | The Proving Grounds.
+# The model supplies content; Ater owns the headings and shape.
 ATOMIC_NOTE_TEMPLATE = """\
 ## Mental Model
 
 {mental_model}
 
-## {h1_title}
-
-{core_logic}
-
-## {h2_title}
-
-{formal_model}
-
-{artifact_label}
-
-{artifact_content}
+{dynamic_sections}
 
 ---
 
@@ -28,38 +18,106 @@ ATOMIC_NOTE_TEMPLATE = """\
 """
 
 
+def build_dynamic_section_plan(domain: Dict[str, Any], modality: str = "") -> List[Dict[str, str]]:
+    """Return a compact, deterministic middle-section plan.
+
+    The plan keeps notes short but domain-aware. It is intentionally controlled
+    code, not model-generated text, so small models cannot destabilize headings.
+    """
+    h1 = domain.get("h1") or "The Core Logic Explained"
+    h2 = domain.get("h2") or "The Textbook Translation"
+    artifact = domain.get("artifact") or "Source Artifact"
+    modality = modality or "Qualitative/Definitional"
+
+    sections = [
+        {
+            "id": "core_logic",
+            "heading": h1,
+            "purpose": "Explain the concept's core mechanism in plain, source-grounded prose.",
+        },
+        {
+            "id": "formal_model",
+            "heading": h2,
+            "purpose": "Translate the idea into the exact formal language, variables, rules, or classifications from the source.",
+        },
+    ]
+
+    if modality == "Quantitative":
+        optional_heading = "Source Calculation"
+    elif modality == "Procedural":
+        optional_heading = "Step Trace"
+    elif modality == "Comparative":
+        optional_heading = "Key Contrast"
+    elif modality == "Causal/Historical":
+        optional_heading = "Cause And Effect"
+    else:
+        optional_heading = "Where It Breaks"
+
+    sections.append(
+        {
+            "id": "source_artifact",
+            "heading": optional_heading,
+            "purpose": f"Use a compact {artifact} or failure/example note that makes the concept testable.",
+        }
+    )
+    return sections
+
+
+def _render_dynamic_sections(data: Dict[str, Any]) -> str:
+    plan = data.get("section_plan") or [
+        {"id": "core_logic", "heading": data.get("h1_title", "The Core Logic Explained")},
+        {"id": "formal_model", "heading": data.get("h2_title", "The Textbook Translation")},
+        {"id": "source_artifact", "heading": data.get("artifact_title", "Source Artifact")},
+    ]
+
+    content_map = {
+        "core_logic": data.get("core_logic", ""),
+        "formal_model": data.get("formal_model", ""),
+        "source_artifact": "\n\n".join(
+            part.strip()
+            for part in [
+                f"> **{data.get('artifact_type')}**" if data.get("artifact_type") else "",
+                data.get("artifact_content", ""),
+                data.get("dynamic3_content", ""),
+            ]
+            if part and str(part).strip()
+        ),
+    }
+
+    rendered = []
+    for section in plan[:4]:
+        heading = str(section.get("heading") or "").strip()
+        sid = section.get("id")
+        body = str(content_map.get(sid, "")).strip()
+        if not heading or not body:
+            continue
+        rendered.append(f"## {heading}\n\n{body}")
+    return "\n\n".join(rendered)
+
+
 def render_atomic_note(data: Dict[str, Any], healer=None) -> str:
     """
-    Deterministic compiler for 4-section atomic notes (v33.0).
+    Deterministic compiler for compact dynamic atomic notes (v34.0).
     Guarantees structural integrity regardless of LLM quality.
     Sections:
       1. Mental Model      — vivid analogy, grounded in source
-      2. {domain.h1}       — core mechanism, continuous prose + wikilinks
-      3. {domain.h2}       — formal model / constraints + domain artifact
-      4. The Proving Grounds — 3-question interactive quiz
-    Walkthrough, Edge Cases, and Misconceptions are offloaded to AiSidecar (Layer 3).
+      2-5. Dynamic domain/modality sections chosen by Ater
+      Last. The Proving Grounds — compact interactive quiz
     """
     if healer:
-        data["mental_model"] = healer.heal_all(data.get("mental_model", ""))
-        data["core_logic"] = healer.heal_all(data.get("core_logic", ""))
-        data["formal_model"] = healer.heal_all(data.get("formal_model", ""))
-        data["artifact_content"] = healer.heal_all(data.get("artifact_content", ""))
+        exclude = data.get("title", "")
+        data["mental_model"] = healer.heal_all(data.get("mental_model", ""), exclude_title=exclude)
+        data["core_logic"] = healer.heal_all(data.get("core_logic", ""), exclude_title=exclude)
+        data["formal_model"] = healer.heal_all(data.get("formal_model", ""), exclude_title=exclude)
+        data["artifact_content"] = healer.heal_all(data.get("artifact_content", ""), exclude_title=exclude)
+        data["dynamic3_content"] = healer.heal_all(data.get("dynamic3_content", ""), exclude_title=exclude)
         data["possible_questions"] = healer.heal_all(
             data.get("possible_questions", ""), is_quiz=True
         )
 
-    # Artifact label: show artifact type inline before the block
-    artifact_type = data.get("artifact_type", "")
-    artifact_label = f"> **{artifact_type}**" if artifact_type else ""
-
     return ATOMIC_NOTE_TEMPLATE.format(
         mental_model=data.get("mental_model", ""),
-        h1_title=data.get("h1_title", "How It Actually Works"),
-        core_logic=data.get("core_logic", ""),
-        h2_title=data.get("h2_title", "The Formal Model"),
-        formal_model=data.get("formal_model", ""),
-        artifact_label=artifact_label,
-        artifact_content=data.get("artifact_content", ""),
+        dynamic_sections=_render_dynamic_sections(data),
         possible_questions=data.get("possible_questions", ""),
     )
 
@@ -111,13 +169,13 @@ def build_skeleton_note(note_schema, source_snippet: str, domain: dict, all_titl
     domain_name = domain.get('persona', domain.get('name', 'the subject'))
     
     mental_model = (
-        f"Think of {title} as a labeled tool in a Java workshop: the label tells you what the tool is allowed to hold, and the handle tells you how other code can safely use it. "
-        + join_prose(model_sents, f"The source frames {title} as a specific Java programming idea with behavior that must be tracked precisely.")
+        f"Think of {title} as the label on one important part of a larger system: once you know what that part does, the surrounding details become much easier to organize. "
+        + join_prose(model_sents, f"The source frames {title} as a specific idea with behavior or meaning that must be tracked precisely.")
     )
     
     core_logic = (
-        f"{title} works by enforcing a specific relationship between Java code structure, stored data, and method behavior. "
-        + join_prose(logic_sents, "The source material outlines specific properties and behaviors that define this concept in practice.")
+        f"{title} works by connecting the source's key terms, rules, and examples into one usable idea. "
+        + join_prose(logic_sents, "The source material outlines specific properties and relationships that define this concept in practice.")
     )
     
     # Inject wikilinks into core_logic deterministically
@@ -145,33 +203,17 @@ def build_skeleton_note(note_schema, source_snippet: str, domain: dict, all_titl
                 core_logic += f" This concept is directly related to {', '.join(related_links)}."
     
     formal_model = (
-        f"In formal Java terminology, {title} must be read through the exact syntax and runtime behavior shown in the source. "
+        f"In formal terms, {title} must be read through the exact language and constraints shown in the source. "
         + join_prose(formal_sents, "These structural constraints ensure consistent and predictable behavior when this concept is applied.")
     )
     
-    if "Software" in domain_name or "CS" in str(domain.get("type", "")) or "Java" in clean:
-        safe_class = re.sub(r'[^A-Za-z0-9]', '', title.title()) or "ConceptDemo"
-        artifact_content = (
-            "```java\n"
-            f"class {safe_class}Demo {{\n"
-            f"    private String state;\n\n"
-            f"    {safe_class}Demo(String state) {{\n"
-            f"        this.state = state;\n"
-            "    }\n\n"
-            "    String describe() {\n"
-            f"        return \"{title}: \" + state;\n"
-            "    }\n"
-            "}\n"
-            "```"
-        )
-    else:
-        artifact_content = (
-            "| Source Detail | Meaning |\n"
-            "|---|---|\n"
-            f"| {title} | The focused concept being studied. |\n"
-            f"| {domain_name} | The disciplinary lens used for examples and questions. |\n"
-            "| Source excerpt | The only authority for definitions and constraints. |"
-        )
+    artifact_content = (
+        "| Source Detail | Meaning |\n"
+        "|---|---|\n"
+        f"| {title} | The focused concept being studied. |\n"
+        f"| {domain_name} | The disciplinary lens used for examples and questions. |\n"
+        "| Source excerpt | The only authority for definitions and constraints. |"
+    )
     
     option_a = join_prose(model_sents[:1], title)[:120].strip() or title
     page = min((int(p) for p in getattr(note_schema, "source_pages", []) if str(p).isdigit()), default=1)
@@ -215,6 +257,8 @@ def build_skeleton_note(note_schema, source_snippet: str, domain: dict, all_titl
         "formal_model": formal_model,
         "artifact_type": domain.get("type", "Markdown Table"),
         "artifact_content": artifact_content,
+        "dynamic3_content": "Use this section as a compact bridge between the source wording and the exact place where a student might get confused.",
+        "section_plan": build_dynamic_section_plan(domain, getattr(note_schema, "concept_modality", "")),
         "possible_questions": possible_questions
     }
     

@@ -5,6 +5,7 @@ import json
 import hashlib
 from pathlib import Path
 from collections import deque
+from src.domains.ai.provider_profiles import get_provider_profile
 
 class DailyLimitExceededException(Exception):
     pass
@@ -25,12 +26,15 @@ class TokenGovernor:
         self._slot_event = asyncio.Event()
         self._slot_event.set()  # Initially unblocked
 
-        # Groq Free Tier limits (llama-4-scout-17b)
-        self.max_tpm = 30000
-        self.max_rpm = 30
-        self.max_tpd = 500000
-        self.max_rpd = 5000
-        self.safety_margin = 0.70  # Conservative margin for Free Tier stability
+        self.provider = "groq"
+        self.model = ""
+        self.base_url = None
+        self.profile = get_provider_profile(self.provider, self.model)
+        self.max_tpm = self.profile.max_tpm
+        self.max_rpm = self.profile.max_rpm
+        self.max_tpd = self.profile.max_tpd
+        self.max_rpd = self.profile.max_rpd
+        self.safety_margin = self.profile.safety_margin
         
         # 60-second sliding windows
         self.request_window: deque = deque()   # request timestamps
@@ -38,7 +42,7 @@ class TokenGovernor:
 
         # Dynamic concurrency
         self.active_slots = 0
-        self.max_concurrency = 3   # Support parallel generation for massive throughput
+        self.max_concurrency = self.profile.max_concurrency
         self.min_concurrency = 1
         self.current_concurrency_limit = 1
 
@@ -49,11 +53,86 @@ class TokenGovernor:
         
         # API Key management
         self._current_key_hash = "default"
+        self._current_quota_key = "default"
         self._all_keys = []  # List of all available keys in the pool
         self._active_key = "" # The actual key string currently in use
 
-    def get_valid_api_key(self, api_keys_str: str, expected_tokens: int = 2000, expected_requests: int = 1) -> str:
+    def configure(
+        self,
+        provider: str,
+        model: str,
+        *,
+        base_url: str = None,
+        max_tpm: int = None,
+        max_rpm: int = None,
+        max_tpd: int = None,
+        max_rpd: int = None,
+        max_concurrency: int = None,
+    ) -> None:
+        profile = get_provider_profile(
+            provider,
+            model,
+            max_tpm=max_tpm,
+            max_rpm=max_rpm,
+            max_tpd=max_tpd,
+            max_rpd=max_rpd,
+            max_concurrency=max_concurrency,
+        )
+        changed = (
+            self.provider != profile.provider
+            or self.model != profile.model
+            or self.base_url != base_url
+            or self.max_tpm != profile.max_tpm
+            or self.max_rpm != profile.max_rpm
+            or self.max_tpd != profile.max_tpd
+            or self.max_rpd != profile.max_rpd
+        )
+        self.provider = profile.provider
+        self.model = profile.model
+        self.base_url = base_url
+        self.profile = profile
+        self.max_tpm = profile.max_tpm
+        self.max_rpm = profile.max_rpm
+        self.max_tpd = profile.max_tpd
+        self.max_rpd = profile.max_rpd
+        self.safety_margin = profile.safety_margin
+        self.max_concurrency = profile.max_concurrency
+        self.current_concurrency_limit = min(self.current_concurrency_limit, self.max_concurrency)
+        if changed:
+            self.request_window.clear()
+            self.token_window.clear()
+            self.cooldown_until = 0.0
+            self.current_concurrency_limit = self.min_concurrency
+            print(
+                f"[Governor] Profile set: {self.provider}/{self.model or '*'} "
+                f"(TPM={self.max_tpm}, RPM={self.max_rpm}, TPD={self.max_tpd}, RPD={self.max_rpd}, "
+                f"concurrency={self.max_concurrency})"
+            )
+
+    def _quota_key_for(self, api_key: str) -> str:
+        key_hash = hashlib.sha256((api_key or "").encode()).hexdigest()[:16]
+        scope = self.base_url or self.provider
+        model = self.model or "*"
+        return f"{scope}:{model}:{key_hash}"
+
+    def update_limits_from_provider(self, requests_limit: int = None, tokens_limit: int = None) -> None:
+        changed = False
+        if tokens_limit and int(tokens_limit) > 0 and int(tokens_limit) != self.max_tpm:
+            self.max_tpm = int(tokens_limit)
+            changed = True
+        if requests_limit and int(requests_limit) > 0 and int(requests_limit) != self.max_rpm:
+            self.max_rpm = int(requests_limit)
+            changed = True
+        if changed:
+            self.current_concurrency_limit = self.min_concurrency
+            self.request_window.clear()
+            self.token_window.clear()
+            print(f"[Governor] Learned provider limits: TPM={self.max_tpm}, RPM={self.max_rpm}")
+
+    def get_valid_api_key(self, api_keys_str: str, expected_tokens: int = 2000, expected_requests: int = 1, provider: str = None, model: str = None, base_url: str = None) -> str:
         """Selects the first API key from a comma-separated list that hasn't exceeded daily limits."""
+        if provider or model or base_url:
+            self.configure(provider or self.provider, model or self.model, base_url=base_url or self.base_url)
         if not api_keys_str:
             return ""
         
@@ -84,8 +163,8 @@ class TokenGovernor:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 for k in keys:
-                    key_hash = hashlib.sha256(k.encode()).hexdigest()[:16]
-                    cursor.execute('SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND api_key_hash = ?', (cutoff_24h, key_hash))
+                    quota_key = self._quota_key_for(k)
+                    cursor.execute('SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND quota_key = ?', (cutoff_24h, quota_key))
                     row = cursor.fetchone()
                     used_tpd = (row[0] or 0) + expected_tokens
                     used_rpd = (row[1] or 0) + expected_requests
@@ -100,7 +179,7 @@ class TokenGovernor:
         self.set_api_key(keys[0])
         return keys[0]
 
-    def set_api_key(self, api_key: str) -> None:
+    def set_api_key(self, api_key: str, provider: str = None, model: str = None, base_url: str = None) -> None:
         """
         Register the active API key with the governor.
         Called on startup and every time the user swaps keys in Settings.
@@ -109,6 +188,8 @@ class TokenGovernor:
         """
         if not api_key:
             return
+        if provider or model or base_url:
+            self.configure(provider or self.provider, model or self.model, base_url=base_url or self.base_url)
             
         api_key = api_key.encode('ascii', 'ignore').decode('ascii')
         
@@ -130,11 +211,13 @@ class TokenGovernor:
                 api_key = api_key[7:].strip().strip("'\"").strip("\r\n").strip()
             
         new_hash = hashlib.sha256(api_key.encode()).hexdigest()[:16]
-        if new_hash == self._current_key_hash:
+        new_quota_key = self._quota_key_for(api_key)
+        if new_quota_key == self._current_quota_key:
             return  # Same key — nothing to do
 
-        old_hash = self._current_key_hash
+        old_hash = self._current_quota_key
         self._current_key_hash = new_hash
+        self._current_quota_key = new_quota_key
         self._active_key = api_key
         # Reset in-memory windows — they're per-key at the API level
         self.request_window.clear()
@@ -142,8 +225,8 @@ class TokenGovernor:
         self.cooldown_until = 0.0
         self.current_concurrency_limit = self.min_concurrency
         print(
-            f"[Governor] 🔑 API key changed ({old_hash} → {new_hash}). "
-            f"In-memory windows reset. Daily quota tracked independently per key."
+            f"[Governor] 🔑 API quota scope changed ({old_hash} → {new_quota_key}). "
+            f"In-memory windows reset. Daily quota tracked per provider/model/key."
         )
 
     def get_key_status(self) -> dict:
@@ -153,14 +236,17 @@ class TokenGovernor:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    'SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND api_key_hash = ?',
-                    (cutoff_24h, self._current_key_hash)
+                    'SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND quota_key = ?',
+                    (cutoff_24h, self._current_quota_key)
                 )
                 row = cursor.fetchone()
                 used_tpd = row[0] or 0
                 used_rpd = row[1] or 0
                 return {
                     "key_hash": self._current_key_hash,
+                    "quota_key": self._current_quota_key,
+                    "provider": self.provider,
+                    "model": self.model,
                     "used_tpd": used_tpd,
                     "max_tpd": self.max_tpd,
                     "used_rpd": used_rpd,
@@ -179,7 +265,7 @@ class TokenGovernor:
         Use key_hash="all" for system-wide total.
         """
         if not key_hash:
-            key_hash = self._current_key_hash
+            key_hash = self._current_quota_key
             
         days = {"day": 1, "week": 7, "month": 30, "year": 365}
         d = days.get(timeframe, 1)
@@ -197,7 +283,7 @@ class TokenGovernor:
                     )
                 else:
                     cursor.execute(
-                        'SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND api_key_hash = ?',
+                        'SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND quota_key = ?',
                         (cutoff, key_hash)
                     )
                 total_row = cursor.fetchone()
@@ -213,7 +299,7 @@ class TokenGovernor:
                     else:
                         cursor.execute(
                             "SELECT strftime('%Y-%m-%d %H:00', datetime(timestamp, 'unixepoch')) as hr, SUM(tokens), SUM(requests) "
-                            "FROM usage WHERE timestamp >= ? AND api_key_hash = ? GROUP BY hr ORDER BY hr ASC",
+                            "FROM usage WHERE timestamp >= ? AND quota_key = ? GROUP BY hr ORDER BY hr ASC",
                             (cutoff, key_hash)
                         )
                 else:
@@ -226,7 +312,7 @@ class TokenGovernor:
                     else:
                         cursor.execute(
                             "SELECT strftime('%Y-%m-%d', datetime(timestamp, 'unixepoch')) as dt, SUM(tokens), SUM(requests) "
-                            "FROM usage WHERE timestamp >= ? AND api_key_hash = ? GROUP BY dt ORDER BY dt ASC",
+                            "FROM usage WHERE timestamp >= ? AND quota_key = ? GROUP BY dt ORDER BY dt ASC",
                             (cutoff, key_hash)
                         )
                 
@@ -252,11 +338,12 @@ class TokenGovernor:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    'SELECT api_key_hash, SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? GROUP BY api_key_hash',
+                    'SELECT quota_key, SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? GROUP BY quota_key',
                     (cutoff,)
                 )
                 return [{
                     "key_hash": r[0],
+                    "quota_key": r[0],
                     "used_tpd": r[1] or 0,
                     "used_rpd": r[2] or 0
                 } for r in cursor.fetchall()]
@@ -271,15 +358,21 @@ class TokenGovernor:
                     timestamp REAL,
                     tokens INTEGER,
                     requests INTEGER,
-                    api_key_hash TEXT DEFAULT 'default'
+                    api_key_hash TEXT DEFAULT 'default',
+                    quota_key TEXT DEFAULT 'default'
                 )
             ''')
             try:
                 conn.execute("ALTER TABLE usage ADD COLUMN api_key_hash TEXT DEFAULT 'default'")
             except sqlite3.OperationalError:
                 pass
+            try:
+                conn.execute("ALTER TABLE usage ADD COLUMN quota_key TEXT DEFAULT 'default'")
+            except sqlite3.OperationalError:
+                pass
             conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON usage(timestamp)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_key_ts ON usage(api_key_hash, timestamp)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_quota_ts ON usage(quota_key, timestamp)")
             conn.commit()
 
     def _clear_old_windows(self, now: float):
@@ -328,7 +421,7 @@ class TokenGovernor:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND api_key_hash = ?', (cutoff_24h, self._current_key_hash))
+                cursor.execute('SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND quota_key = ?', (cutoff_24h, self._current_quota_key))
                 row = cursor.fetchone()
                 used_tpd = (row[0] or 0) + expected_tokens
                 used_rpd = (row[1] or 0) + expected_requests
@@ -355,7 +448,7 @@ class TokenGovernor:
             if self._all_keys and len(self._all_keys) > 1:
                 print(f"[Governor] 🔄 Key {self._current_key_hash} exhausted. Attempting rotation through pool of {len(self._all_keys)} keys...")
                 new_key = self.get_valid_api_key(",".join(self._all_keys), expected_tokens, expected_requests)
-                if new_key and hashlib.sha256(new_key.encode()).hexdigest()[:16] != self._current_key_hash:
+                if new_key and self._quota_key_for(new_key) != self._current_quota_key:
                     # Key was swapped! Permit check will now pass on next attempt.
                     # We need to signal the caller (AterService) that the key changed so it can update its LLM client.
                     # For now, we raise a specific error that the Service can catch to rebuild its LLM.
@@ -435,8 +528,8 @@ class TokenGovernor:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute(
-                    'INSERT INTO usage (timestamp, tokens, requests, api_key_hash) VALUES (?, ?, ?, ?)',
-                    (time.time(), tokens, requests, self._current_key_hash)
+                    'INSERT INTO usage (timestamp, tokens, requests, api_key_hash, quota_key) VALUES (?, ?, ?, ?, ?)',
+                    (time.time(), tokens, requests, self._current_key_hash, self._current_quota_key)
                 )
                 conn.commit()
         except Exception as e:
@@ -483,7 +576,7 @@ class TokenGovernor:
                 cursor = conn.cursor()
                 cursor.execute(
                     'SELECT MIN(timestamp) FROM usage WHERE timestamp >= ? AND api_key_hash = ?',
-                    (cutoff_24h, self._current_key_hash)
+                    (cutoff_24h, self._current_quota_key)
                 )
                 row = cursor.fetchone()
                 if row and row[0]:

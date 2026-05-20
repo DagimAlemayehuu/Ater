@@ -1,34 +1,35 @@
 # Ater Sidecar (Python API)
 
-This is the high-performance reasoning and data orchestration layer for Ater. It is a FastAPI application that handles heavy-duty API integrations and local knowledge processing.
+This is the high-performance reasoning orchestration and Notion synchronization layer for Ater. It operates as a local FastAPI python sidecar service, bridging the Tauri React desktop client with external APIs and Notion database assets.
 
 ## Core Responsibilities
 
-- **AI Orchestration**: Unified interface for Google Gemini 2.5 Flash.
-    - **Instruction Injection**: Dynamic system prompt management.
-    - **Multimodal Context**: Real-time file processing via Gemini Files API.
-    - **Role Mapping**: Automatic conversion between frontend and SDK messaging schemas.
-- **Ater Engine**: Refined academic knowledge synthesis. The system is designed to generate a complete Knowledge Asset Cluster (Unit Hub, Questions, and all Atomic Notes) across multiple batches for seamless integration into Obsidian.
-- **Notion Synapse**: High-speed connectors for Goals, Academics, and Task databases.
-- **Obsidian Vault Hub**: Filesystem-based reader and hierarchical structure parser for local Markdown vaults.
+- **AI Orchestration**: Direct integration interface for Google Gemini models (Gemini 1.5 Pro/Flash, Gemini 2.0, Gemini 3.5).
+    - **Instruction Injection**: Dynamic prompt injection for structural Ater note generation.
+    - **Multimodal Context**: Processing and validation of files using Gemini Generative SDKs.
+- **Ater Ingestion Engine (v32.0 / v33.0)**: Manages structured study-note generation.
+    - Decouples technical theory and pedagogical interactive quizzes (3-level interactive MCQ practice sets).
+    - Regulated by the `TokenGovernor` to handle massive parallel note generation safely without hitting model rate limits.
+- **Notion Synapse**: High-speed, async connectors for Notion goals, academic schedules, and task lists.
+- **Obsidian Vault Syncer**: Local filesystem parser that processes Obsidian vault indices and structures to display in the desktop file tree.
 
 ## Stack
 
-- **Framework**: FastAPI
-- **LLM SDK**: Google Generative AI (Stable SDK)
-- **Data Clients**: Notion Client (Async), Obsidian Filesystem Client
+- **Web Framework**: FastAPI + Uvicorn
+- **AI Integration**: Google Generative AI (Python SDK)
+- **Data Clients**: Notion Client (Async), SQLite (local caching)
 - **Validation**: Pydantic v2
-- **Runtime**: Python 3.11+ managed by `uv`
+- **Runtime Environment**: Python 3.11+ managed by `uv`
 
 ## Key Endpoints
 
-- `POST /api/ai/upload`: Uploads and waits for processing of documents for Gemini context.
-- `POST /api/ai/brainstorm`: Main reasoning loop with instruction and multimodal support.
-- `GET /api/academics/dashboard`: Consolidated view of all Notion academic data.
-- `GET /api/obsidian/files`: Recursive vault structure parsing.
+- `POST /api/ai/upload`: Uploads and pre-processes files for context-rich AI conversation.
+- `POST /api/ai/brainstorm`: Performs instruction-anchored thinking loops.
+- `GET /api/academics/dashboard`: Retrieves consolidated data from Notion academic databases.
+- `GET /api/obsidian/files`: Parses recursive folders and file lists from the target local Obsidian vault path.
 
-## Developer Setup
+## Setup & Running
 
-1. Ensure `uv` is installed.
-2. Run `uv sync` to install dependencies.
-3. Run `python main.py` or use the root `pnpm dev` command to start the sidecar.
+The sidecar is managed automatically by the monorepo workspace toolchain:
+* Start it individually using: `pnpm --filter @ater/api dev` or `pnpm sidecar:dev` from the root.
+* Standard monorepo start uses `pnpm dev` from the root to run Tauri and the sidecar concurrently.

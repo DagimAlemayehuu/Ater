@@ -27,13 +27,19 @@ jobs:
               console.log(`Created release: ${release.html_url}`);
             } catch (error) {
               if (error.status !== 422) throw error;
-              const { data: release } = await github.rest.repos.getReleaseByTag({
+              // getReleaseByTag returns 404 for draft releases. List releases to safely find an existing draft.
+              const { data: releases } = await github.rest.repos.listReleases({
                 owner: 'DagimAlemayehuu',
-                repo: 'Ater_Releases',
-                tag
+                repo: 'Ater_Releases'
               });
-              console.log(`Release already exists: ${release.html_url}`);
+              const release = releases.find(r => r.tag_name === tag);
+              if (release) {
+                console.log(`Release draft already exists: ${release.html_url}`);
+              } else {
+                throw error;
+              }
             }
+
 
   publish:
     needs: create-release
@@ -158,12 +164,21 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Ensure the release exists (idempotent — OK if another runner already created it)
+
+          # Push tag to release repo to ensure GitHub CLI can resolve it against a valid git reference.
+          # We ignore race condition failures (|| true) since only one parallel runner needs to succeed.
+          git remote add release-repo https://x-access-token:${{ secrets.RELEASE_PAT }}@github.com/DagimAlemayehuu/Ater_Releases.git || true
+          git push release-repo "refs/tags/$TAG:refs/tags/$TAG" --force || echo "Tag push race handled successfully (already pushed)."
+
+          # Ensure the draft release exists (idempotent — OK if another runner already created it)
           gh release create "$TAG" \
             --repo DagimAlemayehuu/Ater_Releases \
             --title "Ater $TAG" \
             --notes "Production Build $TAG" \
-            || echo "Release already exists — skipping create."
+            --draft \
+            || echo "Release already exists or is draft — skipping create."
+
+
 
           if [ "${{ matrix.platform }}" == "macos" ]; then
             # DMG Upload

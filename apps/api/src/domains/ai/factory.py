@@ -73,6 +73,11 @@ class TrackingCallbackHandler(AsyncCallbackHandler, BaseCallbackHandler):
 
             # Update tracker even if only usage stats were found
             tracker.update(self.provider, self.model, limit_data)
+            if limit_data.get("requests_limit") or limit_data.get("tokens_limit"):
+                governor.update_limits_from_provider(
+                    requests_limit=limit_data.get("requests_limit"),
+                    tokens_limit=limit_data.get("tokens_limit"),
+                )
         except Exception as e:
             print(f"[TrackingCallback] Failed to parse limits: {e}")
 
@@ -91,6 +96,7 @@ class ModelFactory:
         "anthropic": ChatAnthropic,
         "groq": ChatGroq,
         "openrouter": ChatOpenAI, # OpenAI-compatible
+        "custom": ChatOpenAI, # User-supplied OpenAI-compatible endpoint
     }
 
     @staticmethod
@@ -102,6 +108,12 @@ class ModelFactory:
         timeout: Optional[int] = None,
         request_timeout: Optional[int] = None,
         max_retries: Optional[int] = None,
+        base_url: Optional[str] = None,
+        max_tpm: Optional[int] = None,
+        max_rpm: Optional[int] = None,
+        max_tpd: Optional[int] = None,
+        max_rpd: Optional[int] = None,
+        max_concurrency: Optional[int] = None,
         **kwargs
     ) -> BaseChatModel:
         """
@@ -111,14 +123,25 @@ class ModelFactory:
         if provider not in ModelFactory.PROVIDERS:
             raise ValueError(f"Unsupported AI provider: {provider}")
 
+        governor.configure(
+            provider,
+            model_name,
+            base_url=base_url,
+            max_tpm=max_tpm,
+            max_rpm=max_rpm,
+            max_tpd=max_tpd,
+            max_rpd=max_rpd,
+            max_concurrency=max_concurrency,
+        )
+
         # Pick a valid API key from the pool if comma-separated
-        valid_api_key = governor.get_valid_api_key(api_key)
+        valid_api_key = governor.get_valid_api_key(api_key, provider=provider, model=model_name, base_url=base_url)
 
         model_class = ModelFactory.PROVIDERS[provider]
         
         # Configuration mapping per provider
         config: Dict[str, Any] = {
-            "model_name" if provider in ["openai", "openrouter"] else "model": model_name,
+            "model_name" if provider in ["openai", "openrouter", "custom"] else "model": model_name,
             "temperature": temperature,
             "max_retries": max_retries if max_retries is not None else 2,
             "callbacks": [TrackingCallbackHandler(provider, model_name)]
@@ -126,7 +149,7 @@ class ModelFactory:
         
         # Provider-specific timeout configuration
         effective_timeout = timeout or 300
-        if provider in ["openai", "openrouter", "anthropic", "groq"]:
+        if provider in ["openai", "openrouter", "custom", "anthropic", "groq"]:
             config["timeout"] = effective_timeout
         else:  # google
             config["request_timeout"] = request_timeout or effective_timeout
@@ -146,12 +169,22 @@ class ModelFactory:
                 "HTTP-Referer": "https://github.com/Ater",
                 "X-Title": "Ater"
             }
+        elif provider == "custom":
+            if not base_url:
+                raise ValueError("Custom/OpenAI-compatible providers require ai_base_url")
+            config["api_key"] = valid_api_key
+            config["base_url"] = base_url
+
+        if base_url and provider in ["openai", "custom"]:
+            config["base_url"] = base_url
 
         # Merge additional kwargs safely
         for k, v in kwargs.items():
             if k not in config:
-                if k in ["presence_penalty", "frequency_penalty"]:
-                    if provider in ["openai", "openrouter", "groq"]:
+                if k in ["top_p", "presence_penalty", "frequency_penalty"]:
+                    if provider == "groq":
+                        config.setdefault("model_kwargs", {})[k] = v
+                    elif provider in ["openai", "openrouter", "custom"]:
                         config[k] = v
                 else:
                     config[k] = v
