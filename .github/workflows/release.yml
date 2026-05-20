@@ -164,68 +164,55 @@ jobs:
         run: |
           set -euo pipefail
 
-
-          # Push tag to release repo to ensure GitHub CLI can resolve it against a valid git reference.
-          # We ignore race condition failures (|| true) since only one parallel runner needs to succeed.
+          # Push tag to release repo
           git remote add release-repo https://x-access-token:${{ secrets.RELEASE_PAT }}@github.com/DagimAlemayehuu/Ater_Releases.git || true
-          git push release-repo "refs/tags/$TAG:refs/tags/$TAG" --force || echo "Tag push race handled successfully (already pushed)."
+          git push release-repo "refs/tags/$TAG:refs/tags/$TAG" --force || echo "Tag already pushed."
 
-          # Ensure the draft release exists (idempotent — OK if another runner already created it)
+          # Ensure the draft release exists
           gh release create "$TAG" \
             --repo DagimAlemayehuu/Ater_Releases \
             --title "Ater $TAG" \
             --notes "Production Build $TAG" \
-            --draft \
-            || echo "Release already exists or is draft — skipping create."
-
-
+            --draft || echo "Release already exists."
 
           if [ "${{ matrix.platform }}" == "macos" ]; then
-            # DMG Upload
-            DMG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/ -name "*.dmg" | head -n 1)
-            test -n "$DMG_PATH"
-            test -f "$DMG_PATH"
-            echo "Uploading DMG: $DMG_PATH"
-            gh release upload "$TAG" "$DMG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
-            
-            # Alias copy
-            cp "$DMG_PATH" apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/Ater-${{ matrix.arch }}.dmg
-            gh release upload "$TAG" apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/Ater-${{ matrix.arch }}.dmg --repo DagimAlemayehuu/Ater_Releases --clobber
+            DMG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/ -name "*.dmg" | head -n 1 || echo "")
+            if [ -f "$DMG_PATH" ]; then
+              echo "Uploading DMG: $DMG_PATH"
+              gh release upload "$TAG" "$DMG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+              cp "$DMG_PATH" "Ater-${{ matrix.arch }}.dmg"
+              gh release upload "$TAG" "Ater-${{ matrix.arch }}.dmg" --repo DagimAlemayehuu/Ater_Releases --clobber
+            fi
 
-            # Updater Tarball and Signature Upload
-            TAR_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/ -name "*.app.tar.gz" | head -n 1)
+            TAR_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/ -name "*.app.tar.gz" | head -n 1 || echo "")
+            if [ -f "$TAR_PATH" ]; then
+              gh release upload "$TAG" "$TAR_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            fi
+            
             SIG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/ -name "*.app.tar.gz.sig" | head -n 1 || echo "")
-            test -n "$TAR_PATH"
-            test -f "$TAR_PATH"
-            test -n "$SIG_PATH"
-            test -f "$SIG_PATH"
-            echo "Uploading Tarball: $TAR_PATH"
-            gh release upload "$TAG" "$TAR_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
-            gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            if [ -f "$SIG_PATH" ]; then
+              gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            fi
           fi
 
           if [ "${{ matrix.platform }}" == "windows" ]; then
-            # EXE Upload
-            EXE_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*.exe" | head -n 1)
-            test -n "$EXE_PATH"
-            test -f "$EXE_PATH"
-            echo "Uploading EXE: $EXE_PATH"
-            gh release upload "$TAG" "$EXE_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
-            
-            # Alias copy
-            cp "$EXE_PATH" apps/desktop/src-tauri/target/release/bundle/nsis/Ater_setup.exe
-            gh release upload "$TAG" apps/desktop/src-tauri/target/release/bundle/nsis/Ater_setup.exe --repo DagimAlemayehuu/Ater_Releases --clobber
+            EXE_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*.exe" | head -n 1 || echo "")
+            if [ -f "$EXE_PATH" ]; then
+              echo "Uploading EXE: $EXE_PATH"
+              gh release upload "$TAG" "$EXE_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+              cp "$EXE_PATH" "Ater_setup.exe"
+              gh release upload "$TAG" "Ater_setup.exe" --repo DagimAlemayehuu/Ater_Releases --clobber
+            fi
 
-            # Updater Zip and Signature Upload
             ZIP_PATH=$(find apps/desktop/src-tauri/target/release/bundle/ -name "*.zip" | head -n 1 || echo "")
+            if [ -f "$ZIP_PATH" ]; then
+              gh release upload "$TAG" "$ZIP_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            fi
+
             SIG_PATH=$(find apps/desktop/src-tauri/target/release/bundle/ -name "*.zip.sig" | head -n 1 || echo "")
-            test -n "$ZIP_PATH"
-            test -f "$ZIP_PATH"
-            test -n "$SIG_PATH"
-            test -f "$SIG_PATH"
-            echo "Uploading Zip: $ZIP_PATH"
-            gh release upload "$TAG" "$ZIP_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
-            gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            if [ -f "$SIG_PATH" ]; then
+              gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+            fi
           fi
 
       - name: Upload signatures as artifacts

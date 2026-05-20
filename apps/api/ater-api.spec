@@ -8,7 +8,7 @@ a = Analysis(
     datas=[
         ('../../Ater.md', '.')
     ],
-    hiddenimports=['uvicorn.protocols.http.httptools_impl', 'uvicorn.protocols.http.h11_impl', 'uvicorn.lifespan.on', 'aiosqlite', 'greenlet', 'langchain_core', 'langchain_community', 'langchain_google_genai', 'langchain_openai', 'langchain_anthropic', 'langchain_groq'],
+    hiddenimports=['uvicorn.protocols.http.httptools_impl', 'uvicorn.protocols.http.h11_impl', 'uvicorn.lifespan.on', 'aiosqlite', 'greenlet', 'langchain_core', 'langchain_community', 'langchain_google_genai', 'langchain_openai', 'langchain_anthropic', 'langchain_groq', 'google.generativeai', 'google.api_core', 'google.ai.generativelanguage', 'grpc', 'pydantic.deprecated.decorator', 'httpx', 'certifi'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
