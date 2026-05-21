@@ -52,8 +52,8 @@ except Exception as e:
     print(f"Warning: Failed to collect submodules of 'src': {e}")
 
 a = Analysis(
-    ['apps/api/ater-api.py'],
-    pathex=['apps/api'],
+    ['ater-api.py'],
+    pathex=['.'],
     binaries=[],
     datas=[],
     hiddenimports=hiddenimports,
