@@ -1,6 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
+import sys
+from pathlib import Path
 from PyInstaller.utils.hooks import collect_submodules
+
+# Add the apps/api directory to sys.path so we can collect submodules of 'src'
+# This is required because collect_submodules needs 'src' to be importable
+api_root = Path(os.getcwd()) / 'apps' / 'api'
+if str(api_root) not in sys.path:
+    sys.path.insert(0, str(api_root))
 
 hiddenimports = [
     'uvicorn.logging',
@@ -29,10 +37,19 @@ hiddenimports = [
     'markdown2',
     'bs4',
     'google.genai',
+    'google.generativeai',
+    'psutil',
+    'pypdf',
+    'ruamel.yaml',
+    'tokenizers',
 ]
 
 # Add all submodules of src dynamically
-hiddenimports += collect_submodules('src')
+try:
+    hiddenimports += collect_submodules('src')
+    print(f"Successfully collected {len(hiddenimports)} hidden imports including submodules of 'src'")
+except Exception as e:
+    print(f"Warning: Failed to collect submodules of 'src': {e}")
 
 a = Analysis(
     ['apps/api/ater-api.py'],
