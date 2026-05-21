@@ -1,6 +1,7 @@
 import sqlite3
 import shutil
-import time
+import os
+import sys
 import asyncio
 import logging
 import traceback
@@ -9,15 +10,25 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
 from .service import AterService
 from .governor import governor
 
-file_handler = logging.FileHandler("/tmp/ater_watcher.log")
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+# Platform-safe log directory
+log_dir = Path.home() / ".ater" / "logs"
+log_dir.mkdir(parents=True, exist_ok=True)
+watcher_log = log_dir / "ater_watcher.log"
+
 watcher_logger = logging.getLogger("AterQueueManager")
 watcher_logger.setLevel(logging.INFO)
-watcher_logger.addHandler(file_handler)
+
+# Avoid adding multiple handlers if the watcher is re-initialized
+if not watcher_logger.handlers:
+    file_handler = logging.FileHandler(watcher_log, encoding="utf-8")
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    watcher_logger.addHandler(file_handler)
+    watcher_logger.addHandler(logging.StreamHandler(sys.stdout))
 
 class InboxHandler(FileSystemEventHandler):
     def __init__(self, manager: 'AterQueueManager'):
@@ -167,9 +178,17 @@ class AterQueueManager:
         self.auto_process = auto_process
         
         event_handler = InboxHandler(self)
-        self.observer = Observer()
-        self.observer.schedule(event_handler, str(self.inbox_path), recursive=False)
-        self.observer.start()
+        
+        # Windows/Network Drive Reliability: Use Polling as fallback
+        try:
+            self.observer = Observer()
+            self.observer.schedule(event_handler, str(self.inbox_path), recursive=False)
+            self.observer.start()
+        except Exception as e:
+            watcher_logger.warning(f"Native Observer failed ({e}). Falling back to PollingObserver.")
+            self.observer = PollingObserver()
+            self.observer.schedule(event_handler, str(self.inbox_path), recursive=False)
+            self.observer.start()
         
         print(f"[Ater Queue] Monitoring: {self.inbox_path} | Auto Process: {self.auto_process}")
         
@@ -189,13 +208,18 @@ class AterQueueManager:
             conn = self._get_conn()
             conn.execute("UPDATE queue SET status = 'pending' WHERE status = 'error'")
             conn.commit()
-            conn.close()
             
             for item in self.inbox_path.iterdir():
                 if item.is_file() and not item.name.startswith('.') and item.suffix.lower() in supported:
-                    self.add_to_queue(item)
+                    path_str = str(item.absolute())
+                    if "Generated" not in path_str:
+                        conn.execute("INSERT OR IGNORE INTO queue (file_path, status, added_at) VALUES (?, ?, ?)", 
+                                     (path_str, "pending", datetime.now().isoformat()))
+            conn.commit()
+            conn.close()
+            watcher_logger.info(f"[Ater Queue] Scan complete. Inbox: {self.inbox_path}")
         except Exception as e:
-            print(f"[Ater Queue] Error scanning files: {e}")
+            watcher_logger.error(f"[Ater Queue] Error scanning files: {e}")
 
     def add_to_queue(self, file_path: Path):
         path_str = str(file_path.absolute())
