@@ -454,7 +454,7 @@ async fn proxy_post<T: serde::Serialize, R: serde::de::DeserializeOwned>(
         .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
     let mut attempt = 0;
-    let max_attempts = 5;
+    let max_attempts = 20; // Increased from 5 to 20 to handle cold starts (up to 10 seconds)
     let mut last_err = None;
 
     while attempt < max_attempts {
@@ -478,7 +478,9 @@ async fn proxy_post<T: serde::Serialize, R: serde::de::DeserializeOwned>(
                 last_err = Some(e);
                 attempt += 1;
                 if attempt < max_attempts {
-                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    // Backoff: start fast, then slow down
+                    let delay = if attempt < 5 { 200 } else { 500 };
+                    tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
                 }
             }
         }
