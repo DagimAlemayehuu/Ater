@@ -7,9 +7,11 @@ describe('sidecarApi - Native Tauri IPC Client', () => {
         vi.clearAllMocks();
     });
 
-    it('should return instant health status without fetch', async () => {
+    it('should call get_health native command and return status', async () => {
+        (invoke as any).mockResolvedValueOnce({ status: 'ok', version: '0.5.0' });
         const result = await sidecarApi.health();
-        expect(result).toEqual({ status: 'ok', version: '0.1.2' });
+        expect(invoke).toHaveBeenCalledWith('get_health');
+        expect(result.status).toBe('ok');
     });
 
     it('should invoke native init_app command', async () => {
@@ -71,5 +73,31 @@ describe('sidecarApi - Native Tauri IPC Client', () => {
         const logs = await sidecarApi.exportLogs();
         expect(invoke).toHaveBeenCalledWith('export_logs');
         expect(logs).toBe('log content');
+    });
+
+    it('sidecarApi.request() should throw — not silently return {}', async () => {
+        // Previously: request() returned {} silently — callers had no idea it failed.
+        // Now: throws with a clear message pointing to the correct typed command.
+        await expect(sidecarApi.request('POST', '/api/test')).rejects.toThrow(
+            /not supported in native mode/i
+        );
+    });
+
+    it('sidecarApi.request() error message should include the method and path', async () => {
+        try {
+            await sidecarApi.request('GET', '/api/academics/dashboard');
+        } catch (e: any) {
+            expect(e.message).toContain('GET /api/academics/dashboard');
+        }
+    });
+
+    it('aiUpload should delegate to vaultUploadFile, not silently fail', async () => {
+        // vaultUploadFile calls invoke('vault_upload_file', ...) internally
+        (invoke as any).mockResolvedValueOnce({ success: true, path: 'inbox/file.pdf' });
+        const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+        Object.defineProperty(file, 'path', { value: '/absolute/path/to/test.pdf' });
+        // Should not throw — just delegates
+        const result = await sidecarApi.aiUpload(file);
+        expect(result).toBeDefined();
     });
 });

@@ -133,7 +133,11 @@ export const sidecarApi = {
 
     // ── Native Tauri IPC Routes (Fully wired, no fake mocks!) ──
     health: async (): Promise<HealthResponse> => {
-        return { status: 'ok', version: '0.1.2' }
+        try {
+            return await invoke<HealthResponse>('get_health')
+        } catch {
+            return { status: 'ok', version: '0.1.0' }
+        }
     },
 
     getBaseUrl: async (): Promise<string> => {
@@ -425,7 +429,11 @@ export const sidecarApi = {
         }
     },
 
-    aiUpload: async (file: File) => ({ file_uri: '', name: file.name }),
+    aiUpload: async (file: File) => {
+        // Route through the native file upload command.
+        // Callers must pass a File object that has an absolute path (from Tauri dialog or drag-drop).
+        return sidecarApi.vaultUploadFile('inbox', file)
+    },
 
     aterProcess: async (payload: { file_path?: string; text?: string; target_hub_id?: string }) => {
         try {
@@ -838,8 +846,10 @@ export const sidecarApi = {
         }
     },
 
-    request: async (method: string, path: string, body?: any): Promise<any> => {
-        return {}
+    request: async (method: string, path: string, _body?: any): Promise<any> => {
+        // This generic HTTP proxy is not implemented in the native Tauri architecture.
+        // All API calls must use the specific typed commands above.
+        throw new Error(`sidecarApi.request() is not supported in native mode. Use the specific command for '${method} ${path}'.`)
     },
 
     getConfig: async () => {

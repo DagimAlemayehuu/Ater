@@ -500,7 +500,8 @@ async fn proxy_get<R: serde::de::DeserializeOwned>(
         .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
     let mut attempt = 0;
-    let max_attempts = 5;
+    // Match proxy_post: 20 attempts (up to ~10 seconds) to handle cold sidecar starts.
+    let max_attempts = 20;
     let mut last_err = None;
 
     while attempt < max_attempts {
@@ -523,7 +524,9 @@ async fn proxy_get<R: serde::de::DeserializeOwned>(
                 last_err = Some(e);
                 attempt += 1;
                 if attempt < max_attempts {
-                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    // Adaptive backoff: fast retries first, then slower
+                    let delay = if attempt < 5 { 200 } else { 500 };
+                    tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
                 }
             }
         }
@@ -620,11 +623,19 @@ async fn proxy_delete<R: serde::de::DeserializeOwned>(
     Err(format!("Failed to send request to sidecar API (after {} attempts): {}", max_attempts, last_err.unwrap()))
 }
 
+/// Maximum directory depth for vault traversal.  
+/// Prevents pathological traversal of large vaults or accidental home-dir selections.
+const WALK_MAX_DEPTH: usize = 15;
+
 fn walk_dir(
     dir: &std::path::Path,
     root: &std::path::Path,
     files: &mut Vec<ObsidianFileRust>,
+    depth: usize,
 ) -> Result<(), String> {
+    if depth > WALK_MAX_DEPTH {
+        return Ok(());
+    }
     if !dir.exists() {
         return Ok(());
     }
@@ -637,7 +648,7 @@ fn walk_dir(
             .to_string();
         
         let name_lower = name.to_lowercase();
-        if name.starts_with('.') 
+        if name.starts_with('.')
             || name == "node_modules"
             || name_lower.contains("ater_queue")
             || name_lower.contains("ater_que")
@@ -675,7 +686,7 @@ fn walk_dir(
         });
         
         if is_dir {
-            walk_dir(&path, root, files)?;
+            walk_dir(&path, root, files, depth + 1)?;
         }
     }
     Ok(())
@@ -849,7 +860,7 @@ fn serialize_frontmatter(map: &serde_json::Map<String, serde_json::Value>) -> St
 pub async fn list_obsidian_files(app_handle: tauri::AppHandle) -> Result<Vec<ObsidianFileRust>, String> {
     let vault_path = get_vault_path(&app_handle)?;
     let mut files = Vec::new();
-    walk_dir(&vault_path, &vault_path, &mut files)?;
+    walk_dir(&vault_path, &vault_path, &mut files, 0)?;
     Ok(files)
 }
 
@@ -1079,7 +1090,7 @@ pub async fn find_vault_page(
     let is_pdf = clean_page_name.to_lowercase().ends_with(".pdf") || clean_page_name.to_lowercase().contains(".pdf");
     
     let mut files = Vec::new();
-    walk_dir(&vault_path, &vault_path, &mut files)?;
+    walk_dir(&vault_path, &vault_path, &mut files, 0)?;
     
     // Phase 1: Try exact relative path match first
     for f in &files {
@@ -1152,7 +1163,7 @@ pub async fn find_vault_page(
 pub async fn list_hubs(app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
     let vault_path = get_vault_path(&app_handle)?;
     let mut files = Vec::new();
-    walk_dir(&vault_path, &vault_path, &mut files)?;
+    walk_dir(&vault_path, &vault_path, &mut files, 0)?;
     
     let mut hubs = Vec::new();
     let mut seen_paths = std::collections::HashSet::new();
@@ -1212,7 +1223,7 @@ pub async fn list_hub_notes(
 ) -> Result<serde_json::Value, String> {
     let vault_path = get_vault_path(&app_handle)?;
     let mut files = Vec::new();
-    walk_dir(&vault_path, &vault_path, &mut files)?;
+    walk_dir(&vault_path, &vault_path, &mut files, 0)?;
     
     // Extract only the filename stem of the hub_id to handle directory nesting consistently
     let normalized_hub_id = hub_id.replace('\\', "/");
@@ -2637,4 +2648,249 @@ pub async fn get_vault_backlinks() -> Result<serde_json::Value, String> {
     let mut res = serde_json::Map::new();
     res.insert("backlinks".to_string(), serde_json::Value::Array(Vec::new()));
     Ok(serde_json::Value::Object(res))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ─────────────────────────────────────────────
+    // Frontmatter Parser Tests
+    // ─────────────────────────────────────────────
+
+    #[test]
+    fn test_parse_markdown_note_no_frontmatter() {
+        let content = "# Hello\nThis is content without frontmatter.";
+        let (meta, body) = parse_markdown_note(content);
+        assert!(meta.as_object().unwrap().is_empty(), "Empty frontmatter expected");
+        assert_eq!(body, content);
+    }
+
+    #[test]
+    fn test_parse_markdown_note_with_frontmatter() {
+        let content = "---\ntitle: My Note\nhub: [[Chemistry_Hub]]\n---\n# Body Content";
+        let (meta, body) = parse_markdown_note(content);
+        let obj = meta.as_object().unwrap();
+        assert_eq!(obj["title"].as_str().unwrap(), "My Note");
+        assert_eq!(obj["hub"].as_str().unwrap(), "[[Chemistry_Hub]]");
+        assert!(body.contains("Body Content"));
+    }
+
+    #[test]
+    fn test_parse_markdown_note_boolean_fields() {
+        let content = "---\nis_active: true\nis_archived: false\n---\nContent";
+        let (meta, _) = parse_markdown_note(content);
+        let obj = meta.as_object().unwrap();
+        assert_eq!(obj["is_active"].as_bool().unwrap(), true);
+        assert_eq!(obj["is_archived"].as_bool().unwrap(), false);
+    }
+
+    #[test]
+    fn test_parse_markdown_note_number_field() {
+        let content = "---\nscore: 42\ncredit_hours: 3\n---\n";
+        let (meta, _) = parse_markdown_note(content);
+        let obj = meta.as_object().unwrap();
+        assert_eq!(obj["score"].as_i64().unwrap(), 42);
+        assert_eq!(obj["credit_hours"].as_i64().unwrap(), 3);
+    }
+
+    #[test]
+    fn test_parse_markdown_note_inline_array() {
+        let content = "---\ntags: [rust, tauri, ater]\n---\n";
+        let (meta, _) = parse_markdown_note(content);
+        let obj = meta.as_object().unwrap();
+        let tags = obj["tags"].as_array().unwrap();
+        assert_eq!(tags.len(), 3);
+        assert_eq!(tags[0].as_str().unwrap(), "rust");
+        assert_eq!(tags[2].as_str().unwrap(), "ater");
+    }
+
+    #[test]
+    fn test_parse_markdown_note_block_list() {
+        let content = "---\nkeywords:\n- machine learning\n- neural networks\n- transformers\n---\n";
+        let (meta, _) = parse_markdown_note(content);
+        let obj = meta.as_object().unwrap();
+        let kws = obj["keywords"].as_array().unwrap();
+        assert_eq!(kws.len(), 3);
+        assert_eq!(kws[1].as_str().unwrap(), "neural networks");
+    }
+
+    #[test]
+    fn test_parse_markdown_note_wiki_link_not_stripped() {
+        // [[wiki links]] in frontmatter should be preserved as-is
+        let content = "---\nhub: [[Organic Chemistry Hub]]\n---\nBody";
+        let (meta, _) = parse_markdown_note(content);
+        let obj = meta.as_object().unwrap();
+        let hub_val = obj["hub"].as_str().unwrap();
+        assert!(hub_val.contains("[["), "Wiki link should be preserved");
+    }
+
+    #[test]
+    fn test_parse_markdown_empty_frontmatter() {
+        let content = "---\n---\nJust body.";
+        let (meta, body) = parse_markdown_note(content);
+        assert!(meta.as_object().unwrap().is_empty());
+        assert!(body.contains("Just body."));
+    }
+
+    #[test]
+    fn test_parse_markdown_note_quoted_string() {
+        let content = "---\ntitle: \"My Quoted Title\"\n---\n";
+        let (meta, _) = parse_markdown_note(content);
+        let obj = meta.as_object().unwrap();
+        // Quotes should be stripped from simple strings
+        assert_eq!(obj["title"].as_str().unwrap(), "My Quoted Title");
+    }
+
+    // ─────────────────────────────────────────────
+    // Frontmatter Serializer Tests (Round-trip)
+    // ─────────────────────────────────────────────
+
+    #[test]
+    fn test_serialize_frontmatter_basic() {
+        let mut map = serde_json::Map::new();
+        map.insert("title".to_string(), serde_json::Value::String("Test".to_string()));
+        map.insert("score".to_string(), serde_json::Value::Number(95.into()));
+        map.insert("active".to_string(), serde_json::Value::Bool(true));
+        
+        let output = serialize_frontmatter(&map);
+        assert!(output.starts_with("---\n"));
+        assert!(output.ends_with("---\n"));
+        assert!(output.contains("title: Test"));
+        assert!(output.contains("score: 95"));
+        assert!(output.contains("active: true"));
+    }
+
+    #[test]
+    fn test_serialize_frontmatter_array() {
+        let mut map = serde_json::Map::new();
+        map.insert("tags".to_string(), serde_json::Value::Array(vec![
+            serde_json::Value::String("rust".to_string()),
+            serde_json::Value::String("tauri".to_string()),
+        ]));
+        
+        let output = serialize_frontmatter(&map);
+        assert!(output.contains("tags: [rust, tauri]"), "Expected inline array, got: {}", output);
+    }
+
+    #[test]
+    fn test_parse_serialize_roundtrip() {
+        let original = "---\ntitle: Roundtrip Test\nscore: 88\nactive: true\ntags: [a, b, c]\n---\n# Body\nSome content.";
+        let (meta, body) = parse_markdown_note(original);
+        
+        let meta_obj = meta.as_object().unwrap();
+        let serialized = serialize_frontmatter(meta_obj);
+        let reconstructed = format!("{}{}", serialized, body);
+        
+        // Parse the reconstructed note and verify key fields match
+        let (meta2, _) = parse_markdown_note(&reconstructed);
+        let obj2 = meta2.as_object().unwrap();
+        assert_eq!(obj2["title"].as_str().unwrap(), "Roundtrip Test");
+        assert_eq!(obj2["score"].as_i64().unwrap(), 88);
+        assert_eq!(obj2["active"].as_bool().unwrap(), true);
+    }
+
+    // ─────────────────────────────────────────────
+    // Walk Directory Tests
+    // ─────────────────────────────────────────────
+
+    #[test]
+    fn test_walk_dir_depth_limit() {
+        use std::fs;
+        
+        let temp = std::env::temp_dir().join(format!(
+            "ater_walk_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        
+        // Create a deeply nested structure (20 levels)
+        let mut deep = temp.clone();
+        for _ in 0..20 {
+            deep = deep.join("level");
+        }
+        fs::create_dir_all(&deep).unwrap();
+        fs::write(deep.join("deep_file.md"), "# Deep").unwrap();
+        
+        let mut files = Vec::new();
+        walk_dir(&temp, &temp, &mut files, 0).unwrap();
+        
+        // Files at depth > WALK_MAX_DEPTH should NOT be included
+        let deep_file = files.iter().find(|f| f.name == "deep_file.md");
+        assert!(deep_file.is_none(), "Files beyond WALK_MAX_DEPTH should be excluded");
+        
+        let _ = fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn test_walk_dir_hidden_files_excluded() {
+        use std::fs;
+        
+        let temp = std::env::temp_dir().join(format!(
+            "ater_hidden_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&temp).unwrap();
+        fs::write(temp.join(".hidden_file.md"), "hidden").unwrap();
+        fs::write(temp.join("visible.md"), "visible").unwrap();
+        
+        let mut files = Vec::new();
+        walk_dir(&temp, &temp, &mut files, 0).unwrap();
+        
+        assert!(files.iter().any(|f| f.name == "visible.md"), "Visible file should be included");
+        assert!(!files.iter().any(|f| f.name == ".hidden_file.md"), "Hidden file should be excluded");
+        
+        let _ = fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn test_walk_dir_db_files_excluded() {
+        use std::fs;
+        
+        let temp = std::env::temp_dir().join(format!(
+            "ater_db_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&temp).unwrap();
+        fs::write(temp.join("notes.md"), "notes").unwrap();
+        fs::write(temp.join("queue.db"), "db").unwrap();
+        fs::write(temp.join("queue.db-shm"), "shm").unwrap();
+        
+        let mut files = Vec::new();
+        walk_dir(&temp, &temp, &mut files, 0).unwrap();
+        
+        assert!(files.iter().any(|f| f.name == "notes.md"));
+        assert!(!files.iter().any(|f| f.name.ends_with(".db")), ".db files should be excluded");
+        assert!(!files.iter().any(|f| f.name.ends_with(".db-shm")), ".db-shm files should be excluded");
+        
+        let _ = fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn test_walk_dir_nonexistent_path_ok() {
+        let fake_path = std::path::Path::new("/this/path/does/not/exist/ever");
+        let mut files = Vec::new();
+        let result = walk_dir(fake_path, fake_path, &mut files, 0);
+        // Should return Ok(()) not Err — non-existent dirs are silently skipped
+        assert!(result.is_ok(), "walk_dir should not error on non-existent path");
+        assert!(files.is_empty());
+    }
+
+    // ─────────────────────────────────────────────
+    // WALK_MAX_DEPTH constant sanity check
+    // ─────────────────────────────────────────────
+    #[test]
+    fn test_walk_max_depth_is_sane() {
+        // Should be > 5 (real vaults go deep) and < 50 (prevent runaway)
+        assert!(WALK_MAX_DEPTH > 5, "WALK_MAX_DEPTH should be meaningful");
+        assert!(WALK_MAX_DEPTH < 50, "WALK_MAX_DEPTH should have a practical upper bound");
+    }
 }

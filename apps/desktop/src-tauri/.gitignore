@@ -2,3 +2,7 @@
 # will have compiled files and executables
 /target/
 /gen/schemas
+
+# Compiled sidecar binaries — built by CI, never committed.
+# Each platform runner produces its own arch-specific binary.
+/binaries/

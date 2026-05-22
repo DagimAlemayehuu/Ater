@@ -53,12 +53,23 @@ class InboxHandler(FileSystemEventHandler):
         
         # Absolute check to prevent re-processing generated files
         # Standardized to Inbox/Generated per user request
-        vault_root = Path(self.manager.service.secrets.vault_path).resolve()
-        generated_dir = (vault_root / "Inbox" / "Generated").resolve()
-        abs_src = src_path.resolve()
-
-        if str(abs_src).startswith(str(generated_dir)):
-            return
+        try:
+            vault_root = Path(self.manager.service.secrets.vault_path).resolve()
+            generated_dir = (vault_root / "Inbox" / "Generated").resolve()
+            abs_src = src_path.resolve()
+            
+            # Platform-agnostic check if the file is inside the Generated folder
+            try:
+                if abs_src.is_relative_to(generated_dir):
+                    return
+            except AttributeError:
+                # Fallback to normalized absolute path string check
+                abs_src_str = str(abs_src).replace("\\", "/").lower()
+                generated_dir_str = str(generated_dir).replace("\\", "/").lower()
+                if abs_src_str.startswith(generated_dir_str):
+                    return
+        except Exception as e:
+            self.logger.warning(f"Error checking path generation exclude for {src_path}: {e}")
 
         if src_path.suffix.lower() in supported and not src_path.name.startswith('.'):
             self.logger.info(f"New file detected: {src_path.name}")
@@ -200,72 +211,127 @@ class AterQueueManager:
     def update_settings(self, auto_process: bool):
         self.auto_process = auto_process
         print(f"[Ater Queue] Auto process updated to: {self.auto_process}")
+        if self.loop and (self.worker_task is None or self.worker_task.done()):
+            self.worker_task = self.loop.create_task(self._worker_loop())
 
     def scan_existing_files(self):
         """Scans the inbox for existing files, adds them to the database, and resets errors."""
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
+        conn = None
         try:
             conn = self._get_conn()
             conn.execute("UPDATE queue SET status = 'pending' WHERE status = 'error'")
             conn.commit()
             
+            # Resolve Generated folder path for robust exclusion comparison
+            try:
+                vault_root = Path(self.service.secrets.vault_path).resolve()
+                generated_dir = (vault_root / "Inbox" / "Generated").resolve()
+            except Exception:
+                generated_dir = None
+
             for item in self.inbox_path.iterdir():
                 if item.is_file() and not item.name.startswith('.') and item.suffix.lower() in supported:
+                    abs_item = item.resolve()
+                    # Skip if it is within Generated directory
+                    if generated_dir:
+                        try:
+                            if abs_item.is_relative_to(generated_dir):
+                                continue
+                        except AttributeError:
+                            abs_item_str = str(abs_item).replace("\\", "/").lower()
+                            gen_dir_str = str(generated_dir).replace("\\", "/").lower()
+                            if abs_item_str.startswith(gen_dir_str):
+                                continue
+                    else:
+                        # Fallback simple string check if vault_path could not be resolved
+                        if "Generated" in str(abs_item):
+                            continue
+                            
                     path_str = str(item.absolute())
-                    if "Generated" not in path_str:
-                        conn.execute("INSERT OR IGNORE INTO queue (file_path, status, added_at) VALUES (?, ?, ?)", 
-                                     (path_str, "pending", datetime.now().isoformat()))
+                    conn.execute("INSERT OR IGNORE INTO queue (file_path, status, added_at) VALUES (?, ?, ?)", 
+                                 (path_str, "pending", datetime.now().isoformat()))
             conn.commit()
-            conn.close()
             watcher_logger.info(f"[Ater Queue] Scan complete. Inbox: {self.inbox_path}")
         except Exception as e:
             watcher_logger.error(f"[Ater Queue] Error scanning files: {e}")
+        finally:
+            if conn:
+                conn.close()
 
     def add_to_queue(self, file_path: Path):
         path_str = str(file_path.absolute())
-        if "Generated" in path_str:
-            return
+        
+        # Absolute check to prevent re-processing generated files
+        try:
+            vault_root = Path(self.service.secrets.vault_path).resolve()
+            generated_dir = (vault_root / "Inbox" / "Generated").resolve()
+            abs_file = file_path.resolve()
             
-        conn = self._get_conn()
-        conn.execute("INSERT OR IGNORE INTO queue (file_path, status, added_at) VALUES (?, ?, ?)", 
-                     (path_str, "pending", datetime.now().isoformat()))
-        conn.commit()
-        conn.close()
+            try:
+                if abs_file.is_relative_to(generated_dir):
+                    return
+            except AttributeError:
+                abs_file_str = str(abs_file).replace("\\", "/").lower()
+                generated_dir_str = str(generated_dir).replace("\\", "/").lower()
+                if abs_file_str.startswith(generated_dir_str):
+                    return
+        except Exception:
+            if "Generated" in path_str:
+                return
+            
+        conn = None
+        try:
+            conn = self._get_conn()
+            conn.execute("INSERT OR IGNORE INTO queue (file_path, status, added_at) VALUES (?, ?, ?)", 
+                         (path_str, "pending", datetime.now().isoformat()))
+            conn.commit()
+        finally:
+            if conn:
+                conn.close()
 
     def _mark_done(self, file_path: str):
         conn = self._get_conn()
-        conn.execute("DELETE FROM queue WHERE file_path = ?", (file_path,))
-        conn.commit()
-        conn.close()
+        try:
+            conn.execute("DELETE FROM queue WHERE file_path = ?", (file_path,))
+            conn.commit()
+        finally:
+            conn.close()
 
     def _mark_error(self, file_path: str):
         conn = self._get_conn()
-        conn.execute("UPDATE queue SET status = 'error' WHERE file_path = ?", (file_path,))
-        conn.commit()
-        conn.close()
+        try:
+            conn.execute("UPDATE queue SET status = 'error' WHERE file_path = ?", (file_path,))
+            conn.commit()
+        finally:
+            conn.close()
 
     def _save_checkpoint(self, file_path: str, session_id: str, batch: int, total: int, curriculum: dict):
         import json as _json
         conn = self._get_conn()
-        conn.execute(
-            "UPDATE queue SET status='deploying', session_id=?, current_batch=?, "
-            "total_batches=?, curriculum=? WHERE file_path=?",
-            (session_id, batch, total, _json.dumps(curriculum), file_path)
-        )
-        conn.commit()
-        conn.close()
+        try:
+            conn.execute(
+                "UPDATE queue SET status='deploying', session_id=?, current_batch=?, "
+                "total_batches=?, curriculum=? WHERE file_path=?",
+                (session_id, batch, total, _json.dumps(curriculum), file_path)
+            )
+            conn.commit()
+        finally:
+            conn.close()
 
     def _get_checkpoint(self, file_path: str):
         import json as _json
         conn = self._get_conn()
-        row = conn.execute(
-            "SELECT session_id, current_batch, total_batches, curriculum FROM queue WHERE file_path=?",
-            (file_path,)
-        ).fetchone()
-        conn.close()
-        if row and row[0]:
-            return row[0], row[1] or 0, row[2] or 0, _json.loads(row[3] or "{}")
-        return None, 0, 0, {}
+        try:
+            row = conn.execute(
+                "SELECT session_id, current_batch, total_batches, curriculum FROM queue WHERE file_path=?",
+                (file_path,)
+            ).fetchone()
+            if row and row[0]:
+                return row[0], row[1] or 0, row[2] or 0, _json.loads(row[3] or "{}")
+            return None, 0, 0, {}
+        finally:
+            conn.close()
 
     async def _worker_loop(self):
         """Monitor the queue and spawn parallel workers for pending files."""
@@ -287,10 +353,12 @@ class AterQueueManager:
                     continue
 
                 conn = self._get_conn()
-                cursor = conn.cursor()
-                cursor.execute("SELECT file_path FROM queue WHERE status IN ('pending', 'deploying') ORDER BY added_at ASC")
-                pending = cursor.fetchall()
-                conn.close()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT file_path FROM queue WHERE status IN ('pending', 'deploying') ORDER BY added_at ASC")
+                    pending = cursor.fetchall()
+                finally:
+                    conn.close()
 
                 for (file_path_str,) in pending:
                     if file_path_str not in self.active_tasks:
@@ -312,11 +380,32 @@ class AterQueueManager:
         await self.worker_semaphore.acquire()
         path = Path(file_path_str)
         try:
+            # Wait for file to copy/stabilize (especially for larger PDFs/text files)
+            # Check size every 0.5s up to 10s. If size remains constant, it's ready.
+            if path.exists():
+                last_size = -1
+                stable_count = 0
+                for _ in range(20): # max 10s wait
+                    try:
+                        current_size = path.stat().st_size
+                        if current_size == last_size and current_size > 0:
+                            stable_count += 1
+                            if stable_count >= 2: # Stable for 1 full second
+                                break
+                        else:
+                            stable_count = 0
+                        last_size = current_size
+                    except Exception:
+                        pass
+                    await asyncio.sleep(0.5)
+
             # Mark as active
             conn = self._get_conn()
-            conn.execute("UPDATE queue SET status = 'deploying' WHERE file_path = ?", (file_path_str,))
-            conn.commit()
-            conn.close()
+            try:
+                conn.execute("UPDATE queue SET status = 'deploying' WHERE file_path = ?", (file_path_str,))
+                conn.commit()
+            finally:
+                conn.close()
             
             watcher_logger.info(f"Worker started for {path.name}")
             
@@ -462,23 +551,24 @@ class AterQueueManager:
 
     def get_status(self) -> Dict[str, Any]:
         conn = self._get_conn()
-        pending_count = conn.execute("SELECT COUNT(*) FROM queue WHERE status = 'pending'").fetchone()[0]
-        
-        current_file = None
-        db_status_msg = "Ready"
-        primary_path_str = None
-        
-        if self.active_tasks:
-            primary_path_str = list(self.active_tasks.keys())[0]
-            current_file = Path(primary_path_str).name
+        try:
+            pending_count = conn.execute("SELECT COUNT(*) FROM queue WHERE status = 'pending'").fetchone()[0]
             
-            row = conn.execute("SELECT current_batch, total_batches, status_message FROM queue WHERE file_path=?", (primary_path_str,)).fetchone()
-            if row:
-                self.current_batch = row[0] or self.current_batch
-                self.total_batches = row[1] or self.total_batches
-                db_status_msg = row[2] or "Processing"
-        
-        conn.close()
+            current_file = None
+            db_status_msg = "Ready"
+            primary_path_str = None
+            
+            if self.active_tasks:
+                primary_path_str = list(self.active_tasks.keys())[0]
+                current_file = Path(primary_path_str).name
+                
+                row = conn.execute("SELECT current_batch, total_batches, status_message FROM queue WHERE file_path=?", (primary_path_str,)).fetchone()
+                if row:
+                    self.current_batch = row[0] or self.current_batch
+                    self.total_batches = row[1] or self.total_batches
+                    db_status_msg = row[2] or "Processing"
+        finally:
+            conn.close()
         active_files = [Path(f).name for f in self.active_tasks.keys()]
         
         # Pull live status from service if available (fallback to DB)

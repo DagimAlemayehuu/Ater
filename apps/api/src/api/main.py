@@ -195,7 +195,7 @@ app.add_middleware(_VaultPathCacheMiddleware)
 async def _ensure_watcher_path(vault_path: str):
     """Internal helper to ensure watcher is on the right path."""
     global rag_watcher
-    if rag_watcher and str(rag_watcher.vault_path) != str(Path(vault_path)):
+    if rag_watcher and Path(rag_watcher.vault_path).resolve() != Path(vault_path).resolve():
         logger.info(f"[RAG] Vault path changed from {rag_watcher.vault_path} to {vault_path}. Restarting watcher...")
         rag_watcher.stop()
         rag_watcher = None
@@ -619,7 +619,7 @@ async def ater_watcher_toggle(
         raise HTTPException(status_code=400, detail="AI Key, Vault Path, and Inbox Path are required")
     
     # If the watcher exists but the path changed, kill it.
-    if ater_watcher and str(ater_watcher.inbox_path.absolute()) != str(Path(effective_inbox).absolute()):
+    if ater_watcher and Path(ater_watcher.inbox_path).resolve() != Path(effective_inbox).resolve():
         ater_watcher.stop()
         ater_watcher = None
 
@@ -666,7 +666,7 @@ async def ater_queue_status(
     if not effective_inbox and effective_vault:
         effective_inbox = str(Path(effective_vault) / "Inbox")
 
-    if ater_watcher and effective_inbox and str(ater_watcher.inbox_path.absolute()) != str(Path(effective_inbox).absolute()):
+    if ater_watcher and effective_inbox and Path(ater_watcher.inbox_path).resolve() != Path(effective_inbox).resolve():
         ater_watcher.stop()
         ater_watcher = None
 

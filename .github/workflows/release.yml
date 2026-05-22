@@ -152,6 +152,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         with:
           publish: false
           args: ${{ matrix.platform == 'macos' && '--target aarch64-apple-darwin' || '' }}
@@ -164,16 +166,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Push tag to release repo
-          git remote add release-repo https://x-access-token:${{ secrets.RELEASE_PAT }}@github.com/DagimAlemayehuu/Ater_Releases.git || true
-          git push release-repo "refs/tags/$TAG:refs/tags/$TAG" --force || echo "Tag already pushed."
-
-          # Ensure the draft release exists
-          gh release create "$TAG" \
-            --repo DagimAlemayehuu/Ater_Releases \
-            --title "Ater $TAG" \
-            --notes "Production Build $TAG" \
-            --draft || echo "Release already exists."
+          # The draft release was created by the create-release job.
+          # We only need to push the tag and upload artifacts here.
+          # Removed: duplicate `gh release create` that caused a race condition
+          # when both macOS and Windows runners tried to create the same release simultaneously.
 
           if [ "${{ matrix.platform }}" == "macos" ]; then
             DMG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/ -name "*.dmg" | head -n 1 || echo "")

@@ -250,6 +250,9 @@ importers:
       '@eslint/js':
         specifier: ^9.39.3
         version: 9.39.3
+      '@playwright/test':
+        specifier: ^1.52.0
+        version: 1.60.0
       '@tauri-apps/cli':
         specifier: ^2
         version: 2.10.0
@@ -392,100 +395,6 @@ importers:
       typescript:
         specifier: 5.9.3
         version: 5.9.3
-
-  apps/waitlist:
-    dependencies:
-      '@google/genai':
-        specifier: ^1.17.0
-        version: 1.52.0(@modelcontextprotocol/sdk@1.29.0(zod@3.25.76))
-      '@hookform/resolvers':
-        specifier: ^5.2.1
-        version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
-      '@supabase/supabase-js':
-        specifier: ^2.105.4
-        version: 2.105.4
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.27(postcss@8.5.6)
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      lucide-react:
-        specifier: ^0.553.0
-        version: 0.553.0(react@19.2.4)
-      motion:
-        specifier: ^12.23.24
-        version: 12.38.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      next:
-        specifier: ^15.4.9
-        version: 15.5.18(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
-      react:
-        specifier: ^19.2.1
-        version: 19.2.4
-      react-dom:
-        specifier: ^19.2.1
-        version: 19.2.4(react@19.2.4)
-      tailwind-merge:
-        specifier: ^3.3.1
-        version: 3.6.0
-      tailwindcss-animate:
-        specifier: ^1.0.7
-        version: 1.0.7(tailwindcss@4.1.11)
-    devDependencies:
-      '@playwright/test':
-        specifier: ^1.60.0
-        version: 1.60.0
-      '@tailwindcss/postcss':
-        specifier: 4.1.11
-        version: 4.1.11
-      '@tailwindcss/typography':
-        specifier: ^0.5.19
-        version: 0.5.19(tailwindcss@4.1.11)
-      '@types/node':
-        specifier: ^20
-        version: 20.19.41
-      '@types/react':
-        specifier: ^19
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19
-        version: 19.2.3(@types/react@19.2.14)
-      eslint:
-        specifier: 9.39.1
-        version: 9.39.1(jiti@2.7.0)
-      eslint-config-next:
-        specifier: 16.0.8
-        version: 16.0.8(@typescript-eslint/parser@8.56.1(eslint@9.39.1(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.1(jiti@2.7.0))(typescript@5.9.3)
-      firebase-tools:
-        specifier: ^15.0.0
-        version: 15.18.0(@types/node@20.19.41)
-      tailwindcss:
-        specifier: 4.1.11
-        version: 4.1.11
-      tw-animate-css:
-        specifier: ^1.4.0
-        version: 1.4.0
-      typescript:
-        specifier: 5.9.3
-        version: 5.9.3
-
-  temp_graph:
-    dependencies:
-      force-graph:
-        specifier: ^1.51.4
-        version: 1.51.4
-      react-force-graph-2d:
-        specifier: ^1.29.1
-        version: 1.29.1(react@19.2.4)
-      react-kapsule:
-        specifier: ^2.5.7
-        version: 2.5.7(react@19.2.4)
 
 packages:
 

@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.4.11"
+version = "0.5.0"
 description = "Ater desktop application"
 authors = ["Dagim Alemayehu"]
 license = "Proprietary"
@@ -45,6 +45,9 @@ tokenizers = "0.23.1"
 ndarray = "0.17.2"
 reqwest = { version = "0.13.3", features = ["json", "multipart"] }
 percent-encoding = "2.3"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 
 [profile.release]

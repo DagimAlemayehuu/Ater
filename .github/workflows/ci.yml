@@ -7,8 +7,11 @@ on:
     branches: [ "main" ]
 
 jobs:
+  # ─────────────────────────────────────────────
+  # Tier 1: Python Backend Tests
+  # ─────────────────────────────────────────────
   test-backend:
-    name: Tier 1 - Backend (Python)
+    name: Backend (Python / pytest)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,11 +22,18 @@ jobs:
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
       - name: Run Pytest Suite
-        run: cd apps/api && uv run python -m pytest tests/ -v
+        run: cd apps/api && uv run python -m pytest tests/ -v --tb=short
 
+  # ─────────────────────────────────────────────
+  # Tier 2: Frontend Tests (Vitest + Type Check)
+  # ─────────────────────────────────────────────
   test-desktop:
-    name: Tier 2 - Desktop (React)
+    name: Desktop (React / Vitest)
     runs-on: ubuntu-latest
+    env:
+      # Provide Supabase vars so Vite build succeeds in CI
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Node.js
@@ -39,33 +49,84 @@ jobs:
       - name: Run Typecheck
         run: pnpm --filter @ater/desktop typecheck
       - name: Run Vitest Suite
-        run: cd apps/desktop && pnpm vitest run
+        run: cd apps/desktop && pnpm vitest run --reporter=verbose
       - name: Run Production Build
         run: pnpm --filter @ater/desktop build
 
+  # ─────────────────────────────────────────────
+  # Tier 3: Rust Build + Tests (macOS runner matches release target)
+  # ─────────────────────────────────────────────
   test-rust:
-    name: Tier 3 - Desktop (Rust)
-    runs-on: ubuntu-latest
+    name: Desktop (Rust / cargo test)
+    # Use macos-14 (Apple Silicon) to match the primary release runner.
+    # The CI previously ran cargo check on ubuntu-latest — this would miss
+    # macOS-specific native library linking errors (ort, LanceDB, Arrow).
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev clang libclang-dev
-
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create dummy sidecar for Cargo Check
+      - name: Create dummy sidecar binary (required by Tauri build system)
         run: |
           mkdir -p apps/desktop/src-tauri/binaries
-          touch apps/desktop/src-tauri/binaries/ater-api-x86_64-unknown-linux-gnu
+          touch apps/desktop/src-tauri/binaries/ater-api-aarch64-apple-darwin
+          chmod +x apps/desktop/src-tauri/binaries/ater-api-aarch64-apple-darwin
 
-      - name: Run Cargo Check
-        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      # Full build (not just check) so that native libraries are linked and tested
+      - name: Run cargo build --release
+        run: cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml --release
+
+      # Run Rust unit tests (db.rs has a VectorDB workflow test)
+      - name: Run cargo test
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml -- --nocapture
+
+  # ─────────────────────────────────────────────
+  # Tier 4: E2E Tests (Playwright — desktop build required)
+  # ─────────────────────────────────────────────
+  test-e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright Browsers
+        run: cd apps/desktop && npx playwright install --with-deps chromium
+      - name: Run Playwright Tests
+        run: cd apps/desktop && npx playwright test
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: apps/desktop/playwright-report/
+          retention-days: 7

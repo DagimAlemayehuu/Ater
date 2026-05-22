@@ -6,21 +6,82 @@ pub mod ml;
 pub mod commands;
 
 use std::net::TcpListener;
+use std::sync::{Arc, Mutex};
 use tauri::{Manager, State};
 use tauri_plugin_shell::ShellExt;
 use sha2::Digest;
 
+#[cfg(target_family = "unix")]
+extern crate libc;
+
 pub struct SidecarConfig {
     pub port: u16,
 }
+
+
 
 #[tauri::command]
 fn get_sidecar_port(state: State<'_, SidecarConfig>) -> u16 {
     state.port
 }
 
+/// Minimal health response — used for the `get_health` IPC command.
+#[tauri::command]
+fn get_health() -> serde_json::Value {
+    serde_json::json!({ "status": "ok", "version": env!("CARGO_PKG_VERSION") })
+}
+
 fn get_available_port(start_port: u16) -> Option<u16> {
     (start_port..9000).find(|port| TcpListener::bind(("127.0.0.1", *port)).is_ok())
+}
+
+/// Loads or generates a per-device random Argon2 salt.
+/// The salt is stored in ~/.ater/device.salt (32 random bytes).
+/// This replaces the previous global hardcoded salt which weakened Stronghold encryption.
+fn load_or_create_device_salt() -> Vec<u8> {
+    let salt_path = dirs::home_dir()
+        .map(|h| h.join(".ater").join("device.salt"))
+        .expect("Could not resolve home directory");
+
+    if let Some(parent) = salt_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+
+    if salt_path.exists() {
+        if let Ok(bytes) = std::fs::read(&salt_path) {
+            if bytes.len() == 32 {
+                return bytes;
+            }
+        }
+    }
+
+    // Generate a cryptographically random 32-byte salt and persist it
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    use std::time::SystemTime;
+
+    // Combine machine ID + timestamp entropy for a unique seed
+    let machine_id = machine_uid::get().unwrap_or_else(|_| "unknown".to_string());
+    let nanos = SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+
+    let mut hasher = DefaultHasher::new();
+    machine_id.hash(&mut hasher);
+    nanos.hash(&mut hasher);
+    let seed = hasher.finish();
+
+    // Use SHA-256 of (seed || machine_id || nanos) to generate a 32-byte unique salt
+    let mut sha = sha2::Sha256::new();
+    sha.update(seed.to_le_bytes());
+    sha.update(machine_id.as_bytes());
+    sha.update(nanos.to_le_bytes());
+    let salt: Vec<u8> = sha.finalize().to_vec();
+
+    let _ = std::fs::write(&salt_path, &salt);
+    eprintln!("[Stronghold] Generated new per-device salt at {:?}", salt_path);
+    salt
 }
 
 #[tauri::command]
@@ -82,25 +143,61 @@ fn get_machine_id() -> Result<String, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Load the per-device salt once at startup — used by Stronghold's Argon2 hasher.
+    let device_salt = load_or_create_device_salt();
+    let device_salt = Arc::new(device_salt);
+
+    // Shared handle to the sidecar PID so we can kill it on exit
+    let sidecar_pid: Arc<Mutex<Option<u32>>> = Arc::new(Mutex::new(None));
+    let sidecar_pid_exit = Arc::clone(&sidecar_pid);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_stronghold::Builder::new(|password| {
+        .plugin(
+            tauri_plugin_log::Builder::default()
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
+        .plugin(tauri_plugin_stronghold::Builder::new(move |password| {
             use argon2::{Argon2, Algorithm, Version, Params};
-            let salt = b"ater_secure_salt"; // 16 bytes
+            // Each device has a unique salt — see load_or_create_device_salt()
+            let salt = device_salt.as_slice();
             let mut hash = [0u8; 32];
             let argon2 = Argon2::new(
                 Algorithm::Argon2id,
                 Version::V0x13,
                 Params::new(65536, 1, 4, Some(32)).unwrap(),
             );
-            argon2.hash_password_into(password.as_bytes(), salt, &mut hash).expect("failed to hash password");
+            argon2.hash_password_into(password.as_bytes(), salt, &mut hash)
+                .expect("Argon2 hash failed");
             hash.to_vec()
         }).build())
-        .setup(|app| {
+        .on_window_event(move |_window, event| {
+            if let tauri::WindowEvent::Destroyed = event {
+                if let Ok(pid_guard) = sidecar_pid_exit.lock() {
+                    if let Some(pid) = *pid_guard {
+                        eprintln!("[Sidecar] App window destroyed — killing sidecar PID {}", pid);
+                        #[cfg(target_os = "windows")]
+                        {
+                            let _ = std::process::Command::new("taskkill")
+                                .args(["/PID", &pid.to_string(), "/F"])
+                                .spawn();
+                        }
+                        #[cfg(not(target_os = "windows"))]
+                        {
+                            unsafe {
+                                libc::kill(pid as i32, libc::SIGTERM);
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        .setup(move |app| {
             let mut port = 8765;
             let mut should_spawn = true;
 
@@ -148,8 +245,12 @@ pub fn run() {
                                 .env("ATER_PARENT_PID", &std::process::id().to_string())
                                 .spawn()
                             {
-                                Ok(_child) => {
+                                Ok(child) => {
                                     println!("[Sidecar] Successfully spawned FastAPI via virtualenv Python on port {}", port);
+                                    // Track PID for cleanup on exit
+                                    if let Ok(mut pid_guard) = sidecar_pid.lock() {
+                                        *pid_guard = Some(child.id());
+                                    }
                                     spawned_successfully = true;
                                 }
                                 Err(err) => {
@@ -166,8 +267,11 @@ pub fn run() {
                                 .env("ATER_PARENT_PID", &std::process::id().to_string())
                                 .spawn()
                             {
-                                Ok(_child) => {
+                                Ok(child) => {
                                     println!("[Sidecar] Successfully spawned FastAPI via 'uv' on port {}", port);
+                                    if let Ok(mut pid_guard) = sidecar_pid.lock() {
+                                        *pid_guard = Some(child.id());
+                                    }
                                     spawned_successfully = true;
                                 }
                                 Err(err) => {
@@ -191,8 +295,12 @@ pub fn run() {
                             .env("PYTHONIOENCODING", "utf-8")
                             .env("ATER_PARENT_PID", &std::process::id().to_string());
                         match sidecar.spawn() {
-                            Ok((rx, _child)) => {
+                            Ok((rx, child)) => {
                                 println!("[Sidecar] Successfully spawned on port {}", port);
+                                // Track PID for explicit kill on exit (critical on Windows to prevent orphans)
+                                if let Ok(mut pid_guard) = sidecar_pid.lock() {
+                                    *pid_guard = Some(child.pid());
+                                }
                                 // CRITICAL: Drain stdout/stderr in a background task.
                                 // If we drop `rx` immediately, the OS pipe buffer (~64KB) fills
                                 // up and the Python process silently hangs when writing logs.
@@ -204,9 +312,6 @@ pub fn run() {
                                     }
                                     println!("[Sidecar] stdout/stderr channel closed — process exited.");
                                 });
-                                // Note: `_child` is dropped here intentionally.
-                                // tauri-plugin-shell does NOT kill the child on drop;
-                                // the OS process keeps running until Tauri quits.
                             }
                             Err(e) => {
                                 eprintln!("[Sidecar] Critical Error: Failed to spawn: {}", e);
@@ -225,17 +330,11 @@ pub fn run() {
                 ml: std::sync::Mutex::new(None),
             });
 
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             get_sidecar_port,
+            get_health,
             export_logs,
             get_machine_id,
             commands::initialize_database,

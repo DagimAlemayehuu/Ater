@@ -75,20 +75,30 @@ export default function Onboarding() {
     setFinalStatus('running')
     setFinalError('')
 
+    // Guard against a hung sidecar — show a timeout error after 60 seconds
+    const timeoutId = setTimeout(() => {
+      setFinalStatus('error')
+      setFinalError('Setup timed out. The AI engine may not be ready yet. Please try again in a moment.')
+    }, 60_000)
+
     try {
-      // 0. Save the vault path first so headers in sidecarApi can find it
+      // 0. Save the vault path first so all subsequent sidecar calls can find it
       await saveConfig({
         obsidianVaultPath: vaultPath,
         inboxPath: `${vaultPath}/Inbox`
       })
 
-      // 1. Initialize Folder Structure
-      await sidecarApi.initializeVault()
+      // 1. Initialize folder structure (non-fatal if sidecar not ready — folders are local)
+      try {
+        await sidecarApi.initializeVault()
+      } catch (vaultErr: any) {
+        console.warn('[Onboarding] initializeVault failed (non-fatal):', vaultErr?.message)
+      }
 
-      // 2. Initial sync to prepare databases
+      // 2. Sync academic profile to prepare databases
       await sidecarApi.academicsSyncProfile()
 
-      // 3. Scaffold Academic Program
+      // 3. Scaffold Academic Program years into vault
       if (programName) {
         const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
         const cleanName = programName.replace(/_/g, ' ').trim()
@@ -108,13 +118,13 @@ export default function Onboarding() {
         }
       }
 
-      // Update Supabase profile
+      // 4. Update Supabase profile to mark as configured
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         await supabase.from('profiles').update({ is_configured: true }).eq('id', user.id)
       }
 
-      // 3. Finalize all configuration in ONE call to prevent race conditions in App.tsx
+      // 5. Finalize all configuration in ONE atomic call (prevents race conditions)
       await saveConfig({
         obsidianVaultPath: vaultPath,
         aiApiKey: apiKey,
@@ -126,9 +136,12 @@ export default function Onboarding() {
         isProgramConfigured: true
       })
 
+      clearTimeout(timeoutId)
       setFinalStatus('done')
     } catch (err: any) {
-      setFinalError(err.message || 'Setup failed. Check your vault path and try again.')
+      clearTimeout(timeoutId)
+      const msg = err?.message || 'Setup failed. Check your vault path and try again.'
+      setFinalError(msg)
       setFinalStatus('error')
     }
   }
