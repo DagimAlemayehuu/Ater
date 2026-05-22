@@ -170,11 +170,11 @@ class AterService:
             
             existing = {}
             if self._session_file.exists():
-                with open(self._session_file, "r") as f:
+                with open(self._session_file, "r", encoding="utf-8") as f:
                     existing = json.load(f)
             
             existing[session_id] = persist_data
-            with open(self._session_file, "w") as f:
+            with open(self._session_file, "w", encoding="utf-8") as f:
                 json.dump(existing, f)
         except Exception as e:
             print(f"[Ater Service] Session persistence failed: {e}")
@@ -187,7 +187,7 @@ class AterService:
         if await asyncio.to_thread(self._session_file.exists):
             try:
                 def _read_session():
-                    with open(self._session_file, "r") as f:
+                    with open(self._session_file, "r", encoding="utf-8") as f:
                         return json.load(f)
                 
                 existing = await asyncio.to_thread(_read_session)
@@ -1540,7 +1540,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         title: str,
         source_pages: List[int],
         max_chars: int = 3200,
-        max_pages: int = 4,
+        max_pages: int = 3,
     ) -> Tuple[str, List[int]]:
         """Build a compact source packet plus multiple page anchors.
 
@@ -1548,11 +1548,22 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         concept-local packet instead of a broad chapter slice, while metadata
         preserves all relevant PDF pages for jump/explain flows.
         """
+        max_pages = min(3, max_pages)
+        stop_words = {
+            "and", "the", "for", "with", "this", "that", "from", "into", "over", "under", "both", "using", "through",
+            "about", "above", "below", "between", "during", "before", "after", "here", "there", "when", "where", "why",
+            "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "than", "too", "very",
+            "can", "will", "should", "would", "could", "must", "may", "might", "shall", "does", "done", "doing", "been",
+            "have", "has", "had", "having", "were", "what", "which", "who", "whom", "whose", "their", "theirs", "them",
+            "they", "your", "yours", "yourselves", "yourself", "himself", "herself", "itself", "ourselves", "themselves",
+            "each", "every", "either", "neither", "some", "much", "many", "most", "same", "such", "both", "half", "each"
+        }
         title_words = [
             w.lower()
             for w in re.findall(r"[A-Za-z][A-Za-z0-9+]*", title.replace("_", " "))
-            if len(w) > 2
+            if len(w) > 2 and w.lower() not in stop_words
         ]
+        total_unique_keywords = len(set(title_words))
         wanted_pages = [int(p) for p in source_pages or [] if str(p).isdigit()]
         page_blocks = re.findall(
             r"\[PAGE\s+(\d+)\]\s*(.*?)(?=\n\[PAGE\s+\d+\]|\Z)",
@@ -1560,30 +1571,77 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             flags=re.DOTALL | re.IGNORECASE,
         )
 
-        scored_pages: List[Tuple[int, int, str]] = []
+        scored_pages: List[Tuple[float, int, str]] = []
+        exact_title = title.replace("_", " ").lower()
+
         for page_no_raw, page_text in page_blocks:
             page_no = int(page_no_raw)
             lower = page_text.lower()
-            score = sum(4 for w in title_words if w in lower)
-            score += sum(1 for w in title_words if any(w in s.lower() for s in re.split(r"(?<=[.!?])\s+", page_text)))
+            
+            # Exact title matches (substantial weight)
+            exact_count = lower.count(exact_title)
+            exact_score = exact_count * 30.0
+            
+            # Compute keyword frequency and unique keyword coverage
+            matched_keywords = 0
+            word_score = 0.0
+            for w in set(title_words):
+                count = lower.count(w)
+                if count > 0:
+                    matched_keywords += 1
+                    # Cap frequency contribution to avoid redundancy bias
+                    capped_count = min(3, count)
+                    word_score += capped_count * 4.0
+            
+            # Smart Relevance Coverage Scaling
+            if total_unique_keywords > 0:
+                coverage_ratio = matched_keywords / total_unique_keywords
+                # Boost if more than half or all keywords are present
+                coverage_bonus = (coverage_ratio ** 2) * 20.0
+                relevance_score = exact_score + (word_score * coverage_ratio) + coverage_bonus
+            else:
+                relevance_score = exact_score + word_score
+
+            # Sentence keyword density
+            sentence_score = sum(1.5 for w in title_words if any(w in s.lower() for s in re.split(r"(?<=[.!?])\s+", page_text)))
+            
+            total_page_score = relevance_score + sentence_score
+            
             if page_no in wanted_pages:
-                score += 12
-            if score > 0:
-                scored_pages.append((score, page_no, page_text.strip()))
+                # Moderate boost for planner-suggested pages, but only if they have some content match
+                if total_page_score > 0:
+                    total_page_score += 15.0
+                else:
+                    total_page_score += 2.0
+            
+            if total_page_score >= 10.0:
+                scored_pages.append((total_page_score, page_no, page_text.strip()))
 
+        # Sort scored pages by score descending, then page number ascending
+        scored_pages.sort(key=lambda item: (-item[0], item[1]))
+
+        # Define smart threshold filter
         selected_pages: List[int] = []
-        for p in wanted_pages:
-            if p not in selected_pages:
-                selected_pages.append(p)
+        if scored_pages:
+            max_score = scored_pages[0][0]
+            # Always keep the best page
+            selected_pages.append(scored_pages[0][1])
+            
+            # Keep other pages only if they meet the relevance threshold
+            # Threshold: must be at least 30% of the max score AND at least 8.0 absolute score
+            relevance_threshold = max(8.0, 0.3 * max_score)
+            
+            for score, page_no, _text in scored_pages[1:]:
+                if score >= relevance_threshold:
+                    if page_no not in selected_pages:
+                        selected_pages.append(page_no)
+                if len(selected_pages) >= max_pages:
+                    break
 
-        for _score, page_no, _text in sorted(scored_pages, key=lambda item: (-item[0], item[1])):
-            if page_no not in selected_pages:
-                selected_pages.append(page_no)
-            if len(selected_pages) >= max_pages:
-                break
+        selected_pages = sorted(selected_pages[:max_pages])
 
-        if not selected_pages and page_blocks:
-            selected_pages = [int(page_blocks[0][0])]
+        if not selected_pages:
+            return "", []
 
         page_map = {int(p): text for p, text in page_blocks}
         packet_parts = []
@@ -1606,7 +1664,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             packet = packet[:max_chars].rsplit(" ", 1)[0].strip()
 
         source_page_anchors = sorted(set(int(p) for p in selected_pages if str(p).isdigit()))
-        return packet or self._compact_source_context(full_text, seed_context, title, source_pages, max_chars), source_page_anchors
+        return packet, source_page_anchors
 
     def get_active_academic_context(self) -> Dict[str, str]:
         """Reads the vault to find the currently active semester and year."""
@@ -2060,6 +2118,10 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                             title=note_dict.get("title") or "",
                             source_pages=note_dict.get("source_pages") or [],
                         )
+                        if not source_page_anchors:
+                            print(f"[Ater Service] Skipping concept '{note.title}' because no matching/relevant source pages were found in the PDF.")
+                            continue
+                        
                         note_dict["source_context"] = source_packet
                         note_dict["source_pages"] = source_page_anchors
                         
@@ -2897,11 +2959,11 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 # Also clean up the persisted session file entry if finished
                 try:
                     if self._session_file.exists():
-                        with open(self._session_file, "r") as f:
+                        with open(self._session_file, "r", encoding="utf-8") as f:
                             existing = json.load(f)
                         if session_id in existing:
                             del existing[session_id]
-                            with open(self._session_file, "w") as f:
+                            with open(self._session_file, "w", encoding="utf-8") as f:
                                 json.dump(existing, f)
                 except Exception: pass
             else:

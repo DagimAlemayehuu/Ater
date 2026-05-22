@@ -357,6 +357,31 @@ class AterValidator:
         if last_char not in valid_endings and not body.strip().endswith("```"):
             errors.append("TRUNCATED_GENERATION: The note appears to be cut off mid-sentence without proper closing punctuation.")
 
+        # Check for trailing letter truncations (e.g. lines ending in space + single char or 'and' + space + single char)
+        for line in prose_clean.split("\n"):
+            line_stripped = line.strip()
+            if not line_stripped:
+                continue
+            # If it ends with a space followed by a single letter (excluding 'a', 'i', 'A', 'I', or numbers)
+            match = re.search(r'\s+([b-hj-zB-HJ-Z])\s*$', line_stripped)
+            if match:
+                errors.append(f"TRUNCATED_PROSE_LINE: Line ends in isolated character '{match.group(1)}': '{line_stripped[-40:]}'")
+                break
+
+        # Check for Mermaid syntax corruption
+        mermaid_blocks = re.findall(r"```mermaid\s*(.*?)\s*```", body, re.DOTALL | re.IGNORECASE)
+        for block in mermaid_blocks:
+            if "[[[" in block or "]]]" in block:
+                errors.append("MERMAID_INVALID_BRACKETS: Mermaid diagram contains invalid triple brackets '[[[' or ']]]' which break syntax.")
+            for line in block.split("\n"):
+                line_stripped = line.strip()
+                if line_stripped.endswith("|") and not line_stripped.startswith("|"):
+                    errors.append(f"MERMAID_DANGLING_PIPE: Mermaid diagram line ends in dangling pipe character '|': '{line_stripped}'")
+                    break
+                if re.search(r'[-=~]>\|$', line_stripped) or re.search(r'[-=~]\|$', line_stripped):
+                    errors.append(f"MERMAID_DANGLING_PIPE: Mermaid line has dangling arrow pipe: '{line_stripped}'")
+                    break
+
         # ── TRUNCATION GUARD: Check for mid-sentence cuts inside sections ──────
         # v33.0: matches any ##-level heading to capture all 4 sections
         section_texts = re.findall(

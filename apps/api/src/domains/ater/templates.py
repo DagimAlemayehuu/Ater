@@ -70,6 +70,20 @@ def _render_dynamic_sections(data: Dict[str, Any]) -> str:
         {"id": "source_artifact", "heading": data.get("artifact_title", "Source Artifact")},
     ]
 
+    # Enforce Java Code Blocks in CS-SOFTWARE Modality
+    mode = data.get("mode") or ""
+    artifact_content = data.get("artifact_content", "")
+    if mode == "CS-SOFTWARE" and artifact_content:
+        stripped = artifact_content.strip()
+        if not (stripped.startswith("```") and stripped.endswith("```")):
+            is_table = stripped.startswith("|") or ("|---|---|" in stripped) or (stripped.count("|") > 4 and "\n" in stripped)
+            is_mermaid = stripped.startswith("graph ") or stripped.startswith("flowchart ") or stripped.startswith("```mermaid")
+            if not is_table and not is_mermaid:
+                artifact_content = f"```java\n{stripped}\n```"
+                data["artifact_content"] = artifact_content
+                if "Table" in str(data.get("artifact_type", "")) or not data.get("artifact_type"):
+                    data["artifact_type"] = "Executable Java Code Block"
+
     content_map = {
         "core_logic": data.get("core_logic", ""),
         "formal_model": data.get("formal_model", ""),
@@ -130,9 +144,14 @@ def build_skeleton_note(note_schema, source_snippet: str, domain: dict, all_titl
     import json
     import re
     title = note_schema.title.replace("_", " ")
+    class_name = "".join(w.capitalize() for w in re.findall(r'[A-Za-z0-9]+', title))
+    if not class_name or class_name[0].isdigit():
+        class_name = "Concept" + class_name
     
     # --- Extract clean sentences from raw source ---
     clean = re.sub(r'\[SOURCE EXCERPT\]', '', source_snippet or '', flags=re.IGNORECASE)
+    clean = re.sub(r'\[[A-Z_]+ SOURCE HINT\]', '', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'SOURCE HINT:?', '', clean, flags=re.IGNORECASE)
     clean = re.sub(r'\[PAGE \d+\]', '', clean)
     clean = re.sub(r'\b\d{1,2}/\d{1,2}/\d{4}\b', '', clean)
     clean = re.sub(r'[“”]', '"', clean)
@@ -157,6 +176,16 @@ def build_skeleton_note(note_schema, source_snippet: str, domain: dict, all_titl
     else:
         sentences = []
     
+    # Pad sentences if we have too few to ensure high-quality output
+    domain_name = domain.get('persona', domain.get('name', 'the subject'))
+    while len(sentences) < 3:
+        if len(sentences) == 0:
+            sentences.append(f"The source material frames {title} as a fundamental building block within the scope of {domain_name}.")
+        elif len(sentences) == 1:
+            sentences.append(f"Understanding the behavioral mechanics of {title} is critical for analyzing the textbook's source code and definitions.")
+        else:
+            sentences.append(f"Further analysis of the source text demonstrates how {title} interacts with other components in the system.")
+
     # Partition: first third for mental model, middle for logic, last for formal
     third = max(1, len(sentences) // 3)
     model_sents = sentences[:third]
@@ -165,8 +194,6 @@ def build_skeleton_note(note_schema, source_snippet: str, domain: dict, all_titl
     
     def join_prose(sents, fallback=""):
         return ' '.join(sents) if sents else fallback
-    
-    domain_name = domain.get('persona', domain.get('name', 'the subject'))
     
     mental_model = (
         f"Think of {title} as the label on one important part of a larger system: once you know what that part does, the surrounding details become much easier to organize. "
@@ -207,59 +234,84 @@ def build_skeleton_note(note_schema, source_snippet: str, domain: dict, all_titl
         + join_prose(formal_sents, "These structural constraints ensure consistent and predictable behavior when this concept is applied.")
     )
     
-    artifact_content = (
-        "| Source Detail | Meaning |\n"
-        "|---|---|\n"
-        f"| {title} | The focused concept being studied. |\n"
-        f"| {domain_name} | The disciplinary lens used for examples and questions. |\n"
-        "| Source excerpt | The only authority for definitions and constraints. |"
-    )
+    page = min((int(p) for p in getattr(note_schema, "source_pages", []) if str(p).isdigit()), default=1)
+    
+    # Dynamic Artifact rendering
+    mode = getattr(note_schema, "mode", "")
+    if mode == "CS-SOFTWARE" or "software" in str(domain_name).lower():
+        first_sent = join_prose(logic_sents[:1], "Defines key programming context.")
+        escaped_first_sent = first_sent.replace('"', '\\"')
+        artifact_content = (
+            f"```java\n"
+            f"// Demonstration of {title} in Java\n"
+            f"public class {class_name} {{\n"
+            f"    // Grounded source definition:\n"
+            f"    private static final String DEFINITION = \"{escaped_first_sent}\";\n\n"
+            f"    public static void main(String[] args) {{\n"
+            f"        System.out.println(\"{title} behavior:\");\n"
+            f"        System.out.println(DEFINITION);\n"
+            f"    }}\n"
+            f"}}\n"
+            f"```"
+        )
+        artifact_type = "Executable Java Code Block"
+    else:
+        first_sent = join_prose(logic_sents[:1], "Defines key contextual relationship.")
+        artifact_content = (
+            "| Source Detail | Meaning |\n"
+            "|---|---|\n"
+            f"| {title} | The focused concept being studied. |\n"
+            f"| {domain_name} | {first_sent[:90]} |\n"
+            f"| Source excerpt | The only authority for definitions and constraints. |"
+        )
+        artifact_type = "Markdown Table"
     
     option_a = join_prose(model_sents[:1], title)[:120].strip() or title
-    page = min((int(p) for p in getattr(note_schema, "source_pages", []) if str(p).isdigit()), default=1)
     questions = [
         {
             "type": "mcq",
             "question": f"Which statement best matches the source's treatment of {title}?",
             "options": {
                 "A": option_a,
-                "B": f"{title} is unrelated to Java program behavior.",
+                "B": f"{title} is unrelated to the subject's behavior.",
                 "C": f"{title} only describes comments and formatting.",
                 "D": f"{title} can be ignored without changing program behavior."
             },
             "answer": "A",
-            "explanation": f"The source context connects {title} to concrete Java behavior, syntax, or object structure.",
+            "explanation": f"The source context connects {title} to concrete behavior, syntax, or logical structure from page {page}.",
             "explanation_page": page
         },
         {
             "type": "true_false",
-            "question": f"{title} should be interpreted using the exact Java behavior shown in the source rather than a generic definition alone.",
+            "question": f"{title} should be interpreted using the exact behavior shown in the source rather than a generic definition alone.",
             "answer": True,
             "explanation": f"The note is source-grounded, so the source's examples and constraints determine the correct interpretation of {title}.",
             "explanation_page": page
         },
         {
             "type": "writing",
-            "question": f"Explain {title} in one precise paragraph and include one Java-specific consequence from the source.",
-            "answer": f"A strong answer defines {title}, states how it affects Java code behavior, and anchors the explanation in the source example or definition.",
-            "required_keywords": ["Java", "source", "behavior"],
-            "explanation": f"This checks whether the learner can move from the source wording to a usable programming explanation of {title}.",
+            "question": f"Explain {title} in one precise paragraph and include one specific consequence from the source on page {page}.",
+            "answer": f"A strong answer defines {title}, states how it affects the system's behavior, and anchors the explanation in the source definition from page {page}.",
+            "required_keywords": ["source", "behavior"],
+            "explanation": f"This checks whether the learner can move from the source wording to a usable explanation of {title}.",
             "explanation_page": page
         }
     ]
     possible_questions = "```interactive-quiz\n" + json.dumps(questions, indent=2) + "\n```"
 
     data = {
+        "title": note_schema.title,
         "mental_model": mental_model,
         "h1_title": domain.get("h1", "How It Actually Works"),
         "core_logic": core_logic,
         "h2_title": domain.get("h2", "The Formal Model"),
         "formal_model": formal_model,
-        "artifact_type": domain.get("type", "Markdown Table"),
+        "artifact_type": artifact_type,
         "artifact_content": artifact_content,
         "dynamic3_content": "Use this section as a compact bridge between the source wording and the exact place where a student might get confused.",
         "section_plan": build_dynamic_section_plan(domain, getattr(note_schema, "concept_modality", "")),
-        "possible_questions": possible_questions
+        "possible_questions": possible_questions,
+        "mode": mode
     }
     
     return render_atomic_note(data)

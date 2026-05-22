@@ -370,3 +370,145 @@ def test_topological_sort_circular_breaks():
     assert len(result) == 2, "Must return both notes"
     stripped = [n for n in result if n.get("prerequisites") == []]
     assert len(stripped) >= 1, "At least one circular node must have prereqs stripped"
+
+
+def test_chronological_sorting_in_hub(tmp_path):
+    """Verify chronological sorting in sync_hub_connections based on frontmatter pages."""
+    from src.domains.ater.post_processing import sync_hub_connections
+    
+    unit_dir = tmp_path / "unit_1"
+    unit_dir.mkdir()
+    
+    # Create atomic notes with pages in the YAML frontmatter
+    # Note A: page 10
+    (unit_dir / "Note_A.md").write_text("""---
+title: Note_A
+type: atomic_note
+course: Test Course
+source_pages: [10]
+prerequisites: []
+---
+## Mental Model
+Content A. [[Note_B]] [[Note_C]]
+""", encoding="utf-8")
+
+    # Note B: page 5
+    (unit_dir / "Note_B.md").write_text("""---
+title: Note_B
+type: atomic_note
+course: Test Course
+source_pages: [5]
+prerequisites: []
+---
+## Mental Model
+Content B.
+""", encoding="utf-8")
+
+    # Note C: page 8
+    (unit_dir / "Note_C.md").write_text("""---
+title: Note_C
+type: atomic_note
+course: Test Course
+source_pages: [8]
+prerequisites: []
+---
+## Mental Model
+Content C.
+""", encoding="utf-8")
+
+    hub_file = tmp_path / "Test_Hub.md"
+    hub_file.write_text("""---
+title: Test_Hub
+type: hub
+---
+## Connections
+- [ ] [[Note_A]]
+""", encoding="utf-8")
+
+    # Sync
+    sync_hub_connections(hub_file, unit_dir)
+    
+    # Read hub file and assert that order is Note_B -> Note_C -> Note_A
+    hub_content = hub_file.read_text(encoding="utf-8")
+    
+    b_idx = hub_content.index("[[Note_B]]")
+    c_idx = hub_content.index("[[Note_C]]")
+    a_idx = hub_content.index("[[Note_A]]")
+    
+    assert b_idx < c_idx < a_idx, "Connections list must sort chronologically: Note_B (page 5) -> Note_C (page 8) -> Note_A (page 10)"
+
+
+def test_smart_pdf_page_filter():
+    """Verify smart page filtering, unique keyword coverage, page suggestions limit, and strict exclusion of zero-relevance concepts."""
+    class MockService:
+        from src.domains.ater.service import AterService
+        _build_concept_source_packet = AterService._build_concept_source_packet
+        _extract_source_snippet = AterService._extract_source_snippet
+
+    service = MockService()
+    
+    full_text = (
+        "[PAGE 1] Introduction to Modular programming and functions. We write simple programs.\n"
+        "[PAGE 2] Dynamic memory allocation allows resizing. It is crucial for heap management.\n"
+        "[PAGE 3] Functions are modular building blocks. Functions can call other functions in program design.\n"
+        "[PAGE 4] Modular programming separates concerns. Functions help modular programming.\n"
+    )
+
+    # 1. Concept: "Modular programming" -> Keywords: "modular", "programming"
+    packet, pages = service._build_concept_source_packet(
+        full_text=full_text,
+        seed_context="",
+        title="Modular_programming",
+        source_pages=[1, 2, 3, 4]
+    )
+    assert 2 not in pages, "Page 2 has no matching keywords and should be excluded"
+    assert 1 in pages and 4 in pages, "Page 1 and Page 4 have high relevance (all keywords present) and should be matched"
+    assert len(pages) <= 3, "Source page suggestions must be capped at 3"
+
+    # 2. Concept with zero relevance: "Quantum Physics"
+    packet_none, pages_none = service._build_concept_source_packet(
+        full_text=full_text,
+        seed_context="",
+        title="Quantum_Physics",
+        source_pages=[]
+    )
+    assert pages_none == [], "Zero-relevance concepts must return empty source page anchors"
+    assert packet_none == "", "Zero-relevance concepts must return empty source packet"
+
+
+def test_dynamic_skeleton_fallback_compilation():
+    """Verify build_skeleton_note handles CS-SOFTWARE java code blocks and other formats dynamically."""
+    from src.domains.ater.templates import build_skeleton_note
+    from src.domains.ater.schemas import AtomicNoteSchema
+    
+    note_schema = AtomicNoteSchema(
+        title="Array_List_Implementation",
+        course="CS 101",
+        mode="CS-SOFTWARE",
+        prerequisites=[],
+        source_pages=[3],
+        description="A dynamic array."
+    )
+    
+    domain = {"persona": "Computer Science"}
+    source_snippet = "An ArrayList is a resizable array. It provides O(1) random access to elements but O(N) insertion in the worst case."
+    
+    # 1. Test CS-SOFTWARE mode
+    res_cs = build_skeleton_note(note_schema, source_snippet, domain, all_titles=["ArrayList"])
+    assert "```java" in res_cs, "CS-SOFTWARE mode must use executable Java code blocks"
+    assert "public class ArrayListImplementation {" in res_cs, "Class name must be camel-cased title"
+    assert "O(1) random access" in res_cs, "Should extract context prose correctly"
+    assert "Array List Implementation behavior:" in res_cs, "Should have printable demonstration"
+
+    # 2. Test non-CS-SOFTWARE mode (should use markdown table)
+    note_schema_other = AtomicNoteSchema(
+        title="Supply_Elasticity",
+        course="Econ 101",
+        mode="ECON-MICRO",
+        prerequisites=[],
+        source_pages=[10],
+        description="Elasticity of supply."
+    )
+    res_other = build_skeleton_note(note_schema_other, source_snippet, {"persona": "Economics"}, all_titles=[])
+    assert "```java" not in res_other, "Non-CS-SOFTWARE modes must not use Java code block fallbacks"
+    assert "| Source Detail | Meaning |" in res_other, "Non-CS-SOFTWARE modes must use Markdown table fallbacks"

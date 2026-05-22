@@ -209,12 +209,12 @@ DYNAMIC_DOMAIN_MATRIX = {
             "persona": "Software Architect",
             "h1": "Architectural Design",
             "h2": "Design Trade-offs",
-            "artifact": "Component Relationship Table",
+            "artifact": "Java Code Example / Component Design",
             "walkthrough": "System Design Rationale",
-            "type": "Markdown Table",
-            "sanity_check": "Focus on SOLID principles and design patterns.",
+            "type": "Executable code block (under 20 lines) OR Component Relationship Table",
+            "sanity_check": "Focus on SOLID principles, design patterns, and clear Java structures.",
             "l3_law": "L3 MUST be a design pattern selection task.",
-            "prohibited_anti_patterns": "STRICTLY FORBIDDEN from using code or math. Focus on high-level architecture."
+            "prohibited_anti_patterns": "Avoid overly long implementation details. Focus on clean class relationships and high-level architecture."
         },
         "Procedural": {
             "persona": "DevOps / SRE",

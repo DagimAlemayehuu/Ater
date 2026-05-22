@@ -378,14 +378,16 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
         print(f"[HubSync] No atomic notes found in {unit_dir}")
         return
 
-    # Extract prerequisites to build a tree
+    # Extract prerequisites and page numbers to build a tree
     note_data = {}
+    note_min_pages = {}
     for stem in deployed_stems:
         note_file = unit_dir / f"{stem}.md"
         try:
             content = note_file.read_text(encoding="utf-8")
             parts = content.split("---", 2)
             prereq_stems = []
+            min_page = 9999
             if len(parts) >= 3:
                 fm = yaml.safe_load(parts[1]) or {}
                 raw_prereqs = fm.get("prerequisites", [])
@@ -404,9 +406,20 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
                             if s.lower() == p_stem.lower():
                                 prereq_stems.append(s)
                                 break
+                
+                # Parse source pages
+                source_pages = fm.get("source_pages", [])
+                if isinstance(source_pages, list):
+                    pages = [int(p) for p in source_pages if str(p).isdigit()]
+                    if pages:
+                        min_page = min(pages)
+                elif isinstance(source_pages, (int, str)) and str(source_pages).isdigit():
+                    min_page = int(source_pages)
             note_data[stem] = prereq_stems
+            note_min_pages[stem] = min_page
         except Exception:
             note_data[stem] = []
+            note_min_pages[stem] = 9999
 
     # ── HIERARCHICAL TREE BUILDER (Plan-Driven Topological) ──
     # 1. Map full relationships
@@ -420,14 +433,43 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
         for p in valid_parents:
             parents_to_children[p].append(child)
 
-    # 2. Sorting weights based on plan_order
+    # 2. Topological Sort for foundational progression
+    def topological_sort(stems: List[str], dependency_graph: dict) -> List[str]:
+        visited = {} # 0 = unvisited, 1 = visiting, 2 = visited
+        order = []
+        
+        # Sort by PDF progression (page number) first, then alphabetically
+        sorted_stems = sorted(stems, key=lambda s: (note_min_pages.get(s, 9999), s.lower()))
+        
+        def dfs(node):
+            if visited.get(node, 0) == 1:
+                return True # Cycle detected
+            if visited.get(node, 0) == 2:
+                return False
+                
+            visited[node] = 1 # Visiting
+            parents = dependency_graph.get(node, [])
+            for p in sorted(parents, key=lambda s: (note_min_pages.get(s, 9999), s.lower())):
+                if p in visited:
+                    dfs(p)
+            visited[node] = 2 # Visited
+            order.append(node)
+            return False
+
+        for stem in sorted_stems:
+            visited[stem] = 0
+            
+        for stem in sorted_stems:
+            if visited[stem] == 0:
+                dfs(stem)
+        return order
+
     def normalize_title_for_comparison(t: str) -> str:
         return t.strip().lower().replace(" ", "_").replace("-", "_")
 
-    if plan_order:
-        order_map = {normalize_title_for_comparison(title): i for i, title in enumerate(plan_order)}
-    else:
-        order_map = {normalize_title_for_comparison(s): i for i, s in enumerate(sorted(list(deployed_stems)))}
+    topo_order = topological_sort(deployed_stems, child_to_parents)
+
+    order_map = {normalize_title_for_comparison(s): i for i, s in enumerate(topo_order)}
     
     all_stems_sorted = sorted(list(deployed_stems), key=lambda s: order_map.get(normalize_title_for_comparison(s), 999))
 
@@ -442,7 +484,6 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
         tree_lines.append(f"{indent}- [ ] [[{stem}]]")
         
         # Children are notes that have this stem as their "Best" parent.
-        # "Best" = the parent with the lowest index in plan_order.
         potential_children = parents_to_children.get(stem, [])
         potential_children.sort(key=lambda s: order_map.get(normalize_title_for_comparison(s), 999))
             
@@ -466,8 +507,6 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
         for p in p_list:
             if p in deployed_stems and p not in processed:
                 # We have a parent in this unit that hasn't been placed yet.
-                # However, if there's a cycle, we might be the "entry point".
-                # If our parent comes AFTER us in the plan, we are the leader.
                 if order_map.get(normalize_title_for_comparison(p), 999) > order_map.get(normalize_title_for_comparison(stem), 999):
                     continue 
                 else:
