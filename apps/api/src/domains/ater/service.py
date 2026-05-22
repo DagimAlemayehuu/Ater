@@ -769,8 +769,26 @@ class AterService:
                     "path": file.relative_to(self.vm.vault_path).as_posix()
                 })
         
-        # Sort alphabetically if unsorted
-        all_notes.sort(key=lambda x: x["title"])
+        # Sort by source_pages if available, then alphabetically
+        def get_fallback_sort_key(note_dict):
+            file_path = unit_dir / f"{note_dict['id']}.md"
+            try:
+                content = file_path.read_text(encoding="utf-8")
+                parts = content.split("---", 2)
+                if len(parts) >= 3:
+                    fm = yaml.safe_load(parts[1]) or {}
+                    source_pages = fm.get("source_pages", [])
+                    if isinstance(source_pages, list):
+                        pages = [int(p) for p in source_pages if str(p).isdigit()]
+                        if pages:
+                            return (min(pages), note_dict["title"].lower())
+                    elif isinstance(source_pages, (int, str)) and str(source_pages).isdigit():
+                        return (int(source_pages), note_dict["title"].lower())
+            except Exception:
+                pass
+            return (9999, note_dict["title"].lower())
+
+        all_notes.sort(key=get_fallback_sort_key)
         return all_notes
 
     def list_practices(self) -> List[Dict[str, Any]]:
@@ -1095,9 +1113,79 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         # 3. Invoke LLM in Batches
         AterService._status[session_id] = "Architecting Advanced Session..."
         
+        # --- HIGH-FIDELITY PRE-COMPILED QUIZ POOL EXTRACTION ---
+        extracted_pool = []
+        import json
+        import re
+        for note_path in notes_to_process:
+            try:
+                with open(note_path, "r", encoding="utf-8") as f:
+                    note_content = f.read()
+                # Find interactive-quiz block
+                quiz_match = re.search(r"```interactive-quiz\s*\n(.*?)\n```", note_content, re.DOTALL)
+                if quiz_match:
+                    raw_json = quiz_match.group(1).strip()
+                    try:
+                        quiz_data = json.loads(raw_json)
+                    except Exception:
+                        candidate = re.sub(r",\s*([\]\}])", r"\1", raw_json)
+                        candidate = re.sub(r'(?<=")([^"]*)\n([^"]*?)(?=")', lambda m: m.group(1) + "\\n" + m.group(2), candidate)
+                        try:
+                            quiz_data = json.loads(candidate)
+                        except Exception:
+                            quiz_data = None
+                    
+                    if isinstance(quiz_data, list):
+                        for q in quiz_data:
+                            if isinstance(q, dict) and "question" in q:
+                                q_raw_type = (q.get("type") or q.get("questionType") or q.get("question_type") or "").lower().replace("_", "")
+                                mapping_types = {
+                                    "mcq": "mcq", "multiplechoice": "mcq",
+                                    "true_false": "true_false", "truefalse": "true_false",
+                                    "fill_in": "fill_in", "fillin": "fill_in", "cloze": "fill_in", "clozedeletion": "fill_in",
+                                    "writing": "writing", "short_answer": "writing", "shortanswer": "writing",
+                                    "matching": "matching", "matchingmatrix": "matching",
+                                    "order": "order", "sequencing": "order", "sequencingsteps": "order",
+                                    "debug": "debug", "diagnostic": "debug", "diagnosticerror": "debug",
+                                    "synthesis": "synthesis", "socratic": "synthesis", "socraticsynthesis": "synthesis",
+                                    "calculation": "calculation", "data_analysis": "data_analysis",
+                                    "scenario": "scenario", "code": "code", "trace": "trace"
+                                }
+                                q_type_norm = mapping_types.get(q_raw_type, "writing")
+                                q["type"] = q_type_norm
+                                q["note_path"] = str(note_path)
+                                q["note_title"] = note_path.stem
+                                extracted_pool.append(q)
+            except Exception as e:
+                logger.error(f"[Ater Service] Error extracting quiz from {note_path.name}: {e}")
+
         all_questions = []
         target_distribution = distribution.copy()
+        used_questions_texts = set()
         
+        for q_type, count in list(target_distribution.items()):
+            if count <= 0:
+                continue
+            
+            matching_qs = [q for q in extracted_pool if q.get("type") == q_type]
+            unique_matching_qs = []
+            for q in matching_qs:
+                q_text = q.get("question", "").strip().lower()
+                if q_text not in used_questions_texts:
+                    unique_matching_qs.append(q)
+            
+            import random
+            random.shuffle(unique_matching_qs)
+            
+            sampled = unique_matching_qs[:count]
+            for q in sampled:
+                all_questions.append(q)
+                used_questions_texts.add(q.get("question", "").strip().lower())
+            
+            # Decrease the target count so we only generate the remainder via LLM
+            target_distribution[q_type] = count - len(sampled)
+            logger.info(f"[Ater Service] Practice Builder: Loaded {len(sampled)}/{count} existing '{q_type}' questions from atomic notes.")
+
         # We generate in small batches to avoid output token limits and aggressive TPM limits
         BATCH_SIZE = 5
         
@@ -1115,15 +1203,6 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 hub_mode = "ECON-MACRO"
             
         for q_type, count in target_distribution.items():
-            # Get common hints to prevent duplication within the same type
-            hints = [
-                "Focus on theoretical definitions and core mechanisms.",
-                "Focus on edge cases and common misconceptions.",
-                "Focus on real-world application in a specific industry scenario.",
-                "Focus on mathematical/quantitative relationships.",
-                "Focus on causal links and process flow."
-            ]
-            
             if count > 0:
                 # Map q_type to modality for the Dynamic Matrix
                 modality_map = {
@@ -1155,7 +1234,19 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 random.shuffle(shuffled_parts)
                 tight_context = "\n\n".join(shuffled_parts)
                 
+                hints = [
+                    "Focus on theoretical definitions and core mechanisms.",
+                    "Focus on edge cases and common misconceptions.",
+                    "Focus on real-world application in a specific industry scenario.",
+                    "Focus on mathematical/quantitative relationships.",
+                    "Focus on causal links and process flow."
+                ]
                 hint = random.choice(hints)
+                
+                # Add negative constraint to prevent duplication of extracted questions
+                if used_questions_texts:
+                    hint += "\nCRITICAL: DO NOT duplicate or generate questions similar to the following questions/concepts:\n" + "\n".join(f"- {q}" for q in list(used_questions_texts)[:10])
+                
                 prof_domain = get_professional_domain(hub['title'] + str(q_type), mode=hub_mode)
                 current_diff = config.difficulty if config.difficulty != "Mixed" else "Mixed"
 
@@ -1200,19 +1291,24 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
 
         results = await asyncio.gather(*(run_agent(t) for t in tasks), return_exceptions=True)
         
-        all_questions = []
+        all_questions_llm = []
         for idx, res in enumerate(results):
             # QuestionAgent returns a list of questions (usually 1 in practice, 3 in batch)
             if isinstance(res, list):
                 for q in res:
                     if isinstance(q, dict) and "error" not in q and q.get("answer") != "N/A":
-                        q["id"] = len(all_questions) + 1
-                        all_questions.append(q)
+                        all_questions_llm.append(q)
             elif isinstance(res, dict) and "error" not in res and res.get("answer") != "N/A":
-                res["id"] = len(all_questions) + 1
-                all_questions.append(res)
+                all_questions_llm.append(res)
             else:
                 logger.error(f"[Ater Service] Failed to generate a question: {res}")
+
+        # Merge pre-compiled questions and newly generated questions
+        all_questions = all_questions + all_questions_llm
+        
+        # Re-assign sequential IDs
+        for idx, q in enumerate(all_questions):
+            q["id"] = idx + 1
 
         # FINAL HARD SLICE removed from here, done after post-processing
         

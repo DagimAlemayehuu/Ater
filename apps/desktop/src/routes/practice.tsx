@@ -166,6 +166,13 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   const [explainOpen, setExplainOpen] = useState(false)
   const [explainLesson, setExplainLesson] = useState('')
   const [explainLoading, setExplainLoading] = useState(false)
+  const explainScrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (explainOpen && !explainLoading && explainScrollRef.current) {
+      explainScrollRef.current.scrollTop = 0
+    }
+  }, [explainOpen, explainLoading])
 
   // ── FSRS Spaced Repetition state ───────────────────────────────────────────
   const [srsCardsCache, setSrsCardsCache] = useState<Record<string, any>>({})
@@ -283,13 +290,8 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     }
     setAvailableNotes(notes);
     setAdvancedConfig(prev => {
-     const totalQuestions = Object.values(prev.questionDistribution).reduce((a, b) => a + b, 0);
-     const nextDistribution = totalQuestions === 0 
-       ? { ...ZERO_DISTRIBUTION, ...PRESETS.balanced } 
-       : prev.questionDistribution;
-     
      // Omit label property
-     const { label: _l, ...cleanedDist } = nextDistribution as any;
+     const { label: _l, ...cleanedDist } = prev.questionDistribution as any;
      
      return {
        ...prev,
@@ -579,16 +581,14 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     if (currentQ) {
       const isCorrect = latestGrade !== undefined ? latestGrade : gradedAnswers[currentQ.id] === true;
       const timeTaken = Math.max(1, Math.round((Date.now() - questionStartTimeRef.current) / 1000));
-      try {
-        await sidecarApi.logPracticeAttempt(
-          currentQ.note_id || selectedHub || 'unknown',
-          currentQ.type || 'unknown',
-          isCorrect,
-          timeTaken
-        );
-      } catch (err) {
+      sidecarApi.logPracticeAttempt(
+        currentQ.note_id || selectedHub || 'unknown',
+        currentQ.type || 'unknown',
+        isCorrect,
+        timeTaken
+      ).catch(err => {
         console.error("Failed to log practice attempt:", err);
-      }
+      });
     }
 
     if (latestGrade !== undefined) setStreak(prev => latestGrade ? prev + 1 : 0);
@@ -626,26 +626,37 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  const handleSelectAnswer = (val: any) => {if (!isRevealed) setUserAnswers(prev => ({...prev, [questions[currentQuestionIdx].id]: val}));}
  const handleDeletePractice = async (path: string) => {await sidecarApi.deletePractice(path); loadPastPractices();}
 
- const handleExplainMore = async () => {
-   if (!currentQuestion) return
-   setExplainOpen(true)
-   setExplainLesson('')
-   setExplainLoading(true)
-   try {
-     const res = await sidecarApi.explainQuestion({
-       question: currentQuestion.question,
-       type: currentQuestion.type,
-       answer: (currentQuestion as any).answer,
-       explanation: currentQuestion.explanation,
-       context: (currentQuestion as any).content || (currentQuestion as any).codeSnippet || ''
-     })
-     setExplainLesson(res.lesson)
-   } catch (e: any) {
-     setExplainLesson(`**Error:** ${e.message || 'Failed to generate lesson. Please check your API key in Settings.'}`)
-   } finally {
-     setExplainLoading(false)
-   }
- }
+  const handleExplainMore = async () => {
+    if (!currentQuestion) return
+    setExplainOpen(true)
+    setExplainLesson('')
+    setExplainLoading(true)
+    try {
+      let formattedUserAnswer = '';
+      const rawAns = userAnswers[currentQuestion.id];
+      if (Array.isArray(rawAns)) {
+        formattedUserAnswer = rawAns.join(', ');
+      } else if (typeof rawAns === 'object' && rawAns !== null) {
+        formattedUserAnswer = JSON.stringify(rawAns);
+      } else if (rawAns !== undefined && rawAns !== null) {
+        formattedUserAnswer = String(rawAns);
+      }
+
+      const res = await sidecarApi.explainQuestion({
+        question: currentQuestion.question,
+        type: currentQuestion.type,
+        answer: (currentQuestion as any).answer,
+        explanation: currentQuestion.explanation,
+        context: (currentQuestion as any).content || (currentQuestion as any).codeSnippet || '',
+        userAnswer: formattedUserAnswer
+      })
+      setExplainLesson(res.lesson)
+    } catch (e: any) {
+      setExplainLesson(`**Error:** ${e.message || 'Failed to generate lesson. Please check your API key in Settings.'}`)
+    } finally {
+      setExplainLoading(false)
+    }
+  }
 
  const toggleAtomicNote = (noteId: string) => {
  setAdvancedConfig(prev => ({
@@ -1011,124 +1022,122 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  </div>
 
  <div className="grid grid-cols-4 gap-4 flex-1 min-h-0">
-  <div className="col-span-3 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-  <div className="p-4 bg-muted/5 border border-border rounded-none space-y-6">
-  <div className="grid grid-cols-2 gap-4">
- <div className="space-y-2">
- <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
- <Select value={selectedHub} onValueChange={(val: string) => {setSelectedHub(val); loadHubNotes(val);}}>
- <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-none px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 "><SelectValue placeholder="Select Topic..." /></SelectTrigger>
- <SelectContent className="border-border bg-popover">
-    <SelectItem value="all" className="text-[10px] font-black uppercase tracking-tight text-primary">Global Interleaved (All Topics)</SelectItem>
-    {hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>))}
- </SelectContent>
- </Select>
- </div>
- <div className="space-y-2">
- <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Difficulty</Label>
- <RadioGroup value={advancedConfig.difficulty} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, difficulty: val as any}))} className="grid grid-cols-4 gap-1">
- {[ {val: 'L1', label: '1'}, {val: 'L2', label: '2'}, {val: 'L3', label: '3'}, {val: 'Mixed', label: 'M'} ].map((level) => (
- <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-border rounded-none bg-muted/5 peer-data-[state=checked]:bg-foreground/10 peer-data-[state=checked]:border-foreground peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black  hover:bg-muted/10">{level.label}</Label></div>
- ))}
- </RadioGroup>
- </div>
- </div>
+   <div className="col-span-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+    <div className="p-4 bg-muted/5 border border-border rounded-none space-y-5">
+     
+     <div className="space-y-2">
+      <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
+      <Select value={selectedHub} onValueChange={(val: string) => {setSelectedHub(val); loadHubNotes(val);}}>
+       <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-none px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 "><SelectValue placeholder="Select Topic..." /></SelectTrigger>
+       <SelectContent className="border-border bg-popover">
+          <SelectItem value="all" className="text-[10px] font-black uppercase tracking-tight text-primary">Global Interleaved (All Topics)</SelectItem>
+          {hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>))}
+       </SelectContent>
+      </Select>
+     </div>
 
- <div className="grid grid-cols-2 gap-6">
- <div className="space-y-2">
- <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Notes</Label>
- <Popover>
- <PopoverTrigger asChild>
- <Button variant="outline" className="w-full h-10 border-border bg-muted/5 text-[10px] font-black uppercase px-4 justify-between hover:bg-muted/10 ">
- <span>{advancedConfig.selectedAtomicNotes.length} Selected</span>
- <Layers size={12} className="opacity-40" />
- </Button>
- </PopoverTrigger>
- <PopoverContent className="w-[400px] p-0 rounded-none border border-border bg-popover overflow-hidden" align="start">
- <Command className="bg-transparent">
- <div className="p-3 border-b border-border flex justify-between items-center bg-muted/10">
- <span className="text-[8px] font-black uppercase text-muted-foreground/40">{availableNotes.length} Total</span>
- <Button variant="ghost" size="default" className="h-7 text-[8px] font-black uppercase" onClick={() => {if (advancedConfig.selectedAtomicNotes.length === availableNotes.length) {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: []}))} else {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: availableNotes.map(n => n.path)}))}}}>Toggle All</Button>
- </div>
- <CommandInput placeholder="Search..." className="h-10 text-[10px] font-black uppercase border-none" />
- <CommandList className="max-h-60 p-1">
- {availableNotes.map(note => {
- const isSelected = advancedConfig.selectedAtomicNotes.includes(note.path); 
- return (
- <CommandItem key={note.path} onSelect={() => toggleAtomicNote(note.path)} className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-none text-[9px] font-black uppercase">
- <div className={cn("w-3 h-3 border flex items-center justify-center rounded-none ", isSelected ? "bg-foreground border-foreground text-background" : "border-border")}>{isSelected && <Check size={8} />}</div>
- <span className="truncate">{note.title}</span>
- </CommandItem>
- ); 
-})}
- </CommandList>
- </Command>
- </PopoverContent>
- </Popover>
- </div>
+     <div className="space-y-2">
+      <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Difficulty</Label>
+      <RadioGroup value={advancedConfig.difficulty} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, difficulty: val as any}))} className="grid grid-cols-4 gap-1">
+       {[ {val: 'L1', label: '1'}, {val: 'L2', label: '2'}, {val: 'L3', label: '3'}, {val: 'Mixed', label: 'M'} ].map((level) => (
+        <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-border rounded-none bg-muted/5 peer-data-[state=checked]:bg-foreground/10 peer-data-[state=checked]:border-foreground peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black hover:bg-muted/10">{level.label}</Label></div>
+       ))}
+      </RadioGroup>
+     </div>
 
- <div className="grid grid-cols-2 gap-4">
- <div className="space-y-2">
- <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total (Min)</Label>
- <Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val)}))}>
- <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-none px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
- <SelectContent className="border-border bg-popover">{[null, 5, 10, 15, 30, 60].map(m => (<SelectItem key={String(m)} value={String(m)} className="text-[10px] font-black uppercase">{m ? `${m}m` : 'None'}</SelectItem>))}</SelectContent>
- </Select>
- </div>
- <div className="space-y-2">
- <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Per Q (Sec)</Label>
- <Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val)}))}>
- <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-none px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
- <SelectContent className="border-border bg-popover">{[null, 15, 30, 60, 120].map(s => (<SelectItem key={String(s)} value={String(s)} className="text-[10px] font-black uppercase">{s ? `${s}s` : 'None'}</SelectItem>))}</SelectContent>
- </Select>
- </div>
- </div>
- </div>
- </div>
- </div>
+     <div className="space-y-2">
+      <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Notes</Label>
+      <Popover>
+       <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full h-10 border-border bg-muted/5 text-[10px] font-black uppercase px-4 justify-between hover:bg-muted/10 ">
+         <span>{advancedConfig.selectedAtomicNotes.length} Selected</span>
+         <Layers size={12} className="opacity-40" />
+        </Button>
+       </PopoverTrigger>
+       <PopoverContent className="w-[300px] p-0 rounded-none border border-border bg-popover overflow-hidden" align="start">
+        <Command className="bg-transparent">
+         <div className="p-3 border-b border-border flex justify-between items-center bg-muted/10">
+          <span className="text-[8px] font-black uppercase text-muted-foreground/40">{availableNotes.length} Total</span>
+          <Button variant="ghost" size="default" className="h-7 text-[8px] font-black uppercase" onClick={() => {if (advancedConfig.selectedAtomicNotes.length === availableNotes.length) {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: []}))} else {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: availableNotes.map(n => n.path)}))}}}>Toggle All</Button>
+         </div>
+         <CommandInput placeholder="Search..." className="h-10 text-[10px] font-black uppercase border-none" />
+         <CommandList className="max-h-60 p-1">
+          {availableNotes.map(note => {
+           const isSelected = advancedConfig.selectedAtomicNotes.includes(note.path); 
+           return (
+            <CommandItem key={note.path} onSelect={() => toggleAtomicNote(note.path)} className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-none text-[9px] font-black uppercase">
+             <div className={cn("w-3 h-3 border flex items-center justify-center rounded-none ", isSelected ? "bg-foreground border-foreground text-background" : "border-border")}>{isSelected && <Check size={8} />}</div>
+             <span className="truncate">{note.title}</span>
+            </CommandItem>
+           ); 
+          })}
+         </CommandList>
+        </Command>
+       </PopoverContent>
+      </Popover>
+     </div>
 
- <div className="p-6 bg-muted/5 border border-border rounded-none flex flex-col min-h-0">
- <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
-  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Types</h3>
-  <div className="flex items-center gap-2">
-   <div className="flex gap-1 overflow-x-auto custom-scrollbar pb-1 max-w-xs">
-    {Object.entries(PRESETS).map(([k, p]) => (
-     <button key={k} onClick={() => applyPreset(k)} className="shrink-0 px-2 py-1 text-[8px] font-black uppercase tracking-widest bg-muted/10 hover:bg-muted/20 border border-border text-muted-foreground hover:text-foreground transition-none" title={p.label}>
-      {p.label}
-     </button>
-    ))}
+     <div className="space-y-2">
+      <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total (Min)</Label>
+      <Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val)}))}>
+       <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-none px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
+       <SelectContent className="border-border bg-popover">{[null, 5, 10, 15, 30, 60].map(m => (<SelectItem key={String(m)} value={String(m)} className="text-[10px] font-black uppercase">{m ? `${m}m` : 'None'}</SelectItem>))}</SelectContent>
+      </Select>
+     </div>
+
+     <div className="space-y-2">
+      <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Per Q (Sec)</Label>
+      <Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val)}))}>
+       <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-none px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
+       <SelectContent className="border-border bg-popover">{[null, 15, 30, 60, 120].map(s => (<SelectItem key={String(s)} value={String(s)} className="text-[10px] font-black uppercase">{s ? `${s}s` : 'None'}</SelectItem>))}</SelectContent>
+      </Select>
+     </div>
+
+    </div>
    </div>
-   <Button variant="outline" size="default" onClick={randomizeDistribution} className="h-6 px-2 text-[8px] font-black uppercase border-border/40 hover:bg-foreground/5"><Zap size={10} className="mr-1"/>Random</Button>
+
+   <div className="col-span-3 p-6 bg-muted/5 border border-border rounded-none flex flex-col min-h-0">
+    <div className="flex items-center justify-between border-b border-border pb-4 mb-4 gap-4">
+     <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Question Types Distribution</h3>
+     <div className="flex items-center gap-4">
+      <div className="flex flex-wrap gap-1.5 justify-end">
+       {Object.entries(PRESETS).map(([k, p]) => (
+        <button key={k} onClick={() => applyPreset(k)} className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-muted/10 hover:bg-muted/20 border border-border text-muted-foreground hover:text-foreground transition-none" title={p.label}>
+         {p.label}
+        </button>
+       ))}
+      </div>
+      <Button variant="outline" size="default" onClick={randomizeDistribution} className="h-7 px-2.5 text-[8px] font-black uppercase border-border/40 hover:bg-foreground/5"><Zap size={10} className="mr-1"/>Random</Button>
+     </div>
+    </div>
+    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar grid grid-cols-2 gap-x-6 gap-y-4 content-start">
+     {[
+     {key: 'mcq', label: 'Multiple Choice'}, 
+     {key: 'true_false', label: 'True or False'}, 
+     {key: 'writing', label: 'Writing / Essay'}, 
+     {key: 'fill_in', label: 'Fill in the Blank'},
+     {key: 'debug', label: 'Debugging / Error Finding'},
+     {key: 'trace', label: 'Logic / Calculation Trace'},
+     {key: 'order', label: 'Ordering / Steps'},
+     {key: 'matching', label: 'Matching Pairs'},
+     {key: 'synthesis', label: 'Synthesis / Scenario'},
+     {key: 'calculation', label: 'Math / Calculation'},
+     {key: 'data_analysis', label: 'Data Analysis'},
+     {key: 'scenario', label: 'Scenario Analysis'},
+     {key: 'code', label: 'Code / Implementation'}
+     ].map(type => (
+      <div key={type.key} className="space-y-2 p-2.5 bg-muted/5 border border-border/30 hover:border-border/60 transition-colors">
+       <div className="flex justify-between items-center">
+        <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{type.label}</Label>
+        <span className="text-[9px] font-black tabular-nums">{advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]}</span>
+       </div>
+       <Slider value={[advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]]} max={15} step={1} onValueChange={(vals: number[]) => updateDistribution(type.key as any, vals[0])} className="py-1" />
+      </div>
+     ))}
+    </div>
+    <Button onClick={handleStartSession} disabled={isLoading} className="h-10 w-full bg-foreground/5 border border-foreground/20 hover:border-foreground/50 hover:bg-muted/10 text-foreground text-[10px] font-black uppercase tracking-widest rounded-none mt-6 ">Start Session</Button>
+   </div>
   </div>
- </div>
- <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
- {[
- {key: 'mcq', label: 'Multiple Choice'}, 
- {key: 'true_false', label: 'True or False'}, 
- {key: 'writing', label: 'Writing / Essay'}, 
- {key: 'fill_in', label: 'Fill in the Blank'},
- {key: 'debug', label: 'Debugging / Error Finding'},
- {key: 'trace', label: 'Logic / Calculation Trace'},
- {key: 'order', label: 'Ordering / Steps'},
- {key: 'matching', label: 'Matching Pairs'},
- {key: 'synthesis', label: 'Synthesis / Scenario'},
- {key: 'calculation', label: 'Math / Calculation'},
- {key: 'data_analysis', label: 'Data Analysis'},
- {key: 'scenario', label: 'Scenario Analysis'},
- {key: 'code', label: 'Code / Implementation'}
- ].map(type => (
- <div key={type.key} className="space-y-2">
- <div className="flex justify-between items-center">
- <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{type.label}</Label>
- <span className="text-[9px] font-black tabular-nums">{advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]}</span>
- </div>
- <Slider value={[advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]]} max={15} step={1} onValueChange={(vals: number[]) => updateDistribution(type.key as any, vals[0])} className="py-1" />
- </div>
- ))}
- </div>
- <Button onClick={handleStartSession} disabled={isLoading} className="h-10 w-full bg-foreground/5 border border-foreground/20 hover:border-foreground/50 hover:bg-muted/10 text-foreground text-[10px] font-black uppercase tracking-widest rounded-none mt-6 ">Start Session</Button>
- </div>
- </div>
  </div>
  );
 }
@@ -1304,7 +1313,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
          </div>
          <button onClick={() => setExplainOpen(false)} className="shrink-0 p-1.5 rounded-none hover:bg-muted/20 text-muted-foreground/30 hover:text-foreground transition-none mt-0.5"><X size={15}/></button>
        </div>
-       <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5">
+       <div ref={explainScrollRef} className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5">
          {explainLoading ? (
            <div className="flex flex-col items-center justify-center py-20 gap-4">
              <MiniLoader label="Generating Lesson" />
@@ -1387,17 +1396,35 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
 
  <div className="space-y-6">
  {currentQuestion.type === 'mcq' && (
- <div className="grid grid-cols-1 gap-2">
- {Object.entries(currentQuestion.options || {}).map(([key, val]) => {
- const isSelected = userAnswers[currentQuestion.id] === key; 
- const isCorrect = isRevealed && (key === currentQuestion.answer || String(val).toLowerCase() === String(currentQuestion.answer).toLowerCase());
- return (
- <button key={key} disabled={isRevealed} onClick={() => handleSelectAnswer(key)} className={cn("p-4 border rounded-none text-left text-[12px] font-black uppercase tracking-tight", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10")}>
- <span className="text-muted-foreground/20 shrink-0 mt-0.5 mr-3">{key}</span> <div className="flex-1 overflow-x-auto"><MarkdownBlock content={String(val)} /></div>
- </button>
- );
+  <div className="grid grid-cols-1 gap-2">
+  {Object.entries(currentQuestion.options || {}).map(([key, val]) => {
+  const isSelected = userAnswers[currentQuestion.id] === key; 
+  const isCorrect = isRevealed && (key === currentQuestion.answer || String(val).toLowerCase() === String(currentQuestion.answer).toLowerCase());
+  const isWrongSelected = isRevealed && isSelected && !isCorrect;
+  return (
+  <button 
+    key={key} 
+    disabled={isRevealed} 
+    onClick={() => handleSelectAnswer(key)} 
+    className={cn(
+      "p-4 border rounded-none text-left text-sm font-bold flex items-start w-full transition-all duration-150",
+      isCorrect 
+        ? "bg-primary/10 border-primary text-primary" 
+        : isWrongSelected 
+          ? "bg-destructive/10 border-destructive text-destructive" 
+          : isRevealed 
+            ? "border-border opacity-30 grayscale" 
+            : isSelected 
+              ? "bg-muted/30 border-foreground text-foreground" 
+              : "border-border hover:bg-muted/10 text-foreground"
+    )}
+  >
+  <span className={cn("shrink-0 mt-0.5 mr-3 px-2 py-0.5 border text-xs font-bold", isSelected ? "border-foreground bg-foreground/10 text-foreground" : "border-border text-muted-foreground/50")}>{key}</span>
+  <div className="flex-1 overflow-x-auto"><MarkdownBlock content={String(val)} /></div>
+  </button>
+  );
 })}
- </div>
+  </div>
  )}
 
  {(!currentQuestion.type || ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) && (
@@ -1414,17 +1441,36 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   </div>
   )}
 
- {currentQuestion.type === 'true_false' && (
- <div className="grid grid-cols-2 gap-4">
- {['True', 'False'].map(v => {
- const isSelected = userAnswers[currentQuestion.id] === v; 
- const isCorrect = isRevealed && v.toLowerCase() === String(currentQuestion.answer).toLowerCase(); 
- return (
- <button key={v} disabled={isRevealed} onClick={() => handleSelectAnswer(v)} className={cn("h-24 border rounded-none text-[10px] font-black uppercase tracking-widest ", isCorrect ? "bg-primary/10 border-primary text-primary" : isRevealed ? "border-border opacity-40 grayscale text-muted-foreground/40" : isSelected ? "bg-muted/30 border-foreground" : "border-border hover:bg-muted/10 text-muted-foreground/40")}>{v}</button>
- );
+  {currentQuestion.type === 'true_false' && (
+  <div className="grid grid-cols-2 gap-4">
+  {['True', 'False'].map(v => {
+  const isSelected = userAnswers[currentQuestion.id] === v; 
+  const isCorrect = isRevealed && v.toLowerCase() === String(currentQuestion.answer).toLowerCase(); 
+  const isWrongSelected = isRevealed && isSelected && !isCorrect;
+  return (
+  <button 
+    key={v} 
+    disabled={isRevealed} 
+    onClick={() => handleSelectAnswer(v)} 
+    className={cn(
+      "h-24 border rounded-none text-xs font-bold uppercase tracking-widest transition-all duration-150", 
+      isCorrect 
+        ? "bg-primary/10 border-primary text-primary font-extrabold ring-1 ring-inset ring-primary" 
+        : isWrongSelected 
+          ? "bg-destructive/10 border-destructive text-destructive ring-1 ring-inset ring-destructive" 
+          : isRevealed 
+            ? "border-border opacity-30 grayscale text-muted-foreground/40" 
+            : isSelected 
+              ? "bg-muted/30 border-foreground text-foreground ring-1 ring-inset ring-foreground" 
+              : "border-border hover:bg-muted/10 text-foreground/80"
+    )}
+  >
+    {v}
+  </button>
+  );
 })}
- </div>
- )}
+  </div>
+  )}
 
  
  {currentQuestion.type === 'order' && (
@@ -1465,13 +1511,13 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
          )}>
              <div className="flex-1 font-black uppercase tracking-[0.2em] text-[10px] text-muted-foreground/60">{pair.left}</div>
              <div className="flex-1">
-                 <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-3 bg-background border border-border rounded-none outline-none focus:border-primary/50 text-[10px] font-black uppercase tracking-widest  appearance-none cursor-pointer">
+                 <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-3 bg-muted/5 hover:bg-muted/10 border-2 border-foreground/30 focus:border-primary rounded-none outline-none text-xs font-bold text-foreground cursor-pointer transition-colors">
                      <option value="">Select match...</option>
                      {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
                  </select>
              </div>
              {isRevealed && isWrong && (
-                <div className="flex-1  slide-in-from-right-4 ">
+                <div className="flex-1">
                     <div className="text-[8px] font-black uppercase text-primary/40 mb-1">Correct Match</div>
                     <div className="text-xs font-black uppercase tracking-widest text-primary">{pair.right}</div>
                 </div>
@@ -1491,9 +1537,26 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  <div className="inline-block align-middle"><MarkdownBlock content={part} /></div>
  {i < parts.length - 1 && (
  <div className="inline-flex flex-col items-center">
-   <input type="text" disabled={isRevealed} value={(userAnswers[currentQuestion.id] || [])[i] || ''} onChange={(e) => {const newAns = [...(userAnswers[currentQuestion.id] || [])]; newAns[i] = e.target.value; handleSelectAnswer(newAns);}} className={cn("mx-2 border-b-2 bg-transparent outline-none w-32 text-center text-sm font-black uppercase shrink-0 self-center", isRevealed ? (String((userAnswers[currentQuestion.id] || [])[i] || '').toLowerCase() === String((currentQuestion.answer || [])[i] || '').toLowerCase() ? "border-primary text-primary" : "border-destructive text-destructive") : "border-muted/30 focus:border-primary")} />
-   {isRevealed && String((userAnswers[currentQuestion.id] || [])[i] || '').toLowerCase() !== String((currentQuestion.answer || [])[i] || '').toLowerCase() && (
-     <div className="text-[10px] text-primary font-bold mt-1">Correct: {String((currentQuestion.answer || [])[i] || '')}</div>
+   <input 
+      type="text" 
+      disabled={isRevealed} 
+      value={(userAnswers[currentQuestion.id] || [])[i] || ''} 
+      onChange={(e) => {
+        const newAns = [...(userAnswers[currentQuestion.id] || [])]; 
+        newAns[i] = e.target.value; 
+        handleSelectAnswer(newAns);
+      }} 
+      className={cn(
+        "mx-2 border-b-2 bg-foreground/5 hover:bg-foreground/10 outline-none w-36 focus:w-40 text-center text-sm font-bold uppercase shrink-0 px-2 py-0.5 transition-all duration-150", 
+        isRevealed 
+          ? (String((userAnswers[currentQuestion.id] || [])[i] || '').trim().toLowerCase() === String((currentQuestion.answer || [])[i] || '').trim().toLowerCase() 
+            ? "border-primary bg-primary/10 text-primary" 
+            : "border-destructive bg-destructive/10 text-destructive") 
+          : "border-foreground/50 focus:border-primary text-foreground"
+      )} 
+    />
+   {isRevealed && String((userAnswers[currentQuestion.id] || [])[i] || '').trim().toLowerCase() !== String((currentQuestion.answer || [])[i] || '').trim().toLowerCase() && (
+     <div className="text-[10px] text-primary bg-primary/5 border border-primary/20 px-1.5 py-0.5 font-black uppercase mt-1 tracking-wider whitespace-nowrap">Correct: {String((currentQuestion.answer || [])[i] || '')}</div>
    )}
  </div>
  )}
@@ -1549,7 +1612,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   <Button
     variant="ghost"
     onClick={handleExplainMore}
-    className="h-10 px-4 text-[9px] font-black uppercase tracking-widest border border-border/30 hover:border-border/60 text-muted-foreground/50 hover:text-foreground rounded-none flex items-center gap-2 transition-none"
+    className="h-10 px-4 text-[10px] font-black uppercase tracking-widest border border-foreground/30 hover:border-foreground/60 text-foreground/70 hover:text-foreground rounded-none flex items-center gap-2 transition-colors duration-150"
     title="Get a detailed lesson on this question's concept"
   >
     <BookOpen size={12} />

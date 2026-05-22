@@ -127,14 +127,15 @@ class AterValidator:
         """
         errors: List[str] = []
 
-        # ── 0. Strict 3-Section Sandwich Structure Validation (v33.1/Refactor) ──
-        # Every atomic or synthesis note (or note containing top-level headings) must have exactly three top-level headings in sequence.
+        # ── 0. Strict Flat Level 2 Headings Structure Validation (v33.0/Refactor) ──
         body = content
         yaml_match = re.search(r"^---\s*\n(.*?)\n---\s*(\n|$)", content, re.DOTALL | re.MULTILINE)
         if yaml_match:
             body = content[yaml_match.end():]
         body_no_code = re.sub(r"```.*?```", "", body, flags=re.DOTALL)
-        top_headings = re.findall(r'^#\s+(.*)$', body_no_code, re.MULTILINE)
+        top_headings = re.findall(r'^##\s+(.*)$', body_no_code, re.MULTILINE)
+        if not top_headings:
+            top_headings = re.findall(r'^#\s+(.*)$', body_no_code, re.MULTILINE)
         
         note_type = ""
         if yaml_match:
@@ -145,43 +146,30 @@ class AterValidator:
             except Exception:
                 pass
                 
-        is_atomic_or_synthesis = "atomic" in note_type or "synthesis" in note_type
-        if is_atomic_or_synthesis or len(top_headings) > 0:
-            if len(top_headings) != 3:
+        is_atomic = "atomic" in note_type
+        is_synthesis = "synthesis" in note_type
+        if is_atomic or is_synthesis or len(top_headings) > 0:
+            min_headings = 3
+            if len(top_headings) < min_headings:
                 raise StructureValidationError(
-                    f"Note must have exactly three top-level headings. Found {len(top_headings)}: {top_headings}"
+                    f"Note must have at least {min_headings} Level 2 headings. Found {len(top_headings)}: {top_headings}"
                 )
                 
-            h1, h2, h3 = top_headings[0].strip(), top_headings[1].strip(), top_headings[2].strip()
+            h1 = top_headings[0].strip()
+            h_last = top_headings[-1].strip()
             
-            # Validate Heading 1
-            h1_ok = (
-                re.search(r'\b1\b', h1) is not None or 
-                any(k in h1.lower() for k in ["analogy", "intuitive", "mental model", "bread 1"])
-            )
+            # Validate Heading 1: Mental Model
+            h1_ok = any(k in h1.lower() for k in ["analogy", "intuitive", "mental model", "bread 1"])
             if not h1_ok:
                 raise StructureValidationError(
-                    f"Heading 1 is not a valid Bread 1 header: '{h1}'. Expected '# 1. The Intuitive Analogy' or equivalent."
+                    f"Heading 1 is not a valid Bread 1 header. First Level 2 heading must be 'Mental Model' or equivalent. Found: '{h1}'"
                 )
                 
-            # Validate Heading 2
-            h2_ok = (
-                re.search(r'\b2\b', h2) is not None or 
-                any(k in h2.lower() for k in ["core", "execution", "meat", "logic"])
-            )
-            if not h2_ok:
+            # Validate Last Heading: The Proving Grounds
+            h_last_ok = any(k in h_last.lower() for k in ["proving", "grounds", "quiz", "bread 2", "assessment"])
+            if not h_last_ok:
                 raise StructureValidationError(
-                    f"Heading 2 is not a valid Meat header: '{h2}'. Expected '# 2. The Core Execution' or equivalent."
-                )
-                
-            # Validate Heading 3
-            h3_ok = (
-                re.search(r'\b3\b', h3) is not None or 
-                any(k in h3.lower() for k in ["proving", "grounds", "quiz", "bread 2"])
-            )
-            if not h3_ok:
-                raise StructureValidationError(
-                    f"Heading 3 is not a valid Bread 2 header: '{h3}'. Expected '# 3. The Proving Grounds' or equivalent."
+                    f"Last Level 2 heading must be 'The Proving Grounds' or equivalent. Found: '{h_last}'"
                 )
         for marker in HARD_FAILURE_MARKERS:
             if marker in content:
@@ -426,12 +414,13 @@ class AterValidator:
                     break
 
         # ── TRUNCATION GUARD: Check for mid-sentence cuts inside sections ──────
-        # v33.0: matches any ##-level heading to capture all 4 sections
-        section_texts = re.findall(
-            r'(?:#|##|###)\s+[^\n]+\n(.*?)(?=(?:#|##|###)\s+|```interactive-quiz|$)',
+        # v33.0: matches any ##-level heading and captures both heading and section text
+        sections_with_headings = re.findall(
+            r'((?:#|##|###)\s+[^\n]+)\n(.*?)(?=(?:#|##|###)\s+|```interactive-quiz|$)',
             body, re.DOTALL
         )
-        for section_body in section_texts:
+        for heading_line, section_body in sections_with_headings:
+            heading = re.sub(r'^#+\s+', '', heading_line).strip()
             # v27.5 FIX: Strip markdown artifacts like ---, ***, ___ and trailing whitespace
             # before checking for terminal punctuation to avoid false-positives.
             stripped = section_body.strip()
@@ -439,19 +428,25 @@ class AterValidator:
             cleaned = re.sub(r'[\s\n\-\*_]+$', '', stripped)
             
             if len(cleaned) > 10:  # skip trivially empty sections only
-                # Only check for truncation if this section is the very last thing in the body.
-                # If it's not the last thing, the LLM successfully generated the next heading/block, so it's not truncated.
-                is_last_section = body.strip().endswith(section_body.strip())
-                if is_last_section:
-                    last_sent_char = cleaned[-1]
-                    valid_terminal = [".", "!", "?", "`", ")", "]", "}", "$", '"', ";"]
-                    # Also allow sections ending with a wikilink ([[...]]) or a bare word that isn't mid-sentence
-                    ends_with_wikilink = cleaned.endswith("]]") or cleaned.endswith("]")
-                    # Also allow common math variables or symbols
-                    ends_with_math = re.search(r'[A-Za-z\+\-\=\%]$', cleaned) is not None
-                    
-                    if last_sent_char not in valid_terminal and not ends_with_wikilink and not ends_with_math:
-                        errors.append(f"SECTION_TRUNCATION: The final section ends mid-sentence: '...{cleaned[-40:]}'")
+                is_math_mode = mode in ("MATH-PURE", "ECON-MICRO", "ECON-MACRO", "QUANT-LOGIC") or any(
+                    m in (course or "").lower() for m in ["math", "calculus", "algebra", "stats", "discrete"]
+                )
+                
+                last_sent_char = cleaned[-1]
+                valid_terminal = [".", "!", "?", "`", ")", "]", "}", "$", '"', "'", ";", "*", "|"]
+                ends_with_wikilink = cleaned.endswith("]]") or cleaned.endswith("]")
+                
+                is_truncated = False
+                if last_sent_char not in valid_terminal and not ends_with_wikilink:
+                    if re.search(r'[A-Za-z]{2,}$', cleaned) is not None:
+                        is_truncated = True
+                    elif not is_math_mode and re.search(r'[A-Za-z]$', cleaned) is not None:
+                        is_truncated = True
+                    elif last_sent_char in [",", "-", ":", "—"]:
+                        is_truncated = True
+                        
+                if is_truncated:
+                    errors.append(f"SECTION_TRUNCATION: The section '{heading}' ends mid-sentence: '...{cleaned[-40:]}'")
 
         # v33.0: Empty Table Kill-Switch (Formal Model section)
         formal_model_match = re.search(
@@ -620,7 +615,7 @@ class AterValidator:
 
         clean_json = raw_json.strip()
         # Strip markdown fences
-        clean_json = re.sub(r"^```[a-z]*\n?", "", clean_json)
+        clean_json = re.sub(r"^```[a-z\-]*\n?", "", clean_json, flags=re.IGNORECASE)
         clean_json = re.sub(r"\n?```$", "", clean_json).strip()
 
         # Find outermost JSON object or array
@@ -642,6 +637,60 @@ class AterValidator:
             return False, {}, "NO_JSON_FOUND"
 
         clean_json = clean_json[start:end + 1]
+
+        # ── REPAIR UNESCAPED DOUBLE QUOTES IN STRINGS ──
+        def _repair_quotes(s: str) -> str:
+            chars = list(s)
+            n = len(chars)
+            in_string = False
+            escaped = False
+            i = 0
+            res = []
+            
+            def is_boundary(start_idx):
+                idx = start_idx
+                while idx < n and chars[idx].isspace():
+                    idx += 1
+                if idx >= n:
+                    return True
+                if chars[idx] in (':', ',', '}', ']'):
+                    return True
+                return False
+
+            while i < n:
+                char = chars[i]
+                if in_string:
+                    if escaped:
+                        res.append(char)
+                        escaped = False
+                        i += 1
+                    elif char == '\\':
+                        res.append(char)
+                        escaped = True
+                        i += 1
+                    elif char == '"':
+                        if is_boundary(i + 1):
+                            in_string = False
+                            res.append(char)
+                        else:
+                            res.append('\\')
+                            res.append('"')
+                        i += 1
+                    else:
+                        res.append(char)
+                        i += 1
+                else:
+                    if char == '"':
+                        in_string = True
+                        res.append(char)
+                        i += 1
+                    else:
+                        res.append(char)
+                        i += 1
+            return "".join(res)
+
+        clean_json = _repair_quotes(clean_json)
+
         # Remove trailing commas before closing braces/brackets
         clean_json = re.sub(r",\s*([\]\}])", r"\1", clean_json)
         # Normalize double-escaped newlines from LLM outputs
@@ -673,11 +722,21 @@ class AterValidator:
 
         def _try_parse(s: str):
             try:
-                return json.loads(s, strict=False), None
+                parsed = json.loads(s, strict=False)
+                # Proactively inject/heal missing 'id' keys if parsed is list/dict
+                if isinstance(parsed, list):
+                    for idx, item in enumerate(parsed):
+                        if isinstance(item, dict):
+                            if "id" not in item or not str(item.get("id", "")).strip():
+                                item["id"] = f"q{idx + 1}"
+                elif isinstance(parsed, dict):
+                    if "id" not in parsed or not str(parsed.get("id", "")).strip():
+                        parsed["id"] = "q1"
+                return parsed, None
             except Exception as e:
                 return None, e
 
-        # Attempt 1: direct parse
+        # Attempt 1: direct parse on cleaned_quotes
         data, err = _try_parse(clean_json)
         if data is not None:
             return True, data, None
@@ -707,6 +766,15 @@ class AterValidator:
             import ast
             py_str = sanitized.replace("true", "True").replace("false", "False").replace("null", "None")
             data = ast.literal_eval(py_str)
+            # Proactively inject/heal missing 'id' keys
+            if isinstance(data, list):
+                for idx, item in enumerate(data):
+                    if isinstance(item, dict):
+                        if "id" not in item or not str(item.get("id", "")).strip():
+                            item["id"] = f"q{idx + 1}"
+            elif isinstance(data, dict):
+                if "id" not in data or not str(data.get("id", "")).strip():
+                    data["id"] = "q1"
             return True, data, None
         except Exception:
             return False, {}, f"JSON_PARSE_ERROR: {err}"

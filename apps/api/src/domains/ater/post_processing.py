@@ -433,13 +433,25 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
         for p in valid_parents:
             parents_to_children[p].append(child)
 
+    def normalize_title_for_comparison(t: str) -> str:
+        return t.strip().lower().replace(" ", "_").replace("-", "_")
+
+    def get_plan_index(s: str) -> int:
+        if not plan_order:
+            return 9999
+        s_norm = normalize_title_for_comparison(s)
+        for idx, p in enumerate(plan_order):
+            if normalize_title_for_comparison(p) == s_norm:
+                return idx
+        return 9999
+
     # 2. Topological Sort for foundational progression
     def topological_sort(stems: List[str], dependency_graph: dict) -> List[str]:
         visited = {} # 0 = unvisited, 1 = visiting, 2 = visited
         order = []
         
-        # Sort by PDF progression (page number) first, then alphabetically
-        sorted_stems = sorted(stems, key=lambda s: (note_min_pages.get(s, 9999), s.lower()))
+        # Sort by plan_order, then PDF progression (page number), then alphabetically
+        sorted_stems = sorted(stems, key=lambda s: (get_plan_index(s), note_min_pages.get(s, 9999), s.lower()))
         
         def dfs(node):
             if visited.get(node, 0) == 1:
@@ -449,7 +461,7 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
                 
             visited[node] = 1 # Visiting
             parents = dependency_graph.get(node, [])
-            for p in sorted(parents, key=lambda s: (note_min_pages.get(s, 9999), s.lower())):
+            for p in sorted(parents, key=lambda s: (get_plan_index(s), note_min_pages.get(s, 9999), s.lower())):
                 if p in visited:
                     dfs(p)
             visited[node] = 2 # Visited
@@ -464,14 +476,19 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
                 dfs(stem)
         return order
 
-    def normalize_title_for_comparison(t: str) -> str:
-        return t.strip().lower().replace(" ", "_").replace("-", "_")
-
     topo_order = topological_sort(deployed_stems, child_to_parents)
 
     order_map = {normalize_title_for_comparison(s): i for i, s in enumerate(topo_order)}
     
-    all_stems_sorted = sorted(list(deployed_stems), key=lambda s: order_map.get(normalize_title_for_comparison(s), 999))
+    all_stems_sorted = sorted(
+        list(deployed_stems),
+        key=lambda s: (
+            get_plan_index(s),
+            note_min_pages.get(s, 9999),
+            order_map.get(normalize_title_for_comparison(s), 999),
+            s.lower()
+        )
+    )
 
     processed = set()
     tree_lines = []
@@ -485,7 +502,14 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
         
         # Children are notes that have this stem as their "Best" parent.
         potential_children = parents_to_children.get(stem, [])
-        potential_children.sort(key=lambda s: order_map.get(normalize_title_for_comparison(s), 999))
+        potential_children.sort(
+            key=lambda s: (
+                get_plan_index(s),
+                note_min_pages.get(s, 9999),
+                order_map.get(normalize_title_for_comparison(s), 999),
+                s.lower()
+            )
+        )
             
         for child in potential_children:
             if child not in processed:
@@ -493,7 +517,7 @@ def sync_hub_connections(hub_file: Path, unit_dir: Path, plan_order: List[str] =
                 if not p_list: continue
                 
                 # Robust selection: pick the parent that appears EARLIEST in the plan
-                best_parent = min(p_list, key=lambda p: order_map.get(normalize_title_for_comparison(p), 999))
+                best_parent = min(p_list, key=lambda p: (get_plan_index(p), order_map.get(normalize_title_for_comparison(p), 999)))
                 if best_parent == stem:
                     build_tree(child, depth + 1)
 

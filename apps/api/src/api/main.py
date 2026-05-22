@@ -817,6 +817,7 @@ async def explain_question(
     answer = payload.get("answer", "")
     explanation = payload.get("explanation", "")
     context = payload.get("context", "")
+    user_answer = payload.get("userAnswer", payload.get("user_answer", ""))
 
     provider = secrets.planner_provider or secrets.ai_provider or "google"
     model = secrets.planner_model or secrets.ai_model or "gemini-2.0-flash"
@@ -824,21 +825,26 @@ async def explain_question(
     try:
         llm = ModelFactory.get_model(provider=provider, model_name=model, api_key=ai_key, temperature=0.7, max_tokens=2000)
 
-        sys_prompt = """You are a world-class Socratic tutor. A student just answered a quiz question and requested an explanation of the underlying concept.
+        sys_prompt = """You are a world-class Socratic tutor and an elite educator. A student just answered a quiz question and requested a comprehensive explanation of the underlying concept.
 
-Your mini-lesson MUST:
+Your lesson MUST follow this strict structure:
 1. SOCRATIC HOOK: Start with a brief, thought-provoking question to challenge their assumptions.
-2. EXPLAIN: Break down the core concept tested as if speaking to a brilliant 12-year-old.
-3. VISUALIZE: Provide a vivid, real-world analogy (No clichés like coffee shops; use a mechanical or industry-specific scenario).
-4. DIAGNOSE: Highlight exactly where most students go wrong (misconceptions).
-5. MEMORY HOOK: End with a single, bolded 1-sentence takeaway.
+2. EXPLAIN: Break down the core concept tested as if speaking to a brilliant 12-year-old, but with high academic fidelity. Be thorough, clear, and comprehensive.
+3. VISUALIZE: Provide a vivid, real-world analogy. Avoid common clichés like coffee shops or basic cars; use a mechanical, architectural, natural science, or industry-specific scenario.
+4. DIAGNOSE: Highlight exactly where most students go wrong (key misconceptions).
+5. PERSONALIZED CRITIQUE: If a student's answer is provided:
+   - Compare their answer to the correct answer.
+   - If their answer was correct, briefly validate their logical connection and reinforce why it works.
+   - If their answer was incorrect, directly address their specific mistake and explain exactly why this reasoning falls short or which misconception it represents.
+6. MEMORY HOOK: End with a single, bolded 1-sentence takeaway.
 
-Format your response in flawless, readable Markdown. Use headers, bullet points, and bold text effectively. Be thorough but highly engaging."""
+Format your response in flawless, readable Markdown. Use headers, bullet points, blockquotes, and bold text effectively to organize information."""
 
         human_prompt = f"""Quiz Question: {question}
 
 Question Type: {q_type}
 Correct Answer: {answer}
+{f"Student's Answer: {user_answer}" if user_answer else ""}
 {f'Existing Explanation: {explanation}' if explanation else ''}
 {f'Additional Context: {context}' if context else ''}
 
@@ -902,6 +908,11 @@ async def get_practice_session(
         raise HTTPException(status_code=400, detail="path is required")
         
     p = Path(path)
+    if not p.is_absolute() or not p.exists():
+        if secrets.vault_path:
+            resolved_p = Path(secrets.vault_path) / path
+            if resolved_p.exists():
+                p = resolved_p
     print(f"[get_practice_session] Checking path: {p} (Absolute: {p.absolute()}, Exists: {p.exists()})")
     if not p.exists():
         raise HTTPException(status_code=404, detail="Practice not found")
@@ -932,6 +943,11 @@ async def update_practice_score(
         raise HTTPException(status_code=400, detail="path and score are required")
         
     p = Path(path)
+    if not p.is_absolute() or not p.exists():
+        if secrets.vault_path:
+            resolved_p = Path(secrets.vault_path) / path
+            if resolved_p.exists():
+                p = resolved_p
     if not p.exists():
         raise HTTPException(status_code=404, detail="Practice file not found")
         
@@ -965,12 +981,19 @@ async def delete_practice_session(
         raise HTTPException(status_code=400, detail="path is required")
         
     p = Path(path)
+    if not p.is_absolute() or not p.exists():
+        if secrets.vault_path:
+            resolved_p = Path(secrets.vault_path) / path
+            if resolved_p.exists():
+                p = resolved_p
     if not p.exists():
         raise HTTPException(status_code=404, detail="Practice file not found")
         
     try:
         # Security check: ensure the path is within the vault
-        if not str(p).startswith(str(secrets.vault_path)):
+        abs_p = p.resolve().absolute()
+        abs_vault = Path(secrets.vault_path).resolve().absolute()
+        if abs_vault not in abs_p.parents and abs_vault != abs_p:
              raise HTTPException(status_code=403, detail="Cannot delete files outside the vault")
              
         p.unlink()

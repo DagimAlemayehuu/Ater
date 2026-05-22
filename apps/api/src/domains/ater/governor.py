@@ -550,8 +550,9 @@ class TokenGovernor:
     def record_actual_usage(self, estimated_tokens: int, actual_tokens: int) -> None:
         """
         Corrects the usage accounting after a real LLM response with known token counts.
-        Inserts a delta record so the running TPD total stays accurate.
-        Also patches the last entry in the in-memory sliding window.
+        Patches the last entry in the in-memory sliding window for pacing.
+        Since TrackingCallbackHandler already records the exact actual tokens to SQLite upon completion,
+        we do not persist any delta to SQLite here to avoid double-counting.
         """
         if actual_tokens <= 0:
             return
@@ -562,12 +563,6 @@ class TokenGovernor:
         if self.token_window:
             ts, last_est = self.token_window.pop()
             self.token_window.append((ts, max(0, last_est + delta)))
-        # Persist the delta to SQLite
-        try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(asyncio.to_thread(self._record_usage_db_sync, delta, 0))
-        except RuntimeError:
-            self._record_usage_db_sync(delta, 0)
 
     def get_reset_wait_seconds(self) -> float:
         """

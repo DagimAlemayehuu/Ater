@@ -106,8 +106,8 @@ def test_render_atomic_note():
     result = render_atomic_note(data, healer=healer)
     
     # Check body content (no frontmatter anymore in result)
-    assert "# 1. The Intuitive Analogy" in result
-    assert "### " + domain["h1"] in result
+    assert "## Mental Model" in result
+    assert "## " + domain["h1"] in result
     
     # Check healing occurred during render
     assert "Sure, here is the note." not in result
@@ -231,15 +231,19 @@ type: atomic_note
 course: Inclusiveness
 ---
 
-# 1. The Intuitive Analogy
+## Mental Model
 
 In a medical diagnostics lab, patients and clinical staff coordinate diagnosis.
 
-# 2. The Core Execution
+## Core Logic
 
 Partnership means equal participation. [[Stakeholder_Definition]] [[Communication]] [[Respect]]
 
-# 3. The Proving Grounds
+## Formal Translation
+
+Details of the formal translation.
+
+## The Proving Grounds
 
 ```interactive-quiz
 []
@@ -256,16 +260,20 @@ type: atomic_note
 course: Inclusiveness
 ---
 
-# 1. The Intuitive Analogy
+## Mental Model
 
 A community meeting includes every affected group.
 
-# 2. The Core Execution
+## Core Logic
 
 We utilize community development strategies to include every affected group. [[Community_Development]] [[Communication]] [[Respect]]
 [ARCHITECT SOURCE HINT]
 
-# 3. The Proving Grounds
+## Formal Translation
+
+Details of the formal translation.
+
+## The Proving Grounds
 
 ```interactive-quiz
 []
@@ -318,7 +326,13 @@ def test_section_truncation_guard():
     from src.domains.ater.validator import AterValidator
     truncated = (
         "---\ntitle: Test\ntype: test\ncourse: econ\n---\n"
-        "## Mental Model\n"
+        "## Mental Model\n\n"
+        "Analogy goes here.\n\n"
+        "## Core Logic\n\n"
+        "Prose here [[Link1]] [[Link2]] [[Link3]].\n\n"
+        "## Formal Translation\n\n"
+        "Details of formal translation.\n\n"
+        "## The Proving Grounds\n\n"
         "This scenario is cut of"
     )
     _, errors = AterValidator.validate_structure(truncated)

@@ -881,7 +881,7 @@ export const sidecarApi = {
         }
     },
 
-    explainQuestion: async (payload: { question: string; type: string; answer: any; explanation?: string; context?: string }) => {
+    explainQuestion: async (payload: { question: string; type: string; answer: any; explanation?: string; context?: string; userAnswer?: string }) => {
         try {
             return await invoke<any>('explain_question', { payload })
         } catch (err) {

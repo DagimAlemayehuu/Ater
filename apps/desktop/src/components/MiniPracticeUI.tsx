@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Check, ArrowRight, RotateCcw, Copy } from 'lucide-react';
+import { Check, ArrowRight, RotateCcw, BookOpen, X } from 'lucide-react';
 import { AterMarkdown } from './obsidian/MarkdownViewer';
 import { usePomodoroStore } from '@/lib/pomodoroStore';
 import { Question } from '@/types/practice';
@@ -13,6 +13,9 @@ export const MarkdownBlock = ({ content }: { content: string }) => {
     <AterMarkdown 
       content={content} 
       className="inline-block align-baseline text-[13px] text-foreground/90"
+      components={{
+        p: ({ children }: any) => <span className="inline text-[13px] text-foreground/90">{children}</span>
+      }}
     />
   );
 };
@@ -37,6 +40,16 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   const [startTime] = useState(() => Date.now());
   const startTimeRef = useRef(startTime);
   const [confidenceWager, setConfidenceWager] = useState<number | null>(null);
+  const [explainOpen, setExplainOpen] = useState(false);
+  const [explainLesson, setExplainLesson] = useState('');
+  const [explainLoading, setExplainLoading] = useState(false);
+  const explainScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (explainOpen && !explainLoading && explainScrollRef.current) {
+      explainScrollRef.current.scrollTop = 0;
+    }
+  }, [explainOpen, explainLoading]);
 
   const currentQ = questions[currentIdx];
 
@@ -154,6 +167,42 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
     startTimeRef.current = Date.now();
   };
 
+  const handleExplainMore = async () => {
+    if (!currentQ) return;
+    setExplainOpen(true);
+    setExplainLesson('');
+    setExplainLoading(true);
+    try {
+      let formattedUserAnswer = '';
+      const rawAns = userAnswers[currentQ.id];
+      if (Array.isArray(rawAns)) {
+        formattedUserAnswer = rawAns.join(', ');
+      } else if (typeof rawAns === 'object' && rawAns !== null) {
+        formattedUserAnswer = JSON.stringify(rawAns);
+      } else if (rawAns !== undefined && rawAns !== null) {
+        formattedUserAnswer = String(rawAns);
+      }
+
+      const res = await sidecarApi.explainQuestion({
+        question: currentQ.question,
+        type: currentQ.type,
+        answer: Array.isArray(currentQ.answer) 
+          ? currentQ.answer.join(', ') 
+          : typeof currentQ.answer === 'object' && currentQ.answer !== null
+            ? JSON.stringify(currentQ.answer)
+            : String(currentQ.answer),
+        explanation: currentQ.explanation || '',
+        context: currentQ.content || currentQ.codeSnippet || '',
+        userAnswer: formattedUserAnswer
+      });
+      setExplainLesson(res.lesson);
+    } catch (e: any) {
+      setExplainLesson(`**Error:** ${e.message || 'Failed to generate lesson. Please check your API key in Settings.'}`);
+    } finally {
+      setExplainLoading(false);
+    }
+  };
+
   const renderFillInBlanks = () => {
     const text = currentQ.textWithBlanks || currentQ.text_with_blanks || '';
     const parts = text.split(/\[\[.*?\]\]/);
@@ -222,7 +271,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
         </div>
       ) : (
         <div className="p-3 flex flex-col justify-center space-y-2 min-h-[120px]">
-          <div className="space-y-2  slide-in-from-top-4  duration-700" key={`header-${currentQ.id}`}>
+          <div className="space-y-2" key={`header-${currentQ.id}`}>
               <div className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-2">
     <Badge variant="outline" className="text-[7px] border-border/40 bg-muted/20 text-muted-foreground rounded-md px-1.5 py-0">{currentQ.difficulty || '1'}</Badge>
     <div className="w-0.5 h-0.5 rounded-md bg-muted-foreground/20" />
@@ -235,7 +284,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
               )}
           </div>
 
-          <div className="space-y-4   slide-in-from-bottom-2  delay-200" key={`body-${currentQ.id}`}>
+          <div className="space-y-4" key={`body-${currentQ.id}`}>
               
               {/* MCQ / True False */}
               {(currentQ.type === 'mcq' || currentQ.type === 'true_false') && (
@@ -327,7 +376,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                               </select>
                           </div>
                           {isRevealed && !isCorrect && (
-                            <div className="flex-1  slide-in-from-right-2  ">
+                            <div className="flex-1">
                                 <div className="text-[8px] font-black uppercase text-foreground/40 mb-1">Correct Match</div>
                                 <div className="text-[10px] font-black uppercase tracking-widest text-foreground">{pair.right}</div>
                             </div>
@@ -472,6 +521,17 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                       )}
               
               <div className="flex gap-3">
+                {isRevealed && (
+                  <Button 
+                    onClick={handleExplainMore}
+                    variant="outline"
+                    className="h-9 px-3 border border-foreground/20 hover:border-foreground/40 text-foreground/80 hover:text-foreground text-[10px] font-black uppercase tracking-wider rounded-md flex items-center justify-center gap-1.5 transition-colors"
+                    title="Explain more about this question"
+                  >
+                    <BookOpen size={12} />
+                    <span>Explain</span>
+                  </Button>
+                )}
                       {['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis'].includes(currentQ.type || 'writing') ? (
                           <>
                               <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-9 rounded-md  border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40  transition-none">
@@ -509,6 +569,35 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
               </div>
             </div>
           )}
+
+      {/* ── Explain More Modal ── */}
+      {explainOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="relative w-full max-w-lg mx-4 max-h-[80vh] flex flex-col bg-background border border-border/40 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between px-5 py-4 border-b border-border/20 gap-4">
+              <div className="min-w-0">
+                <div className="text-[8px] font-black uppercase tracking-[0.35em] text-primary/50 mb-1">Deep Lesson</div>
+                <div className="text-xs font-black tracking-tight text-foreground/80 leading-snug line-clamp-2">{currentQ.question}</div>
+              </div>
+              <button onClick={() => setExplainOpen(false)} className="shrink-0 p-1 rounded-md hover:bg-muted/20 text-muted-foreground/30 hover:text-foreground transition-colors"><X size={14}/></button>
+            </div>
+            <div ref={explainScrollRef} className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar">
+              {explainLoading ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-3">
+                  <span className="text-xs font-medium text-muted-foreground animate-pulse">Generating Lesson...</span>
+                </div>
+              ) : (
+                <div className="prose prose-sm max-w-none text-foreground/80 leading-relaxed text-xs">
+                  <AterMarkdown content={explainLesson} />
+                </div>
+              )}
+            </div>
+            <div className="px-5 py-3 border-t border-border/10 bg-muted/5">
+              <button onClick={() => setExplainOpen(false)} className="w-full h-8 bg-background border border-border hover:border-foreground/20 text-foreground/70 hover:text-foreground text-[10px] font-black uppercase tracking-widest rounded-md transition-colors">Close Lesson</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

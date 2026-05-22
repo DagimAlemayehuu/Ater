@@ -4,17 +4,15 @@ from typing import Dict, Any, List
 # Sections: Mental Model | 2-4 controlled domain sections | The Proving Grounds.
 # The model supplies content; Ater owns the headings and shape.
 ATOMIC_NOTE_TEMPLATE = """\
-# 1. The Intuitive Analogy
+## Mental Model
 
 {mental_model}
-
-# 2. The Core Execution
 
 {dynamic_sections}
 
 ---
 
-# 3. The Proving Grounds
+## The Proving Grounds
 
 {possible_questions}
 """
@@ -107,7 +105,7 @@ def _render_dynamic_sections(data: Dict[str, Any]) -> str:
         body = str(content_map.get(sid, "")).strip()
         if not heading or not body:
             continue
-        rendered.append(f"### {heading}\n\n{body}")
+        rendered.append(f"## {heading}\n\n{body}")
     return "\n\n".join(rendered)
 
 
