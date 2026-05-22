@@ -74,3 +74,43 @@ More text."""
     assert "$$" in healed
     assert "- x_1 + x_2 = 0" in healed
     assert "- y_1 + y_2 = 0" in healed
+
+def test_healer_comprehensive_formatting_and_gutter_law():
+    healer = LogicHealer(canonical_titles={"Machine_Learning", "Deep_Learning"})
+    
+    malformed_input = """Sure, here is your note about artificial intelligence.
+Let's break this down step-by-step.
+# 1. The Intuitive Analogy
+- Machine learning is like teaching a child by showing examples.
+- Deep learning is a subset that uses neural networks.
+# 2. The Core Execution
+| Metric | Value |
+| Accuracy | 99% |
+Check [[machine learning]] and [[deep learning]]!
+```python
+def train_model():
+    pass
+```
+I hope this is useful for you! Let me know if you need anything else.
+"""
+    
+    healed = healer.heal_all(malformed_input, is_quiz=False, exclude_title="")
+    
+    # 1. Check conversational sludge is fully pruned
+    assert "Sure, here is your note" not in healed
+    assert "Let's break this down" not in healed
+    assert "I hope this is useful" not in healed
+    assert "Let me know if you need" not in healed
+    
+    # 2. Check bullets are converted to prose
+    assert "- Machine learning" not in healed
+    assert "- Deep learning" not in healed
+    
+    # 3. Check wikilinks are correctly converted to Underscore_Title_Case
+    assert "[[Machine_Learning]]" in healed
+    assert "[[Deep_Learning]]" in healed
+    
+    # 4. Check Gutter Law spacing is perfectly restored
+    assert "\n\n# 2. The Core Execution\n\n" in healed
+    assert "\n\n| Metric | Value |\n| Accuracy | 99% |\n\n" in healed
+    assert "\n\n```python\ndef train_model():\n    pass\n```\n\n" in healed

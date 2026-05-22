@@ -61,6 +61,14 @@ DOMAIN_MATRIX = {
     "HIST-CATALYST":      {"persona":"Historian","h1":"Historical Event","h2":"Long-term Impact","artifact":"Timeline","type":"Basic Mermaid flowchart (graph TD) or Table","question_modes":["fill_in", "scenario", "writing", "order"]},
     "PHILOSOPHY":         {"persona":"Philosopher","h1":"Core Argument","h2":"Counter-Arguments","artifact":"Logical Flow","type":"ASCII Logic Tree or Block quote","question_modes":["mcq", "scenario", "writing", "synthesis"]},
     "SOC-POLITICAL":      {"persona":"Political Scientist","h1":"Political Theory","h2":"Institutional Failure","artifact":"Power Dynamics","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
+    "SOC-INT-RELATIONS":  {"persona":"International Relations Scholar","h1":"Global Strategy","h2":"Diplomatic Friction","artifact":"Geopolitical Map","type":"Markdown Table or ASCII Map","question_modes":["mcq", "scenario", "writing", "order"], "sanity_check": "Focus on state actors, sovereignty, and international law. Ensure real-world diplomatic precedents are used."},
+    "SOC-GLOBAL-TRENDS":  {"persona":"Global Trends Analyst","h1":"Macro Shift","h2":"Emerging Risks","artifact":"Trend Forecast","type":"Markdown Table or Mermaid Chart","question_modes":["mcq", "scenario", "writing", "synthesis"], "sanity_check": "Analyze long-term structural changes in society, technology, and economy."},
+    "SOC-GEOGRAPHY":      {"persona":"Geographer","h1":"Spatial Logic","h2":"Resource Constraints","artifact":"Spatial Distribution","type":"Markdown Table or ASCII Map","question_modes":["mcq", "fill_in", "scenario", "matching"]},
+    "SOC-ECONOMICS":      {"persona":"Political Economist","h1":"Economic Policy","h2":"Systemic Inequality","artifact":"Incentive Structure","type":"Markdown Table","question_modes":["mcq", "true_false", "writing", "trace"]},
+    "HUM-HISTORY":        {"persona":"Historian","h1":"Historical Logic","h2":"Causal Lineage","artifact":"Chronological Analysis","type":"Timeline or Markdown Table","question_modes":["mcq", "fill_in", "writing", "order"]},
+    "MATH-APPLIED":       {"persona":"Applied Mathematician","h1":"Mathematical Model","h2":"Approximation Errors","artifact":"Equation Derivation","type":"Block LaTeX ($$)","question_modes":["mcq", "fill_in", "debug", "trace"]},
+    "ENG-GENERAL":        {"persona":"Systems Engineer","h1":"Engineering Principle","h2":"Tolerance & Failure","artifact":"Technical Spec","type":"Markdown Table or ASCII Diagram","question_modes":["fill_in", "scenario", "debug", "order"]},
+    "SCI-GENERAL":        {"persona":"Research Scientist","h1":"Scientific Method","h2":"Experimental Bias","artifact":"Data Analysis","type":"Markdown Table","question_modes":["mcq", "true_false", "writing", "matching"]},
     "SOC-ANTHRO":         {"persona":"Anthropologist","h1":"Cultural Phenomenon","h2":"Ethnocentrism","artifact":"Cultural Framework","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
     "PSYCH-SOCIOLOGY":    {"persona":"Psychologist","h1":"Behavioral Concept","h2":"Cognitive Bias","artifact":"Behavior Map","type":"Markdown Matrix Table","question_modes":["true_false", "scenario", "writing", "matching"]},
     "HUM-RELIGION":       {"persona":"Theologian","h1":"Theological Concept","h2":"Sectarian Differences","artifact":"Doctrinal Map","type":"Markdown Table","question_modes":["mcq", "scenario", "writing", "matching"]},
@@ -703,6 +711,17 @@ MODE_ALIASES = {
     # Canonical taxonomy keys that do not have first-class generation templates yet.
     # Route them to the closest concrete DOMAIN_MATRIX entry so every downstream
     # persona, artifact law, validator, and prompt remains defined.
+    "GLOBAL-TRENDS": "SOC-GLOBAL-TRENDS",
+    "INT-RELATIONS": "SOC-INT-RELATIONS",
+    "POLITICS": "SOC-POLITICAL",
+    "POLI-SCIENCE": "SOC-POLITICAL",
+    "POLI-RELATIONS": "SOC-INT-RELATIONS",
+    "POLI-ECONOMY": "SOC-ECONOMICS",
+    "GEOGRAPHY": "SOC-GEOGRAPHY",
+    "HISTORY": "HUM-HISTORY",
+    "MATH-GENERAL": "MATH-APPLIED",
+    "ENGINEERING-GENERAL": "ENG-GENERAL",
+    "SCIENCE-GENERAL": "SCI-GENERAL",
     "CS-GENERAL": "CS-SOFTWARE",
     "CS-DATA-SYSTEMS": "CS-DB",
     "CS-AI-ML": "CS-AI",
@@ -1022,17 +1041,21 @@ class ArchitectAgent:
         mode_instruction = f"mode: EXACTLY one code from this list: {modes_str}"
         forced_mode = normalize_mode(forced_mode, "") if forced_mode else ""
         if forced_mode and forced_mode in VALID_MODES:
-            mode_instruction = f"mode: You MUST use `{forced_mode}` for all notes in this plan. This has been pre-verified by a domain specialist."
+            mode_instruction = f"mode: You MUST use `{forced_mode}` for all notes in this plan. This is the Law of Cognitive Anchoring. DO NOT use generic analogies (like coffee shops); anchor everything to the {forced_mode} persona."
 
         system = (
-            "You are the Ater Curriculum Architect. Extract 15-25 atomic concepts from the text.\n"
+            "You are the Ater Curriculum Architect. Your job is SELECTIVE EXTRACTION, not cataloguing.\n"
+            "Extract ONLY the 1-3 most foundational concepts from this text chunk.\n"
+            "SELECTION RULE: A concept earns a note ONLY if a student CANNOT understand the chapter without it. "
+            "Skip: supporting terms, named persons, historical events, examples, and peripheral mentions.\n"
+            "Ask yourself: 'Is this a PILLAR the whole chapter rests on, or just a detail?' Only pillars get notes.\n"
             "RULES:\n"
             "1. Titles: 1-3 words, Title_Case_With_Underscores.\n"
             "2. " + mode_instruction + "\n"
             "3. prerequisites: list dependencies. Do not leave empty for compound concepts.\n"
             "4. concept_modality: EXACTLY one: 'Quantitative', 'Qualitative/Definitional', 'Procedural', 'Comparative', 'Causal/Historical'.\n"
-            "5. source_context/pages: copy 1-2 source sentences and page numbers (integers).\n"
-            "OUTPUT: Pure JSON ONLY.\n"
+            "5. source_context: PARAPHRASE the core idea in 1 sentence (do NOT copy direct quotes). Add page numbers as integers.\n"
+            "6. OUTPUT: Pure JSON ONLY. No markdown, no explanation.\n"
             '{"course_title": "...", "academic_level": "...", "epistemic_stance": "...", '
             '"atomic_notes":[{"title":"...","description":"...","mode":"...","concept_modality":"Qualitative/Definitional","prerequisites":[],'
             '"source_context":"...","source_pages":[]}],"possible_questions":[]}'
@@ -1096,7 +1119,13 @@ class ArchitectAgent:
             raise ValueError(f"No JSON object found in response: {clean[:100]}...")
 
         json_str = clean[start:end+1]
-        
+
+        # ── PRE-SANITIZE: Strip OCR artifacts & non-ASCII before parsing ──────
+        # Non-ASCII chars (™, ©, Arabic, OCR junk) inside source_context values
+        # produce "Expecting ',' delimiter" errors in json.loads because they can
+        # contain byte sequences that look like JSON delimiters.
+        json_str = ''.join(c if ord(c) < 128 else ' ' for c in json_str)
+
         # 2. Aggressive Sanitization
         # Remove trailing commas
         json_str = re.sub(r",\s*([\]\}])", r"\1", json_str)
@@ -1134,7 +1163,40 @@ class ArchitectAgent:
                         return json.loads(json_str[:i+1], strict=False)
                     except Exception:
                         pass
-            
+
+            # Character-level repair: escape unescaped double quotes inside string values
+            try:
+                repaired = []
+                in_string = False
+                skip_next = False
+                for idx, ch in enumerate(json_str):
+                    if skip_next:
+                        repaired.append(ch)
+                        skip_next = False
+                        continue
+                    if ch == '\\':
+                        repaired.append(ch)
+                        skip_next = True
+                        continue
+                    if ch == '"':
+                        if not in_string:
+                            in_string = True
+                            repaired.append(ch)
+                        else:
+                            # Peek: is the next meaningful char a JSON delimiter?
+                            rest = json_str[idx + 1:].lstrip()
+                            if rest and rest[0] in ',:}]':
+                                in_string = False
+                                repaired.append(ch)
+                            else:
+                                # Unescaped quote inside string — escape it
+                                repaired.append('\\"')
+                    else:
+                        repaired.append(ch)
+                return json.loads(''.join(repaired), strict=False)
+            except Exception:
+                pass
+
             raise e
 
     def _is_rate_limit(self, e: Exception) -> bool:
@@ -1209,23 +1271,20 @@ class TheoryAgent:
         persona = self.domain.get("persona", "Subject Matter Expert")
         
         sys_prompt = f"""You are a world-class Pedagogue and Expert in {persona}.
-Your ONLY job is to create ONE perfect analogy for {title_readable} based strictly on the source text below.
+Your ONLY job is to create ONE perfect, vivid analogy for {title_readable} based strictly on the source text.
 
 S-TIER ANALOGY LAWS:
-1. GROUND IN SOURCE: Your analogy MUST reflect what the SOURCE TEXT actually says. Do not invent.
-2. NO CLICHÉS: Prohibited: Coffee shops, burger stands, lemonade stands, islands, pizza, traffic lights.
-3. SOURCE-RELEVANT REAL WORLD: Use a concrete scenario from the same world as the source text. For education, inclusion, stakeholders, participation, or community development, use classrooms, community meetings, public services, families, schools, local organizations, or stakeholder planning.
-4. DOMAIN QUARANTINE: Do NOT use medicine, hospitals, patients, diagnostics, drugs, finance, aerospace, semiconductors, physics, or engineering unless those ideas appear explicitly in the SOURCE TEXT.
-5. COGNITIVE SIMPLICITY: A smart 12-year-old must understand it in one read. Start the narrative directly.
-6. EPISTEMIC FIDELITY: If the concept is Quantitative, the analogy MUST feature a resource being counted or balanced.
+1. STRUCTURAL DIVERSITY: Use a mechanism specific to your field. 
+   - If SOCIAL/POLITICAL: Use architectural (foundations, load-bearing walls), biological (enzymes, ecosystems), or logistical (supply chains, sorting hubs).
+   - If TECHNICAL/SCIENCE: Use circuits, chemical catalysts, or distributed networks.
+   - Prohibited: Gears, clockwork, community centers, coffee shops, burger stands.
+2. GROUNDING: The analogy MUST map ≥2 structural components of the concept from the source.
+3. COGNITIVE SIMPLICITY: A smart 12-year-old must understand it in one read.
 
-SOURCE TEXT (your only allowed knowledge base):
-{source_text[:1800]}
+SOURCE TEXT:
+{source_text[:1200]}
 
-CONCEPT: {title_readable}
-LEVEL: {academic_level}
-
-OUTPUT: Exactly 3 sentences of a vivid, concrete analogy. No preamble. Start directly with the scenario."""
+OUTPUT: Exactly 2-3 sentences of a vivid, non-gear analogy. Start the story directly."""
 
         for attempt in range(2):
             try:
@@ -1242,227 +1301,93 @@ OUTPUT: Exactly 3 sentences of a vivid, concrete analogy. No preamble. Start dir
 
     @staticmethod
     def _extract_xml(tag: str, text: str) -> str:
-        """Robustly extracts content between XML tags, handling markdown fences and filler."""
-        # Use (?:</{tag}>|$) to handle truncated LLM outputs that don't close the tag
-        pattern = rf"<{tag}>(.*?)(?:</{tag}>|$)"
+        """Robustly extracts content between XML tags, handling markdown fences, filler, and missing closing tags."""
+        # 1. Try standard paired tag match
+        pattern = rf"<{tag}>(.*?)</{tag}>"
         match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
-        # Fallback: if closing tag missing or premature start of another tag, extract until next tag
-        if not match or not match.group(1).strip():
+        
+        # 2. Fallback to start tag until next tag or end of string
+        if not match:
             fallback_pattern = rf"<{tag}>(.*?)(?=<[A-Z_]+>|$)"
             match = re.search(fallback_pattern, text, re.DOTALL | re.IGNORECASE)
+            
         if match:
             content = match.group(1).strip()
-            # Remove markdown code fences if the LLM wrapped the XML content in them
+            # Clean markdown code fences and headers leaked by LLM
             content = re.sub(r"^```[a-zA-Z]*\n?", "", content)
             content = re.sub(r"\n?```$", "", content)
-            # Proactively strip any markdown headers (e.g. lines starting with #) to avoid duplication failures
             content = re.sub(r'(?m)^\s*#+\s*.*$', '', content)
             return content.strip()
-        # Return empty string on failure — caller/validator will detect the missing block
         return ""
 
     async def generate_theory_core(self, note_schema, source_text: str, all_concepts: str, academic_level: str) -> Dict[str, str]:
         """
         The 'Deep Feynman' pass — v33.0 SOURCE-INJECTION MODEL.
-        Optimized into three sequential micro-passes for small 2B-7B models to ensure structural absolute obedience.
+        Optimized to focus entirely on core logic prose.
         """
         title_readable = note_schema.title.replace("_", " ")
         domain_h1 = self.domain.get("h1", "The Core Logic Explained")
-        domain_h2 = self.domain.get("h2", "The Textbook Translation")
 
         # --- PASS 0: Mental Model (Analogy) ---
         plain_english = await self.generate_mental_model(note_schema, source_text, academic_level)
         if not plain_english or len(plain_english.strip()) < 30:
-            plain_english = f"{title_readable} can be understood as a fundamental mechanism within its domain, structuring the way we approach related problems."
+            plain_english = f"[{title_readable}] acts as a fundamental structural mechanism within its domain, dictating how related components interact and defining the boundaries of what is possible in the system."
 
         # --- PASS A: Theory Core (Core Breakdown) ---
-        sys_prompt_a = f"""You are a master teacher producing a DEEP, DETAILED study note for the concept: "{title_readable}".
-Your ONLY knowledge base is the SOURCE TEXT below.
+        persona = self.domain.get("persona", "Master Teacher")
+        sanity_check = self.domain.get("sanity_check", "")
+        domain_rules_block = f"\n\nDOMAIN RULES — apply these as hard constraints ({persona}):\n{sanity_check}" if sanity_check else ""
 
-===SOURCE TEXT===
+        sys_prompt_a = f"""You are an expert {persona}. Your task is to explain "{title_readable}" based ONLY on the source text.
+
+LAWS:
+1. CONTINUOUS PROSE: No bullet points. No lists.
+2. RAW OUTPUT: Do not use markdown headers or wikilinks.
+3. STRUCTURE:
+   - Paragraph 1: Define "{title_readable}" exactly as the source does.
+   - Paragraph 2: Explain the underlying mechanism or logic step-by-step.
+   - Paragraph 3: Explain the real-world significance or consequence.
+
+SOURCE TEXT:
 {source_text[:2500]}
-===END SOURCE TEXT===
 
-LAWS:
-1. EXTREME SIMPLICITY: You must explain the concept in a simple, highly detailed way so that it is impossible for a 12-year-old NOT to understand it.
-2. SOURCE ONLY. Every claim MUST come from the SOURCE TEXT. No outside knowledge.
-3. NO BULLETS. Bullet points/lists are STRICTLY FORBIDDEN. Use continuous analytical prose.
-4. NO WIKILINKS. Do not use [[brackets]] around words. We will add links later.
-5. Output ONLY the XML block below. No preamble, comments, or thoughts. Start directly with '<CORE_BREAKDOWN>'.
-
-<CORE_BREAKDOWN>
-[{domain_h1}: Mechanistic walkthrough of "{title_readable}". Continuous prose only.
-Structure: WHAT (precisely define) -> WHY (underlying reason) -> HOW (mechanism step-by-step). Make it engaging and dead-simple.]
-</CORE_BREAKDOWN>"""
-
-        # --- PASS B: Formal Model (Textbook Translation) ---
-        sys_prompt_b = f"""You are a technical writer completing the formal textbook definition for: "{title_readable}".
-Your ONLY knowledge base is the SOURCE TEXT below.
-
-===SOURCE TEXT===
-{source_text[:1500]}
-===END SOURCE TEXT===
-
-LAWS:
-1. SOURCE ONLY. Use equations, formulas, taxonomies, or technical terminology EXACTLY as in source.
-2. NO BULLETS. Continuous prose only.
-3. ABSOLUTE UNIQUENESS: Do NOT repeat the analogy, explanations, or introductory sentences from the core breakdown. Provide ONLY the formal textbook classifications, math equations, or structural parameters. If no formal translation exists, explain the technical variables and domain classifications in exactly 2-3 precise sentences.
-4. Output ONLY the XML block below. No preamble or other text. Start directly with '<ACADEMIC_TRANSLATION>'.
-
-<ACADEMIC_TRANSLATION>
-[{domain_h2}: Introduce the formal textbook definition or classifications. Must be detailed and mathematically/scientifically accurate. Minimum 3 sentences.]
-</ACADEMIC_TRANSLATION>"""
+OUTPUT: Exactly 3 paragraphs of high-fidelity prose inside <CORE_PROSE> tags."""
 
         detailed_breakdown = ""
-        academic_translation = ""
 
         # Execute Pass A
         for attempt in range(2):
             try:
-                await governor.get_permit(expected_tokens=800)
+                await governor.get_permit(expected_tokens=1000)
                 res_a = await self.llm.ainvoke([
                     ("system", sys_prompt_a),
-                    ("human", f"Generate CORE_BREAKDOWN for: {title_readable}")
+                    ("human", f"Generate CORE_PROSE for: {title_readable}")
                 ])
-                detailed_breakdown = TheoryAgent._extract_xml("CORE_BREAKDOWN", res_a.content)
+                detailed_breakdown = TheoryAgent._extract_xml("CORE_PROSE", res_a.content)
                 if detailed_breakdown and len(detailed_breakdown.strip()) >= 30:
                     break
             except Exception:
-                if attempt == 1: raise ValueError("CORE_BREAKDOWN failed.")
+                if attempt == 1: raise ValueError("CORE_PROSE failed.")
                 await asyncio.sleep(2)
 
-        # Execute Pass B
-        for attempt in range(2):
-            try:
-                await governor.get_permit(expected_tokens=600)
-                res_b = await self.llm.ainvoke([
-                    ("system", sys_prompt_b),
-                    ("human", f"Generate ACADEMIC_TRANSLATION for: {title_readable}. Context core breakdown: {detailed_breakdown[:400]}")
-                ])
-                academic_translation = TheoryAgent._extract_xml("ACADEMIC_TRANSLATION", res_b.content)
-                if academic_translation and len(academic_translation.strip()) >= 30:
-                    break
-            except Exception:
-                if attempt == 1: raise ValueError("ACADEMIC_TRANSLATION failed.")
-                await asyncio.sleep(2)
-
-        if not detailed_breakdown or not academic_translation:
+        if not detailed_breakdown:
             clean_source = re.sub(r"\[PAGE\s+\d+\]|\[ARCHITECT SOURCE HINT\]", "", source_text or "", flags=re.IGNORECASE)
             sentences = [
                 s.strip()
                 for s in re.split(r"(?<=[.!?])\s+", clean_source)
                 if len(s.strip()) > 30
             ]
-            if not detailed_breakdown:
-                basis = " ".join(sentences[:3]) or f"The source defines {title_readable} as the focused concept for this note."
-                detailed_breakdown = (
-                    f"{title_readable} means the specific idea isolated by the source excerpt. "
-                    f"To understand it, first identify the source's exact words, then ask what role the idea plays, "
-                    f"and finally connect that role to the example or rule shown in the source. {basis}"
-                )
-            if not academic_translation:
-                basis = " ".join(sentences[3:5]) or sentences[0] if sentences else ""
-                academic_translation = (
-                    f"In formal terms, {title_readable} is bounded by the attached source pages. "
-                    f"The correct technical version is whatever can be traced back to those pages, not a generic outside definition. {basis}"
-                ).strip()
+            basis = " ".join(sentences[:3]) or f"The source defines {title_readable} as the focused concept for this note."
+            detailed_breakdown = (
+                f"{title_readable} means the specific idea isolated by the source excerpt. "
+                f"To understand it, first identify the source's exact words, then ask what role the idea plays, "
+                f"and finally connect that role to the example or rule shown in the source. {basis}"
+            )
 
         return {
             "plain_english": plain_english,
             "detailed_breakdown": detailed_breakdown,
-            "academic_translation": academic_translation,
             "misconceptions": "",
-        }
-
-    async def generate_limitations(self, note_schema, source_text: str, persona: str) -> str:
-        title_readable = note_schema.title.replace("_", " ")
-        sys_prompt = f"""You are an Expert in {persona}. Based STRICTLY on the source text, identify where "{title_readable}" breaks down, what assumptions it makes, and what it cannot explain.
-
-SOURCE TEXT:
-{source_text[:1200]}
-
-RULES:
-- Use ONLY information from the source text.
-- Be specific and brutal. No generic fluff like "this is complex".
-- Format: 3 bullet points. Each starts with a bold failure label in **bold**.
-OUTPUT: The 3 bullet points only. No preamble."""
-        await governor.get_permit(expected_tokens=350)
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", "Generate edge cases and limitations.")])
-        return res.content.strip()
-
-    async def generate_theory_markdown(self, note_schema, source_text: str, academic_level: str, sanity_check: str) -> Dict[str, str]:
-        """
-        One single, structured, unified call to generate all theory text segments.
-        Combines:
-        - Mental Model (Analogy/Plain English): exactly 1 paragraph, no jargon.
-        - Core Mechanism Walkthrough (How it actually works): continuous prose, 3-5 wikilinks.
-        - Textbook Translation (Formal Model): continuous prose, formulas/equations if math domain.
-        """
-        title_readable = note_schema.title.replace("_", " ")
-        persona = self.domain.get("persona", "Subject Matter Expert")
-        
-        # We must inject the S-Tier analogy laws, domain-specific shifters rules, and the banned analogies.
-        banned_analogies = "Coffee shops, burger stands, lemonade stands, islands, pizza, traffic lights, car engines, factory assembly lines."
-        
-        sys_prompt = f"""You are a world-class Pedagogue and Senior Technical Writer in {persona}.
-Your task is to explain "{title_readable}" clearly, based STRICTLY on the provided source text.
-
-===SOURCE TEXT===
-{source_text}
-===END SOURCE TEXT===
-
-SANITY CHECK:
-{sanity_check}
-
-You MUST output exactly three XML blocks in your response:
-
-1. <MENTAL_MODEL>: Exactly 3 sentences of a vivid, source-relevant real-world scenario. Use the same world as the source text; for education, inclusion, stakeholders, participation, or community development, use classrooms, community meetings, families, local organizations, public services, or stakeholder planning.
-- Prohibited analogies: {banned_analogies}
-- Domain quarantine: Do NOT use medicine, hospitals, patients, diagnostics, drugs, finance, aerospace, semiconductors, physics, or engineering unless those ideas appear explicitly in the SOURCE TEXT.
-- If Quantitative, the analogy MUST feature a resource being counted or balanced.
-- Start directly with the scenario, no preamble.
-- DO NOT output any markdown headers (such as '## Mental Model' or any line starting with '#') inside the XML block.
-
-2. <CORE_BREAKDOWN>: Continuous analytical prose explaining how this concept actually works.
-- Be concise. If the source material is short, your explanation must be short. Do not artificially inflate the word count. Explain WHAT (define precisely), WHY (underlying reason), and HOW (mechanism step-by-step).
-- You MUST explicitly state the core facts, lists, or enumerations present in the SOURCE TEXT.
-- NO WIKILINKS. Do not use double brackets [[ ]] or hyper-link any vocabulary words here. We will add links programmatically later.
-- Bullet points/lists are STRICTLY FORBIDDEN here. Use continuous prose only.
-- DO NOT output any markdown headers (such as '## How It Actually Works' or any line starting with '#') inside the XML block.
-
-3. <ACADEMIC_TRANSLATION>: Continuous prose describing the formal textbook definition or classifications.
-- Use equations, formulas, taxonomies, or technical terminology EXACTLY as in source.
-- For math domains, use block LaTeX ($$...$$) for equations.
-- Bullet points are STRICTLY FORBIDDEN.
-- DO NOT output any markdown headers (such as '## The Formal Model' or any line starting with '#') inside the XML block.
-
-CRITICAL RULE: DO NOT REPEAT YOURSELF. The <MENTAL_MODEL>, <CORE_BREAKDOWN>, and <ACADEMIC_TRANSLATION> sections MUST contain 100% unique text. If you repeat a sentence or paragraph across sections, you will be penalized. If you have no new technical information to add to <ACADEMIC_TRANSLATION> (which will be rendered under Technical Implementation), keep it to a single brief sentence.
-
-Output ONLY these three XML blocks. Do not add any introduction, outro, markdown files wrapper, or thoughts. Output ONLY the raw paragraphs inside the XML blocks."""
-
-        await governor.get_permit(expected_tokens=1500)
-        res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Generate theory markdown blocks for {title_readable}.")])
-        
-        content = res.content
-        
-        # Robustly extract the XML blocks
-        mental_model = self._extract_xml("MENTAL_MODEL", content)
-        core_logic = self._extract_xml("CORE_BREAKDOWN", content)
-        formal_model = self._extract_xml("ACADEMIC_TRANSLATION", content)
-        
-        # Fallback if any block is missing or empty
-        if not mental_model:
-            mental_model = f"A physical representation of the constraints of {title_readable} operating under dynamic conditions."
-        if not core_logic:
-            core_logic = f"The underlying mechanism of {title_readable} coordinates various parameters to achieve consistent states based on the source text."
-        if not formal_model:
-            formal_model = f"At a formal level, {title_readable} is defined by the mathematical and structural constraints outlined in its academic discipline."
-
-        return {
-            "plain_english": mental_model,
-            "detailed_breakdown": core_logic,
-            "academic_translation": formal_model,
-            "misconceptions": ""
         }
 
     async def generate_micro(self, note_schema, source_text: str, all_concepts: str, used_scenarios: list = None, academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 6000) -> Dict[str, Any]:
@@ -1474,37 +1399,20 @@ Output ONLY these three XML blocks. Do not add any introduction, outro, markdown
         )
         return {
             "mental_model": theory_data.get("plain_english", ""),
-            "h1_title": self.domain.get("h1", "How It Actually Works"),
             "core_logic": theory_data.get("detailed_breakdown", ""),
-            "h2_title": self.domain.get("h2", "The Formal Model"),
-            "formal_model": theory_data.get("academic_translation", ""),
-            "_misconceptions_cache": theory_data.get("misconceptions", ""),
         }
 
     async def generate(self, note_schema, source_text: str, primary_language: str, all_concepts: str, used_scenarios: list = None) -> str:
-        # Legacy direct string call - now redirects to render_atomic_note via service
         res = await self.generate_micro(note_schema, source_text, all_concepts, used_scenarios)
         return f"FEYNMAN_DATA:{json.dumps(res)}"
 
     async def retry(self, note_schema, source_text: str, primary_language: str, all_concepts: str, diagnosis: str) -> str:
         return await self.generate(note_schema, source_text, primary_language, all_concepts)
 
-class QuizQuestionDict(BaseModel):
-    type: str = Field(description="Question type: mcq, true_false, writing, calculation, fill_in, matching, order, debug, code, data_analysis, scenario, synthesis, trace.")
-    question: str = Field(description="The hostile, source-grounded question prompt")
-    options: Optional[Dict[str, str]] = Field(default=None, description="For mcq: dict with EXACTLY 4 keys 'A', 'B', 'C', 'D' mapping to plausible options. None for all other question types.")
-    answer: Any = Field(description="The correct answer. For MCQ: single letter ('A', 'B', 'C', or 'D'). For true_false: boolean (true or false). For others: the exact correct short answer or model explanation.")
-    explanation: Optional[str] = Field(default=None, description="Pedagogical, step-by-step reasoning explaining why the correct answer is correct and others are wrong.")
-    required_keywords: Optional[List[str]] = Field(default=None, description="For writing/scenario/synthesis/debug/trace: a list of exactly 3-5 technical keywords that must be present in the answer. None for other question types.")
-    content: Optional[str] = Field(default=None, description="For code/debug/calculation/data_analysis: code snippet, buggy code, or data table content. None for other types.")
-    textWithBlanks: Optional[str] = Field(default=None, description="For fill_in: the text containing blanks marked with [[blank]]. None for other types.")
-    pairs: Optional[List[Dict[str, str]]] = Field(default=None, description="For matching: list of matching dicts containing 'left' and 'right' keys. None for other types.")
-    steps: Optional[List[str]] = Field(default=None, description="For order: list of shuffled steps. None for other types.")
-
 class StructuredArtifactsResponse(BaseModel):
+    formal_model: str = Field(description="3-5 sentences of continuous formal prose, academic definitions, constraints, boundary conditions based on the source text.")
     artifact_content: str = Field(description="The high-fidelity markdown table, basic Mermaid diagram, or block LaTeX content based on the source text and domain requirements.")
-    limitations: str = Field(description="Exactly 3 specific, source-grounded bullet points outlining limitations or failure states of the concept. Formatted exactly as: **Label**: Explanation.")
-    quiz_questions: List[QuizQuestionDict] = Field(description="A list containing EXACTLY 3 interactive quiz questions testing the concept.")
+    limitations: str = Field(description="Exactly 3 specific, source-grounded failure states or edge cases for the concept. Formatted exactly as: **Label**: Explanation.")
 
 class PractitionerAgent:
     def __init__(self, llm: BaseChatModel, domain: dict):
@@ -1522,29 +1430,23 @@ class PractitionerAgent:
         academic_level: str,
         course_title: str,
         artifact_type_hint: str = "",
-        q_modes: List[str] = None
     ) -> Dict[str, Any]:
         """
         Structured structured-output pass.
         Combines:
-        1. Markdown Table / Mermaid / LaTeX Artifact
-        2. 3 Limitations Bullet Points
-        3. 3 Heterogeneous Quiz Questions
+        1. Academic/formal prose description (formal_model).
+        2. Markdown Table / Mermaid / LaTeX Artifact.
+        3. 3 Limitations Bullet Points.
         All compiled into a single Pydantic-enforced response.
+        NO quiz questions are generated by PractitionerAgent anymore.
         """
         title_readable = note_title.replace("_", " ")
         artifact_type = artifact_type_hint or "Markdown Table"
         
-        if not q_modes:
-            q_modes = ["mcq", "true_false", "writing"]
-        
-        mcq_extra = "\\nCRITICAL FOR MCQ: You MUST provide EXACTLY 4 options (A, B, C, D) in the options dict. Never generate 2 options. All distractors must be plausible."
-        keyword_extra = "\\nCRITICAL FOR WRITING/SCENARIO/DEBUG/TRACE: You MUST include 3-5 technical, non-trivial vocabulary words in required_keywords."
-        
-        sys_prompt = f"""You are an Expert Systems Breaker, Technical Engineer, and Hostile Examiner in {persona}.
-Generate a HIGH-FIDELITY pedagogical artifact, 3 specific failure states, and exactly 3 interactive quiz questions for "{title_readable}".
+        sys_prompt = f"""You are an Expert Systems Breaker, Technical Engineer, and Formal Analyst in {persona}.
+Generate a formal textbook explanation, high-fidelity pedagogical artifact, and exactly 3 specific failure states for "{title_readable}".
 
-===SOURCE TEXT (use this for all data/values/questions)===
+===SOURCE TEXT (use this for all data/values/technical definitions)===
 {source_text}
 ===END SOURCE TEXT===
 
@@ -1552,14 +1454,21 @@ Generate a HIGH-FIDELITY pedagogical artifact, 3 specific failure states, and ex
 {theory_body}
 ===END CORE THEORY===
 
-===MENTAL MODEL / ANALOGY (frame your quiz scenarios and failure states around this analogy to ensure a unified theme)===
+===MENTAL MODEL / ANALOGY (frame your failure states around this analogy if appropriate to ensure a unified theme)===
 {plain_english}
 ===END MENTAL MODEL / ANALOGY===
 
 SANITY CHECK LAW:
 {sanity_check}
 
-ARTIFACT LAWS:
+LAWS FOR FORMAL TEXTBOOK EXPLANATION (formal_model):
+- Generate exactly 3-5 sentences of continuous formal prose, academic definitions, constraints, boundary conditions.
+- LINGUISTIC DIVERSITY: Do NOT repeat words or phrases from the "CORE THEORY" section provided above. Phrasing MUST be distinct and more academic.
+- Keep the tone academic, precise, and rigorous.
+- Bullet points or lists are strictly forbidden. Use continuous prose only.
+- Ground this strictly in the source text. Do not introduce outside concepts.
+
+LAWS FOR PEDAGOGICAL ARTIFACT (artifact_content):
 1. SOURCE GROUNDING: All numbers, labels, and values in the artifact MUST come from the SOURCE TEXT.
 2. ARTIFACT TYPE: Generate a {artifact_type} — this is domain-mandated.
 3. worked example: If Quantitative/Calculative, the artifact MUST show a worked numerical example from the source.
@@ -1568,16 +1477,11 @@ ARTIFACT LAWS:
 6. SIZE LAW: Keep the artifact compact — max 12 rows for tables, max 8 nodes for Mermaid.
 7. SEMANTIC LOCK: The artifact and failure states MUST strictly align with the CORE THEORY and SOURCE TEXT. Do not introduce any new terminology.
 8. DOMAIN QUARANTINE: Do NOT introduce medicine, hospitals, patients, diagnostics, drugs, finance, aerospace, physics, or engineering unless those ideas appear explicitly in the SOURCE TEXT.
-9. CLOSED-LOOP ALIGNMENT: The failure states and interactive quiz questions must reinforce-test the student's understanding by referencing or extending the specific analogy and scenarios defined in the MENTAL MODEL / ANALOGY above where appropriate.
 
-LIMITATIONS LAWS:
+LAWS FOR LIMITATIONS (limitations):
 - Exactly 3 bullet points, each describing a specific, source-grounded failure state or edge case for "{title_readable}".
 - Format: **Label**: Explanation.
-
-QUIZ LAWS:
-- Generate EXACTLY 3 interactive questions testing "{title_readable}" under heterogeneous modes: {q_modes}.
-- Hostile Examiner stance: Prove the student doesn't understand the concept.
-- Grounding: Only use vocabulary/facts from the SOURCE TEXT. Do not test outside concepts.{mcq_extra}{keyword_extra}"""
+- Preamble or other text is prohibited. Return only the requested fields in the JSON schema."""
 
         structured_llm = self.llm.with_structured_output(StructuredArtifactsResponse)
         
@@ -1586,33 +1490,37 @@ QUIZ LAWS:
                 await governor.get_permit(expected_tokens=3000)
                 res = await structured_llm.ainvoke([
                     ("system", sys_prompt),
-                    ("human", f"Generate structured artifacts and quiz for {note_title}.")
+                    ("human", f"Generate formal textbook model, structured artifacts and limitations for {note_title}.")
                 ])
                 
-                quiz_list = []
-                for q in res.quiz_questions:
-                    q_dict = {
-                        "type": q.type,
-                        "question": q.question,
-                        "explanation": q.explanation or f"Self-evident based on the core mechanics of {title_readable}.",
-                        "answer": q.answer
-                    }
-                    if q.options: q_dict["options"] = q.options
-                    if q.required_keywords: q_dict["required_keywords"] = q.required_keywords
-                    if q.content: q_dict["content"] = q.content
-                    if q.textWithBlanks: q_dict["textWithBlanks"] = q.textWithBlanks
-                    if q.pairs: q_dict["pairs"] = q.pairs
-                    if q.steps: q_dict["steps"] = q.steps
-                    quiz_list.append(q_dict)
-                
                 return {
+                    "formal_model": res.formal_model,
                     "artifact_title": self.domain.get("artifact", "Technical Artifact"),
                     "artifact_content": res.artifact_content,
-                    "limitations": res.limitations,
-                    "quiz_questions": quiz_list
+                    "limitations": res.limitations
                 }
             except Exception as e:
                 print(f"[PractitionerAgent] Structured pass attempt {attempt+1} failed: {e}")
+                # FALLBACK: If attempt 1 fails, try one more time using a raw string and regex extraction 
+                # to bypass Groq's flaky tool_use_failed (400) errors.
+                if attempt == 0:
+                    try:
+                        print("[PractitionerAgent] Attempting Raw JSON recovery pass...")
+                        raw_prompt = sys_prompt + "\n\nCRITICAL: You MUST return a JSON object inside <ARTIFACT_JSON> tags with keys: 'formal_model', 'artifact_content', 'limitations'."
+                        await governor.get_permit(expected_tokens=3000)
+                        raw_res = await self.llm.ainvoke([("system", raw_prompt)])
+                        json_str = TheoryAgent._extract_xml("ARTIFACT_JSON", raw_res.content)
+                        if json_str:
+                            data = json.loads(json_str)
+                            return {
+                                "formal_model": data.get("formal_model", ""),
+                                "artifact_title": self.domain.get("artifact", "Technical Artifact"),
+                                "artifact_content": data.get("artifact_content", ""),
+                                "limitations": data.get("limitations", "")
+                            }
+                    except Exception as raw_e:
+                        print(f"[PractitionerAgent] Raw JSON recovery failed: {raw_e}")
+
                 if attempt == 1:
                     raise RuntimeError(f"PractitionerAgent.generate_structured_artifacts exhausted retries: {e}")
                 await asyncio.sleep(2)
@@ -1623,7 +1531,6 @@ QUIZ LAWS:
         artifact_type_hint = self.domain.get("type", "Markdown Table")
         if len(artifact_type_hint) > 80:
             artifact_type_hint = artifact_type_hint[:80]
-        q_modes = self.domain.get("question_modes", ["mcq", "true_false", "writing"])
 
         try:
             return await self.generate_structured_artifacts(
@@ -1636,7 +1543,6 @@ QUIZ LAWS:
                 academic_level=academic_level,
                 course_title=course_title,
                 artifact_type_hint=artifact_type_hint,
-                q_modes=q_modes
             )
         except Exception as e:
             print(f"[PractitionerAgent] Falling back to deterministic artifact for {note_title}: {e}")
@@ -1661,11 +1567,12 @@ QUIZ LAWS:
                 f"**Common Miss**: A student may memorize the name without explaining how the source says it works. "
                 f"**Check Point**: If an example cannot be tied back to the listed source pages, it should be treated as outside this atomic note."
             )
+            formal_model = f"In formal terms, {title_readable} is defined and bounded by the academic parameters detailed in the source texts."
             return {
+                "formal_model": formal_model,
                 "artifact_title": self.domain.get("artifact", "Source Artifact"),
                 "artifact_content": artifact,
                 "limitations": limitations,
-                "quiz_questions": []
             }
 
     async def generate(self, note_title: str, theory_body: str, primary_language: str, mode: str = "") -> str:
@@ -1758,6 +1665,7 @@ LAWS (non-negotiable):
 5. DOMAIN DRIFT PROHIBITION: You are STRICTLY FORBIDDEN from introducing advanced topics not in the source (e.g. aggregate demand curves, monetary policy, game theory, regression analysis, quantum mechanics, etc.) unless they are explicitly stated in the source context.
 6. CONTEXT QUARANTINE: Do NOT use medical, hospital, patient, diagnostic, finance, aerospace, physics, or engineering scenarios unless those exact domains appear in the SOURCE CONTEXT.
 7. JSON ONLY: Output ONLY the JSON array inside <QUIZ_JSON></QUIZ_JSON> tags. Zero other text.
+8. LEAKAGE GUARD: For 'scenario', 'writing', 'trace', and 'debug' types: The 'answer' field MUST BE A DETAILED TEXTUAL EXPLANATION (minimum 2 sentences). NEVER use a single letter (A, B, C, D) as the answer for these types. Single letters are ONLY for 'mcq'.
 {mcq_extra}
 {keyword_extra}
 

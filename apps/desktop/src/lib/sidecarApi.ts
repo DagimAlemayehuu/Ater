@@ -792,6 +792,24 @@ export const sidecarApi = {
         }
     },
 
+    srsCards: async () => {
+        try {
+            return await invoke<any>('srs_cards')
+        } catch (err) {
+            console.error('[Tauri Native RAG] srsCards failed:', err)
+            return { cards: [] }
+        }
+    },
+
+    srsFeynmanValidate: async (notePath: string, explanation: string) => {
+        try {
+            return await invoke<any>('srs_feynman_validate', { notePath, explanation })
+        } catch (err) {
+            console.error('[Tauri Native RAG] srsFeynmanValidate failed:', err)
+            throw err
+        }
+    },
+
     recordPerformance: async (payload: { note_path: string; was_correct: boolean; time_ms: number; question_type?: string; difficulty?: string; confidence?: number; session_id?: string; question_id?: string }) => {
         try {
             return await invoke<any>('record_performance', { payload })

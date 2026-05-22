@@ -30,32 +30,50 @@ def _retrievability(t: float, s: float) -> float:
     if s <= 0: return 0.0
     return (1 + t / (9 * s)) ** -1
 
+MAX_STABILITY = 36500.0  # Cap at 100 years to prevent timedelta overflow
+
 def _next_interval(stability: float, target_retention: float = 0.90) -> int:
     if stability <= 0: return 1
-    return max(1, round(9 * stability * (target_retention**-1 - 1)**-1))
+    s = min(stability, MAX_STABILITY)
+    return max(1, round(9 * s * (target_retention**-1 - 1)**-1))
 
 def fsrs_update(card: FSRSCard, rating: Rating) -> FSRSCard:
     now = datetime.now()
+
+    # ── First-ever review: seed stability from FSRS initial weights W[0..3] ──
+    if card.reps == 0:
+        card.stability = FSRS_W[rating - 1]   # W[0]=Again, W[1]=Hard, W[2]=Good, W[3]=Easy
+        card.difficulty = min(10.0, max(1.0,
+            FSRS_W[4] - FSRS_W[5] * (rating - 3)
+        ))
+        if rating == 1:
+            card.lapses += 1
+        card.reps += 1
+        card.last_review = now
+        card.due = now + timedelta(days=_next_interval(card.stability))
+        return card
+
+    # ── Subsequent reviews ────────────────────────────────────────────────────
     t = (now - card.last_review).days if card.last_review else 0
-    r = _retrievability(t, card.stability) if card.reps > 0 else 0.0
+    r = _retrievability(t, max(card.stability, 0.01))
 
     card.difficulty = min(10.0, max(1.0,
         card.difficulty - FSRS_W[6] * (rating - 3)
     ))
 
     if rating == 1:  # Forgot
-        card.stability = (
+        card.stability = min(MAX_STABILITY, (
             FSRS_W[11] * (card.difficulty ** -FSRS_W[12]) *
             ((card.stability + 1) ** FSRS_W[13] - 1) *
             math.exp(FSRS_W[14] * (1 - r))
-        )
+        ))
         card.lapses += 1
     else:
-        card.stability = card.stability * math.exp(
+        card.stability = min(MAX_STABILITY, card.stability * math.exp(
             FSRS_W[8] * (11 - card.difficulty) *
             (card.stability ** -FSRS_W[9]) *
             (math.exp(FSRS_W[10] * (1 - r)) - 1)
-        ) * (FSRS_W[15] if rating == 4 else 1.0)
+        ) * (FSRS_W[15] if rating == 4 else 1.0))
 
     card.reps += 1
     card.last_review = now
@@ -123,3 +141,59 @@ class SRSEngine:
                 "SELECT * FROM srs_cards WHERE due <= ?", (now,)
             ).fetchall()
         return [self.get_card(r[0]) for r in rows]
+
+    def get_all(self) -> List[FSRSCard]:
+        rows = self.db.execute(
+            "SELECT * FROM srs_cards"
+        ).fetchall()
+        return [self.get_card(r[0]) for r in rows]
+
+    def validate_feynman_gate(self, note_path: str, explanation_text: str, vault_path: Path) -> dict:
+        """
+        Locates a note, extracts its interactive-quiz writing question's keywords,
+        and verifies if the explanation contains all required keywords.
+        """
+        import json
+        import re
+        vault_path = Path(vault_path) if isinstance(vault_path, str) else vault_path
+        abs_path = vault_path / note_path if not Path(note_path).is_absolute() else Path(note_path)
+        if not abs_path.exists():
+            return {"success": False, "error": f"Note file not found at: {note_path}"}
+            
+        with open(abs_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Locate the ```interactive-quiz markdown block
+        match = re.search(r"```interactive-quiz\s*\n(.*?)\n```", content, re.DOTALL)
+        if not match:
+            return {"success": False, "error": "No interactive-quiz block found in note."}
+
+        try:
+            quiz_data = json.loads(match.group(1).strip())
+        except Exception:
+            return {"success": False, "error": "Failed to parse interactive-quiz JSON block."}
+
+        # Extract the required_keywords from the writing question
+        writing_q = next((q for q in quiz_data if q.get("type") == "writing"), None)
+        if not writing_q:
+            # If no writing question exists, fallback to standard case-insensitive unlock
+            self.review(note_path, rating=3)
+            return {"success": True, "unlocked_directly": True}
+
+        keywords = [kw.strip() for kw in writing_q.get("required_keywords", []) if kw.strip()]
+        if not keywords:
+            self.review(note_path, rating=3)
+            return {"success": True, "unlocked_directly": True}
+
+        missing = []
+        explanation_lower = explanation_text.lower()
+        for kw in keywords:
+            if kw.lower() not in explanation_lower:
+                missing.append(kw)
+
+        if len(missing) == 0:
+            # Mark FSRS rating as Good (3) and save to srs_cards SQLite table
+            self.review(note_path, rating=3)
+            return {"success": True}
+        else:
+            return {"success": False, "missing_keywords": missing}

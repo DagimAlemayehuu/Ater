@@ -21,8 +21,11 @@ class LogicHealer:
         Fixes broken wikilinks by fuzzy matching against known titles in the current hub plan.
         Handles aliases like [[Title|Alias]].
         """
-        # 0. Pre-heal broken brackets: [[Concept] -> [[Concept]]
-        text = re.sub(r'\[\[([^\]\n]+)\](?!\])', r'[[\1]]', text)
+        # 0. Bracket normalization (redundant, triple, or broken brackets)
+        text = re.sub(r'\[{3,}', '[[', text)
+        text = re.sub(r'\]{3,}', ']]', text)
+        text = re.sub(r'\[{2}([^\]\n]+)\](?!\])', r'[[\1]]', text)
+        text = re.sub(r'(?<!\[)\[([^\[\]\n]+)\]{2}', r'[[\1]]', text)
         
         def _fix_link(match):
             raw_content = match.group(1).strip()
@@ -36,21 +39,23 @@ class LogicHealer:
                 link = raw_content
                 alias = None
             
-            # Normalize and check link using canonical sanitizer
-            sanitized_link = self.validator.sanitize_title(link)
+            # Convert spaces to underscores and capitalize to follow Underscore_Title_Case
+            link_normalized = "_".join(part.capitalize() for part in link.replace(" ", "_").split("_") if part)
+            sanitized_link = self.validator.sanitize_title(link_normalized)
             fixed_link = sanitized_link
             
             # 1. Exact match in canonical titles
-            if raw_content in self.canonical_titles:
-                fixed_link = raw_content
+            if link_normalized in self.canonical_titles:
+                fixed_link = link_normalized
             elif sanitized_link in self.normalized_titles:
                 fixed_link = self.normalized_titles[sanitized_link]
             else:
                 # 2. Case-insensitive match against canonical set
                 matched = False
                 for title in self.canonical_titles:
-                    if title.lower() == raw_content.lower() or self.validator.sanitize_title(title).lower() == sanitized_link.lower():
-                        fixed_link = title
+                    title_norm = title.replace(" ", "_")
+                    if title.lower() == link_normalized.lower() or title_norm.lower() == link_normalized.lower() or self.validator.sanitize_title(title).lower() == sanitized_link.lower():
+                        fixed_link = title_norm
                         matched = True
                         break
                 
@@ -58,9 +63,10 @@ class LogicHealer:
                     # v29.2: STRICT Closed Knowledge Graph Law
                     # If we can't find a match in the plan, we strip the brackets and convert to plain text
                     self.logger.warning(f"[Healer] Hallucinated link pruned: {link}")
-                    # If an alias was provided, use it; otherwise use the cleaned link text
-                    return alias if alias else link.replace('_', ' ')
+                    return alias if alias else link_normalized.replace('_', ' ')
             
+            # Always ensure the final link uses underscores and title case
+            fixed_link = fixed_link.replace(" ", "_")
             if alias:
                 return f"[[{fixed_link}|{alias}]]"
             return f"[[{fixed_link}]]"
@@ -225,14 +231,14 @@ class LogicHealer:
         """
         # Aggressive patterns for LLM conversational sludge
         patterns = [
-            r"(?i)(?:Sure|Certainly|Here is|Great choice|Atery|As an?|Absolutely|I understand),?.*?(?:explaining|overview|analysis|help|note|here is).*?[:\.]\s*",
-            r"(?i)(?:In this section|This note|The following).*?[:\.]\s*",
+            r"(?i)(?:Sure|Certainly|Here is|Great choice|Atery|As an?|Absolutely|I understand|Below is|I have compiled|I will now),?.*?(?:explaining|overview|analysis|help|note|here is|the note|content|response).*?[:\.]\s*",
+            r"(?i)(?:In this section|This note|The following|This response).*?[:\.]\s*",
             r"(?i)(?:Note|Tip|Hint|Important|Pro Tip):\s*",
-            r"(?i)Hope this (?:helps|is useful|clarifies).*?\.?$",
-            r"(?i)(?:If you have|Feel free to).*?\.?$",
+            r"(?i)Hope this (?:helps|is useful|clarifies|meets).*?\.?$",
+            r"(?i)(?:If you have|Feel free to|Let me know if).*?\.?$",
             r"(?i)^(?:\*\*?)?(?:Analysis|Explanation|Walkthrough|Summary)(?:\*\*?)?:\s+",
             r"(?i)(?:Here's a|I have created).*?\.?$",
-            r"(?i)Let me know if you need any further.*\.?$",
+            r"(?i)Let me know if you need any (?:further|anything|else).*?\.?$",
             r"(?i)I hope this academic note meets your expectations.*?\.?$",
             r"(?i)Wait, (?:let me check|let's correct|actually|let me rephrase).*?\.?$",
             r"(?i)Thinking:.*?\.?$",
@@ -399,18 +405,218 @@ class LogicHealer:
         """
         Deterministically links the first occurrence of each canonical title in prose.
         Matches case-insensitively with strict word boundaries.
+        Refined v33.4: Skips linking words already inside existing markdown links or bold tags.
+        """
+        # Sort titles by length descending so longer titles (e.g. "State System Evolution")
+        # match before shorter sub-titles (e.g. "State System")
+        sorted_titles = sorted(self.canonical_titles, key=len, reverse=True)
+        
+        for title in sorted_titles:
+            readable = title.replace("_", " ")
+            if readable.lower() == exclude_title.replace("_", " ").lower():
+                continue
+
+            # This regex avoids matching words inside [[links]] or **bold** blocks
+            # Group 1: already formatted markdown block
+            # Group 2: bare word match for our concept
+            pattern = re.compile(
+                r'(\[\[[^\]]+\]\]|\*\*[^*]+\*\*)|(\b' + re.escape(readable) + r'\b)',
+                re.IGNORECASE
+            )
+
+            matches_found = [False]
+            def _link_sub_first(match):
+                if match.group(1):
+                    # Already in a markdown block, return as is
+                    return match.group(1)
+                if not matches_found[0]:
+                    # First bare match! Link it.
+                    matches_found[0] = True
+                    return f"[[{title}]]"
+                return match.group(2) # Subsequent matches stay plain
+
+            text = pattern.sub(_link_sub_first, text)
+        return text
+
+    def auto_bold_concepts(self, text: str) -> str:
+        """
+        Automatically wraps the first occurrence of each canonical concept in bold syntax (`**Concept_Name**`).
+        Avoids wrapping inside wikilinks, headers, code blocks, or block LaTeX.
         """
         # Sort titles by length descending so longer titles match first
-        for title in sorted(self.canonical_titles, key=len, reverse=True):
-            if title == exclude_title:
-                continue
+        sorted_titles = sorted(self.canonical_titles, key=len, reverse=True)
+        bolded_concepts = set()
+        
+        for title in sorted_titles:
             readable = title.replace("_", " ")
-            # Only link if neither capitalized nor normalized version is already linkified
-            if f"[[{title}]]" not in text and f"[[{readable}]]" not in text:
-                # Use a case-insensitive word-boundary pattern
-                pattern = re.compile(r'\b' + re.escape(readable) + r'\b', re.IGNORECASE)
-                text = pattern.sub(f"[[{title}]]", text, count=1)
+            underscored = title.replace(" ", "_")
+            
+            for concept_variant in (readable, underscored):
+                if concept_variant.lower() in bolded_concepts:
+                    continue
+                
+                # Regex matching either:
+                # - group 1: wikilink or already bolded block
+                # - group 2: bare occurrence of the concept
+                pattern = re.compile(
+                    r'(\[\[[^\]]+\]\]|\*\*[^*]+\*\*)|(\b' + re.escape(concept_variant) + r'\b)',
+                    re.IGNORECASE
+                )
+                
+                first_bold = [True]
+                def _bold_sub_first(match):
+                    if match.group(1):
+                        return match.group(1)
+                    if first_bold[0]:
+                        first_bold[0] = False
+                        bolded_concepts.add(concept_variant.lower())
+                        return f"**{match.group(2)}**"
+                    return match.group(2)
+                
+                text = pattern.sub(_bold_sub_first, text)
+                if not first_bold[0]:
+                    # Successfully bolded this concept, skip checking other variants
+                    break
         return text
+
+    def enforce_gutter_law(self, text: str) -> str:
+        """
+        Deterministic Margin Fixer (Gutter Law).
+        Ensures exactly one blank line before and after:
+        - Every Markdown Header (#, ##, ###)
+        - Every Markdown Table (|)
+        - Every fenced code block (```)
+        - Every block LaTeX container ($$)
+        """
+        text = text.replace("\r\n", "\n").strip()
+        
+        # Extract YAML Frontmatter if present
+        yaml_block = ""
+        yaml_match = re.match(r"^---\n.*?\n---\n", text, re.DOTALL)
+        if yaml_match:
+            yaml_block = yaml_match.group(0)
+            text = text[yaml_match.end():].strip()
+            
+        lines = text.split("\n")
+        blocks = []
+        current_block_type = None
+        current_block_lines = []
+        
+        in_code_block = False
+        in_math_block = False
+        
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            stripped = line.strip()
+            
+            # Check for fenced code block boundary
+            if stripped.startswith("```"):
+                if not in_code_block:
+                    if current_block_lines:
+                        blocks.append((current_block_type, "\n".join(current_block_lines)))
+                        current_block_lines = []
+                    in_code_block = True
+                    current_block_type = "code_block"
+                    current_block_lines.append(line)
+                else:
+                    current_block_lines.append(line)
+                    blocks.append(("code_block", "\n".join(current_block_lines)))
+                    current_block_lines = []
+                    in_code_block = False
+                    current_block_type = None
+                i += 1
+                continue
+                
+            if in_code_block:
+                current_block_lines.append(line)
+                i += 1
+                continue
+                
+            # Check for LaTeX block boundary
+            if stripped.startswith("$$"):
+                if not in_math_block:
+                    if len(stripped) > 2 and stripped.endswith("$$"):
+                        if current_block_lines:
+                            blocks.append((current_block_type, "\n".join(current_block_lines)))
+                            current_block_lines = []
+                        blocks.append(("math_block", line))
+                        current_block_type = None
+                    else:
+                        if current_block_lines:
+                            blocks.append((current_block_type, "\n".join(current_block_lines)))
+                            current_block_lines = []
+                        in_math_block = True
+                        current_block_type = "math_block"
+                        current_block_lines.append(line)
+                else:
+                    current_block_lines.append(line)
+                    blocks.append(("math_block", "\n".join(current_block_lines)))
+                    current_block_lines = []
+                    in_math_block = False
+                    current_block_type = None
+                i += 1
+                continue
+                
+            if in_math_block:
+                current_block_lines.append(line)
+                i += 1
+                continue
+                
+            # Headers
+            if stripped.startswith("#"):
+                if current_block_lines:
+                    blocks.append((current_block_type, "\n".join(current_block_lines)))
+                    current_block_lines = []
+                blocks.append(("header", line))
+                current_block_type = None
+                i += 1
+                continue
+                
+            # Markdown tables
+            if "|" in stripped and not stripped.startswith("$"):
+                if current_block_type != "table":
+                    if current_block_lines:
+                        blocks.append((current_block_type, "\n".join(current_block_lines)))
+                        current_block_lines = []
+                    current_block_type = "table"
+                current_block_lines.append(line)
+                i += 1
+                continue
+                
+            # Blank lines separate blocks but are themselves discarded from raw list
+            if stripped == "":
+                if current_block_lines:
+                    blocks.append((current_block_type, "\n".join(current_block_lines)))
+                    current_block_lines = []
+                current_block_type = None
+                i += 1
+                continue
+                
+            # Prose
+            if current_block_type != "prose":
+                if current_block_lines:
+                    blocks.append((current_block_type, "\n".join(current_block_lines)))
+                    current_block_lines = []
+                current_block_type = "prose"
+            current_block_lines.append(line)
+            i += 1
+            
+        if current_block_lines:
+            blocks.append((current_block_type, "\n".join(current_block_lines)))
+            
+        # Reconstruct with exactly one blank line between elements
+        reconstructed = []
+        for btype, bcontent in blocks:
+            bcontent_clean = bcontent.strip("\n")
+            if bcontent_clean:
+                reconstructed.append(bcontent_clean)
+                
+        body_text = "\n\n".join(reconstructed)
+        
+        if yaml_block:
+            return yaml_block + body_text
+        return body_text
 
     def heal_all(self, text: str, is_quiz: bool = False, exclude_title: str = "") -> str:
         if is_quiz:
@@ -425,9 +631,16 @@ class LogicHealer:
         text = self.heal_wikilinks(text)
         # Weave in links deterministically since the LLM no longer does it
         text = self.inject_wikilinks(text, exclude_title=exclude_title)
+        
+        # Auto-bold first occurrence of concepts
+        text = self.auto_bold_concepts(text)
+        
         text = self.verify_arithmetic(text)
         text = self.heal_markdown_tables(text)
         # v33.2: Fix invalid leading pipes in Mermaid blocks
         text = self.fix_mermaid_pipes(text)
+        
+        # Gutter Law enforcement (always run last)
+        text = self.enforce_gutter_law(text)
         return text
 

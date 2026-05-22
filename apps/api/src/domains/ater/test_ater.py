@@ -38,12 +38,12 @@ def test_logic_healer_wikilinks():
     # Exact match but spaces
     text = "The [[Supply and Demand]] model."
     healed = healer.heal_wikilinks(text)
-    assert "[[Supply and Demand]]" in healed # Should keep original if matched
+    assert "[[Supply_and_Demand]]" in healed # Should keep original if matched
     
     # Normalization match
     text2 = "The [[supply_and_demand]] is here."
     healed2 = healer.heal_wikilinks(text2)
-    assert "[[Supply and Demand]]" in healed2
+    assert "[[Supply_and_Demand]]" in healed2
     
     # Case insensitive
     text3 = "The [[price_elasticity]] is high."
@@ -53,12 +53,12 @@ def test_logic_healer_wikilinks():
     # Aliases
     text4 = "The [[Supply and Demand|S&D]] curve."
     healed4 = healer.heal_wikilinks(text4)
-    assert "[[Supply and Demand|S&D]]" in healed4
+    assert "[[Supply_and_Demand|S&D]]" in healed4
     
     # Aliases with case fix
     text5 = "The [[supply_and_demand|S&D]] curve."
     healed5 = healer.heal_wikilinks(text5)
-    assert "[[Supply and Demand|S&D]]" in healed5
+    assert "[[Supply_and_Demand|S&D]]" in healed5
 
 def test_logic_healer_sanitization():
     healer = LogicHealer(canonical_titles=set())
@@ -106,8 +106,8 @@ def test_render_atomic_note():
     result = render_atomic_note(data, healer=healer)
     
     # Check body content (no frontmatter anymore in result)
-    assert "## Mental Model" in result
-    assert "## " + domain["h1"] in result
+    assert "# 1. The Intuitive Analogy" in result
+    assert "### " + domain["h1"] in result
     
     # Check healing occurred during render
     assert "Sure, here is the note." not in result
@@ -230,13 +230,17 @@ title: Partnership_Definition
 type: atomic_note
 course: Inclusiveness
 ---
-## Mental Model
+
+# 1. The Intuitive Analogy
+
 In a medical diagnostics lab, patients and clinical staff coordinate diagnosis.
-## How Participation Works
-[[Stakeholder_Definition]] [[Communication]] [[Respect]]
-## The Inclusion Rules
-Partnership means equal participation.
-## The Proving Grounds
+
+# 2. The Core Execution
+
+Partnership means equal participation. [[Stakeholder_Definition]] [[Communication]] [[Respect]]
+
+# 3. The Proving Grounds
+
 ```interactive-quiz
 []
 ```
@@ -251,13 +255,18 @@ title: Inclusive_Development_Strategies
 type: atomic_note
 course: Inclusiveness
 ---
-## Mental Model
+
+# 1. The Intuitive Analogy
+
 A community meeting includes every affected group.
-## How Participation Works
-[[Community_Development]] [[Communication]] [[Respect]]
-## The Inclusion Rules
+
+# 2. The Core Execution
+
+We utilize community development strategies to include every affected group. [[Community_Development]] [[Communication]] [[Respect]]
 [ARCHITECT SOURCE HINT]
-## The Proving Grounds
+
+# 3. The Proving Grounds
+
 ```interactive-quiz
 []
 ```

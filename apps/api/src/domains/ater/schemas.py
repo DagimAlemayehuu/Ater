@@ -186,6 +186,17 @@ class AtomicNoteSchema(NoteSchema):
         "Causal/Historical"
     ] = Field(default="Qualitative/Definitional", description="The epistemic nature of the concept.")
     mode: str = Field(default="ACADEMIC-GENERAL")
+
+    @field_validator("concept_modality", mode="before")
+    @classmethod
+    def coerce_empty_modality(cls, v):
+        """Coerce empty strings or unrecognised values to the safe default.
+        The 2B model sometimes truncates and returns '' for later notes in the plan.
+        """
+        _valid = {"Quantitative", "Qualitative/Definitional", "Procedural", "Comparative", "Causal/Historical"}
+        if not v or str(v).strip() not in _valid:
+            return "Qualitative/Definitional"
+        return v
 class BatchSchema(BaseModel):
     id: int
     notes: List[str]

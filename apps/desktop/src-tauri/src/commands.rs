@@ -1813,6 +1813,31 @@ pub async fn srs_due(
 }
 
 #[tauri::command]
+pub async fn srs_cards(
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    proxy_get(sidecar_config.port, "/api/srs/cards", headers).await
+}
+
+#[tauri::command]
+pub async fn srs_feynman_validate(
+    note_path: String,
+    explanation: String,
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    let mut payload = serde_json::Map::new();
+    payload.insert("note_path".to_string(), serde_json::Value::String(note_path));
+    payload.insert("explanation".to_string(), serde_json::Value::String(explanation));
+    proxy_post(sidecar_config.port, "/api/srs/feynman-validate", &serde_json::Value::Object(payload), headers).await
+}
+
+#[tauri::command]
 pub async fn record_performance(
     payload: serde_json::Value,
     sidecar_config: State<'_, crate::SidecarConfig>,

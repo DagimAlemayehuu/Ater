@@ -3,6 +3,10 @@ import yaml
 import json
 from typing import Any, List, Tuple, Optional
 
+class StructureValidationError(ValueError):
+    """Exception raised when a note violates the strict 3-Section Sandwich format structure."""
+    pass
+
 # Strings that indicate a generation failure — notes containing these must NEVER be deployed
 HARD_FAILURE_MARKERS = [
     "Error generating content",
@@ -123,23 +127,62 @@ class AterValidator:
         """
         errors: List[str] = []
 
-        # ── 0. Structural Obedience (v33.0) ──────────────────────────────────
-        # Fixed sections: Mental Model (sec 1) and The Proving Grounds (sec 4)
-        # Domain sections 2 & 3 use dynamic h1/h2 titles — validated via heading count
-        required_sections = [
-            r"(?:#|##|###)\s+Mental Model",
-            r"(?:#|##|###)\s+The Proving Grounds",
-        ]
-        for section in required_sections:
-            if not re.search(section, content, re.IGNORECASE):
-                errors.append(f"MISSING_SECTION: {section}")
-        # Require at least 4 '## '-level headings total (Mental Model + h1 + h2 + The Proving Grounds)
-        content_for_heading_count = re.sub(r"```.*?```", "", content, flags=re.DOTALL)
-        heading_count = len(re.findall(r'^#{1,3}\s+\S', content_for_heading_count, re.MULTILINE))
-        if heading_count < 4:
-            errors.append(f"INSUFFICIENT_SECTIONS: Found {heading_count} headings, expected ≥ 4 (v33.0 requires Mental Model, Domain H1, Domain H2, The Proving Grounds)")
-        if heading_count > 6:
-            errors.append(f"TOO_MANY_SECTIONS: Found {heading_count} headings, expected 4-6 compact atomic-note headings")
+        # ── 0. Strict 3-Section Sandwich Structure Validation (v33.1/Refactor) ──
+        # Every atomic or synthesis note (or note containing top-level headings) must have exactly three top-level headings in sequence.
+        body = content
+        yaml_match = re.search(r"^---\s*\n(.*?)\n---\s*(\n|$)", content, re.DOTALL | re.MULTILINE)
+        if yaml_match:
+            body = content[yaml_match.end():]
+        body_no_code = re.sub(r"```.*?```", "", body, flags=re.DOTALL)
+        top_headings = re.findall(r'^#\s+(.*)$', body_no_code, re.MULTILINE)
+        
+        note_type = ""
+        if yaml_match:
+            try:
+                meta = yaml.safe_load(yaml_match.group(1))
+                if isinstance(meta, dict):
+                    note_type = str(meta.get("type", "")).strip().lower()
+            except Exception:
+                pass
+                
+        is_atomic_or_synthesis = "atomic" in note_type or "synthesis" in note_type
+        if is_atomic_or_synthesis or len(top_headings) > 0:
+            if len(top_headings) != 3:
+                raise StructureValidationError(
+                    f"Note must have exactly three top-level headings. Found {len(top_headings)}: {top_headings}"
+                )
+                
+            h1, h2, h3 = top_headings[0].strip(), top_headings[1].strip(), top_headings[2].strip()
+            
+            # Validate Heading 1
+            h1_ok = (
+                re.search(r'\b1\b', h1) is not None or 
+                any(k in h1.lower() for k in ["analogy", "intuitive", "mental model", "bread 1"])
+            )
+            if not h1_ok:
+                raise StructureValidationError(
+                    f"Heading 1 is not a valid Bread 1 header: '{h1}'. Expected '# 1. The Intuitive Analogy' or equivalent."
+                )
+                
+            # Validate Heading 2
+            h2_ok = (
+                re.search(r'\b2\b', h2) is not None or 
+                any(k in h2.lower() for k in ["core", "execution", "meat", "logic"])
+            )
+            if not h2_ok:
+                raise StructureValidationError(
+                    f"Heading 2 is not a valid Meat header: '{h2}'. Expected '# 2. The Core Execution' or equivalent."
+                )
+                
+            # Validate Heading 3
+            h3_ok = (
+                re.search(r'\b3\b', h3) is not None or 
+                any(k in h3.lower() for k in ["proving", "grounds", "quiz", "bread 2"])
+            )
+            if not h3_ok:
+                raise StructureValidationError(
+                    f"Heading 3 is not a valid Bread 2 header: '{h3}'. Expected '# 3. The Proving Grounds' or equivalent."
+                )
         for marker in HARD_FAILURE_MARKERS:
             if marker in content:
                 errors.append(f"HARD_FAILURE_MARKER: '{marker}' found in content. Note must be regenerated.")

@@ -2,7 +2,7 @@ import pytest
 from src.domains.ater.validator import AterValidator
 
 def test_validator_perfect_note():
-    """String A: Perfect v33.0 format. (Should Pass)"""
+    """String A: Perfect 3-Section Sandwich format. (Should Pass)"""
     perfect_content = """---
 title: Test_Concept
 type: Atomic Note
@@ -11,31 +11,15 @@ semester: Spring_2026
 unit: "1"
 ---
 
-## Mental Model
+# 1. The Intuitive Analogy
 
 The [[CPU]] is like a conductor in an orchestra, directing the [[Data_Stream]] to various instruments while maintaining the [[Clock_Sync]].
 
-## Processor Core (domain.h1)
+# 2. The Core Execution
 
 The [[Processor_Core]] executes instructions by cycling through the [[Fetch_Decode_Execute]] loop. It coordinates with the [[Control_Unit]] to maintain state.
 
-## Formal Definition (domain.h2)
-
-A computational unit capable of executing logic gates at high frequency.
-
-> **Execution Pipeline (artifact)**
-
-```cpp
-void execute() {
-    // Instruction cycle
-}
-```
-
-This code represents the instruction cycle logic.
-
----
-
-## The Proving Grounds
+# 3. The Proving Grounds
 
 ```interactive-quiz
 [
@@ -78,8 +62,27 @@ type: Atomic Note
 course: CS
 ---
 
-## Mental Model
+# 1. The Intuitive Analogy
+
 Error generating content.
+
+# 2. The Core Execution
+
+Prose here. [[Concept_1]], [[Concept_2]], [[Concept_3]].
+
+# 3. The Proving Grounds
+
+```interactive-quiz
+[
+  {
+    "type": "recall",
+    "question": "q",
+    "answer": "a",
+    "explanation": "e",
+    "explanation_page": 1
+  }
+]
+```
 """
     is_valid, errors = AterValidator.validate_structure(failed_content)
     assert not is_valid
@@ -96,11 +99,11 @@ semester: Spring_2026
 unit: "1"
 ---
 
-## Mental Model
+# 1. The Intuitive Analogy
 
 The [[CPU]] manages operations like standard addition and subtraction of [[State_Variables]].
 
-## Math Core (domain.h1)
+# 2. The Core Execution
 
 We represent equations inline as $ -x + y = z $ or inside math blocks:
 
@@ -111,21 +114,7 @@ $$
 
 The above equation describes the basic system state.
 
-## Formal Definition (domain.h2)
-
-A mathematical definition containing [[Control_Unit]] and [[Clock_Sync]] concepts.
-
-> **Execution Pipeline (artifact)**
-
-```cpp
-void execute() {}
-```
-
-This code represents the logic.
-
----
-
-## The Proving Grounds
+# 3. The Proving Grounds
 
 ```interactive-quiz
 [

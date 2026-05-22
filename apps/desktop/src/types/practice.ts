@@ -57,6 +57,7 @@ export type QuestionType =
 export interface BaseQuestion {
   id: number;
   note_id?: string;
+  note_title?: string;
   type: QuestionType;
   difficulty: string;
   question: string;

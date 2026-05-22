@@ -167,6 +167,13 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   const [explainLesson, setExplainLesson] = useState('')
   const [explainLoading, setExplainLoading] = useState(false)
 
+  // ── FSRS Spaced Repetition state ───────────────────────────────────────────
+  const [srsCardsCache, setSrsCardsCache] = useState<Record<string, any>>({})
+  const [unlockedNotes, setUnlockedNotes] = useState<Set<string>>(new Set())
+  const [feynmanExplanation, setFeynmanExplanation] = useState<string>('')
+  const [feynmanError, setFeynmanError] = useState<string | null>(null)
+  const [isFeynmanValidating, setIsFeynmanValidating] = useState<boolean>(false)
+
   const globalTimeLeftRef = useRef(globalTimeLeft);
   const questionTimeLeftRef = useRef(questionTimeLeft);
   const isRevealedRef = useRef(isRevealed);
@@ -254,31 +261,47 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  useEffect(() => {if (selectedHub) loadHubNotes(selectedHub);}, [selectedHub])
  
  const loadHubNotes = async (hubId: string) => {
- if (!hubId) return;
- try {
- const res = await sidecarApi.listHubNotes(hubId); 
- const notes = Array.isArray(res?.notes) ? res.notes : [];
- setAvailableNotes(notes);
- setAdvancedConfig(prev => {
-  const totalQuestions = Object.values(prev.questionDistribution).reduce((a, b) => a + b, 0);
-  const nextDistribution = totalQuestions === 0 
-    ? { ...ZERO_DISTRIBUTION, ...PRESETS.balanced } 
-    : prev.questionDistribution;
-  
-  // Omit label property
-  const { label: _l, ...cleanedDist } = nextDistribution as any;
-  
-  return {
-    ...prev,
-    selectedAtomicNotes: notes.map((n: any) => n.path),
-    questionDistribution: cleanedDist
-  };
- })
-} catch (err) {
- console.error("Error loading notes:", err); 
- setAvailableNotes([]);
-} 
-}
+  if (!hubId) return;
+  try {
+    let notes: any[] = [];
+    if (hubId === "all") {
+      const allNotesPromises = hubs.map(h => sidecarApi.listHubNotes(h.id));
+      const allNotesResults = await Promise.all(allNotesPromises);
+      const notePaths = new Set<string>();
+      allNotesResults.forEach(res => {
+        const hubNotes = Array.isArray(res?.notes) ? res.notes : [];
+        hubNotes.forEach((n: any) => {
+          if (n && n.path && !notePaths.has(n.path)) {
+            notePaths.add(n.path);
+            notes.push(n);
+          }
+        });
+      });
+    } else {
+      const res = await sidecarApi.listHubNotes(hubId); 
+      notes = Array.isArray(res?.notes) ? res.notes : [];
+    }
+    setAvailableNotes(notes);
+    setAdvancedConfig(prev => {
+     const totalQuestions = Object.values(prev.questionDistribution).reduce((a, b) => a + b, 0);
+     const nextDistribution = totalQuestions === 0 
+       ? { ...ZERO_DISTRIBUTION, ...PRESETS.balanced } 
+       : prev.questionDistribution;
+     
+     // Omit label property
+     const { label: _l, ...cleanedDist } = nextDistribution as any;
+     
+     return {
+       ...prev,
+       selectedAtomicNotes: notes.map((n: any) => n.path),
+       questionDistribution: cleanedDist
+     };
+    })
+  } catch (err) {
+    console.error("Error loading notes:", err); 
+    setAvailableNotes([]);
+  } 
+  }
 
  useEffect(() => {
  let interval: any;
@@ -383,69 +406,95 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     return msg || 'Error starting.';
   };
 
-  const loadPastPractices = async () => {try {const res = await sidecarApi.listPractices(); setPastPractices(res.practices);} catch {console.error("Error");}}
-  const loadHubs = async () => {try {const res = await sidecarApi.listHubs(); setHubs(res.hubs); if (res.hubs.length > 0) setSelectedHub(res.hubs[0].id);} catch {console.error("Error");}}
   const loadAnalytics = async () => {
     try {
       const res = await sidecarApi.getPracticeAnalytics();
-      setAnalytics({
-        modalities: res.modalities || {},
-        weakest_concepts: res.weakest_concepts || []
-      });
+      setAnalytics(res);
     } catch {
       console.error("Error loading analytics");
     }
   };
 
-  
-const handleStartSession = async () => {
- if (!selectedHub) {toast.error('Choose a topic.'); return;}
- 
- const totalQuestions = Object.values(advancedConfig.questionDistribution).reduce((a, b) => a + b, 0);
- if (totalQuestions <= 0) {
-  toast.error('Please select at least one question type or apply a preset.');
-  return;
- }
- 
- setIsLoading(true);
- setView('loading');
- try {
- const cleanDistribution = Object.fromEntries(
- Object.entries(advancedConfig.questionDistribution).filter(([k]) => 
- ['mcq', 'true_false', 'writing', 'fill_in', 'matching', 'order', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(k)
- )
- );
+  const loadPastPractices = async () => {try {const res = await sidecarApi.listPractices(); setPastPractices(res.practices);} catch {console.error("Error");}}
+  const loadHubs = async () => {
+    try {
+      const res = await sidecarApi.listHubs();
+      setHubs(res.hubs);
+      if (res.hubs.length > 0 && !selectedHub) {
+        setSelectedHub(res.hubs[0].id);
+      }
+    } catch {
+      console.error("Error loading hubs");
+    }
+  };
 
- const res = await sidecarApi.generatePractice(selectedHub, {
- ...advancedConfig, 
- hubId: selectedHub,
- questionDistribution: cleanDistribution 
-});
- 
- if (!res.questions || res.questions.length === 0) {
- toast.error('No content found.');
- setView('configuring');
- return;
-}
- 
- setTimeout(() => {
- setQuestions(res.questions); 
- setCurrentPracticePath(res.quiz_path); 
- setCurrentQuestionIdx(0); 
- setUserAnswers({}); 
- setIsRevealed(false); 
- setGradedAnswers({}); 
- setStreak(0); setBookmarked(new Set());
- setView('session');
-  (window as any).__practiceStartTime = Date.now();
- if (advancedConfig.globalTimeLimitMinutes) setGlobalTimeLeft(advancedConfig.globalTimeLimitMinutes * 60);
- if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
-}, 1000);
-} catch (err: any) {
- toast.error(getCleanErrorMessage(err)); 
- setView('configuring');
-} finally {setIsLoading(false);}
-}
+  const handleStartSession = async () => {
+    if (!selectedHub) {
+      toast.error('Choose a topic.');
+      return;
+    }
+    
+    const totalQuestions = Object.values(advancedConfig.questionDistribution).reduce((a, b) => a + b, 0);
+    if (totalQuestions <= 0) {
+      toast.error('Please select at least one question type or apply a preset.');
+      return;
+    }
+    
+    setIsLoading(true);
+    setView('loading');
+    try {
+      const cleanDistribution = Object.fromEntries(
+        Object.entries(advancedConfig.questionDistribution).filter(([k]) => 
+          ['mcq', 'true_false', 'writing', 'fill_in', 'matching', 'order', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(k)
+        )
+      );
+
+      // Fetch and cache FSRS cards state
+      const cacheRes = await sidecarApi.srsCards();
+      const cacheMap: Record<string, any> = {};
+      if (cacheRes && Array.isArray(cacheRes.cards)) {
+        cacheRes.cards.forEach((c: any) => {
+          cacheMap[c.note_path] = c;
+        });
+      }
+      setSrsCardsCache(cacheMap);
+      setUnlockedNotes(new Set());
+      setFeynmanExplanation('');
+      setFeynmanError(null);
+
+      const res = await sidecarApi.generatePractice(selectedHub, {
+        ...advancedConfig, 
+        hubId: selectedHub,
+        questionDistribution: cleanDistribution 
+      });
+      
+      if (!res.questions || res.questions.length === 0) {
+        toast.error('No content found.');
+        setView('configuring');
+        return;
+      }
+      
+      setTimeout(() => {
+        setQuestions(res.questions); 
+        setCurrentPracticePath(res.quiz_path); 
+        setCurrentQuestionIdx(0); 
+        setUserAnswers({}); 
+        setIsRevealed(false); 
+        setGradedAnswers({}); 
+        setStreak(0); 
+        setBookmarked(new Set());
+        setView('session');
+        (window as any).__practiceStartTime = Date.now();
+        if (advancedConfig.globalTimeLimitMinutes) setGlobalTimeLeft(advancedConfig.globalTimeLimitMinutes * 60);
+        if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
+      }, 1000);
+    } catch (err: any) {
+      toast.error(getCleanErrorMessage(err)); 
+      setView('configuring');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
  const handleResumePractice = async (path: string) => {
  setIsLoading(true);
@@ -638,14 +687,33 @@ const handleStartSession = async () => {
     setIsLoading(true);
     setView('loading');
     try {
-      const dueRes = await sidecarApi.srsDue(selectedHub);
+      // Fetch and cache FSRS cards state
+      const cacheRes = await sidecarApi.srsCards();
+      const cacheMap: Record<string, any> = {};
+      if (cacheRes && Array.isArray(cacheRes.cards)) {
+        cacheRes.cards.forEach((c: any) => {
+          cacheMap[c.note_path] = c;
+        });
+      }
+      setSrsCardsCache(cacheMap);
+      setUnlockedNotes(new Set());
+      setFeynmanExplanation('');
+      setFeynmanError(null);
+
+      // If selectedHub === "all", srsDue is called without params
+      const dueRes = selectedHub === "all" ? await sidecarApi.srsDue() : await sidecarApi.srsDue(selectedHub);
       if (!dueRes.due_cards || dueRes.due_cards.length === 0) {
-        toast.info("No cards are due for this topic right now!");
+        toast.info("No cards are due right now!");
         setView('dashboard');
         return;
       }
       
-      const duePaths = dueRes.due_cards.map((c: any) => c.note_path);
+      let duePaths = dueRes.due_cards.map((c: any) => c.note_path);
+      // Shuffle the array of returned note paths in JS if hub is "all"
+      if (selectedHub === "all") {
+        duePaths = [...duePaths].sort(() => Math.random() - 0.5);
+      }
+
       const cleanDistribution = Object.fromEntries(
          Object.entries(advancedConfig.questionDistribution).filter(([k]) => 
          ['mcq', 'true_false', 'writing', 'fill_in', 'matching', 'order', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(k)
@@ -950,7 +1018,10 @@ const handleStartSession = async () => {
  <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
  <Select value={selectedHub} onValueChange={(val: string) => {setSelectedHub(val); loadHubNotes(val);}}>
  <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-none px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 "><SelectValue placeholder="Select Topic..." /></SelectTrigger>
- <SelectContent className="border-border bg-popover">{hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>))}</SelectContent>
+ <SelectContent className="border-border bg-popover">
+    <SelectItem value="all" className="text-[10px] font-black uppercase tracking-tight text-primary">Global Interleaved (All Topics)</SelectItem>
+    {hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>))}
+ </SelectContent>
  </Select>
  </div>
  <div className="space-y-2">
@@ -1071,9 +1142,157 @@ const handleStartSession = async () => {
  // SESSION RENDERER
  // ──────────────────────────────────────────────────────────────────────────
  if (view === 'session' && currentQuestion) {
- const progress = ((currentQuestionIdx + 1) / questions.length) * 100;
+  const progress = ((currentQuestionIdx + 1) / questions.length) * 100;
+
+  // Calculate Feynman Lock properties
+  const currentCardPath = currentQuestion ? currentQuestion.note_id : null;
+  const currentCard = currentCardPath ? srsCardsCache[currentCardPath] : null;
+  
+  // R = (1 + t / (9 * s))^-1
+  const getRetrievability = (card: any): number => {
+    if (!card) return 1.0;
+    const stability = Math.max(0.01, card.stability || 0);
+    if (!card.last_review) return 1.0;
+    
+    const lastReviewTime = new Date(card.last_review).getTime();
+    const now = Date.now();
+    const elapsedMs = Math.max(0, now - lastReviewTime);
+    const elapsedDays = elapsedMs / (1000 * 60 * 60 * 24);
+    
+    return Math.pow(1 + elapsedDays / (9 * stability), -1);
+  };
+  
+  const retrievability = currentCard ? getRetrievability(currentCard) : 1.0;
+  const lapses = currentCard ? (currentCard.lapses || 0) : 0;
+  
+  const isFeynmanLocked = currentCardPath && 
+    (lapses >= 3 || retrievability < 0.70) && 
+    !unlockedNotes.has(currentCardPath);
+
  return (
- <div className="h-full w-full flex flex-col bg-background text-foreground overflow-hidden">
+ <div className="h-full w-full flex flex-col bg-background text-foreground overflow-hidden relative">
+    {/* ── Feynman Gate Locked Overlay ── */}
+    {isFeynmanLocked && (
+      <div className="absolute inset-0 z-40 bg-background/90 backdrop-blur-md flex items-center justify-center p-6">
+        <div className="max-w-xl w-full border border-border bg-background p-8 rounded-none space-y-6 shadow-2xl relative">
+          <div className="flex items-center gap-3 border-b border-border pb-4">
+            <BrainCircuit className="text-primary shrink-0" size={24} />
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-primary">Cognitive Lock Engaged</h3>
+              <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">FSRS Telemetry: Memory Decay Detected</p>
+            </div>
+            <div className="ml-auto bg-destructive/10 border border-destructive/20 text-destructive text-[8px] font-black uppercase tracking-widest px-2.5 py-1">
+              Locked
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-3 bg-muted/5 border border-border/40 rounded-none flex flex-col gap-0.5">
+              <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Retrievability</span>
+              <span className={cn("text-xs font-black tracking-tight", retrievability < 0.70 ? "text-destructive" : "text-foreground")}>
+                {(retrievability * 100).toFixed(1)}%
+              </span>
+            </div>
+            <div className="p-3 bg-muted/5 border border-border/40 rounded-none flex flex-col gap-0.5">
+              <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Stability</span>
+              <span className="text-xs font-black tracking-tight text-foreground">
+                {currentCard?.stability ? `${currentCard.stability.toFixed(2)}d` : '0d'}
+              </span>
+            </div>
+            <div className="p-3 bg-muted/5 border border-border/40 rounded-none flex flex-col gap-0.5">
+              <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Lapses</span>
+              <span className={cn("text-xs font-black tracking-tight", lapses >= 3 ? "text-destructive" : "text-foreground")}>
+                {lapses}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">The Feynman Challenge</h4>
+            <p className="text-xs text-foreground/80 leading-relaxed">
+              Your memory weights for <strong className="text-foreground">{cleanTitle(currentQuestion.note_title || currentCardPath)}</strong> indicate high fading. Write a clear, comprehensive explanation of this topic in your own words to unlock.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <textarea
+              value={feynmanExplanation}
+              onChange={(e) => setFeynmanExplanation(e.target.value)}
+              disabled={isFeynmanValidating}
+              rows={5}
+              placeholder="Explain the core concepts, mechanisms, and rules of this topic..."
+              className="w-full p-4 bg-muted/5 border border-border rounded-none text-xs font-medium focus:ring-1 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20 resize-none"
+            />
+
+            {feynmanError && (
+              <div className="p-4 bg-destructive/5 border border-destructive/20 text-destructive text-[10px] font-bold rounded-none space-y-2">
+                <span className="uppercase tracking-widest text-[8px] font-black text-destructive/40 block">Unlocking Failed</span>
+                <p>{feynmanError}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              onClick={resetSession}
+              disabled={isFeynmanValidating}
+              className="h-10 px-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border rounded-none"
+            >
+              Exit Session
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!feynmanExplanation.trim()) {
+                  toast.error("Please write an explanation first.");
+                  return;
+                }
+                setIsFeynmanValidating(true);
+                setFeynmanError(null);
+                try {
+                  const res = await sidecarApi.srsFeynmanValidate(currentCardPath, feynmanExplanation);
+                  if (res.success) {
+                    toast.success("Cognitive Lock Unlocked! Memory weights successfully sync'd.");
+                    setUnlockedNotes(prev => {
+                      const next = new Set(prev);
+                      next.add(currentCardPath);
+                      return next;
+                    });
+                    setFeynmanExplanation('');
+                    // Update card in local FSRS cache with rating 3 (Good)
+                    setSrsCardsCache(prev => ({
+                      ...prev,
+                      [currentCardPath]: {
+                        ...prev[currentCardPath],
+                        lapses: 0,
+                        stability: prev[currentCardPath] ? prev[currentCardPath].stability * 1.5 : 1.5,
+                        last_review: new Date().toISOString()
+                      }
+                    }));
+                  } else {
+                    if (res.missing_keywords && res.missing_keywords.length > 0) {
+                      setFeynmanError(`Missing mandatory concepts: ${res.missing_keywords.join(', ')}`);
+                    } else if (res.error) {
+                      setFeynmanError(res.error);
+                    } else {
+                      setFeynmanError("Validation failed. Please verify your explanation covers all key concepts.");
+                    }
+                  }
+                } catch (e: any) {
+                  setFeynmanError(e.message || "Failed to validate explanation.");
+                } finally {
+                  setIsFeynmanValidating(false);
+                }
+              }}
+              disabled={isFeynmanValidating || !feynmanExplanation.trim()}
+              className="h-10 flex-1 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest rounded-none"
+            >
+              {isFeynmanValidating ? "Analyzing Telemetry..." : "Validate & Unlock"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
  {/* ── Explain More Modal ── */}
  {explainOpen && (
    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)'}}>

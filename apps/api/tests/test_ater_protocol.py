@@ -1,27 +1,27 @@
 import pytest
-from src.domains.ater.validator import AterValidator
+from src.domains.ater.validator import AterValidator, StructureValidationError
 
 def test_validator_required_sections():
     validator = AterValidator()
     
-    # Missing Mental Model
+    # Missing required sections (invalid headings)
     content = """---
 title: Test
 type: atomic
 course: CS101
 ---
-# Domain Section 1
+# Unrelated Heading A
 Content
-# Domain Section 2
+# Unrelated Heading B
 Content
-# The Proving Grounds
+# Unrelated Heading C
 ```interactive-quiz
 []
 ```
 """
-    is_valid, errors = validator.validate_structure(content)
-    assert not is_valid
-    assert any("MISSING_SECTION" in e and "Mental Model" in e for e in errors)
+    with pytest.raises(StructureValidationError) as exc_info:
+        validator.validate_structure(content)
+    assert "Heading 1 is not a valid Bread 1 header" in str(exc_info.value)
 
 def test_validator_hard_failure_markers():
     validator = AterValidator()
@@ -30,13 +30,17 @@ title: Test
 type: atomic
 course: CS101
 ---
-# Mental Model
+
+# 1. The Intuitive Analogy
+
 Wait, that is incorrect. Error generating content.
-# Section 1
-Content
-# Section 2
-Content
-# The Proving Grounds
+
+# 2. The Core Execution
+
+Prose here. [[Concept_1]], [[Concept_2]], [[Concept_3]].
+
+# 3. The Proving Grounds
+
 ```interactive-quiz
 []
 ```
@@ -53,13 +57,17 @@ title: Test
 type: atomic
 course: CS101
 ---
-# Mental Model
+
+# 1. The Intuitive Analogy
+
 This has [[ Space_Inside ]].
-# Section 1
+
+# 2. The Core Execution
+
 [[Link1]] [[Link2]] [[Link3]]
-# Section 2
-Content
-# The Proving Grounds
+
+# 3. The Proving Grounds
+
 ```interactive-quiz
 []
 ```
@@ -106,11 +114,17 @@ title: Test
 type: atomic
 course: CS101
 ---
-# Mental Model
+
+# 1. The Intuitive Analogy
+
 This section is fine.
-# Section 1
+
+# 2. The Core Execution
+
 [[Link1]] [[Link2]] [[Link3]]
-# Section 2
+
+# 3. The Proving Grounds
+
 This section ends abruptly without"""
     is_valid, errors = validator.validate_structure(content)
     assert not is_valid

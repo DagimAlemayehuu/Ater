@@ -6,6 +6,7 @@ import time
 import yaml
 import difflib
 from typing import List, Dict, Any, Optional, Tuple
+from pydantic import BaseModel, Field
 from pathlib import Path
 from datetime import datetime
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
@@ -18,6 +19,7 @@ from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgen
 from .router import router
 from .templates import render_atomic_note, build_skeleton_note, build_dynamic_section_plan
 from .healer import LogicHealer
+from .validator import StructureValidationError
 from .governor import governor, DailyLimitExceededException
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
 import ruamel.yaml
@@ -30,6 +32,12 @@ ATER_TIMEOUT = 600       # 10 minutes — headroom for large PDFs
 ATER_MAX_RETRIES = 10     # Retry on transient failures (524, timeout, rate-limit)
 ATER_RETRY_BACKOFF = 15  # Seconds between retries (doubles each attempt)
 MAX_SOURCE_CHARS = 80000  # Characters to include in prompt (Lowered for 30k TPM Free Tier)
+
+class SynthesisNoteResponse(BaseModel):
+    integrated_analogy: str = Field(description="Exactly 3-5 sentences of a vivid, concrete, integrated analogy explaining how the member concepts interact. Bullet points are prohibited.")
+    comparative_breakdown: str = Field(description="Continuous prose comparing and contrasting the trade-offs, similarities, and differences of the member concepts. Do NOT use bullet points.")
+    comparison_table: str = Field(description="A beautiful Markdown table contrasting member concepts on key structural parameters (e.g. Parameter, Concept A, Concept B).")
+    cross_concept_quiz: List[Dict[str, Any]] = Field(description="Exactly 3 advanced cross-concept questions. Must follow the standard MCQ or writing/trace question schema. Each question must have difficulty 'L3'.")
 
 
 class AterService:
@@ -893,90 +901,124 @@ class AterService:
         if not self.planner_llm:
             raise ValueError("Planner AI is not configured. Go to Settings > AI Configuration and add your API key.")
 
-        hub = self._find_hub(config.hubId)
-        if not hub:
-            available = [h["id"] for h in hubs]
-            raise ValueError(f"Hub not found: '{config.hubId}'. Available hubs: {available}")
-        
-        hub_path = self.vm.vault_path / hub["path"]
-        
-        unit_dir = self._get_unit_dir(hub)
-        practice_dir = self.vm.academic_root / "Practice"
-        practice_dir.mkdir(exist_ok=True)
-        
         # 1. Gather Context
         # Budget: 12,000 chars total for the prompt context to fit in low TPM limits
         PRACTICE_MAX_CHARS = 12_000
         context_parts = []
-        
-        # Filter files based on config
-        atomic_notes = list(unit_dir.glob("*.md"))
-        selected_notes = config.selectedAtomicNotes
-        
-        # Check if selectedAtomicNotes was explicitly provided as an empty list (0 notes selected)
         is_explicitly_empty = False
-        if isinstance(config_raw, dict):
-            if "selectedAtomicNotes" in config_raw and config_raw["selectedAtomicNotes"] == []:
-                is_explicitly_empty = True
-            elif "selected_atomic_notes" in config_raw and config_raw["selected_atomic_notes"] == []:
-                is_explicitly_empty = True
 
-        selected_stems = set()
-        selected_names = set()
-        selected_rel_paths = set()
-        if selected_notes:
-            for n in selected_notes:
-                selected_stems.add(Path(n).stem)
-                selected_names.add(Path(n).name)
-                selected_rel_paths.add(Path(n).as_posix())
-
-        notes_to_process = []
-        if not is_explicitly_empty:
-            for note_path in atomic_notes:
-                if note_path.name == hub_path.name or "Possible_Questions" in note_path.name or "Practice" in note_path.name or note_path.name.startswith("_"):
-                    continue
-                if selected_notes:
-                    # Robust matching logic
-                    try:
-                        rel_p = note_path.relative_to(self.vm.vault_path).as_posix()
-                    except ValueError:
-                        rel_p = note_path.as_posix()
-
-                    match_found = False
-                    if note_path.stem in selected_stems:
-                        match_found = True
-                    elif note_path.name in selected_names:
-                        match_found = True
-                    elif rel_p in selected_rel_paths:
-                        match_found = True
-                    elif any(n.endswith(rel_p) or rel_p.endswith(n) for n in selected_rel_paths):
-                        match_found = True
-
-                    if not match_found:
-                        continue
-                notes_to_process.append(note_path)
-
-        if not notes_to_process:
-             # If no specific notes selected, we might want the Hub itself
-             with open(hub_path, "r", encoding="utf-8") as f:
-                context_parts.append(f"## Hub Note: {hub['title']}\n{f.read()}")
-
-        # Distribute budget
-        if notes_to_process:
-            budget_per_note = PRACTICE_MAX_CHARS // len(notes_to_process)
-            found_selected = True
-            for note_path in notes_to_process:
-                with open(note_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    # Truncate note if it's too long for its share of the budget
-                    if len(content) > budget_per_note:
-                        content = content[:budget_per_note] + "... [Truncated for Context Limit]"
-                    context_parts.append(f"### Atomic Note: {note_path.stem}\n{content}")
+        if config.hubId == "all":
+            hub = {"title": "Global Interleaved", "path": ""}
+            practice_dir = self.vm.academic_root / "Practice"
+            practice_dir.mkdir(exist_ok=True)
+            
+            selected_notes = config.selectedAtomicNotes or []
+            notes_to_process = []
+            
+            if isinstance(config_raw, dict):
+                if "selectedAtomicNotes" in config_raw and config_raw["selectedAtomicNotes"] == []:
+                    is_explicitly_empty = True
+                elif "selected_atomic_notes" in config_raw and config_raw["selected_atomic_notes"] == []:
+                    is_explicitly_empty = True
+            
+            for path_str in selected_notes:
+                p = Path(path_str)
+                resolved_p = self.vm.vault_path / path_str if not p.is_absolute() else p
+                if resolved_p.exists():
+                    notes_to_process.append(resolved_p)
+                    
+            if notes_to_process:
+                budget_per_note = PRACTICE_MAX_CHARS // len(notes_to_process)
+                found_selected = True
+                for note_path in notes_to_process:
+                    with open(note_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                        if len(content) > budget_per_note:
+                            content = content[:budget_per_note] + "... [Truncated for Context Limit]"
+                        context_parts.append(f"### Atomic Note: {note_path.stem}\n{content}")
+            else:
+                found_selected = False
+                
+            atomic_notes = notes_to_process
         else:
-            found_selected = False
+            hub = self._find_hub(config.hubId)
+            if not hub:
+                available = [h["id"] for h in hubs]
+                raise ValueError(f"Hub not found: '{config.hubId}'. Available hubs: {available}")
+            
+            hub_path = self.vm.vault_path / hub["path"]
+            
+            unit_dir = self._get_unit_dir(hub)
+            practice_dir = self.vm.academic_root / "Practice"
+            practice_dir.mkdir(exist_ok=True)
+            
+            # Filter files based on config
+            atomic_notes = list(unit_dir.glob("*.md"))
+            selected_notes = config.selectedAtomicNotes
+            
+            # Check if selectedAtomicNotes was explicitly provided as an empty list (0 notes selected)
+            if isinstance(config_raw, dict):
+                if "selectedAtomicNotes" in config_raw and config_raw["selectedAtomicNotes"] == []:
+                    is_explicitly_empty = True
+                elif "selected_atomic_notes" in config_raw and config_raw["selected_atomic_notes"] == []:
+                    is_explicitly_empty = True
+
+            selected_stems = set()
+            selected_names = set()
+            selected_rel_paths = set()
+            if selected_notes:
+                for n in selected_notes:
+                    selected_stems.add(Path(n).stem)
+                    selected_names.add(Path(n).name)
+                    selected_rel_paths.add(Path(n).as_posix())
+
+            notes_to_process = []
+            if not is_explicitly_empty:
+                for note_path in atomic_notes:
+                    if note_path.name == hub_path.name or "Possible_Questions" in note_path.name or "Practice" in note_path.name or note_path.name.startswith("_"):
+                        continue
+                    if selected_notes:
+                        # Robust matching logic
+                        try:
+                            rel_p = note_path.relative_to(self.vm.vault_path).as_posix()
+                        except ValueError:
+                            rel_p = note_path.as_posix()
+
+                        match_found = False
+                        if note_path.stem in selected_stems:
+                            match_found = True
+                        elif note_path.name in selected_names:
+                            match_found = True
+                        elif rel_p in selected_rel_paths:
+                            match_found = True
+                        elif any(n.endswith(rel_p) or rel_p.endswith(n) for n in selected_rel_paths):
+                            match_found = True
+
+                        if not match_found:
+                            continue
+                    notes_to_process.append(note_path)
+
+            if not notes_to_process:
+                 # If no specific notes selected, we might want the Hub itself
+                 with open(hub_path, "r", encoding="utf-8") as f:
+                    context_parts.append(f"## Hub Note: {hub['title']}\n{f.read()}")
+
+            # Distribute budget
+            if notes_to_process:
+                budget_per_note = PRACTICE_MAX_CHARS // len(notes_to_process)
+                found_selected = True
+                for note_path in notes_to_process:
+                    with open(note_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                        # Truncate note if it's too long for its share of the budget
+                        if len(content) > budget_per_note:
+                            content = content[:budget_per_note] + "... [Truncated for Context Limit]"
+                        context_parts.append(f"### Atomic Note: {note_path.stem}\n{content}")
+            else:
+                found_selected = False
 
         # 2. Add Possible Questions only if no specific notes are selected (full unit mode)
-        if not selected_notes or is_explicitly_empty:
+        if config.hubId != "all" and (not selected_notes or is_explicitly_empty):
             pq_file = next(unit_dir.glob("*_Possible_Questions.md"), None)
             if pq_file:
                 with open(pq_file, "r", encoding="utf-8") as f:
@@ -984,7 +1026,7 @@ class AterService:
         
         # STRICT ERROR: If notes were selected but none were found/processed, abort.
         if selected_notes and not found_selected and not is_explicitly_empty:
-            raise Exception(f"Strict Error: None of the selected notes ({selected_notes}) were found in the unit directory.")
+            raise Exception(f"Strict Error: None of the selected notes ({selected_notes}) were found.")
         
         # Randomize context order to break structural bias
         import random
@@ -2067,77 +2109,24 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             primary_language = "C++"
         
         # --- CHUNKING LOGIC ---
-        chunk_size = 12000
-        text_chunks = [full_text[i:i+chunk_size] for i in range(0, len(full_text), chunk_size)] or [full_text]
-        all_atomic_notes = []
-        all_pq_notes = []
-        seen_titles = set(existing_notes)
+        from .keywords import chunk_text, reduce_concepts
+        text_chunks = chunk_text(full_text, chunk_size=4000, overlap=1000) or [full_text]
         
         extracted_course_title = "Unknown"
         extracted_academic_level = "Unknown"
         extracted_epistemic_stance = "Unknown"
         
-        for idx, chunk in enumerate(text_chunks):
+        # Concurrent processing of textbook text chunks
+        async def process_chunk(idx, chunk):
             self.set_status(session_id, f"Architecting Plan (Chunk {idx+1}/{len(text_chunks)})...")
-            print(f"[Ater Service] Processing chunk {idx+1}/{len(text_chunks)}")
+            print(f"[Ater Service] Processing chunk {idx+1}/{len(text_chunks)} concurrently")
             try:
-                await self.governor.get_permit(expected_tokens=len(chunk) + 1000)
-
+                await self.governor.get_permit(expected_tokens=len(chunk) // 4 + 1000)
                 partial_plan = await self.architect_agent.generate_partial_plan(
                     f"{context_enrichment}\n\nSOURCE TEXT CHUNK:\n{chunk}",
                     forced_mode=detected_mode
                 )
-                
-                # Capture global curriculum meta from the first successful chunk
-                if idx == 0 or extracted_course_title == "Unknown":
-                    extracted_course_title = partial_plan.course_title or "Unknown"
-                    extracted_academic_level = partial_plan.academic_level or "Unknown"
-                    extracted_epistemic_stance = partial_plan.epistemic_stance or "Unknown"
-                
-                if not partial_plan.atomic_notes:
-                    print(f"[Ater Service] Chunk {idx+1} returned zero notes. Context might be irrelevant.")
-                    continue
-
-                # Merge notes, avoiding duplicates
-                for note in partial_plan.atomic_notes:
-                    # Normalize title for cross-session idempotency comparison
-                    norm_title = note.title
-                    if norm_title not in seen_titles:
-                        # Law of Cognitive Anchoring: Enforced in generation phase
-                        note.mode = normalize_mode(detected_mode)
-                        
-                        note_dict = note.model_dump()
-                        
-                        # SOURCE ENRICHMENT: keep a tight, concept-local window. Older
-                        # builds appended the first 3k chars of the chapter chunk, which
-                        # caused weak models and the deterministic fallback to copy
-                        # unrelated slide text into every note.
-                        source_packet, source_page_anchors = self._build_concept_source_packet(
-                            full_text=full_text,
-                            seed_context=note_dict.get("source_context") or "",
-                            title=note_dict.get("title") or "",
-                            source_pages=note_dict.get("source_pages") or [],
-                        )
-                        if not source_page_anchors:
-                            print(f"[Ater Service] Skipping concept '{note.title}' because no matching/relevant source pages were found in the PDF.")
-                            continue
-                        
-                        note_dict["source_context"] = source_packet
-                        note_dict["source_pages"] = source_page_anchors
-                        
-                        print(f"[Ater Service] Adding concept: {note.title} (Mode: {note.mode})")
-                        all_atomic_notes.append(note_dict)
-                        seen_titles.add(norm_title)
-                    else:
-                        print(f"[Ater Service] Cross-session idempotency: '{note.title}' already in vault or plan. Skipping.")
-
-
-                for pq in partial_plan.possible_questions:
-                    if pq.title not in seen_titles:
-                        print(f"[Ater Service] Adding PQ: {pq.title}")
-                        all_pq_notes.append(pq.model_dump())
-                        seen_titles.add(pq.title)
-                        
+                return idx, partial_plan
             except Exception as e:
                 err_trace = traceback.format_exc()
                 try:
@@ -2154,37 +2143,78 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 except Exception:
                     pass
                 print(f"[Ater Service] CRITICAL: Chunk {idx+1} failed validation: {e}\n{err_trace}")
-                self.set_status(session_id, f"Load Failed during Architecting: {str(e)}")
                 raise e
 
-        # Deduplicate Plan
+        # Gather extraction results concurrently
+        tasks = [process_chunk(idx, chunk) for idx, chunk in enumerate(text_chunks)]
+        chunk_results = await asyncio.gather(*tasks)
+
+        all_atomic_notes = []
+        all_pq_notes = []
+        seen_titles = set(existing_notes)
+
+        # Merge results programmatically
+        for idx, partial_plan in sorted(chunk_results, key=lambda x: x[0]):
+            if not partial_plan:
+                continue
+            if extracted_course_title == "Unknown":
+                extracted_course_title = partial_plan.course_title or "Unknown"
+                extracted_academic_level = partial_plan.academic_level or "Unknown"
+                extracted_epistemic_stance = partial_plan.epistemic_stance or "Unknown"
+
+            if not partial_plan.atomic_notes:
+                print(f"[Ater Service] Chunk {idx+1} returned zero notes.")
+                continue
+
+            for note in partial_plan.atomic_notes:
+                norm_title = note.title
+                if norm_title not in seen_titles:
+                    note.mode = normalize_mode(detected_mode)
+                    note_dict = note.model_dump()
+                    
+                    source_packet, source_page_anchors = self._build_concept_source_packet(
+                        full_text=full_text,
+                        seed_context=note_dict.get("source_context") or "",
+                        title=note_dict.get("title") or "",
+                        source_pages=note_dict.get("source_pages") or [],
+                    )
+                    if not source_page_anchors:
+                        print(f"[Ater Service] Skipping concept '{note.title}' because no matching/relevant source pages were found.")
+                        continue
+                    
+                    note_dict["source_context"] = source_packet
+                    note_dict["source_pages"] = source_page_anchors
+                    
+                    print(f"[Ater Service] Adding concept: {note.title}")
+                    all_atomic_notes.append(note_dict)
+                    seen_titles.add(norm_title)
+
+            for pq in partial_plan.possible_questions:
+                if pq.title not in seen_titles:
+                    print(f"[Ater Service] Adding PQ: {pq.title}")
+                    all_pq_notes.append(pq.model_dump())
+                    seen_titles.add(pq.title)
+
+        # Merge, deduplicate, prerequisites mapping, loop-breaking, clustering, topological sorting
         try:
-            from .post_processing import deduplicate_plan
-            print(f"[Ater Service] Deduplicating {len(all_atomic_notes)} concepts...")
-            all_atomic_notes = deduplicate_plan(all_atomic_notes)
+            print(f"[Ater Service] Programmatically reducing {len(all_atomic_notes)} concepts...")
+            all_atomic_notes = reduce_concepts(all_atomic_notes)
 
-            # ── READING-ORDER SORT (v32.1) ──────────────────────────────────────────
-            # Sort by the MINIMUM page number from source_pages so that note deployment
-            # and hub connections mirror the exact reading order of the textbook PDF.
-            # Notes with no source_pages are pushed to the end (page 9999).
-            def _min_page(note_dict):
-                pages = note_dict.get("source_pages", []) or []
-                return min((int(p) for p in pages if str(p).isdigit()), default=9999)
-
-            all_atomic_notes.sort(key=_min_page)
-            print(f"[Ater Service] Reading-order sort applied. First note: {all_atomic_notes[0]['title'] if all_atomic_notes else 'N/A'}")
-
-            # all_atomic_notes = self._topological_sort_prerequisites(all_atomic_notes)
+            from .embeddings_linker import EmbeddingsLinker
+            linker = EmbeddingsLinker()
+            print(f"[Ater Service] Activating EmbeddingsLinker pipeline...")
+            all_atomic_notes = linker.map_prerequisites(all_atomic_notes, full_text=full_text)
 
             # Phase 1.5: Epistemic Classification (HYDRA)
             self.set_status(session_id, "Classifying Concept Modalities...")
             classifications = await self.epistemic_classifier_agent.classify_batch(all_atomic_notes)
             for note in all_atomic_notes:
-                modality = classifications.get(note["title"], "Qualitative/Definitional")
+                current_modality = note.get("concept_modality") or "Qualitative/Definitional"
+                modality = classifications.get(note["title"], current_modality)
                 note["concept_modality"] = modality
                 print(f"[Ater Service] Epistemic Congruence: {note['title']} -> {modality}")
         except Exception as e:
-            print(f"[Ater Service] Deduplication / Sorting / Classification failed: {e}")
+            print(f"[Ater Service] Phase 2 post-processing pipeline failed: {e}")
 
         if not all_atomic_notes:
             fallback_title = self.validator.sanitize_title(hub_title or "Source Overview")
@@ -2297,6 +2327,212 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             "plan_structured": structured_plan,
             "status": "awaiting_confirmation"
         }
+
+    # ── Phase 3: Synthesis Compiler & Heuristic Evaluator ─────────────────
+    def rate_candidate_quiz(self, questions: List[dict], note_title: str, source_context: str) -> float:
+        score = 0.0
+        
+        # 1. Valid, parsable JSON structure (+10 points)
+        if isinstance(questions, list):
+            score += 10.0
+            
+        # 2. Output array contains exactly 3 questions (+10 points)
+        if isinstance(questions, list) and len(questions) == 3:
+            score += 10.0
+            
+        # 3. Question modes are heterogeneous (contains L1, L2, and L3 types / difficulty levels) (+15 points)
+        if isinstance(questions, list):
+            difficulties = {q.get("difficulty") for q in questions if isinstance(q, dict) and q.get("difficulty")}
+            if len(difficulties) >= 2 or ("L1" in difficulties and "L2" in difficulties) or ("L1" in difficulties and "L3" in difficulties):
+                score += 15.0
+                
+        # 4. MCQs have exactly 4 choices (options A, B, C, D present in the dictionary) (+15 points)
+        mcq_valid = True
+        has_mcq = False
+        if isinstance(questions, list):
+            for q in questions:
+                if isinstance(q, dict) and q.get("type") == "mcq":
+                    has_mcq = True
+                    opts = q.get("options")
+                    if not isinstance(opts, dict) or len(opts) != 4:
+                        mcq_valid = False
+                    else:
+                        keys = {str(k).upper() for k in opts.keys()}
+                        if not {"A", "B", "C", "D"}.issubset(keys):
+                            mcq_valid = False
+            if has_mcq and mcq_valid:
+                score += 15.0
+            elif not has_mcq:
+                score += 15.0
+                
+        # 5. Debug/Trace/Writing questions have 3-5 keywords in required_keywords (+15 points)
+        keywords_valid = True
+        has_applicable_q = False
+        if isinstance(questions, list):
+            for q in questions:
+                if isinstance(q, dict) and q.get("type") in ["debug", "trace", "writing"]:
+                    has_applicable_q = True
+                    req_kws = q.get("required_keywords")
+                    if not isinstance(req_kws, list) or not (3 <= len(req_kws) <= 5):
+                        keywords_valid = False
+            if has_applicable_q and keywords_valid:
+                score += 15.0
+            elif not has_applicable_q:
+                score += 15.0
+                
+        # 6. Semantic topic lock check passes (+20 points)
+        if isinstance(questions, list) and hasattr(self, 'validator'):
+            try:
+                topic_lock_source = (source_context or "") + " " + note_title
+                lock_passed, _ = self.validator.semantic_topic_lock(
+                    note_title=note_title,
+                    source_context=topic_lock_source,
+                    quiz_questions=questions
+                )
+                if lock_passed:
+                    score += 20.0
+            except Exception as e:
+                print(f"[rate_candidate_quiz] Error during semantic_topic_lock: {e}")
+                
+        # 7. Trace answers are clean (no scratchpad calculations or trailing equal signs) (+15 points)
+        trace_clean = True
+        has_trace = False
+        if isinstance(questions, list):
+            for q in questions:
+                if isinstance(q, dict) and q.get("type") == "trace":
+                    has_trace = True
+                    ans = q.get("answer")
+                    if isinstance(ans, str):
+                        if "=" in ans and len(ans) > 15:
+                            trace_clean = False
+                        if ans.strip().endswith("="):
+                            trace_clean = False
+            if has_trace and trace_clean:
+                score += 15.0
+            elif not has_trace:
+                score += 15.0
+                
+        return score
+
+    async def compile_synthesis_note(
+        self,
+        session_id: str,
+        note_schema_dict: Optional[dict],
+        current_note_title: str,
+        plan_obj: SovereignPlan,
+        session_path: str,
+        temp_llm: Any,
+        temp_llm_creative: Any,
+        all_note_titles: List[str]
+    ) -> str:
+        # Reconstruct note_schema
+        if not note_schema_dict:
+            note_schema = AtomicNoteSchema(
+                title=current_note_title,
+                description="Integrated Synthesis Note",
+                source_context="No context",
+                prerequisites=[]
+            )
+        else:
+            note_schema = AtomicNoteSchema(**note_schema_dict)
+
+        title_readable = current_note_title.replace("_", " ")
+        member_concepts = ", ".join([f"[[{p}]]" for p in note_schema.prerequisites])
+
+        sys_prompt = f"""You are a world-class Pedagogue and Senior Systems Engineer.
+Your job is to compile a highly rigorous Synthesis Note that integrates, compares, and contrasts the following member concepts: {member_concepts}.
+
+===SOURCE TEXT FOR MEMBER CONCEPTS===
+{note_schema.source_context or "No source context available."}
+===END SOURCE TEXT===
+
+LAWS:
+1. INTEGRATED ANALOGY (integrated_analogy):
+   - Provide a vivid, concrete, industry-specific analogy describing how these member concepts interact under a single unified framework theme.
+   - Exactly 3-5 sentences.
+   - Bullet points are strictly forbidden.
+
+2. COMPARATIVE BREAKDOWN (comparative_breakdown):
+   - Provide deep, analytical, continuous prose comparing and contrasting the trade-offs, similarities, and differences between {member_concepts}.
+   - Bullet points or lists are strictly forbidden. Use continuous prose only.
+
+3. COMPARISON TABLE (comparison_table):
+   - Provide a beautiful, highly informative Markdown table comparing these concepts.
+   - The table columns should compare them on structural parameters (e.g., Parameter/Dimension, {', '.join(note_schema.prerequisites) if note_schema.prerequisites else 'Concepts'}).
+
+4. CROSS-CONCEPT QUIZ (cross_concept_quiz):
+   - Generate exactly 3 advanced cross-concept questions testing cross-concept integration, trade-offs, or tracing multi-step variables across boundaries.
+   - Use 'mcq', 'writing', or 'trace' types.
+   - Difficulty level must be 'L3'.
+   - Each MCQ must have exactly 4 choices (keys A, B, C, D in 'options' dictionary).
+   - Trace or Writing questions must have a clean final 'answer' string and 3-5 keywords in 'required_keywords'.
+   - All questions must be grounded in the provided source text.
+"""
+        
+        await self.governor.get_permit(expected_tokens=4000)
+        structured_llm = temp_llm.with_structured_output(SynthesisNoteResponse)
+        
+        res = await structured_llm.ainvoke([
+            ("system", sys_prompt),
+            ("human", f"Generate the full Synthesis Note response for {current_note_title} comparing {member_concepts}.")
+        ])
+
+        # Run healer
+        healer = LogicHealer(canonical_titles=set(all_note_titles))
+        analogy_healed = healer.heal_all(res.integrated_analogy, exclude_title=current_note_title)
+        breakdown_healed = healer.heal_all(res.comparative_breakdown, exclude_title=current_note_title)
+        
+        # Attach explanation pages to quiz
+        valid_qs = res.cross_concept_quiz
+        source_pages = note_schema.source_pages or []
+        if source_pages:
+            first_page = min((int(p) for p in source_pages if str(p).isdigit()), default=None)
+            if first_page:
+                for q in valid_qs:
+                    if isinstance(q, dict) and "explanation_page" not in q:
+                        q["explanation_page"] = first_page
+                    if isinstance(q, dict) and "source_pages" not in q:
+                        q["source_pages"] = sorted(set(int(p) for p in source_pages if str(p).isdigit()))
+
+        # Render layout body
+        body_content = f"""# 1. Integrated Synthesis Analogy
+{analogy_healed}
+
+---
+
+# 2. Comparative Synthesis Breakdown
+{breakdown_healed}
+
+{res.comparison_table}
+
+---
+
+# 3. Cross-Concept Interactive Assessment
+```interactive-quiz
+{json.dumps(valid_qs, indent=2)}
+```"""
+
+        # Repair code fences and check section duplication
+        body_content = self.validator.repair_code_fences(body_content)
+
+        source_pages_sorted = sorted(list(set(int(p) for p in note_schema.source_pages if str(p).isdigit())))
+        prereqs_str = ", ".join([f'"[[{p}]]"' for p in note_schema.prerequisites])
+        
+        yaml_frontmatter = f"""title: {note_schema.title}
+type: Synthesis Note
+course: {plan_obj.course}
+semester: {plan_obj.semester}
+unit: "{plan_obj.unit}"
+hub: "[[{plan_obj.hub_note.title}]]"
+source: "[[{self._get_source_link(plan_obj, session_path)}]]"
+source_pages: {source_pages_sorted}
+prerequisites: [{prereqs_str}]
+read: false
+generated: true"""
+        
+        final_markdown = f"---\n{yaml_frontmatter}\n---\n\n{body_content}\n"
+        return final_markdown
+
 
     # ── Phase 2 (Legacy redirect) ──────────────────────────────────────
     async def process_file(self, file_path: str, system_instruction_path: str, target_hub_id: Optional[str] = None) -> Dict[str, Any]:
@@ -2418,7 +2654,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         
                         # ── IDEMPOTENCY CHECK (v32.1 Singularity) ──
                         # Compute target path and check if it already exists
-                        target_path = self.vm.get_note_path({"title": current_note_title, "type": "atomic_note"}, session_metadata=session["metadata"])
+                        target_path = self.vm.get_note_path({"title": current_note_title, "type": "Atomic Note"}, session_metadata=session["metadata"])
                         if target_path.exists():
                             print(f"[Ater Service] Idempotency Hit: [[{current_note_title}]] already exists. Skipping.")
                             if current_note_title not in session.get("processed_notes", []):
@@ -2428,6 +2664,56 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                         # --- NEW AGENT-BASED ATOMIC GENERATION WITH VALIDATION LOOP ---
                         note_schema_dict = next((n for n in session["metadata"].get("atomic_notes", []) if n["title"] == current_note_title), None)
                         
+                        is_synthesis = False
+                        if note_schema_dict:
+                            is_synthesis = (note_schema_dict.get("type") == "Synthesis Note") or (note_schema_dict.get("title", "").endswith("_Synthesis"))
+                        else:
+                            is_synthesis = current_note_title.endswith("_Synthesis")
+
+                        if is_synthesis:
+                            self.set_status(session_id, f"Compiling Synthesis: [[{current_note_title}]]...")
+                            temp_llm = self._build_model(
+                                provider=self.secrets.ai_provider,
+                                model_name=self.secrets.ai_model,
+                                api_key=self.secrets.ai_key,
+                                temperature=0.0,
+                                top_p=0.9,
+                                timeout=ATER_TIMEOUT,
+                                request_timeout=ATER_TIMEOUT,
+                                max_retries=0,
+                                max_tokens=4096,
+                            ) if self.secrets.ai_key else self.llm
+                            temp_llm_creative = self._build_model(
+                                provider=self.secrets.ai_provider,
+                                model_name=self.secrets.ai_model,
+                                api_key=self.secrets.ai_key,
+                                temperature=0.3,
+                                top_p=0.9,
+                                timeout=ATER_TIMEOUT,
+                                request_timeout=ATER_TIMEOUT,
+                                max_retries=0,
+                                max_tokens=4096,
+                            ) if self.secrets.ai_key else self.llm_creative
+
+                            final_markdown = await self.compile_synthesis_note(
+                                session_id=session_id,
+                                note_schema_dict=note_schema_dict,
+                                current_note_title=current_note_title,
+                                plan_obj=plan_obj,
+                                session_path=session.get("path", ""),
+                                temp_llm=temp_llm,
+                                temp_llm_creative=temp_llm_creative,
+                                all_note_titles=all_note_titles
+                            )
+                            local_results = self.deployer.deploy_atomic_notes(
+                                session_id, [current_note_title], [final_markdown], plan_obj, session.get("path", "")
+                            )
+                            if current_note_title not in session.get("processed_notes", []):
+                                session.setdefault("processed_notes", []).append(current_note_title)
+                            
+                            self._persist_session(session_id, session)
+                            return True
+
                         if not note_schema_dict:
                             note_schema = AtomicNoteSchema(title=current_note_title, description="Generated concept", source_context="")
                         else:
@@ -2483,7 +2769,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     "unit": str(unit_num),
                                     "semester": semester,
                                     "mode": note_schema.mode,
-                                    "type": "atomic_note",
+                                    "type": "Atomic Note",
                                     "hub": f"[[{plan_obj.hub_note.title}]]",
                                     "source": self._get_source_link(plan_obj, session.get("path", "")),
                                     "date": datetime.now().strftime("%Y-%m-%d"),
@@ -2610,15 +2896,16 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     max_tokens=8000,
                                     plain_english=note_data.get("mental_model", "")
                                 )
+                                healer = LogicHealer(canonical_titles=set(all_note_titles))
+                                if "formal_model" in prac_parts:
+                                    prac_parts["formal_model"] = healer.heal_all(prac_parts["formal_model"], exclude_title=current_note_title)
                                 note_data.update(prac_parts)
                                 note_data["dynamic3_content"] = prac_parts.get("limitations", "")
                                 # 3. Micro-Question Pass (Dynamic Assessment)
                                 # v33.0: Compressed context — saves ~8k tokens per note
                                 self.set_status(session_id, f"{phase_prefix} Assessment: [[{current_note_title}]]...")
-                                await self.governor.get_permit(expected_tokens=2500)
 
                                 q_agent = QuestionAgent(temp_llm, domain)
-                                # v33.1: Expanded source anchor + strict domain lock header
                                 _concept_label = current_note_title.replace('_', ' ')
                                 q_context = (
                                     f"⚠️ DOMAIN LOCK: You MUST ONLY test the concept '{_concept_label}'. "
@@ -2631,30 +2918,103 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 )
                                 prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
                                 
-                                valid_qs = await q_agent.generate(
-                                    note_schema=note_schema, 
-                                    source_text=q_context, 
-                                    mechanics="Focus on multi-step causal tracing and artifact verification.",
-                                    academic_level=plan_obj.academic_level,
-                                    count=3,
-                                    prof_domain=prof_domain,
-                                    q_type=None
-                                )
+                                async def generate_candidate():
+                                    await self.governor.get_permit(expected_tokens=2500)
+                                    try:
+                                        res = await q_agent.generate(
+                                            note_schema=note_schema, 
+                                            source_text=q_context, 
+                                            mechanics="Focus on multi-step causal tracing and artifact verification.",
+                                            academic_level=plan_obj.academic_level,
+                                            count=3,
+                                            prof_domain=prof_domain,
+                                            q_type=None
+                                        )
+                                        return res
+                                    except Exception as e:
+                                        logger.warning(f"[Ater Service] Quiz generation candidate failed: {e}")
+                                        return []
 
-                                # ── SEMANTIC TOPIC LOCK (v32.1) ──────────────────────────────
-                                # Deterministically verify that quiz questions are grounded
-                                # in the note's source context, not hallucinated topics.
-                                topic_lock_source = (note_schema.source_context or "") + " " + note_schema.title
-                                lock_passed, lock_diag = self.validator.semantic_topic_lock(
-                                    note_title=note_schema.title,
-                                    source_context=topic_lock_source,
-                                    quiz_questions=valid_qs
-                                )
-                                if not lock_passed:
-                                    print(f"[Ater Service] Semantic Topic Lock FAILED: {lock_diag}. Triggering regeneration.")
-                                    self.set_status(session_id, f"⚠️ Topic Lock Fail: Regenerating quiz for [[{current_note_title}]]...")
-                                    note_schema.source_context = f"\n\nSYSTEM CONSTRAINT: The previous quiz attempt FAILED because: {lock_diag}. Generate questions ONLY about '{note_schema.title.replace('_', ' ')}' using vocabulary from the source text.\n\n" + (note_schema.source_context or "")
-                                    continue
+                                # Fire 1 concurrent call instead of 5 to save massive API quota
+                                tasks = [generate_candidate() for _ in range(1)]
+                                candidates = await asyncio.gather(*tasks)
+
+                                best_candidate = None
+                                best_score = -1.0
+                                for cand in candidates:
+                                    if not cand:
+                                        continue
+                                    cand_score = self.rate_candidate_quiz(cand, note_schema.title, note_schema.source_context)
+                                    if cand_score > best_score:
+                                        best_score = cand_score
+                                        best_candidate = cand
+
+                                # Score threshold retry
+                                if best_score < 50.0:
+                                    logger.warning(f"[Ater Service] Best quiz score {best_score} is below threshold 50. Initiating rapid retry sequence.")
+                                    retry_tasks = [generate_candidate() for _ in range(1)]
+                                    retry_candidates = await asyncio.gather(*retry_tasks)
+                                    
+                                    for cand in retry_candidates:
+                                        if not cand:
+                                            continue
+                                        cand_score = self.rate_candidate_quiz(cand, note_schema.title, note_schema.source_context)
+                                        if cand_score > best_score:
+                                            best_score = cand_score
+                                            best_candidate = cand
+
+                                # Fallback if retries exhaust or score under 40
+                                if not best_candidate or best_score < 40.0:
+                                    logger.warning(f"[Ater Service] Quiz score after retries ({best_score}) still below threshold. Deploying deterministic fallback quiz.")
+                                    clean_src = re.sub(r"\[PAGE\s+\d+\]", "", note_schema.source_context or "", flags=re.IGNORECASE)
+                                    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", clean_src) if len(s.strip()) > 25][:3]
+                                    
+                                    fallback_qs = []
+                                    for idx, sent in enumerate(sentences):
+                                        q_type = "writing" if idx % 2 == 0 else "mcq"
+                                        if q_type == "mcq":
+                                            fallback_qs.append({
+                                                "id": 100 + idx,
+                                                "type": "mcq",
+                                                "difficulty": "L1",
+                                                "question": f"Based on the course materials, which of the following is true regarding '{_concept_label}'?",
+                                                "options": {
+                                                    "A": sent,
+                                                    "B": f"It is completely unrelated to standard {note_schema.title.replace('_', ' ')} procedures.",
+                                                    "C": "It is only applicable in medical or clinical diagnostics.",
+                                                    "D": "It represents an unverified historical assumption."
+                                                },
+                                                "answer": "A",
+                                                "explanation": f"The verified source text explicitly states: '{sent}'",
+                                                "hints": ["Review the core textbook reading."],
+                                                "required_keywords": []
+                                            })
+                                        else:
+                                            fallback_qs.append({
+                                                "id": 100 + idx,
+                                                "type": "writing",
+                                                "difficulty": "L1",
+                                                "question": f"Briefly explain the following aspect of '{_concept_label}' in your own words: '{sent[:60]}...'",
+                                                "answer": sent,
+                                                "explanation": f"The verified source text defines this as: '{sent}'",
+                                                "hints": ["Recall the key text from the reading."],
+                                                "required_keywords": [w.strip(".,;:?!") for w in sent.split() if len(w) > 5][:4]
+                                            })
+                                            
+                                    while len(fallback_qs) < 3:
+                                        fallback_qs.append({
+                                            "id": 105,
+                                            "type": "writing",
+                                            "difficulty": "L1",
+                                            "question": f"What is the primary function or definition of '{_concept_label}' according to the source context?",
+                                            "answer": f"According to the source, '{_concept_label}' is used to structure domain logic.",
+                                            "explanation": "Standard recall check.",
+                                            "hints": [],
+                                            "required_keywords": [word for word in _concept_label.split()]
+                                        })
+                                    valid_qs = fallback_qs
+                                else:
+                                    valid_qs = best_candidate
 
                                 # ── CLOSED-LOOP: Attach explanation_page metadata ────────────
                                 # Each quiz question gets a reference to the source page so the UI
@@ -2698,7 +3058,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                     "unit": str(note_data["unit"]),
                                     "semester": note_data["semester"],
                                     "mode": note_data["mode"],
-                                    "type": "atomic_note",
+                                    "type": "Atomic Note",
                                     "hub": note_data["hub"],
                                     "source": note_data["source"],
                                     "date": note_data["date"],
@@ -2711,11 +3071,24 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 last_candidate_markdown = final_markdown
                                 
                                 # 5. Validation Check
-                                is_valid, validation_errors = self.validator.validate_structure(
-                                    final_markdown, 
-                                    course=note_data.get("course", ""), 
-                                    mode=note_data.get("mode", "")
-                                )
+                                try:
+                                    is_valid, validation_errors = self.validator.validate_structure(
+                                        final_markdown, 
+                                        course=note_data.get("course", ""), 
+                                        mode=note_data.get("mode", "")
+                                    )
+                                except StructureValidationError as sve:
+                                    logger.warning(f"[AterService] Strict 3-Section Sandwich format violation for [[{current_note_title}]]: {sve}")
+                                    self.set_status(session_id, f"⚠️ Sandwich Violation: Regenerating [[{current_note_title}]]...")
+                                    note_schema.source_context = (
+                                        f"\n\nSYSTEM CONSTRAINT FAILURE: The previous generation violated the strict 3-Section Sandwich format: {sve}. "
+                                        "You MUST output exactly the 3-Section structure:\n"
+                                        "1. '# 1. The Intuitive Analogy' (containing a bolded BLUF and clear industry-specific analogy)\n"
+                                        "2. '# 2. The Core Execution' (containing domain-specific code, LaTeX, or tables)\n"
+                                        "3. '# 3. The Proving Grounds' (containing exactly the ```interactive-quiz block)\n"
+                                        "Do not output any other top-level headings!\n\n"
+                                    ) + (note_schema.source_context or "")
+                                    continue
                                 
                                 if not is_valid:
                                     error_msg = f"Validation failed for [[{current_note_title}]]: {', '.join(validation_errors)}"
@@ -2795,7 +3168,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                                 "unit": str(note_data["unit"]),
                                 "semester": note_data["semester"],
                                 "mode": note_data["mode"],
-                                "type": "atomic_note",
+                                "type": "Atomic Note",
                                 "hub": note_data["hub"],
                                 "source": note_data["source"],
                                 "date": note_data["date"],

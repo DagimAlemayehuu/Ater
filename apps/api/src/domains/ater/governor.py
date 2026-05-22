@@ -283,7 +283,7 @@ class TokenGovernor:
                     )
                 else:
                     cursor.execute(
-                        'SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND quota_key = ?',
+                        'SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND api_key_hash = ?',
                         (cutoff, key_hash)
                     )
                 total_row = cursor.fetchone()
@@ -299,7 +299,7 @@ class TokenGovernor:
                     else:
                         cursor.execute(
                             "SELECT strftime('%Y-%m-%d %H:00', datetime(timestamp, 'unixepoch')) as hr, SUM(tokens), SUM(requests) "
-                            "FROM usage WHERE timestamp >= ? AND quota_key = ? GROUP BY hr ORDER BY hr ASC",
+                            "FROM usage WHERE timestamp >= ? AND api_key_hash = ? GROUP BY hr ORDER BY hr ASC",
                             (cutoff, key_hash)
                         )
                 else:
@@ -312,7 +312,7 @@ class TokenGovernor:
                     else:
                         cursor.execute(
                             "SELECT strftime('%Y-%m-%d', datetime(timestamp, 'unixepoch')) as dt, SUM(tokens), SUM(requests) "
-                            "FROM usage WHERE timestamp >= ? AND quota_key = ? GROUP BY dt ORDER BY dt ASC",
+                            "FROM usage WHERE timestamp >= ? AND api_key_hash = ? GROUP BY dt ORDER BY dt ASC",
                             (cutoff, key_hash)
                         )
                 
@@ -323,7 +323,9 @@ class TokenGovernor:
                     "timeframe": timeframe,
                     "total_tokens": total_row[0] or 0,
                     "total_requests": total_row[1] or 0,
-                    "breakdown": breakdown
+                    "breakdown": breakdown,
+                    "max_tpd": self.max_tpd,
+                    "max_rpd": self.max_rpd
                 }
         except Exception as e:
             return {"error": str(e)}
@@ -338,7 +340,7 @@ class TokenGovernor:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    'SELECT quota_key, SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? GROUP BY quota_key',
+                    'SELECT api_key_hash, SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? GROUP BY api_key_hash',
                     (cutoff,)
                 )
                 return [{
@@ -496,7 +498,9 @@ class TokenGovernor:
                     self.last_throttle_event = None
                     self.request_window.append(now)
                     self.token_window.append((now, expected_tokens))
-                    self._record_usage_db(expected_tokens, expected_requests)
+                    # We no longer aggressively debit the SQLite database with expected tokens here.
+                    # This prevents 'ghost tokens' from accumulating during retries or crashes.
+                    # The actual token count will be written to SQLite by the Langchain Callback Handler upon completion.
                     return True
 
                 self.last_throttle_event = (

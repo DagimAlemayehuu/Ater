@@ -69,7 +69,7 @@ def fix_notes(vault_path: str):
                 meta = yaml.safe_load(raw_meta_str)
                 
                 note_type = meta.get("type")
-                if note_type not in ["atomic_note", "Possible Questions"]:
+                if note_type not in ["atomic_note", "Atomic Note", "Possible Questions"]:
                     continue
                 
                 changed = False

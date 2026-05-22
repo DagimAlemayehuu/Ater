@@ -73,6 +73,14 @@ class TrackingCallbackHandler(AsyncCallbackHandler, BaseCallbackHandler):
 
             # Update tracker even if only usage stats were found
             tracker.update(self.provider, self.model, limit_data)
+            
+            # PERFECT TOKEN COUNTER FIX:
+            # We now use the exact actual tokens from the LLM response to debit the daily DB quota.
+            # This completely eliminates "ghost tokens" from over-estimated permits.
+            exact_tokens = limit_data.get('total_tokens', 0)
+            if exact_tokens > 0:
+                governor._record_usage_db(exact_tokens, 1)
+                
             if limit_data.get("requests_limit") or limit_data.get("tokens_limit"):
                 governor.update_limits_from_provider(
                     requests_limit=limit_data.get("requests_limit"),

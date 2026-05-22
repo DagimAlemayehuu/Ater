@@ -106,18 +106,23 @@ function BatchTreeView({batches, processedNotes}: {batches: any[], processedNote
   const firstPendingRef = useRef<HTMLDivElement | null>(null);
 
   // Determine sorted list for hook dependency check
-  const processedTitles = useMemo(() => new Set(processedNotes?.map((n: any) => {
-    const raw = typeof n === 'string' ? n : (n?.title ?? '');
-    return cleanTitle(raw).toLowerCase();
-  })), [processedNotes]);
+  const processedTitles = useMemo(() => {
+    if (!processedNotes) return new Set<string>();
+    return new Set(processedNotes.map((n: any) => {
+      // Robust extraction of title from processed notes
+      const raw = typeof n === 'string' ? n : (n?.title ?? (typeof n === 'object' ? JSON.stringify(n) : ''));
+      return cleanTitle(raw).toLowerCase().trim();
+    }));
+  }, [processedNotes]);
 
   const allNotes: {batchId: number; note: string; isDone: boolean}[] = [];
   batches?.forEach((batch: any) => {
     batch.notes?.forEach((note: string) => {
+      const normalizedNote = cleanTitle(note).toLowerCase().trim();
       allNotes.push({
         batchId: batch.id,
         note,
-        isDone: processedTitles.has(cleanTitle(note).toLowerCase()),
+        isDone: processedTitles.has(normalizedNote),
       });
     });
   });

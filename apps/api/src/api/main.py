@@ -824,16 +824,16 @@ async def explain_question(
     try:
         llm = ModelFactory.get_model(provider=provider, model_name=model, api_key=ai_key, temperature=0.7, max_tokens=2000)
 
-        sys_prompt = """You are a world-class tutor. A student just answered a quiz question and wants a deep, crystal-clear explanation of the underlying concept.
+        sys_prompt = """You are a world-class Socratic tutor. A student just answered a quiz question and requested an explanation of the underlying concept.
 
-Your mini-lesson must:
-1. EXPLAIN the core concept tested — assume the student struggles with it
-2. USE clear analogies and real-world examples to make it intuitive
-3. BREAK DOWN the reasoning step by step
-4. HIGHLIGHT common mistakes and misconceptions
-5. END with a 1-sentence memory hook (bold it)
+Your mini-lesson MUST:
+1. SOCRATIC HOOK: Start with a brief, thought-provoking question to challenge their assumptions.
+2. EXPLAIN: Break down the core concept tested as if speaking to a brilliant 12-year-old.
+3. VISUALIZE: Provide a vivid, real-world analogy (No clichés like coffee shops; use a mechanical or industry-specific scenario).
+4. DIAGNOSE: Highlight exactly where most students go wrong (misconceptions).
+5. MEMORY HOOK: End with a single, bolded 1-sentence takeaway.
 
-Format your response in clean markdown. Use headers, bullet points, and bold text effectively. Be thorough but engaging — no fluff."""
+Format your response in flawless, readable Markdown. Use headers, bullet points, and bold text effectively. Be thorough but highly engaging."""
 
         human_prompt = f"""Quiz Question: {question}
 
@@ -978,6 +978,38 @@ async def delete_practice_session(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def resolve_note_path(note_id: str, vault_path: Path) -> Optional[str]:
+    if not note_id:
+        return None
+    p = Path(note_id)
+    if p.is_absolute():
+        try:
+            return p.relative_to(vault_path).as_posix()
+        except ValueError:
+            return None
+    if (vault_path / note_id).exists():
+        return p.as_posix()
+        
+    stem = p.stem
+    stem = stem.replace("[", "").replace("]", "").replace(" ", "_")
+    
+    for md_path in vault_path.rglob("*.md"):
+        parts = md_path.parts
+        if any(ignored in parts for ignored in [".git", ".ater", ".obsidian", "Practice"]):
+            continue
+        if md_path.stem == stem:
+            return md_path.relative_to(vault_path).as_posix()
+            
+    stem_lower = stem.lower()
+    for md_path in vault_path.rglob("*.md"):
+        parts = md_path.parts
+        if any(ignored in parts for ignored in [".git", ".ater", ".obsidian", "Practice"]):
+            continue
+        if md_path.stem.lower() == stem_lower:
+            return md_path.relative_to(vault_path).as_posix()
+            
+    return note_id
+
 @app.post("/api/practice/log")
 async def log_practice(
     payload: Dict[str, Any] = Body(...),
@@ -1048,6 +1080,18 @@ async def log_practice(
                     interval_days=excluded.interval_days,
                     next_review_date=excluded.next_review_date
             """, (note_id, review_count, consec_correct, ef, interval, next_date))
+            
+            # FSRS Spaced Repetition Synchronization
+            if secrets.vault_path:
+                vault_path = Path(secrets.vault_path)
+                note_path = resolve_note_path(note_id, vault_path)
+                if note_path:
+                    try:
+                        from src.domains.ater.srs import SRSEngine
+                        engine = SRSEngine(db_path)
+                        engine.review(note_path, rating=3 if is_correct else 1)
+                    except Exception as fsrs_err:
+                        logger.error(f"[SRS Sync] Failed to update FSRS card: {fsrs_err}")
             
         conn.commit()
         conn.close()
@@ -1232,6 +1276,55 @@ async def srs_review(
         logger.error(f"SRS Review Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/srs/feynman-validate")
+async def srs_feynman_validate(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.inbox_path:
+        raise HTTPException(status_code=400, detail="Inbox Path not configured")
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault Path not configured")
+        
+    from src.domains.ater.srs import SRSEngine
+    engine = SRSEngine(Path(secrets.inbox_path) / "ater_queue.db")
+    
+    note_path = payload.get("note_path")
+    explanation = payload.get("explanation")
+    if not note_path:
+        raise HTTPException(status_code=400, detail="note_path required")
+    if explanation is None:
+        raise HTTPException(status_code=400, detail="explanation required")
+        
+    try:
+        res = engine.validate_feynman_gate(note_path, explanation, Path(secrets.vault_path))
+        return res
+    except Exception as e:
+        logger.error(f"Feynman validation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/srs/cards")
+async def get_srs_cards(
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.inbox_path:
+        return {"cards": []}
+    from src.domains.ater.srs import SRSEngine
+    engine = SRSEngine(Path(secrets.inbox_path) / "ater_queue.db")
+    try:
+        cards = engine.get_all()
+        return {"cards": [{
+            "note_path": c.note_path,
+            "stability": c.stability,
+            "difficulty": c.difficulty,
+            "due": c.due.isoformat(),
+            "reps": c.reps,
+            "lapses": c.lapses,
+            "last_review": c.last_review.isoformat() if c.last_review else None
+        } for c in cards]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/srs/due")
 async def get_srs_due(
     hub_id: str = None,
@@ -1243,12 +1336,12 @@ async def get_srs_due(
     engine = SRSEngine(Path(secrets.inbox_path) / "ater_queue.db")
     
     hub_notes = []
-    if hub_id and secrets.vault_path:
+    if hub_id and hub_id != "all" and secrets.vault_path:
         service = AterService(secrets)
         hub_notes = [n["path"] for n in service.list_atomic_notes(hub_id)]
         
     try:
-        cards = engine.get_due(hub_notes if hub_id else None)
+        cards = engine.get_due(hub_notes if (hub_id and hub_id != "all") else None)
         return {"due_cards": [{
             "note_path": c.note_path,
             "due": c.due.isoformat(),
@@ -1532,17 +1625,36 @@ async def ater_explain_concept(
         # ── DYNAMIC PERSONA SYSTEM INSTRUCTION ───────────────────────────────
         concept_label = note_title or (selection[:80] if selection else source_locator or "the selected material")
         scope_label = "the entire current PDF page" if scope == "page" else "the exact selected text"
+        
+        structure_rules = ""
+        if scope == "page":
+            structure_rules = (
+                "4. PAGE STRUCTURE: You MUST use exactly these markdown sections:\n"
+                "   `### The Core Thesis` (1 sentence summary of the page)\n"
+                "   `### The Key Arguments` (Bullet points of the main ideas)\n"
+                "   `### How It Connects` (How this page relates to the broader chapter)\n"
+                "   `### Check Yourself` (1 Socratic question)"
+            )
+        else:
+            structure_rules = (
+                "4. SELECTION STRUCTURE: You MUST use exactly these markdown sections:\n"
+                "   `### What It Says` (Restate the dense text in simple terms)\n"
+                "   `### What It Means` (The deeper implication)\n"
+                "   `### How It Works` (The mechanism)\n"
+                "   `### Why It Matters` (The broader impact)\n"
+                "   `### Check Yourself` (1 Socratic question)"
+            )
+
         si_content = f"""You are a master {persona} and an elite pedagogue. Your task is to explain {scope_label} for a student in {note_course or 'their course'}.
 
 CRITICAL PEDAGOGICAL CONSTRAINTS (MANDATORY):
 1. EXACT SCOPE: Explain ONLY the selected text or page identified below. Do not wander into adjacent concepts unless needed to decode the selection.
-2. SOURCE GROUNDING: Use the provided source context as the authority. If the selected text is ambiguous, say what the source context makes most likely.
+2. SOURCE GROUNDING: Use the provided source context as the absolute authority.
 3. EXTREME CLARITY: Make it impossible to misunderstand. Define every technical word in plain English before using it.
-4. STRUCTURE: Use exactly these markdown sections: `What It Says`, `What It Means`, `How It Works`, `Why It Matters`, `Check Yourself`.
-5. SELECTION FIRST: In `What It Says`, restate the exact selected words or page target in simpler language.
-6. DYNAMIC PERSONA: Explain like a {persona}, but translated into simple student language.
-7. NO SLOP: No greetings, no generic conclusions, no "as an AI", no filler.
-8. LENGTH: 350 to 650 words unless the selection is tiny."""
+{structure_rules}
+5. THE PERSONA LAW: You must write in the authoritative, specific voice of a {persona}.
+6. NO SLOP: No greetings, no generic conclusions, no filler. Start immediately with the first header.
+7. LENGTH: 350 to 650 words. Be dense with information."""
 
         user_prompt = f"""SOURCE CONTENT:
 {focused_context}
@@ -1718,7 +1830,7 @@ async def ater_chat(
         scope_label = "the current PDF page" if scope == "page" else "the exact selected text"
         focused_context = (selection_context or context_content)[:9000]
         anchor_block = (
-            f"\n[ACTIVE EXPLAIN ANCHOR]\n"
+            f"\n[ACTIVE CHAT ANCHOR]\n"
             f"Scope: {scope}\n"
             f"Source Kind: {source_kind}\n"
             f"Selection or Page Target: \"{selection}\"\n"
@@ -1728,11 +1840,11 @@ async def ater_chat(
             f"Source Pages in Textbook: {pages_str}\n"
             f"Hub: {active_hub or 'Unknown'}\n\n"
             f"CRITICAL PEDAGOGICAL CONSTRAINTS (MANDATORY):\n"
-            f"1. You are an expert {persona} helping the student understand ONLY {scope_label}.\n"
-            f"2. Preserve exact scope. Do not answer with unrelated textbook material.\n"
-            f"3. Make every answer impossible to misunderstand: define jargon immediately and use concrete cause-effect language.\n"
-            f"4. If the student asks a follow-up, connect it back to the original selection/page before expanding.\n"
-            f"5. No greetings, no generic conclusions, no filler.\n"
+            f"1. PERSONA: You are an elite {persona}. You MUST speak with the specific vocabulary and perspective of this profession.\n"
+            f"2. SOCRATIC RULE: If the student is confused or asks a broad question, DO NOT just give them the answer. Ask a guiding question to lead them there.\n"
+            f"3. EXACT SCOPE: Answer ONLY based on the selected text or page provided below. Never hallucinate outside knowledge.\n"
+            f"4. ANALOGY RULE: If you use an analogy, it must be industry-specific and map structural mechanisms (e.g., enzymes, load balancers). No coffee shops.\n"
+            f"5. NO SLOP: No greetings (e.g., 'Hello!', 'I can help'), no filler, no 'as an AI'. Start answering immediately.\n"
         )
 
         context_reminder = (

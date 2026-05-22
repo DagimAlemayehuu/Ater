@@ -4,15 +4,17 @@ from typing import Dict, Any, List
 # Sections: Mental Model | 2-4 controlled domain sections | The Proving Grounds.
 # The model supplies content; Ater owns the headings and shape.
 ATOMIC_NOTE_TEMPLATE = """\
-## Mental Model
+# 1. The Intuitive Analogy
 
 {mental_model}
+
+# 2. The Core Execution
 
 {dynamic_sections}
 
 ---
 
-## The Proving Grounds
+# 3. The Proving Grounds
 
 {possible_questions}
 """
@@ -105,7 +107,7 @@ def _render_dynamic_sections(data: Dict[str, Any]) -> str:
         body = str(content_map.get(sid, "")).strip()
         if not heading or not body:
             continue
-        rendered.append(f"## {heading}\n\n{body}")
+        rendered.append(f"### {heading}\n\n{body}")
     return "\n\n".join(rendered)
 
 
@@ -195,10 +197,19 @@ def build_skeleton_note(note_schema, source_snippet: str, domain: dict, all_titl
     def join_prose(sents, fallback=""):
         return ' '.join(sents) if sents else fallback
     
-    mental_model = (
-        f"Think of {title} as the label on one important part of a larger system: once you know what that part does, the surrounding details become much easier to organize. "
-        + join_prose(model_sents, f"The source frames {title} as a specific idea with behavior or meaning that must be tracked precisely.")
-    )
+    domain_persona = domain.get('persona', 'subject matter expert')
+    if model_sents:
+        mental_model = (
+            f"**{title} is the specific mechanism the source isolates — not a background term, but the rule that governs what is possible within this domain.** "
+            + join_prose(model_sents, f"The source defines {title} as a concept with a precise function within the {domain_persona}'s toolkit.")
+            + f" A {domain_persona} reads this by asking three questions: what does {title} do, what does it constrain, and what breaks when it is absent."
+        )
+    else:
+        mental_model = (
+            f"**{title}, in the source's own terms, is a functional concept with specific scope and consequences.** "
+            f"The source introduces {title} not as decoration but as the exact term that determines how related ideas connect and operate. "
+            f"To master it, a {domain_persona} identifies its rule, names what it governs, and states what changes in the system because of it."
+        )
     
     core_logic = (
         f"{title} works by connecting the source's key terms, rules, and examples into one usable idea. "
@@ -267,6 +278,16 @@ def build_skeleton_note(note_schema, source_snippet: str, domain: dict, all_titl
         artifact_type = "Markdown Table"
     
     option_a = join_prose(model_sents[:1], title)[:120].strip() or title
+
+    # Build a factual T/F from source logic — grounded in the concept's actual properties, not the pipeline
+    first_logic_sent = join_prose(logic_sents[:1], "").split('.')[0].strip()
+    if first_logic_sent and len(first_logic_sent) > 20:
+        factual_tf_question = first_logic_sent
+        factual_tf_explanation = f"This follows directly from the source's definition of {title} on page {page}."
+    else:
+        factual_tf_question = f"{title} has specific conditions or constraints that determine when and how it applies within the domain."
+        factual_tf_explanation = f"The source on page {page} outlines the precise scope and constraints of {title}, which define its boundary conditions."
+
     questions = [
         {
             "type": "mcq",
@@ -283,9 +304,9 @@ def build_skeleton_note(note_schema, source_snippet: str, domain: dict, all_titl
         },
         {
             "type": "true_false",
-            "question": f"{title} should be interpreted using the exact behavior shown in the source rather than a generic definition alone.",
+            "question": factual_tf_question,
             "answer": True,
-            "explanation": f"The note is source-grounded, so the source's examples and constraints determine the correct interpretation of {title}.",
+            "explanation": factual_tf_explanation,
             "explanation_page": page
         },
         {

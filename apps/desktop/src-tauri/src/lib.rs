@@ -378,6 +378,8 @@ pub fn run() {
             commands::factory_reset,
             commands::srs_review,
             commands::srs_due,
+            commands::srs_cards,
+            commands::srs_feynman_validate,
             commands::record_performance,
             commands::vault_list,
             commands::vault_upload_text,

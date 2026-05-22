@@ -139,3 +139,118 @@ DOMAIN_KEYWORDS = {
     "COSMOLOGY": ["cosmology", "universe", "expansion", "dark matter", "dark energy", "relativity"],
     "ASTROPHYSICS": ["astrophysics", "stellar", "fusion", "spectroscopy", "radiation", "luminosity"]
 }
+
+import re
+from typing import List, Dict, Any
+
+def chunk_text(text: str, chunk_size: int = 4000, overlap: int = 1000) -> List[str]:
+    """
+    Slices a continuous text string into overlapping chunks.
+    Cleans leading/trailing whitespace and garbage characters.
+    """
+    if not text:
+        return []
+    chunks = []
+    start = 0
+    while start < len(text):
+        end = min(start + chunk_size, len(text))
+        chunk = text[start:end]
+        # Clean trailing and leading newlines/junk character boundaries from each slice
+        chunk = chunk.strip()
+        if chunk:
+            chunks.append(chunk)
+        # Advance by chunk_size - overlap
+        if end == len(text):
+            break
+        start += (chunk_size - overlap)
+    return chunks
+
+def reduce_concepts(atomic_notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Merges duplicate concept dicts using Title_Case_With_Underscores.
+    - Concatenates unique source_contexts.
+    - Unions and sorts source_pages.
+    - Deduplicates prerequisites.
+    """
+    merged = {}
+    from .validator import AterValidator
+    
+    for note in atomic_notes:
+        raw_title = note.get("title", "")
+        sanitized_title = AterValidator.sanitize_title(raw_title)
+        if not sanitized_title:
+            continue
+            
+        if sanitized_title not in merged:
+            merged[sanitized_title] = {
+                "title": sanitized_title,
+                "description": note.get("description", ""),
+                "source_context": note.get("source_context", "") or "",
+                "source_pages": list(note.get("source_pages", []) or []),
+                "prerequisites": list(note.get("prerequisites", []) or []),
+                "concept_modality": note.get("concept_modality", "Qualitative/Definitional"),
+                "mode": note.get("mode", ""),
+            }
+        else:
+            existing = merged[sanitized_title]
+            
+            # Combine source contexts cleanly with double newlines
+            existing_contexts = [c.strip() for c in existing["source_context"].split("\n\n") if c.strip()]
+            new_context = (note.get("source_context") or "").strip()
+            if new_context and new_context not in existing_contexts:
+                existing_contexts.append(new_context)
+            existing["source_context"] = "\n\n".join(existing_contexts)
+            
+            # Union pages, sort in ascending order
+            existing_pages = set()
+            for p in existing["source_pages"]:
+                if str(p).isdigit():
+                    existing_pages.add(int(p))
+            for p in (note.get("source_pages") or []):
+                if str(p).isdigit():
+                    existing_pages.add(int(p))
+            existing["source_pages"] = sorted(list(existing_pages))
+            
+            # Deduplicate prerequisites
+            existing_prereqs = set(existing["prerequisites"])
+            new_prereqs = note.get("prerequisites") or []
+            for pr in new_prereqs:
+                existing_prereqs.add(pr)
+            existing["prerequisites"] = list(existing_prereqs)
+            
+            # Save the longer description
+            desc1 = existing["description"] or ""
+            desc2 = note.get("description") or ""
+            if len(desc2) > len(desc1):
+                existing["description"] = desc2
+                
+            # Mode & Modality fallbacks
+            if not existing["mode"] and note.get("mode"):
+                existing["mode"] = note.get("mode")
+            if not existing["concept_modality"] and note.get("concept_modality"):
+                existing["concept_modality"] = note.get("concept_modality")
+
+    result = list(merged.values())
+
+    # ── BUDGET CAP (Hard Limit: 30 notes max for any PDF) ──────────────────────
+    MAX_NOTES = 30
+    if len(result) > MAX_NOTES:
+        # Build prerequisite centrality map: how many notes list each concept as a dependency
+        prereq_counts: Dict[str, int] = {}
+        for note in result:
+            for p in (note.get("prerequisites") or []):
+                prereq_counts[p] = prereq_counts.get(p, 0) + 1
+
+        def _concept_score(note: Dict[str, Any]) -> float:
+            page_coverage = len(set(note.get("source_pages") or []))          # breadth
+            context_depth = len(note.get("source_context") or "") / 200       # substance
+            centrality    = prereq_counts.get(note["title"], 0)               # architectural importance
+            return (page_coverage * 3.0) + context_depth + (centrality * 2.0)
+
+        result.sort(key=_concept_score, reverse=True)
+        dropped = len(result) - MAX_NOTES
+        result = result[:MAX_NOTES]
+        print(f"[reduce_concepts] Budget cap: kept top {MAX_NOTES}, dropped {dropped} low-coverage concepts.")
+
+    return result
+
