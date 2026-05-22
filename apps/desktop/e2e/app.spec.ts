@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
  */
 async function injectTauriMocks(page: Page) {
   await page.addInitScript({
-    path: path.join(__dirname, 'mocks/tauri.ts'),
+    path: path.join(__dirname, 'mocks/tauri.js'),
   });
 }
 
@@ -55,6 +55,9 @@ test.describe('Login Page', () => {
 // ─────────────────────────────────────────────────────────────────────
 test.describe('Onboarding', () => {
   test.beforeEach(async ({ page }) => {
+    page.on('console', msg => console.log(`[PAGE LOG] ${msg.type()}: ${msg.text()}`));
+    page.on('pageerror', err => console.error(`[PAGE ERROR] ${err.stack}`));
+
     await injectTauriMocks(page);
     // Override store to simulate: authenticated but not yet configured
     await page.addInitScript(() => {
@@ -81,23 +84,19 @@ test.describe('Onboarding', () => {
   test('should reach onboarding when activated but not configured', async ({ page }) => {
     await page.goto('/onboarding');
     // Step 1 of onboarding should be visible
-    const hasStepIndicator = await page.getByText(/step 1/i).isVisible().catch(() => false);
-    const hasProfileHeader = await page.getByText(/profile|name/i).isVisible().catch(() => false);
-    expect(hasStepIndicator || hasProfileHeader).toBeTruthy();
+    await expect(page.getByText('DEFINE YOUR PROFILE')).toBeVisible();
   });
 
   test('should advance through name entry in step 1', async ({ page }) => {
     await page.goto('/onboarding');
     const nameInput = page.locator('input[type="text"]').first();
-    if (await nameInput.isVisible()) {
-      await nameInput.fill('Dagim');
-      const continueBtn = page.getByRole('button', { name: /continue/i });
-      await expect(continueBtn).toBeEnabled();
-      await continueBtn.click();
-      // Should advance to step 2
-      const step2 = await page.getByText(/step 2|vault/i).isVisible().catch(() => false);
-      expect(step2).toBeTruthy();
-    }
+    await expect(nameInput).toBeVisible();
+    await nameInput.fill('Dagim');
+    const continueBtn = page.getByRole('button', { name: /continue/i });
+    await expect(continueBtn).toBeEnabled();
+    await continueBtn.click();
+    // Should advance to step 2
+    await expect(page.getByText(/step 2|vault/i).first()).toBeVisible();
   });
 });
 
@@ -187,7 +186,7 @@ test.describe('Navigation', () => {
   });
 
   test('should not 404 on /obsidian route', async ({ page }) => {
-    const response = await page.goto('/obsidian');
+    await page.goto('/obsidian');
     // In a SPA, 404 means a blank page or an error boundary, not an HTTP 404
     await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
