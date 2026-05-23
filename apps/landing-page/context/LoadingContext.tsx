@@ -12,28 +12,25 @@ interface LoadingContextType {
 const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
 
 export function LoadingProvider({ children }: { children: React.ReactNode }) {
-  const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
-  const prevPathname = React.useRef(pathname);
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Route transition detection
+  // Synchronous route change detection to prevent flashing
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setIsLoading(true);
+  }
+
   useEffect(() => {
-    // Prevent flickering: only trigger loading when path actually changes
-    if (prevPathname.current !== pathname) {
-      prevPathname.current = pathname;
-      setIsLoading(true);
+    // On mount or when isLoading becomes true, set a timer to stop loading
+    if (isLoading) {
       const timer = setTimeout(() => {
         setIsLoading(false);
-      }, 700); // 700ms represents the perfect aesthetic duration for the minimal loader
-      return () => clearTimeout(timer);
-    } else {
-      // If it's the initial hydration mount, clear loading after the same period
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 700);
+      }, 700); // Aesthetic duration
       return () => clearTimeout(timer);
     }
-  }, [pathname]);
+  }, [isLoading, pathname]);
 
   const startLoading = () => setIsLoading(true);
   const stopLoading = () => setIsLoading(false);

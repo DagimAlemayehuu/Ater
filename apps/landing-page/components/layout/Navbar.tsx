@@ -69,7 +69,7 @@ export function Navbar() {
           
           {!showCenteredHeader && (
             <>
-              <nav className="hidden lg:flex items-center gap-4 font-mono text-[12px] uppercase tracking-widest">
+              <nav className="hidden lg:flex items-center gap-4 text-[12px] uppercase tracking-widest">
                 {navLinks.map((link) => {
                   const isActive = pathname === link.href || (link.label === "Features" && pathname.startsWith("/features"));
                   return (
@@ -168,7 +168,7 @@ export function Navbar() {
                     setMobileMenuOpen(false);
                   }}
                   className={cn(
-                    "p-5 font-mono text-sm uppercase tracking-widest border transition-all flex items-center justify-between group",
+                    "p-5 text-sm uppercase tracking-widest border transition-all flex items-center justify-between group",
                     isActive 
                       ? "bg-surface-container text-on-background font-bold border-on-background" 
                       : "bg-surface text-on-surface hover:bg-surface-container border-outline-variant"
@@ -193,10 +193,10 @@ export function Navbar() {
               SIGN IN
             </IndustrialButton>
             <div className="flex justify-between items-center px-2">
-              <p className="font-mono uppercase text-[10px] tracking-widest opacity-40 text-on-surface">
+              <p className="uppercase text-[10px] tracking-widest opacity-40 text-on-surface">
                 BETA
               </p>
-              <p className="font-mono uppercase text-[10px] tracking-widest opacity-40 text-on-surface">
+              <p className="uppercase text-[10px] tracking-widest opacity-40 text-on-surface">
                 EST. 2026
               </p>
             </div>

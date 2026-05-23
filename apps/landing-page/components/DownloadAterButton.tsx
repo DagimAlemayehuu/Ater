@@ -26,8 +26,20 @@ export function DownloadAterButton() {
   useEffect(() => {
     async function fetchLatest() {
       try {
-        const response = await fetch('https://api.github.com/repos/DagimAlemayehuu/Ater_Releases/releases/latest');
-        if (!response.ok) throw new Error('API request failed');
+        // Only fetch if we're in a browser environment
+        if (typeof window === 'undefined') return;
+
+        const response = await fetch('https://api.github.com/repos/DagimAlemayehuu/Ater_Releases/releases/latest', {
+          // Add a cache header to avoid constant hitting of the API
+          next: { revalidate: 3600 } 
+        } as any);
+
+        if (!response.ok) {
+          console.warn(`GitHub API returned ${response.status}. Using fallback download links.`);
+          setDownloads(prev => ({ ...prev, loading: false }));
+          return;
+        }
+
         const data = await response.json();
         
         const assets = data.assets || [];
@@ -65,14 +77,14 @@ export function DownloadAterButton() {
 
   const downloadList = [
     { 
-      label: 'macOS (Apple Silicon)', 
-      info: `ARM64_SILICON | ${downloads.version}`, 
+      label: 'macOS', 
+      info: `Apple Silicon | ${downloads.version}`, 
       url: downloads.mac,
       icon: Cpu
     },
     { 
       label: 'Windows', 
-      info: `X64_EXECUTABLE | ${downloads.version}`, 
+      info: `Standard Installer | ${downloads.version}`, 
       url: downloads.windows,
       icon: Monitor
     }
@@ -131,7 +143,7 @@ export function DownloadAterButton() {
                 <button 
                   onClick={() => setGuideTab('mac')}
                   className={cn(
-                    "text-[10px] font-black tracking-[0.2em] pb-1.5 transition-all border-b-2 font-mono uppercase cursor-pointer",
+                    "text-[10px] font-black tracking-[0.2em] pb-1.5 transition-all border-b-2 uppercase cursor-pointer",
                     guideTab === 'mac' ? "border-primary text-primary" : "border-transparent opacity-40 hover:opacity-100"
                   )}
                 >
@@ -140,7 +152,7 @@ export function DownloadAterButton() {
                 <button 
                   onClick={() => setGuideTab('win')}
                   className={cn(
-                    "text-[10px] font-black tracking-[0.2em] pb-1.5 transition-all border-b-2 font-mono uppercase cursor-pointer",
+                    "text-[10px] font-black tracking-[0.2em] pb-1.5 transition-all border-b-2 uppercase cursor-pointer",
                     guideTab === 'win' ? "border-primary text-primary" : "border-transparent opacity-40 hover:opacity-100"
                   )}
                 >
@@ -154,13 +166,13 @@ export function DownloadAterButton() {
                   <p className="font-bold text-primary uppercase tracking-wider !text-[10px]">
                     If macOS blocks launch:
                   </p>
-                  <ol className="list-decimal pl-4 space-y-3 font-mono text-[10px] opacity-80">
+                  <ol className="list-decimal pl-4 space-y-3 text-[10px] opacity-80">
                     <li>
                       Open your Mac&apos;s <strong className="text-on-surface font-sans font-bold">Terminal</strong> app.
                     </li>
                     <li>
                       Type the following command followed by a space:
-                      <div className="mt-2 p-3 bg-background border border-outline-variant flex items-center justify-between font-mono text-[10px]">
+                      <div className="mt-2 p-3 bg-background border border-outline-variant flex items-center justify-between text-[10px]">
                         <span>xattr -cr </span>
                         <button 
                           onClick={copyCommand}
@@ -183,7 +195,7 @@ export function DownloadAterButton() {
                   <p className="font-bold text-primary uppercase tracking-wider !text-[10px]">
                     If Windows blocks launch:
                   </p>
-                  <ol className="list-decimal pl-4 space-y-3 font-mono text-[10px] opacity-80">
+                  <ol className="list-decimal pl-4 space-y-3 text-[10px] opacity-80">
                     <li>
                       Launch the downloaded <strong className="text-primary font-sans font-bold">Ater_setup.exe</strong> file.
                     </li>
@@ -205,7 +217,7 @@ export function DownloadAterButton() {
       </div>
 
       <p className="technical-label opacity-20 text-center text-[7px] pt-1">
-        {downloads.loading ? 'CHECKING LATEST RELEASE...' : `${downloads.version.toUpperCase()}-BETA`}
+        {downloads.loading ? 'Checking for updates...' : `${downloads.version.toUpperCase()} Beta`}
       </p>
     </div>
   );

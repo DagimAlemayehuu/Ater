@@ -7,6 +7,11 @@ export function RouteLoader() {
   const { isLoading } = useLoading();
   const [shouldRender, setShouldRender] = useState(isLoading);
 
+  // Synchronously update shouldRender when isLoading becomes true
+  if (isLoading && !shouldRender) {
+    setShouldRender(true);
+  }
+
   useEffect(() => {
     if (isLoading) {
       setShouldRender(true);

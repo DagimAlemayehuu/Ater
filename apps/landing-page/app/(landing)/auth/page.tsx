@@ -138,9 +138,9 @@ function AuthContent() {
   if (view === "loading") {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-background min-h-[100dvh]">
-        <div className="flex gap-2 items-center text-primary font-mono text-[10px] tracking-widest uppercase">
+        <div className="flex gap-2 items-center text-primary text-[10px] tracking-widest uppercase">
           <Loader2 className="size-3 animate-spin" />
-          <span>AUTHENTICATING_</span>
+          <span>Authenticating</span>
         </div>
       </div>
     );
@@ -160,28 +160,28 @@ function AuthContent() {
               className="flex items-center gap-2 technical-label opacity-40 hover:opacity-100 hover:text-primary transition-all -ml-1"
             >
               <ArrowLeft className="size-3" />
-              <span>RETURN</span>
+              <span>Return</span>
             </Link>
             <button 
               onClick={() => supabase.auth.signOut()} 
               className="flex items-center gap-2 technical-label opacity-40 hover:opacity-100 transition-all"
             >
-              <span>LOGOUT</span>
+              <span>Logout</span>
               <LogOut className="size-3" />
             </button>
           </div>
 
           <div className="flex flex-col gap-1 sm:gap-2">
             <h1 className="text-display-hero !text-[1.8rem] sm:!text-[2.5rem] md:!text-[3.5rem] tracking-tighter uppercase break-words">
-              WELCOME, {firstName}.
+              Welcome, {firstName}.
             </h1>
             <div className="flex items-center gap-3">
-              <span className="technical-label opacity-40">STATUS:</span>
+              <span className="technical-label opacity-40">Status:</span>
               <span className={cn(
                 "technical-label px-2 py-1 border",
                 isApproved ? "border-primary text-primary bg-primary/10" : "border-outline-variant text-on-surface-variant bg-surface"
               )}>
-                {isApproved ? 'APPROVED' : 'PENDING'}
+                {isApproved ? 'Approved' : 'Pending'}
               </span>
             </div>
             </div>
@@ -189,8 +189,8 @@ function AuthContent() {
             <div className="border border-outline-variant bg-surface flex flex-col relative overflow-hidden shadow-2xl">
             {/* Top Bar of the Card */}
             <div className="flex items-center justify-between border-b border-outline-variant px-6 py-4 bg-surface-container-low">
-              <span className="font-mono font-bold text-[11px] text-on-surface uppercase tracking-widest">
-                {isApproved ? 'ACTIVATION' : 'WAITLIST'}
+              <span className="font-bold text-[11px] text-on-surface uppercase tracking-widest">
+                {isApproved ? 'Activation' : 'Waitlist'}
               </span>
               <div className="flex gap-1.5">
                 <div className="size-1.5 rounded-full bg-outline-variant" />
@@ -208,20 +208,21 @@ function AuthContent() {
                   
                   <div className="p-6 border border-primary bg-primary/5 flex flex-col gap-4 relative group">
                     <div className="flex justify-between items-center border-b border-primary/20 pb-3">
-                      <span className="technical-label text-primary">ACTIVATION_KEY</span>
+                      <span className="technical-label text-primary">Activation Key</span>
                       <button onClick={copyKey} className="text-primary hover:opacity-70 transition-opacity">
                         {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
                       </button>
                     </div>
-                    <div className="text-2xl sm:text-4xl font-mono font-black text-center tracking-[0.2em] sm:tracking-[0.4em] text-primary break-all">
+                    <div className="text-2xl sm:text-4xl font-black text-center tracking-[0.2em] sm:tracking-[0.4em] text-primary break-all">
                       {userStatus?.activation_code || '---'}
                     </div>
                     {copied && (
                       <div className="absolute inset-0 bg-primary flex items-center justify-center animate-in fade-in duration-200">
-                        <span className="text-[12px] font-black uppercase tracking-[0.4em] text-on-primary">KEY COPIED TO CLIPBOARD</span>
+                        <span className="text-[12px] font-black uppercase tracking-[0.4em] text-on-primary">Key copied to clipboard</span>
                       </div>
                     )}
                   </div>
+
 
                   <DownloadAterButton />
                 </>
@@ -255,7 +256,7 @@ function AuthContent() {
             className="flex items-center gap-2 technical-label opacity-40 hover:opacity-100 hover:text-primary transition-all -ml-1 w-fit"
           >
             <ArrowLeft className="size-3" />
-            <span>RETURN</span>
+            <span>Return</span>
           </Link>
 
           {/* Header */}
@@ -273,7 +274,7 @@ function AuthContent() {
             <form onSubmit={handleAuth} className="flex flex-col gap-6 relative z-10">
               {error && (
                 <div className={cn(
-                  "p-4 border text-[10px] font-mono font-bold uppercase tracking-widest text-left",
+                  "p-4 border text-[10px] font-bold uppercase tracking-widest text-left",
                   error.includes("SUCCESS") ? "bg-primary text-background border-primary" : "bg-error/10 border-error/30 text-error"
                 )}>
                   {error}
@@ -351,9 +352,9 @@ export default function AuthPage() {
   return (
     <Suspense fallback={
       <div className="flex-1 flex flex-col items-center justify-center bg-background min-h-[100dvh]">
-        <div className="flex gap-2 items-center text-primary font-mono text-[10px] tracking-widest uppercase">
+        <div className="flex gap-2 items-center text-primary text-[10px] tracking-widest uppercase">
           <Loader2 className="size-3 animate-spin" />
-          <span>SYSTEM_BOOT_</span>
+          <span>Starting</span>
         </div>
       </div>
     }>

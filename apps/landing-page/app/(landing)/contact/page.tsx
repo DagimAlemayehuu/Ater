@@ -29,7 +29,7 @@ export default function ContactPage() {
               href={channel.href}
               target={channel.href.startsWith('http') ? '_blank' : undefined}
               rel={channel.href.startsWith('http') ? 'noreferrer' : undefined}
-              className="p-6 border border-outline-variant bg-surface flex items-center justify-between group hover:border-primary transition-colors font-mono text-[11px]"
+              className="p-6 border border-outline-variant bg-surface flex items-center justify-between group hover:border-primary transition-colors text-[11px]"
             >
               <div className="flex flex-col gap-1">
                 <span className="text-[9px] opacity-40 uppercase">{channel.label}</span>

@@ -34,7 +34,7 @@ export default function KnowledgeBasePage() {
               { label: "Markdown Standard", desc: "No locked formats. Take your notes to any other app." }
             ].map(item => (
               <div key={item.label} className="p-4 border border-outline-variant bg-surface flex flex-col gap-1 text-left">
-                <span className="text-[10px] opacity-50 font-mono uppercase">{item.label}</span>
+                <span className="text-[10px] opacity-50 uppercase">{item.label}</span>
                 <span className="text-sm font-bold tracking-tight text-primary uppercase">{item.desc}</span>
               </div>
             ))}
@@ -51,17 +51,17 @@ export default function KnowledgeBasePage() {
             <p className="text-body opacity-85">
               A clean screen that helps you focus. Work without distractions using adjustable layouts. You can see your note list on the left, your main lesson in the middle, and the study assistant on the right.
             </p>
-            <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
-              <li>&gt; Collapsible Left Panel hosts directory navigation and file lists.</li>
-              <li>&gt; Center Canvas renders rich Markdown study notes and document viewers.</li>
-              <li>&gt; Collapsible Right Panel keeps the AI Sidecar and Property Inspectors ready.</li>
+            <ul className="space-y-3 text-[11px] leading-relaxed opacity-75">
+              <li> Collapsible Left Panel hosts directory navigation and file lists.</li>
+              <li> Center Canvas renders rich Markdown study notes and document viewers.</li>
+              <li> Collapsible Right Panel keeps the AI Sidecar and Property Inspectors ready.</li>
             </ul>
           </div>
           
           {/* Workspace Mockup */}
-          <div className="w-full border border-outline-variant bg-surface p-4 flex flex-col gap-3 font-mono text-[10px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto">
+          <div className="w-full border border-outline-variant bg-surface p-4 flex flex-col gap-3 text-[10px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto">
             <div className="flex justify-between items-center border-b border-outline-variant pb-2">
-              <span className="text-primary font-bold">WORKSPACE_SHELL</span>
+              <span className="text-primary font-bold">Workspace Shell</span>
               <span className="opacity-40">PANELS: ACTIVE</span>
             </div>
             <div className="grid grid-cols-4 gap-2 h-44 text-[9px]">
@@ -95,9 +95,9 @@ export default function KnowledgeBasePage() {
         <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           
           {/* Viewers Mockup */}
-          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
+          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
-              <span className="text-primary font-bold">MARKDOWN_VIEWER</span>
+              <span className="text-primary font-bold">Note Viewer</span>
               <span className="text-[10px] opacity-40">LINKS: PARSED</span>
             </div>
             
@@ -124,10 +124,10 @@ export default function KnowledgeBasePage() {
             <p className="text-body opacity-85">
               Read your books and notes side-by-side. You can click on direct links to jump to other notes, check off things you've learned to update your files instantly, and ask the assistant to explain hard words.
             </p>
-            <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
-              <li>&gt; Clickable wiki links [[NoteName]] connect topics instantly.</li>
-              <li>&gt; Sandboxed PDF frames stream text highlight coordinates to the system.</li>
-              <li>&gt; Checking boxes updates the raw file content instantly on your hard drive.</li>
+            <ul className="space-y-3 text-[11px] leading-relaxed opacity-75">
+              <li> Clickable wiki links [[NoteName]] connect topics instantly.</li>
+              <li> Sandboxed PDF frames stream text highlight coordinates to the system.</li>
+              <li> Checking boxes updates the raw file content instantly on your hard drive.</li>
             </ul>
           </div>
         </div>
@@ -141,17 +141,17 @@ export default function KnowledgeBasePage() {
             <p className="text-body opacity-85">
               See a visual map of your brain. Watch how different topics connect to each other like a web. The more notes you write about a specific topic, the bigger its circle gets so you know what is important.
             </p>
-            <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
-              <li>&gt; Force-directed equations balance repulsive constants and spring link distances.</li>
-              <li>&gt; Larger study hubs represent files with the highest note density.</li>
-              <li>&gt; Zoom-dependent logic ensures text labels show only when you zoom in.</li>
+            <ul className="space-y-3 text-[11px] leading-relaxed opacity-75">
+              <li> Force-directed equations balance repulsive constants and spring link distances.</li>
+              <li> Larger study hubs represent files with the highest note density.</li>
+              <li> Zoom-dependent logic ensures text labels show only when you zoom in.</li>
             </ul>
           </div>
           
           {/* Neural Graph Mockup */}
-          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto">
+          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto">
             <div className="flex justify-between items-center border-b border-outline-variant pb-2">
-              <span className="text-primary font-bold">NEURAL_MAP</span>
+              <span className="text-primary font-bold">Study Map</span>
               <span className="text-[9px] opacity-40">SIMULATION: RIGID</span>
             </div>
             <div className="border border-outline-variant/30 bg-background/30 p-6 flex flex-col gap-4 items-center justify-center min-h-[220px]">
@@ -167,7 +167,7 @@ export default function KnowledgeBasePage() {
                   <line x1="72" y1="72" x2="110" y2="40" stroke="var(--color-outline-variant)" strokeWidth="1" className="stroke-outline-variant opacity-40" />
                 </svg>
                 
-                <div className="mt-12 text-[8px] text-primary font-bold tracking-tight uppercase">GPA: CALCULUS_HUB</div>
+                <div className="mt-12 text-[8px] text-primary font-bold tracking-tight uppercase">GPA: Calculus Hub</div>
               </div>
             </div>
           </div>
@@ -178,9 +178,9 @@ export default function KnowledgeBasePage() {
       <section className="z-[50] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
         <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           {/* Concept Pathways Mockup */}
-          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
+          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
-              <span className="text-primary font-bold">STUDY_PATHWAY_TRAVERSAL</span>
+              <span className="text-primary font-bold">Study Path Navigation</span>
               <span className="text-[10px] opacity-40">HUB: DATABASE</span>
             </div>
             
@@ -212,10 +212,10 @@ export default function KnowledgeBasePage() {
             <p className="text-body opacity-85">
               Your personal study roadmap. Ater turns a big list of study files into a step-by-step sequential guide, showing you exactly what to read first, second, and third so you never get lost.
             </p>
-            <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
-              <li>&gt; Convert outline documents to step-by-step sequential reading bars.</li>
-              <li>&gt; Automated navigation loads previous and next steps quickly.</li>
-              <li>&gt; Launch focus sessions to keep study history logged in real time.</li>
+            <ul className="space-y-3 text-[11px] leading-relaxed opacity-75">
+              <li> Convert outline documents to step-by-step sequential reading bars.</li>
+              <li> Automated navigation loads previous and next steps quickly.</li>
+              <li> Launch focus sessions to keep study history logged in real time.</li>
             </ul>
           </div>
         </div>
@@ -229,17 +229,17 @@ export default function KnowledgeBasePage() {
             <p className="text-body opacity-85">
               Manage note details instantly. Track which class a note belongs to, mark lessons as completed, set due dates, and update your local study database with simple checklists.
             </p>
-            <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
-              <li>&gt; Visual fields isolate course connections, dates, and checklists.</li>
-              <li>&gt; Form changes parse variables back into YAML headers.</li>
-              <li>&gt; Saves parameters directly to note files automatically.</li>
+            <ul className="space-y-3 text-[11px] leading-relaxed opacity-75">
+              <li> Visual fields isolate course connections, dates, and checklists.</li>
+              <li> Form changes parse variables back into YAML headers.</li>
+              <li> Saves parameters directly to note files automatically.</li>
             </ul>
           </div>
           
           {/* Metadata Inspector Mockup */}
-          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto">
+          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto">
             <div className="flex justify-between items-center border-b border-outline-variant pb-2">
-              <span className="text-primary font-bold">PROPERTIES_INSPECTOR</span>
+              <span className="text-primary font-bold">Note Properties</span>
               <span className="text-[10px] opacity-40">YAML HEADER</span>
             </div>
             <div className="flex flex-col gap-2">
@@ -265,9 +265,9 @@ export default function KnowledgeBasePage() {
       <section className="z-[70] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full py-8 px-4 md:px-8">
         <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           {/* Local AI Mockup */}
-          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
+          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
-              <span className="text-primary font-bold">EXPLAIN_SIDECAR</span>
+              <span className="text-primary font-bold">Tutor Sidecar</span>
               <span className="text-[10px] opacity-40">STREAMING ACTIVE</span>
             </div>
             
@@ -308,10 +308,10 @@ export default function KnowledgeBasePage() {
             <p className="text-body opacity-85">
               Highlight any sentence in your books or notes, and the AI sidecar tutor will explain it instantly in simple words—without sending your personal files to the internet.
             </p>
-            <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
-              <li>&gt; Stream explanations instantly from local secure models on your computer.</li>
-              <li>&gt; Dual personas translate details: Strategist for architectures, Creator for code.</li>
-              <li>&gt; Sliders adjust generation settings like innovation, detail levels, and polish.</li>
+            <ul className="space-y-3 text-[11px] leading-relaxed opacity-75">
+              <li> Stream explanations instantly from local secure models on your computer.</li>
+              <li> Dual personas translate details: Strategist for architectures, Creator for code.</li>
+              <li> Sliders adjust generation settings like innovation, detail levels, and polish.</li>
             </ul>
           </div>
         </div>

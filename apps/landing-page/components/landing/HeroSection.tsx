@@ -28,11 +28,11 @@ export function HeroSection() {
   }, []);
 
   return (
-    <section className="relative md:sticky md:top-0 z-10 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full overflow-hidden border-b border-outline-variant pt-12 md:pt-16">
+    <section className="stack-section relative md:sticky md:top-0 z-10 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full overflow-hidden border-b border-outline-variant pt-12 md:pt-16">
       <div className="industrial-container flex flex-col items-center justify-center gap-4 sm:gap-6 w-full py-6 md:py-8 flex-1">
         <div className="flex flex-col items-start justify-center gap-4 w-full">
           <motion.h1 
-            className="text-display-hero border-b border-outline-variant pb-2 text-left w-full uppercase flex font-mono font-black"
+            className="text-display-hero border-b border-outline-variant pb-2 text-left w-full uppercase flex font-black"
             initial="hidden"
             animate="visible"
             variants={{
@@ -84,7 +84,7 @@ export function HeroSection() {
             WATCH DEMO
           </IndustrialButton>
           {demoMessage && (
-            <span className="font-mono text-[10px] text-primary animate-pulse tracking-widest mt-2">
+            <span className="text-[10px] text-primary animate-pulse tracking-widest mt-2">
               {demoMessage}
             </span>
           )}

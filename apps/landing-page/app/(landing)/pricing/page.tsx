@@ -14,7 +14,7 @@ export default function PricingPage() {
           Ater is currently in private beta, which means all features are fully unlocked and 100% free. No credit cards, no monthly fees, and no surprise charges.
         </p>
 
-        <div className="border border-outline-variant bg-surface p-4 sm:p-6 md:p-8 w-full max-w-md font-mono text-[11px] text-left flex flex-col gap-6 shadow-xl relative overflow-hidden mx-auto">
+        <div className="border border-outline-variant bg-surface p-4 sm:p-6 md:p-8 w-full max-w-md text-[11px] text-left flex flex-col gap-6 shadow-xl relative overflow-hidden mx-auto">
           <div className="flex justify-between items-center border-b border-outline-variant pb-3">
             <span className="text-primary font-bold">CURRENT_TIER</span>
           </div>

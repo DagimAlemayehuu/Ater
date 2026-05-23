@@ -34,7 +34,7 @@ export default function AgentsPage() {
               { label: "Smart Governor", desc: "Monitors and balances system loads to keep things fast." }
             ].map(item => (
               <div key={item.label} className="p-4 border border-outline-variant bg-surface flex flex-col gap-1 text-left">
-                <span className="text-[10px] opacity-50 font-mono uppercase">{item.label}</span>
+                <span className="text-[10px] opacity-50 uppercase">{item.label}</span>
                 <span className="text-sm font-bold tracking-tight text-primary uppercase">{item.desc}</span>
               </div>
             ))}
@@ -51,17 +51,17 @@ export default function AgentsPage() {
             <p className="text-body opacity-85">
               A smart screen that changes as you study. It shows you your inbox when you upload new textbooks, and automatically updates to a live progress tracking screen when the assistants are building your notes.
             </p>
-            <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
-              <li>&gt; <strong>Inbox Mode</strong>: Ater scans your textbooks and groups notes by subject.</li>
-              <li>&gt; <strong>Generation Mode</strong>: Watch notes get written and sorted live in real-time.</li>
-              <li>&gt; Live gauges show system speed and active processing windows.</li>
+            <ul className="space-y-3 text-[11px] leading-relaxed opacity-75">
+              <li><strong>Inbox Mode</strong>: Ater scans your textbooks and groups notes by subject.</li>
+              <li> <strong>Generation Mode</strong>: Watch notes get written and sorted live in real-time.</li>
+              <li> Live gauges show system speed and active processing windows.</li>
             </ul>
           </div>
           
           {/* UI Lifecycle Mockup */}
-          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto">
+          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto">
             <div className="flex justify-between items-center border-b border-outline-variant pb-2">
-              <span className="text-primary font-bold">SOVEREIGN_PLAN_ENGINE</span>
+              <span className="text-primary font-bold">Planning Engine</span>
               <span className="text-[10px] opacity-40">ACTIVE BATCH: 3</span>
             </div>
             
@@ -94,9 +94,9 @@ export default function AgentsPage() {
         <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           
           {/* Pipeline Mockup */}
-          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
+          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
-              <span className="text-primary font-bold">SELF_HEALING_DAEMON</span>
+              <span className="text-primary font-bold">Self Healing Assistant</span>
               <span className="text-[10px] opacity-40">REPAIR LOOP</span>
             </div>
             
@@ -118,10 +118,10 @@ export default function AgentsPage() {
             <p className="text-body opacity-85">
               If the helpers make a formatting mistake or a link gets broken, a checker assistant catches it and fixes it instantly so your notes are always clean, complete, and formatted perfectly.
             </p>
-            <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
-              <li>&gt; Background watchers automatically monitor folder queues for new documents.</li>
-              <li>&gt; Diagnostic critics and regex engines repair broken brackets or tags.</li>
-              <li>&gt; Updates the parent Study Hub connections list dynamically on completion.</li>
+            <ul className="space-y-3 text-[11px] leading-relaxed opacity-75">
+              <li> Background watchers automatically monitor folder queues for new documents.</li>
+              <li> Diagnostic critics and regex engines repair broken brackets or tags.</li>
+              <li> Updates the parent Study Hub connections list dynamically on completion.</li>
             </ul>
           </div>
         </div>
@@ -135,7 +135,7 @@ export default function AgentsPage() {
             A cooperative network of eleven specialized helpers, each in charge of a single step in writing, double-checking, and organizing your notes.
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full mt-6 text-left font-mono text-[10px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full mt-6 text-left text-[10px]">
             {[
               { name: "MetaScanner", role: "Reads the book and highlights major topics." },
               { name: "Architect", role: "Splits textbook chunks and maps out the study roadmap." },
@@ -166,17 +166,17 @@ export default function AgentsPage() {
             <p className="text-body opacity-85">
               Subject matters are explained using their true professional rules. Ater adapts its writing styles, dynamic headers, artifacts, and test logic across over 85 domains.
             </p>
-            <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
-              <li>&gt; <strong>CS-SOFTWARE</strong>: Programmer. Includes clean, runnable code.</li>
-              <li>&gt; <strong>MED-PHYSIO</strong>: Doctor. Clear cell maps and body system loops.</li>
-              <li>&gt; <strong>MATH-PURE</strong>: Mathematician. Neat LaTeX formulas and proofs.</li>
-              <li>&gt; <strong>LAW-CASE</strong>: Lawyer. Strict IRAC argument flows and legal scenarios.</li>
-              <li>&gt; <strong>ECON-MICRO</strong>: Economist. Math supply/demand tables and grids.</li>
+            <ul className="space-y-3 text-[11px] leading-relaxed opacity-75">
+              <li> <strong>CS-SOFTWARE</strong>: Programmer. Includes clean, runnable code.</li>
+              <li> <strong>MED-PHYSIO</strong>: Doctor. Clear cell maps and body system loops.</li>
+              <li> <strong>MATH-PURE</strong>: Mathematician. Neat LaTeX formulas and proofs.</li>
+              <li> <strong>LAW-CASE</strong>: Lawyer. Strict IRAC argument flows and legal scenarios.</li>
+              <li> <strong>ECON-MICRO</strong>: Economist. Math supply/demand tables and grids.</li>
             </ul>
           </div>
           
           {/* Domain Persona Mockup */}
-          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto">
+          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto">
             <div className="flex justify-between items-center border-b border-outline-variant pb-2">
               <span className="text-primary font-bold">ECON-MICRO // QUANTITATIVE</span>
               <span className="text-[10px] opacity-40">AXIOMS ACTIVE</span>
@@ -199,9 +199,9 @@ export default function AgentsPage() {
       <section className="z-[60] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full py-8 px-4 md:px-8">
         <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           {/* Note Geometry Mockup */}
-          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
+          <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
-              <span className="text-primary font-bold">FEYNMAN_HAMBURGER_CONTRACT</span>
+              <span className="text-primary font-bold">Feynman Note Structure</span>
             </div>
             
             <div className="border border-outline-variant/30 bg-background/50 p-4 space-y-3 text-[10px]">
@@ -229,10 +229,10 @@ export default function AgentsPage() {
             <p className="text-body opacity-85">
               Every study note is organized exactly the same way. It maps out the concept using a friendly analogy, gives a detailed explanation with charts, and finishes with a quick 3-question quiz.
             </p>
-            <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
-              <li>&gt; Frontmatter quotes all internal link dependencies.</li>
-              <li>&gt; Core technical H1 prose embeds exactly 3–5 concept links.</li>
-              <li>&gt; Proving Grounds quiz questions maps solutions to textbook page counts.</li>
+            <ul className="space-y-3 text-[11px] leading-relaxed opacity-75">
+              <li> Frontmatter quotes all internal link dependencies.</li>
+              <li> Core technical H1 prose embeds exactly 3–5 concept links.</li>
+              <li> Proving Grounds quiz questions maps solutions to textbook page counts.</li>
             </ul>
           </div>
         </div>

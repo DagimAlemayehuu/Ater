@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  output: 'standalone',
+
   async headers() {
     return [
       {
@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.supabase.co https://picsum.photos; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.googleapis.com; frame-ancestors 'none';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://github.com https://*.githubusercontent.com https://picsum.photos; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.googleapis.com https://api.github.com https://github.com; frame-ancestors 'none';",
           },
           {
             key: 'X-Frame-Options',
