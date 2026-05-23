@@ -124,7 +124,7 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
+        run: cd apps/desktop && npx playwright install --with-deps chromium
       - name: Run Playwright Tests (Desktop Mocks)
         run: cd apps/desktop && npx playwright test
       - name: Run Playwright Tests (Admin)
