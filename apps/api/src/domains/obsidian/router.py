@@ -1119,7 +1119,8 @@ async def get_pdf_viewer(
         resolved_str = resolved_str[1:]
         
     auth_query = f"?vault_path={quote(effective_vault_path)}" if effective_vault_path else ""
-    pdf_src = f"/api/obsidian/serve/{resolved_str}{auth_query}"
+    # Ensure the path is URL-encoded so spaces do not break pdf.js fetch requests
+    pdf_src = f"/api/obsidian/serve/{quote(resolved_str)}{auth_query}"
     
     # Process filter pages
     filter_list_json = "null"

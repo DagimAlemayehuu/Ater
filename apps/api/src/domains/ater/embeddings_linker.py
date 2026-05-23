@@ -32,12 +32,32 @@ class EmbeddingsLinker:
     @classmethod
     def _get_model_paths(cls) -> Tuple[Path, Path]:
         """Resolves the directory path and model.onnx file path for the ONNX model."""
-        current_dir = Path(__file__).resolve().parent
-        api_root = current_dir.parent.parent.parent  # apps/api
-        model_dir = api_root / "onnx_model"
-        if not model_dir.exists():
+        import sys
+        if getattr(sys, 'frozen', False):
+            # In a PyInstaller bundle, resolve relative to the sidecar executable
+            exe_path = Path(sys.executable)
+            
+            # Windows: Resources are usually alongside the executable
+            potential_dir = exe_path.parent / "onnx_model"
+            if potential_dir.exists():
+                return potential_dir, potential_dir / "model.onnx"
+                
+            # macOS: Tauri bundles resources in Ater.app/Contents/Resources
+            if sys.platform == "darwin":
+                potential_dir = exe_path.parent.parent / "Resources" / "onnx_model"
+                if potential_dir.exists():
+                    return potential_dir, potential_dir / "model.onnx"
+                    
+            # Fallback to CWD just in case
             model_dir = Path("onnx_model").resolve()
-        return model_dir, model_dir / "model.onnx"
+            return model_dir, model_dir / "model.onnx"
+        else:
+            current_dir = Path(__file__).resolve().parent
+            api_root = current_dir.parent.parent.parent  # apps/api
+            model_dir = api_root / "onnx_model"
+            if not model_dir.exists():
+                model_dir = Path("onnx_model").resolve()
+            return model_dir, model_dir / "model.onnx"
 
     @classmethod
     def load_model(cls):

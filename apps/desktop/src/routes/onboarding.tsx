@@ -75,11 +75,11 @@ export default function Onboarding() {
     setFinalStatus('running')
     setFinalError('')
 
-    // Guard against a hung sidecar — show a timeout error after 60 seconds
+    // Guard against a hung sidecar — show a timeout error after 120 seconds
     const timeoutId = setTimeout(() => {
       setFinalStatus('error')
-      setFinalError('Setup timed out. The AI engine may not be ready yet. Please try again in a moment.')
-    }, 60_000)
+      setFinalError('Setup timed out. The AI engine is still unpacking. Please try again in a moment.')
+    }, 120_000)
 
     try {
       // 0. Save the vault path first so all subsequent sidecar calls can find it

@@ -213,26 +213,40 @@ class AterService:
 
     @staticmethod
     def resolve_si_path() -> Path:
-        # Resolve absolute root (Ater/)
-        # Current file is apps/api/src/domains/ater/service.py
-        # parent 1: ater/
-        # parent 2: domains/
-        # parent 3: src/
-        # parent 4: api/
-        # parent 5: apps/
-        # parent 6: Ater/
         import sys
-        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-            root = Path(sys._MEIPASS)
+        if getattr(sys, 'frozen', False):
+            exe_path = Path(sys.executable)
+            
+            # Windows: Resources are usually alongside the executable
+            paths = [
+                exe_path.parent / "Ater.md",
+                exe_path.parent / ".system/prompts/ATER_System_Instruction.md"
+            ]
+            
+            # macOS: Tauri bundles resources in Ater.app/Contents/Resources
+            if sys.platform == "darwin":
+                paths.extend([
+                    exe_path.parent.parent / "Resources" / "Ater.md",
+                    exe_path.parent.parent / "Resources" / ".system/prompts/ATER_System_Instruction.md"
+                ])
+                
+            for p in paths:
+                if p.exists(): return p
+                
+            # Fallback to CWD
+            fallback = Path("Ater.md").resolve()
+            if fallback.exists(): return fallback
+            
+            raise FileNotFoundError(f"Ater System Instruction not found. Checked: {[str(p) for p in paths]}")
         else:
             root = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
-        paths = [
-            root / "Ater.md",
-            root / ".system/prompts/ATER_System_Instruction.md"
-        ]
-        for p in paths:
-            if p.exists(): return p
-        raise FileNotFoundError(f"Ater System Instruction not found in: {[str(p) for p in paths]}")
+            paths = [
+                root / "Ater.md",
+                root / ".system/prompts/ATER_System_Instruction.md"
+            ]
+            for p in paths:
+                if p.exists(): return p
+            raise FileNotFoundError(f"Ater System Instruction not found in: {[str(p) for p in paths]}")
 
     async def _get_si(self, path: str) -> str:
         def _read():
