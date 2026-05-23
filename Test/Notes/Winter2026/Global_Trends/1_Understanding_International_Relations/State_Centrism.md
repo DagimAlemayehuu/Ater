@@ -1,4 +1,5 @@
 ---
+
 title: State_Centrism
 course: Global Trends
 unit: '1'
@@ -18,6 +19,7 @@ source_pages:
 - 21
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -32,33 +34,40 @@ The underlying mechanism of **state centrism** lies in the way international rel
 
 The real-world significance of state centrism lies in its implications for how we understand international relations. States form the primary kind of actor in major international organizations, such as the UN, and still hold a monopoly on violence, with the exclusive right to the legitimate use of physical force. This perspective has consequences for how we study and understand global issues, as it places the state at the center of our analysis, and views other actors in relation to the state.
 
+This concept is fundamentally connected to [[International_Relations_Model]] and operates within the [[Levels_Of_Analysis]] framework.
+
 ## Diplomatic Friction
 
 **State centrism** is a paradigm in international relations that privileges the state as the primary unit of analysis, positing it as the central actor around which other entities revolve. This approach assumes that the state serves as the main locus of power and the primary framework for managing political life, particularly in matters concerning national security, domestic cohesion, and internal stability. The state is viewed as an arena where state officials, politicians, and decision-makers operate, and it is seen as the dominant structure that encapsulates society. Furthermore, **state centrism** implies that the state's interactions with other states, such as cooperation, competition, and antagonism, are crucial for understanding international dynamics. This perspective also underpins the state's monopoly on violence and its role in major international organizations.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Aspect | Description |
+
 | --- | --- |
+
 | **Unit of Analysis** | State |
+
 | **Primary Role** | Main point of reference for other actors |
+
 | **Power Location** | State as the main location of power |
+
 | **Political Life Management** | State framework for national security, domestic cohesion, internal stability |
+
 | **International Organizations** | States as primary actors in organizations like the UN |
+
 | **Monopoly on Violence** | State's exclusive right to legitimate use of physical force |
 
 **Overemphasis on State Actors**: **State centrism** may overlook the influence of non-state actors, such as NGOs and multinational corporations, in shaping international relations.
 **Neglect of Sub-State Dynamics**: This approach might fail to account for internal state dynamics, such as regional variations and domestic power struggles, that can affect foreign policy.
 **Insufficient Adaptation to Globalization**: State centrism may not adequately capture the complexities introduced by globalization, where power and influence are increasingly distributed among non-state actors and international institutions.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -75,7 +84,9 @@ The real-world significance of state centrism lies in its implications for how w
     "source_pages": [
       20,
       21
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -90,7 +101,9 @@ The real-world significance of state centrism lies in its implications for how w
     "source_pages": [
       20,
       21
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -106,7 +119,10 @@ The real-world significance of state centrism lies in its implications for how w
     "source_pages": [
       20,
       21
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

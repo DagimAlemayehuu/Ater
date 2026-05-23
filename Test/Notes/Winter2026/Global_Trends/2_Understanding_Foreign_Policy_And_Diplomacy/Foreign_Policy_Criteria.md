@@ -1,4 +1,5 @@
 ---
+
 title: Foreign_Policy_Criteria
 course: Global Trends
 unit: '2'
@@ -19,6 +20,7 @@ source_pages:
 generated: true
 skeleton_fallback: true
 read: false
+
 ---
 
 ## Mental Model
@@ -27,30 +29,32 @@ read: false
 
 ## The Global Economic Engine
 
-[[Foreign_Policy]] Criteria works by connecting the source's key terms, rules, and examples into one usable idea. Operational Philosophy = Depending on time, location, your orientation toward the world around you, and in particular the action of your predecessors, you may choose one of two major style of operation » act in a bold and sweeping fashion/ synoptic orientation (%3 CamScanner = equate the interest of your organization (the army, the foreign office, and so forth) with the [[National_Interest]] 7. Foreign Dependency Criteria » usually applies to less developing countries, who had fallen under the yoke of colonialism, and now, even after political independence, kept the colonial ties with their ex-masters intact = dependent on their ex-colonial states for technical aid, expertise and technology, sometimes even for their security » As a result of this state of dependency, the less developing countries face difficulties to defend and promote their national interest Views on determination of national interest A.Realist view v prioritize pragmatic criteria when defining national interest and employing foreign policy v defines national interest in terms of pursuits of power o power is about establishing control or influencing the behaviors of others, either diplomatically or use of coercion v International politics is a struggle among states and thus the prime interest of state is survival and security among other v minimum goal a state would like to achieve is survival - protect their physical, political, and cultural identities against any encroachment by other states v Foreign policy also involves specific instruments and tactics that must be employed to realize those objectives and goals. This concept is directly related to [[Diplomacy_And_Foreign_Policy]].
+[[Foreign_Policy]] Criteria works by connecting the source's key terms, rules, and examples into one usable idea. Operational Philosophy = Depending on time, location, your orientation toward the world around you, and in particular the action of your predecessors, you may choose one of two major style of operation » act in a bold and sweeping fashion/ synoptic orientation  = equate the interest of your organization (the army, the foreign office, and so forth) with the [[National_Interest]] 7. Foreign Dependency Criteria » usually applies to less developing countries, who had fallen under the yoke of colonialism, and now, even after political independence, kept the colonial ties with their ex-masters intact = dependent on their ex-colonial states for technical aid, expertise and technology, sometimes even for their security » As a result of this state of dependency, the less developing countries face difficulties to defend and promote their national interest Views on determination of national interest A.Realist view v prioritize pragmatic criteria when defining national interest and employing foreign policy v defines national interest in terms of pursuits of power o power is about establishing control or influencing the behaviors of others, either diplomatically or use of coercion v International politics is a struggle among states and thus the prime interest of state is survival and security among other v minimum goal a state would like to achieve is survival - protect their physical, political, and cultural identities against any encroachment by other states v Foreign policy also involves specific instruments and tactics that must be employed to realize those objectives and goals. This concept is directly related to [[Diplomacy_And_Foreign_Policy]].
 
 ## The Macro Model & Jargon
 
 In formal terms, Foreign Policy Criteria must be read through the exact language and constraints shown in the source. The most widely employed instruments include o diplomatic bargaining o economic instruments o propaganda o terrorism (sabotage) o use of force (war) " Each instrument is used to affect the behaviors of other states, and has an element of power v Diplomacy - states attempt to affect the behavior of others through bargaining that involves less element of power as compared to other instruments 2.2.2. Foreign Policy Objectives e Foreign policy, just like any policy, sets short term, middle term and long term goals and objectives to be achieved in proportion to a state's
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table**
 
 | Source Detail | Meaning |
+
 |---|---|
+
 | Foreign Policy Criteria | The focused concept being studied. |
+
 | Macroeconomist | Operational Philosophy = Depending on time, location, your orientation toward the world ar |
+
 | Source excerpt | The only authority for definitions and constraints. |
 
 Use this section as a compact bridge between the source wording and the exact place where a student might get confused.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -63,14 +67,18 @@ Use this section as a compact bridge between the source wording and the exact pl
     },
     "answer": "A",
     "explanation": "The source context connects Foreign Policy Criteria to concrete behavior, syntax, or logical structure from page 3.",
-    "explanation_page": 3
+    "explanation_page": 3,
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
-    "type": "true_false",
-    "question": "Operational Philosophy = Depending on time, location, your orientation toward the world around you, and in particular the action of your predecessors, you may choose one of two major style of operation \u00bb act in a bold and sweeping fashion/ synoptic orientation (%3 CamScanner = equate the interest of your organization (the army, the foreign office, and so forth) with the national interest 7",
+    "type": "scenario",
+    "question": "Operational Philosophy = Depending on time, location, your orientation toward the world around you, and in particular the action of your predecessors, you may choose one of two major style of operation \u00bb act in a bold and sweeping fashion/ synoptic orientation  = equate the interest of your organization (the army, the foreign office, and so forth) with the national interest 7",
     "answer": true,
     "explanation": "This follows directly from the source's definition of Foreign Policy Criteria on page 3.",
-    "explanation_page": 3
+    "explanation_page": 3,
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -81,7 +89,10 @@ Use this section as a compact bridge between the source wording and the exact pl
       "behavior"
     ],
     "explanation": "This checks whether the learner can move from the source wording to a usable explanation of Foreign Policy Criteria.",
-    "explanation_page": 3
+    "explanation_page": 3,
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

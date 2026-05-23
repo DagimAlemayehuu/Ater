@@ -1,4 +1,5 @@
 ---
+
 title: Foreign_Aid
 course: Global Trends
 unit: '2'
@@ -17,6 +18,7 @@ source_pages:
 generated: true
 skeleton_fallback: true
 read: false
+
 ---
 
 ## Mental Model
@@ -31,24 +33,26 @@ Foreign Aid works by connecting the source's key terms, rules, and examples into
 
 In formal terms, Foreign Aid must be read through the exact language and constraints shown in the source. Loans, Credits and Currency Manipulations = Rewards may include favorable tariff rates and quotas, granting loans (favorable reward offered by the major powers to developing countries) or extending credits » The choice of a technique or combinations of techniques to be used will be influenced by v' the goals being pursued v the type of economic sensitivity &vulnerability 6. Foreign Aid = transfer of money, goods, or technical advice from donor to recipient = There are main type of aid program including, military aid, technical assistance, grants and commodity import program, and development loans = Note o Most aid programs are obviously not undertaken solely for humanitarian o vast portion of the aid goes to a few countries-and sometimes not the countries with the most pressing needs Because their strategic and symbolic importance in world politics o Donors can easily manipulate economic and military aid program to change the internal and external policies of a government 7. Military Aid = probably the oldest type of aid which had been used for buttressing alliances |n this aid scheme, the donors supply money and material, while the recipient provided most of the man power = By helping recipients build up modern forces, the donors hope to obtain some immediate political or security objective = military aid is used to create local power balances or preponderances, thus reducing the likelihood that the donor will have to station troops abroad or intervene militarily to protect its interests 2.3.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table**
 
 | Source Detail | Meaning |
+
 |---|---|
+
 | Foreign Aid | The focused concept being studied. |
+
 | Macroeconomist | v' Interdependence means that to satisfy domestic needs and aspirations, states would have |
+
 | Source excerpt | The only authority for definitions and constraints. |
 
 Use this section as a compact bridge between the source wording and the exact place where a student might get confused.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -61,14 +65,18 @@ Use this section as a compact bridge between the source wording and the exact pl
     },
     "answer": "A",
     "explanation": "The source context connects Foreign Aid to concrete behavior, syntax, or logical structure from page 12.",
-    "explanation_page": 12
+    "explanation_page": 12,
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
-    "type": "true_false",
+    "type": "scenario",
     "question": "v' Interdependence means that to satisfy domestic needs and aspirations, states would have to interact with others v Trade, foreign aid, access to communication facilities, sources of supply, and foreign market are for most states necessary for increasing social welfare 3",
     "answer": true,
     "explanation": "This follows directly from the source's definition of Foreign Aid on page 12.",
-    "explanation_page": 12
+    "explanation_page": 12,
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -79,7 +87,10 @@ Use this section as a compact bridge between the source wording and the exact pl
       "behavior"
     ],
     "explanation": "This checks whether the learner can move from the source wording to a usable explanation of Foreign Aid.",
-    "explanation_page": 12
+    "explanation_page": 12,
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

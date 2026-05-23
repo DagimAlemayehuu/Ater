@@ -1,4 +1,5 @@
 ---
+
 title: Realist_Vs_Idealist_View
 course: Global Trends
 unit: '2'
@@ -17,6 +18,7 @@ source_pages:
 - 7
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -35,28 +37,28 @@ The real-world significance of the **Realist Vs Idealist View** lies in its impl
 
 The **Realist Vs Idealist View** dichotomy is a fundamental paradigm in [[Foreign_Policy]] analysis, characterized by distinct epistemological and ontological assumptions. Realists prioritize state-centric, power-based [[National_Interest]], whereas idealists emphasize moral, legal, and ideological considerations. This paradigmatic divide influences the determination of **national interest**, with realists focusing on survival and security, and idealists stressing global problem-solving. The realist view operationalizes [[National_Interest]] through pragmatic, power-based calculations, whereas the idealist view integrates moral and legal frameworks into **foreign policy** decision-making. A nuanced understanding of these competing perspectives is essential for effective [[Foreign_Policy]] analysis.
 
-## Key Contrast
+> **Key Contrast**
 
 > **Basic Mermaid flowchart (graph LR)**
 
 ```mermaid
+
 graph LR
     A[Realist View] --> B(Power and Survival)
     A --> C([[National_Interest]])
     D[Idealist View] --> E(Morality and Justice)
     D --> F(Global Problem-Solving)
-    B --> C
-    E --> F
+    B -->
+    E -->
+
 ```
 
 **Failure to Account for Global Interdependence**: The realist view neglects the complexities of global interdependence, potentially leading to ineffective [[Foreign_Policy]] decisions. **Overemphasis on Moralism**: The idealist view may overlook the harsh realities of international politics, leading to naive and ineffective policy prescriptions. **Inability to Balance Competing Interests**: Both perspectives may struggle to balance competing national interests, leading to suboptimal **foreign policy** outcomes.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "true_false",
@@ -67,7 +69,9 @@ graph LR
     "source_pages": [
       6,
       7
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -83,7 +87,9 @@ graph LR
     "source_pages": [
       6,
       7
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "trace",
@@ -94,7 +100,10 @@ graph LR
     "source_pages": [
       6,
       7
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

@@ -1,4 +1,5 @@
 ---
+
 title: Transnational_Interactions
 course: Global Trends
 unit: '1'
@@ -17,6 +18,7 @@ source_pages:
 - 27
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -31,28 +33,32 @@ The underlying mechanism driving **transnational interactions** involves the cha
 
 The real-world significance of transnational interactions lies in their ability to reveal the complex and wide-ranging dynamics that emerge from the global economic system, affecting its various components, including states, national economies, societies, and individuals. By considering transnational interactions, researchers can grasp the big picture and better understand developments that are outside the immediate control of any particular state or group of states, such as the global economy, transnational terrorism, and the internet. This perspective ultimately highlights the need to move beyond traditional state-centric approaches to understanding international relations.
 
+This concept is fundamentally connected to [[Non_State_Actors]] and operates within the [[State_Sovereignty]] framework.
+
 ## Diplomatic Friction
 
 **Transnational interactions** refer to the phenomenon where individuals and groups interact across borders, marking a shift away from traditional inter-national relations. This concept acknowledges that societal and political issues, challenges, and problems are no longer confined by the borders of individual states or groups of states. The increased focus on non-state actors and cross-border issues has led to a shift from inter-national to trans-national interactions. As a result, thinking about world affairs in trans-national terms has become an analytical necessity. The [[International_System]] can be conceived of as made up of states, groups of states, organizations, societies, or individuals within and across those societies.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Level of Analysis | Description |
+
 | --- | --- |
+
 | System | Global linkages that go beyond single interactions between states |
+
 | State | Autonomy in foreign policy and independence/freedom in domestic affairs |
+
 | Individual | Interactions involving not only diplomatic core or representatives of individual states, but also business community, media, charitable organizations, and so on |
 
 **Data Confidentiality**: Sensitive information may be compromised during **transnational interactions**, potentially leading to security breaches. **Regulatory Challenges**: Different regulatory frameworks across states can create complexities and conflicts in transnational interactions. **Cultural Misunderstandings**: Cultural differences and language barriers can lead to misunderstandings and miscommunications during transnational interactions.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -70,7 +76,9 @@ The real-world significance of transnational interactions lies in their ability 
       17,
       23,
       27
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -87,7 +95,9 @@ The real-world significance of transnational interactions lies in their ability 
       17,
       23,
       27
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -105,7 +115,10 @@ The real-world significance of transnational interactions lies in their ability 
       17,
       23,
       27
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

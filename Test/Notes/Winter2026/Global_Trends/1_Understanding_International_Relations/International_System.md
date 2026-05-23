@@ -1,4 +1,5 @@
 ---
+
 title: International_System
 course: Global Trends
 unit: '1'
@@ -18,6 +19,7 @@ source_pages:
 - 37
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -26,33 +28,36 @@ Imagine a vast, intricate aqueduct system, where states are like individual pipe
 
 ## Global Strategy
 
-The **international system** can be conceived of as made up of states, groups of states, organizations, societies or individuals within and across those societies. IR generally distinguishes between three [[Levels_Of_Analysis]]: the system, the state, the individual, although the group level is also important to consider as a fourth. 
+The **international system** can be conceived of as made up of states, groups of states, organizations, societies or individuals within and across those societies. IR generally distinguishes between three [[Levels_Of_Analysis]]: the system, the state, the individual, although the group level is also important to consider as a fourth.
 
 A system-level study would need to consider global linkages that go beyond single interactions between states, the balance of power between states and how that determines what happens in global politics. This would include developments that are even outside the immediate control of any particular state or group of states, such as the global economy, transnational terrorism, or the internet. Such a study aims to provide a broad understanding of the dynamics at play.
 
 The **international system**, according to Waltz, is anarchical and hence perpetually threatening and conflictual. This perspective, often categorized under neo-[[Realism]], focuses on the international system itself and seeks to provide a structuralist account of its dynamics and the constraints it imposes on state behavior. What is of interest is the imperatives of the international system and the distribution of capabilities within it, which shapes state behavior and leads to a world where war seems more common than peace.
 
+This concept is fundamentally connected to [[Anarchy]] and operates within the [[State_Sovereignty]] framework.
+
 ## Diplomatic Friction
 
 In formal terms, **International System** is defined and bounded by the academic parameters detailed in the source texts.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Source Anchor | Student Meaning |
+
 |---|---|
+
 | **International System** | The concept |
+
 | The Treaty of Westphalia in 1648 concluded the 30 years of warfare and marked the beginning of a new way of organizing international politics, where internation | The source detail the explanation must stay attached to. |
 
 **Scope Boundary**: **International System** should only be interpreted through the source excerpt for **Common Miss**: A student may memorize the name without explaining how the source says it works. **Check Point**: If an example cannot be tied back to the listed source pages, it should be treated as outside this atomic note.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -70,7 +75,9 @@ In formal terms, **International System** is defined and bounded by the academic
       23,
       34,
       37
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -87,7 +94,9 @@ In formal terms, **International System** is defined and bounded by the academic
       23,
       34,
       37
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -106,7 +115,10 @@ In formal terms, **International System** is defined and bounded by the academic
       23,
       34,
       37
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

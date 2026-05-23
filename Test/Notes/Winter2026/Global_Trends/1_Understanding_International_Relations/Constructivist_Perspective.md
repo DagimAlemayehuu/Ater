@@ -1,4 +1,5 @@
 ---
+
 title: Constructivist_Perspective
 course: Global Trends
 unit: '1'
@@ -15,6 +16,7 @@ source_pages:
 - 40
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -29,30 +31,36 @@ The underlying mechanism of Constructivism is based on the relationship between 
 
 The real-world significance of the **Constructivist Perspective** lies in its implications for understanding the dynamics of international relations. If international relations are shaped by the interactions of individuals and the norms they create, then it is possible for individuals to effect change and create new systems of international relations. This perspective suggests that international relations are in a constant state of flux, with emerging norms of the future replacing the accepted norms of the past. As a result, Constructivism offers a nuanced understanding of the complex and ever-changing nature of international relations, and highlights the agency of individuals in shaping the global order.
 
+This concept is fundamentally connected to [[Actors_In_International_Relations]] and operates within the [[Actors_In_International_Relations_International_Relations_Definition_Synthesis]] framework.
+
 ## Diplomatic Friction
 
 The **Constructivist Perspective** is a theoretical approach in international relations that emphasizes the role of values and shared interests among individuals interacting on the global stage. It posits that international relations are constituted by the interactions between people, rather than by the interactions between states. This perspective is situated as a middle ground between mainstream theories and [[Critical_Theories]]. The relationship between agents, such as individuals, and structures, such as the state, is central to Constructivism. According to Alexander Wendt, international [[Anarchy]] is not an inherent fact, but rather '**anarchy** is what states make of it,' implying that the nature of international relations can change if a critical mass of individuals, and by proxy the states they represent, accept new ideas and norms.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Aspect | Description | Source Reference |
+
 | --- | --- | --- |
+
 | Key Concept | Values and shared interests among individuals | Page 38 |
+
 | Theoretical Approach | Middle ground between mainstream and [[Critical_Theories]] | Page 38 |
+
 | Role of Agents | Interactions between individuals shape international relations | Page 40 |
+
 | [[Anarchy]] | '**Anarchy** is what states make of it' - Alexander Wendt | Page 40 |
+
 | Global Politics | Dynamic and ever-changing nature of international relations | Page 40 |
 
 **Lack of Empirical Support**: The **Constructivist Perspective** relies heavily on interpretive and qualitative methods, which can be subjective and lack empirical rigor. **Overemphasis on Agency**: The focus on individual agency and interactions may overlook the structural constraints and systemic factors that shape international relations. **Difficulty in Predicting Outcomes**: The Constructivist Perspective's emphasis on the dynamic and ever-changing nature of international relations can make it challenging to predict specific outcomes or identify clear causal relationships.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -70,7 +78,9 @@ The **Constructivist Perspective** is a theoretical approach in international re
       18,
       38,
       40
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -87,7 +97,9 @@ The **Constructivist Perspective** is a theoretical approach in international re
       18,
       38,
       40
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -105,7 +117,10 @@ The **Constructivist Perspective** is a theoretical approach in international re
       18,
       38,
       40
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

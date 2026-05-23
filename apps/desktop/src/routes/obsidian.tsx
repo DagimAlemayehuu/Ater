@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {useState, useRef, useEffect, useMemo, useCallback} from 'react'
+import {useState, useRef, useEffect, useMemo, useCallback, useTransition} from 'react'
 import {
  Trash2, ShieldCheck, RefreshCw, 
  Sparkles, Paperclip, FileText, Folder, ChevronRight, 
@@ -397,6 +397,8 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
  const [loadingNote, setLoadingNote] = useState(false)
  const [searchQuery, setSearchQuery] = useState('')
+ const [inputValue, setInputValue] = useState('')
+ const [isPending, startTransition] = useTransition()
  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
 
  // --- Ater Agent State ---
@@ -786,6 +788,10 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
       setEditedContent('')
       if (initSearch) {
         setSearchQuery(initSearch)
+        setInputValue(initSearch)
+      } else {
+        setSearchQuery('')
+        setInputValue('')
       }
     }
   }, [location.search, selectedPath, selectedPage])
@@ -1693,9 +1699,18 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
           <input
             type="text"
             placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-muted/50 border border-border text-[11px] px-2 py-1.5 pl-7 rounded-none focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 "
+            value={inputValue}
+            onChange={(e) => {
+              const val = e.target.value;
+              setInputValue(val);
+              startTransition(() => {
+                setSearchQuery(val);
+              });
+            }}
+            className={cn(
+              "w-full bg-muted/50 border border-border text-[11px] px-2 py-1.5 pl-7 rounded-none focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 transition-all",
+              isPending && "opacity-75"
+            )}
           />
         </div>
       </div>

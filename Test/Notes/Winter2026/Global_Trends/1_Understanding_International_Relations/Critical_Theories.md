@@ -1,4 +1,5 @@
 ---
+
 title: Critical_Theories
 course: Global Trends
 unit: '1'
@@ -14,6 +15,7 @@ source_pages:
 - 39
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -32,34 +34,38 @@ This analogy maps to the concept of Critical Theories in IR, which oppose common
 
 ## Global Strategy
 
-**Critical Theories** refer to a wide spectrum of theories that have been established in response to mainstream approaches in the field, mainly liberalism and [[Realism]]. 
+**Critical Theories** refer to a wide spectrum of theories that have been established in response to mainstream approaches in the field, mainly liberalism and [[Realism]].
 
 These theories oppose commonly held assumptions in the field of International Relations and provide a voice to individuals who have frequently been marginalized. The underlying mechanism of **Critical Theories** is rooted in their skepticism towards the dominant perspectives in IR, which they argue often overlook the experiences and perspectives of less powerful actors. By challenging these mainstream approaches, Critical Theories aim to uncover the [[Power_Dynamics]] and social structures that shape international relations. This is achieved by critically examining the norms, values, and interests that underpin global interactions, and by highlighting the ways in which these interactions often perpetuate inequality and injustice.
 
 The real-world significance of Critical Theories lies in their ability to bring attention to the voices and experiences of marginalized communities and to challenge the status quo in international relations. By providing an alternative perspective on global issues, Critical Theories can inform more nuanced and equitable foreign policy decisions. Furthermore, by highlighting the social and economic structures that underpin global inequality, Critical Theories can help to identify potential avenues for change and to develop more effective strategies for addressing global challenges. As such, Critical Theories play a crucial role in promoting a more critical and reflective approach to international relations, one that takes into account the diverse perspectives and experiences of all actors involved.
 
+This concept is fundamentally connected to [[Actors_In_International_Relations]] and operates within the [[Actors_In_International_Relations_International_Relations_Definition_Synthesis]] framework.
+
 ## Diplomatic Friction
 
 **Critical Theories** in International Relations (IR) constitute a spectrum of theoretical frameworks that challenge the prevailing assumptions in the field, particularly those of liberalism and [[Realism]]. These theories are characterized by their skepticism towards dominant IR perspectives, which are argued to often marginalize the experiences and viewpoints of less powerful actors. By critically examining the norms, values, and interests underpinning global interactions, **Critical Theories** seek to expose the [[Power_Dynamics]] and social structures that shape IR. This approach aims to provide a voice to marginalized individuals and to promote a more nuanced understanding of global relations. The development of Critical Theories is attributed to scholars such as Andre Gunter Frank and Samir Amin, who focused on dependency theory.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | **Theorist** | **Contribution** |
+
 | --- | --- |
+
 | Andre Gunter Frank | Dependency Theory |
+
 | Samir Amin | Dependency Theory |
+
 | Alexander Wendt | Constructivism, highlighting the role of shared values and interests in shaping IR |
 
 **Overemphasis on Marginalization**: **Critical Theories** may overlook the agency and actions of powerful actors in shaping international relations. **Lack of Clear Alternatives**: These theories often critique mainstream approaches without providing concrete, actionable alternatives. **Difficulty in Operationalization**: The critical perspectives may be challenging to operationalize in diplomatic and policy-making contexts due to their emphasis on nuanced, context-specific understandings of [[Power_Dynamics]].
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -76,7 +82,9 @@ The real-world significance of Critical Theories lies in their ability to bring 
     "source_pages": [
       38,
       39
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -91,7 +99,9 @@ The real-world significance of Critical Theories lies in their ability to bring 
     "source_pages": [
       38,
       39
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -107,7 +117,10 @@ The real-world significance of Critical Theories lies in their ability to bring 
     "source_pages": [
       38,
       39
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

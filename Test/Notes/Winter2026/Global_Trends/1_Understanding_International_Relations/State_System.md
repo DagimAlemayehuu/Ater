@@ -1,4 +1,5 @@
 ---
+
 title: State_System
 course: Global Trends
 unit: '1'
@@ -15,6 +16,7 @@ source_pages:
 - 22
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -29,28 +31,32 @@ The underlying mechanism of the State System is based on the principle of **sove
 
 The real-world significance of the State System is that it has shaped the modern international landscape, with most countries existing as separate nation-states. The State System has also led to the development of international relations as a field of study, as countries interact with one another and navigate issues such as diplomacy, trade, and security. The challenges to the State System, such as nationalism and the resurgence of ethnic and cultural identities, have also led to a re-evaluation of the role of states in world politics and the nature of international relations.
 
+This concept is fundamentally connected to [[Actors_In_International_Relations]] and operates within the [[Actors_In_International_Relations_International_Relations_Definition_Synthesis]] framework.
+
 ## Diplomatic Friction
 
 The **State System** is a political framework comprising sovereign states that interact within the international arena, predicated on the principle of [[Sovereignty]]. This system emerged as a simplification of medieval Europe's complex jurisdictional landscape, characterized by overlapping authorities and allegiances. The **State System** operates on the basis of mutual recognition among states, each respecting the territorial integrity and governing authority of others. A critical aspect of this system is the distribution of power among states, which can manifest as unipolarity, bipolarity, or multipolarity. The State System's evolution has significantly influenced the modern international landscape, shaping the field of international relations and the interactions among nations.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | **Institution** | **Description** | **Influence** |
+
 | --- | --- | --- |
+
 | Church | Spiritual authority with universal claims | Cultural and intellectual life of the Middle Ages |
+
 | Empire (Holy Roman) | Loosely structured federation with universal claims | Central, predominantly German-speaking Europe |
+
 | State | Sovereign entity with territorial boundaries | Emerged as a political entity in medieval Europe |
 
 **Incomplete Sovereignty**: The **State System** assumes complete [[Sovereignty]] of states, but in reality, states may face limitations due to external pressures or internal divisions. **Power Imbalance**: The distribution of power among states can lead to unequal influence, potentially destabilizing the system. **Nationalism and Identity**: Resurgence of nationalism and ethnic identities can challenge the State System, leading to conflicts and re-evaluations of state roles in world politics.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -68,7 +74,9 @@ The **State System** is a political framework comprising sovereign states that i
       3,
       8,
       22
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -85,7 +93,9 @@ The **State System** is a political framework comprising sovereign states that i
       3,
       8,
       22
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -102,7 +112,10 @@ The **State System** is a political framework comprising sovereign states that i
       3,
       8,
       22
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

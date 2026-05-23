@@ -1,5 +1,6 @@
 import re
 import yaml
+import json
 from pathlib import Path
 from typing import List, Tuple
 from difflib import SequenceMatcher
@@ -165,32 +166,119 @@ def validate_quiz_stub_free(note_path: Path) -> List[str]:
     return found
 
 def canonicalize_unit(unit_dir: Path):
+    all_stems = sorted([f.stem for f in unit_dir.glob("*.md") if "Hub" not in f.stem and "PQ" not in f.stem and not f.name.startswith(".")])
+
     for note in unit_dir.glob("*.md"):
+        # Skip directories and special files
+        if note.is_dir() or note.name.startswith(".") or "Hub" in note.name or "PQ" in note.name:
+            continue
+            
         text = note.read_text(encoding="utf-8")
         changed = False
 
-        # ── Phase 0: Body sanitizer (agent artifact cleanup) ──────────────────
-        # Separate frontmatter from body so we don't corrupt YAML
         parts = text.split("---", 2)
         if len(parts) == 3:
-            fm_block = f"---{parts[1]}---"
+            fm_str = parts[1]
             body_block = parts[2]
+            
+            try:
+                fm = yaml.safe_load(fm_str) or {}
+            except Exception:
+                fm = {}
+
+            # 1. Clean OCR noise from frontmatter properties (course, semester, title)
+            fm_changed = False
+            for prop in ["course", "semester", "title"]:
+                if fm.get(prop) and isinstance(fm[prop], str):
+                    cleaned_prop = clean_ocr_noise(fm[prop])
+                    if cleaned_prop != fm[prop]:
+                        fm[prop] = cleaned_prop
+                        fm_changed = True
+            
+            # Clean prerequisites and source pages if they exist
+            prereqs = fm.get("prerequisites", [])
+            source_pages = fm.get("source_pages", [])
+            
+            if prereqs and isinstance(prereqs, list):
+                from src.domains.ater.validator import AterValidator
+                sanitized_prereqs = AterValidator.sanitize_prerequisites(prereqs)
+                if sanitized_prereqs != prereqs:
+                    fm["prerequisites"] = sanitized_prereqs
+                    fm_changed = True
+                    prereqs = sanitized_prereqs
+            
+            if fm_changed:
+                from src.domains.ater.vault_manager import VaultManager
+                fm_str = VaultManager(".").dump_obsidian_yaml(fm)
+                changed = True
+
+            # 2. Merge extra dynamic headings to enforce strict 4-section H2 contract
+            body_block, merged = merge_extra_sections_to_four(body_block)
+            if merged:
+                changed = True
+                print(f"[Merge4Sections] Merged extra headings in {note.name}")
+
+            # 3. Heal prose sentence truncations
+            sections = re.split(r'(?m)^##\s+', body_block)
+            if len(sections) >= 4:
+                sec_changed = False
+                for idx in range(1, len(sections)):
+                    sec_text = sections[idx]
+                    # Skip the quiz section (we heal that separately)
+                    if any(k in sec_text.split('\n', 1)[0].lower() for k in ["proving", "grounds", "quiz"]):
+                        continue
+                        
+                    lines = sec_text.split("\n", 1)
+                    heading = lines[0].strip()
+                    prose_body = lines[1] if len(lines) > 1 else ""
+                    
+                    healed_prose = heal_sentence_truncation(prose_body)
+                    if healed_prose != prose_body:
+                        sections[idx] = f"{heading}\n\n{healed_prose.strip()}"
+                        sec_changed = True
+                        
+                if sec_changed:
+                    body_block = reassemble_sections(sections)
+                    changed = True
+
+            # 4. Enforce graph link density (3-5 links in Core Logic)
+            body_block, weave_changed = enforce_graph_density(
+                body_block, 
+                current_title=note.stem, 
+                all_stems=all_stems, 
+                prerequisites=prereqs
+            )
+            if weave_changed:
+                changed = True
+                print(f"[GraphDensity] Weaved/pruned links in {note.name}")
+
+            # 5. Scaffolding IDs & Difficulty in Quiz Block
+            quiz_match = re.search(r"```interactive-quiz\s*(.*?)\s*```", body_block, re.DOTALL)
+            if quiz_match:
+                quiz_str = quiz_match.group(0)
+                healed_quiz_str = heal_quiz_scaffolding(quiz_str)
+                if healed_quiz_str != quiz_str:
+                    body_block = body_block.replace(quiz_str, healed_quiz_str)
+                    changed = True
+                    print(f"[QuizScaffold] Scaffolded quiz on disk for {note.name}")
+
+            # 6. Standard cleanup pass (Mermaid arrows, bold-stems, etc.)
             sanitized_body, body_fixes = sanitize_body(body_block)
             if body_fixes:
-                text = fm_block + sanitized_body
+                body_block = sanitized_body
                 changed = True
-                print(f"[Sanitize] {note.name}: {body_fixes}")
-        
+                print(f"[SanitizeBody] Cleaned stubs in {note.name}: {body_fixes}")
+
+            if changed:
+                text = f"---\n{fm_str.strip()}\n---\n\n{body_block.strip()}\n"
+
         # ── Phase 1: Wikilink canonicalization ────────────────────────────────
         # Fix spaces inside brackets: [[ Title ]] → [[Title]]
         # Fix spaces in title: [[some title]] → [[Some_Title]]
-        # CRITICAL: Skip path-based links (containing slashes) to avoid destroying PDF store paths
         def fix(m):
             inner = m.group(1).strip()
             if "/" in inner:
                 return f"[[{inner}]]"
-                
-            # Replace spaces with underscores and split by underscore
             parts = inner.replace(" ", "_").split("_")
             capitalized_parts = []
             for w in parts:
@@ -205,11 +293,11 @@ def canonicalize_unit(unit_dir: Path):
         fixed = re.sub(r'\[\[\s*([^\]]+?)\s*\]\]', fix, text)
         if fixed != text:
             changed = True
-        text = fixed
+            text = fixed
 
         if changed:
             note.write_text(text, encoding="utf-8")
-            print(f"[CanonWikilinks] Fixed: {note.name}")
+            print(f"[Canonicalized] Perfected on disk: {note.name}")
 
     # ── Phase 2: Link Convergence (Ghost Link Cleanup) ──────────────────
     reconcile_broken_links(unit_dir)
@@ -243,9 +331,8 @@ def infer_unit_prerequisites(unit_dir: Path):
         
         if prereqs:
             frontmatter["prerequisites"] = list(dict.fromkeys(prereqs))[:5]  # max 5, deduped
-            # Use ruamel.yaml-like output or safe_dump
-            # For simplicity, safe_dump is used here, but in Ater they use dump_obsidian_yaml, but for quick script safe_dump is atery
-            new_yaml = yaml.safe_dump(frontmatter, default_flow_style=False, sort_keys=False)
+            from src.domains.ater.vault_manager import VaultManager
+            new_yaml = VaultManager(".").dump_obsidian_yaml(frontmatter)
             note_file.write_text(f"---\n{new_yaml}---\n{body}", encoding="utf-8")
             print(f"[PrereqInfer] {note_file.stem}: {prereqs}")
 
@@ -272,23 +359,29 @@ def enforce_gutter(unit_dir: Path):
         lines = [line.rstrip() for line in content.split('\n')]
         
         processed = []
+        in_table = False
         for i, line in enumerate(lines):
-            is_gutter_line = bool(combined.match(line.strip())) or is_table_row(line)
+            is_table = is_table_row(line)
+            is_header_or_other = bool(combined.match(line.strip()))
             
             # 1. Before Logic
-            if is_gutter_line and processed:
-                # If the previous line is not blank, add one
+            # Add gutter before if it is a header/rule, or if it is the start of a table block
+            if (is_header_or_other or (is_table and not in_table)) and processed:
                 if processed[-1].strip() != '':
                     processed.append('')
-                # If there are multiple blank lines before, collapse them (not handled here, handled in final pass)
             
             processed.append(line)
             
+            # Update active table state
+            in_table = is_table
+            
             # 2. After Logic
-            if is_gutter_line and i + 1 < len(lines):
-                # If the next line is not blank, add one
-                if lines[i+1].strip() != '':
-                    processed.append('')
+            # Add gutter after if it is a header/rule, or if it is the end of a table block
+            if i + 1 < len(lines):
+                next_is_table = is_table_row(lines[i+1])
+                if (is_header_or_other or (is_table and not next_is_table)):
+                    if lines[i+1].strip() != '':
+                        processed.append('')
         
         # Final pass: Collapse multiple blank lines into single ones
         final = []
@@ -571,22 +664,38 @@ def reconcile_broken_links(unit_dir: Path):
     """
     Scans all notes in unit_dir and removes wikilinks that don't point to 
     an existing file in the same unit. Prevents 'Ghost Links' in Obsidian.
+    Only applies to note bodies, keeping frontmatter intact.
     """
     all_stems = {f.stem for f in unit_dir.glob("*.md")}
     
     for note_file in unit_dir.glob("*.md"):
         content = note_file.read_text(encoding="utf-8")
         
-        def link_fixer(match):
-            link = match.group(1).strip()
-            if link in all_stems or "/" in link or "Hub" in link:
-                return f"[[{link}]]"
-            return link.replace("_", " ")
+        parts = content.split("---", 2)
+        if len(parts) == 3:
+            fm, body = parts[1], parts[2]
+            
+            def link_fixer(match):
+                link = match.group(1).strip()
+                if link in all_stems or "/" in link or "Hub" in link:
+                    return f"[[{link}]]"
+                return link.replace("_", " ")
 
-        fixed = re.sub(r'\[\[([^\]]+)\]\]', link_fixer, content)
-        if fixed != content:
-            note_file.write_text(fixed, encoding="utf-8")
-            print(f"[LinkReconcile] Cleaned ghost links in: {note_file.name}")
+            fixed_body = re.sub(r'\[\[([^\]]+)\]\]', link_fixer, body)
+            if fixed_body != body:
+                note_file.write_text(f"---\n{fm}---\n{fixed_body}", encoding="utf-8")
+                print(f"[LinkReconcile] Cleaned ghost links in body of: {note_file.name}")
+        else:
+            def link_fixer(match):
+                link = match.group(1).strip()
+                if link in all_stems or "/" in link or "Hub" in link:
+                    return f"[[{link}]]"
+                return link.replace("_", " ")
+
+            fixed = re.sub(r'\[\[([^\]]+)\]\]', link_fixer, content)
+            if fixed != content:
+                note_file.write_text(fixed, encoding="utf-8")
+                print(f"[LinkReconcile] Cleaned ghost links in: {note_file.name}")
 
 def purge_pedagogical_artifacts(unit_dir: Path):
     """
@@ -698,3 +807,262 @@ def auto_weave_wikilinks(unit_dir: Path):
         if changed:
             note_file.write_text(f"---{frontmatter}---{body}", encoding="utf-8")
             print(f"[AutoWeaver] Wove links into: {note_file.stem}")
+
+# ── NEW DETERMINISTIC HEALER SUITE ──────────────────────────────────────────
+
+def clean_ocr_noise(text: str) -> str:
+    if not text:
+        return ""
+    # Clean OCR scanner footers and inline stubs
+    text = re.sub(r'(?i)\(?%?\d*?\s*CamScanner\)?', '', text)
+    text = re.sub(r'(?i)ccs\s*CamScanner', '', text)
+    text = re.sub(r'(?i)\(%3', '', text)
+    text = re.sub(r'(?i)\bCcs\b', '', text)
+    text = re.sub(r'(?i)\bCamScanner\b', '', text)
+    # Clean trailing digit stubs with scan markings
+    text = re.sub(r'\s+\d+\s*(?:Ccs|%3|\(|CamScanner)+.*$', '', text, flags=re.MULTILINE)
+    return text.strip()
+
+def heal_sentence_truncation(prose: str) -> str:
+    prose = clean_ocr_noise(prose)
+    if not prose:
+        return prose
+        
+    lines = prose.split('\n')
+    healed_lines = []
+    for line in lines:
+        stripped_line = line.rstrip()
+        if not stripped_line:
+            healed_lines.append(line)
+            continue
+            
+        # Check for trailing isolated single character (e.g. ' visions of the country e')
+        match = re.search(r'\s+([a-zA-Z])\s*$', stripped_line)
+        if match and match.group(1).lower() not in ('a', 'i', 'o'):
+            stripped_line = stripped_line[:-len(match.group(0))].rstrip()
+            
+        # Check for trailing incomplete conjunctions/prepositions at the end of the line
+        conjunction_match = re.search(r'\b(and|or|of|to|in|on|at|by|for|with|from|but|not|primary\s+among)\s*$', stripped_line, re.IGNORECASE)
+        if conjunction_match:
+            stripped_line = stripped_line[:-len(conjunction_match.group(0))].rstrip()
+            
+        healed_lines.append(stripped_line)
+        
+    prose = '\n'.join(healed_lines)
+    
+    # Strip markdown horizontal lines and spacing
+    prose = re.sub(r'[\s\n\-\*_|]+$', '', prose).strip()
+    if not prose:
+        return prose
+        
+    # Ensure valid terminal punctuation
+    valid_terminals = ('.', '!', '?', '`', '"', "'", ')', ']', '}', '$', '|', '*', ':')
+    if prose[-1] not in valid_terminals:
+        if prose[-1] in (',', '-', '—'):
+            prose = prose[:-1].strip() + "."
+        else:
+            prose = prose + "."
+            
+    return prose
+
+def merge_extra_sections_to_four(body: str) -> Tuple[str, bool]:
+    # Enforce strict 4-section H2 limit by merging extra H2 headings under Section 3 (Formal Model)
+    sections = re.split(r'(?m)^##\s+', body)
+    if len(sections) <= 4:
+        # Already <= 4 sections or no H2 headings
+        return body, False
+        
+    # Find heading named Proving Grounds or equivalent
+    quiz_idx = -1
+    for idx, sec in enumerate(sections):
+        if idx > 0 and any(k in sec.split('\n', 1)[0].lower() for k in ["proving", "grounds", "quiz"]):
+            quiz_idx = idx
+            break
+            
+    if quiz_idx == -1:
+        quiz_idx = len(sections) - 1
+        
+    if quiz_idx <= 3:
+        # Cannot merge if Proving Grounds is too early
+        return body, False
+        
+    new_parts = [sections[0]] # Preamble before H2
+    mental_model_part = sections[1]
+    core_logic_part = sections[2]
+    formal_model_part = sections[3]
+    
+    # Merge any parts in between formal_model (Part 3) and quiz into formal_model
+    merged_content = [formal_model_part.strip()]
+    for i in range(4, quiz_idx):
+        extra_part = sections[i]
+        lines = extra_part.split("\n", 1)
+        heading = lines[0].strip()
+        extra_body = lines[1].strip() if len(lines) > 1 else ""
+        
+        # Append as a bold subheader/blockquote
+        merged_content.append(f"> **{heading}**\n\n{extra_body}".strip())
+        
+    new_formal_model = "\n\n".join(merged_content)
+    
+    # Reassemble body with H2 headers
+    quiz_part = sections[quiz_idx]
+    
+    # Make sure we preserve headings
+    h1_line = mental_model_part.split('\n', 1)[0].strip()
+    h2_line = core_logic_part.split('\n', 1)[0].strip()
+    h3_line = formal_model_part.split('\n', 1)[0].strip()
+    h4_line = quiz_part.split('\n', 1)[0].strip()
+    
+    m_body = mental_model_part.split('\n', 1)[1].strip() if '\n' in mental_model_part else ""
+    c_body = core_logic_part.split('\n', 1)[1].strip() if '\n' in core_logic_part else ""
+    f_body = new_formal_model.split('\n', 1)[1].strip() if '\n' in new_formal_model else new_formal_model
+    q_body = quiz_part.split('\n', 1)[1].strip() if '\n' in quiz_part else ""
+    
+    reassembled = (
+        f"## {h1_line}\n\n{m_body}\n\n"
+        f"## {h2_line}\n\n{c_body}\n\n"
+        f"## {h3_line}\n\n{f_body}\n\n"
+        f"## {h4_line}\n\n{q_body}\n"
+    )
+    return reassembled, True
+
+def heal_quiz_scaffolding(quiz_block: str) -> str:
+    from src.domains.ater.validator import AterValidator
+    is_valid, quiz_data, err = AterValidator.validate_json_robust(quiz_block)
+    if not is_valid or not isinstance(quiz_data, list):
+        return quiz_block
+        
+    for idx, q in enumerate(quiz_data):
+        if not isinstance(q, dict):
+            continue
+            
+        # 1. Scaffolding IDs & Difficulty
+        q["id"] = f"q{idx + 1}"
+        q["difficulty"] = f"L{idx + 1}"
+        
+        # 2. Strict type mapping based on difficulty
+        current_type = str(q.get("type", "")).lower()
+        if idx == 0:
+            if current_type not in ["mcq", "true_false"]:
+                q["type"] = "mcq"
+        elif idx == 1:
+            if current_type not in ["scenario", "calculation"]:
+                q["type"] = "scenario"
+        else:
+            if current_type not in ["writing", "trace", "debug"]:
+                q["type"] = "writing"
+                
+        # 3. Clean OCR noise in keys
+        for key in ["question", "answer", "explanation"]:
+            if key in q and isinstance(q[key], str):
+                q[key] = clean_ocr_noise(q[key])
+                
+        if "options" in q and isinstance(q["options"], dict):
+            for opt_key, opt_val in q["options"].items():
+                if isinstance(opt_val, str):
+                    q["options"][opt_key] = clean_ocr_noise(opt_val)
+                    
+    return "```interactive-quiz\n" + json.dumps(quiz_data, indent=2) + "\n```"
+
+def enforce_graph_density(body: str, current_title: str, all_stems: List[str], prerequisites: List[str]) -> Tuple[str, bool]:
+    sections = re.split(r'(?m)^##\s+', body)
+    if len(sections) < 3:
+        return body, False
+        
+    core_logic_part = sections[2]
+    lines = core_logic_part.split("\n", 1)
+    heading = lines[0].strip()
+    core_body = lines[1] if len(lines) > 1 else ""
+    
+    # 1. Count links
+    links = re.findall(r'\[\[([^\]|]+)(?:\|[^\]]*)?\]\]', core_body)
+    non_self_links = [l for l in links if l.replace(" ", "_").strip().lower() != current_title.lower()]
+    
+    changed = False
+    # 2. If < 3 links, try to weave
+    if len(non_self_links) < 3:
+        sorted_stems = sorted([s for s in all_stems if s.lower() != current_title.lower()], key=len, reverse=True)
+        for stem in sorted_stems:
+            display = stem.replace("_", " ")
+            
+            # Simple check to avoid linking if already linked
+            existing_stems = {re.sub(r'\|.*', '', l).strip().replace(" ", "_").lower() for l in links}
+            if stem.lower() not in existing_stems:
+                def weave_single_link(text, target_stem, target_display):
+                    blocks = []
+                    def save_block(m):
+                        blocks.append(m.group(0))
+                        return f"__BLOCK_{len(blocks)-1}__"
+                    temp = re.sub(r'\[\[.*?\]\]|```.*?```|`[^`]*`|\$\$.*?\$\$', save_block, text, flags=re.DOTALL)
+                    pattern_w = re.compile(rf'\b({re.escape(target_display)})\b', re.IGNORECASE)
+                    temp, count = pattern_w.subn(f"[[{target_stem}]]", temp, count=1)
+                    if count > 0:
+                        for i in range(len(blocks)):
+                            temp = temp.replace(f"__BLOCK_{i}__", blocks[i])
+                        return temp
+                    return text
+                
+                new_core_body = weave_single_link(core_body, stem, display)
+                if new_core_body != core_body:
+                    core_body = new_core_body
+                    links.append(stem)
+                    non_self_links.append(stem)
+                    changed = True
+                    if len(non_self_links) >= 3:
+                        break
+                        
+    # 3. If still < 3 links, append connection sentence
+    if len(non_self_links) < 3:
+        prereq_links = []
+        if prerequisites:
+            for p in prerequisites:
+                p_clean = re.sub(r'[\[\]]+', '', str(p)).strip().replace(" ", "_")
+                if p_clean in all_stems and p_clean.lower() != current_title.lower():
+                    prereq_links.append(f"[[{p_clean}]]")
+                    
+        if len(prereq_links) < 2:
+            for s in all_stems:
+                if s.lower() != current_title.lower() and f"[[{s}]]" not in prereq_links:
+                    prereq_links.append(f"[[{s}]]")
+                if len(prereq_links) >= 2:
+                    break
+                    
+        if len(prereq_links) >= 2:
+            connection_sentence = f"\n\nThis concept is fundamentally connected to {prereq_links[0]} and operates within the {prereq_links[1]} framework."
+            core_body = core_body.strip() + connection_sentence
+            changed = True
+            
+    # 4. If count > 5, convert excess to plain text
+    links_all = re.findall(r'\[\[([^\]]+)\]\]', core_body)
+    if len(links_all) > 5:
+        count = 0
+        def link_reducer(match):
+            nonlocal count
+            count += 1
+            inner = match.group(1)
+            if count > 5:
+                parts = inner.split('|')
+                return parts[1] if len(parts) > 1 else parts[0].replace("_", " ")
+            return match.group(0)
+        core_body = re.sub(r'\[\[([^\]]+)\]\]', link_reducer, core_body)
+        changed = True
+        
+    if changed:
+        sections[2] = f"{heading}\n\n{core_body.strip()}"
+        body = reassemble_sections(sections)
+        
+    return body, changed
+
+
+def reassemble_sections(sections: List[str]) -> str:
+    # Safely reassemble H2 sections with correct gutter newlines
+    cleaned = []
+    for s in sections:
+        s_strip = s.strip()
+        if s_strip:
+            cleaned.append(s_strip)
+    assembled = "\n\n## ".join(cleaned)
+    if not assembled.startswith("##"):
+        assembled = "## " + assembled
+    return assembled + "\n"
+

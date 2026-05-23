@@ -1,4 +1,5 @@
 ---
+
 title: Actors_In_International_Relations
 course: Global Trends
 unit: '1'
@@ -18,6 +19,7 @@ source_pages:
 - 25
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -36,25 +38,28 @@ The real-world significance of Actors in International Relations lies in their i
 
 The concept of **Actors in International Relations** encompasses various political entities that interact on the global stage, influencing one another through complex [[Power_Dynamics]]. These entities, which include states, international organizations, and multinational corporations, operate within a framework defined by [[Sovereignty]] and international law. The interactions between these actors shape the structure of the [[International_System]], with states traditionally being the primary actors, exercising **sovereignty** and governing their territories. However, the landscape has evolved to include non-state actors, which have gained significance in international relations. Understanding these actors and their interactions is crucial for grasping the intricacies of global politics.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | **Actor Type** | **Description** | **Characteristics** |
+
 | --- | --- | --- |
+
 | State Actors | Traditional primary **actors in international relations** | Territorial extension, borders, capital, army, foreign ministry, flag, national anthem, [[Sovereignty]] |
+
 | International Organizations | Entities formed by states to facilitate cooperation | Membership of states, defined purposes, structured governance |
+
 | Multinational Corporations | Non-state actors with significant economic influence | Global operations, profit-driven, legal personality |
+
 | Societies' Citizens | Individuals and groups influencing international relations | Participation in international interactions, impact on foreign policy |
 
 **Incomplete Sovereignty**: Non-state actors may not possess full [[Sovereignty]], limiting their influence in international relations. **Unequal Power Dynamics**: The power imbalance between state and non-state actors can skew international interactions, favoring more powerful entities. **Evolving Actor Roles**: The roles and influence of different **actors in international relations** can change over time, challenging traditional understandings of global politics.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -72,7 +77,9 @@ The concept of **Actors in International Relations** encompasses various politic
       14,
       15,
       25
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -89,7 +96,9 @@ The concept of **Actors in International Relations** encompasses various politic
       14,
       15,
       25
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -107,7 +116,10 @@ The concept of **Actors in International Relations** encompasses various politic
       14,
       15,
       25
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

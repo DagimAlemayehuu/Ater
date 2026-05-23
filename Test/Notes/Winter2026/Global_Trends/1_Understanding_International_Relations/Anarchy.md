@@ -1,4 +1,5 @@
 ---
+
 title: Anarchy
 course: Global Trends
 unit: '1'
@@ -15,6 +16,7 @@ source_pages:
 - 38
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -29,21 +31,30 @@ In an [[Anarchic_System]], states operate without a higher authority to enforce 
 
 The real-world significance of anarchy is that it can lead to constant tensions and threats of war in international relations. In an **anarchic system**, diplomacy becomes a crucial tool for states to navigate their interactions and avoid misunderstandings. However, the lack of a central authority to enforce rules means that states must be cautious and prepared to defend their interests. This can result in a system characterized by competition, conflict, and an ongoing struggle for power and security. As a result, understanding anarchy is essential for grasping the complexities of international relations and the challenges of maintaining peace and stability in a world without a central authority.
 
+This concept is fundamentally connected to [[Actors_In_International_Relations]] and operates within the [[Actors_In_International_Relations_International_Relations_Definition_Synthesis]] framework.
+
 ## Diplomatic Friction
 
 **Anarchy** is characterized by the absence of a centralized authority, leading to a decentralized system where sovereign states operate without a higher power to enforce rules or maintain order. This situation arises from the principles of [[Sovereignty]] and formal equality among states, where each state has ultimate authority within its territory and the freedom to act as it sees fit in relation to other states. The lack of a central authority necessitates that states rely on their own resources or form alliances to ensure their security, often resulting in precarious power balances and an incentive for aggressive behavior. Consequently, an [[Anarchic_System]] is marked by constant tensions and threats of war, as states prioritize their own interests in the absence of an overarching authority to govern international relations.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Concept | Description | Source Reference |
+
 | --- | --- | --- |
+
 | **Anarchy** | Absence of centralized authority | Page 12 |
+
 | [[Sovereignty]] | Ultimate authority within a state's territory | Page 26 |
+
 | Formal Equality | Equal rights and obligations among states | Page 26 |
+
 | Decentralized Power | No shared institutions to enforce rules | Page 12 |
+
 | Self-Interest | States prioritize their own interests | Page 38 |
+
 | Diplomacy | Crucial tool for navigating interactions | Page 12 |
 
 **Power Imbalance**: The absence of a central authority can lead to significant power imbalances between states, as larger or more powerful states may exploit their advantages to influence or dominate smaller or weaker states.
@@ -52,12 +63,10 @@ The real-world significance of anarchy is that it can lead to constant tensions 
 
 **Conflict Escalation**: The lack of a central authority to enforce rules or mediate disputes can lead to rapid escalation of conflicts between states, as there is no higher power to intervene and prevent the situation from spiraling out of control.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -75,7 +84,9 @@ The real-world significance of anarchy is that it can lead to constant tensions 
       12,
       26,
       38
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -92,7 +103,9 @@ The real-world significance of anarchy is that it can lead to constant tensions 
       12,
       26,
       38
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -109,7 +122,10 @@ The real-world significance of anarchy is that it can lead to constant tensions 
       12,
       26,
       38
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

@@ -64,12 +64,6 @@ def build_dynamic_section_plan(domain: Dict[str, Any], modality: str = "") -> Li
 
 
 def _render_dynamic_sections(data: Dict[str, Any]) -> str:
-    plan = data.get("section_plan") or [
-        {"id": "core_logic", "heading": data.get("h1_title", "The Core Logic Explained")},
-        {"id": "formal_model", "heading": data.get("h2_title", "The Textbook Translation")},
-        {"id": "source_artifact", "heading": data.get("artifact_title", "Source Artifact")},
-    ]
-
     # Enforce Java Code Blocks in CS-SOFTWARE Modality
     mode = data.get("mode") or ""
     artifact_content = data.get("artifact_content", "")
@@ -84,28 +78,39 @@ def _render_dynamic_sections(data: Dict[str, Any]) -> str:
                 if "Table" in str(data.get("artifact_type", "")) or not data.get("artifact_type"):
                     data["artifact_type"] = "Executable Java Code Block"
 
-    content_map = {
-        "core_logic": data.get("core_logic", ""),
-        "formal_model": data.get("formal_model", ""),
-        "source_artifact": "\n\n".join(
-            part.strip()
-            for part in [
-                f"> **{data.get('artifact_type')}**" if data.get("artifact_type") else "",
-                data.get("artifact_content", ""),
-                data.get("dynamic3_content", ""),
-            ]
-            if part and str(part).strip()
-        ),
-    }
-
+    # We want exactly two dynamic sections: H1 (core_logic) and H2 (formal_model).
+    # We merge the source_artifact content directly into formal_model to preserve the 4-section H2 limit.
+    h1_heading = data.get("h1_title") or "The Core Logic Explained"
+    h2_heading = data.get("h2_title") or "The Textbook Translation"
+    
+    core_logic_body = str(data.get("core_logic", "")).strip()
+    
+    # Render the formal model prose
+    formal_model_prose = str(data.get("formal_model", "")).strip()
+    
+    # Render the source artifact details
+    artifact_parts = []
+    if data.get("artifact_type"):
+        artifact_parts.append(f"> **{data.get('artifact_type')}**")
+    if data.get("artifact_content"):
+        artifact_parts.append(str(data.get("artifact_content")).strip())
+    if data.get("dynamic3_content"):
+        artifact_parts.append(str(data.get("dynamic3_content")).strip())
+        
+    artifact_body = "\n\n".join(part for part in artifact_parts if part)
+    
+    # Merge them under H2
+    if artifact_body:
+        formal_model_body = f"{formal_model_prose}\n\n{artifact_body}".strip()
+    else:
+        formal_model_body = formal_model_prose
+        
     rendered = []
-    for section in plan[:4]:
-        heading = str(section.get("heading") or "").strip()
-        sid = section.get("id")
-        body = str(content_map.get(sid, "")).strip()
-        if not heading or not body:
-            continue
-        rendered.append(f"## {heading}\n\n{body}")
+    if core_logic_body:
+        rendered.append(f"## {h1_heading}\n\n{core_logic_body}")
+    if formal_model_body:
+        rendered.append(f"## {h2_heading}\n\n{formal_model_body}")
+        
     return "\n\n".join(rendered)
 
 

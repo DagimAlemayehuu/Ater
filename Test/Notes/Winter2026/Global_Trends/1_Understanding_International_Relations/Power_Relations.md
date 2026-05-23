@@ -1,4 +1,5 @@
 ---
+
 title: Power_Relations
 course: Global Trends
 unit: '1'
@@ -15,6 +16,7 @@ source_pages:
 - 32
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -33,26 +35,30 @@ The real-world significance of power relations lies in its ability to shape the 
 
 **Power relations** in international relations refer to the dynamics of influence and control among actors in the supra-national domain, where power determines the relative influence of actors and shapes the structure of the [[International_System]]. This concept is rooted in the relational definition of power, formulated by Robert Dahl, which understands power as 'A's' ability to get 'B' to do something it would not otherwise do. The distribution of power, coercion, and bargaining among states and organizations significantly impacts international order and interdependence. Furthermore, the unequal distribution of power necessitates that states navigate and negotiate [[Power_Dynamics]] to achieve their interests. The formative assumptions of [[Realism]], a school of thought in international relations, center on the view that the **international system** is 'anarchic,' devoid of an all-encompassing authority, which underscores the significance of **power relations**.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Aspect | Description | Source Reference |
+
 | --- | --- | --- |
+
 | Definition of Power | Ability of 'A' to get 'B' to do something it would not otherwise do | Robert Dahl |
+
 | Power in International Relations | Determines relative influence of actors and shapes the [[International_System]] | Hans Morgenthau |
+
 | Number of UN Member States in 2000s | 189-192 | Source Text |
+
 | Year UN Charter Signed | 1945 | Source Text |
+
 | Initial Signatories of UN Charter | 51 states | Source Text |
 
 **Unequal Distribution of Capabilities**: The assumption that all actors have equal capabilities, which is not reflective of real-world [[Power_Dynamics]]. **Anarchic International System**: The absence of a centralized authority in international relations can lead to power vacuums and instability. **Static Power Balance**: The notion that power balance remains constant over time, which neglects the dynamic nature of **power relations**.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -70,7 +76,9 @@ The real-world significance of power relations lies in its ability to shape the 
       7,
       25,
       32
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -87,7 +95,9 @@ The real-world significance of power relations lies in its ability to shape the 
       7,
       25,
       32
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -104,7 +114,10 @@ The real-world significance of power relations lies in its ability to shape the 
       7,
       25,
       32
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

@@ -1,4 +1,5 @@
 ---
+
 title: Long_Range_Goals
 course: Global Trends
 unit: '2'
@@ -13,6 +14,7 @@ source_pages:
 - 12
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -27,34 +29,36 @@ The underlying mechanism of long range goals involves states making universal de
 
 The real-world significance of long range goals lies in their potential to have far-reaching international repercussions. Every country has its own unique set of visions and ambitions, proportional to its relative strength and capabilities, which it seeks to realize in the long run. As states pursue their long range goals, they can shape the course of international relations and influence the global order. The impact of long range goals can be significant, as they have the potential to redefine the rules and norms that govern international interactions.
 
+This concept is fundamentally connected to [[Core_Interests_And_Values]] and operates within the [[Diplomacy]] framework.
+
 ## The Macro Model & Jargon
 
 Long-range goals pertain to the envisioned ultimate political or ideological configuration of the international system and the regulatory framework governing inter-state relations. These goals are distinguished by their universal applicability and the ambition to reshape the global order according to a specific plan or vision. The pursuit of long-range goals involves states making broad demands that aim to reconstruct the international system in alignment with their own visions and capabilities. This process is intrinsically linked to the capabilities and power of states, as the feasibility of realizing these goals depends on their ability to project influence on a global scale. Consequently, long-range goals have significant implications for international relations, as they can redefine the norms and structures that govern global interactions.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Basic Mermaid flowchart (graph LR)**
 
 ```mermaid
+
 graph LR
     A[**Long Range Goals**] --> B[Universal Demands]
     A --> C[Reconstruct International System]
     B --> D[States' Visions and Ambitions]
     C --> E[Capabilities and Powers]
     D --> F[International Repercussions]
-    E --> F
+    E -->
+
 ```
 
 **Infeasibility Due to Power Disparities**: The realization of long-range goals may be hindered by significant disparities in capabilities and power among states, making it challenging for some to project their visions globally.
 **Lack of International Consensus**: The pursuit of long-range goals often requires international cooperation and consensus, which can be difficult to achieve due to divergent state interests and visions for the international system.
 **Unintended Consequences**: The implementation of long-range goals can lead to unintended consequences, such as destabilization of the existing international order or the emergence of conflicting interests among states.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "true_false",
@@ -64,7 +68,9 @@ graph LR
     "explanation_page": 12,
     "source_pages": [
       12
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -79,7 +85,9 @@ graph LR
     "explanation_page": 12,
     "source_pages": [
       12
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "trace",
@@ -89,7 +97,10 @@ graph LR
     "explanation_page": 12,
     "source_pages": [
       12
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

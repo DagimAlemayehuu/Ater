@@ -1,4 +1,5 @@
 ---
+
 title: Diplomacy_And_Foreign_Policy
 course: Global Trends
 unit: '2'
@@ -16,6 +17,7 @@ source_pages:
 generated: true
 skeleton_fallback: true
 read: false
+
 ---
 
 ## Mental Model
@@ -24,30 +26,32 @@ read: false
 
 ## The Global Economic Engine
 
-[[Diplomacy]] And [[Foreign_Policy]] works by connecting the source's key terms, rules, and examples into one usable idea. Defining [[National_Interest]] National interest ¢ the raison detat, (the reason of state), to justify its actions and policy towards other states at international level (%3 CamScanner v minimum goal a state would like to achieve is survival - protect their physical, political, and cultural identities against any encroachment by other states v Foreign policy also involves specific instruments and tactics that must be employed to realize those objectives and goals. The most widely employed instruments include o diplomatic bargaining o economic instruments o propaganda o terrorism (sabotage) o use of force (war) " Each instrument is used to affect the behaviors of other states, and has an element of power v Diplomacy - states attempt to affect the behavior of others through bargaining that involves less element of power as compared to other instruments 2.2.2.
+[[Diplomacy]] And [[Foreign_Policy]] works by connecting the source's key terms, rules, and examples into one usable idea. Defining [[National_Interest]] National interest ¢ the raison detat, (the reason of state), to justify its actions and policy towards other states at international level  v minimum goal a state would like to achieve is survival - protect their physical, political, and cultural identities against any encroachment by other states v Foreign policy also involves specific instruments and tactics that must be employed to realize those objectives and goals. The most widely employed instruments include o diplomatic bargaining o economic instruments o propaganda o terrorism (sabotage) o use of force (war) " Each instrument is used to affect the behaviors of other states, and has an element of power v Diplomacy - states attempt to affect the behavior of others through bargaining that involves less element of power as compared to other instruments 2.2.2.
 
 ## The Macro Model & Jargon
 
-In formal terms, Diplomacy And Foreign Policy must be read through the exact language and constraints shown in the source. Foreign Policy Objectives e Foreign policy, just like any policy, sets short term, middle term and long term goals and objectives to be achieved in proportion to a state's capability e Such classifications of foreign policy objectives is based on the combination of the three criteria (%3 CamScanner v They play the carrot and stick diplomacy to affect the outcomes of events or influence the behaviors of others o like Intervention, threat of use of force and some time, use of force v" The more unilateral a state is the more likely to initiate actions in international relations or to resist initiatives taken by others 2.2.5. Instruments of Foreign Policy 1. Diplomacy e Diplomacy - process between actors (diplomats, usually representing a state) who exist within a system (international relations) and engage in private and public dialogue v diplomacy can promote exchanges that enhance trade, culture, wealth and knowledge e Diplomacy is not foreign policy but part of foreign policy ¢ state's foreign policy has two key ingredients; its actions and its strategies for achieving its goals » The interaction one state has with another is considered the act of its foreign policy. This act typically takes place via interactions between government personnel through diplomacy 18 (%3 CamScanner
+In formal terms, Diplomacy And Foreign Policy must be read through the exact language and constraints shown in the source. Foreign Policy Objectives e Foreign policy, just like any policy, sets short term, middle term and long term goals and objectives to be achieved in proportion to a state's capability e Such classifications of foreign policy objectives is based on the combination of the three criteria  v They play the carrot and stick diplomacy to affect the outcomes of events or influence the behaviors of others o like Intervention, threat of use of force and some time, use of force v" The more unilateral a state is the more likely to initiate actions in international relations or to resist initiatives taken by others 2.2.5. Instruments of Foreign Policy 1. Diplomacy e Diplomacy - process between actors (diplomats, usually representing a state) who exist within a system (international relations) and engage in private and public dialogue v diplomacy can promote exchanges that enhance trade, culture, wealth and knowledge e Diplomacy is not foreign policy but part of foreign policy ¢ state's foreign policy has two key ingredients; its actions and its strategies for achieving its goals » The interaction one state has with another is considered the act of its foreign policy. This act typically takes place via interactions between government personnel through diplomacy 18
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table**
 
 | Source Detail | Meaning |
+
 |---|---|
+
 | Diplomacy And Foreign Policy | The focused concept being studied. |
+
 | Macroeconomist | Defining National Interest National interest ¢ the raison detat, (the reason of state), to |
+
 | Source excerpt | The only authority for definitions and constraints. |
 
 Use this section as a compact bridge between the source wording and the exact place where a student might get confused.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -60,14 +64,18 @@ Use this section as a compact bridge between the source wording and the exact pl
     },
     "answer": "A",
     "explanation": "The source context connects Diplomacy And Foreign Policy to concrete behavior, syntax, or logical structure from page 1.",
-    "explanation_page": 1
+    "explanation_page": 1,
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
-    "type": "true_false",
-    "question": "Defining National Interest National interest \u00a2 the raison detat, (the reason of state), to justify its actions and policy towards other states at international level (%3 CamScanner v minimum goal a state would like to achieve is survival - protect their physical, political, and cultural identities against any encroachment by other states v Foreign policy also involves specific instruments and tactics that must be employed to realize those objectives and goals",
+    "type": "scenario",
+    "question": "Defining National Interest National interest \u00a2 the raison detat, (the reason of state), to justify its actions and policy towards other states at international level  v minimum goal a state would like to achieve is survival - protect their physical, political, and cultural identities against any encroachment by other states v Foreign policy also involves specific instruments and tactics that must be employed to realize those objectives and goals",
     "answer": true,
     "explanation": "This follows directly from the source's definition of Diplomacy And Foreign Policy on page 1.",
-    "explanation_page": 1
+    "explanation_page": 1,
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -78,7 +86,10 @@ Use this section as a compact bridge between the source wording and the exact pl
       "behavior"
     ],
     "explanation": "This checks whether the learner can move from the source wording to a usable explanation of Diplomacy And Foreign Policy.",
-    "explanation_page": 1
+    "explanation_page": 1,
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

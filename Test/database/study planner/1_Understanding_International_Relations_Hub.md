@@ -1,4 +1,17 @@
-
+---
+confidence: "null"
+course: "Global Trends"
+generated: true
+semester: "Winter2026"
+source: "[[Inbox/Generated/Winter2026/Global_Trends/Chapter1-ocr.pdf]]"
+source_pages:
+ - "1"
+status: "Not Started"
+study_date: "null"
+title: "1_Understanding_International_Relations_Hub"
+type: "Hub"
+unit: 1
+---
 
 ## Overview
 
@@ -17,35 +30,35 @@ An integrated synthesis of these concepts reveals that the international system 
 
 ## Connections
 
-- [ ] Nationalism Definition
-- [ ] State System
-    - [ ] Nationalism And Sovereignty
-    - [ ] Globalization And International Relations
-    - [ ] Anarchical System International System State System Synthesis
-    - [ ] Power Dynamics
-    - [ ] State System Definition
-        - [ ] International Relations Definition
-            - [ ] Actors In International Relations International Relations Definition Synthesis
-            - [ ] International Relations Model
-            - [ ] State Centrism
-            - [ ] Realism In International Relations
-    - [ ] International System
-        - [ ] Power Distribution
-        - [ ] Structuralism And Marxism
-    - [ ] Anarchical System
-- [ ] Interconnected World
-- [ ] Human Nature In International Relations
-- [ ] Power Relations
-- [ ] State Sovereignty
-    - [ ] Actors In International Relations
-    - [ ] Non State Actors
-    - [ ] Transnational Interactions
-- [ ] Anarchy
-- [ ] Sovereignty
-- [ ] Constructivist Perspective
-- [ ] Levels Of Analysis
-- [x] Anarchic System
-- [ ] Liberalism In International Relations
-    - [ ] Democratic Peace Theory
-- [ ] Realism
-- [ ] Critical Theories
+- [ ] [[Nationalism_Definition]]
+- [ ] [[State_System]]
+    - [ ] [[Nationalism_And_Sovereignty]]
+    - [ ] [[Globalization_And_International_Relations]]
+    - [ ] [[Anarchical_System_International_System_State_System_Synthesis]]
+    - [ ] [[Power_Dynamics]]
+    - [ ] [[State_System_Definition]]
+        - [ ] [[International_Relations_Definition]]
+            - [ ] [[Actors_In_International_Relations_International_Relations_Definition_Synthesis]]
+            - [ ] [[International_Relations_Model]]
+            - [ ] [[State_Centrism]]
+            - [ ] [[Realism_In_International_Relations]]
+    - [ ] [[International_System]]
+        - [ ] [[Power_Distribution]]
+        - [ ] [[Structuralism_And_Marxism]]
+    - [ ] [[Anarchical_System]]
+- [ ] [[Interconnected_World]]
+- [ ] [[Human_Nature_In_International_Relations]]
+- [ ] [[Power_Relations]]
+- [ ] [[State_Sovereignty]]
+    - [ ] [[Actors_In_International_Relations]]
+    - [ ] [[Non_State_Actors]]
+    - [ ] [[Transnational_Interactions]]
+- [ ] [[Anarchy]]
+- [ ] [[Sovereignty]]
+- [ ] [[Constructivist_Perspective]]
+- [ ] [[Levels_Of_Analysis]]
+- [ ] [[Anarchic_System]]
+- [ ] [[Liberalism_In_International_Relations]]
+    - [ ] [[Democratic_Peace_Theory]]
+- [ ] [[Realism]]
+- [ ] [[Critical_Theories]]

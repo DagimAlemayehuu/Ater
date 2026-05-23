@@ -1,4 +1,5 @@
 ---
+
 title: Human_Nature_In_International_Relations
 course: Global Trends
 unit: '1'
@@ -15,6 +16,7 @@ source_pages:
 - 33
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -29,28 +31,32 @@ The underlying mechanism of **Human Nature In International Relations** involves
 
 The real-world significance of Human Nature In International Relations lies in its implications for understanding and predicting international interactions, cooperation, and conflict. If human beings are indeed innately good, then international relations can be expected to trend towards greater cooperation, peace, and harmony. Conversely, if human nature is driven by self-interest and a desire for power, then international relations are likely to be characterized by competition, conflict, and the pursuit of national interests. This has significant consequences for policymakers, international organizations, and other actors seeking to promote peace, stability, and cooperation in the [[International_System]].
 
+This concept is fundamentally connected to [[Actors_In_International_Relations]] and operates within the [[Actors_In_International_Relations_International_Relations_Definition_Synthesis]] framework.
+
 ## Diplomatic Friction
 
 **Human Nature In International Relations** refers to the role of human characteristics, behaviors, and tendencies in shaping interactions between nations and international organizations. This concept is rooted in the fundamental difference in perspective on human nature between realists and liberals. Realists assume that human beings are driven by self-interest and a desire for power, whereas liberals view human beings as innately good and capable of cooperation. This dichotomy underlies distinct approaches to understanding international relations, with realists emphasizing the pursuit of national interests and liberals promoting cooperation and peaceful resolution of conflicts. The study of **human nature in international relations** is crucial for understanding and predicting international interactions, cooperation, and conflict.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Perspective | View of Human Nature | Implications for International Relations |
+
 | --- | --- | --- |
+
 | [[Realism]] | Human beings are driven by self-interest and a desire for power | International relations are characterized by competition, conflict, and the pursuit of national interests |
+
 | Liberalism | Human beings are innately good and capable of cooperation | International relations can trend towards greater cooperation, peace, and harmony |
+
 | Historical Context | 1800: No international organizations; 1945: United Nations Charter signed by 51 states; 2000s: UN grew to 189-192 member states | Expansion of international organizations and interdependence among states |
 
 **Assumption of Human Nature**: The concept of **human nature in international relations** relies heavily on assumptions about human behavior, which may not always be accurate. **Cultural and Historical Context**: The perspectives on human nature are influenced by cultural and historical contexts, which can limit the generalizability of the theories. **Complexity of International Interactions**: The complexity of international interactions and the multitude of factors influencing state behavior can make it challenging to isolate the role of human nature.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -68,7 +74,9 @@ The real-world significance of Human Nature In International Relations lies in i
       7,
       27,
       33
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -85,7 +93,9 @@ The real-world significance of Human Nature In International Relations lies in i
       7,
       27,
       33
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -103,7 +113,10 @@ The real-world significance of Human Nature In International Relations lies in i
       7,
       27,
       33
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

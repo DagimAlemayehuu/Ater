@@ -1,4 +1,5 @@
 ---
+
 title: Modes_Of_Operation
 course: Global Trends
 unit: '2'
@@ -16,6 +17,7 @@ source_pages:
 - 17
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -24,21 +26,24 @@ A master chef can choose to prepare a dish using a collaborative kitchen, where 
 
 ## The Global Economic Engine
 
-**Modes Of Operation** refer to the method of operation to address different issues, which can be pursued through either multilateral or unilateral means. 
+**Modes Of Operation** refer to the method of operation to address different issues, which can be pursued through either multilateral or unilateral means.
 
 The underlying mechanism for choosing a mode of operation involves considering the most effective approach to achieve desired outcomes. A multilateral approach involves seeking solutions through diplomatic forums where several states participate, such as the United Nations, rather than relying on purely bilateral country-to-country approaches. On the other hand, a unilateral approach involves using individual actions to influence outcomes. The choice between these two **modes of operation** depends on various factors, including the country's power and capability, the nature of the issue at hand, and the desired level of collective action. Countries may opt for a multilateral framework as the best strategy to address issues, regardless of their power and capability, as it can enhance their collective bargaining power.
 
 The real-world significance of Modes Of Operation lies in their consequences for international relations and global governance. Countries that adopt a multilateral approach can pool their resources and expertise to address common challenges, while those that prefer a unilateral approach may be able to act more swiftly and decisively, but may also face greater risks and challenges. For instance, most developing countries use multilateral approaches because it enhances their collective bargaining power vis-a-vis other developed countries and is often less costly than establishing bilateral relations. In contrast, countries like Germany and Scandinavian countries may opt for multilateral frameworks as a best strategy to address issues, demonstrating that the choice of mode of operation is not necessarily determined by a country's power or capability.
 
+This concept is fundamentally connected to [[Scope_Of_Foreign_Policy]] and operates within the [[Foreign_Policy]] framework.
+
 ## The Macro Model & Jargon
 
 **Modes Of Operation** refer to the methodological approaches employed by countries to address various issues, which can be categorized into multilateral and unilateral means. The multilateral approach involves collaborative diplomatic efforts through forums such as the United Nations, whereas the unilateral approach entails individual actions to influence outcomes. The selection of a mode of operation is contingent upon factors including the country's capabilities, the nature of the issue, and the desired level of collective action. A country's operational philosophy, which may emphasize either bold and sweeping actions or more measured and collaborative efforts, underpins its choice of mode of operation. The implications of these choices are far-reaching, influencing international relations and global governance.
 
-## Step Trace
+> **Step Trace**
 
 > **Basic Mermaid flowchart (graph LR)**
 
 ```mermaid
+
 graph LR
     A[**Modes Of Operation**] --> B[Multilateral]
     A --> C[Unilateral]
@@ -46,16 +51,15 @@ graph LR
     C --> E[Individual Actions]
     D --> F[United Nations]
     E --> G[Country-to-Country Approaches]
+
 ```
 
 **Inadequate Collective Bargaining Power**: A country may opt for a multilateral approach, but if it lacks sufficient collective bargaining power, its efforts may be ineffective in achieving desired outcomes. **Insufficient Unilateral Capabilities**: A country may choose a unilateral approach, but if it lacks the necessary capabilities, its individual actions may not be enough to influence outcomes. **Misalignment with National Interest**: A country's chosen mode of operation may not align with its [[National_Interest]], leading to ineffective or counterproductive policy outcomes.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "true_false",
@@ -66,7 +70,9 @@ graph LR
     "source_pages": [
       3,
       17
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -81,7 +87,9 @@ graph LR
     "source_pages": [
       3,
       17
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "trace",
@@ -92,7 +100,10 @@ graph LR
     "source_pages": [
       3,
       17
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

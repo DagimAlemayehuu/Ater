@@ -1,4 +1,5 @@
 ---
+
 title: Nationalism_Definition
 course: Global Trends
 unit: '1'
@@ -15,6 +16,7 @@ source_pages:
 - 31
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -29,33 +31,40 @@ The underlying mechanism of nationalism, as per this definition, involves the pr
 
 The real-world significance of nationalism lies in its profound impact on international affairs. It has been a driving force behind numerous revolutions and wars, the collapse of empires, and the emergence of new states. Nationalism continues to shape global politics, with many nation-states facing pressures that challenge their roles in world politics. Moreover, the resurgence of nationalism, often tied to assertions of religion, culture, and ethnicity, underscores its ongoing relevance and influence in contemporary international relations. Understanding nationalism, therefore, is crucial for grasping the complexities of global politics and the dynamics that shape international interactions.
 
+This concept is fundamentally connected to [[Actors_In_International_Relations]] and operates within the [[Actors_In_International_Relations_International_Relations_Definition_Synthesis]] framework.
+
 ## Diplomatic Friction
 
 Nationalism is defined as a doctrine that posits the nation as the fundamental unit of societal organization, emphasizing its primacy in political and social structures. This conceptual framework underscores the nation's role in shaping identity, loyalty, and collective action. The nation's interests and aspirations take precedence, influencing the formation of communities and the distribution of authority. This doctrine has significantly impacted international affairs, contributing to revolutions, wars, and the emergence of new states. Nationalism continues to shape global politics, with its influence evident in the resurgence of nationalist sentiments tied to cultural, religious, and ethnic assertions.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Aspect | Description | Source Reference |
+
 | --- | --- | --- |
+
 | Definition | Doctrine asserting the nation as the basic political unit | Page 1 |
+
 | Influence | Shaped revolutions, wars, and new states | Page 1 |
+
 | Impact | Continues to shape global politics | Page 3 |
+
 | Key Feature | Prioritizes nation's interests and identity | Page 1 |
+
 | Historical Context | Emerged as a significant force post-First World War | Page 3 |
+
 | Current Trend | Resurgence of nationalism tied to religion, culture, and ethnicity | Page 3 |
 
 **Conceptual Ambiguity**: The interchangeable use of terms like 'nation,' 'state,' and 'country' can lead to confusion and undermine the clarity of nationalism's definition.
 **Historical Contextualization**: The definition of nationalism may not fully account for variations in historical and cultural contexts, potentially limiting its applicability across different regions and periods.
-**Operationalization Challenges**: The abstract nature of nationalism can make it difficult to operationalize and mea
-
-
----
+**Operationalization Challenges**: The abstract nature of nationalism can make it difficult to operationalize and mea.
 
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -73,7 +82,9 @@ Nationalism is defined as a doctrine that posits the nation as the fundamental u
       1,
       3,
       31
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -90,7 +101,9 @@ Nationalism is defined as a doctrine that posits the nation as the fundamental u
       1,
       3,
       31
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -107,7 +120,10 @@ Nationalism is defined as a doctrine that posits the nation as the fundamental u
       1,
       3,
       31
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

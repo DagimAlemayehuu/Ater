@@ -1,4 +1,5 @@
 ---
+
 title: International_Relations_Definition
 course: Global Trends
 unit: '1'
@@ -16,6 +17,7 @@ source_pages:
 - 31
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -34,26 +36,30 @@ The study of international relations has significant real-world implications, as
 
 International relations is a field of study that examines the interactions and transactions between nations, states, and other actors in the global arena, encompassing the analysis of complex relationships that shape the structure of the [[International_System]] and determine the relative influence of actors. The underlying mechanism of international relations is rooted in [[Power_Relations]] in the supra-national domain, where power is a critical component. This field of study has significant real-world implications, as it enables students and professionals to understand the complexities of the global arena and the impact of international transactions on their lives. The study of international relations is essential for navigating the complexities of the global system and for making informed decisions about international interactions and transactions. As the world becomes increasingly interconnected, the role of international relations in shaping global politics, economies, and cultures will continue to grow.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Concept | Description | Source |
+
 | --- | --- | --- |
+
 | International Relations | Field of study examining interactions and transactions between nations, states, and other actors | Page 3 |
+
 | [[Power_Relations]] | Underlying mechanism of international relations in the supra-national domain | Page 25 |
+
 | [[Realism]] | Theory that international politics is a struggle for power | Page 31 |
+
 | Nation-States | Primary actors in the [[International_System]] | Page 3 |
+
 | Global Arena | Complex system of interactions and transactions between nations, states, and other actors | Page 3 |
 
 **Lack of Clear Definition**: The definition of international relations is not universally agreed upon, leading to varying interpretations and understandings of the field. **Overemphasis on State Actors**: The focus on state [[Actors_In_International_Relations]] may overlook the role of non-state actors, such as NGOs and multinational corporations, in shaping global politics and economies. **Changing Nature of Power**: The concept of power in international relations is evolving, with new forms of power emerging, such as soft power and cyber power, which may challenge traditional notions of power and influence.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -71,7 +77,9 @@ International relations is a field of study that examines the interactions and t
       3,
       25,
       31
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -87,7 +95,9 @@ International relations is a field of study that examines the interactions and t
       3,
       25,
       31
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -104,7 +114,10 @@ International relations is a field of study that examines the interactions and t
       3,
       25,
       31
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

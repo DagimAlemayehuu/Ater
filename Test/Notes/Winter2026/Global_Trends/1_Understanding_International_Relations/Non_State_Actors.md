@@ -1,4 +1,5 @@
 ---
+
 title: Non_State_Actors
 course: Global Trends
 unit: '1'
@@ -16,6 +17,7 @@ source_pages:
 - 20
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -30,28 +32,32 @@ The underlying mechanism that allows non-state actors to play a significant role
 
 The real-world significance of non-state actors lies in their ability to shape international relations in meaningful ways. Despite the challenges they pose to traditional state-centric views of international relations, non-state actors continue to play a vital role in the global arena. Their influence highlights that international relations do not have to be confined to relations between nations. The term "international relations" can be understood more broadly, encompassing interactions between various actors, including non-state actors.
 
+This concept is fundamentally connected to [[State_Sovereignty]] and operates within the [[Actors_In_International_Relations]] framework.
+
 ## Diplomatic Friction
 
 Non-state actors, including global firms, international governmental institutions, and non-governmental organizations, play a pivotal role in shaping international relations. These entities, often operating across multiple state boundaries, influence global interactions through various mechanisms, such as economic activities, policy advocacy, and service provision. The significance of non-state actors lies in their ability to affect state behavior and international outcomes, often in ways that complement or challenge traditional state-centric approaches. By examining the role of non-state actors, scholars and practitioners can gain a more nuanced understanding of the complex dynamics at play in international relations. Furthermore, the study of non-state actors highlights the evolving nature of international relations, where the boundaries between domestic and international spheres are increasingly blurred.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Category | Examples | Description |
+
 | --- | --- | --- |
+
 | Global Firms | Multinational Corporations (MNCs) | Operate across multiple states, influencing economic activities |
+
 | International Governmental Institutions | United Nations, European Union | Facilitate cooperation and policy-making among states |
+
 | Non-Governmental Organizations | Human Rights Watch, Red Cross | Advocate for human rights, provide humanitarian aid |
 
 **State-Centric Bias**: The dominance of state-centric perspectives in international relations may overlook the influence of non-state actors. **Regulatory Challenges**: Non-state actors often operate in a regulatory gray area, making it difficult to hold them accountable. **Power Imbalance**: The influence of non-state actors can exacerbate existing power imbalances between states, potentially leading to unequal outcomes.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -69,7 +75,9 @@ Non-state actors, including global firms, international governmental institution
       14,
       16,
       20
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -86,7 +94,9 @@ Non-state actors, including global firms, international governmental institution
       14,
       16,
       20
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -103,7 +113,10 @@ Non-state actors, including global firms, international governmental institution
       14,
       16,
       20
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

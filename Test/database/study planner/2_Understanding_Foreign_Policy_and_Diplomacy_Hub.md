@@ -32,30 +32,30 @@ The intersection of foreign policy and diplomacy involves the actions states tak
 
 ## Connections
 
-- [ ] Diplomacy And Foreign Policy
-    - [ ] Diplomacy And Foreign Policy Economic Diplomacy Synthesis
-    - [ ] Instruments Of Foreign Policy
-- [ ] Economic Influence
-- [ ] Foreign Aid
-- [ ] Foreign Policy
-    - [ ] Diplomacy
-    - [ ] Foreign Policy Behavior
-        - [ ] Foreign Policy Orientation
-            - [ ] Strategic Location
-        - [ ] Self Preservation
-    - [ ] Foreign Policy Foreign Policy Behavior Synthesis
-    - [ ] Military Aid
-    - [ ] Military Capability
-    - [ ] National Interest
-        - [ ] Economic Diplomacy
-        - [ ] Inside Out Approach
-        - [ ] National Interest Definition
-            - [ ] Foreign Policy Criteria
-                - [ ] Foreign Policy Objectives
-                    - [ ] Core Interests And Values
-                - [ ] Realist Vs Idealist View
-                - [ ] Scope Of Foreign Policy
-                    - [ ] Modes Of Operation
-        - [ ] National Interest National Interest Definition Synthesis
-- [ ] Long Range Goals
-- [ ] Territorial Integrity
+- [ ] [[Diplomacy_And_Foreign_Policy]]
+    - [ ] [[Diplomacy_And_Foreign_Policy_Economic_Diplomacy_Synthesis]]
+    - [ ] [[Instruments_Of_Foreign_Policy]]
+- [ ] [[Economic_Influence]]
+- [ ] [[Foreign_Aid]]
+- [ ] [[Foreign_Policy]]
+    - [ ] [[Diplomacy]]
+    - [ ] [[Foreign_Policy_Behavior]]
+        - [ ] [[Foreign_Policy_Orientation]]
+            - [ ] [[Strategic_Location]]
+        - [ ] [[Self_Preservation]]
+    - [ ] [[Foreign_Policy_Foreign_Policy_Behavior_Synthesis]]
+    - [ ] [[Military_Aid]]
+    - [ ] [[Military_Capability]]
+    - [ ] [[National_Interest]]
+        - [ ] [[Economic_Diplomacy]]
+        - [ ] [[Inside_Out_Approach]]
+        - [ ] [[National_Interest_Definition]]
+            - [ ] [[Foreign_Policy_Criteria]]
+                - [ ] [[Foreign_Policy_Objectives]]
+                    - [ ] [[Core_Interests_And_Values]]
+                - [ ] [[Realist_Vs_Idealist_View]]
+                - [ ] [[Scope_Of_Foreign_Policy]]
+                    - [ ] [[Modes_Of_Operation]]
+        - [ ] [[National_Interest_National_Interest_Definition_Synthesis]]
+- [ ] [[Long_Range_Goals]]
+- [ ] [[Territorial_Integrity]]

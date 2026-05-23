@@ -1,4 +1,5 @@
 ---
+
 title: State_Sovereignty
 course: Global Trends
 unit: '1'
@@ -15,6 +16,7 @@ source_pages:
 - 26
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -33,26 +35,30 @@ The real-world significance of **state sovereignty** lies in its implications fo
 
 The concept of State [[Sovereignty]], as symbolized by the Treaty of Westphalia in 1648, delineates the exclusive authority of a state to govern its territory and engage with other states as it deems fit. This notion is predicated on the principles of formal equality among states, where all states possess the same rights and obligations. The **sovereignty** of states operates within a system devoid of overarching authority, thereby necessitating the development of diplomatic practices to facilitate interactions and mitigate conflicts. The primacy of **state sovereignty** in international relations endures despite the emergence of non-state actors and novel theoretical perspectives. The sovereign state's authority is vested in its ability to enact laws, collect taxes, and maintain military forces, underscoring its paramountcy in the study of international relations.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Concept | Description | Source Reference |
+
 | --- | --- | --- |
+
 | State [[Sovereignty]] | Exclusive authority to govern territory and interact with other states | Treaty of Westphalia (1648) |
+
 | Formal Equality | Equal rights and obligations among states | Post-Westphalia [[International_System]] |
+
 | [[Anarchy]] | Absence of overarching authority in international relations | Post-Westphalia **international system** |
+
 | Diplomacy | Practice of managing relations and negotiations between states | Development of diplomatic networks |
+
 | Non-State Actors | Global firms, international institutions, NGOs | Challenges to **state sovereignty** |
 
 **Incomplete Information Flow**: The absence of a centralized authority to enforce common rules can lead to misunderstandings and conflicts between states. **Power Imbalance**: The decentralized nature of power in the [[International_System]] can result in precarious balances of power, incentivizing states to engage in aggressive wars. **Non-State Actor Influence**: The emergence of non-state actors can challenge the primacy of state [[Sovereignty]], potentially undermining the traditional state-centric approach to international relations.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -70,7 +76,9 @@ The concept of State [[Sovereignty]], as symbolized by the Treaty of Westphalia 
       12,
       16,
       26
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -87,7 +95,9 @@ The concept of State [[Sovereignty]], as symbolized by the Treaty of Westphalia 
       12,
       16,
       26
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -104,7 +114,10 @@ The concept of State [[Sovereignty]], as symbolized by the Treaty of Westphalia 
       12,
       16,
       26
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

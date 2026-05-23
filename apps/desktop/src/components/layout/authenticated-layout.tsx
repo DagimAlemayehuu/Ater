@@ -17,7 +17,7 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
       {!isFullscreen && <AppSidebar />}
       <main id="content" className="flex-1 flex flex-col overflow-hidden relative">
         <AppHeader />
-        <div className="flex-1 overflow-auto relative">
+        <div className="flex-1 overflow-hidden relative">
           {children ?? <Outlet />}
         </div>
       </main>

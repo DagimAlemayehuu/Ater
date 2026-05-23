@@ -1,4 +1,5 @@
 ---
+
 title: Sovereignty
 course: Global Trends
 unit: '1'
@@ -15,6 +16,7 @@ source_pages:
 - 27
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -23,26 +25,34 @@ Imagine a majestic, self-sustaining coral reef, where each reef represents a sov
 
 ## Global Strategy
 
-**Sovereignty** denotes a state's ultimate authority within its territorial entity and its involvement in the international community, comprising internal and external aspects. Internal **sovereignty** refers to a state's ultimate authority within its territorial entity, while external sovereignty refers to a state's involvement in the international community. 
+**Sovereignty** denotes a state's ultimate authority within its territorial entity and its involvement in the international community, comprising internal and external aspects. Internal **sovereignty** refers to a state's ultimate authority within its territorial entity, while external sovereignty refers to a state's involvement in the international community.
 
 The underlying mechanism of sovereignty is based on the idea that all states are formally equal and have the same rights and obligations. This means that states lay claims to the exclusive right to rule their own territories and to act, in relation to other states, as they themselves see fit. This creates a problem of [[Anarchy]], where states have to rely on their own resources or form alliances to balance power.
 
 The real-world significance of sovereignty is that it leads to a system where states look after themselves and no one looks after the system as a whole. This results in constant tensions and threats of war, as states have an incentive to engage in aggressive wars, particularly given the value attached to territorial acquisitions. Furthermore, the practices of diplomacy have become essential in this system, as states need to gather information, negotiate, and conclude deals with each other in order to avoid misunderstandings and unnecessary conflicts. The diplomatic network provides a means for states to interact with each other, but it also highlights the precarious nature of power balances and the potential for conflict in a system characterized by sovereignty.
 
+This concept is fundamentally connected to [[Actors_In_International_Relations]] and operates within the [[Actors_In_International_Relations_International_Relations_Definition_Synthesis]] framework.
+
 ## Diplomatic Friction
 
 **Sovereignty** is a fundamental concept in international relations, denoting a state's ultimate authority within its territorial entity and its involvement in the international community. This concept comprises internal and external aspects, where internal **sovereignty** refers to a state's supreme authority within its borders, and external sovereignty pertains to its interactions with other states. The principle of sovereignty is rooted in the idea that all states are formally equal and possess the same rights and obligations, leading to a system where states claim exclusive rights to govern their territories and engage in foreign policy autonomously. However, this system also leads to a problem of [[Anarchy]], characterized by the absence of a centralized authority, resulting in a decentralized power structure where states must rely on their own resources or form alliances to balance power.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Aspect | Description | Source Reference |
+
 | --- | --- | --- |
+
 | Internal **Sovereignty** | Ultimate authority within a state's territorial entity | Page 26 |
+
 | External Sovereignty | State's involvement in the international community | Page 26 |
+
 | Formal Equality | All states have the same rights and obligations | Page 12 |
+
 | [[Anarchy]] | Absence of centralized authority in international relations | Page 12 |
+
 | Diplomacy | Practice of conducting negotiations and gathering information between states | Page 12 |
 
 **Incomplete Information**: In the context of **sovereignty**, incomplete information can lead to misunderstandings and unnecessary conflicts between states, as they may not have access to accurate or comprehensive information about each other's intentions or capabilities.
@@ -51,12 +61,10 @@ The real-world significance of sovereignty is that it leads to a system where st
 
 **Anarchic System**: The [[Anarchic_System]] resulting from sovereignty can lead to a security dilemma, where states, in their efforts to ensure their own security, may inadvertently create an environment of increased insecurity for all states, as each may perceive the actions of others as threats.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -74,7 +82,9 @@ The real-world significance of sovereignty is that it leads to a system where st
       12,
       26,
       27
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -91,7 +101,9 @@ The real-world significance of sovereignty is that it leads to a system where st
       12,
       26,
       27
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -108,7 +120,10 @@ The real-world significance of sovereignty is that it leads to a system where st
       12,
       26,
       27
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

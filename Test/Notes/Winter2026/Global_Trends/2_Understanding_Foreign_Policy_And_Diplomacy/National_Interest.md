@@ -1,4 +1,5 @@
 ---
+
 title: National_Interest
 course: Global Trends
 unit: '2'
@@ -16,6 +17,7 @@ source_pages:
 - 8
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -34,11 +36,12 @@ The real-world significance of national interest lies in its impact on a state's
 
 **National interest** is a foundational concept in international relations, representing a nation's values, orientation, goals, and objectives in its external relations. It serves as the raison d'etat, justifying a state's actions and policies towards other nations. The pursuit of **national interest** is driven by a state's desire for survival and security within the international system. This concept is shaped by both internal factors, such as economic, technological, and military capabilities, and external/systemic factors, including international regimes and the influence of great powers. The determination of national interest is subject to various perspectives, including the realist view, which prioritizes pragmatic criteria and the pursuit of power.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Basic Mermaid flowchart (graph LR)**
 
 ```mermaid
+
 graph LR
     A[**National Interest**] --> B[Internal Factors]
     A --> C[External/Systemic Factors]
@@ -47,16 +50,15 @@ graph LR
     B --> F[Military Capabilities]
     C --> G[International Regimes]
     C --> H[Great Powers]
+
 ```
 
 **Dependency on External Powers**: Less developing countries may face challenges in defending and promoting their **national interest** due to their dependency on external powers for technical aid, expertise, and security. **Equating Organizational Interest with National Interest**: The interest of key organizations, such as the army or foreign office, may be equated with the national interest, potentially leading to biased [[Foreign_Policy]] decisions. **Realist Perspective Limitations**: The realist view's prioritization of power and pragmatic criteria may overlook other essential factors in determining national interest, such as ethical considerations and long-term cooperation.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "true_false",
@@ -68,7 +70,9 @@ graph LR
       1,
       6,
       8
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -85,7 +89,9 @@ graph LR
       1,
       6,
       8
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "trace",
@@ -97,7 +103,10 @@ graph LR
       1,
       6,
       8
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

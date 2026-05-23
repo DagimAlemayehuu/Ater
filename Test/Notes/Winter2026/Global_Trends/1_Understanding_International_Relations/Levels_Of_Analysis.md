@@ -1,4 +1,5 @@
 ---
+
 title: Levels_Of_Analysis
 course: Global Trends
 unit: '1'
@@ -15,6 +16,7 @@ source_pages:
 - 23
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -29,29 +31,34 @@ The underlying mechanism of **levels of analysis** involves specifying the focus
 
 The real-world significance of levels of analysis lies in its ability to help policymakers and scholars understand the complexities of international relations and make more informed decisions. By examining international phenomena at different levels, researchers can identify the root causes of conflicts, understand the motivations and behaviors of states and non-state actors, and develop more effective policies to address global challenges. For instance, understanding the role of individuals in shaping international relations can help policymakers to develop more effective strategies to counter terrorism and promote global stability. Similarly, analyzing the **international system** can help researchers to understand the impact of globalization and develop more effective policies to promote cooperation and prevent conflict.
 
+This concept is fundamentally connected to [[Actors_In_International_Relations]] and operates within the [[Actors_In_International_Relations_International_Relations_Definition_Synthesis]] framework.
+
 ## Diplomatic Friction
 
 The **levels of analysis** in International Relations constitute a framework for examining and understanding international phenomena at multiple levels, specifically the individual, group, state, and [[International_System]] levels. This framework, influenced by the works of J. David Singer and Kenneth Waltz, facilitates a systematic approach to research by distinguishing between different 'images' of an issue. By specifying the focus of analysis, researchers can avoid analytical 'cherry-picking' and enThis approach enables researchers to gain a nuanced understanding of the complex interactions that shape international relations.
 
-## Step Trace
+> **Step Trace**
 
 > **Markdown Table or ASCII Map**
 
 | Level of Analysis | Description | Example |
+
 | --- | --- | --- |
+
 | Individual | Examines the behaviors, motivations, beliefs, and orientations of individuals | A single individual's decision to engage in activism |
+
 | Group | Considers the characteristics and actions of groups of individuals | A social movement's impact on policy |
+
 | State | Focuses on the attributes and behaviors of states | A state's foreign policy decisions |
+
 | [[International_System]] | Analyzes the interactions and structures within the global system | The balance of power between states in the **international system** |
 
 **Inadequate Level of Analysis**: Failure to specify the level of analysis can lead to confusion and inconsistent research findings. **Overemphasis on a Single Level**: Focusing too much on one level of analysis can overlook important interactions and influences from other levels. **Failure to Account for Interactions Between Levels**: Neglecting to examine how different **levels of analysis** interact and influence each other can result in an incomplete understanding of international phenomena.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -69,7 +76,9 @@ The **levels of analysis** in International Relations constitute a framework for
       18,
       19,
       23
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -86,7 +95,9 @@ The **levels of analysis** in International Relations constitute a framework for
       18,
       19,
       23
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -104,7 +115,10 @@ The **levels of analysis** in International Relations constitute a framework for
       18,
       19,
       23
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

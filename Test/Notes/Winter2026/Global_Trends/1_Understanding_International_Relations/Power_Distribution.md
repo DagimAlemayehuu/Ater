@@ -1,4 +1,5 @@
 ---
+
 title: Power_Distribution
 course: Global Trends
 unit: '1'
@@ -16,6 +17,7 @@ source_pages:
 - 31
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -30,28 +32,32 @@ The underlying mechanism of **Power Distribution** lies in the structure or cont
 
 The real-world significance of Power Distribution lies in its impact on global politics and the behavior of states. A system-level study of Power Distribution can help us grasp wide-ranging dynamics that emerge from the global economic system and affect its various components, including states, national economies, societies, and individuals. Understanding Power Distribution is crucial in analyzing global linkages that go beyond single interactions between states, including developments that are outside the immediate control of any particular state or group of states, such as the global economy, transnational terrorism, and the internet.
 
+This concept is fundamentally connected to [[International_System]] and operates within the [[Actors_In_International_Relations]] framework.
+
 ## Diplomatic Friction
 
 The concept of **Power Distribution** in international relations refers to the allocation of political power among states within the global system. This distribution is typically categorized into three primary configurations: unipolarity, characterized by a single dominant power; bipolarity, marked by two preeminent powers; and multipolarity, where several states hold significant influence. The structure of the [[International_System]], in turn, shapes the interactions and behaviors of states, as they navigate the complexities of national interest and global governance. Understanding **Power Distribution** is essential for analyzing the dynamics of international relations, as it underpins the ability of states to pursue their interests and shapes the global political landscape.
 
-## Source Calculation
+> **Source Calculation**
 
 > **Markdown Table or ASCII Map**
 
 | **Power Distribution** Type | Description | Example |
+
 | --- | --- | --- |
+
 | Unipolarity | One main concentration of power | A single dominant state |
+
 | Bipolarity | Two main concentrations of power | Two superpowers |
+
 | Multipolarity | Several concentrations of power | Multiple influential states |
 
 **Unclear System Boundaries**: The boundaries of the [[International_System]] can be ambiguous, making it challenging to determine the distribution of power. **Incomplete Data**: The availability and accuracy of data on state power and influence can be limited, hindering a comprehensive understanding of **Power Distribution**. **Dynamic Nature of Power**: The distribution of power can shift rapidly due to various factors, such as changes in economic or military capabilities, making it difficult to predict and analyze.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -69,7 +75,9 @@ The concept of **Power Distribution** in international relations refers to the a
       22,
       23,
       31
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -86,7 +94,9 @@ The concept of **Power Distribution** in international relations refers to the a
       22,
       23,
       31
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -103,7 +113,10 @@ The concept of **Power Distribution** in international relations refers to the a
       22,
       23,
       31
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

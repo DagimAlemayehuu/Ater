@@ -1,4 +1,5 @@
 ---
+
 title: Core_Interests_And_Values
 course: Global Trends
 unit: '2'
@@ -14,6 +15,7 @@ source_pages:
 - 10
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -32,11 +34,12 @@ The real-world significance of core interests and values lies in their ability t
 
 **Core interests and values** constitute paramount objectives that garner unwavering commitment and willingness to make sacrifices, underpinning the self-preservation of a nation's fundamental systems, populace, cultural fabric, and [[Territorial_Integrity]]. These objectives are prioritized due to their indispensability to the existence and well-being of a state, necessitating their realization as a prerequisite for pursuing other goals. The definition and prioritization of **core interests and values** are contingent upon the perspectives and attitudes of [[Foreign_Policy]] decision-makers. Consequently, these objectives are often codified as basic principles of **foreign policy**, enjoying unquestioned societal acceptance. The attainment of core interests and values ensures a state's sovereignty and independence, thereby providing the foundation for the pursuit of additional objectives.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Basic Mermaid flowchart (graph LR)**
 
 ```mermaid
+
 graph LR
     A[**Core Interests and Values**] --> B(Self-Preservation)
     A --> C([[Foreign_Policy_Objectives]])
@@ -44,18 +47,17 @@ graph LR
     B --> E(People and Culture)
     B --> F([[Territorial_Integrity]])
     C --> G(Sovereignty and Independence)
+
 ```
 
 **Compromised Sovereignty**: Threats to a nation's sovereignty and independence undermine its **core interests and values**, potentially jeopardizing its existence and self-preservation.
 **Cultural Erosion**: The erosion of a nation's cultural fabric can compromise its core interests and values, as the preservation of culture is integral to the nation's identity and self-preservation.
 **Territorial Integrity Breach**: Breaches to a nation's [[Territorial_Integrity]] directly threaten its core interests and values, as **territorial integrity** is fundamental to the nation's self-preservation and sovereignty.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "true_false",
@@ -65,7 +67,9 @@ graph LR
     "explanation_page": 10,
     "source_pages": [
       10
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -80,7 +84,9 @@ graph LR
     "explanation_page": 10,
     "source_pages": [
       10
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "trace",
@@ -90,7 +96,10 @@ graph LR
     "explanation_page": 10,
     "source_pages": [
       10
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

@@ -1,4 +1,5 @@
 ---
+
 course: "Global Trends"
 date: "2026-05-22"
 generated: true
@@ -16,6 +17,7 @@ source_pages:
 title: "Anarchic_System"
 type: "Atomic Note"
 unit: 1
+
 ---
 
 ## Mental Model
@@ -28,29 +30,34 @@ The concept of an "**Anarchic System**" refers to a situation where tThe underly
 
 The real-world significance of an anarchic system is that it conditions the ability and opportunity of individual states and groups of states to pursue their interests in cooperative or competitive ways. In an anarchic world, states must constantly be mindful of their own security and interests, which can lead to a self-help system where states prioritize their own needs over collective cooperation. This can result in a more volatile and unpredictable international environment, where states are more likely to engage in conflict and competition rather than cooperation. The anarchic system has been a dominant feature of international relations, shaping the behavior of states and influencing the course of global events.
 
+This concept is fundamentally connected to [[Actors_In_International_Relations]] and operates within the [[Actors_In_International_Relations_International_Relations_Definition_Synthesis]] framework.
+
 ## Diplomatic Friction
 
 The **Anarchic System** is characterized by the absence of a common sovereign over states, leading to a decentralized distribution of power. This system conditions the ability and opportunity of individual states and groups of states to pursue their interests in cooperative or competitive ways. The distribution of power amongst states can be categorized into unipolarity, bipolarity, or multipolarity, each with its own implications for state behavior. In this system, states must prioritize their own security and interests, often leading to a self-help system where cooperation is secondary to competition. The **anarchic system** is thus marked by constant tensions and threats of war, as states seek to advance their interests in the absence of a central authority.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | **Characteristics** | **Description** |
+
 | --- | --- |
+
 | **Distribution of Power** | Unipolarity, Bipolarity, Multipolarity |
+
 | **State Behavior** | Self-help system, prioritization of national interests |
+
 | **System Outcome** | Constant tensions, threats of war |
+
 | **Key Indicators** | Foreign policy, statements of politicians, role of diplomats |
 
 **Power Imbalance**: The **anarchic system** can lead to power imbalances between states, making it difficult for weaker states to protect their interests. **Lack of Enforcement Mechanisms**: The absence of a central authority means that there are no shared institutions with the right to enforce common rules, making it challenging to prevent aggression. **Security Dilemma**: States may prioritize their own security over cooperation, leading to a security dilemma where one state's efforts to increase its security are perceived as a threat by others.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -68,7 +75,9 @@ The **Anarchic System** is characterized by the absence of a common sovereign ov
       22,
       26,
       34
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -85,7 +94,9 @@ The **Anarchic System** is characterized by the absence of a common sovereign ov
       22,
       26,
       34
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -102,7 +113,10 @@ The **Anarchic System** is characterized by the absence of a common sovereign ov
       22,
       26,
       34
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

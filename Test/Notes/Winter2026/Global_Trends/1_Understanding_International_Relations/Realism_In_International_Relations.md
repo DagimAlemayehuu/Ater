@@ -1,4 +1,5 @@
 ---
+
 title: Realism_In_International_Relations
 course: Global Trends
 unit: '1'
@@ -17,6 +18,7 @@ source_pages:
 - 33
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -35,26 +37,30 @@ The real-world significance of **realism** in international relations lies in it
 
 [[Realism]] in International Relations, as a paradigmatic framework, posits that the [[International_System]] is characterized by an anarchic structure, devoid of a centralized authority, thereby necessitating states to prioritize power acquisition and security. This theoretical perspective, rooted in the works of Hans Morgenthau, assumes a clear dichotomy between fact and value, as well as theory and practice. The concept of power, a pivotal element in realist thought, is defined relationally, as the ability of one actor to influence the actions of another, and materially, through the possession of capabilities. The distribution of power among states shapes the **international system**'s structure and determines the relative influence of actors within it. Furthermore, **realism**'s scientific and explanatory nature requires that theories of international relations be grounded in empirical facts, which serve as the ultimate test of theoretical validity.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Concept | Description | Source Reference |
+
 | --- | --- | --- |
+
 | [[Anarchic_System]] | [[International_System]] devoid of centralized authority | Page 32 |
+
 | [[Power_Relations]] | Actors' influence and capabilities shape international structure | Page 25 |
+
 | Relational Power | Ability of one actor to influence another's actions | Page 32 |
+
 | Material Power | Possession of capabilities | Page 32 |
+
 | Scientific Approach | Theories must be consistent with empirical facts | Page 33 |
 
 **Assumption of Anarchy**: The realist assumption of an anarchic [[International_System]] may not account for the presence of international institutions and norms that influence state behavior. **Power Definition Limitations**: The relational definition of power may overlook other forms of power, such as economic or cultural influence. **Static Capability Analysis**: The focus on material capabilities may not capture the dynamic nature of power, as states can develop or acquire new capabilities over time.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -72,7 +78,9 @@ The real-world significance of **realism** in international relations lies in it
       25,
       32,
       33
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -89,7 +97,9 @@ The real-world significance of **realism** in international relations lies in it
       25,
       32,
       33
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -106,7 +116,10 @@ The real-world significance of **realism** in international relations lies in it
       25,
       32,
       33
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

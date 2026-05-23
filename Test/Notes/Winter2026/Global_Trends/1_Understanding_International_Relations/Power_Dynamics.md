@@ -1,4 +1,5 @@
 ---
+
 title: Power_Dynamics
 course: Global Trends
 unit: '1'
@@ -16,6 +17,7 @@ source_pages:
 - 23
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -30,35 +32,44 @@ The underlying mechanism of **power dynamics** is rooted in the idea that intern
 
 The real-world significance of power dynamics lies in its impact on international relations and global governance. The delicate adjustment of power to power has significant consequences for maintaining international order, resolving conflicts, and promoting cooperation among states. The example of the 2003 invasion of Iraq by a US coalition illustrates the role of power dynamics in international politics, where the use of physical force can have far-reaching and often unintended consequences. Understanding power dynamics is essential for navigating the complexities of international relations and for developing effective strategies for promoting peace, stability, and cooperation in an increasingly [[Interconnected_World]].
 
+This concept is fundamentally connected to [[State_System]] and operates within the [[Actors_In_International_Relations]] framework.
+
 ## Diplomatic Friction
 
 **Power dynamics** in international relations refers to the intricate process of adjusting power among states, groups, and organizations to maintain equilibrium and achieve objectives. This concept is deeply rooted in the anarchic nature of the [[International_System]], where the absence of a centralized authority necessitates that actors rely on their capabilities and resources to protect their interests. The delicate balance of power is crucial for maintaining international order, resolving conflicts, and promoting cooperation. A fundamental aspect of **power dynamics** is the interplay between cooperation and conflict, as states and other actors navigate their relationships to achieve their goals. This complex interaction is influenced by various factors, including the distribution of power, the level of interdependence, and the presence of international institutions.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Concept | Description | Source |
+
 | --- | --- | --- |
+
 | Hobbesian View | Pessimistic view of human nature, where life is 'solitary, poor, nasty, brutish, and short' | Hobbes |
+
 | Lockean View | Optimistic view of human nature, emphasizing sociability and equality | Locke |
+
 | [[Anarchy]] | Absence of centralized authority in international relations | Source Text |
+
 | Interdependence | Reliance of states and organizations on each other | Source Text |
+
 | **Power Dynamics** | Delicate adjustment of power to power in international politics | Source Text |
+
 | International Order | Maintenance of order in an anarchic world | Source Text |
+
 | Balance of Power | Distribution of power among states and organizations | Source Text |
+
 | Global Governance | System of rules and institutions governing international relations | Source Text |
 
 **Miscalculation of Power**: Misjudging the strength or intentions of other states or actors, leading to unintended consequences, such as conflict or instability.
 **Overextension of Power**: Exceeding one's capabilities or resources, resulting in a loss of influence or control.
 **Ignoring Interdependence**: Failing to account for the interconnectedness of states and organizations, leading to policies that neglect the interests or needs of other actors.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -76,7 +87,9 @@ The real-world significance of power dynamics lies in its impact on internationa
       6,
       7,
       23
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -93,7 +106,9 @@ The real-world significance of power dynamics lies in its impact on internationa
       6,
       7,
       23
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -110,7 +125,10 @@ The real-world significance of power dynamics lies in its impact on internationa
       6,
       7,
       23
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

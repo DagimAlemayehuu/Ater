@@ -1,4 +1,5 @@
 ---
+
 title: Nationalism_And_Sovereignty
 course: Global Trends
 unit: '1'
@@ -16,6 +17,7 @@ source_pages:
 - 26
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -30,29 +32,34 @@ The underlying mechanism of **nationalism and sovereignty** lies in the concept 
 
 The real-world significance of **nationalism and sovereignty** lies in their impact on international relations. The revival of nationalism across the world, particularly in the post-Cold War era, has led to a resurgence of assertions of religion, culture, and ethnicity as potent forces in world politics. This has put nation-states under pressure, challenging their role in world politics. The tension between nationalism and **sovereignty** has significant consequences for global governance, international conflict, and cooperation. As the world becomes increasingly interconnected, understanding the complex dynamics of nationalism and sovereignty is crucial for navigating the complexities of international relations.
 
+This concept is fundamentally connected to [[State_System]] and operates within the [[Actors_In_International_Relations]] framework.
+
 ## Diplomatic Friction
 
 Nationalism and [[Sovereignty]] are interrelated concepts in international relations, with nationalism being a doctrine that asserts the nation as the basic political unit in organizing society. This doctrine has been a significant factor in the outbreak of revolutions and wars, the collapse of empires, and the emergence of new states. The nation, a historical entity evolving from similar ethnic communities, is distinct from a state, a political entity with defined borders and a sovereign government. The interplay between **nationalism and sovereignty** has shaped international relations, particularly in the post-Cold War era, where nationalism has resurfaced as a potent force. Understanding this complex dynamic is crucial for navigating global governance, international conflict, and cooperation.
 
-## Cause And Effect
+> **Cause And Effect**
 
 > **Markdown Table or ASCII Map**
 
 | Concept | Description | Source |
+
 | --- | --- | --- |
+
 | Nationalism | Doctrine asserting the nation as the basic political unit | Source Text, Page 1 |
+
 | Nation | Historical entity evolving from similar ethnic communities | Source Text, Page 3 |
+
 | State | Political entity with defined borders and sovereign government | Source Text, Page 3 |
+
 | [[Sovereignty]] | Authority of the state to govern without external interference | Source Text, Page 26 |
 
 **Nation-State Fragility**: The emergence of nation-states can be fragile, as seen in the post-Cold War era where nationalism has resurfaced, challenging the role of states in world politics. **Global Governance Challenges**: The interplay between nationalism and [[Sovereignty]] poses significant challenges for global governance, international conflict, and cooperation. **Anarchical System**: The [[International_System]], characterized by [[Anarchy]], can lead to power balances that are precarious and easily subverted, resulting in aggressive wars.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -70,7 +77,9 @@ Nationalism and [[Sovereignty]] are interrelated concepts in international relat
       1,
       3,
       26
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -87,7 +96,9 @@ Nationalism and [[Sovereignty]] are interrelated concepts in international relat
       1,
       3,
       26
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -105,7 +116,10 @@ Nationalism and [[Sovereignty]] are interrelated concepts in international relat
       1,
       3,
       26
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

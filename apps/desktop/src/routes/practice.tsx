@@ -1534,7 +1534,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  const parts = (currentQuestion.textWithBlanks || '').split(/\[\[.*?\]\]/);
  return parts.map((part: string, i: number) => (
  <React.Fragment key={i}>
- <div className="inline-block align-middle"><MarkdownBlock content={part} /></div>
+ <div className="inline-block align-middle"><MarkdownBlock content={part} variant="inline" /></div>
  {i < parts.length - 1 && (
  <div className="inline-flex flex-col items-center">
    <input 

@@ -1,4 +1,5 @@
 ---
+
 title: Territorial_Integrity
 course: Global Trends
 unit: '2'
@@ -15,6 +16,7 @@ source_pages:
 - 29
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -31,15 +33,18 @@ The underlying mechanism of **territorial integrity** is rooted in a state's nee
 
 The real-world significance of territorial integrity lies in its role as a catalyst for state action in the face of external threats. As seen in the example of Ethiopia during Menelik II's reign, the concept of territorial integrity can mobilize a nation to take drastic measures, such as declaring war, to defend its sovereignty and territorial boundaries. In this case, Menelik II's determination to protect Ethiopia's territorial integrity led to a nationwide war against Italy, highlighting the importance of this concept in international relations and statecraft.
 
+This concept is fundamentally connected to [[Core_Interests_And_Values]] and operates within the [[Diplomacy]] framework.
+
 ## The Macro Model & Jargon
 
 The concept of **territorial integrity** is a fundamental principle of [[Foreign_Policy]], ensuring the protection and preservation of a state's territorial boundaries and its right to control and govern its own territory without external interference. This concept is closely tied to a state's self-preservation, sovereignty, and independence. The **territorial integrity** of a state is essential for the realization of other goals, as it provides the foundation for the exercise of sovereignty and the ability to make decisions without external influence. The value placed on territorial integrity varies depending on the attitudes of those who make **foreign policy**, with some governments prioritizing the control and defense of neighboring territories. In the context of Ethiopia's [[Foreign_Policy]] during Menelik II's reign, the concept of territorial integrity played a crucial role in the country's response to Italy's expansionist threats.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Basic Mermaid flowchart (graph LR)**
 
 ```mermaid
+
 graph LR
     A[**Territorial Integrity**] --> B[Sovereignty]
     A --> C[Self-Preservation]
@@ -47,18 +52,17 @@ graph LR
     B --> E[Control over Territory]
     C --> F[Protection of People and Culture]
     D --> G[Freedom from External Interference]
+
 ```
 
 **Erosion of Sovereignty**: The loss of control over territory can lead to a decline in a state's sovereignty, making it vulnerable to external influence and interference.
 **Territorial Fragmentation**: The division of a state's territory can result in the fragmentation of its people and culture, leading to social and economic instability.
 **External Interference**: The violation of a state's **territorial integrity** can lead to external interference in its internal affairs, undermining its independence and self-preservation.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "true_false",
@@ -70,7 +74,9 @@ graph LR
       10,
       27,
       29
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -87,7 +93,9 @@ graph LR
       10,
       27,
       29
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "trace",
@@ -99,7 +107,10 @@ graph LR
       10,
       27,
       29
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

@@ -1,4 +1,5 @@
 ---
+
 title: Foreign_Policy
 course: Global Trends
 unit: '2'
@@ -16,6 +17,7 @@ source_pages:
 generated: true
 skeleton_fallback: true
 read: false
+
 ---
 
 ## Mental Model
@@ -24,30 +26,32 @@ read: false
 
 ## The Global Economic Engine
 
-Foreign Policy works by connecting the source's key terms, rules, and examples into one usable idea. Defining [[National_Interest]] National interest ¢ the raison detat, (the reason of state), to justify its actions and policy towards other states at international level (%3 CamScanner v They play the carrot and stick [[Diplomacy]] to affect the outcomes of events or influence the behaviors of others o like Intervention, threat of use of force and some time, use of force v" The more unilateral a state is the more likely to initiate actions in international relations or to resist initiatives taken by others 2.2.5. [[Instruments_Of_Foreign_Policy]] 1.
+Foreign Policy works by connecting the source's key terms, rules, and examples into one usable idea. Defining [[National_Interest]] National interest ¢ the raison detat, (the reason of state), to justify its actions and policy towards other states at international level  v They play the carrot and stick [[Diplomacy]] to affect the outcomes of events or influence the behaviors of others o like Intervention, threat of use of force and some time, use of force v" The more unilateral a state is the more likely to initiate actions in international relations or to resist initiatives taken by others 2.2.5. [[Instruments_Of_Foreign_Policy]] 1.
 
 ## The Macro Model & Jargon
 
-In formal terms, Foreign Policy must be read through the exact language and constraints shown in the source. Diplomacy e Diplomacy - process between actors (diplomats, usually representing a state) who exist within a system (international relations) and engage in private and public dialogue v diplomacy can promote exchanges that enhance trade, culture, wealth and knowledge e Diplomacy is not foreign policy but part of foreign policy ¢ state's foreign policy has two key ingredients; its actions and its strategies for achieving its goals » The interaction one state has with another is considered the act of its foreign policy. This act typically takes place via interactions between government personnel through diplomacy 18 (%3 CamScanner e The issue of Nile River, boundary issues, the strategic location of the country, unique culture (Christianity) amid the Islam religion and Arab culture had cumulative effect in shaping the foreign policy the country 2.3.6. The Foreign Policy of Ethiopia in the Post 1991 e With EPRDF's ascent to power the country adopted a new foreign policy orientation and objectives ¢ In the post 1991 period, Ethiopia's foreign policy is driven primarily by the quest to ensure national interest and security o one of the goals of the foreign policy is to ensure the survival of the multi- national state e foreign policy of Ethiopia has been designed to create favorable external environment to achieve rapid economic development and build up democratic system o S0 democracy and development are the foreign policy visions of the country e foreign policy has been considered as an instrument to solve the domestic problems of the country, including; lack of good governance, instability and lack of economic development 37 Ccs CamScanner
+In formal terms, Foreign Policy must be read through the exact language and constraints shown in the source. Diplomacy e Diplomacy - process between actors (diplomats, usually representing a state) who exist within a system (international relations) and engage in private and public dialogue v diplomacy can promote exchanges that enhance trade, culture, wealth and knowledge e Diplomacy is not foreign policy but part of foreign policy ¢ state's foreign policy has two key ingredients; its actions and its strategies for achieving its goals » The interaction one state has with another is considered the act of its foreign policy. This act typically takes place via interactions between government personnel through diplomacy 18  e The issue of Nile River, boundary issues, the strategic location of the country, unique culture (Christianity) amid the Islam religion and Arab culture had cumulative effect in shaping the foreign policy the country 2.3.6. The Foreign Policy of Ethiopia in the Post 1991 e With EPRDF's ascent to power the country adopted a new foreign policy orientation and objectives ¢ In the post 1991 period, Ethiopia's foreign policy is driven primarily by the quest to ensure national interest and security o one of the goals of the foreign policy is to ensure the survival of the multi- national state e foreign policy of Ethiopia has been designed to create favorable external environment to achieve rapid economic development and build up democratic system o S0 democracy and development are the foreign policy visions of the country e foreign policy has been considered as an instrument to solve the domestic problems of the country, including; lack of good governance, instability and lack of economic development 37
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table**
 
 | Source Detail | Meaning |
+
 |---|---|
+
 | Foreign Policy | The focused concept being studied. |
+
 | Macroeconomist | Defining National Interest National interest ¢ the raison detat, (the reason of state), to |
+
 | Source excerpt | The only authority for definitions and constraints. |
 
 Use this section as a compact bridge between the source wording and the exact place where a student might get confused.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -60,14 +64,18 @@ Use this section as a compact bridge between the source wording and the exact pl
     },
     "answer": "A",
     "explanation": "The source context connects Foreign Policy to concrete behavior, syntax, or logical structure from page 1.",
-    "explanation_page": 1
+    "explanation_page": 1,
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
-    "type": "true_false",
-    "question": "Defining National Interest National interest \u00a2 the raison detat, (the reason of state), to justify its actions and policy towards other states at international level (%3 CamScanner v They play the carrot and stick diplomacy to affect the outcomes of events or influence the behaviors of others o like Intervention, threat of use of force and some time, use of force v\" The more unilateral a state is the more likely to initiate actions in international relations or to resist initiatives taken by others 2",
+    "type": "scenario",
+    "question": "Defining National Interest National interest \u00a2 the raison detat, (the reason of state), to justify its actions and policy towards other states at international level  v They play the carrot and stick diplomacy to affect the outcomes of events or influence the behaviors of others o like Intervention, threat of use of force and some time, use of force v\" The more unilateral a state is the more likely to initiate actions in international relations or to resist initiatives taken by others 2",
     "answer": true,
     "explanation": "This follows directly from the source's definition of Foreign Policy on page 1.",
-    "explanation_page": 1
+    "explanation_page": 1,
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -78,7 +86,10 @@ Use this section as a compact bridge between the source wording and the exact pl
       "behavior"
     ],
     "explanation": "This checks whether the learner can move from the source wording to a usable explanation of Foreign Policy.",
-    "explanation_page": 1
+    "explanation_page": 1,
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

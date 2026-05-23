@@ -1,4 +1,5 @@
 ---
+
 title: Diplomacy
 course: Global Trends
 unit: '2'
@@ -17,6 +18,7 @@ source_pages:
 generated: true
 skeleton_fallback: true
 read: false
+
 ---
 
 ## Mental Model
@@ -29,26 +31,28 @@ Diplomacy works by connecting the source's key terms, rules, and examples into o
 
 ## The Macro Model & Jargon
 
-In formal terms, Diplomacy must be read through the exact language and constraints shown in the source. This act typically takes place via interactions between government personnel through diplomacy 18 (%3 CamScanner e Diplomacy is a complex game of maneuver in which the goal is to influence the behaviors of others in ones interest Past democracy » practiced in formalistic and somewhat rigid manner that was limited to the bilateral relations of countries Now days democracy » involves powerful actors that are not states like international non- governmental organizations (INGOs) and international governmental organizations (IGOs), These actors regularly partake in areas of diplomacy and often materially shape outcomes. » There arose multilateral diplomacy, public diplomacy, leader-to-leader (summitry diplomacy) in sharp contrast to secret diplomacy and bilateral diplomacy. e The essence of diplomacy is bargaining o a means of settling differences over priorities between contestants through an exchange of proposals for mutually acceptable solutions o Diplomatic bargaining is used primarily to reach agreements, compromises, and settlements where governments objectives conflict 19 (%3 CamScanner e The primary strategy in realization of these goals is to put the focus on domestic issues first o in the age of globalization emphasizing on external issues such as; seeking financial aid, loans or technical issues would subject the country to dependency and vulnerability = That will limit not only the diplomatic leverage of the country but also will neglect the crux of the matter at home, viz., the issue of democratization and good governance and issues of development would not be addressed o This strategy is called an 'inside-out' approach 'inside-out' approach - If we solve our domestic problems the country would not be vulnerable and its peace and survival can be ensured » The inside out approach would then help to reduce the countries vulnerability to threat e At diplomatic level, economic diplomacy is adopted to strengthen the domestic efforts in fighting poverty and backwardness and address the issues of development o Economic diplomacy involves = attracting
+In formal terms, Diplomacy must be read through the exact language and constraints shown in the source. This act typically takes place via interactions between government personnel through diplomacy 18  e Diplomacy is a complex game of maneuver in which the goal is to influence the behaviors of others in ones interest Past democracy » practiced in formalistic and somewhat rigid manner that was limited to the bilateral relations of countries Now days democracy » involves powerful actors that are not states like international non- governmental organizations (INGOs) and international governmental organizations (IGOs), These actors regularly partake in areas of diplomacy and often materially shape outcomes. » There arose multilateral diplomacy, public diplomacy, leader-to-leader (summitry diplomacy) in sharp contrast to secret diplomacy and bilateral diplomacy. e The essence of diplomacy is bargaining o a means of settling differences over priorities between contestants through an exchange of proposals for mutually acceptable solutions o Diplomatic bargaining is used primarily to reach agreements, compromises, and settlements where governments objectives conflict 19  e The primary strategy in realization of these goals is to put the focus on domestic issues first o in the age of globalization emphasizing on external issues such as; seeking financial aid, loans or technical issues would subject the country to dependency and vulnerability = That will limit not only the diplomatic leverage of the country but also will neglect the crux of the matter at home, viz., the issue of democratization and good governance and issues of development would not be addressed o This strategy is called an 'inside-out' approach 'inside-out' approach - If we solve our domestic problems the country would not be vulnerable and its peace and survival can be ensured » The inside out approach would then help to reduce the countries vulnerability to threat e At diplomatic level, economic diplomacy is adopted to strengthen the domestic efforts in fighting poverty and backwardness and address the issues of development o Economic diplomacy involves = attracting
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table**
 
 | Source Detail | Meaning |
+
 |---|---|
+
 | Diplomacy | The focused concept being studied. |
+
 | Macroeconomist | Instruments of Foreign Policy 1. |
+
 | Source excerpt | The only authority for definitions and constraints. |
 
 Use this section as a compact bridge between the source wording and the exact place where a student might get confused.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -61,14 +65,18 @@ Use this section as a compact bridge between the source wording and the exact pl
     },
     "answer": "A",
     "explanation": "The source context connects Diplomacy to concrete behavior, syntax, or logical structure from page 18.",
-    "explanation_page": 18
+    "explanation_page": 18,
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
-    "type": "true_false",
+    "type": "scenario",
     "question": "Instruments of Foreign Policy 1",
     "answer": true,
     "explanation": "This follows directly from the source's definition of Diplomacy on page 18.",
-    "explanation_page": 18
+    "explanation_page": 18,
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -79,7 +87,10 @@ Use this section as a compact bridge between the source wording and the exact pl
       "behavior"
     ],
     "explanation": "This checks whether the learner can move from the source wording to a usable explanation of Diplomacy.",
-    "explanation_page": 18
+    "explanation_page": 18,
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

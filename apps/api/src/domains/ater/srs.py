@@ -186,9 +186,60 @@ class SRSEngine:
             return {"success": True, "unlocked_directly": True}
 
         missing = []
-        explanation_lower = explanation_text.lower()
         for kw in keywords:
-            if kw.lower() not in explanation_lower:
+            kw_clean = re.sub(r'[^\w\s]', '', kw.lower()).strip()
+            explanation_clean = re.sub(r'[^\w\s]', ' ', explanation_text.lower()).strip()
+            
+            # 1. Substring phrase check
+            if kw_clean in explanation_clean:
+                continue
+                
+            # 2. Advanced word-level stem, singular/plural, and similarity check
+            kw_words = [w for w in kw_clean.split() if w]
+            explanation_words = [w for w in explanation_clean.split() if w]
+            
+            if not kw_words:
+                missing.append(kw)
+                continue
+                
+            matched_phrase = True
+            for kw_w in kw_words:
+                matched_word = False
+                for tw in explanation_words:
+                    # Exact word match
+                    if tw == kw_w:
+                        matched_word = True
+                        break
+                    # Plural form checks
+                    if tw.endswith('s') and tw[:-1] == kw_w:
+                        matched_word = True
+                        break
+                    if tw.endswith('es') and tw[:-2] == kw_w:
+                        matched_word = True
+                        break
+                    if tw.endswith('ies') and len(tw) > 3 and tw[:-3] + 'y' == kw_w:
+                        matched_word = True
+                        break
+                    # Singular form checks
+                    if kw_w.endswith('s') and kw_w[:-1] == tw:
+                        matched_word = True
+                        break
+                    if kw_w.endswith('es') and kw_w[:-2] == tw:
+                        matched_word = True
+                        break
+                    if kw_w.endswith('ies') and len(kw_w) > 3 and kw_w[:-3] + 'y' == tw:
+                        matched_word = True
+                        break
+                    # Substring prefix/stem match (len >= 5)
+                    if len(kw_w) >= 5 and len(tw) >= 5:
+                        if kw_w.startswith(tw[:5]) or tw.startswith(kw_w[:5]):
+                            matched_word = True
+                            break
+                if not matched_word:
+                    matched_phrase = False
+                    break
+            
+            if not matched_phrase:
                 missing.append(kw)
 
         if len(missing) == 0:

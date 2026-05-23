@@ -1,4 +1,5 @@
 ---
+
 title: Diplomacy_And_Foreign_Policy_Economic_Diplomacy_Synthesis
 type: Synthesis Note
 course: Global Trends
@@ -17,12 +18,12 @@ prerequisites:
 - "[[Economic_Diplomacy]]"
 read: false
 generated: true
+
 ---
 
 # 1. Integrated Synthesis Analogy
 
 [[Diplomacy_And_Foreign_Policy]] can be likened to the navigation system of a ship, where [[Economic_Diplomacy]] serves as the propulsion system. While the navigation system charts the course and ensures safe passage, the propulsion system provides the necessary power to move forward. Together, they enable the ship to reach its destination efficiently. In the context of international relations, [[Diplomacy]] and [[Foreign_Policy]] set the goals and strategies, while **Economic Diplomacy** provides the means to achieve them by attracting investments, seeking markets, and securing aid.
-
 
 ---
 
@@ -31,19 +32,25 @@ generated: true
 [[Diplomacy_And_Foreign_Policy]] are overarching concepts that guide a state's interactions with the international community. They encompass various instruments, including diplomatic bargaining, economic tools, and the use of force, aimed at promoting national interests. [[Economic_Diplomacy]], on the other hand, is a specific component of [[Foreign_Policy]] that focuses on economic aspects such as attracting foreign investments, seeking markets for exportable commodities, and securing aid and loans. While [[Diplomacy]] and **Foreign Policy** provide the strategic framework, **Economic Diplomacy** serves as a tactical tool to achieve specific economic objectives. Both are essential for a state's survival and prosperity in the global arena.
 
 | Parameter/Dimension | Diplomacy_And_Foreign_Policy | Economic_Diplomacy |
-| --- | --- | --- |
-| Definition | Actions, decisions, and goals a state pursues towards the outside world | A component of foreign policy focusing on economic aspects to achieve national interests |
-| Objectives | Promote national interests, achieve survival, and protect identity | Attract foreign investments, seek markets, and secure aid |
-| Instruments | Diplomatic bargaining, economic tools, propaganda, use of force | Economic tools, negotiations, agreements |
-| Scope | Broad, encompassing various aspects of international relations | Narrow, focusing specifically on economic aspects |
-| Role | Sets strategic framework for international interactions | Provides tactical means to achieve economic objectives within the strategic framework |
 
+| --- | --- | --- |
+
+| Definition | Actions, decisions, and goals a state pursues towards the outside world | A component of foreign policy focusing on economic aspects to achieve national interests |
+
+| Objectives | Promote national interests, achieve survival, and protect identity | Attract foreign investments, seek markets, and secure aid |
+
+| Instruments | Diplomatic bargaining, economic tools, propaganda, use of force | Economic tools, negotiations, agreements |
+
+| Scope | Broad, encompassing various aspects of international relations | Narrow, focusing specifically on economic aspects |
+
+| Role | Sets strategic framework for international interactions | Provides tactical means to achieve economic objectives within the strategic framework |
 
 ---
 
 # 3. Cross-Concept Interactive Assessment
 
 ```interactive-quiz
+
 [
   {
     "answer": "C",
@@ -62,7 +69,9 @@ generated: true
       18,
       38,
       39
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "answer": "Diplomacy and Foreign Policy provide the overarching strategic framework for a state's international interactions, including the pursuit of economic objectives. Economic Diplomacy serves as a tactical tool within this framework, focusing on attracting foreign investments, seeking markets, and securing aid to achieve specific economic goals. For instance, a state may use diplomatic channels to negotiate trade agreements, which is a form of Economic Diplomacy aimed at promoting exports and attracting investments.",
@@ -72,7 +81,7 @@ generated: true
       "tactical tool",
       "economic objectives"
     ],
-    "type": "writing",
+    "type": "scenario",
     "explanation_page": 1,
     "source_pages": [
       1,
@@ -80,7 +89,9 @@ generated: true
       18,
       38,
       39
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "answer": "A state's national interests are pursued through its Foreign Policy, which encompasses various instruments, including Diplomacy. Diplomacy is a key component of Foreign Policy that involves interactions with other states to promote exchanges and achieve goals. Economic Diplomacy is a specific aspect of Diplomacy that focuses on economic tools to achieve national interests. It involves attracting foreign investments, seeking markets, and securing aid to promote economic growth and stability, thereby contributing to the state's overall national interests.",
@@ -99,7 +110,10 @@ generated: true
       18,
       38,
       39
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

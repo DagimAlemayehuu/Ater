@@ -1,4 +1,5 @@
 ---
+
 title: State_System_Definition
 course: Global Trends
 unit: '1'
@@ -18,6 +19,7 @@ source_pages:
 - 25
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -32,28 +34,32 @@ The underlying mechanism of the **state system definition** involves the interac
 
 The real-world significance of the **state system** definition lies in its ability to provide a big picture of wide-ranging dynamics that emerge from the global economic system to affect its various components, including states, national economies, societies, and individuals. By analyzing the [[State_System]], researchers can grasp the complex interactions and interdependencies that shape global politics and international relations. This level of analysis is essential in understanding the behavior of states and other actors in the international arena, and how they respond to various challenges and opportunities in the global system.
 
+This concept is fundamentally connected to [[Nationalism_Definition]] and operates within the [[State_Sovereignty]] framework.
+
 ## Diplomatic Friction
 
 The [[State_System]] Definition refers to the structural context within which states interact, characterized by the distribution of power among them, influencing their cooperative, competitive, and confrontational behaviors. This system-level analysis encompasses the global circumstances that condition the pursuit of national interests by individual states and groups of states. The distribution of power within the system can be categorized into unipolarity, bipolarity, or multipolarity, each shaping the interactions and relationships between states, groups of states, organizations, societies, and individuals. The **State System Definition** is crucial in understanding the complex dynamics of international relations, as it provides a framework for analyzing the behavior of states and other actors within the global context. By examining the **State System**, researchers can gain insights into the mechanisms that drive global politics and international relations.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Category | Description | Example |
+
 | --- | --- | --- |
+
 | Unipolarity | One main concentration of power | A single dominant state |
+
 | Bipolarity | Two main concentrations of power | Two superpowers |
+
 | Multipolarity | Several concentrations of power | Multiple states with significant influence |
 
 **Incomplete Information**: The [[State_System]] Definition may not account for all relevant factors influencing state behavior, such as non-state actors or unforeseen global events. **Assumed Rationality**: The model assumes that states act rationally in their pursuit of national interests, which may not always be the case. **Static Power Distribution**: The **State System Definition** may not capture dynamic changes in [[Power_Distribution]] over time, which can significantly impact state interactions and global politics.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -71,7 +77,9 @@ The [[State_System]] Definition refers to the structural context within which st
       22,
       23,
       25
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -88,7 +96,9 @@ The [[State_System]] Definition refers to the structural context within which st
       22,
       23,
       25
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -106,7 +116,10 @@ The [[State_System]] Definition refers to the structural context within which st
       22,
       23,
       25
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

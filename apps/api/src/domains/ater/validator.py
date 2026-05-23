@@ -107,12 +107,52 @@ class AterValidator:
         if allowed:
             return False
         body_lower = body.lower()
-        medical_terms = {
-            "medical diagnostics", "medical diagnostic", "clinical", "patient",
-            "patients", "hospital", "healthcare", "pharmaceutical", "diagnosis",
-            "diagnostic lab", "surgery"
-        }
-        return any(term in body_lower for term in medical_terms)
+        
+        # Check standard medical terms with word boundaries
+        medical_terms = [
+            "medical diagnostics", "medical diagnostic", "clinical", "hospital",
+            "healthcare", "pharmaceutical", "diagnosis", "diagnostic lab", "surgery"
+        ]
+        for term in medical_terms:
+            if re.search(r'\b' + re.escape(term) + r'\b', body_lower):
+                return True
+                
+        # Robust check for patient/patients with contextual filters to prevent false positives
+        patient_matches = list(re.finditer(r'\bpatient(s)?\b', body_lower))
+        if patient_matches:
+            for match in patient_matches:
+                start, end = match.start(), match.end()
+                # Extract surrounding window (up to 40 characters) to verify context
+                window_start = max(0, start - 40)
+                window_end = min(len(body_lower), end + 40)
+                context = body_lower[window_start:window_end]
+                
+                # Check for non-medical/diplomatic/general usage patterns
+                non_medical_patterns = [
+                    r'\bbe\s+patient\b',
+                    r'\bis\s+patient\b',
+                    r'\bremain\s+patient\b',
+                    r'\bstay\s+patient\b',
+                    r'\bhow\s+patient\b',
+                    r'\btoo\s+patient\b',
+                    r'\bmore\s+patient\b',
+                    r'\bvery\s+patient\b',
+                    r'\bpatient\s+negotiator\b',
+                    r'\bpatient\s+diplomat\b',
+                    r'\bpatient\s+listener\b',
+                    r'\bpatient\s+agent\b',
+                    r'\bpatient\s+stance\b',
+                    r'\bpatient\s+actor\b',
+                    r'\bpatient\s+approach\b',
+                    r'\bpatient\s+effort\b',
+                    r'\bpatient\s+strategy\b',
+                    r'\bpatient\s+work\b'
+                ]
+                if any(re.search(pat, context) for pat in non_medical_patterns):
+                    continue
+                return True
+                
+        return False
 
     @staticmethod
     def validate_structure(content: str, course: str = "", mode: str = "", unit_stems: List[str] = None) -> Tuple[bool, List[str]]:

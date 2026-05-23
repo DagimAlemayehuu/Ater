@@ -1,4 +1,5 @@
 ---
+
 title: Interconnected_World
 course: Global Trends
 unit: '1'
@@ -15,6 +16,7 @@ source_pages:
 - 13
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -29,30 +31,36 @@ The underlying mechanism of this interconnectedness can be understood by recogni
 
 The real-world significance of an **interconnected world** is that participation in international relations or politics is inescapable. No individual, people, nation, or state can exist in splendid isolation or be master of its own fate. The interconnectedness of the world means that events such as international conflict, international conferences, and global economic transactions can have far-reaching consequences that affect us all. As a result, understanding international relations is crucial for navigating this complex and interconnected world.
 
+This concept is fundamentally connected to [[Actors_In_International_Relations]] and operates within the [[Actors_In_International_Relations_International_Relations_Definition_Synthesis]] framework.
+
 ## Diplomatic Friction
 
 The concept of an **interconnected world** is rooted in the idea that geographical, intellectual, and social ties bind nations and communities together, fostering a complex network of interactions. This phenomenon is characterized by the inescapable participation in international relations, where individual and collective actions are linked to those of others across the globe. The interconnectedness of the world is a result of increased interactions between people, groups, firms, associations, parties, nations, or states, as well as between these entities and non-governmental international organizations. As a result, events such as international conflict, international conferences, and global economic transactions can have far-reaching consequences that affect us all. Understanding international relations is crucial for navigating this complex and **interconnected world**.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Aspect | Description | Source Reference |
+
 | --- | --- | --- |
+
 | Geographical Interconnectedness | The world is interconnected geographically, intellectually, and socially. | Page 3 |
+
 | Intellectual Interconnectedness | International relations is an essential aspect of our lives. | Page 3 |
+
 | Social Interconnectedness | No individual, people, nation or state can exist in splendid isolation. | Page 4 |
+
 | International Interactions | Sending international mail, buying or selling goods abroad, choosing an Olympics host or awarding a film Oscar. | Page 4 |
+
 | Global Impact | Events such as international conflict, international conferences, and global economic transactions. | Page 4 |
 
 **National Isolationism**: The idea that a nation can exist in splendid isolation, unaffected by global events, contradicts the concept of an **interconnected world**. **Limited International Cooperation**: The assumption that nations and international organizations will always cooperate effectively to address global challenges undermines the complexities of international relations. **Static Global Landscape**: The notion that the global landscape remains static, unaffected by changes in international relations, neglects the dynamic nature of interconnectedness.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -70,7 +78,9 @@ The concept of an **interconnected world** is rooted in the idea that geographic
       3,
       4,
       13
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -87,7 +97,9 @@ The concept of an **interconnected world** is rooted in the idea that geographic
       3,
       4,
       13
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -104,7 +116,10 @@ The concept of an **interconnected world** is rooted in the idea that geographic
       3,
       4,
       13
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

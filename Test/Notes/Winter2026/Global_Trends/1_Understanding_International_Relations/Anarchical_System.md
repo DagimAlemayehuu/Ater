@@ -1,4 +1,5 @@
 ---
+
 title: Anarchical_System
 course: Global Trends
 unit: '1'
@@ -19,6 +20,7 @@ source_pages:
 - 35
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -33,29 +35,34 @@ In an anarchical world, every entity looks after itself, and no one is responsib
 
 The **anarchical system** has significant implications for international relations. According to realist perspectives, such as that of Waltz, the **international system** is perpetually threatening and conflictual due to its anarchical nature. This leads to a focus on the distribution of capabilities within the system and the imperatives it imposes on state behavior. In this view, war is seen as inevitable and common, and human beings are perceived as selfish, behaving according to their own needs without necessarily considering the needs of others. This perspective stands in contrast to liberal views, which tend to be more optimistic about human nature and the potential for peaceful cooperation.
 
+This concept is fundamentally connected to [[State_System]] and operates within the [[Anarchy]] framework.
+
 ## Diplomatic Friction
 
 An **anarchical system**, characterized by the absence of a centralized authority, necessitates that states prioritize self-reliance and strategic alliances to ensure their security and survival. This environment is marked by a precarious balance of power, where the pursuit of territorial acquisitions and the propensity for aggressive wars are incentivized. The implications of such a system are profound, influencing state behavior and the distribution of capabilities within the [[International_System]]. Consequently, the anarchical nature of the **international system** perpetuates an environment of tension and conflict, underscoring the challenges of maintaining stability and order among states.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | **Characteristics** | **Description** |
+
 | --- | --- |
+
 | Decentralized Power | Power is decentralized, and there are no shared institutions with the right to enforce common rules. |
+
 | Self-Reliance | States must rely on their own resources or form alliances to balance power against other alliances. |
+
 | Precarious Balance | The balance of power is precarious and easily subverted, leading to an incentive for states to engage in aggressive wars. |
+
 | Constant Tensions | The [[International_System]] is characterized by constant tensions and threats of war. |
 
 **Incomplete Information**: The **anarchical system** assumes that states have complete information about each other's capabilities and intentions, which is often not the case in reality. **Unclear Lines of Authority**: The absence of a centralized authority can lead to unclear lines of authority, making it difficult to determine who is responsible for maintaining order and stability. **Power Imbalance**: The anarchical system can lead to a power imbalance, where some states have more capabilities and influence than others, creating an uneven playing field.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -73,7 +80,9 @@ An **anarchical system**, characterized by the absence of a centralized authorit
       26,
       34,
       35
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -90,7 +99,9 @@ An **anarchical system**, characterized by the absence of a centralized authorit
       26,
       34,
       35
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -107,7 +118,10 @@ An **anarchical system**, characterized by the absence of a centralized authorit
       26,
       34,
       35
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

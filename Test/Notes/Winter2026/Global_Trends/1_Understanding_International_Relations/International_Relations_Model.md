@@ -1,4 +1,5 @@
 ---
+
 title: International_Relations_Model
 course: Global Trends
 unit: '1'
@@ -17,6 +18,7 @@ source_pages:
 - 33
 generated: true
 read: false
+
 ---
 
 ## Mental Model
@@ -31,30 +33,36 @@ The underlying mechanism of the **International Relations Model** was rooted in 
 
 The International Relations Model had significant real-world consequences, as it spread to the rest of the world through the process of decolonization. As colonized countries gained independence in the decades after the Second World War, they adopted the European model of statehood, with its characteristic institutions and practices. The new states established their own territories, borders, capitals, armies, and foreign ministries, and participated in the global system of international relations. The spread of the International Relations Model had a profound impact on global politics, as it created a common framework for international relations and facilitated the emergence of a global community of sovereign states.
 
+This concept is fundamentally connected to [[Globalization_And_International_Relations]] and operates within the [[International_Relations_Definition]] framework.
+
 ## Diplomatic Friction
 
 The **International Relations Model**, rooted in European statehood, is characterized by sovereign states with defined territories and fortified borders. This model, driven by the need for economic expansion, spread globally through decolonization. The European experience of state-building and diplomatic practices underpinned its development. The model's underlying mechanism emphasizes [[Sovereignty]], non-interference, and inviolability of diplomatic dispatches. As a result, newly independent states adopted this model, leading to a global system of international relations.
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table or ASCII Map**
 
 | Aspect | Description | Source Reference |
+
 | --- | --- | --- |
+
 | [[Sovereignty]] | Emphasis on [[State_Sovereignty]] and self-determination | Page 13 |
+
 | Diplomatic Practices | Inviolability of diplomatic dispatches and freedom of worship for ambassadors | Page 13 |
+
 | Economic Expansion | Driven by the industrial revolution and need for new markets | Page 13-14 |
+
 | Decolonization | Spread of European model through decolonization post-WWII | Page 14 |
+
 | Global System | Establishment of a global system of international relations | Page 33 |
 
 **Incomplete Adoption**: The **International Relations Model** assumes uniform adoption across all states, neglecting potential variations in implementation. **Cultural Homogenization**: The model overlooks the potential for cultural differences to influence the adoption and practice of international relations. **Power Imbalance**: The model does not account for power disparities between states, which can affect the effectiveness of international relations.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -72,7 +80,9 @@ The **International Relations Model**, rooted in European statehood, is characte
       13,
       14,
       33
-    ]
+    ],
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
     "type": "scenario",
@@ -88,7 +98,9 @@ The **International Relations Model**, rooted in European statehood, is characte
       13,
       14,
       33
-    ]
+    ],
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -105,7 +117,10 @@ The **International Relations Model**, rooted in European statehood, is characte
       13,
       14,
       33
-    ]
+    ],
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

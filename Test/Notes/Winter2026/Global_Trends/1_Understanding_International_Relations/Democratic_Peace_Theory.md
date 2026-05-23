@@ -1,4 +1,5 @@
 ---
+
 title: Democratic_Peace_Theory
 course: Global Trends
 unit: '1'
@@ -17,6 +18,7 @@ source_pages:
 generated: true
 skeleton_fallback: true
 read: false
+
 ---
 
 ## Mental Model
@@ -31,24 +33,26 @@ Democratic Peace Theory works by connecting the source's key terms, rules, and e
 
 In formal terms, Democratic Peace Theory must be read through the exact language and constraints shown in the source. liberal internationalism o from 1919 to the 1930s, the discipline was dominated by what is conventionally referred to as liberal internationalism o primary concern of this approach was that: v conditions which v' democracy over aristocracy v free trade over autarky v collective security over the balance of power system o The two interrelated ideas that emerge from Kant's reflections on a perpetual peace centered on o democratic governance and o institutionalized law-governed relations of cooperation between states. o two formative pillars of liberal internationalism » democracy free trade o A system of "collective security" was advocated to replace antagonistic alliance systems with an international order based on the rule of law and collective responsibility the League of nations collapse o When the League collapse due to the outbreak of the Second World War in 1939, its failure became difficult for liberals to comprehend, as events seemed to contradict their theories o liberalism failed to retain a strong hold and a new theory emerged to explain the continuing presence of war
 
-## Cause And Effect
+> **Cause And Effect**
 
 > **Markdown Table**
 
 | Source Detail | Meaning |
+
 |---|---|
+
 | Democratic Peace Theory | The focused concept being studied. |
+
 | International Relations Scholar | Theories of International Relations e politics of global interactions is more accessible n |
+
 | Source excerpt | The only authority for definitions and constraints. |
 
 Use this section as a compact bridge between the source wording and the exact place where a student might get confused.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -61,14 +65,18 @@ Use this section as a compact bridge between the source wording and the exact pl
     },
     "answer": "A",
     "explanation": "The source context connects Democratic Peace Theory to concrete behavior, syntax, or logical structure from page 27.",
-    "explanation_page": 27
+    "explanation_page": 27,
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
-    "type": "true_false",
+    "type": "scenario",
     "question": "Theories of International Relations e politics of global interactions is more accessible now in the present age than it ever has been in the past e Relationships which take place across state boundaries seem, therefore, to include interactions involving not only the diplomatic core or representatives of our individual states, but the business community, the media, charitable organizations and so on e Theories of international relations allow us to understand and try to make sense of the world around us through various lenses, each of which represents a different theoretical perspective 1",
     "answer": true,
     "explanation": "This follows directly from the source's definition of Democratic Peace Theory on page 27.",
-    "explanation_page": 27
+    "explanation_page": 27,
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -79,7 +87,10 @@ Use this section as a compact bridge between the source wording and the exact pl
       "behavior"
     ],
     "explanation": "This checks whether the learner can move from the source wording to a usable explanation of Democratic Peace Theory.",
-    "explanation_page": 27
+    "explanation_page": 27,
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```

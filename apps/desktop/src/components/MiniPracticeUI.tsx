@@ -8,17 +8,26 @@ import { usePomodoroStore } from '@/lib/pomodoroStore';
 import { Question } from '@/types/practice';
 import { sidecarApi } from '@/lib/sidecarApi';
 
-export const MarkdownBlock = ({ content }: { content: string }) => {
+export const MarkdownBlock = ({ content, variant = 'block' }: { content: string; variant?: 'block' | 'inline' }) => {
+  if (variant === 'inline') {
+    return (
+      <AterMarkdown 
+        content={content} 
+        className="inline-block align-baseline text-[13px] text-foreground/90"
+        components={{
+          p: ({ children }: any) => <span className="inline text-[13px] text-foreground/90">{children}</span>
+        }}
+      />
+    );
+  }
   return (
     <AterMarkdown 
       content={content} 
-      className="inline-block align-baseline text-[13px] text-foreground/90"
-      components={{
-        p: ({ children }: any) => <span className="inline text-[13px] text-foreground/90">{children}</span>
-      }}
+      className="block w-full text-[13px] text-foreground/90 whitespace-pre-wrap break-words"
     />
   );
 };
+
 
 interface MiniPracticeUIProps {
     question: Question | Question[];
@@ -208,7 +217,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
     const parts = text.split(/\[\[.*?\]\]/);
     return parts.map((part: string, i: number) => (
       <React.Fragment key={i}>
-        <div className="inline-block align-middle"><MarkdownBlock content={part} /></div>
+        <div className="inline-block align-middle"><MarkdownBlock content={part} variant="inline" /></div>
         {i < parts.length - 1 && (
           <div className="inline-flex flex-col items-center">
             <input

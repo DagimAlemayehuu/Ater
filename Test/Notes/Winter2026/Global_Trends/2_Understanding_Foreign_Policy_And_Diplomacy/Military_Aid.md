@@ -1,4 +1,5 @@
 ---
+
 title: Military_Aid
 course: Global Trends
 unit: '2'
@@ -18,6 +19,7 @@ source_pages:
 generated: true
 skeleton_fallback: true
 read: false
+
 ---
 
 ## Mental Model
@@ -30,26 +32,28 @@ Military Aid works by connecting the source's key terms, rules, and examples int
 
 ## The Macro Model & Jargon
 
-In formal terms, Military Aid must be read through the exact language and constraints shown in the source. Military Aid = probably the oldest type of aid which had been used for buttressing alliances |n this aid scheme, the donors supply money and material, while the recipient provided most of the man power = By helping recipients build up modern forces, the donors hope to obtain some immediate political or security objective = military aid is used to create local power balances or preponderances, thus reducing the likelihood that the donor will have to station troops abroad or intervene militarily to protect its interests 2.3. Overview of Foreign Policy of Ethiopia 2.3.1. Foreign Policy during Tewodros Il (1855-1868) 24 (%3 CamScanner greatly to the confidence with which the emperor could approach the task of political consolidation o In addition to the military aid Ethiopia received, its armed forces also benefited from the presence of a Military Assistance Advisory Group o By 1975, the total U.S. military assistance to Ethiopia amounted to almost $ 280 million o The military aid was decisive for the Emperor to ensure his survival at home and maintain the territorial integrity of the country » He effectively used military action against those riots and rebellions both in rural and urban places o The United States contributed to the expansion of Ethiopian military as a hedge against the Somalia threats = |t also provided counterinsurgency training and on the ground advisors to help to suppress Eritrean Nationalism e Ethiopia also played significant role in Africa in fighting for African independence and to end colonialism and
+In formal terms, Military Aid must be read through the exact language and constraints shown in the source. Military Aid = probably the oldest type of aid which had been used for buttressing alliances |n this aid scheme, the donors supply money and material, while the recipient provided most of the man power = By helping recipients build up modern forces, the donors hope to obtain some immediate political or security objective = military aid is used to create local power balances or preponderances, thus reducing the likelihood that the donor will have to station troops abroad or intervene militarily to protect its interests 2.3. Overview of Foreign Policy of Ethiopia 2.3.1. Foreign Policy during Tewodros Il (1855-1868) 24  greatly to the confidence with which the emperor could approach the task of political consolidation o In addition to the military aid Ethiopia received, its armed forces also benefited from the presence of a Military Assistance Advisory Group o By 1975, the total U.S. military assistance to Ethiopia amounted to almost $ 280 million o The military aid was decisive for the Emperor to ensure his survival at home and maintain the territorial integrity of the country » He effectively used military action against those riots and rebellions both in rural and urban places o The United States contributed to the expansion of Ethiopian military as a hedge against the Somalia threats = |t also provided counterinsurgency training and on the ground advisors to help to suppress Eritrean Nationalism e Ethiopia also played significant role in Africa in fighting for African independence and to end colonialism
 
-## Where It Breaks
+> **Where It Breaks**
 
 > **Markdown Table**
 
 | Source Detail | Meaning |
+
 |---|---|
+
 | Military Aid | The focused concept being studied. |
+
 | Macroeconomist | Loans, Credits and Currency Manipulations = Rewards may include favorable tariff rates and |
+
 | Source excerpt | The only authority for definitions and constraints. |
 
 Use this section as a compact bridge between the source wording and the exact place where a student might get confused.
 
-
----
-
 ## The Proving Grounds
 
 ```interactive-quiz
+
 [
   {
     "type": "mcq",
@@ -62,14 +66,18 @@ Use this section as a compact bridge between the source wording and the exact pl
     },
     "answer": "A",
     "explanation": "The source context connects Military Aid to concrete behavior, syntax, or logical structure from page 23.",
-    "explanation_page": 23
+    "explanation_page": 23,
+    "id": "q1",
+    "difficulty": "L1"
   },
   {
-    "type": "true_false",
+    "type": "scenario",
     "question": "Loans, Credits and Currency Manipulations = Rewards may include favorable tariff rates and quotas, granting loans (favorable reward offered by the major powers to developing countries) or extending credits \u00bb The choice of a technique or combinations of techniques to be used will be influenced by v' the goals being pursued v the type of economic sensitivity &vulnerability 6",
     "answer": true,
     "explanation": "This follows directly from the source's definition of Military Aid on page 23.",
-    "explanation_page": 23
+    "explanation_page": 23,
+    "id": "q2",
+    "difficulty": "L2"
   },
   {
     "type": "writing",
@@ -80,7 +88,10 @@ Use this section as a compact bridge between the source wording and the exact pl
       "behavior"
     ],
     "explanation": "This checks whether the learner can move from the source wording to a usable explanation of Military Aid.",
-    "explanation_page": 23
+    "explanation_page": 23,
+    "id": "q3",
+    "difficulty": "L3"
   }
 ]
+
 ```
