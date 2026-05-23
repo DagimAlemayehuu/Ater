@@ -1,22 +1,55 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    if (pathname === "/login") {
-      router.replace("/");
-    }
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user && pathname !== "/login") {
+        router.replace("/login");
+      } else if (user && pathname === "/login") {
+        router.replace("/");
+      }
+      
+      setAuthenticated(!!user);
+      setLoading(false);
+    };
+
+    checkUser();
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setAuthenticated(!!session?.user);
+        if (!session?.user && pathname !== "/login") {
+          router.replace("/login");
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, [pathname, router]);
 
+  // Allow the login page to render its own content without layout
   if (pathname === "/login") {
-    return null;
+    return <>{children}</>;
+  }
+
+  // Show nothing while checking initial auth to prevent layout flash
+  if (loading && !authenticated) {
+    return <div className="h-screen w-screen bg-background" />;
   }
 
   return (
