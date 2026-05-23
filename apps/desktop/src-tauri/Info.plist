@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSDocumentsFolderUsageDescription</key>
+  <string>Ater requires access to your Documents folder to ingest PDFs and sync your Obsidian Vault.</string>
+  <key>NSDesktopFolderUsageDescription</key>
+  <string>Ater requires access to your Desktop to ingest PDFs and sync your Obsidian Vault.</string>
+  <key>NSDownloadsFolderUsageDescription</key>
+  <string>Ater requires access to your Downloads folder to ingest PDFs.</string>
+</dict>
+</plist>
