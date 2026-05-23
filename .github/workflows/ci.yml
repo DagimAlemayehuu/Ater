@@ -124,13 +124,20 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
       - name: Install Playwright Browsers
-        run: cd apps/desktop && npx playwright install --with-deps chromium
-      - name: Run Playwright Tests
+        run: npx playwright install --with-deps chromium
+      - name: Run Playwright Tests (Desktop Mocks)
         run: cd apps/desktop && npx playwright test
+      - name: Run Playwright Tests (Admin)
+        run: cd apps/admin && npx playwright test
+      - name: Run Playwright Tests (Landing Page)
+        run: cd apps/landing-page && npx playwright test
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
-          path: apps/desktop/playwright-report/
+          name: playwright-reports
+          path: |
+            apps/desktop/playwright-report/
+            apps/admin/playwright-report/
+            apps/landing-page/playwright-report/
           retention-days: 7
