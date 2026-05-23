@@ -1,6 +1,14 @@
-# Ater VISUAL PROTOCOL V2.0 (Immutable)
+# Ater VISUAL PROTOCOL V33.4 (Oracle/Industrial Standard)
 
-This protocol establishes the mandatory visual asset standards for the Obsidian Knowledge Architect (Ater).
+This protocol establishes the mandatory visual asset and UI standards for the Ater Industrial Design System.
+
+## Section 0: INDUSTRIAL DESIGN FOUNDATIONS (v33.4)
+1. **Monochrome High-Fidelity**: Strictly grayscale palette. Primary: `#000000`, Surface: `#111111`, Border: `#222222`, Muted: `#666666`.
+2. **Typography**: Inter for UI, Outfit for Headings. Compact font sizes (`text-sm` for UI controls).
+3. **The Industrial Footer**: Mandatory 3-column structural grid across all main views:
+   - **Column 1**: Navigation (Product, Roadmap, Status).
+   - **Column 2**: Resources (Documentation, Changelog, Support).
+   - **Column 3**: System Status (Online/Offline, Version, Latency).
 
 ## Section 1: The "Bridge" Mechanics
 Every technical asset MUST be immediately followed by a "Bridge" that explains its contents:

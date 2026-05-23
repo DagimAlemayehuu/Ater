@@ -6,14 +6,11 @@ Your mission: Transform raw source material into high-fidelity Obsidian atomic n
 
 1. **GUTTER LAW**: ONE blank line BEFORE and AFTER every heading, table, code block, and diagram.
 2. **YAML WIKILINKS**: Every wikilink in the YAML header MUST be double-quoted.
-   - CORRECT: `hub: "[[Topic_Name]]"` | WRONG: `hub: [[Topic_Name]]`
 3. **PLAIN TEXT PROPERTIES**: `course` and `semester` are PLAIN TEXT — never use `[[brackets]]`.
 4. **GRAPH DENSITY LAW**: The Core Logic section MUST contain 3–5 `[[Wikilink]]` references. Zero wikilinks = FAIL.
-   - Format: `[[Underscore_Title_Case]]` — use underscores, not spaces.
-5. **ACCURACY LAW**: 100% technical grounding from the source excerpt. No hallucination, no domain mixing.
-6. **ACTIVE RECALL LAW**: Every atomic note MUST end with an `interactive-quiz` block containing EXACTLY 3 questions.
-7. **GENUINE BUG LAW**: For `debug` L3 questions: `content` = ONLY the buggy code, zero hints. `answer` = the fix.
-8. **NO BULLET POINTS IN PROSE**: Mental Model, Core Logic, and Formal Model use continuous analytical paragraphs. No `- bullets`.
+5. **ACCURACY LAW**: 100% technical grounding. No hallucination, no domain mixing.
+6. **NO BULLET POINTS IN PROSE**: Mental Model, Core Logic, and Formal Model use continuous analytical paragraphs. No `- bullets`.
+7. **ORACLE ANCHORING**: Every note must be anchored to a globally-detected domain mode from the MetaScanner briefing.
 9. **SOURCE PAGES**: Capture `[PAGE N]` markers from source text. Never leave `source_pages: []` if page data exists.
 10. **DOMAIN LOCK**: Every section operates within the assigned domain mode. CS code = real executable code. Math = LaTeX. Econ = tables/LaTeX. No mixing.
 11. **QUIZ TOPIC LOCK**: Every question tests ONLY the concept in the note title. Generic algebra/unrelated topics = FAIL.

@@ -8,8 +8,9 @@ This is the high-performance reasoning orchestration and Notion synchronization 
     - **Instruction Injection**: Dynamic prompt injection for structural Ater note generation.
     - **Multimodal Context**: Processing and validation of files using Gemini Generative SDKs.
 - **Ater Ingestion Engine (v32.0 / v33.0)**: Manages structured study-note generation.
-    - Decouples technical theory and pedagogical interactive quizzes (3-level interactive MCQ practice sets).
-    - Regulated by the `TokenGovernor` to handle massive parallel note generation safely without hitting model rate limits.
+    - **Oracle Pre-Analysis**: MetaScannerAgent briefing for global document context.
+    - **Singularity Parallelism**: Massively parallel generation governed by the `TokenGovernor`.
+    - **Cognitive Anchoring**: Strict domain-persona stability via anchoring laws.
 - **Notion Synapse**: High-speed, async connectors for Notion goals, academic schedules, and task lists.
 - **Obsidian Vault Syncer**: Local filesystem parser that processes Obsidian vault indices and structures to display in the desktop file tree.
 
