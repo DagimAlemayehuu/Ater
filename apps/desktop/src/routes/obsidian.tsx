@@ -70,6 +70,7 @@ export default function ObsidianVaultPage() {
  const [files, setFiles] = useState<ObsidianFile[]>([])
  const [loadingFiles, setLoadingFiles] = useState(false)
  const [selectedPath, setSelectedPath] = useState<string | null>(null)
+ const [loadedPath, setLoadedPath] = useState<string | null>(null)
  const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
  const selectRequestId = useRef(0)
  const [selectedPage, setSelectedPage] = useState(1)
@@ -436,7 +437,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
 
  // Heuristic: If it's a Hub note itself, the hub is "self"
- const isHubNote = (typeof selectedPath === 'string' && selectedPath.toLowerCase().includes('_hub.md')) || noteMetadata?.type?.toLowerCase() === 'hub'
+ const isHubNote = (typeof loadedPath === 'string' && loadedPath.toLowerCase().includes('_hub.md')) || noteMetadata?.type?.toLowerCase() === 'hub'
  
  if (!rawHub && !isHubNote) {
  setHubConnections(null)
@@ -496,7 +497,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
  
  if (topologies) {
-  const pageName = typeof selectedPath === 'string' ? selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '' : ''
+  const pageName = typeof loadedPath === 'string' ? loadedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '' : ''
   if (pageName) {
   const escapedPageName = pageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const regex = new RegExp(`(\\[\\[${escapedPageName}(?:\\|[^\\]]*)?\\]\\])`, 'gi')
@@ -510,7 +511,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   console.error("[HubConnections] fetchHubConnections failed:", e);
   setHubConnections(null);
 }
-}, [noteMetadata, selectedPath, noteContent])
+}, [noteMetadata, loadedPath, noteContent])
 
  // ── Shared helper: surgically update ONE frontmatter key without touching anything else ──
  const updateFrontmatterProperty = async (
@@ -844,6 +845,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  await fetchFiles()
  if (selectedPath === path || selectedPath?.startsWith(path + '/')) {
  setSelectedPath(null)
+ setLoadedPath(null)
  setNoteMetadata({})
  setNoteContent('')
  setEditedContent('')
@@ -1028,6 +1030,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
       clearTimeout(loadingTimeout)
       clearTimeout(safetyTimeout)
       setLoadingNote(false)
+      setLoadedPath(path)
       return
     }
 
@@ -1049,6 +1052,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
       noteContentRef.current = content;
       setEditedContent(content);
       setIsEditing(false);
+      setLoadedPath(path);
       
       console.log(`[selectFile] SUCCESS: ${path} (${content.length} chars)`);
     } catch (err) {
@@ -1056,6 +1060,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
       if (selectRequestId.current === currentReq) {
         setNoteMetadata({})
         setNoteContent('# Error\nFailed to load content. Please check if the file exists or the backend is running.')
+        setLoadedPath(null)
       }
     } finally {
       clearTimeout(loadingTimeout);

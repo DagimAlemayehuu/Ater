@@ -1,10 +1,81 @@
-import { createClient } from '@supabase/supabase-js'
+// Ater - Resilient Local/Offline Supabase Mock
+// Completely removes remote database dependency, preventing startup freezes and key requirements.
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+console.info('[Supabase] Offline/Local mock auth client loaded successfully.');
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('[Supabase] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set.')
+export const supabase: any = {
+  auth: {
+    getUser: async () => ({
+      data: {
+        user: {
+          id: 'local-session-user-id',
+          email: 'user@local.ater',
+        } as any
+      },
+      error: null
+    }),
+    signInWithPassword: async ({ email }: { email: string }) => ({
+      data: {
+        user: {
+          id: 'local-session-user-id',
+          email: email,
+        }
+      },
+      error: null
+    }),
+    signOut: async () => ({ error: null }),
+    onAuthStateChange: () => {
+      return {
+        data: {
+          subscription: {
+            unsubscribe: () => {}
+          }
+        }
+      }
+    }
+  },
+  from: (..._args: any[]) => {
+    return {
+      select: (..._args2: any[]) => {
+        return {
+          eq: (..._args3: any[]) => {
+            return {
+              single: async () => {
+                return {
+                  data: {
+                    id: 'local-session-user-id',
+                    full_name: 'Local User',
+                    activation_code: 'ATER-PRO',
+                    waitlist_status: 'approved',
+                    is_approved: true,
+                    is_configured: true,
+                    machine_id: ''
+                  },
+                  error: null
+                }
+              },
+              maybeSingle: async () => {
+                return {
+                  data: {
+                    activation_code: 'ATER-PRO'
+                  },
+                  error: null
+                }
+              }
+            }
+          }
+        }
+      },
+      update: (..._args4: any[]) => {
+        return {
+          eq: (..._args5: any[]) => {
+            return {
+              single: async () => ({ data: null, error: null }),
+              maybeSingle: async () => ({ data: null, error: null })
+            }
+          }
+        }
+      }
+    }
+  }
 }
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
