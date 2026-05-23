@@ -1144,7 +1144,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  // LOADING RENDERER
  // ──────────────────────────────────────────────────────────────────────────
  if (view === 'loading') {
- return <BlockingLoader label={genStatus} detail="Rate-limit protection active" />
+ return <BlockingLoader label={genStatus} />
 }
 
  // ──────────────────────────────────────────────────────────────────────────

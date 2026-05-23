@@ -22,7 +22,7 @@ export function MiniLoader({ label = 'Loading', detail, className }: LoadingStat
 
 export function BlockingLoader({ label = 'Loading', detail, className }: LoadingStateProps) {
   return (
-    <div className={cn('fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 text-white', className)}>
+    <div className={cn('fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 text-foreground backdrop-blur-md', className)}>
       <MiniLoader label={label} detail={detail} />
     </div>
   )
@@ -30,7 +30,7 @@ export function BlockingLoader({ label = 'Loading', detail, className }: Loading
 
 export function PanelLoader({ label = 'Loading', detail, className }: LoadingStateProps) {
   return (
-    <div className={cn('absolute inset-0 z-50 flex items-center justify-center bg-black/95 text-white', className)}>
+    <div className={cn('absolute inset-0 z-50 flex items-center justify-center bg-background/80 text-foreground backdrop-blur-md', className)}>
       <MiniLoader label={label} detail={detail} />
     </div>
   )
