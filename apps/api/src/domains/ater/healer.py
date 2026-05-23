@@ -234,7 +234,7 @@ class LogicHealer:
             r"(?i)(?:Sure|Certainly|Here is|Great choice|Atery|As an?|Absolutely|I understand|Below is|I have compiled|I will now),?.*?(?:explaining|overview|analysis|help|note|here is|the note|content|response).*?[:\.]\s*",
             r"(?i)(?:In this section|This note|The following|This response).*?[:\.]\s*",
             r"(?i)(?:Note|Tip|Hint|Important|Pro Tip):\s*",
-            r"(?i)Hope this (?:helps|is useful|clarifies|meets).*?\.?$",
+            r"(?i)(?:I\s+)?hope\s+this\s+(?:helps|is\s+useful|clarifies|meets).*?\.?$",
             r"(?i)(?:If you have|Feel free to|Let me know if).*?\.?$",
             r"(?i)^(?:\*\*?)?(?:Analysis|Explanation|Walkthrough|Summary)(?:\*\*?)?:\s+",
             r"(?i)(?:Here's a|I have created).*?\.?$",
@@ -618,9 +618,50 @@ class LogicHealer:
             return yaml_block + body_text
         return body_text
 
+    def clean_ocr_noise(self, text: str) -> str:
+        """
+        Aggressive regex scrubber to remove OCR scanner noise, CamScanner watermarks,
+        and stray bullet/list symbols that LLMs copy directly from low-quality scans.
+        """
+        if not text:
+            return ""
+        # Remove CamScanner stamps and watermarks
+        text = re.sub(r'(?i)\(?%?3?\s*CamScanner\)?', '', text)
+        
+        lines = text.split("\n")
+        processed_lines = []
+        in_code_block = False
+        
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("```"):
+                in_code_block = not in_code_block
+                processed_lines.append(line)
+                continue
+                
+            if in_code_block:
+                processed_lines.append(line)
+                continue
+                
+            # Remove stray bullet and OCR list prefix noise at the start of lines/sentences
+            # E.g. "e Realism locations...", "v diplomacy can...", "» The interaction...", "o a means..."
+            line = re.sub(r'^\s*[e•oØ»v”\-\*]\'?\s+([A-Za-z])', r'\1', line)
+            
+            # Remove bullet characters mixed into prose lines (like ' o ' or ' v ' or ' e ' or ' » ')
+            line = re.sub(r'\s+[eovØ»”\-\*•]\'?\s+([A-Za-z])', r' \1', line)
+            
+            # Clean double spacing
+            line = re.sub(r' {2,}', ' ', line)
+            processed_lines.append(line)
+            
+        return "\n".join(processed_lines).strip()
+
     def heal_all(self, text: str, is_quiz: bool = False, exclude_title: str = "") -> str:
         if is_quiz:
             return self.heal_quiz_json(text)
+
+        # Clean OCR noise first
+        text = self.clean_ocr_noise(text)
 
         # v33.1: Strip orphaned XML tags FIRST — before any other processing
         text = self.strip_orphan_xml_tags(text)
@@ -643,4 +684,5 @@ class LogicHealer:
         # Gutter Law enforcement (always run last)
         text = self.enforce_gutter_law(text)
         return text
+
 

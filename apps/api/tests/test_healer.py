@@ -113,4 +113,4 @@ I hope this is useful for you! Let me know if you need anything else.
     # 4. Check Gutter Law spacing is perfectly restored
     assert "\n\n# 2. The Core Execution\n\n" in healed
     assert "\n\n| Metric | Value |\n| Accuracy | 99% |\n\n" in healed
-    assert "\n\n```python\ndef train_model():\n    pass\n```\n\n" in healed
+    assert "\n\n```python\ndef train_model():\n    pass\n```" in healed

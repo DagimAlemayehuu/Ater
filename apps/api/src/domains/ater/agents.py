@@ -1648,14 +1648,37 @@ Rules:
         sys_prompt = f"""You are a hostile examiner. Prove the student doesn't actually understand "{title_readable}".
 Generate EXACTLY {count} question(s).
 {q_type_str}
-OUTPUT: A JSON array of {count} object(s) inside <QUIZ_JSON> tags.
 
-JSON SCHEMA:
+OUTPUT FORMAT: You are permitted to output either a clean JSON array inside <QUIZ_JSON></QUIZ_JSON> tags, OR a clean, human-readable plain text quiz using the standard format inside <QUIZ_TEXT></QUIZ_TEXT> tags.
+
+PLAIN TEXT FORMAT:
+<QUIZ_TEXT>
+[QUESTION 1]
+Type: mcq
+Question: (Your question text)
+A: Option A
+B: Option B
+C: Option C
+D: Option D
+Answer: A
+Explanation: (Technical mechanism explanation)
+
+[QUESTION 2]
+Type: true_false
+Question: (Your true/false question text)
+Answer: True
+Explanation: (Technical mechanism explanation)
+</QUIZ_TEXT>
+
+JSON FORMAT:
+<QUIZ_JSON>
 [
   {{
     {type_schema}
   }}
 ]
+</QUIZ_JSON>
+
 
 LAWS (non-negotiable):
 1. LEVEL: Match {academic_level} difficulty.
@@ -1689,17 +1712,37 @@ Domain axioms: {axioms[:300]}"""
                 ])
                 
                 content = res.content
+                
+                # Check for plain text tags first
+                text_match = re.search(r"<QUIZ_TEXT>(.*?)</QUIZ_TEXT>", content, re.DOTALL)
+                if text_match:
+                    from .validator import AterValidator
+                    try:
+                        data = AterValidator.parse_plain_text_quiz(text_match.group(1))
+                        if data and len(data) >= 1:
+                            return data
+                    except Exception:
+                        pass
+
                 match = re.search(r"<QUIZ_JSON>(.*?)</QUIZ_JSON>", content, re.DOTALL)
                 if not match:
                     match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
                 
                 if not match:
-                    if content.strip().startswith("["):
+                    if content.strip().startswith("[") or "id" in content:
                         raw_json = content.strip()
                     else:
+                        from .validator import AterValidator
+                        try:
+                            data = AterValidator.parse_plain_text_quiz(content)
+                            if data and len(data) >= 1:
+                                return data
+                        except Exception:
+                            pass
                         raise Exception("LLM failed to provide <QUIZ_JSON> tags or bare JSON.")
                 else:
                     raw_json = match.group(1).strip()
+
 
                 data = None
                 # Attempt 1: direct parse
@@ -1751,13 +1794,20 @@ Domain axioms: {axioms[:300]}"""
                     if objects:
                         data = objects
 
-                # Attempt 4: dict-based fallback
+                # Attempt 4: dict-based fallback or plain-text parser recovery
                 if data is None:
                     try:
                         data = ArchitectAgent._parse_json(raw_json)
                     except Exception:
-                        print(f"[QuestionAgent] RAW CONTENT DUMP (first 800 chars):\n{content[:800]}")
-                        raise Exception("All JSON parse attempts failed for quiz output.")
+                        from .validator import AterValidator
+                        try:
+                            data = AterValidator.parse_plain_text_quiz(content)
+                        except Exception:
+                            pass
+                        if not data:
+                            print(f"[QuestionAgent] RAW CONTENT DUMP (first 800 chars):\n{content[:800]}")
+                            raise Exception("All JSON parse attempts failed for quiz output.")
+
 
                 if isinstance(data, dict) and "questions" in data:
                     data = data["questions"]

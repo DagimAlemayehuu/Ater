@@ -30,9 +30,9 @@ An integrated synthesis of these concepts reveals that the international system 
 
 ## Connections
 
-- [ ] [[Nationalism_Definition]]
-- [ ] [[State_System]]
-    - [ ] [[Nationalism_And_Sovereignty]]
+- [x] [[Nationalism_Definition]]
+- [x] [[State_System]]
+    - [x] [[Nationalism_And_Sovereignty]]
     - [ ] [[Globalization_And_International_Relations]]
     - [ ] [[Anarchical_System_International_System_State_System_Synthesis]]
     - [ ] [[Power_Dynamics]]

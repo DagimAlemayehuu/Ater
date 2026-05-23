@@ -1,7 +1,7 @@
 import re
 import yaml
 import json
-from typing import Any, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional
 
 class StructureValidationError(ValueError):
     """Exception raised when a note violates the strict 3-Section Sandwich format structure."""
@@ -653,6 +653,16 @@ class AterValidator:
         if not raw_json:
             return False, {}, "EMPTY_INPUT"
 
+        # First-pass plain-text quiz parser check
+        if any(marker in raw_json.upper() for marker in ["[Q1]", "[QUESTION 1]", "QUESTION 1", "QUESTION: 1", "Q1:"]):
+            try:
+                parsed = AterValidator.parse_plain_text_quiz(raw_json)
+                if parsed and len(parsed) >= 1:
+                    return True, parsed, None
+            except Exception:
+                pass
+
+
         clean_json = raw_json.strip()
         # Strip markdown fences
         clean_json = re.sub(r"^```[a-z\-]*\n?", "", clean_json, flags=re.IGNORECASE)
@@ -817,10 +827,153 @@ class AterValidator:
                     data["id"] = "q1"
             return True, data, None
         except Exception:
+            # Final Fallback recovery: try parsing as plain text if it failed JSON completely
+            try:
+                parsed = AterValidator.parse_plain_text_quiz(raw_json)
+                if parsed and len(parsed) >= 1:
+                    return True, parsed, None
+            except Exception:
+                pass
             return False, {}, f"JSON_PARSE_ERROR: {err}"
+
+
+    @staticmethod
+    def parse_plain_text_quiz(raw_text: str) -> List[Dict[str, Any]]:
+        """
+        Intelligent, fault-tolerant plain-text quiz parser.
+        Converts human-readable plain text question patterns from weak models into clean JSON arrays.
+        Supports MCQs, True/False, and Writing questions.
+        """
+        import re
+        questions = []
+        
+        # Split by [Q1], [QUESTION 1], [Q 1], etc.
+        q_blocks = re.split(r'(?i)\[?QUESTION\s*\d+\]?|\[?Q\s*\d+\]?', raw_text)
+        
+        q_index = 1
+        for block in q_blocks:
+            if not block.strip() or len(block.strip()) < 30:
+                continue
+                
+            # Default structure
+            q_dict = {
+                "id": f"q{q_index}",
+                "difficulty": f"L{min(3, q_index)}"
+            }
+            
+            # Extract Type (Default: mcq if it has options, writing if not, true_false if it mentions true/false)
+            q_type = "writing"
+            block_lower = block.lower()
+            if "true" in block_lower and "false" in block_lower and ("type: true_false" in block_lower or "true/false" in block_lower or "[type] true_false" in block_lower or "true_false" in block_lower):
+                q_type = "true_false"
+            elif any(re.search(rf'(?im)^\s*[A-D]\s*[:\-\)]\s*\w+', block) for _ in range(1)):
+                q_type = "mcq"
+                
+            type_match = re.search(r'(?im)(?:type|question_type)\s*[:\-\)]\s*(\w+)', block)
+            if type_match:
+                mapped_type = type_match.group(1).lower().strip()
+                if "mc" in mapped_type or "choice" in mapped_type:
+                    q_type = "mcq"
+                elif "true" in mapped_type or "tf" in mapped_type:
+                    q_type = "true_false"
+                elif "writing" in mapped_type or "short" in mapped_type:
+                    q_type = "writing"
+                elif "scenario" in mapped_type:
+                    q_type = "scenario"
+                elif "trace" in mapped_type:
+                    q_type = "trace"
+                elif "debug" in mapped_type:
+                    q_type = "debug"
+                    
+            q_dict["type"] = q_type
+            
+            # Extract Question text
+            q_text = ""
+            q_match = re.search(r'(?im)(?:question|prompt)\s*[:\-\)]\s*(.*?)(?=\n\s*(?:[A-D]\s*[:\-\)]|options|answer|explanation|required_keywords|type|content|$))', block, re.DOTALL)
+            if q_match:
+                q_text = q_match.group(1).strip()
+            else:
+                lines = [line.strip() for line in block.split("\n") if line.strip()]
+                candidate_lines = []
+                for line in lines:
+                    if any(line.lower().startswith(prefix) for prefix in ["options", "answer", "explanation", "type", "a:", "b:", "c:", "d:"]):
+                        break
+                    candidate_lines.append(line)
+                q_text = " ".join(candidate_lines)
+                
+            q_dict["question"] = q_text.strip()
+            
+            # Extract Options (for MCQ)
+            if q_type == "mcq":
+                options = {}
+                for choice in ["A", "B", "C", "D"]:
+                    choice_match = re.search(rf'(?im)^\s*{choice}\s*[:\-\)]\s*(.*?)(?=\n\s*(?:[A-D]\s*[:\-\)]|answer|explanation|type|$))', block, re.DOTALL)
+                    if choice_match:
+                        options[choice] = choice_match.group(1).strip()
+                    else:
+                        choice_match = re.search(rf'(?im)\b{choice}\b\s*[:\-\)]\s*(.*?)(?=\s+\b[B-D]\b|\s+answer|\s+explanation|$)', block)
+                        if choice_match:
+                            options[choice] = choice_match.group(1).strip()
+                if options:
+                    q_dict["options"] = options
+                else:
+                    q_dict["options"] = {"A": "Option A", "B": "Option B", "C": "Option C", "D": "Option D"}
+            
+            # Extract Content (for Debug / Trace / Scenario)
+            content_match = re.search(r'(?im)(?:content|code_snippet|snippet)\s*[:\-\)]\s*(.*?)(?=\n\s*(?:answer|explanation|type|$))', block, re.DOTALL)
+            if content_match:
+                q_dict["content"] = content_match.group(1).strip()
+                
+            # Extract Answer
+            ans_val = ""
+            ans_match = re.search(r'(?im)(?:answer|correct_answer|key)\s*[:\-\)]\s*(.*?)(?=\n\s*(?:explanation|required_keywords|type|$))', block, re.DOTALL)
+            if ans_match:
+                ans_val = ans_match.group(1).strip()
+            else:
+                for line in block.split("\n"):
+                    if "answer:" in line.lower() or "answer -" in line.lower() or "answer =" in line.lower():
+                        ans_val = line.split(":", 1)[-1].split("-", 1)[-1].split("=", 1)[-1].strip()
+                        break
+            
+            if q_type == "true_false":
+                if "true" in ans_val.lower():
+                    q_dict["answer"] = True
+                else:
+                    q_dict["answer"] = False
+            else:
+                q_dict["answer"] = ans_val
+                
+            # Extract Explanation
+            exp_val = ""
+            exp_match = re.search(r'(?im)(?:explanation|reasoning)\s*[:\-\)]\s*(.*?)(?=\n\s*(?:required_keywords|type|$))', block, re.DOTALL)
+            if exp_match:
+                exp_val = exp_match.group(1).strip()
+            else:
+                for line in block.split("\n"):
+                    if "explanation:" in line.lower() or "explanation -" in line.lower():
+                        exp_val = line.split(":", 1)[-1].split("-", 1)[-1].strip()
+                        break
+            if not exp_val:
+                exp_val = f"The correct response is {ans_val} based on the course materials."
+            q_dict["explanation"] = exp_val.strip()
+            
+            # Extract Required Keywords
+            keywords_match = re.search(r'(?im)(?:required_keywords|keywords)\s*[:\-\)]\s*(.*?)(?=\n\s*(?:type|$))', block, re.DOTALL)
+            if keywords_match:
+                raw_kws = keywords_match.group(1).strip()
+                kws = [k.strip().replace('"', '').replace("'", "") for k in re.split(r'[,\n]+', raw_kws) if k.strip()]
+                q_dict["required_keywords"] = [k for k in kws if len(k) > 1]
+            elif q_type in ["writing", "scenario", "synthesis"]:
+                q_dict["required_keywords"] = [w.strip(".,;:?!") for w in ans_val.split() if len(w) > 5][:3]
+                
+            questions.append(q_dict)
+            q_index += 1
+            
+        return questions
 
     @staticmethod
     def sanitize_title(title: str) -> str:
+
         """Ensures a title is in canonical Title_Case_With_Underscores format."""
         if not title:
             return ""

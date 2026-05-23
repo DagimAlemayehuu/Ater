@@ -1,29 +1,38 @@
 "use client";
 
 import React from 'react';
-import Link from 'next/link';
 import { IndustrialButton } from '@/components/IndustrialButton';
-
+import { MacbookMockup } from '@/components/MacbookMockup';
 
 export default function AcademicDashboardPage() {
   return (
     <div className="min-h-[100dvh] bg-background w-full flex flex-col">
       
       {/* SECTION 01: HERO */}
-      <section className="z-10 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto flex flex-col gap-6 text-center items-center justify-center">
+      <section className="z-10 stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto flex flex-col gap-6 text-center items-center justify-center flex-1">
           <h1 className="text-display-hero text-center w-full">
             ACADEMIC DASHBOARD
           </h1>
           <p className="text-body max-w-2xl leading-relaxed opacity-85 text-center">
-            One central place to organize all your school work. Keep track of semesters, courses, assignments, and exams in a clean, simple layout.
+            Your school control center. One simple dashboard to see all your classes, homework, and exams. It helps you stay organized so you never forget a deadline.
           </p>
+          
+          {/* Integrated Mockup */}
+          <div className="w-full max-w-4xl relative origin-center flex items-center justify-center mt-2">
+            <MacbookMockup 
+              lightSrc="/academic-light.png" 
+              darkSrc="/academic-dark.png" 
+              alt="Academic Dashboard" 
+              priority 
+            />
+          </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl mt-8">
             {[
-              { label: "Degree tracking", desc: "Plan your semesters and track progress." },
-              { label: "Task manager", desc: "Stay on top of assignments and deadlines." },
-              { label: "Exam planner", desc: "Track countdowns and prepare for tests." }
+              { label: "Graduation Progress", desc: "Plan your semesters and track graduation goals." },
+              { label: "Task manager", desc: "Stay on top of assignments and daily homework." },
+              { label: "Exam planner", desc: "See countdown alerts and get ready for tests." }
             ].map(stat => (
               <div key={stat.label} className="p-4 border border-outline-variant bg-surface flex flex-col gap-1 text-left">
                 <span className="text-[10px] opacity-50 font-mono uppercase">{stat.label}</span>
@@ -34,17 +43,18 @@ export default function AcademicDashboardPage() {
         </div>
       </section>
 
+
       {/* SECTION 02: PROGRAM */}
-      <section className="z-20 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-20 stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">PROGRAM</h2>
+            <h2 className="text-section-heading">TRACK YOUR PROGRESS</h2>
             <p className="text-body opacity-85">
-              Manage your entire degree and track your academic years. Keep an eye on your grades, semesters, and credits in real time.
+              Manage your entire degree and see your progress in real-time. Easily track which semesters you've finished, view your active classes, and watch your GPA grow.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; Track your semesters from Year 1 to Year 4.</li>
-              <li>&gt; View your current GPA and accumulated credits automatically.</li>
+              <li>&gt; See your current GPA and accumulated credits automatically.</li>
               <li>&gt; Easily plan future courses for upcoming terms.</li>
             </ul>
           </div>
@@ -85,8 +95,8 @@ export default function AcademicDashboardPage() {
       </section>
 
       {/* SECTION 03: COURSES */}
-      <section className="z-30 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-30 stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           {/* Course Mockup */}
           <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
@@ -115,9 +125,9 @@ export default function AcademicDashboardPage() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">COURSES</h2>
+            <h2 className="text-section-heading">YOUR CLASSES</h2>
             <p className="text-body opacity-85">
-              Keep all your active classes in one list. Store important details like syllabus files, teacher contact information, and study progress for each subject.
+              Keep all your active classes in one simple list. Save teacher email details, upload syllabus info, and see what percentage of each course you have successfully reviewed.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; Store grade history and active study status.</li>
@@ -129,12 +139,12 @@ export default function AcademicDashboardPage() {
       </section>
 
       {/* SECTION 04: STUDY PLANNER */}
-      <section className="z-[40] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-[40] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">STUDY PLANNER</h2>
+            <h2 className="text-section-heading">BITE-SIZED PLANNERS</h2>
             <p className="text-body opacity-85">
-              Break down big courses into small, manageable study blocks. Set confidence levels for different topics so you know what to focus on next.
+              Break down big courses into small, manageable study blocks. Set confidence levels (Easy, Medium, Hard) for different topics so you know exactly what to practice next.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; Sort and filter your study tasks by due date or status.</li>
@@ -172,8 +182,8 @@ export default function AcademicDashboardPage() {
       </section>
 
       {/* SECTION 05: ASSIGNMENTS */}
-      <section className="z-[50] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-[50] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           {/* Assignments Mockup */}
           <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
@@ -201,9 +211,9 @@ export default function AcademicDashboardPage() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">ASSIGNMENTS</h2>
+            <h2 className="text-section-heading">NEVER FORGET HOMEWORK</h2>
             <p className="text-body opacity-85">
-              Keep track of your homework, essays, and school projects. Automatically groups your tasks by due date so you always know what needs to be done first.
+              Keep track of your homework, essays, and school projects. Ater automatically lists your tasks by due date: overdue work turns red, tasks due today show up first, and upcoming projects are sorted neatly.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; Group tasks by time urgency (Overdue, Due Today, Due This Week, Upcoming).</li>
@@ -215,12 +225,12 @@ export default function AcademicDashboardPage() {
       </section>
 
       {/* SECTION 06: EXAMS */}
-      <section className="z-[60] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-[60] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">EXAMS</h2>
+            <h2 className="text-section-heading">STRESS-FREE EXAM PREP</h2>
             <p className="text-body opacity-85">
-              Prepare for your exams with clear countdown alerts. Track your study readiness based on how many topics you have finished in your planner.
+              Prepare for your exams with clear countdown alerts. Track your study readiness based on how many topics you have finished in your planner, so you know exactly when you're ready.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; View prominent countdown days for upcoming exams.</li>
@@ -259,8 +269,8 @@ export default function AcademicDashboardPage() {
       </section>
 
       {/* SECTION 07: PRACTICE */}
-      <section className="z-[70] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-[70] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           {/* Practice Mockup */}
           <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
@@ -289,9 +299,9 @@ export default function AcademicDashboardPage() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">PRACTICE</h2>
+            <h2 className="text-section-heading">PRACTICE QUIZZES</h2>
             <p className="text-body opacity-85">
-              Test your memory with active recall sessions. Create practice quizzes from your files and grade your answers automatically using key study terms.
+              Practice quizzes that actually help. Ater creates quick quizzes from your notes. It grades your answers and highlights the key words you missed, helping you study smarter, not harder.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; Build smart quizzes directly from your Markdown notes.</li>

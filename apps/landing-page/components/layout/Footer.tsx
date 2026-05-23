@@ -34,12 +34,12 @@ export function Footer() {
             <h4 className="technical-label text-primary">SOCIALS</h4>
             <ul className="space-y-4">
               {[
-                { label: 'TWITTER', icon: Twitter },
-                { label: 'GITHUB', icon: Github },
-                { label: 'DISCORD', icon: MessageSquare }
+                { label: 'TWITTER', icon: Twitter, href: 'https://x.com/ater_app' },
+                { label: 'GITHUB', icon: Github, href: 'https://github.com/DagimAlemayehuu/Ater' },
+                { label: 'DISCORD', icon: MessageSquare, href: 'https://discord.com' }
               ].map((item) => (
                 <li key={item.label}>
-                  <Link href="#" className="flex items-center gap-3 group">
+                  <Link href={item.href} target="_blank" rel="noreferrer" className="flex items-center gap-3 group">
                     <item.icon className="size-4 text-on-surface-variant group-hover:opacity-100 group-hover:text-primary transition-all" />
                     <span className="technical-label text-on-surface-variant group-hover:text-on-surface transition-colors">
                       {item.label}

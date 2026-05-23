@@ -1,26 +1,37 @@
 "use client";
 
 import React from 'react';
+import { MacbookMockup } from '@/components/MacbookMockup';
 
 export default function AgentsPage() {
   return (
     <div className="min-h-[100dvh] bg-background w-full flex flex-col">
       
       {/* SECTION 01: HERO / SYSTEM COMMAND */}
-      <section className="z-10 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto flex flex-col gap-6 text-center items-center justify-center">
+      <section className="z-10 stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto flex flex-col gap-6 text-center items-center justify-center flex-1">
           <h1 className="text-display-hero text-center w-full uppercase">
             REASONING AGENTS
           </h1>
           <p className="text-body max-w-2xl leading-relaxed opacity-85 text-center">
-            A cooperative network of local study assistants. Build dependency maps from your books, classify notes by learning styles, and test yourself with custom quizzes.
+            Helpful study assistants. Ater uses small, private computer helpers (agents) that automatically scan your books, plan your study roadmaps, and build custom practice quizzes for you.
           </p>
+          
+          {/* Integrated Mockup */}
+          <div className="w-full max-w-4xl relative origin-center flex items-center justify-center mt-2">
+            <MacbookMockup 
+              lightSrc="/dashboard-light.png" 
+              darkSrc="/dashboard-dark.png" 
+              alt="Reasoning Agents Dashboard" 
+              priority 
+            />
+          </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl mt-8">
             {[
-              { label: "Topological Sort", desc: "Kahn's Algorithm sorts study topics from basic to advanced." },
-              { label: "Local Execution", desc: "All processes run locally on your device with 100% data safety." },
-              { label: "Rate-Limit Governor", desc: "Monitors and balances system loads during generation." }
+              { label: "Automatic roadmaps", desc: "Helper agents sort topics from simple to advanced." },
+              { label: "100% Private", desc: "All assistants run locally on your own machine." },
+              { label: "Smart Governor", desc: "Monitors and balances system loads to keep things fast." }
             ].map(item => (
               <div key={item.label} className="p-4 border border-outline-variant bg-surface flex flex-col gap-1 text-left">
                 <span className="text-[10px] opacity-50 font-mono uppercase">{item.label}</span>
@@ -31,18 +42,19 @@ export default function AgentsPage() {
         </div>
       </section>
 
+
       {/* SECTION 02: DYNAMIC TWO-STATE UI LIFECYCLE */}
-      <section className="z-20 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-20 stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">LIFECYCLE</h2>
+            <h2 className="text-section-heading">SMART WORKSPACE</h2>
             <p className="text-body opacity-85">
-              The workspace dashboard automatically adapts its layout depending on whether you are preparing documents or active generation is running in the background.
+              A smart screen that changes as you study. It shows you your inbox when you upload new textbooks, and automatically updates to a live progress tracking screen when the assistants are building your notes.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
-              <li>&gt; <strong>State A (Pre-Planning)</strong>: Inbox discovery reads new PDFs, matching topics with Course, Unit, and Hub pills automatically.</li>
-              <li>&gt; <strong>State B (Active Generation)</strong>: Plan trees highlight current note generation, pushing finished notes up and tracking API rate limits.</li>
-              <li>&gt; Telemetry gauges show active sliding windows and throttle alerts in real time.</li>
+              <li>&gt; <strong>Inbox Mode</strong>: Ater scans your textbooks and groups notes by subject.</li>
+              <li>&gt; <strong>Generation Mode</strong>: Watch notes get written and sorted live in real-time.</li>
+              <li>&gt; Live gauges show system speed and active processing windows.</li>
             </ul>
           </div>
           
@@ -78,8 +90,8 @@ export default function AgentsPage() {
       </section>
 
       {/* SECTION 03: 7-STAGE PIPELINE & SELF-HEALING */}
-      <section className="z-30 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-30 stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           
           {/* Pipeline Mockup */}
           <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
@@ -102,9 +114,9 @@ export default function AgentsPage() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">PIPELINE</h2>
+            <h2 className="text-section-heading">AUTO-FIXING NOTES</h2>
             <p className="text-body opacity-85">
-              Turn raw books into linked note networks. Files enter a SQLite database queue, split into concept blocks, pass through verifiers, and heal formatting errors automatically.
+              If the helpers make a formatting mistake or a link gets broken, a checker assistant catches it and fixes it instantly so your notes are always clean, complete, and formatted perfectly.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; Background watchers automatically monitor folder queues for new documents.</li>
@@ -116,26 +128,26 @@ export default function AgentsPage() {
       </section>
 
       {/* SECTION 04: THE 11 SOVEREIGN STUDY AGENTS */}
-      <section className="z-[40] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto flex flex-col gap-6 text-center items-center justify-center">
-          <h2 className="text-section-heading w-full uppercase">THE 11 STUDY AGENTS</h2>
+      <section className="z-[40] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto flex flex-col gap-6 text-center items-center justify-center flex-1">
+          <h2 className="text-section-heading w-full uppercase">THE 11 SPECIALIZED HELPERS</h2>
           <p className="text-body max-w-2xl leading-relaxed opacity-85 text-center">
-            A cooperative network of eleven specialized local agents, each responsible for an isolated step in the note processing and validation pipeline.
+            A cooperative network of eleven specialized helpers, each in charge of a single step in writing, double-checking, and organizing your notes.
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full mt-6 text-left font-mono text-[10px]">
             {[
-              { name: "MetaScanner", role: "Extracts summary keywords and snapping data." },
-              { name: "Architect", role: "Segments textbook chunks and sorts dependencies." },
-              { name: "EpistemicClassifier", role: "Maps note topics to quantitative or qualitative styles." },
-              { name: "TheoryAgent", role: "Drafts analogies and core conceptual foundations." },
-              { name: "Practitioner", role: "Creates code blocks, math curves, and visual diagrams." },
-              { name: "QuestionAgent", role: "Writes active recall tests locked to textbook page numbers." },
-              { name: "VerifierAgent", role: "Checks syntax, brackets, and structural alignments." },
-              { name: "CriticAgent", role: "Writes targeted instructions if structural checks fail." },
+              { name: "MetaScanner", role: "Reads the book and highlights major topics." },
+              { name: "Architect", role: "Splits textbook chunks and maps out the study roadmap." },
+              { name: "EpistemicClassifier", role: "Figures out if a topic is math, science, or reading." },
+              { name: "TheoryAgent", role: "Creates clear, simple analogies and core explanations." },
+              { name: "Practitioner", role: "Adds clean code blocks, math curves, and visual charts." },
+              { name: "QuestionAgent", role: "Writes active recall practice tests linked to actual book pages." },
+              { name: "VerifierAgent", role: "Double-checks syntax, brackets, and note structures." },
+              { name: "CriticAgent", role: "Instructs helpers to rewrite a section if a verifier check fails." },
               { name: "QuizAuditor", role: "Validates practice quizzes before they reach your feed." },
               { name: "HubAgent", role: "Compiles single outline notes for entire study units." },
-              { name: "TaxonomyExtender", role: "Cartographer Prime. Dynamically constructs new study domains." }
+              { name: "TaxonomyExtender", role: "Creates new subjects and study paths dynamically." }
             ].map(agent => (
               <div key={agent.name} className="p-3.5 border border-outline-variant bg-surface flex flex-col gap-1">
                 <span className="text-primary font-bold">{agent.name}</span>
@@ -147,19 +159,19 @@ export default function AgentsPage() {
       </section>
 
       {/* SECTION 05: THE 85+ DOMAIN PERSONA MATRIX */}
-      <section className="z-[50] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-[50] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">PERSONAS</h2>
+            <h2 className="text-section-heading">EXPERT SUBJECT TEACHERS</h2>
             <p className="text-body opacity-85">
               Subject matters are explained using their true professional rules. Ater adapts its writing styles, dynamic headers, artifacts, and test logic across over 85 domains.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
-              <li>&gt; <strong>CS-SOFTWARE</strong>: Software Engineer. Includes runnable code and debugging tests.</li>
-              <li>&gt; <strong>MED-PHYSIO</strong>: Surgeon. Cellular maps and pathway perturbation tracing.</li>
-              <li>&gt; <strong>MATH-PURE</strong>: Mathematician. LaTeX proofs, checks division by zero.</li>
-              <li>&gt; <strong>LAW-CASE</strong>: Lawyer. Strict IRAC method applying fact scenarios.</li>
-              <li>&gt; <strong>ECON-MICRO</strong>: Microeconomist. Math supply/demand schedule tables.</li>
+              <li>&gt; <strong>CS-SOFTWARE</strong>: Programmer. Includes clean, runnable code.</li>
+              <li>&gt; <strong>MED-PHYSIO</strong>: Doctor. Clear cell maps and body system loops.</li>
+              <li>&gt; <strong>MATH-PURE</strong>: Mathematician. Neat LaTeX formulas and proofs.</li>
+              <li>&gt; <strong>LAW-CASE</strong>: Lawyer. Strict IRAC argument flows and legal scenarios.</li>
+              <li>&gt; <strong>ECON-MICRO</strong>: Economist. Math supply/demand tables and grids.</li>
             </ul>
           </div>
           
@@ -184,8 +196,8 @@ export default function AgentsPage() {
       </section>
 
       {/* SECTION 06: FEYNMAN HAMBURGER NOTE GEOMETRY */}
-      <section className="z-[60] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-[60] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           {/* Note Geometry Mockup */}
           <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
@@ -194,28 +206,28 @@ export default function AgentsPage() {
             
             <div className="border border-outline-variant/30 bg-background/50 p-4 space-y-3 text-[10px]">
               <div>
-                <span className="text-primary font-bold">1. YAML FRONTMATTER</span>
-                <p className="opacity-60 text-[9px]">Quoted wikilinks, target courses, and page boundaries.</p>
+                <span className="text-primary font-bold">1. FILE INFO</span>
+                <p className="opacity-60 text-[9px]">Course links, study status, and book page numbers.</p>
               </div>
               <div className="border-t border-outline-variant/10 pt-2">
-                <span className="text-primary font-bold">2. MENTAL MODEL ANALOGY</span>
-                <p className="opacity-60 text-[9px]">Vivid analogy mapping structural components without clichés.</p>
+                <span className="text-primary font-bold">2. CLEAR ANALOGY</span>
+                <p className="opacity-60 text-[9px]">Vivid analogy comparing the concept to daily objects without clichés.</p>
               </div>
               <div className="border-t border-outline-variant/10 pt-2">
-                <span className="text-primary font-bold">3. CORE TECHNICAL PROSE (H1 & H2)</span>
-                <p className="opacity-60 text-[9px]">Prose logic with 3-5 links, followed by dynamic visual artifacts.</p>
+                <span className="text-primary font-bold">3. TECHNICAL CANVASES</span>
+                <p className="opacity-60 text-[9px]">Prose logic with 3-5 links, followed by visual graphs or code blocks.</p>
               </div>
               <div className="border-t border-outline-variant/10 pt-2">
                 <span className="text-primary font-bold">4. THE PROVING GROUNDS</span>
-                <p className="opacity-60 text-[9px]">Three-tiered JSON quizzes mapped directly to book pages.</p>
+                <p className="opacity-60 text-[9px]">Three practice quiz questions mapped directly to actual book pages.</p>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">NOTE STRUCTURE</h2>
+            <h2 className="text-section-heading">PERFECT NOTES EVERY TIME</h2>
             <p className="text-body opacity-85">
-              Every note adheres to a strict 4-section layout contract, balancing high conceptual density with verifiable question formats.
+              Every study note is organized exactly the same way. It maps out the concept using a friendly analogy, gives a detailed explanation with charts, and finishes with a quick 3-question quiz.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; Frontmatter quotes all internal link dependencies.</li>

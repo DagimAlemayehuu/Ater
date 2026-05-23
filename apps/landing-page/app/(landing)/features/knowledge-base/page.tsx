@@ -1,26 +1,37 @@
 "use client";
 
 import React from 'react';
+import { MacbookMockup } from '@/components/MacbookMockup';
 
 export default function KnowledgeBasePage() {
   return (
     <div className="min-h-[100dvh] bg-background w-full flex flex-col">
       
       {/* SECTION 01: SOVEREIGNTY / LOCAL NOTE VAULT */}
-      <section className="z-10 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto flex flex-col gap-6 text-center items-center justify-center">
+      <section className="z-10 stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto flex flex-col gap-6 text-center items-center justify-center flex-1">
           <h1 className="text-display-hero text-center w-full uppercase">
             KNOWLEDGE BASE
           </h1>
           <p className="text-body max-w-2xl leading-relaxed opacity-85 text-center">
-            A secure knowledge base linked directly to your local folders. All your study notes and guides stay entirely on your computer, private and safe.
+            A safe place to keep all your study notes. All your files stay entirely on your own computer, so nobody else can see them. They work even if you don't have internet!
           </p>
+          
+          {/* Integrated Mockup */}
+          <div className="w-full max-w-4xl relative origin-center flex items-center justify-center mt-2">
+            <MacbookMockup 
+              lightSrc="/notes-light.png" 
+              darkSrc="/notes-dark.png" 
+              alt="Knowledge Base Note Vault" 
+              priority 
+            />
+          </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl mt-8">
             {[
-              { label: "Local-First Storage", desc: "Your notes live inside plain local files on your drive." },
+              { label: "Local-First Storage", desc: "Your notes live inside plain files on your hard drive." },
               { label: "Offline Accessibility", desc: "Instant startup and note opening with zero internet needed." },
-              { label: "Markdown Standard", desc: "No proprietary formats. Truly portable study data." }
+              { label: "Markdown Standard", desc: "No locked formats. Take your notes to any other app." }
             ].map(item => (
               <div key={item.label} className="p-4 border border-outline-variant bg-surface flex flex-col gap-1 text-left">
                 <span className="text-[10px] opacity-50 font-mono uppercase">{item.label}</span>
@@ -31,13 +42,14 @@ export default function KnowledgeBasePage() {
         </div>
       </section>
 
+
       {/* SECTION 02: DYNAMIC COLLAPSIBLE WORKSPACE */}
-      <section className="z-20 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-20 stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">WORKSPACE</h2>
+            <h2 className="text-section-heading">A CLEAN WORKSPACE</h2>
             <p className="text-body opacity-85">
-              Work without distractions using adjustable split-screen layouts. Keep structural outlines on the left, your main canvas in the center, and utilities on the right.
+              A clean screen that helps you focus. Work without distractions using adjustable layouts. You can see your note list on the left, your main lesson in the middle, and the study assistant on the right.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; Collapsible Left Panel hosts directory navigation and file lists.</li>
@@ -79,8 +91,8 @@ export default function KnowledgeBasePage() {
       </section>
 
       {/* SECTION 03: HIGH-FIDELITY DOCUMENT VIEWERS */}
-      <section className="z-30 bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-30 stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           
           {/* Viewers Mockup */}
           <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
@@ -108,9 +120,9 @@ export default function KnowledgeBasePage() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">VIEWERS</h2>
+            <h2 className="text-section-heading">SIDE-BY-SIDE READERS</h2>
             <p className="text-body opacity-85">
-              Read both notes and textbook PDFs smoothly. Link folders inside Markdown, track checkboxes automatically, and prompt AI directly from highlighted text.
+              Read your books and notes side-by-side. You can click on direct links to jump to other notes, check off things you've learned to update your files instantly, and ask the assistant to explain hard words.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; Clickable wiki links [[NoteName]] connect topics instantly.</li>
@@ -122,12 +134,12 @@ export default function KnowledgeBasePage() {
       </section>
 
       {/* SECTION 04: NEURAL CONCEPT GRAPH */}
-      <section className="z-[40] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-[40] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">NEURAL GRAPH</h2>
+            <h2 className="text-section-heading">A VISUAL BRAIN MAP</h2>
             <p className="text-body opacity-85">
-              Observe your study network as an interactive force-directed graph. Central topic hubs expand automatically based on how many notes link back to them.
+              See a visual map of your brain. Watch how different topics connect to each other like a web. The more notes you write about a specific topic, the bigger its circle gets so you know what is important.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; Force-directed equations balance repulsive constants and spring link distances.</li>
@@ -163,8 +175,8 @@ export default function KnowledgeBasePage() {
       </section>
 
       {/* SECTION 05: CONCEPT PATHWAYS & TRAVERSAL */}
-      <section className="z-[50] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-[50] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           {/* Concept Pathways Mockup */}
           <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
@@ -196,9 +208,9 @@ export default function KnowledgeBasePage() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">PATHWAYS</h2>
+            <h2 className="text-section-heading">YOUR STUDY PATHS</h2>
             <p className="text-body opacity-85">
-              Turn random files into progressive study guides. Parse structured bulleted lists to build ordered pathways, tracking sessions with Pomodoro integration.
+              Your personal study roadmap. Ater turns a big list of study files into a step-by-step sequential guide, showing you exactly what to read first, second, and third so you never get lost.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; Convert outline documents to step-by-step sequential reading bars.</li>
@@ -210,12 +222,12 @@ export default function KnowledgeBasePage() {
       </section>
 
       {/* SECTION 06: FRONTMATTER METADATA INSPECTOR */}
-      <section className="z-[60] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-[60] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-b border-outline-variant py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">METADATA</h2>
+            <h2 className="text-section-heading">NOTE PROPERTY CARDS</h2>
             <p className="text-body opacity-85">
-              Manage note classifications instantly. Track course links, study states, index dates, and custom parameters using automated frontmatter fields.
+              Manage note details instantly. Track which class a note belongs to, mark lessons as completed, set due dates, and update your local study database with simple checklists.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; Visual fields isolate course connections, dates, and checklists.</li>
@@ -250,8 +262,8 @@ export default function KnowledgeBasePage() {
       </section>
 
       {/* SECTION 07: LOCAL AI SIDECAR & PROMPT CONTROL */}
-      <section className="z-[70] bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full py-8 sm:py-12 md:py-20 px-4 md:px-8">
-        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 md:gap-12 items-center justify-center">
+      <section className="z-[70] stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full py-8 px-4 md:px-8">
+        <div className="industrial-container w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center flex-1">
           {/* Local AI Mockup */}
           <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 font-mono text-[11px] leading-relaxed relative overflow-hidden shadow-xl max-w-lg mx-auto order-last lg:order-first">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
@@ -292,9 +304,9 @@ export default function KnowledgeBasePage() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <h2 className="text-section-heading">LOCAL CO-PILOT</h2>
+            <h2 className="text-section-heading">YOUR PRIVATE TUTOR</h2>
             <p className="text-body opacity-85">
-              Explain concepts as you read. Highlight note sections to trigger local streaming completions, adjusting precision sliders to tailor explanation details.
+              Highlight any sentence in your books or notes, and the AI sidecar tutor will explain it instantly in simple words—without sending your personal files to the internet.
             </p>
             <ul className="space-y-3 font-mono text-[11px] leading-relaxed opacity-75">
               <li>&gt; Stream explanations instantly from local secure models on your computer.</li>

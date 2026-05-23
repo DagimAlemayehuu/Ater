@@ -5,6 +5,8 @@ import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
 import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { LoadingProvider } from '@/context/LoadingContext';
+import { RouteLoader } from '@/components/layout/RouteLoader';
 
 export default function LandingLayout({
   children,
@@ -30,10 +32,14 @@ export default function LandingLayout({
   const hideFooter = isAuthPage && !session;
 
   return (
-    <div className="bg-background transition-colors duration-300 relative isolation-isolate z-0">
-      <Navbar />
-      {children}
-      {!hideFooter && <Footer />}
-    </div>
+    <LoadingProvider>
+      <RouteLoader />
+      <div className="bg-background transition-colors duration-300 relative isolation-isolate z-0">
+        <Navbar />
+        {children}
+        {!hideFooter && <Footer />}
+      </div>
+    </LoadingProvider>
   );
 }
+

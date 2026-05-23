@@ -2711,6 +2711,11 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         else:
             note_schema = AtomicNoteSchema(**note_schema_dict)
 
+        healer = LogicHealer(canonical_titles=set(all_note_titles))
+        if note_schema.source_context:
+            note_schema.source_context = healer.clean_ocr_noise(note_schema.source_context)
+
+
         title_readable = current_note_title.replace("_", " ")
         member_concepts = ", ".join([f"[[{p}]]" for p in note_schema.prerequisites])
 
@@ -2993,6 +2998,12 @@ generated: true"""
                             note_schema = AtomicNoteSchema(title=current_note_title, description="Generated concept", source_context="")
                         else:
                             note_schema = AtomicNoteSchema(**note_schema_dict)
+
+                        # Clean OCR noise prior to processing
+                        healer = LogicHealer(canonical_titles=set(all_note_titles))
+                        if note_schema.source_context:
+                            note_schema.source_context = healer.clean_ocr_noise(note_schema.source_context)
+
 
                         modality = getattr(note_schema, 'concept_modality', 'Qualitative/Definitional')
                         domain = get_persona(note_schema.mode, modality)

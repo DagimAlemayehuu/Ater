@@ -1,23 +1,21 @@
 ---
-
-title: Nationalism_And_Sovereignty
-course: Global Trends
-unit: '1'
-semester: Winter2026
-mode: SOC-INT-RELATIONS
-type: Atomic Note
-hub: "[[1_Understanding_International_Relations_Hub]]"
-source: "[[Inbox/Generated/Winter2026/Global_Trends/Chapter1-ocr.pdf]]"
-date: '2026-05-22'
-prerequisites:
-- "[[State_System]]"
-source_pages:
-- 1
-- 3
-- 26
+course: "Global Trends"
+date: "2026-05-22"
 generated: true
-read: false
-
+hub: "[[1_Understanding_International_Relations_Hub]]"
+mode: "SOC-INT-RELATIONS"
+prerequisites:
+ - "[[State_System]]"
+read: true
+semester: "Winter2026"
+source: "[[Inbox/Generated/Winter2026/Global_Trends/Chapter1-ocr.pdf]]"
+source_pages:
+ - "1"
+ - "3"
+ - "26"
+title: "Nationalism_And_Sovereignty"
+type: "Atomic Note"
+unit: 1
 ---
 
 ## Mental Model

@@ -13,6 +13,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("dark");
+  const transitionTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -26,10 +27,23 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const toggleTheme = () => {
     const newTheme = theme === "dark" ? "light" : "dark";
+
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+    }
+
+    document.documentElement.classList.add("theme-switching");
+
     setTheme(newTheme);
     localStorage.setItem("theme", newTheme);
     document.documentElement.classList.toggle("dark", newTheme === "dark");
+
+    transitionTimeoutRef.current = setTimeout(() => {
+      document.documentElement.classList.remove("theme-switching");
+      transitionTimeoutRef.current = null;
+    }, 500);
   };
+
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

@@ -12,6 +12,16 @@ This file tracks the step-by-step technical implementation path.
 - [x] Implement "Strictly Generate All" frontend-driven loop to prevent timeouts.
 - [x] Fix Auto-Ingest Watcher infinite loops and absolute path resolution.
 - [x] Integrate real-time AI rate limit tracking in the UI.
+- [x] Configure globals.css for card stacking scroll-snap
+- [x] Create LoadingContext for page transition tracking
+- [x] Create RouteLoader component with minimal Ater logo and pulse loader
+- [x] Update layout.tsx with LoadingProvider and RouteLoader
+- [x] Refactor homepage sections in page.tsx with stack-section and z-indexes
+- [x] Replace Section 5 security box with high-density daemon configuration block
+- [x] Fix Waitlist CTA and waitlist page links to include `?mode=signup`
+- [x] Update DownloadAterButton fallback version to `v0.6.2`
+- [x] Update Footer social links with real targets
+- [x] Build and test landing-page for zero TypeScript/lint issues.
 
 ## Sprint: Knowledge Visualization
 - [x] Force-Directed Vault Graph (Visual Knowledge Map).

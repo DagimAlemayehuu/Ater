@@ -1,7 +1,7 @@
 {
   "name": "ater",
   "private": true,
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Ater - Personal Intelligence Operating System (Tier 3: Agency Standard)",
   "scripts": {
     "build": "turbo run build",
